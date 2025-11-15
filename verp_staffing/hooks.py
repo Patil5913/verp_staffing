@@ -137,34 +137,24 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"User" : {
+        "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
+    },
+    "File": {
+        "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
+    }
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"verp_staffing.tasks.all"
-# 	],
-# 	"daily": [
-# 		"verp_staffing.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"verp_staffing.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"verp_staffing.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"verp_staffing.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"hourly": [
+		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
+	],
+}
 
 # Testing
 # -------
@@ -196,7 +186,10 @@ app_license = "mit"
 
 # Request Events
 # ----------------
-# before_request = ["verp_staffing.utils.before_request"]
+before_request = [
+    "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
+]
 # after_request = ["verp_staffing.utils.after_request"]
 
 # Job Events
