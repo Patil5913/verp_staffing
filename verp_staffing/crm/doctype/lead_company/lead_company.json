@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-11-14 15:45:36.154232",
+ "creation": "2025-11-15 14:54:10.886568",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -19,10 +19,10 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 11:23:09.782551",
+ "modified": "2025-11-15 14:57:11.910467",
  "modified_by": "Administrator",
  "module": "CRM",
- "name": "Lead Social Links Name",
+ "name": "Lead Company",
  "owner": "Administrator",
  "permissions": [
   {
