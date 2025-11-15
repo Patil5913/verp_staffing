@@ -1,52 +1,53 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-11-14 20:59:35.429623",
+ "creation": "2025-11-14 20:51:03.722071",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "opportunity",
   "status",
-  "payment_terms",
-  "outsource"
+  "column_break_nesv",
+  "prospect",
+  "quotation",
+  "agreement"
  ],
  "fields": [
-  {
-   "fieldname": "opportunity",
-   "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity"
-  },
   {
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nForm Filled\nTech Department\nMarketing Department",
+   "options": "Open\nQuotation\nProspect\nConverted\nLost",
    "reqd": 1
   },
   {
-   "fieldname": "payment_terms",
-   "fieldtype": "Table",
-   "label": "Payment Terms",
-   "options": "Payment Terms",
-   "reqd": 1
+   "fieldname": "column_break_nesv",
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "outsource",
-   "fieldtype": "Table",
-   "label": "Outsource",
-   "options": "Outsource"
+   "fieldname": "prospect",
+   "fieldtype": "Attach",
+   "label": "Prospect"
+  },
+  {
+   "fieldname": "quotation",
+   "fieldtype": "Attach",
+   "label": "Quotation"
+  },
+  {
+   "fieldname": "agreement",
+   "fieldtype": "Attach",
+   "label": "Agreement"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-14 21:07:47.907635",
+ "modified": "2025-11-15 10:34:55.135688",
  "modified_by": "Administrator",
- "module": "Vrugle Staffing ERP",
- "name": "Customer",
+ "module": "CRM",
+ "name": "Opportunity",
  "owner": "Administrator",
  "permissions": [
   {

@@ -42,6 +42,11 @@
  ],
  "fields": [
   {
+   "fieldname": "basic_information_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
    "fieldname": "name1",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -55,17 +60,27 @@
    "options": "Male\nFemale"
   },
   {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nLead\nInterested\nDo Not Contact\nLost"
+  },
+  {
+   "fieldname": "column_break_vwnk",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "lead_owner",
    "fieldtype": "Link",
    "label": "Lead Owner",
    "options": "User"
   },
   {
-   "default": "Open",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Open\nLead\nInterested\nDo Not Contact\nLost"
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "label": "Lead Source",
+   "options": "Lead Source"
   },
   {
    "fieldname": "lead_datails",
@@ -74,10 +89,9 @@
    "options": "Hot\nCold"
   },
   {
-   "fieldname": "lead",
-   "fieldtype": "Link",
-   "label": "Lead Source",
-   "options": "Lead Source"
+   "fieldname": "contact_information_section",
+   "fieldtype": "Section Break",
+   "label": "Contact Information"
   },
   {
    "fieldname": "phone",
@@ -95,9 +109,8 @@
    "label": "Ext. Phone"
   },
   {
-   "fieldname": "past_resume",
-   "fieldtype": "Attach",
-   "label": "Past Resume"
+   "fieldname": "column_break_rnjd",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "address",
@@ -115,10 +128,9 @@
    "label": "State"
   },
   {
-   "fieldname": "social_links",
-   "fieldtype": "Link",
-   "label": "Social Links",
-   "options": "Social Links"
+   "fieldname": "visa_and_education_details_section",
+   "fieldtype": "Section Break",
+   "label": "Visa And Education Details"
   },
   {
    "fieldname": "visa_status",
@@ -131,11 +143,14 @@
    "label": "Visa Discreption"
   },
   {
-   "fieldname": "course_detail",
-   "fieldtype": "Table",
-   "label": "Course Detail",
-   "options": "Course",
-   "reqd": 1
+   "fieldname": "column_break_hfab",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "social_links",
+   "fieldtype": "Link",
+   "label": "Social Links",
+   "options": "Social Links"
   },
   {
    "fieldname": "university",
@@ -143,6 +158,22 @@
    "label": "University",
    "options": "University",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_iiqs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "course_detail",
+   "fieldtype": "Table",
+   "label": "Course Detail",
+   "options": "Course",
+   "reqd": 1
+  },
+  {
+   "fieldname": "past_and_aspirational_job_details_section",
+   "fieldtype": "Section Break",
+   "label": "Past And Aspirational Job Details"
   },
   {
    "fieldname": "past_experience_year",
@@ -165,9 +196,13 @@
    "label": "Past Experience Descreption"
   },
   {
-   "fieldname": "espiring_company",
-   "fieldtype": "Data",
-   "label": "Espiring Company"
+   "fieldname": "column_break_xsed",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "past_resume",
+   "fieldtype": "Attach",
+   "label": "Past Resume"
   },
   {
    "fieldname": "espiring_job_role",
@@ -175,58 +210,23 @@
    "label": "Espiring Job Role"
   },
   {
+   "fieldname": "espiring_company",
+   "fieldtype": "Data",
+   "label": "Espiring Company"
+  },
+  {
    "fieldname": "expected_ctc",
    "fieldtype": "Int",
    "label": "Expected CTC",
    "non_negative": 1
-  },
-  {
-   "fieldname": "basic_information_section",
-   "fieldtype": "Section Break",
-   "label": "Basic Information"
-  },
-  {
-   "fieldname": "contact_information_section",
-   "fieldtype": "Section Break",
-   "label": "Contact Information"
-  },
-  {
-   "fieldname": "column_break_vwnk",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_rnjd",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "visa_and_education_details_section",
-   "fieldtype": "Section Break",
-   "label": "Visa And Education Details"
-  },
-  {
-   "fieldname": "column_break_hfab",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_iiqs",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "past_and_aspirational_job_details_section",
-   "fieldtype": "Section Break",
-   "label": "Past And Aspirational Job Details"
-  },
-  {
-   "fieldname": "column_break_xsed",
-   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-14 17:56:01.282679",
+ "modified": "2025-11-15 10:34:07.427240",
  "modified_by": "Administrator",
- "module": "Vrugle Staffing ERP",
+ "module": "CRM",
  "name": "Lead",
  "owner": "Administrator",
  "permissions": [
