@@ -1,52 +1,42 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-11-14 20:59:35.429623",
+ "creation": "2025-11-14 15:46:29.491871",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "opportunity",
-  "status",
-  "payment_terms",
-  "outsource"
+  "name1",
+  "column_break_zkkq",
+  "link"
  ],
  "fields": [
   {
-   "fieldname": "opportunity",
+   "fieldname": "name1",
    "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity"
-  },
-  {
-   "default": "Open",
-   "fieldname": "status",
-   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Status",
-   "options": "Open\nForm Filled\nTech Department\nMarketing Department",
+   "label": "Name",
+   "options": "Lead Social Links Name",
    "reqd": 1
   },
   {
-   "fieldname": "payment_terms",
-   "fieldtype": "Table",
-   "label": "Payment Terms",
-   "options": "Customer Payment Terms",
-   "reqd": 1
+   "fieldname": "column_break_zkkq",
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "outsource",
-   "fieldtype": "Table",
-   "label": "Outsource",
-   "options": "Outsource"
+   "fieldname": "link",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Link",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 11:17:58.217110",
+ "modified": "2025-11-15 11:23:22.965705",
  "modified_by": "Administrator",
  "module": "CRM",
- "name": "Customer",
+ "name": "Lead Social Links",
  "owner": "Administrator",
  "permissions": [
   {

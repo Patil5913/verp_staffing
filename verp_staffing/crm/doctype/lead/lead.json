@@ -150,13 +150,13 @@
    "fieldname": "social_links",
    "fieldtype": "Link",
    "label": "Social Links",
-   "options": "Social Links"
+   "options": "Lead Social Links"
   },
   {
    "fieldname": "university",
    "fieldtype": "Link",
    "label": "University",
-   "options": "University",
+   "options": "Lead University",
    "reqd": 1
   },
   {
@@ -167,7 +167,7 @@
    "fieldname": "course_detail",
    "fieldtype": "Table",
    "label": "Course Detail",
-   "options": "Course",
+   "options": "Lead Course",
    "reqd": 1
   },
   {
@@ -224,7 +224,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 10:34:07.427240",
+ "modified": "2025-11-15 11:22:40.692575",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",

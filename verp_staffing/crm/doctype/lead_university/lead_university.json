@@ -1,52 +1,53 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-11-14 20:59:35.429623",
+ "creation": "2025-11-14 16:21:46.386806",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "opportunity",
-  "status",
-  "payment_terms",
-  "outsource"
+  "name1",
+  "column_break_tlcr",
+  "location",
+  "section_break_ibsm",
+  "cources"
  ],
  "fields": [
   {
-   "fieldname": "opportunity",
-   "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity"
-  },
-  {
-   "default": "Open",
-   "fieldname": "status",
-   "fieldtype": "Select",
+   "fieldname": "name1",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Status",
-   "options": "Open\nForm Filled\nTech Department\nMarketing Department",
+   "label": "Name",
    "reqd": 1
   },
   {
-   "fieldname": "payment_terms",
-   "fieldtype": "Table",
-   "label": "Payment Terms",
-   "options": "Customer Payment Terms",
+   "fieldname": "column_break_tlcr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "location",
    "reqd": 1
   },
   {
-   "fieldname": "outsource",
+   "fieldname": "section_break_ibsm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "cources",
    "fieldtype": "Table",
-   "label": "Outsource",
-   "options": "Outsource"
+   "label": "cources",
+   "options": "Lead Course"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 11:17:58.217110",
+ "modified": "2025-11-15 11:21:25.081332",
  "modified_by": "Administrator",
  "module": "CRM",
- "name": "Customer",
+ "name": "Lead University",
  "owner": "Administrator",
  "permissions": [
   {
