@@ -57,5 +57,13 @@ refresh(frm) {
             frm.set_value("master_manager", null);
             frm.set_value("manager", null);
         }
-    }
+    },
+   user(frm) {
+    if (!frm.doc.user) return;
+
+   frappe.db.get_doc("User", frm.doc.user).then(user_doc => {
+        const name = user_doc.full_name || user_doc.first_name || user_doc.name;
+        frm.set_value("employee_name", name);
+    });
+}
 });

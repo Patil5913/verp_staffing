@@ -3,12 +3,23 @@
 
 import frappe
 from frappe.model.document import Document
-
+from frappe.model.naming import make_autoname
+from frappe.utils import today
 
 class Employee(Document):
 
     def validate(self):
         self.validate_hierarchy()
+
+    def autoname(self):
+        # Get today's date in YYYY-MM-DD
+        date_str = today()
+
+        # Naming pattern: EMP-YYYY-MM-DD-####
+        series = f"EMP-{date_str}-.####"
+
+        # Generate incrementing name
+        self.name = make_autoname(series)
 
     def validate_hierarchy(self):
         # Prevent employee selecting themselves as manager

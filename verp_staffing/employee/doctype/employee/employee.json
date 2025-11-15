@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:employee_name",
  "creation": "2025-11-14 12:06:33.180575",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -9,10 +8,11 @@
   "user",
   "employee_name",
   "department",
+  "position",
+  "column_break_ookt",
   "designation",
   "manager",
-  "master_manager",
-  "position"
+  "master_manager"
  ],
  "fields": [
   {
@@ -62,16 +62,20 @@
    "fieldname": "position",
    "fieldtype": "Data",
    "label": "Position"
+  },
+  {
+   "fieldname": "column_break_ookt",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 10:39:08.387636",
+ "modified": "2025-11-15 15:50:09.303285",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
- "naming_rule": "By fieldname",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
