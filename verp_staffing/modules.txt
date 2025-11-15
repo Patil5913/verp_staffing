@@ -1,2 +1,4 @@
 Vrugle Staffing ERP
+CRM
 Employee
+Technical
