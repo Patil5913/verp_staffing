@@ -6,13 +6,23 @@
  "engine": "InnoDB",
  "field_order": [
   "status",
+  "opportunity_from",
+  "party_name",
   "column_break_nesv",
-  "prospect",
-  "quotation",
-  "agreement"
+  "source",
+  "opportunity_owner",
+  "column_break_lbgc",
+  "sales_stage",
+  "expected_closing_date",
+  "probability_",
+  "opportunity_value_section",
+  "currency",
+  "column_break_yvzt",
+  "opportunity_amount"
  ],
  "fields": [
   {
+   "bold": 1,
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -26,25 +36,82 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "prospect",
-   "fieldtype": "Attach",
-   "label": "Prospect"
+   "bold": 1,
+   "fieldname": "opportunity_from",
+   "fieldtype": "Link",
+   "label": "Opportunity From",
+   "options": "DocType",
+   "reqd": 1
   },
   {
-   "fieldname": "quotation",
-   "fieldtype": "Attach",
-   "label": "Quotation"
+   "fieldname": "source",
+   "fieldtype": "Link",
+   "label": "Source",
+   "options": "Lead Source"
   },
   {
-   "fieldname": "agreement",
-   "fieldtype": "Attach",
-   "label": "Agreement"
+   "fieldname": "opportunity_owner",
+   "fieldtype": "Link",
+   "label": "Opportunity Owner",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_lbgc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_stage",
+   "fieldtype": "Link",
+   "label": "Sales Stage",
+   "options": "Sales Stage"
+  },
+  {
+   "fieldname": "expected_closing_date",
+   "fieldtype": "Date",
+   "label": "Expected Closing Date"
+  },
+  {
+   "fieldname": "probability_",
+   "fieldtype": "Percent",
+   "label": "Probability (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "opportunity_value_section",
+   "fieldtype": "Section Break",
+   "label": "Opportunity Value"
+  },
+  {
+   "default": "USD",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "non_negative": 1,
+   "options": "Currency"
+  },
+  {
+   "fieldname": "column_break_yvzt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "opportunity_amount",
+   "fieldtype": "Currency",
+   "label": "Opportunity Amount",
+   "non_negative": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "party_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "options": "opportunity_from",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 10:34:55.135688",
+ "modified": "2025-11-15 16:39:36.183710",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
