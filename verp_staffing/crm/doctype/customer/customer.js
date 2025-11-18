@@ -54,6 +54,9 @@ function get_notes(frm, $wrapper) {
             }
 
             let html = `
+            <div class="mt-2 mb-2">
+                    <button class="btn btn-secondary btn-sm add-note-inline">Add Note</button>
+                </div>
                 <div class="notes-list list-group">
             `;
 
@@ -80,9 +83,7 @@ function get_notes(frm, $wrapper) {
 
             html += `
                 </div>
-                <div class="mt-2">
-                    <button class="btn btn-secondary btn-sm add-note-inline">Add Note</button>
-                </div>
+                
             `;
 
             $wrapper.html(html);
