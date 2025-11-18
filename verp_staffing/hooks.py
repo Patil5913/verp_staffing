@@ -235,3 +235,6 @@ before_request = [
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+override_whitelisted_methods = {
+    "crm.api.notes.get_notes": "crm.api.notes.get_notes"
+}

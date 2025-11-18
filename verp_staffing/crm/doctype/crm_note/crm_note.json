@@ -22,18 +22,36 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Added By",
+   "hidden":1,
    "options": "User"
   },
-  {
+   {
    "fieldname": "added_on",
    "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "Added On"
+   "label": "Added On",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+   {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference Doctype",
+   "options": "DocType",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "reference_doctype",
+   "reqd": 1,
+   "in_list_view": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "istable": 1,
+ "istable": 0,
  "links": [],
  "modified": "2025-11-15 17:34:08.045510",
  "modified_by": "Administrator",
