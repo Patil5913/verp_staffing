@@ -8,7 +8,10 @@
   "opportunity",
   "status",
   "payment_terms",
-  "outsource"
+  "outsource",
+  "note_tab",
+  "notes_html",
+  "notes"
  ],
  "fields": [
   {
@@ -38,12 +41,30 @@
    "fieldtype": "Table",
    "label": "Outsource",
    "options": "Outsource"
+  },
+  {
+   "fieldname": "note_tab",
+   "fieldtype": "Tab Break",
+   "label": "Note"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes Html"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Notes",
+   "no_copy": 1,
+   "options": "CRM Note"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 11:17:58.217110",
+ "modified": "2025-11-15 17:48:06.668845",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -66,5 +87,7 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1,
+ "track_views": 1
 }
