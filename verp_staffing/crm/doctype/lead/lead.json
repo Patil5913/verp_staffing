@@ -11,34 +11,31 @@
   "status",
   "column_break_vwnk",
   "lead_owner",
-  "lead",
+  "source",
   "lead_datails",
   "contact_information_section",
   "phone",
-  "email",
   "ext_phone",
+  "social_links",
   "column_break_rnjd",
+  "email",
   "address",
   "city",
   "state",
   "visa_and_education_details_section",
   "visa_status",
-  "visa_discreption",
   "column_break_hfab",
-  "social_links",
-  "university",
-  "section_break_iiqs",
-  "course_detail",
+  "visa_discreption",
+  "education_details_section",
+  "education_table",
+  "past_experience_section",
+  "past_experience",
   "past_and_aspirational_job_details_section",
-  "past_experience_year",
-  "past_experience_company",
-  "past_experience_job_role",
-  "past_experience_descreption",
+  "expected_ctc",
   "column_break_xsed",
-  "past_resume",
-  "espiring_job_role",
-  "espiring_company",
-  "expected_ctc"
+  "aspiring_job_role",
+  "column_break_vipi",
+  "aspiring_company"
  ],
  "fields": [
   {
@@ -74,13 +71,7 @@
    "fieldname": "lead_owner",
    "fieldtype": "Link",
    "label": "Lead Owner",
-   "options": "User"
-  },
-  {
-   "fieldname": "lead",
-   "fieldtype": "Link",
-   "label": "Lead Source",
-   "options": "Lead Source"
+   "options": "Employee"
   },
   {
    "fieldname": "lead_datails",
@@ -130,7 +121,7 @@
   {
    "fieldname": "visa_and_education_details_section",
    "fieldtype": "Section Break",
-   "label": "Visa And Education Details"
+   "label": "Visa Details"
   },
   {
    "fieldname": "visa_status",
@@ -147,84 +138,72 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "social_links",
-   "fieldtype": "Link",
-   "label": "Social Links",
-   "options": "Lead Social Links"
-  },
-  {
-   "fieldname": "university",
-   "fieldtype": "Link",
-   "label": "University",
-   "options": "Lead University",
-   "reqd": 1
-  },
-  {
-   "fieldname": "section_break_iiqs",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "course_detail",
-   "fieldtype": "Table",
-   "label": "Course Detail",
-   "options": "Lead Course",
-   "reqd": 1
-  },
-  {
    "fieldname": "past_and_aspirational_job_details_section",
    "fieldtype": "Section Break",
-   "label": "Past And Aspirational Job Details"
-  },
-  {
-   "fieldname": "past_experience_year",
-   "fieldtype": "Int",
-   "label": "Past Experience Year"
-  },
-  {
-   "fieldname": "past_experience_company",
-   "fieldtype": "Data",
-   "label": "Past Experience Company"
-  },
-  {
-   "fieldname": "past_experience_job_role",
-   "fieldtype": "Data",
-   "label": "Past Experience Job Role"
-  },
-  {
-   "fieldname": "past_experience_descreption",
-   "fieldtype": "Data",
-   "label": "Past Experience Descreption"
+   "label": "Aspirational Job Details"
   },
   {
    "fieldname": "column_break_xsed",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "past_resume",
-   "fieldtype": "Attach",
-   "label": "Past Resume"
-  },
-  {
-   "fieldname": "espiring_job_role",
-   "fieldtype": "Data",
-   "label": "Espiring Job Role"
-  },
-  {
-   "fieldname": "espiring_company",
-   "fieldtype": "Data",
-   "label": "Espiring Company"
-  },
-  {
    "fieldname": "expected_ctc",
    "fieldtype": "Int",
    "label": "Expected CTC",
    "non_negative": 1
+  },
+  {
+   "fieldname": "past_experience",
+   "fieldtype": "Table",
+   "options": "Lead Past Experience"
+  },
+  {
+   "fieldname": "aspiring_job_role",
+   "fieldtype": "Link",
+   "label": "Aspiring Job Role",
+   "options": "Lead Job Role"
+  },
+  {
+   "fieldname": "aspiring_company",
+   "fieldtype": "Link",
+   "label": "Aspiring Company",
+   "options": "Lead Company"
+  },
+  {
+   "fieldname": "social_links",
+   "fieldtype": "Small Text",
+   "label": "Social Links"
+  },
+  {
+   "fieldname": "education_details_section",
+   "fieldtype": "Section Break",
+   "label": "Education Details"
+  },
+  {
+   "fieldname": "education_table",
+   "fieldtype": "Table",
+   "options": "Lead Course"
+  },
+  {
+   "fieldname": "past_experience_section",
+   "fieldtype": "Section Break",
+   "label": "Past Experience"
+  },
+  {
+   "fieldname": "column_break_vipi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Link",
+   "label": "Lead Source",
+   "options": "Lead Source"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 11:22:40.692575",
+ "modified": "2025-11-15 17:16:54.268796",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -245,7 +224,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "name1",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "name1"
 }

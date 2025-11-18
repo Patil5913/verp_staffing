@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestLeadSocialLinksName(FrappeTestCase):
+class TestLeadPastExperience(FrappeTestCase):
 	pass

@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class LeadSocialLinks(Document):
+class LeadPastExperience(Document):
 	pass
