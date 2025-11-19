@@ -11,7 +11,8 @@
   "outsource",
   "note_tab",
   "notes_html",
-  "notes"
+  "activities_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -53,18 +54,20 @@
    "label": "Notes Html"
   },
   {
-   "fieldname": "notes",
-   "fieldtype": "Table",
-   "hidden": 1,
-   "label": "Notes",
-   "no_copy": 1,
-   "options": "CRM Note"
+   "fieldname": "activities_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activities"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML",
+   "label": "Open Activities HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 17:48:06.668845",
+ "modified": "2025-11-18 12:50:42.148618",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
