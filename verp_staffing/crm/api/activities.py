@@ -11,29 +11,53 @@ def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
     if not reference_doctype or not reference_name:
         return {"tasks": [], "events": []}
 
-    # Tasks: where is_completed != 1
+    current_user = frappe.session.user
+    user_roles = frappe.get_roles(current_user)
+
+    is_employee = "employee" in user_roles
+
+   # Base AND filters
+    task_filters = {
+        "reference_doctype": reference_doctype,
+        "related_to": reference_name,
+        "is_completed": 0
+    }
+
+    event_filters = {
+        "reference_doctype": reference_doctype,
+        "related_to": reference_name
+    }
+
+    # OR filters ONLY if employee
+    task_or_filters = []
+    event_or_filters = []
+
+    if is_employee:
+        task_or_filters = [
+            ["assigned_to", "=", current_user],
+            ["owner", "=", current_user]
+        ]
+
+        event_or_filters = [
+            ["assigned_to", "=", current_user],
+            ["owner", "=", current_user]
+        ]
+
     tasks = frappe.get_all(
         "CRM Task",
-        filters=[
-            ["reference_doctype", "=", reference_doctype],
-            ["related_to", "=", reference_name],
-            ["is_completed", "=", 0]
-        ],
-        fields=["name", "description", "date", "assigned_to", "is_completed"],
+        filters=task_filters,
+        or_filters=task_or_filters,    
+        fields=[ "description", "date", "assigned_to", "is_completed"],
         order_by="date asc",
         limit_page_length=int(limit),
         start=int(start)
     )
 
-    # Events: upcoming events (date >= now) OR show next few
-    now = now_datetime()
     events = frappe.get_all(
         "CRM Event",
-        filters=[
-            ["reference_doctype", "=", reference_doctype],
-            ["related_to", "=", reference_name],
-        ],
-        fields=["name", "category", "date", "summary", "assigned_to"],
+        filters=event_filters,
+        or_filters=event_or_filters,    
+        fields=["category","description", "summary", "date", "assigned_to"],
         order_by="date asc",
         limit_page_length=int(limit),
         start=int(start)
