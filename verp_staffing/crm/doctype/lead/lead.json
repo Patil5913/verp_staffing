@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:name1",
  "creation": "2025-11-14 15:24:45.052361",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -22,10 +23,7 @@
   "address",
   "city",
   "state",
-  "visa_and_education_details_section",
   "visa_status",
-  "column_break_hfab",
-  "visa_discreption",
   "education_details_section",
   "education_table",
   "past_experience_section",
@@ -48,18 +46,20 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Name",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "gender",
    "fieldtype": "Select",
    "label": "Gender",
-   "options": "Male\nFemale"
+   "options": "\nMale\nFemale\nNot Specified"
   },
   {
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Open\nLead\nInterested\nDo Not Contact\nLost"
   },
@@ -92,6 +92,7 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Email"
   },
   {
@@ -119,23 +120,9 @@
    "label": "State"
   },
   {
-   "fieldname": "visa_and_education_details_section",
-   "fieldtype": "Section Break",
-   "label": "Visa Details"
-  },
-  {
    "fieldname": "visa_status",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "label": "Visa Status"
-  },
-  {
-   "fieldname": "visa_discreption",
-   "fieldtype": "Data",
-   "label": "Visa Discreption"
-  },
-  {
-   "fieldname": "column_break_hfab",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "past_and_aspirational_job_details_section",
@@ -203,10 +190,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 17:16:54.268796",
+ "modified": "2025-11-19 17:20:34.311793",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

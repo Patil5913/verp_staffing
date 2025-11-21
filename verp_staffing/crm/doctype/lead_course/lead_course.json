@@ -15,30 +15,27 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Name",
-   "options": "Lead Course Name",
-   "reqd": 1
+   "options": "Lead Course Name"
   },
   {
    "fieldname": "specialization",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Specialization",
-   "options": "Lead Course Specialization",
-   "reqd": 1
+   "options": "Lead Course Specialization"
   },
   {
    "fieldname": "university",
    "fieldtype": "Link",
    "label": "University",
-   "options": "Lead University",
-   "reqd": 1
+   "options": "Lead University"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-15 15:20:44.526773",
+ "modified": "2025-11-17 11:18:58.591994",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Course",
