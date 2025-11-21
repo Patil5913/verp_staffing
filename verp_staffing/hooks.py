@@ -149,12 +149,17 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"hourly": [
-# 		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-#         "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
-# 	],
-# }
+scheduler_events = {
+	"hourly": [
+		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
+	],
+    "cron": {
+        "*/15 * * * *": [
+            "verp_staffing.crm.api.event_remainders.send_event_reminders"
+        ]
+    }
+}
 
 # Testing
 # -------
@@ -168,6 +173,7 @@ override_whitelisted_methods = {
 	"frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
 }
 #
+
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
@@ -233,4 +239,3 @@ override_whitelisted_methods = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
