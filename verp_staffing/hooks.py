@@ -154,6 +154,11 @@ scheduler_events = {
 		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
         "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
 	],
+    "cron": {
+        "*/15 * * * *": [
+            "verp_staffing.crm.api.event_remainders.send_event_reminders"
+        ]
+    }
 }
 
 # Testing
