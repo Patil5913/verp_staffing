@@ -168,6 +168,7 @@ scheduler_events = {
 # 	"frappe.desk.doctype.event.event.get_events": "verp_staffing.event.get_events"
 # }
 #
+
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
