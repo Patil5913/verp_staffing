@@ -191,10 +191,12 @@ override_whitelisted_methods = {
 
 # Request Events
 # ----------------
-# before_request = [
-#     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-#     "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
-# ]
+before_request = [
+    "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+    "verp_staffing.vrugle_staffing_erp.utils.quota.show_expiry_warning",
+    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
+]
+
 # after_request = ["verp_staffing.utils.after_request"]
 
 # Job Events
