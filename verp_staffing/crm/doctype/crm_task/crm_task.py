@@ -25,6 +25,24 @@ def send_assignment_notification(doc):
     if not doc.assigned_to:
         return
 
+        # Notification Message
+    message = f"""
+    ⏰ Task Assigned: <b>{doc.description}</b> on {doc.date}<br><br>
+    <a href="/app/crm-task/{doc.name}" target="_blank">
+    👉 Open Task!!
+    </a>
+    """
+
+    frappe.get_doc({
+            "doctype": "Notification Log",
+            "subject": f"You Have been Assigned a task on {doc.date}",
+            "email_content": message,
+            "for_user": doc.assigned_to,
+            "document_type": "CRM Task",
+            "document_name": doc.name,
+            "type": "Alert"
+        }).insert(ignore_permissions=True)
+
     frappe.publish_realtime(
         event="msgprint",
         message=f"You have been assigned a new Task: <b>{doc.description}</b>",

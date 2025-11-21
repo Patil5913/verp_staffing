@@ -47,7 +47,7 @@ def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
         "CRM Task",
         filters=task_filters,
         or_filters=task_or_filters,    
-        fields=[ "description", "date", "assigned_to", "is_completed"],
+        fields=[ "description","name", "date", "assigned_to", "is_completed"],
         order_by="date asc",
         limit_page_length=int(limit),
         start=int(start)
@@ -57,7 +57,7 @@ def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
         "CRM Event",
         filters=event_filters,
         or_filters=event_or_filters,    
-        fields=["category","description", "summary", "date", "assigned_to"],
+        fields=["category","description","name", "summary", "date", "assigned_to"],
         order_by="date asc",
         limit_page_length=int(limit),
         start=int(start)

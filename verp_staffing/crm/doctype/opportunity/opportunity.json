@@ -18,7 +18,11 @@
   "opportunity_value_section",
   "currency",
   "column_break_yvzt",
-  "opportunity_amount"
+  "opportunity_amount",
+  "note_tab",
+  "notes_html",
+  "activities_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -106,12 +110,32 @@
    "label": "Party",
    "options": "opportunity_from",
    "reqd": 1
+  },
+  {
+   "fieldname": "note_tab",
+   "fieldtype": "Tab Break",
+   "label": "Note"
+  },
+  {
+   "fieldname": "activities_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activities"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes Html"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML",
+   "label": "Open Activities HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 16:39:36.183710",
+ "modified": "2025-11-21 12:21:53.470167",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",

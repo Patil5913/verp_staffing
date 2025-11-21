@@ -30,6 +30,7 @@
    "fieldtype": "Datetime",
    "label": "Added On",
    "read_only": 1,
+   "hidden": 1,
    "in_list_view": 1
   },
    {
@@ -38,6 +39,7 @@
    "label": "Reference Doctype",
    "options": "DocType",
    "reqd": 1,
+   "hidden": 1,
    "in_list_view": 1
   },
   {
@@ -46,6 +48,7 @@
    "label": "Reference Name",
    "options": "reference_doctype",
    "reqd": 1,
+            "hidden": 1,
    "in_list_view": 1
   }
  ],

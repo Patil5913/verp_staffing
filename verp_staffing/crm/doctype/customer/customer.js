@@ -238,7 +238,6 @@ function render_activity_section(frm) {
         callback: function (r) {
             let tasks = r.message.tasks;
             let events = r.message.events;
-
             let html = `
             <div style="display:flex; gap:20px;">
                 
@@ -327,8 +326,7 @@ function render_task_card(t, frm) {
             <b>${t.description}</b><br>
             <small>Due: ${t.date || "No date"} | Assigned: ${t.assigned_to || "N/A"}</small>
         </div>
-
-        <button class="btn btn-xs btn-secondary edit-task-btn" onclick="open_edit_task_dialog('${t.name}', '${frm}')">Edit</button>
+        <button class="btn btn-xs btn-secondary edit-task-btn"">Edit</button>
         <button class="btn btn-xs btn-secondary delete-task-btn text-danger">Delete</button>
 
     </div>
