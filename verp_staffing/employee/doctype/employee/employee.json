@@ -41,7 +41,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Designation",
-   "options": "employee\nmanager\nmaster_manager",
+   "options": "employee\nmanager\nmaster_manager\nCEO\nCTO\nfounder",
    "reqd": 1
   },
   {
@@ -71,7 +71,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 15:50:09.303285",
+ "modified": "2025-11-17 11:10:05.727234",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",

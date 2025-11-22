@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "verp_staffing.install.before_install"
-# after_install = "verp_staffing.install.after_install"
+after_install = "verp_staffing.install.after_install"
 
 # Uninstallation
 # ------------
@@ -169,16 +169,15 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "verp_staffing.event.get_events"
-# }
+override_whitelisted_methods = {
+	"frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
+}
 #
 
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "verp_staffing.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -194,8 +193,10 @@ scheduler_events = {
 # ----------------
 before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+    "verp_staffing.vrugle_staffing_erp.utils.quota.show_expiry_warning",
     "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
 ]
+
 # after_request = ["verp_staffing.utils.after_request"]
 
 # Job Events

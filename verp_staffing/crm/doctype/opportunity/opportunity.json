@@ -135,7 +135,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-21 12:21:53.470167",
+ "modified": "2025-11-17 11:25:01.490810",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -156,7 +156,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "party_name",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "party_name"
 }

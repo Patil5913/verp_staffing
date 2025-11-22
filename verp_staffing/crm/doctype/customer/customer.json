@@ -18,8 +18,11 @@
   {
    "fieldname": "opportunity",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Opportunity",
-   "options": "Opportunity"
+   "options": "Opportunity",
+   "reqd": 1,
+   "unique": 1
   },
   {
    "default": "Open",
@@ -34,8 +37,7 @@
    "fieldname": "payment_terms",
    "fieldtype": "Table",
    "label": "Payment Terms",
-   "options": "Customer Payment Terms",
-   "reqd": 1
+   "options": "Customer Payment Terms"
   },
   {
    "fieldname": "outsource",
@@ -88,9 +90,12 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "opportunity",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1,
- "track_views": 1
+ "track_views": 1,
+ "title_field": "opportunity"
 }
