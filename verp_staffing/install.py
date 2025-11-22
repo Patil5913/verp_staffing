@@ -4,7 +4,7 @@ def after_install():
     seed_sales_stages()
     create_role("Lead Employee")
     set_role_permissions("Lead Employee", "Lead", ["create", "read", "write"])
-
+    remove_default_workspaces()
 
 def seed_sales_stages():
     doctype = "Sales Stage"
@@ -74,3 +74,20 @@ def set_role_permissions(role, doctype, perms):
 
     # Clear cache so permissions apply immediately
     frappe.clear_cache(doctype=doctype)
+
+def remove_default_workspaces():
+    print("Hiding all workspaces except CRM and Users...")
+
+    # Names of workspaces to keep visible
+    keep_list = ["CRM", "Users"]
+
+    # Hide all others
+    frappe.db.sql("""
+        UPDATE `tabWorkspace`
+        SET is_hidden = 1
+        WHERE name NOT IN ({})
+    """.format(", ".join(["%s"] * len(keep_list))), tuple(keep_list))
+
+    frappe.db.commit()
+
+    print("Workspaces updated successfully.")
