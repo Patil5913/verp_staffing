@@ -32,7 +32,7 @@ frappe.ui.form.on("Lead", {
 
         const roles = frappe.user_roles
 
-        if (roles.includes("Extra Menu Item Show")) {
+        if (roles.includes("Extra Menu Item Not Show")) {
             /* ----------------------------------------------------
                GENERIC REUSABLE HIDE FUNCTION
             ---------------------------------------------------- */

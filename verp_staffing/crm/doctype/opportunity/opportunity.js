@@ -47,7 +47,7 @@ frappe.ui.form.on("Opportunity", {
 
         const roles = frappe.user_roles
 
-        if (roles.includes("Extra Menu Item Show")) {
+        if (roles.includes("Extra Menu Item Not Show")) {
             /* ----------------------------------------------------
                GENERIC REUSABLE HIDE FUNCTION
             ---------------------------------------------------- */
