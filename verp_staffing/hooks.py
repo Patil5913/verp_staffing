@@ -84,6 +84,7 @@ app_license = "mit"
 
 # before_install = "verp_staffing.install.before_install"
 after_install = "verp_staffing.install.after_install"
+after_migrate = "verp_staffing.migrate.after_migrate"
 
 # Uninstallation
 # ------------
@@ -241,3 +242,7 @@ before_request = [
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
+
+fixtures = [
+    {"doctype": "Workspace"},
+]
