@@ -7,10 +7,9 @@ from frappe.model.naming import make_autoname
 from frappe.utils import today
 
 class Employee(Document):
-
     def validate(self):
         self.validate_hierarchy()
-
+    
     def autoname(self):
         # Get today's date in YYYY-MM-DD
         date_str = today()
@@ -72,13 +71,18 @@ def get_master_manager_filter(doctype, txt, searchfield, start, page_len, filter
 
 
 @frappe.whitelist()
-def get_available_users(doctype, txt, searchfield, start, page_len, filters):
-    return frappe.db.sql("""
-        SELECT name, full_name
-        FROM `tabUser`
-        WHERE enabled = 1
-          AND name NOT IN (SELECT user FROM `tabEmployee` WHERE user IS NOT NULL)
-          AND name NOT IN ('Administrator', 'Guest')
-          AND (name LIKE %s OR full_name LIKE %s)
-        LIMIT %s OFFSET %s
-    """, (f"%{txt}%", f"%{txt}%", page_len, start))
+def get_users_not_linked_to_employee(doctype, txt, searchfield, start, page_len, filters):
+    # Get users already mapped in Employee
+    assigned_users = frappe.get_all("Employee", pluck="user")
+
+    # Return only users NOT assigned in Employee
+    user_list = frappe.get_all(
+        "User",
+        filters={"name": ["not in", assigned_users]},
+        fields=["name"],
+        start=start,
+        page_length=page_len,
+        order_by="name asc"
+    )
+
+    return [(u["name"], ) for u in user_list]
