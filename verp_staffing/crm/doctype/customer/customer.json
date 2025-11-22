@@ -6,8 +6,11 @@
  "engine": "InnoDB",
  "field_order": [
   "opportunity",
+  "column_break_emkf",
   "status",
+  "payment_terms_section",
   "payment_terms",
+  "out_source_section",
   "outsource",
   "note_tab",
   "notes_html",
@@ -36,13 +39,11 @@
   {
    "fieldname": "payment_terms",
    "fieldtype": "Table",
-   "label": "Payment Terms",
    "options": "Customer Payment Terms"
   },
   {
    "fieldname": "outsource",
    "fieldtype": "Table",
-   "label": "Outsource",
    "options": "Outsource"
   },
   {
@@ -64,12 +65,26 @@
    "fieldname": "open_activities_html",
    "fieldtype": "HTML",
    "label": "Open Activities HTML"
+  },
+  {
+   "fieldname": "column_break_emkf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_terms_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Terms"
+  },
+  {
+   "fieldname": "out_source_section",
+   "fieldtype": "Section Break",
+   "label": "Out Source"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-18 12:50:42.148618",
+ "modified": "2025-11-22 14:44:32.938789",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -95,7 +110,7 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "opportunity",
  "track_changes": 1,
- "track_views": 1,
- "title_field": "opportunity"
+ "track_views": 1
 }

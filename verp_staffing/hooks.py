@@ -84,7 +84,10 @@ app_license = "mit"
 
 # before_install = "verp_staffing.install.before_install"
 after_install = "verp_staffing.install.after_install"
-after_migrate = "verp_staffing.migrate.after_migrate"
+after_migrate = [
+    "verp_staffing.migrate.after_migrate",
+    "verp_staffing.install.after_install"
+    ]
 
 # Uninstallation
 # ------------

@@ -24,6 +24,9 @@ frappe.ui.form.on("Opportunity", {
 
     refresh(frm) {
         frm.trigger("opportunity_from");
+        render_notes(frm);
+        add_note_button(frm);
+        render_activity_section(frm);
 
         frm.add_custom_button(__("Create Customer"), function () {
             open_create_customer_dialog(frm);
@@ -146,13 +149,6 @@ frappe.ui.form.on("Opportunity", {
         if (frm.doc.opportunity_from) {
             frm.set_df_property("party_name", "label", frm.doc.opportunity_from);
         }
-    },
-
-    refresh: function (frm) {
-        frm.trigger("opportunity_from");
-        render_notes(frm);
-        add_note_button(frm);
-        render_activity_section(frm);
     },
 
     party_name: function (frm) {
