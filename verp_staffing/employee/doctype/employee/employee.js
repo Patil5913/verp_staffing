@@ -3,10 +3,10 @@
 
 frappe.ui.form.on("Employee", {
 refresh(frm) {
-        frm.set_query("user", function () {
-            return {
-                query: "verp_staffing.employee.doctype.employee.employee.get_available_users"
-            };
+        frm.set_query("user", function() {
+            return{
+                query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee"
+            }
         });
 
         frm.set_query("manager", function () {
@@ -67,3 +67,4 @@ refresh(frm) {
     });
 }
 });
+

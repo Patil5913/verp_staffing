@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "field:name1",
  "creation": "2025-11-15 15:59:18.700543",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -13,16 +13,18 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Name",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 15:59:53.369825",
+ "modified": "2025-11-18 11:30:12.070898",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales Stage",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

@@ -73,8 +73,13 @@ def site_expiry_check():
     if expiry_date:
         today = datetime.today().date()
         expiry = datetime.strptime(expiry_date, "%Y-%m-%d").date()
+
         if today > expiry:
             enable_archive_mode()
+
+            if frappe.session.user and frappe.session.user != "Administrator":
+                frappe.msgprint("Site expired. Only Administrator can login.")
+                frappe.local.login_manager.logout()
 
 
 # enable archive mode
@@ -83,8 +88,55 @@ def enable_archive_mode():
     update_site_config("archive_mode", True)
 
 
+def show_expiry_warning():
+    from datetime import datetime
+    import frappe
+
+    quota = frappe.get_site_config().get("quota", {})
+    expiry_date = quota.get("expiry_date")
+
+    if not expiry_date:
+        return
+
+    today = datetime.today().date()
+    expiry = datetime.strptime(expiry_date, "%Y-%m-%d").date()
+
+    # Not expired
+    if today > expiry:
+        return
+
+    days_left = (expiry - today).days
+
+    # Only last 7 days
+    if days_left > 7:
+        return
+
+    # → Use cookie to show popup once per day
+    cookie_key = "expiry_warning_shown"
+    last_seen = frappe.request.cookies.get(cookie_key)
+
+    if last_seen == str(today):
+        return  # already shown today
+
+    # Show popup
+    frappe.msgprint(
+        f"<b>Warning:</b> Your site will expire on <b>{expiry}</b>. "
+        "Please renew before expiry.",
+        indicator="yellow",
+        alert=True
+    )
+
+    # Set cookie for today (1 day expiry)
+    frappe.local.cookie_manager.set_cookie(cookie_key, str(today))
+
+
 # block non admin login in archive mode
 def block_non_admin():
-    if frappe.local.conf.get("archive_mode"):
-        if frappe.session.user != "Administrator":
-            frappe.throw("This site is in archive mode. Only Administrator can login.")
+    if not frappe.local.conf.get("archive_mode"):
+        return
+
+    # Allow Administrator always
+    if frappe.session.user != "Administrator":
+        # For any other logged-in user → block
+        frappe.msgprint("Site expired.")
+        frappe.local.login_manager.logout()

@@ -4,6 +4,25 @@ from frappe.model.document import Document
 from frappe.utils import now_datetime
 
 class CRMTask(Document):
+    def validate(self):
+        user = frappe.session.user
+
+        # Allow System Manager full access
+        if "System Manager" in frappe.get_roles(user):
+            return
+
+        # Check if assigned user is allowed to update
+        if self.assigned_to != user:
+            frappe.throw("You are not allowed to update this task. Only the assigned user or System Manager can modify it.")
+
+        # Restrict editing only to certain fields
+        if not self.is_new():
+            old = frappe.get_doc(self.doctype, self.name)
+
+            # If user tries to change anything except `date` or `is_completed`, block it
+            if old.description != self.description or old.assigned_to != self.assigned_to:
+                frappe.throw("You can only update Date and Completion status.")
+
     def before_insert(self):
         # set owner as assigned_to if not provided
         if not self.assigned_to:
@@ -24,6 +43,24 @@ class CRMTask(Document):
 def send_assignment_notification(doc):
     if not doc.assigned_to:
         return
+
+        # Notification Message
+    message = f"""
+    ⏰ Task Assigned: <b>{doc.description}</b> on {doc.date}<br><br>
+    <a href="/app/crm-task/{doc.name}" target="_blank">
+    👉 Open Task!!
+    </a>
+    """
+
+    frappe.get_doc({
+            "doctype": "Notification Log",
+            "subject": f"You Have been Assigned a task on {doc.date}",
+            "email_content": message,
+            "for_user": doc.assigned_to,
+            "document_type": "CRM Task",
+            "document_name": doc.name,
+            "type": "Alert"
+        }).insert(ignore_permissions=True)
 
     frappe.publish_realtime(
         event="msgprint",

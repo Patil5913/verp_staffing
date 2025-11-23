@@ -21,7 +21,21 @@ class CRMEvent(Document):
 def send_assignment_notification(doc):
     if not doc.assigned_to:
         return
-
+    message = f"""
+    ⏰ Event Assigned: <b>{doc.category}</b> at {doc.date}<br><br>
+    <a href="/app/crm-event/{doc.name}" target="_blank">
+    👉 Open Event!!
+    </a>
+    """
+    frappe.get_doc({
+        "doctype": "Notification Log",
+        "subject": f"Event Assigned: {doc.category} at {doc.date}",
+        "email_content": message,
+        "for_user": doc.assigned_to,
+        "document_type": "CRM Event",
+        "document_name": doc.name,
+        "type": "Alert"
+    }).insert(ignore_permissions=True)
     frappe.publish_realtime(
         event="msgprint",
         message=f"You have a new Event: <b>{doc.summary}</b>",

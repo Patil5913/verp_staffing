@@ -1,15 +1,19 @@
 {
     "actions": [],
+    "allow_import": 1,
     "allow_rename": 1,
     "creation": "2025-11-18 15:27:24.031825",
     "doctype": "DocType",
     "editable_grid": 1,
-    "allow_import": 1,
-    "track_changes": 1,
-    "track_seen": 1,
     "engine": "InnoDB",
     "field_order": [
-        "section_break_6pt3"
+        "section_break_6pt3",
+        "description",
+        "date",
+        "assigned_to",
+        "related_to",
+        "reference_doctype",
+        "is_completed"
     ],
     "fields": [
         {
@@ -18,45 +22,48 @@
         },
         {
             "fieldname": "description",
-            "label": "Description",
-            "fieldtype": "Small Text"
+            "fieldtype": "Small Text",
+            "label": "Description"
         },
         {
             "fieldname": "date",
-            "label": "Date",
             "fieldtype": "Datetime",
-            "in_list_view": 1
+            "in_list_view": 1,
+            "label": "Date"
         },
         {
             "fieldname": "assigned_to",
-            "label": "Assigned To",
             "fieldtype": "Link",
-            "options": "User",
-            "in_list_view": 1
+            "in_list_view": 1,
+            "label": "Assigned To",
+            "options": "User"
         },
         {
             "fieldname": "related_to",
-            "label": "Related To",
             "fieldtype": "Dynamic Link",
+            "label": "Related To",
+            "hidden": 1,
             "options": "reference_doctype"
         },
         {
             "fieldname": "reference_doctype",
-            "label": "Reference Doctype",
             "fieldtype": "Link",
+            "hidden": 1,
+            "label": "Reference Doctype",
             "options": "DocType"
         },
         {
+            "default": "0",
             "fieldname": "is_completed",
-            "label": "Is Completed",
             "fieldtype": "Check",
-            "in_list_view": 1
+            "in_list_view": 1,
+            "label": "Is Completed"
         }
     ],
     "grid_page_length": 50,
     "index_web_pages_for_search": 1,
     "links": [],
-    "modified": "2025-11-18 15:27:24.031825",
+    "modified": "2025-11-21 12:16:36.575872",
     "modified_by": "Administrator",
     "module": "CRM",
     "name": "CRM Task",
@@ -79,5 +86,7 @@
     "rows_threshold_for_grid_search": 20,
     "sort_field": "modified",
     "sort_order": "DESC",
-    "states": []
+    "states": [],
+    "track_changes": 1,
+    "track_seen": 1
 }
