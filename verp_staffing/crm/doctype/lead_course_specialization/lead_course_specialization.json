@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:name1",
  "creation": "2025-11-14 16:15:46.346909",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -13,16 +14,18 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Name",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 11:22:09.300870",
+ "modified": "2025-11-24 15:44:30.388301",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Course Specialization",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

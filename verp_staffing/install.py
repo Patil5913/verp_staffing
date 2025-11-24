@@ -33,6 +33,7 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
+        "Sales Stage": ["read", "create"],
     },
 
     "Sales Manager" :{
@@ -40,6 +41,7 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
+        "Sales Stage": ["read", "create"],
     },
 
     "Sales Master Manager" :{
@@ -47,6 +49,7 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
+        "Sales Stage": ["read", "create"],
     },
 
     "HR": {
@@ -58,9 +61,11 @@ ROLE_PERMISSIONS = {
 
 def after_install():
     seed_sales_stages()
+    seed_employee_departments()
     create_all_roles()
     set_all_role_permissions()
     remove_default_workspaces()
+
 
 def seed_sales_stages():
     doctype = "Sales Stage"
@@ -71,6 +76,19 @@ def seed_sales_stages():
             doc = frappe.get_doc({
                 "doctype": doctype,
                 "name1": stage,
+            })
+            doc.insert(ignore_permissions=True)
+
+
+def seed_employee_departments():
+    doctype = "Department"
+    departments = ["Lead", "Sales", "Resume", "Technical", "Marketing", "HR"]
+
+    for dept in departments:
+        if not frappe.db.exists(doctype, dept):
+            doc = frappe.get_doc({
+                "doctype": doctype,
+                "department_name": dept,
             })
             doc.insert(ignore_permissions=True)
             

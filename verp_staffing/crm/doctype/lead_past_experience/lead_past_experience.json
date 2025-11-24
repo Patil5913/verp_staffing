@@ -6,9 +6,11 @@
  "engine": "InnoDB",
  "field_order": [
   "year",
-  "company",
-  "job_role",
   "description",
+  "column_break_eyme",
+  "job_role",
+  "company",
+  "column_break_htfj",
   "resume"
  ],
  "fields": [
@@ -39,13 +41,21 @@
    "fieldname": "resume",
    "fieldtype": "Attach",
    "label": "Resume"
+  },
+  {
+   "fieldname": "column_break_eyme",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_htfj",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-15 15:03:55.861331",
+ "modified": "2025-11-24 15:48:21.993158",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Past Experience",
