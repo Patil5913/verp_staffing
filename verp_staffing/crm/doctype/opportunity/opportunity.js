@@ -25,7 +25,6 @@ frappe.ui.form.on("Opportunity", {
     refresh(frm) {
         frm.trigger("opportunity_from");
         render_notes(frm);
-        add_note_button(frm);
         render_activity_section(frm);
 
         frm.add_custom_button(__("Create Customer"), function () {
@@ -189,6 +188,38 @@ frappe.ui.form.on("Opportunity", {
 
 
 function open_create_customer_dialog(frm) {
+     if (!frm.doc.agreement) {
+        frappe.msgprint({
+            title: "Agreement Missing",
+            message: "Please upload the Agreement before proceeding.",
+            indicator: "red"
+        });
+        return;
+    }
+        // CHECK 2: Payment Terms Table Exists and Has Checked Rows
+    const payment_terms = frm.doc.table_lprg || [];
+
+    if (payment_terms.length === 0) {
+        frappe.msgprint({
+            title: "Payment Terms Required",
+            message: "Please add at least one Payment Term with Received checked.",
+            indicator: "red"
+        });
+        return;
+    }
+
+    // Find if at least one row has is_received checked
+    const hasReceivedChecked = payment_terms.some(row => row.is_received === 1 || row.is_received === true);
+
+    if (!hasReceivedChecked) {
+        frappe.msgprint({
+            title: "Pending Payment",
+            message: "At least one payment term must be marked as Received.",
+            indicator: "red"
+        });
+        return;
+    }
+
     // check if document is saved
     if (frm.is_dirty()) {
         frappe.msgprint({
@@ -263,15 +294,6 @@ function create_customer_from_opportunity(frm) {
 }
 
 //notes and activity section
-function add_note_button(frm) {
-    frm.add_custom_button(__("Add Note"), function () {
-        frappe.new_doc("Note", {
-            reference_doctype: "Opportunity",
-            reference_name: frm.doc.name,
-            public: 0
-        });
-    }, __("Create"));
-}
 
 function render_notes(frm) {
     const $wrapper = frm.get_field("notes_html")?.$wrapper;

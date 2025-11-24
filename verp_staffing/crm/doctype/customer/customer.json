@@ -8,8 +8,14 @@
   "opportunity",
   "column_break_emkf",
   "status",
-  "payment_terms_section",
-  "payment_terms",
+  "section_break_roxl",
+  "lead_details",
+  "sales_tab",
+  "sales_content",
+  "technical_tab",
+  "technical_content",
+  "marketing_tab",
+  "marketing_content",
   "out_source_section",
   "outsource",
   "note_tab",
@@ -35,11 +41,6 @@
    "label": "Status",
    "options": "Open\nForm Filled\nTech Department\nMarketing Department",
    "reqd": 1
-  },
-  {
-   "fieldname": "payment_terms",
-   "fieldtype": "Table",
-   "options": "Customer Payment Terms"
   },
   {
    "fieldname": "outsource",
@@ -71,20 +72,54 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "payment_terms_section",
-   "fieldtype": "Section Break",
-   "label": "Payment Terms"
-  },
-  {
    "fieldname": "out_source_section",
    "fieldtype": "Section Break",
    "label": "Out Source"
+  },
+  {
+   "fieldname": "sales_tab",
+   "fieldtype": "Tab Break",
+   "label": "Sales"
+  },
+  {
+   "fieldname": "sales_content",
+   "fieldtype": "HTML",
+   "label": "Sales Content"
+  },
+  {
+   "fieldname": "technical_tab",
+   "fieldtype": "Tab Break",
+   "label": "Technical"
+  },
+  {
+   "fieldname": "technical_content",
+   "fieldtype": "HTML",
+   "label": "Technical Content"
+  },
+  {
+   "fieldname": "marketing_tab",
+   "fieldtype": "Tab Break",
+   "label": "Marketing"
+  },
+  {
+   "fieldname": "marketing_content",
+   "fieldtype": "HTML",
+   "label": "Marketing Content"
+  },
+  {
+   "fieldname": "section_break_roxl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML",
+   "label": "Lead Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-22 14:44:32.938789",
+ "modified": "2025-11-24 15:04:47.781817",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
