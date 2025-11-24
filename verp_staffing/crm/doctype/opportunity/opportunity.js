@@ -134,6 +134,7 @@ frappe.ui.form.on("Opportunity", {
         }
     },
 
+
     setup: function (frm) {
         frm.set_query("opportunity_from", function () {
             return {
@@ -143,7 +144,6 @@ frappe.ui.form.on("Opportunity", {
             };
         });
     },
-
 
     opportunity_from: function (frm) {
         if (frm.doc.opportunity_from) {

@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "opportunity",
+  "title",
   "column_break_emkf",
   "status",
   "payment_terms_section",
@@ -21,7 +22,6 @@
   {
    "fieldname": "opportunity",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Opportunity",
    "options": "Opportunity",
    "reqd": 1,
@@ -79,12 +79,19 @@
    "fieldname": "out_source_section",
    "fieldtype": "Section Break",
    "label": "Out Source"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-22 14:44:32.938789",
+ "modified": "2025-11-24 14:37:13.625734",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -105,12 +112,12 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "opportunity",
+ "search_fields": "title",
  "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "opportunity",
+ "title_field": "title",
  "track_changes": 1,
  "track_views": 1
 }

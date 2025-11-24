@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:employee_name",
  "creation": "2025-11-14 12:06:33.180575",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -32,8 +33,10 @@
   {
    "fieldname": "department",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Department",
-   "options": "Department"
+   "options": "Department",
+   "reqd": 1
   },
   {
    "default": "employee",
@@ -71,11 +74,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-17 11:10:05.727234",
+ "modified": "2025-11-24 15:50:06.469824",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

@@ -8,6 +8,7 @@
  "field_order": [
   "section_break_shap",
   "department_name",
+  "column_break_ocvi",
   "head_of_department"
  ],
  "fields": [
@@ -28,12 +29,16 @@
    "fieldtype": "Link",
    "label": "Head Of Department",
    "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_ocvi",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-15 10:38:51.603679",
+ "modified": "2025-11-24 14:43:11.390000",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Department",

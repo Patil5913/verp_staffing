@@ -11,6 +11,7 @@
   "column_break_nesv",
   "source",
   "opportunity_owner",
+  "title",
   "column_break_lbgc",
   "sales_stage",
   "expected_closing_date",
@@ -130,12 +131,19 @@
    "fieldname": "open_activities_html",
    "fieldtype": "HTML",
    "label": "Open Activities HTML"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-17 11:25:01.490810",
+ "modified": "2025-11-24 12:35:03.477765",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -156,10 +164,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "party_name",
+ "search_fields": "title",
  "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "party_name"
+ "title_field": "title"
 }
