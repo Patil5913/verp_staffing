@@ -5,9 +5,16 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "course_details_section",
   "name1",
+  "column_break_rvhj",
   "specialization",
-  "university"
+  "column_break_woby",
+  "university",
+  "section_break_pvmq",
+  "start_date",
+  "column_break_izkr",
+  "end_date"
  ],
  "fields": [
   {
@@ -29,13 +36,45 @@
    "fieldtype": "Link",
    "label": "University",
    "options": "Lead University"
+  },
+  {
+   "fieldname": "column_break_rvhj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_woby",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_pvmq",
+   "fieldtype": "Section Break",
+   "label": "Date Information"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Data",
+   "label": "Start Date (MM-YYYY)"
+  },
+  {
+   "fieldname": "column_break_izkr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Data",
+   "label": "End Date (MM-YYYY)"
+  },
+  {
+   "fieldname": "course_details_section",
+   "fieldtype": "Section Break",
+   "label": "Course Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-17 11:18:58.591994",
+ "modified": "2025-11-24 15:18:11.016809",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Course",

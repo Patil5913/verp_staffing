@@ -2,10 +2,10 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Lead", {
-    refresh(frm) {
-        render_notes(frm);
-        add_note_button(frm);
-        render_activity_section(frm);
+    onload(frm) {
+        // Always keep field visible
+        frm.set_df_property("lead_owner", "read_only_onload", 1);
+        // If lead_owner is empty → auto assign employee of logged-in user
         if (!frm.doc.lead_owner) {
             frappe.call({
                 method: "frappe.client.get_value",
@@ -17,14 +17,23 @@ frappe.ui.form.on("Lead", {
                 callback: function (r) {
                     if (r.message) {
                         frm.set_value("lead_owner", r.message.name);
+
+                        // Lock the field so user cannot change
                         frm.set_df_property("lead_owner", "read_only", 1);
                     }
                 },
             });
         } else {
-            // If already set → also make read only
+            // If already set → lock it
             frm.set_df_property("lead_owner", "read_only", 1);
         }
+    },
+
+
+    refresh(frm) {
+        render_notes(frm);
+        add_note_button(frm);
+        render_activity_section(frm);
 
         frm.add_custom_button(__('Opportunity'), () => {
             open_create_opportunity_dialog(frm);
@@ -33,9 +42,7 @@ frappe.ui.form.on("Lead", {
         const roles = frappe.user_roles
 
         if (roles.includes("Extra Menu Item Not Show")) {
-            /* ----------------------------------------------------
-               GENERIC REUSABLE HIDE FUNCTION
-            ---------------------------------------------------- */
+            //    GENERIC REUSABLE HIDE FUNCTION
             const hideElements = ({ selectors = [], keywordSelectors = [], keywords = [] }) => {
                 // Hide specific selectors
                 selectors.forEach(sel => {
@@ -57,9 +64,7 @@ frappe.ui.form.on("Lead", {
                 });
             };
 
-            /* ----------------------------------------------------
-               MENU CLEANUP
-            ---------------------------------------------------- */
+            //    MENU CLEANUP
             const MENU_HIDE = ["Links", "Duplicate", "Copy to Clipboard"];
 
             const cleanMenu = () => {
@@ -77,9 +82,7 @@ frappe.ui.form.on("Lead", {
             // Re-clean when dropdown opens
             $(frm.page.wrapper).on("shown.bs.dropdown", cleanMenu);
 
-            /* ----------------------------------------------------
-               SIDEBAR CLEANUP
-            ---------------------------------------------------- */
+            //    SIDEBAR CLEANUP
             const SIDEBAR_KEYWORDS = ["Assigned", "Share"];
 
             const cleanSidebar = () => {
@@ -96,9 +99,7 @@ frappe.ui.form.on("Lead", {
                 });
             };
 
-            /* ----------------------------------------------------
-               RUN CLEANUP ONCE + SINGLE RETRY TIMER
-            ---------------------------------------------------- */
+            //    RUN CLEANUP ONCE + SINGLE RETRY TIMER
             const runCleanup = () => {
                 cleanMenu();
                 cleanSidebar();
@@ -113,6 +114,30 @@ frappe.ui.form.on("Lead", {
                 runCleanup();
                 if (attempts++ > 12) clearInterval(timer);
             }, 200);
+        }
+    },
+
+    before_save(frm) {
+        let rows = frm.doc.education_table;
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            console.log("No rows in education_table table");
+            return;
+        }
+
+        rows.forEach(row => {
+            validate_mm_yyyy(row.start_date, "Start Date");
+            validate_mm_yyyy(row.end_date, "End Date");
+        });
+
+        function validate_mm_yyyy(value, label) {
+            if (!value) return;
+
+            const regex = /^(0[1-9]|1[0-2])-\d{4}$/;
+
+            if (!regex.test(value)) {
+                frappe.throw(`${label} must be in format MM-YYYY. Invalid value: ${value}`);
+            }
         }
     }
 });
@@ -155,7 +180,14 @@ function open_create_opportunity_dialog(frm) {
                             fieldtype: "Link",
                             options: "Employee",
                             depends_on: "eval:doc.manual_assign == 1",
-                            mandatory_depends_on: "eval:doc.manual_assign == 1"
+                            mandatory_depends_on: "eval:doc.manual_assign == 1",
+                            get_query() {
+                                return {
+                                    filters: {
+                                        department: "Sales" // Only show Sales department employees
+                                    }
+                                };
+                            }
                         }
                     ],
                     primary_action_label: __('Create'),
@@ -186,6 +218,7 @@ function auto_assign_opportunity_owner() {
             method: "frappe.client.get_list",
             args: {
                 doctype: "Employee",
+                filters: { department: "Sales" },
                 fields: ["name"]
             },
             callback: function (empRes) {

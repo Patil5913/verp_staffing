@@ -6,6 +6,11 @@ frappe.ui.form.on("Customer", {
         render_notes(frm);
         add_note_button(frm);
         render_activity_section(frm);
+        toggle_tab_view(frm);
+        render_technical_tab_content(frm);
+        render_marketing_tab_content(frm);
+        render_sales_payment_terms(frm);
+        render_lead_details(frm)
     },
 
 });
@@ -487,5 +492,216 @@ function open_edit_event_dialog(event_name, frm) {
         });
 
         d.show();
+    });
+}
+
+//toogle tab view
+function toggle_tab_view(frm) {
+    frappe.call({
+        method: "frappe.client.get_value",
+        args: {
+            doctype: "Employee",
+            filters: { user: frappe.session.user },
+            fieldname: ["department"]
+        },
+        callback: function (r) {
+            if (!r.message) return;
+
+            const department = r.message.department;
+            // Hide other tabs based on department
+            if (department === "Technical") {
+                frm.toggle_display("sales_tab", false);
+                frm.toggle_display("sales_content", false);
+                frm.toggle_display("marketing_tab", false);
+                frm.toggle_display("marketing_content", false);
+            }
+
+            if (department === "Marketing") {
+                frm.toggle_display("sales_tab", false);
+                frm.toggle_display("sales_content", false);
+                frm.toggle_display("technical_tab", false);
+                frm.toggle_display("technical_content", false);
+            }
+        }
+    });
+}
+// Render sales tab content
+function render_sales_payment_terms(frm) {
+
+    const opportunity = frm.doc.opportunity;
+
+    if (!opportunity) {
+        frm.set_df_property("sales_content", "options",
+            `<p style="color:#888; padding:10px;">No Opportunity linked.</p>`
+        );
+        return;
+    }
+
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Opportunity",
+            name: opportunity
+        },
+        callback(res) {
+            if (!res.message) return;
+
+            let payment_terms = res.message.table_lprg || [];
+
+            if (payment_terms.length === 0) {
+                frm.set_df_property("sales_content", "options",
+                    `<p style="color:#888; padding:10px;">No Payment Terms found.</p>`
+                );
+                return;
+            }
+
+            // Build HTML table
+            let html = `
+                <div style="padding:15px;">
+                <h4 style="margin-bottom:15px;">Payment Terms</h4>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr style="background:#f5f5f5;">
+                        <th style="border:1px solid #ddd; padding:8px;">Amount</th>
+                        <th style="border:1px solid #ddd; padding:8px;">Date</th>
+                        <th style="border:1px solid #ddd; padding:8px;">Received</th>
+                    </tr>
+            `;
+
+            payment_terms.forEach(row => {
+                html += `
+                    <tr>
+                        <td style="border:1px solid #ddd; padding:8px;">₹ ${row.amount || "-"}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">${row.date || "-"}</td>
+                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">
+                            ${row.is_received ? "✔" : "❌"}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</table></div>`;
+
+            frm.set_df_property("sales_content", "options", html);
+        }
+    });
+}
+
+
+// Render technical tab content
+function render_technical_tab_content(frm) {
+    const $wrapper = frm.get_field("technical_content")?.$wrapper;
+    if (!$wrapper) return;
+    $wrapper.html(`<div class="p-3">Technical tab content goes here.</div>`);
+}
+
+// Render marketing tab content
+function render_marketing_tab_content(frm) {
+    const $wrapper = frm.get_field("marketing_content")?.$wrapper;
+    if (!$wrapper) return;
+    $wrapper.html(`<div class="p-3">Marketing tab content goes here.</div>`);
+}
+
+function render_lead_details(frm) {
+    const opportunity = frm.doc.opportunity;
+    if (!opportunity) {
+        frm.set_df_property("lead_details", "options", "<p style='color: gray;'>No opportunity linked</p>");
+        return;
+    }
+
+    frappe.call({
+        method: "frappe.client.get",
+        args: { doctype: "Opportunity", name: opportunity },
+        callback: function (oppty_res) {
+            if (!oppty_res.message || !oppty_res.message.party_name) {
+                frm.set_df_property("lead_details", "options", "<p style='color: gray;'>Lead not found</p>");
+                return;
+            }
+
+            const party_name = oppty_res.message.party_name;
+            const party_doctype = oppty_res.message.opportunity_from;
+
+            frappe.call({
+                method: "frappe.client.get",
+                args: { doctype: party_doctype, name: party_name },
+                callback: function (lead_res) {
+                    if (!lead_res.message) return;
+
+                    const lead = lead_res.message;
+
+                    let html = `
+                    <div style="padding:15px;">
+                        <h4 style="margin-bottom:15px;">Lead Details</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">`;
+
+                    const exclude = [
+                        "doctype", "name", "owner", "modified", "creation", "modified_by",
+                        "docstatus", "_comments", "_assign", "_user_tags", "idx"
+                    ];
+
+                    const fetchLinkValue = (field, value) => {
+                        return frappe.call({
+                            method: "frappe.client.get",
+                            args: { doctype: field.options, name: value },
+                            callback: function (data) {
+                                const finalValue = data.message?.name || value;
+                                $(`#field-${field.fieldname}`).html(finalValue);
+                            }
+                        });
+                    };
+
+                    Object.keys(lead).forEach(key => {
+                        const value = lead[key];
+
+                        if (exclude.includes(key) || value === null || value === "" || key === "past_experience" || key === "education_table") return;
+                        const field = frappe.meta.get_docfield(party_doctype, key);
+                        const label = frappe.model.unscrub(key);
+
+                        if (field && field.fieldtype === "Link") {
+                            html += `
+                            <div style="border:1px solid #e5e5e5; padding:10px; border-radius:8px;">
+                                <strong>${label}</strong><br>
+                                <span id="field-${key}">Loading...</span>
+                            </div>`;
+                            fetchLinkValue(field, value);
+
+                        } else if (typeof value !== "object" && !Array.isArray(value)) {
+                            html += `
+                            <div style="border:1px solid #e5e5e5; padding:10px; border-radius:8px;">
+                                <strong>${label}</strong><br>
+                                <span>${value}</span>
+                            </div>`;
+                        }
+                    });
+
+                    html += `</div><br>`;
+                    // Table Data (Array of Objects UI)
+                    ["past_experience", "education_table"].forEach(tblKey => {
+                        if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
+                            html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
+                            html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
+                                <tr>`;
+
+                            Object.keys(lead[tblKey][0]).forEach(col => {
+                                html += `<th>${frappe.model.unscrub(col)}</th>`;
+                            });
+
+                            html += `</tr>`;
+
+                            lead[tblKey].forEach(row => {
+                                html += `<tr>`;
+                                Object.keys(row).forEach(col => {
+                                    html += `<td>${row[col] || "-"}</td>`;
+                                });
+                                html += `</tr>`;
+                            });
+
+                            html += `</table>`;
+                        }
+                    });
+                    html += `</div>`;
+                    frm.set_df_property("lead_details", "options", html);
+                }
+            });
+        }
     });
 }
