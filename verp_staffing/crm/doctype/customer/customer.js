@@ -546,7 +546,7 @@ function render_sales_payment_terms(frm) {
         callback(res) {
             if (!res.message) return;
 
-            let payment_terms = res.message.table_lprg || [];
+            let payment_terms = res.message.payment_terms_table || [];
 
             if (payment_terms.length === 0) {
                 frm.set_df_property("sales_content", "options",

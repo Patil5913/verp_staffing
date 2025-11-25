@@ -85,7 +85,7 @@ def seed_employee_departments():
     departments = ["Lead", "Sales", "Resume", "Technical", "Marketing", "HR"]
 
     for dept in departments:
-        if not frappe.db.exists(doctype, dept):
+        if not frappe.db.exists(doctype, {"department_name": dept}):
             doc = frappe.get_doc({
                 "doctype": doctype,
                 "department_name": dept,

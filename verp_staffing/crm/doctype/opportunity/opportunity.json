@@ -21,9 +21,10 @@
   "column_break_yvzt",
   "opportunity_amount",
   "section_break_gopu",
-  "table_lprg",
+  "payment_terms_table",
   "section_break_spxs",
   "agreement",
+  "quotation",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -141,12 +142,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "table_lprg",
-   "fieldtype": "Table",
-   "label": "Payment Terms",
-   "options": "Customer Payment Terms"
-  },
-  {
    "fieldname": "section_break_spxs",
    "fieldtype": "Section Break"
   },
@@ -161,12 +156,23 @@
    "label": "Title",
    "read_only": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "quotation",
+   "fieldtype": "Attach",
+   "label": "Quotation"
+  },
+  {
+   "fieldname": "payment_terms_table",
+   "fieldtype": "Table",
+   "label": "Payment Terms",
+   "options": "Customer Payment Terms"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-24 12:35:03.477765",
+ "modified": "2025-11-25 10:11:48.401286",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",

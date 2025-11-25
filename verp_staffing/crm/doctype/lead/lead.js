@@ -32,7 +32,6 @@ frappe.ui.form.on("Lead", {
 
     refresh(frm) {
         render_notes(frm);
-        add_note_button(frm);
         render_activity_section(frm);
 
         frm.add_custom_button(__('Opportunity'), () => {
@@ -195,11 +194,13 @@ function open_create_opportunity_dialog(frm) {
                         dialog.hide();
                         if (values.manual_assign) {
                             // if user select owner manually then direct create
+                            update_lead_status(frm.doc.name);
                             create_opportunity(frm, values.opportunity_owner);
                         } else {
                             // else get employee with lowest count and create opportunity
                             auto_assign_opportunity_owner().then(owner => {
-                                create_opportunity(frm, owner)
+                                update_lead_status(frm.doc.name);
+                                create_opportunity(frm, owner);
                             })
                         }
                     }
@@ -279,16 +280,6 @@ function create_opportunity(frm, owner) {
 }
 
 // Notes and Activity Section
-function add_note_button(frm) {
-    frm.add_custom_button(__("Add Note"), function () {
-        frappe.new_doc("Note", {
-            reference_doctype: "Lead",
-            reference_name: frm.doc.name,
-            public: 0
-        });
-    }, __("Create"));
-}
-
 function render_notes(frm) {
     const $wrapper = frm.get_field("notes_html")?.$wrapper;
     if (!$wrapper) return;
@@ -758,5 +749,23 @@ function open_edit_event_dialog(event_name, frm) {
         });
 
         d.show();
+    });
+}
+
+function update_lead_status(lead_name) {
+    frappe.call({
+        method: "frappe.client.set_value",
+        args: {
+            doctype: "Lead",
+            name: lead_name,
+            fieldname: "status",
+            value: "Lead"
+        },
+        callback() {
+            frappe.show_alert({
+                message: __("Lead status updated to Lead"),
+                indicator: "green"
+            });
+        }
     });
 }

@@ -188,7 +188,15 @@ frappe.ui.form.on("Opportunity", {
 
 
 function open_create_customer_dialog(frm) {
-     if (!frm.doc.agreement) {
+    if (!frm.doc.quotation) {
+        frappe.msgprint({
+            title: "Quotation Missing",
+            message: "Please upload the Quotation before proceeding.",
+            indicator: "red"
+        });
+        return;
+    }
+    if (!frm.doc.agreement) {
         frappe.msgprint({
             title: "Agreement Missing",
             message: "Please upload the Agreement before proceeding.",
@@ -196,8 +204,8 @@ function open_create_customer_dialog(frm) {
         });
         return;
     }
-        // CHECK 2: Payment Terms Table Exists and Has Checked Rows
-    const payment_terms = frm.doc.table_lprg || [];
+    // CHECK 2: Payment Terms Table Exists and Has Checked Rows
+    const payment_terms = frm.doc.payment_terms_table || [];
 
     if (payment_terms.length === 0) {
         frappe.msgprint({
@@ -246,6 +254,17 @@ function open_create_customer_dialog(frm) {
                     indicator: 'red'
                 });
             } else {
+                //convert the status of opportunity to 'Converted'
+                frappe.call({
+                    method: "frappe.client.set_value",
+                    args: {
+                        doctype: "Opportunity",
+                        name: frm.doc.name,
+                        fieldname: "status",
+                        value: "Converted"
+                    }
+                });
+
                 // Open a dialog to create Customer
                 const dialog = new frappe.ui.Dialog({
                     title: __('Create Customer from Opportunity'),

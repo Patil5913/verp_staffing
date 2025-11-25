@@ -13,7 +13,7 @@
   "column_break_vwnk",
   "lead_owner",
   "source",
-  "lead_datails",
+  "lead_details",
   "contact_information_section",
   "phone",
   "ext_phone",
@@ -76,12 +76,6 @@
    "fieldtype": "Link",
    "label": "Lead Owner",
    "options": "Employee"
-  },
-  {
-   "fieldname": "lead_datails",
-   "fieldtype": "Select",
-   "label": "Lead Datails",
-   "options": "\nHot\nCold"
   },
   {
    "fieldname": "contact_information_section",
@@ -210,12 +204,18 @@
    "fieldname": "activities_tab",
    "fieldtype": "Tab Break",
    "label": "Activities"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "Select",
+   "label": "Lead Details",
+   "options": "\nHot\nCold"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-21 14:43:12.846086",
+ "modified": "2025-11-25 09:36:30.470699",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",

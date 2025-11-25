@@ -161,6 +161,9 @@ scheduler_events = {
     "cron": {
         "*/15 * * * *": [
             "verp_staffing.crm.api.event_remainders.send_event_reminders"
+        ],
+        "0 0 * * *": [  # This cron expression runs daily at midnight
+            "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
         ]
     }
 }
