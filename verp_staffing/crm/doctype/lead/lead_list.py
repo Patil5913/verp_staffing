@@ -53,7 +53,19 @@ def secure_get(**kwargs):
         frappe.local.form_dict["filters"] = frappe.as_json(
             [["Opportunity", "opportunity_owner", "in", opportunity_owners]]
         )
+        
+    if user != "Administrator" and doctype == "Customer":
+        opportunity_owners = get_lead_list_based_on_role(user, roles)
 
+        allowed_oppotunities = frappe.db.get_all(
+            "Opportunity",
+            filters={"opportunity_owner": ["in", opportunity_owners]},
+            pluck="name",
+        )
+        # Force filter even if user tries to modify URL
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Customer", "opportunity", "in", allowed_oppotunities]]
+        )
     # Call Frappe's original get function with the current form_dict
     return original_get(**frappe.local.form_dict)
 

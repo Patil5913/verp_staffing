@@ -7,9 +7,7 @@ from frappe.model.document import Document
 
 class Opportunity(Document):
     def before_save(self):
-        # If quotation is uploaded and current status is not Converted
-        if self.quotation and self.status not in ["Converted", "Quotation"]:
-            self.status = "Quotation"
+        pass
 
     def before_insert(self):
         # Only apply the logic when Opportunity From = Lead
@@ -36,12 +34,15 @@ class Opportunity(Document):
                     self.title = base_title
 
     def validate(self):
+            # Auto update status when quotation is uploaded
+        if self.quotation and self.status != "Quotation":
+            self.status = "Quotation"
         # Run validation only when converting status
         if self.status == "Converted":
             # Check agreement and quotation attachments
-            if not self.agreement or not self.quotation:
+            if not self.quotation:
                 frappe.throw(
-                    "Agreement and Quotation are mandatory before converting status to Converted."
+                    "Quotation is mandatory before converting status to Converted."
                 )
 
             # Check Payment Terms Received status
@@ -49,6 +50,4 @@ class Opportunity(Document):
             has_received_checked = any(bool(row.is_received) for row in payment_terms)
 
             if not has_received_checked:
-                frappe.throw(
-                    "At least one Payment Term must have 'Received' checked before converting status to Converted."
-                )
+                self.status = "Payment Pending"

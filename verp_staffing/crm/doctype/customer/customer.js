@@ -9,8 +9,10 @@ frappe.ui.form.on("Customer", {
         toggle_tab_view(frm);
         render_technical_tab_content(frm);
         render_marketing_tab_content(frm);
-        render_sales_payment_terms(frm);
-        render_lead_details(frm)
+        render_lead_details(frm);
+        if (frm.doc.opportunity) {
+            update_payment_terms_table(frm);
+        }
     },
 
 });
@@ -526,66 +528,39 @@ function toggle_tab_view(frm) {
     });
 }
 // Render sales tab content
-function render_sales_payment_terms(frm) {
-
-    const opportunity = frm.doc.opportunity;
-
-    if (!opportunity) {
-        frm.set_df_property("sales_content", "options",
-            `<p style="color:#888; padding:10px;">No Opportunity linked.</p>`
-        );
-        return;
-    }
-
+function update_payment_terms_table(frm) {
     frappe.call({
         method: "frappe.client.get",
         args: {
             doctype: "Opportunity",
-            name: opportunity
+            name: frm.doc.opportunity
         },
-        callback(res) {
-            if (!res.message) return;
+        callback(r) {
 
-            let payment_terms = res.message.payment_terms_table || [];
+            if (!r.message) return;
 
-            if (payment_terms.length === 0) {
-                frm.set_df_property("sales_content", "options",
-                    `<p style="color:#888; padding:10px;">No Payment Terms found.</p>`
-                );
-                return;
-            }
+            let opp = r.message;
 
-            // Build HTML table
-            let html = `
-                <div style="padding:15px;">
-                <h4 style="margin-bottom:15px;">Payment Terms</h4>
-                <table style="width:100%; border-collapse:collapse;">
-                    <tr style="background:#f5f5f5;">
-                        <th style="border:1px solid #ddd; padding:8px;">Amount</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Date</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Received</th>
-                    </tr>
-            `;
+            // clear existing terms
+            opp.payment_terms_table = [];
 
-            payment_terms.forEach(row => {
-                html += `
-                    <tr>
-                        <td style="border:1px solid #ddd; padding:8px;">₹ ${row.amount || "-"}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">${row.date || "-"}</td>
-                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">
-                            ${row.is_received ? "✔" : "❌"}
-                        </td>
-                    </tr>
-                `;
+            // push updated rows from customer
+            (frm.doc.payment_terms || []).forEach(row => {
+                opp.payment_terms_table.push({
+                    amount: row.amount,
+                    date: row.date,
+                    is_received: row.is_received
+                });
             });
 
-            html += `</table></div>`;
-
-            frm.set_df_property("sales_content", "options", html);
+            // save full document back
+            frappe.call({
+                method: "frappe.client.save",
+                args: { doc: opp },
+            });
         }
     });
 }
-
 
 // Render technical tab content
 function render_technical_tab_content(frm) {

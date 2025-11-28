@@ -11,7 +11,10 @@
   "status",
   "section_break_roxl",
   "lead_details",
+  "company_name",
   "sales_tab",
+  "payment_terms",
+  "section_break_gtmf",
   "sales_content",
   "technical_tab",
   "technical_content",
@@ -34,6 +37,7 @@
    "unique": 1
   },
   {
+   "bold": 1,
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -121,12 +125,28 @@
    "label": "Title",
    "read_only": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "payment_terms",
+   "fieldtype": "Table",
+   "label": "Payment Terms",
+   "options": "Customer Payment Terms"
+  },
+  {
+   "fieldname": "section_break_gtmf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Table MultiSelect",
+   "label": "Company Name",
+   "options": "Lead Course"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-24 14:37:13.625734",
+ "modified": "2025-11-26 16:06:36.034359",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
