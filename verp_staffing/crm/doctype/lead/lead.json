@@ -16,7 +16,7 @@
   "lead_details",
   "contact_information_section",
   "phone",
-  "ext_phone",
+  "whatsapp_no",
   "social_links",
   "column_break_rnjd",
   "email",
@@ -32,8 +32,8 @@
   "expected_ctc",
   "column_break_xsed",
   "aspiring_job_role",
-  "column_break_vipi",
-  "aspiring_company",
+  "column_break_vkvi",
+  "resume",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -94,11 +94,6 @@
    "label": "Email"
   },
   {
-   "fieldname": "ext_phone",
-   "fieldtype": "Phone",
-   "label": "Ext. Phone"
-  },
-  {
    "fieldname": "column_break_rnjd",
    "fieldtype": "Column Break"
   },
@@ -150,12 +145,6 @@
    "options": "Lead Job Role"
   },
   {
-   "fieldname": "aspiring_company",
-   "fieldtype": "Link",
-   "label": "Aspiring Company",
-   "options": "Lead Company"
-  },
-  {
    "fieldname": "social_links",
    "fieldtype": "Small Text",
    "label": "Social Links"
@@ -174,10 +163,6 @@
    "fieldname": "past_experience_section",
    "fieldtype": "Section Break",
    "label": "Past Experience"
-  },
-  {
-   "fieldname": "column_break_vipi",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "source",
@@ -204,6 +189,20 @@
    "fieldname": "activities_tab",
    "fieldtype": "Tab Break",
    "label": "Activities"
+  },
+  {
+   "fieldname": "whatsapp_no",
+   "fieldtype": "Phone",
+   "label": "Whatsapp No."
+  },
+  {
+   "fieldname": "column_break_vkvi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "Attach",
+   "label": "Resume"
   },
   {
    "fieldname": "lead_details",

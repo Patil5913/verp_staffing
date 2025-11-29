@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestLeadCompany(FrappeTestCase):
+class TestLeadAddressHistory(FrappeTestCase):
 	pass
