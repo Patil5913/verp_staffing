@@ -26,9 +26,14 @@ frappe.ui.form.on("Opportunity", {
         frm.trigger("opportunity_from");
         render_notes(frm);
         render_activity_section(frm);
+        if (frm.doc.status == "Converted") {
+            console.log("Converted");
+            
+            frm.set_df_property("status", "read_only", 1)
+        }
 
         frm.add_custom_button(__("Create Customer"), function () {
-            open_create_customer_dialog(frm);
+            open_create_sales_order_dialog(frm);
         }, __("Create"))
 
         if (!frm.doc.opportunity_owner) {
@@ -46,6 +51,8 @@ frappe.ui.form.on("Opportunity", {
                 }
             });
         }
+        // but still allow changes *except* Converted
+        frm.doc._previous_status = frm.doc.status; //save the last status
 
         const roles = frappe.user_roles
 
@@ -132,8 +139,6 @@ frappe.ui.form.on("Opportunity", {
             }, 200);
         }
     },
-
-
     setup: function (frm) {
         frm.set_query("opportunity_from", function () {
             return {
@@ -144,6 +149,10 @@ frappe.ui.form.on("Opportunity", {
         });
     },
 
+    status(frm) {
+        // store safe previous value
+        frm.doc.__last_sync_status = frm.doc.status;
+    },
     opportunity_from: function (frm) {
         if (frm.doc.opportunity_from) {
             frm.set_df_property("party_name", "label", frm.doc.opportunity_from);
@@ -187,129 +196,79 @@ frappe.ui.form.on("Opportunity", {
 });
 
 
-function open_create_customer_dialog(frm) {
-    if (!frm.doc.quotation) {
-        frappe.msgprint({
-            title: "Quotation Missing",
-            message: "Please upload the Quotation before proceeding.",
-            indicator: "red"
-        });
-        return;
-    }
-    if (!frm.doc.agreement) {
-        frappe.msgprint({
-            title: "Agreement Missing",
-            message: "Please upload the Agreement before proceeding.",
-            indicator: "red"
-        });
-        return;
-    }
-    // CHECK 2: Payment Terms Table Exists and Has Checked Rows
-    const payment_terms = frm.doc.payment_terms_table || [];
+function open_create_sales_order_dialog(frm) {
 
-    if (payment_terms.length === 0) {
-        frappe.msgprint({
-            title: "Payment Terms Required",
-            message: "Please add at least one Payment Term with Received checked.",
-            indicator: "red"
-        });
-        return;
-    }
-
-    // Find if at least one row has is_received checked
-    const hasReceivedChecked = payment_terms.some(row => row.is_received === 1 || row.is_received === true);
-
-    if (!hasReceivedChecked) {
-        frappe.msgprint({
-            title: "Pending Payment",
-            message: "At least one payment term must be marked as Received.",
-            indicator: "red"
-        });
-        return;
-    }
-
-    // check if document is saved
     if (frm.is_dirty()) {
-        frappe.msgprint({
-            title: __('Error'),
-            message: __('Please save the Opportunity before creating a Customer.'),
-            indicator: 'red'
-        });
+        frappe.msgprint("Please save the Opportunity first.");
         return;
     }
 
-    // check if opportunity already saved as Customer
-    frappe.call({
-        method: "frappe.client.get_list",
-        args: {
-            doctype: "Customer",
-            filters: { opportunity: frm.doc.name },
-            limit_page_length: 1
-        },
-        callback: function (r) {
-            if (r.message && r.message.length > 0) {
-                frappe.msgprint({
-                    title: __('Error'),
-                    message: __('A Customer already exists for this Opportunity.'),
-                    indicator: 'red'
-                });
-            } else {
-                //convert the status of opportunity to 'Converted'
-                frappe.call({
-                    method: "frappe.client.set_value",
-                    args: {
-                        doctype: "Opportunity",
-                        name: frm.doc.name,
-                        fieldname: "status",
-                        value: "Converted"
+    // Dialog Fields
+    const dialog = new frappe.ui.Dialog({
+        title: "Create Sales Order",
+        fields: [
+            {
+                label: "Date",
+                fieldname: "date",
+                fieldtype: "Date",
+                default: frappe.datetime.get_today(),
+                reqd: 1
+            },
+            {
+                fieldtype: "Section Break",
+                label: "Payment Terms"
+            },
+            {
+                fieldname: "payment_terms",
+                fieldtype: "Table",
+                label: "Payment Terms",
+                reqd: 1,
+                options: "Customer Payment Terms",
+                fields: [
+                    {
+                        fieldtype: "Date",
+                        fieldname: "date",
+                        label: "Date",
+                        reqd: 1,
+                        in_list_view: 1
+                    },
+                    {
+                        fieldtype: "Currency",
+                        fieldname: "amount",
+                        label: "Amount",
+                        reqd: 1,
+                        in_list_view: 1
+                    },
+                    {
+                        fieldtype: "Check",
+                        fieldname: "is_received",
+                        label: "Received?",
+                        in_list_view: 1
                     }
-                });
-
-                // Open a dialog to create Customer
-                const dialog = new frappe.ui.Dialog({
-                    title: __('Create Customer from Opportunity'),
-                    primary_action_label: __('Create'),
-                    primary_action() {
-                        dialog.hide();
-                        create_customer_from_opportunity(frm);
+                ]
+            }
+        ],
+        primary_action_label: "Create Sales Order",
+        primary_action(values) {
+            dialog.hide();
+            frappe.call({
+                method: "verp_staffing.crm.api.sales_order_api.create_sales_order",
+                args: {
+                    opportunity: frm.doc.name,
+                    opportunity_from: frm.doc.opportunity_from,
+                    party_name: frm.doc.party_name,
+                    data: values
+                },
+                callback: function (r) {
+                    if (r.message?.customer) {
+                        frappe.set_route("Form", "Customer", r.message.customer);
                     }
-                });
-                dialog.show();
-            }
+                }
+            });
         }
-    })
-}
+    });
 
-function create_customer_from_opportunity(frm) {
-    const customer_doc = {
-        doctype: 'Customer',
-        opportunity: frm.doc.name,
-    };
-
-    frappe.call({
-        method: 'frappe.client.insert',
-        args: {
-            doc: customer_doc
-        },
-        callback: function (r) {
-            if (!r.exc && r.message) {
-                frappe.msgprint({
-                    title: __('Success'),
-                    message: __('Customer {0} created successfully.', [r.message.name]),
-                    indicator: 'green'
-                });
-                // redirect to customer form
-                frappe.set_route('Form', 'Customer', r.message.name);
-            }
-        },
-        error: function (err) {
-            frappe.msgprint({
-                title: __('Error'),
-                message: err && err.exc ? err.exc : __('Failed to create Customer'),
-                indicator: 'red'
-            })
-        }
-    })
+    dialog.show();
 }
 
 //notes and activity section

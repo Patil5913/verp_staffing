@@ -20,8 +20,6 @@
   "currency",
   "column_break_yvzt",
   "opportunity_amount",
-  "section_break_gopu",
-  "payment_terms_table",
   "section_break_spxs",
   "agreement",
   "quotation",
@@ -38,7 +36,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nQuotation\nProspect\nConverted\nLost",
+   "options": "Open\nQuotation\nReplied\nConverted\nLost",
    "reqd": 1
   },
   {
@@ -138,10 +136,6 @@
    "label": "Open Activities HTML"
   },
   {
-   "fieldname": "section_break_gopu",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "section_break_spxs",
    "fieldtype": "Section Break"
   },
@@ -161,18 +155,12 @@
    "fieldname": "quotation",
    "fieldtype": "Attach",
    "label": "Quotation"
-  },
-  {
-   "fieldname": "payment_terms_table",
-   "fieldtype": "Table",
-   "label": "Payment Terms",
-   "options": "Customer Payment Terms"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-25 10:11:48.401286",
+ "modified": "2025-11-29 17:30:08.505821",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",

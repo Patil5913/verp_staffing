@@ -11,7 +11,7 @@ frappe.ui.form.on("Customer", {
         render_marketing_tab_content(frm);
         render_lead_details(frm);
         if (frm.doc.opportunity) {
-            update_payment_terms_table(frm);
+            show_sales_order(frm);
         }
     },
 
@@ -527,40 +527,118 @@ function toggle_tab_view(frm) {
         }
     });
 }
-// Render sales tab content
-function update_payment_terms_table(frm) {
+
+function show_sales_order(frm) {
     frappe.call({
-        method: "frappe.client.get",
+        method: "frappe.client.get_list",
         args: {
-            doctype: "Opportunity",
-            name: frm.doc.opportunity
+            doctype: "Sales Order",
+            filters: { opportunity: frm.doc.opportunity },
+            fields: ["name", "title", "date", "customer"],
+            limit_page_length: 50
         },
         callback(r) {
+            let sales_orders = r.message || [];
 
-            if (!r.message) return;
+            if (sales_orders.length === 0) {
+                frm.fields_dict.sales_content.$wrapper.html("<p>No Sales Orders found.</p>");
+                return;
+            }
 
-            let opp = r.message;
+            let html = `<div style="padding: 10px;">`;
 
-            // clear existing terms
-            opp.payment_terms_table = [];
+            html += `<h3>Sales Orders (${sales_orders.length})</h3><hr/>`;
 
-            // push updated rows from customer
-            (frm.doc.payment_terms || []).forEach(row => {
-                opp.payment_terms_table.push({
-                    amount: row.amount,
-                    date: row.date,
-                    is_received: row.is_received
+            sales_orders.forEach((so, idx) => {
+                html += `
+                    <div style="border:1px solid #ddd; padding:15px; border-radius:6px; margin-bottom:15px;">
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h4>Sales Order: ${so.name}</h4>
+
+                            <button class="btn btn-primary update-so-btn" 
+                                data-so="${so.name}" 
+                                style="font-size:13px;">
+                                Update
+                            </button>
+                        </div>
+
+                        <p><b>Title:</b> ${so.title || ""}</p>
+                        <p><b>Date:</b> ${so.transaction_date || ""}</p>
+                        <p><b>Customer:</b> ${so.customer_name || ""}</p>
+
+                        <div id="terms_${so.name}">
+                            <i>Loading Payment Terms...</i>
+                        </div>
+                    </div>
+                `;
+
+                // Fetch payment terms for each SO
+                load_payment_terms(so.name, frm);
+            });
+
+            html += `</div>`;
+
+            frm.fields_dict.sales_content.$wrapper.html(html);
+
+            // Attach click events for all update buttons
+            frm.fields_dict.sales_content.$wrapper
+                .find(".update-so-btn")
+                .on("click", function () {
+                    const so_name = $(this).data("so");
+                    frappe.set_route("Form", "Sales Order", so_name);
                 });
-            });
-
-            // save full document back
-            frappe.call({
-                method: "frappe.client.save",
-                args: { doc: opp },
-            });
         }
     });
 }
+
+
+// Fetch payment terms for each SO block dynamically
+function load_payment_terms(so_name, frm) {
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Sales Order",
+            name: so_name
+        },
+        callback: function (r) {
+            if (!r.message) return;
+
+            let so = r.message;
+            let html = `
+                <h5>Payment Terms</h5>
+                <table class="table table-bordered" style="width:100%; margin-top:10px;">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Received?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            (so.payment_terms || []).forEach((row, i) => {
+                html += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${row.date || ""}</td>
+                        <td>${row.amount || ""}</td>
+                        <td>${row.is_received ? "Yes" : "No"}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+
+            frm.fields_dict.sales_content.$wrapper
+                .find(`#terms_${so_name}`)
+                .html(html);
+        }
+    });
+}
+
 
 // Render technical tab content
 function render_technical_tab_content(frm) {

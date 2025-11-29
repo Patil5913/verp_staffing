@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
+from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
 
 
 class Opportunity(Document):
@@ -34,9 +35,9 @@ class Opportunity(Document):
                     self.title = base_title
 
     def validate(self):
-            # Auto update status when quotation is uploaded
-        if self.quotation and self.status != "Quotation":
-            self.status = "Quotation"
+        # first check manual conversion attempt
+        self.block_manual_conversion()
+        # Auto update status when quotation is uploaded
         # Run validation only when converting status
         if self.status == "Converted":
             # Check agreement and quotation attachments
@@ -45,9 +46,21 @@ class Opportunity(Document):
                     "Quotation is mandatory before converting status to Converted."
                 )
 
-            # Check Payment Terms Received status
-            payment_terms = self.payment_terms_table or []
-            has_received_checked = any(bool(row.is_received) for row in payment_terms)
+    def on_update(self):
+        if self.party_name:
+            update_status_based_on_opportunity(self.party_name, self.status)
 
-            if not has_received_checked:
-                self.status = "Payment Pending"
+    def block_manual_conversion(self):
+        """Prevent users from manually changing status to Converted."""
+        # old doc = previous DB version
+        old_status = self.get_db_value("status")
+        if not old_status:
+            return  # first save, skip
+
+        # User tries to manually change to Converted
+        if old_status != "Converted" and self.status == "Converted":
+            # Allow only if your backend logic sets a special flag
+            if not getattr(self, "_auto_converted", False):
+                frappe.throw(
+                    "You cannot manually mark this Opportunity as Converted. This happens automatically after meeting payment conditions."
+                )

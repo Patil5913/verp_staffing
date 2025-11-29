@@ -27,6 +27,8 @@ frappe.ui.form.on("Lead", {
             // If already set → lock it
             frm.set_df_property("lead_owner", "read_only", 1);
         }
+        // Stop user from selecting Converted manually
+        frm.set_df_property("status", "read_only", 1);
     },
 
 
@@ -194,12 +196,10 @@ function open_create_opportunity_dialog(frm) {
                         dialog.hide();
                         if (values.manual_assign) {
                             // if user select owner manually then direct create
-                            update_lead_status(frm.doc.name);
                             create_opportunity(frm, values.opportunity_owner);
                         } else {
                             // else get employee with lowest count and create opportunity
                             auto_assign_opportunity_owner().then(owner => {
-                                update_lead_status(frm.doc.name);
                                 create_opportunity(frm, owner);
                             })
                         }
@@ -749,23 +749,5 @@ function open_edit_event_dialog(event_name, frm) {
         });
 
         d.show();
-    });
-}
-
-function update_lead_status(lead_name) {
-    frappe.call({
-        method: "frappe.client.set_value",
-        args: {
-            doctype: "Lead",
-            name: lead_name,
-            fieldname: "status",
-            value: "Lead"
-        },
-        callback() {
-            frappe.show_alert({
-                message: __("Lead status updated to Lead"),
-                indicator: "green"
-            });
-        }
     });
 }

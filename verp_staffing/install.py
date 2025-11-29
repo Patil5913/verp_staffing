@@ -34,6 +34,7 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
+        "Sales Order":["select","read", "write", "create"],
     },
 
     "Sales Manager" :{
@@ -42,6 +43,7 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
+        "Sales Order":["select","read", "write", "create"],
     },
 
     "Sales Master Manager" :{
@@ -50,6 +52,7 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
+        "Sales Order":["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
     },
 
     "HR": {
