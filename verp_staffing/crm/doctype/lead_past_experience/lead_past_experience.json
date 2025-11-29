@@ -5,57 +5,111 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "year",
-  "description",
-  "column_break_eyme",
   "job_role",
+  "employment_type",
+  "start_date",
+  "is_currently_working",
+  "description",
+  "column_break_vmsm",
   "company",
-  "column_break_htfj",
-  "resume"
+  "location",
+  "location_type",
+  "end_date",
+  "skills"
  ],
  "fields": [
   {
-   "fieldname": "year",
-   "fieldtype": "Int",
-   "label": "Year",
-   "non_negative": 1
-  },
-  {
+   "description": "NOTE: Include company name only",
    "fieldname": "company",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Company",
-   "options": "Lead Company"
+   "placeholder": "Exp: Amazon",
+   "reqd": 1
   },
   {
    "fieldname": "job_role",
-   "fieldtype": "Link",
-   "label": "Job Role",
-   "options": "Lead Job Role"
-  },
-  {
-   "fieldname": "description",
    "fieldtype": "Data",
-   "label": "Description"
+   "in_list_view": 1,
+   "label": "Job Role",
+   "placeholder": "Exp: Software Developer",
+   "reqd": 1
   },
   {
-   "fieldname": "resume",
-   "fieldtype": "Attach",
-   "label": "Resume"
+   "description": "NOTE: Minimum length: 800 characters (excluding spaces).",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Description",
+   "reqd": 1
   },
   {
-   "fieldname": "column_break_eyme",
+   "fieldname": "employment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Employment type",
+   "options": "\nFull-time\nPart-time\nContract\nSelf-employed\nFreelance\nInternship\nApprenticeship",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_vmsm",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "column_break_htfj",
-   "fieldtype": "Column Break"
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Location",
+   "placeholder": "Exp: New York",
+   "reqd": 1
+  },
+  {
+   "fieldname": "location_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Location Type",
+   "options": "\nOnsite\nHybrid\nRemote",
+   "reqd": 1
+  },
+  {
+   "description": "NOTE: Use date format: MM-YYYY",
+   "fieldname": "start_date",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval: !doc.is_currently_working",
+   "description": "NOTE: Use date format: MM-YYYY",
+   "fieldname": "end_date",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "End Date",
+   "mandatory_depends_on": "eval: !doc.is_currently_working"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_currently_working",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "I am currently working in this role"
+  },
+  {
+   "description": "NOTE: List all skills separated by commas.",
+   "fieldname": "skills",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Skills",
+   "placeholder": "Exp: React,Public Speaking,Docker",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-24 15:48:21.993158",
+ "modified": "2025-11-29 12:50:46.422012",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Past Experience",

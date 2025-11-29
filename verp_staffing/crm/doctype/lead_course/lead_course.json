@@ -6,7 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "course_details_section",
-  "name1",
+  "course_name",
   "column_break_rvhj",
   "specialization",
   "column_break_woby",
@@ -14,28 +14,28 @@
   "section_break_pvmq",
   "start_date",
   "column_break_izkr",
-  "end_date"
+  "end_date",
+  "section_break_qmjz",
+  "grade",
+  "column_break_bivb",
+  "course_description"
  ],
  "fields": [
   {
-   "fieldname": "name1",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Name",
-   "options": "Lead Course Name"
-  },
-  {
    "fieldname": "specialization",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Specialization",
-   "options": "Lead Course Specialization"
+   "placeholder": "Exp: B.Tech",
+   "reqd": 1
   },
   {
    "fieldname": "university",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "University",
-   "options": "Lead University"
+   "placeholder": "Exp: Oxford University",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_rvhj",
@@ -51,30 +51,70 @@
    "label": "Date Information"
   },
   {
+   "description": "NOTE: Provide in given format only (MM-YYYY)",
    "fieldname": "start_date",
    "fieldtype": "Data",
-   "label": "Start Date (MM-YYYY)"
+   "in_list_view": 1,
+   "label": "Start Date",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_izkr",
    "fieldtype": "Column Break"
   },
   {
+   "description": "NOTE: Provide in given format only (MM-YYYY)",
    "fieldname": "end_date",
    "fieldtype": "Data",
-   "label": "End Date (MM-YYYY)"
+   "in_list_view": 1,
+   "label": "End Date",
+   "reqd": 1
   },
   {
    "fieldname": "course_details_section",
    "fieldtype": "Section Break",
    "label": "Course Details"
+  },
+  {
+   "fieldname": "course_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Course Name",
+   "placeholder": "Exp: Computer Engineering",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_qmjz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "NOTE: Provide value out of 10 only.",
+   "fieldname": "grade",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Grade",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_bivb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "course_description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Course Description",
+   "placeholder": "Exp: Operating System, System Arcitecture",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-24 15:18:11.016809",
+ "modified": "2025-11-29 14:43:31.699344",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Course",

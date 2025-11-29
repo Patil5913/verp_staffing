@@ -158,6 +158,9 @@ scheduler_events = {
 		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
         "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
 	],
+    "daily": [
+        "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"
+    ],
     "cron": {
         "*/15 * * * *": [
             "verp_staffing.crm.api.event_remainders.send_event_reminders"
@@ -200,7 +203,6 @@ override_whitelisted_methods = {
 # ----------------
 before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.show_expiry_warning",
     "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
 ]
 
