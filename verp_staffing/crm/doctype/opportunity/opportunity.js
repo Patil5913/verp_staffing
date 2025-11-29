@@ -240,6 +240,24 @@ function open_create_sales_order_dialog(frm) {
                         in_list_view: 1
                     },
                     {
+                        fieldtype: "Select",
+                        fieldname: "payment_condition",
+                        label: "Payment Condition",
+                        options: "\nNumber of Days\nNumber of Interviews",
+                        default: "Number of Days",
+                        reqd: 1,
+                        in_list_view: 1
+                    },
+                       {
+                        fieldtype: "Int",
+                        fieldname: "counter",
+                        label: "Counter",
+                        default: 1,
+                        non_negative: 1,
+                        reqd: 1,
+                        in_list_view: 1
+                    },
+                    {
                         fieldtype: "Check",
                         fieldname: "is_received",
                         label: "Received?",
