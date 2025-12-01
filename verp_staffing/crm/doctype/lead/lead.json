@@ -13,10 +13,10 @@
   "column_break_vwnk",
   "lead_owner",
   "source",
-  "lead_datails",
+  "lead_details",
   "contact_information_section",
   "phone",
-  "ext_phone",
+  "whatsapp_no",
   "social_links",
   "column_break_rnjd",
   "email",
@@ -32,8 +32,8 @@
   "expected_ctc",
   "column_break_xsed",
   "aspiring_job_role",
-  "column_break_vipi",
-  "aspiring_company",
+  "column_break_vkvi",
+  "resume",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -65,7 +65,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nLead\nInterested\nDo Not Contact\nLost"
+   "options": "Open\nLead\nInterested\nWon\nLost"
   },
   {
    "fieldname": "column_break_vwnk",
@@ -76,12 +76,6 @@
    "fieldtype": "Link",
    "label": "Lead Owner",
    "options": "Employee"
-  },
-  {
-   "fieldname": "lead_datails",
-   "fieldtype": "Select",
-   "label": "Lead Datails",
-   "options": "\nHot\nCold"
   },
   {
    "fieldname": "contact_information_section",
@@ -98,11 +92,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Email"
-  },
-  {
-   "fieldname": "ext_phone",
-   "fieldtype": "Phone",
-   "label": "Ext. Phone"
   },
   {
    "fieldname": "column_break_rnjd",
@@ -156,12 +145,6 @@
    "options": "Lead Job Role"
   },
   {
-   "fieldname": "aspiring_company",
-   "fieldtype": "Link",
-   "label": "Aspiring Company",
-   "options": "Lead Company"
-  },
-  {
    "fieldname": "social_links",
    "fieldtype": "Small Text",
    "label": "Social Links"
@@ -180,10 +163,6 @@
    "fieldname": "past_experience_section",
    "fieldtype": "Section Break",
    "label": "Past Experience"
-  },
-  {
-   "fieldname": "column_break_vipi",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "source",
@@ -210,12 +189,32 @@
    "fieldname": "activities_tab",
    "fieldtype": "Tab Break",
    "label": "Activities"
+  },
+  {
+   "fieldname": "whatsapp_no",
+   "fieldtype": "Phone",
+   "label": "Whatsapp No."
+  },
+  {
+   "fieldname": "column_break_vkvi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "Attach",
+   "label": "Resume"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "Select",
+   "label": "Lead Details",
+   "options": "\nHot\nCold"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-21 14:43:12.846086",
+ "modified": "2025-11-28 14:26:26.631579",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",

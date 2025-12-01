@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class LeadUniversity(Document):
+class LeadAddressHistory(Document):
 	pass

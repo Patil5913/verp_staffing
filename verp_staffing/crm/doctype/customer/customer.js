@@ -9,8 +9,10 @@ frappe.ui.form.on("Customer", {
         toggle_tab_view(frm);
         render_technical_tab_content(frm);
         render_marketing_tab_content(frm);
-        render_sales_payment_terms(frm);
-        render_lead_details(frm)
+        render_lead_details(frm);
+        if (frm.doc.opportunity) {
+            show_sales_order(frm);
+        }
     },
 
 });
@@ -525,63 +527,114 @@ function toggle_tab_view(frm) {
         }
     });
 }
-// Render sales tab content
-function render_sales_payment_terms(frm) {
 
-    const opportunity = frm.doc.opportunity;
-
-    if (!opportunity) {
-        frm.set_df_property("sales_content", "options",
-            `<p style="color:#888; padding:10px;">No Opportunity linked.</p>`
-        );
-        return;
-    }
-
+function show_sales_order(frm) {
     frappe.call({
-        method: "frappe.client.get",
+        method: "frappe.client.get_list",
         args: {
-            doctype: "Opportunity",
-            name: opportunity
+            doctype: "Sales Order",
+            filters: { opportunity: frm.doc.opportunity },
+            fields: ["name", "title", "date", "customer"],
+            limit_page_length: 50
         },
-        callback(res) {
-            if (!res.message) return;
+        callback(r) {
+            let sales_orders = r.message || [];
 
-            let payment_terms = res.message.table_lprg || [];
-
-            if (payment_terms.length === 0) {
-                frm.set_df_property("sales_content", "options",
-                    `<p style="color:#888; padding:10px;">No Payment Terms found.</p>`
-                );
+            if (sales_orders.length === 0) {
+                frm.fields_dict.sales_content.$wrapper.html("<p>No Sales Orders found.</p>");
                 return;
             }
 
-            // Build HTML table
+            let html = `<div style="padding: 10px;">`;
+
+            html += `<h3>Sales Orders (${sales_orders.length})</h3><hr/>`;
+
+            sales_orders.forEach((so, idx) => {
+                html += `
+                    <div style="border:1px solid #ddd; padding:15px; border-radius:6px; margin-bottom:15px;">
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h4>Sales Order: ${so.name}</h4>
+
+                            <button class="btn btn-primary update-so-btn" 
+                                data-so="${so.name}" 
+                                style="font-size:13px;">
+                                Update
+                            </button>
+                        </div>
+
+                        <p><b>Title:</b> ${so.title || ""}</p>
+                        <p><b>Date:</b> ${so.transaction_date || ""}</p>
+                        <p><b>Customer:</b> ${so.customer_name || ""}</p>
+
+                        <div id="terms_${so.name}">
+                            <i>Loading Payment Terms...</i>
+                        </div>
+                    </div>
+                `;
+
+                // Fetch payment terms for each SO
+                load_payment_terms(so.name, frm);
+            });
+
+            html += `</div>`;
+
+            frm.fields_dict.sales_content.$wrapper.html(html);
+
+            // Attach click events for all update buttons
+            frm.fields_dict.sales_content.$wrapper
+                .find(".update-so-btn")
+                .on("click", function () {
+                    const so_name = $(this).data("so");
+                    frappe.set_route("Form", "Sales Order", so_name);
+                });
+        }
+    });
+}
+
+
+// Fetch payment terms for each SO block dynamically
+function load_payment_terms(so_name, frm) {
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Sales Order",
+            name: so_name
+        },
+        callback: function (r) {
+            if (!r.message) return;
+
+            let so = r.message;
             let html = `
-                <div style="padding:15px;">
-                <h4 style="margin-bottom:15px;">Payment Terms</h4>
-                <table style="width:100%; border-collapse:collapse;">
-                    <tr style="background:#f5f5f5;">
-                        <th style="border:1px solid #ddd; padding:8px;">Amount</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Date</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Received</th>
-                    </tr>
+                <h5>Payment Terms</h5>
+                <table class="table table-bordered" style="width:100%; margin-top:10px;">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Received?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             `;
 
-            payment_terms.forEach(row => {
+            (so.payment_terms || []).forEach((row, i) => {
                 html += `
                     <tr>
-                        <td style="border:1px solid #ddd; padding:8px;">₹ ${row.amount || "-"}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">${row.date || "-"}</td>
-                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">
-                            ${row.is_received ? "✔" : "❌"}
-                        </td>
+                        <td>${i + 1}</td>
+                        <td>${row.date || ""}</td>
+                        <td>${row.amount || ""}</td>
+                        <td>${row.is_received ? "Yes" : "No"}</td>
                     </tr>
                 `;
             });
 
-            html += `</table></div>`;
+            html += `</tbody></table>`;
 
-            frm.set_df_property("sales_content", "options", html);
+            frm.fields_dict.sales_content.$wrapper
+                .find(`#terms_${so_name}`)
+                .html(html);
         }
     });
 }

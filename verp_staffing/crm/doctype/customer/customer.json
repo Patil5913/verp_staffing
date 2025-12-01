@@ -12,6 +12,7 @@
   "section_break_roxl",
   "lead_details",
   "sales_tab",
+  "section_break_gtmf",
   "sales_content",
   "technical_tab",
   "technical_content",
@@ -34,6 +35,7 @@
    "unique": 1
   },
   {
+   "bold": 1,
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -121,12 +123,17 @@
    "label": "Title",
    "read_only": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "section_break_gtmf",
+   "fieldtype": "Section Break",
+   "label": "Sales Order"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-24 14:37:13.625734",
+ "modified": "2025-11-29 15:50:38.355057",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

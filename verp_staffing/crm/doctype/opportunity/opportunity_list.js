@@ -26,5 +26,22 @@ frappe.listview_settings['Opportunity'] = {
         sidebar.find(".group-by-field").hide();
         sidebar.find(".add-group-by").hide();
         sidebar.find(".save-filter-section").hide();
+    },
+    get_indicator: function (doc) {
+        if (doc.status === "Converted") {
+            return [__("Converted"), "green", "status,=,Converted"];
+        }
+        if (doc.status === "Lost") {
+            return [__("Lost"), "red", "status,=,Lost"];
+        }
+        if (doc.status === "Replied") {
+            return [__("Replied"), "blue", "status,=,Replied"];
+        }
+        if (doc.status === "Open") {
+            return [__("Open"), "orange", "status,=,Open"];
+        }
+
+        // default
+        return [__(doc.status), "gray", `status,=,${doc.status}`];
     }
 };

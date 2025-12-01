@@ -34,6 +34,7 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
+        "Sales Order":["select","read", "write", "create"],
     },
 
     "Sales Manager" :{
@@ -42,6 +43,7 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
+        "Sales Order":["select","read", "write", "create"],
     },
 
     "Sales Master Manager" :{
@@ -50,6 +52,7 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
+        "Sales Order":["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
     },
 
     "HR": {
@@ -85,7 +88,7 @@ def seed_employee_departments():
     departments = ["Lead", "Sales", "Resume", "Technical", "Marketing", "HR"]
 
     for dept in departments:
-        if not frappe.db.exists(doctype, dept):
+        if not frappe.db.exists(doctype, {"department_name": dept}):
             doc = frappe.get_doc({
                 "doctype": doctype,
                 "department_name": dept,

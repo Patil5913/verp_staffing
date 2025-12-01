@@ -1,0 +1,341 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-25 09:33:40.314531",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "personal_information_section",
+  "surname",
+  "first_name",
+  "father_name",
+  "personl_phone_number",
+  "column_break_lgnl",
+  "email",
+  "personal_linkedin",
+  "date_of_birth",
+  "lead",
+  "educational_details_section",
+  "educational_details",
+  "past_experience_details_section",
+  "past_experience_table",
+  "technical_information_section",
+  "technologies",
+  "additional_skills",
+  "current_information_section",
+  "entry_date",
+  "column_break_tbeo",
+  "current_address",
+  "address_history_section",
+  "address_history",
+  "section_break_bxyq",
+  "certificate_or_completed_course",
+  "column_break_ylcw",
+  "current_visa_status",
+  "experience",
+  "details_for_marketing_purpose_section",
+  "number_for_marketing",
+  "google_voice_number",
+  "marketing_email",
+  "marketing_email_password",
+  "column_break_uksq",
+  "marketing_linkedin",
+  "linkedin_password",
+  "passport_number",
+  "column_break_mffv",
+  "ssn_digit",
+  "availability_for_interview",
+  "section_break_xllz",
+  "remarks",
+  "column_break_vext",
+  "visa_copy",
+  "ead_card",
+  "driving_licence"
+ ],
+ "fields": [
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "label": "Lead",
+   "options": "Lead",
+   "unique": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "personl_phone_number",
+   "fieldtype": "Phone",
+   "in_list_view": 1,
+   "label": "Phone Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date Of Birth "
+  },
+  {
+   "fieldname": "educational_details",
+   "fieldtype": "Table",
+   "options": "Lead Course"
+  },
+  {
+   "fieldname": "technologies",
+   "fieldtype": "Small Text",
+   "label": "Technology In which You are looking make your resume",
+   "reqd": 1
+  },
+  {
+   "description": "NOTE: Use date format: MM-YYYY",
+   "fieldname": "entry_date",
+   "fieldtype": "Data",
+   "label": "Entry Date Into USA/Canada",
+   "reqd": 1
+  },
+  {
+   "fieldname": "address_history",
+   "fieldtype": "Table",
+   "options": "Lead Address History"
+  },
+  {
+   "fieldname": "certificate_or_completed_course",
+   "fieldtype": "Small Text",
+   "label": "Certifications or completed courses (if Any)"
+  },
+  {
+   "fieldname": "current_visa_status",
+   "fieldtype": "Select",
+   "label": "Current VISA Status",
+   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "\n",
+   "fieldname": "experience",
+   "fieldtype": "Check",
+   "label": "Experience (Only if worked genuinely and related field and want to keep exp as it is.)"
+  },
+  {
+   "fieldname": "number_for_marketing",
+   "fieldtype": "Phone",
+   "label": "Phone Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "marketing_email",
+   "fieldtype": "Data",
+   "label": "Email ID "
+  },
+  {
+   "fieldname": "marketing_linkedin",
+   "fieldtype": "Data",
+   "label": "LinkedIn ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "personal_linkedin",
+   "fieldtype": "Data",
+   "label": "LinkedIn ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "passport_number",
+   "fieldtype": "Data",
+   "label": "Passport Number",
+   "reqd": 1
+  },
+  {
+   "description": "NOTE: Only Last 4-Digits",
+   "fieldname": "ssn_digit",
+   "fieldtype": "Int",
+   "label": "SSN",
+   "length": 4,
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "description": "NOTE: Please enter the availability hours in the following format: \"DDD \u2013 DDD, hh:mm AM/PM \u2013 hh:mm AM/PM\"",
+   "fieldname": "availability_for_interview",
+   "fieldtype": "Data",
+   "label": "Availability for Interview",
+   "placeholder": "Exp: Mon \u2013 Fri, 9:30 AM \u2013 10:00 PM."
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "personal_information_section",
+   "fieldtype": "Section Break",
+   "label": "Personal Information"
+  },
+  {
+   "fieldname": "educational_details_section",
+   "fieldtype": "Section Break",
+   "label": "Educational Details"
+  },
+  {
+   "fieldname": "technical_information_section",
+   "fieldtype": "Section Break",
+   "label": "Technical Information"
+  },
+  {
+   "fieldname": "current_information_section",
+   "fieldtype": "Section Break",
+   "label": "Current Information"
+  },
+  {
+   "fieldname": "column_break_tbeo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "address_history_section",
+   "fieldtype": "Section Break",
+   "label": "Address History"
+  },
+  {
+   "fieldname": "section_break_bxyq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ylcw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "details_for_marketing_purpose_section",
+   "fieldtype": "Section Break",
+   "label": "Details For Marketing Purpose"
+  },
+  {
+   "fieldname": "column_break_uksq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "marketing_email_password",
+   "fieldtype": "Data",
+   "label": "Email Password"
+  },
+  {
+   "fieldname": "column_break_mffv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_xllz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_vext",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "surname",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Surname",
+   "reqd": 1
+  },
+  {
+   "fieldname": "father_name",
+   "fieldtype": "Data",
+   "label": "Father's name"
+  },
+  {
+   "fieldname": "ead_card",
+   "fieldtype": "Attach",
+   "label": "EAD Card",
+   "reqd": 1
+  },
+  {
+   "fieldname": "driving_licence",
+   "fieldtype": "Attach",
+   "label": "Driving Licence"
+  },
+  {
+   "fieldname": "visa_copy",
+   "fieldtype": "Attach",
+   "label": "Visa Copy",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_lgnl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "past_experience_details_section",
+   "fieldtype": "Section Break",
+   "label": "Past Experience Details  "
+  },
+  {
+   "fieldname": "past_experience_table",
+   "fieldtype": "Table",
+   "options": "Lead Past Experience"
+  },
+  {
+   "description": "NOTE: List all skills separated by commas.",
+   "fieldname": "additional_skills",
+   "fieldtype": "Small Text",
+   "label": "Additional Skills",
+   "placeholder": "Exp: React,Public Speaking,Docker",
+   "reqd": 1
+  },
+  {
+   "fieldname": "linkedin_password",
+   "fieldtype": "Data",
+   "label": "LinkedIn Password",
+   "reqd": 1
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "First Name",
+   "reqd": 1
+  },
+  {
+   "description": "NOTE: Provide full Address (Street Address, City, State, Country, Zip code).",
+   "fieldname": "current_address",
+   "fieldtype": "Data",
+   "label": "Current Address",
+   "reqd": 1
+  },
+  {
+   "fieldname": "google_voice_number",
+   "fieldtype": "Data",
+   "label": "Google Voice Number"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-29 15:32:09.414461",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "Lead Detail Form",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

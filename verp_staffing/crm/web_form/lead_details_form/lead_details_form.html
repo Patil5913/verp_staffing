@@ -1,0 +1,7 @@
+{% if no_form %}
+<div class="alert alert-danger" style="margin-top: 20px;">
+    {{ message }}
+</div>
+{% else %}
+    {{ web_form.render_form() }}
+{% endif %}
