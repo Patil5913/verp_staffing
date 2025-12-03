@@ -86,8 +86,8 @@ app_license = "mit"
 after_install = "verp_staffing.install.after_install"
 after_migrate = [
     "verp_staffing.migrate.after_migrate",
-    "verp_staffing.install.after_install"
-    ]
+    "verp_staffing.install.after_install",
+]
 
 # Uninstallation
 # ------------
@@ -142,33 +142,30 @@ after_migrate = [
 # Hook on document methods and events
 
 doc_events = {
-	"User" : {
+    "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
-    }
+    },
+    "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
 }
 
 # Scheduled Tasks
 # ---------------
 
 scheduler_events = {
-	"hourly": [
-		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
-	],
-    "daily": [
-        "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"
+    "hourly": [
+        "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
     ],
+    "daily": ["verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"],
     "cron": {
-        "*/15 * * * *": [
-            "verp_staffing.crm.api.event_remainders.send_event_reminders"
-        ],
+        "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
-        ]
-    }
+        ],
+    },
 }
 
 # Testing
@@ -180,7 +177,7 @@ scheduler_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
-	"frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
+    "frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
 }
 #
 
@@ -203,7 +200,7 @@ override_whitelisted_methods = {
 # ----------------
 before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
+    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
 ]
 
 # after_request = ["verp_staffing.utils.after_request"]
@@ -254,3 +251,12 @@ before_request = [
 fixtures = [
     {"doctype": "Workspace"},
 ]
+
+# pdflibjs Imports
+
+app_include_js = [
+    "/assets/verp_staffing/js/pdf.js",
+]
+
+# include worker
+web_include_js = ["/assets/verp_staffing/js/pdf.worker.js"]

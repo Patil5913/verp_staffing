@@ -556,10 +556,10 @@ function show_sales_order(frm) {
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <h4>Sales Order: ${so.name}</h4>
 
-                            <button class="btn btn-primary update-so-btn" 
+                            <button class="btn btn-primary go-to-so-btn" 
                                 data-so="${so.name}" 
                                 style="font-size:13px;">
-                                Update
+                                go to Sales Order
                             </button>
                         </div>
 
@@ -583,7 +583,7 @@ function show_sales_order(frm) {
 
             // Attach click events for all update buttons
             frm.fields_dict.sales_content.$wrapper
-                .find(".update-so-btn")
+                .find(".go-to-so-btn")
                 .on("click", function () {
                     const so_name = $(this).data("so");
                     frappe.set_route("Form", "Sales Order", so_name);

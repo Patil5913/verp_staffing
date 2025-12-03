@@ -33,6 +33,7 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
             "customer_name": party_name or f"Customer-{frappe.utils.now()}"
         })
         customer_doc.insert(ignore_permissions=True)
+        customer_name = {"title": customer_doc.title, "name": customer_doc.name}
 
     # -------- CREATE SALES ORDER -------- #
 
