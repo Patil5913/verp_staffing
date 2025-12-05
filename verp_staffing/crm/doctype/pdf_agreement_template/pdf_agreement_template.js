@@ -1,5 +1,6 @@
-// Copyright (c) 2025, Vrugle and contributors
-// For license information, please see license.txt
+// // Copyright (c) 2025, Vrugle and contributors
+// // For license information, please see license.txt
+
 frappe.ui.form.on("Pdf Agreement Template", {
     refresh(frm) {
         if (frm.doc.upload_pdf_template) {
@@ -103,6 +104,7 @@ async function load_pdf_into_builder(frm) {
     // after pages created, load existing fields and enable interactions
     load_existing_fields(frm);
     setup_drag_drop(frm);
+    setup_field_events(frm);
 }
 
 
@@ -133,7 +135,7 @@ function render_field_on_canvas(frm, field) {
     if (!layer.length) return;
 
     // create wrapper element
-    const id = field.field_id || ("fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2, 10)));
+    const id = field.field_id || ("fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2,10)));
 
     // If element already exists, remove and re-create (to update)
     layer.find(`[data-id="${id}"]`).remove();
@@ -195,36 +197,19 @@ function setup_drag_drop(frm) {
             frappe.prompt([
                 { fieldname: "field_name", label: "Field Name (unique)", fieldtype: "Data", reqd: 1 }
             ], function (values) {
-
                 // build field object
                 const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || { width: $pc.width(), height: $pc.height() };
 
-                // rendered container sizes (canvas displayed size)
-                const rendered_width = $pc.width();
-                const rendered_height = $pc.height();
-
-                // compute scale from rendered -> real PDF points
-                const scale_x = real.width / rendered_width;
-                const scale_y = real.height / rendered_height;
-
-                // compute converted px -> store PDF-point coords (we store coords in PDF point space)
-                const pdf_x = Math.round(x * scale_x);
-                const pdf_y = Math.round(y * scale_y);
-                const pdf_w = Math.round(150 * scale_x);
-                const pdf_h = Math.round(30 * scale_y);
-
+                const id = "fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2,10));
                 const fld = {
                     field_id: id,
                     name: values.field_name.trim(),
                     type: type,
                     page: page,
-                    // store coordinates in PIXEL space relative to real PDF page (so backend gets page_width + coords)
-                    x: pdf_x,
-                    y: pdf_y,
-                    width: pdf_w,
-                    height: pdf_h,
-                    page_width: real.width,
-                    page_height: real.height
+                    x: Math.round(x),
+                    y: Math.round(y),
+                    width: 150,
+                    height: 30
                 };
 
                 // store and render
@@ -295,8 +280,6 @@ function attach_field_select_handlers($el, frm, field) {
 // simple update helper
 function update_temp_field(frm, field_id, updates) {
     frm._temp_fields = frm._temp_fields || [];
-    console.log("frm._temp_fields from update temp fiels", frm._temp_fields);
-
     for (let i = 0; i < frm._temp_fields.length; i++) {
         if (frm._temp_fields[i].field_id === field_id) {
             Object.assign(frm._temp_fields[i], updates);
@@ -363,18 +346,33 @@ function escape_html(s) {
 }
 
 
-// Save template button handler (delegated)
 function Save_Template(frm) {
     if (!frm) return;
 
-    // ensure unique field names
     const names = (frm._temp_fields || []).map(f => f.name && f.name.trim()).filter(Boolean);
     const dup = names.find((n, i) => names.indexOf(n) !== i);
     if (dup) {
         frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
         return;
     }
-    console.log("frm._temp_fields: ", frm._temp_fields);
+
+    // Attach real page sizes to any field missing them
+    frm._temp_fields = (frm._temp_fields || []).map(f => {
+        if (!f.page_width || !f.page_height) {
+            const page = f.page;
+            const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || null;
+            if (real) {
+                f.page_width = real.width;
+                f.page_height = real.height;
+            } else {
+                // fallback: use the page DOM size (less accurate)
+                const $pc = $(`.pdf-page-container[data-page="${page}"]`);
+                f.page_width = $pc.width() || f.page_width || 0;
+                f.page_height = $pc.height() || f.page_height || 0;
+            }
+        }
+        return f;
+    });
 
     // commit to doctype field and save
     frm.set_value("fields_json", JSON.stringify(frm._temp_fields || []));
