@@ -116,49 +116,20 @@ frappe.ui.form.on("Lead", {
             }, 200);
         }
     },
+});
 
-    before_save(frm) {
-        validate_rows(frm.doc.education_table, "Education Details");
-        validate_rows(frm.doc.past_experience, "Past Experience");
-
-        function validate_rows(rows, table_label) {
-            if (!Array.isArray(rows) || rows.length === 0) {
-                console.log("No rows in education_table table");
-                return;
-            }
-
-            rows.forEach(row => {
-                validate_mm_yyyy(row.start_date, `Start Date of '${table_label}'`);
-                validate_mm_yyyy(row.end_date, `End Date of '${table_label}'`);
-
-                if (table_label === "Past Experience") {
-                    validate_description(row.description, table_label);
-                }
-            });
-        }
-
-        function validate_mm_yyyy(value, label) {
-            if (!value) return;
-
-            const regex = /^(0[1-9]|1[0-2])-\d{4}$/;
-
-            if (!regex.test(value)) {
-                frappe.throw(`${label} must be in format MM-YYYY.<br>Invalid value: ${value}`);
-            }
-        }
-
-        function validate_description(value, table_label) {
-            if (!value) return;
-
-            const text = value.replace(/\s+/g, '');
-
-            if (text.length < 800) {
-                frappe.throw(
-                    `Description in '${table_label}' must contain at least 800 characters (excluding spaces).<br>` +
-                    `Entered: ${text.length} characters.`
-                );
-            }
-        }
+frappe.ui.form.on("Lead Course", {
+    start_date(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        window.LeadCourse.check_row(row);
+    },
+    end_date(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        window.LeadCourse.check_row(row);
+    },
+    grade(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        window.LeadCourse.check_row(row);
     }
 });
 
