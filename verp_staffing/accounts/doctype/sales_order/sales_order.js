@@ -3,7 +3,6 @@
 
 frappe.ui.form.on("Sales Order", {
     refresh(frm) {
-        console.log("frm.doc.agreement: ", frm.doc.agreement)
         if (frm.doc.agreement) {
             frm.add_custom_button("Download Agreement", function () {
                 frappe.call({
@@ -22,9 +21,8 @@ frappe.ui.form.on("Sales Order", {
                     }
                 });
             });
-        } else {
-            render_agreement_ui(frm);
         }
+        render_agreement_ui(frm);
     }
 });
 
@@ -34,9 +32,40 @@ function render_agreement_ui(frm) {
     wrapper.empty();
 
     // Stop if Agreement already exists
+    // If Agreement Already Exists
     if (frm.doc.agreement) {
-        wrapper.html(`<p style="color:red;">Agreement already created.</p>`);
-        return;
+        frappe.call({
+            method: "frappe.client.get",
+            args: { doctype: "Agreement", name: frm.doc.agreement },
+            callback(r) {
+                if (!r.message) {
+                    frappe.msgprint("Agreement not found.");
+                } else {
+                    const pdf_url = r.message.pdf || "";  // assuming you saved file_url into agreement_pdf_file
+
+                    if (pdf_url) {
+                        wrapper.append(`
+                            <div style="padding: 10px;">
+                                <h3>Agreement Already Created</h3>
+
+                                <a href="${pdf_url}" class="btn btn-primary" download style="margin-bottom: 15px;">
+                                    Download Agreement PDF
+                                </a>
+
+                                <div style="margin-top:20px;">
+                                    <embed src="${pdf_url}" type="application/pdf" width="100%" height="600px" />
+                                </div>
+                            </div>
+                        `);
+                    } else {
+                        wrapper.append(`
+                <p style="color:red;">Agreement already created, but PDF file missing.</p>
+            `);
+                    }
+                }
+            }
+        })
+        return; // stop here, do not load UI builder
     }
 
     wrapper.append(`
