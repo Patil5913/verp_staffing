@@ -43,7 +43,11 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+validation_docs = ["Lead", "Lead Course"]
+
+doctype_js = {doc: "public/js/validation.js" for doc in validation_docs}
+
+
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -152,6 +156,9 @@ doc_events = {
 
 # Scheduled Tasks
 # ---------------
+
+# files delete from "file" doctype, time : weekly on sunday at 1 am (depends on site_config.json)
+# DB and file storage backup everyday morning, time : (depends on site_config.json)
 
 scheduler_events = {
 	"hourly": [
