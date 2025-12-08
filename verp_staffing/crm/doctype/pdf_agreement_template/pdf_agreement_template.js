@@ -32,6 +32,7 @@ frappe.ui.form.on("Pdf Agreement Template", {
                     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
                         <button class="btn btn-sm btn-primary add-field" data-type="Text">Text</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Number">Number</button>
+                        <button class="btn btn-sm btn-primary add-field" data-type="Payment_Terms">Payment Terms</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Date">Date</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Checkbox">Checkbox</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Signature">Signature</button>
@@ -135,36 +136,79 @@ function render_field_on_canvas(frm, field) {
     if (!layer.length) return;
 
     // create wrapper element
-    const id = field.field_id || ("fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2,10)));
+    const id = field.field_id || ("fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2, 10)));
 
     // If element already exists, remove and re-create (to update)
     layer.find(`[data-id="${id}"]`).remove();
 
     const $el = $(`
-        <div class="pdf-field" data-id="${id}" data-type="${field.type}" style="
-            position:absolute;
-            top:${field.y}px;
-            left:${field.x}px;
-            width:${field.width || 150}px;
-            height:${field.height || 30}px;
-            border:1px dashed #222;
-            background: rgba(255,255,255,0.85);
-            padding:4px;
-            box-sizing:border-box;
-            cursor:move;
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            font-size:12px;
-            z-index:10;
-        ">
-            <div class="pdf-field-label" style="padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escape_html(field.name || field.type)}</div>
-            <div class="pdf-field-toolbar" style="display:none; gap:6px;">
-                <button class="btn btn-xs btn-default edit-field" title="Edit">✎</button>
-                <button class="btn btn-xs btn-danger delete-field" title="Delete">🗑</button>
-            </div>
+    <div class="pdf-field" data-id="${id}" data-type="${field.type}" style="
+        position:absolute;
+        top:${field.y}px;
+        left:${field.x}px;
+        width:${field.width || 150}px;
+        height:${field.height || 30}px;
+        border:1px dashed #222;
+        background: rgba(255,255,255,0.85);
+        padding:4px;
+        box-sizing:border-box;
+        cursor:move;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        font-size:12px;
+        z-index:10;
+    ">
+        <style>
+    .resize-handle {
+        position:absolute;
+        width:10px;
+        height:10px;
+        background:#333;
+        border-radius:2px;
+        z-index:20;
+    }
+
+    /* bottom-right corner */
+    .resize-se {
+        right:-5px; 
+        bottom:-5px; 
+        cursor:se-resize;
+    }
+
+    /* right side */
+    .resize-e {
+        right:-5px;
+        top:50%;
+        transform:translateY(-50%);
+        cursor:e-resize;
+    }
+
+    /* bottom side */
+    .resize-s {
+        left:50%;
+        transform:translateX(-50%);
+        bottom:-5px;
+        cursor:s-resize;
+    }
+    </style>
+
+        <div class="pdf-field-label" style="padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${escape_html(field.name || field.type)}
         </div>
-    `);
+
+        <div class="pdf-field-toolbar" style="display:none; gap:6px;">
+            <button class="btn btn-xs btn-default edit-field" title="Edit">✎</button>
+            <button class="btn btn-xs btn-danger delete-field" title="Delete">🗑</button>
+        </div>
+
+        <!-- RESIZE HANDLES -->
+        <div class="resize-handle resize-se"></div>
+        <div class="resize-handle resize-e"></div>
+        <div class="resize-handle resize-s"></div>
+    </div>
+`);
+
 
     layer.append($el);
 
@@ -172,6 +216,7 @@ function render_field_on_canvas(frm, field) {
     if (!field.field_id) field.field_id = id;
 
     // attach interactions
+    make_field_resizable($el, frm, field); 
     make_field_draggable($el, frm, field);
     attach_field_select_handlers($el, frm, field);
 }
@@ -200,7 +245,7 @@ function setup_drag_drop(frm) {
                 // build field object
                 const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || { width: $pc.width(), height: $pc.height() };
 
-                const id = "fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2,10));
+                const id = "fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2, 10));
                 const fld = {
                     field_id: id,
                     name: values.field_name.trim(),
@@ -377,4 +422,53 @@ function Save_Template(frm) {
     // commit to doctype field and save
     frm.set_value("fields_json", JSON.stringify(frm._temp_fields || []));
     frm.save();
+}
+
+function make_field_resizable($el, frm, field) {
+    let resizing = false;
+    let startX, startY, startW, startH;
+    let mode = null; // "se", "e", "s"
+
+    $el.find(".resize-handle").on("mousedown", function (e) {
+        e.stopPropagation();
+        resizing = true;
+
+        mode = $(this).attr("class").includes("resize-se")
+            ? "se"
+            : $(this).attr("class").includes("resize-e")
+            ? "e"
+            : "s";
+
+        startX = e.pageX;
+        startY = e.pageY;
+        startW = $el.width();
+        startH = $el.height();
+    });
+
+    $(document).on("mousemove.resize_" + field.field_id, function (e) {
+        if (!resizing) return;
+
+        let newW = startW;
+        let newH = startH;
+
+        if (mode === "se" || mode === "e")
+            newW = Math.max(40, startW + (e.pageX - startX)); // min width 40
+
+        if (mode === "se" || mode === "s")
+            newH = Math.max(20, startH + (e.pageY - startY)); // min height 20
+
+        $el.css({ width: newW + "px", height: newH + "px" });
+    });
+
+    $(document).on("mouseup.resize_" + field.field_id, function () {
+        if (!resizing) return;
+
+        resizing = false;
+
+        // save to temp fields
+        update_temp_field(frm, field.field_id, {
+            width: Math.round($el.width()),
+            height: Math.round($el.height())
+        });
+    });
 }

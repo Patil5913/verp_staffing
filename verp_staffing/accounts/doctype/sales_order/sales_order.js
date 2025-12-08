@@ -38,6 +38,7 @@ function render_agreement_ui(frm) {
             method: "frappe.client.get",
             args: { doctype: "Agreement", name: frm.doc.agreement },
             callback(r) {
+                
                 if (!r.message) {
                     frappe.msgprint("Agreement not found.");
                 } else {
@@ -142,10 +143,8 @@ function load_form_fields(frm) {
         args: { doctype: "Pdf Agreement Template", name: template },
         callback(r) {
             const tpl = r.message;
-            console.log("tpl: ", tpl);
 
             const blocks = JSON.parse(tpl.fields_json || "[]");
-            console.log("blocks: ", blocks);
 
             form_div.empty();
 
@@ -175,21 +174,19 @@ function preview_inline(frm) {
         return;
     }
 
-    const values = {};
-    wrap.find(".ag-field").each(function () {
-        values[$(this).data("field")] = $(this).val();
-    });
+    const data = collect_so_agreement_data(frm);
 
     frappe.call({
         method: "verp_staffing.crm.api.agreement.preview_agreement",
         args: {
-            template_name: template,
-            data: values
+            template: template,
+            data: JSON.stringify(data),
         },
         callback(r) {
-            if (r.message && r.message.file_url) {
-                window.open(r.message.file_url);
-            }
+            if (!r.message) return frappe.msgprint("Preview error");
+            // const frame = frm.fields_dict.agreement_html.$wrapper.find("#so_preview_frame");
+            // frame.html(`<iframe src="${r.message.file_url}" style="width:100%; height:600px; border:none;"></iframe>`);
+            window.open(r.message.file_url);
         }
     });
 }
@@ -203,21 +200,40 @@ function submit_inline(frm) {
         return;
     }
 
-    const values = {};
-    wrap.find(".ag-field").each(function () {
-        values[$(this).data("field")] = $(this).val();
+    const data = collect_so_agreement_data(frm);
+
+    frappe.confirm("Save and send agreement? This will lock the agreement.", function () {
+        frappe.call({
+            method: "verp_staffing.crm.api.agreement.submit_and_generate",
+            args: {
+                sales_order: frm.doc.name,
+                template: template,
+                data: JSON.stringify(data)
+            },
+            callback(r) {
+                if (r.message) {
+                    frappe.show_alert("Agreement created & sent");
+                    frm.reload_doc();
+                }
+            }
+        });
+    });
+}
+
+function collect_so_agreement_data(frm) {
+    const data = {};
+    frm.fields_dict.agreement_html.$wrapper.find(".ag-field").each(function () {
+        const key = $(this).data("field");
+        data[key] = $(this).val();
     });
 
-    frappe.call({
-        method: "verp_staffing.crm.api.agreement.submit_and_generate",
-        args: {
-            sales_order: frm.doc.name,
-            template,
-            data: values
-        },
-        callback(r) {
-            frappe.msgprint("Agreement saved & sent.");
-            frm.reload_doc();
-        }
-    });
+    // If payment_terms exist in Sales Order, include them
+    // fetch child table rows
+    data["Payment_Terms"] = (frm.doc.payment_terms || []).map(r => ({
+        date: r.date,
+        amount: r.amount,
+        is_received: r.is_received
+    }));
+
+    return data;
 }

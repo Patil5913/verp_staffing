@@ -1,6 +1,7 @@
 import frappe
 import json
 
+
 @frappe.whitelist()
 def create_sales_order(opportunity, opportunity_from, party_name, data):
     import json
@@ -15,10 +16,7 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
 
     # Try to find customer linked with this opportunity
     customer_name = frappe.db.get_value(
-        "Customer",
-        {"opportunity": opportunity},
-        ["name","title"],
-        as_dict=True
+        "Customer", {"opportunity": opportunity}, ["name", "title"], as_dict=True
     )
 
     if customer_name:
@@ -27,24 +25,28 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
 
     else:
         # No customer → create new
-        customer_doc = frappe.get_doc({
-            "doctype": "Customer",
-            "opportunity": opportunity,
-            "customer_name": party_name or f"Customer-{frappe.utils.now()}"
-        })
+        customer_doc = frappe.get_doc(
+            {
+                "doctype": "Customer",
+                "opportunity": opportunity,
+                "customer_name": party_name or f"Customer-{frappe.utils.now()}",
+            }
+        )
         customer_doc.insert(ignore_permissions=True)
         customer_name = {"title": customer_doc.title, "name": customer_doc.name}
 
     # -------- CREATE SALES ORDER -------- #
-
-    so = frappe.get_doc({
-        "doctype": "Sales Order",
-        "title": f"SO-{customer_name['title']}-{data.date}",
-        "customer": customer_name["name"],
-        "date": data.date,
-        "opportunity": opportunity,
-        "payment_terms_table": data.payment_terms,
-    })
+    frappe.errprint(f"data: {data}")
+    so = frappe.get_doc(
+        {
+            "doctype": "Sales Order",
+            "title": f"SO-{customer_name['title']}-{data.date}",
+            "customer": customer_name["name"],
+            "date": data.date,
+            "opportunity": opportunity,
+            "payment_terms": data.payment_terms,
+        }
+    )
 
     so.insert(ignore_permissions=True)
 
@@ -56,7 +58,4 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
 
     frappe.db.commit()
 
-    return {
-        "sales_order": so.name,
-        "customer": customer_name["name"]
-    }
+    return {"sales_order": so.name, "customer": customer_name["name"]}
