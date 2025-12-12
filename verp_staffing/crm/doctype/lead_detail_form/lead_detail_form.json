@@ -5,6 +5,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "agreement_section",
+  "agreement_html",
   "consent_and_electronic_signature_confirmation_section",
   "signature_method",
   "signature",
@@ -61,8 +63,8 @@
   "visa_copy",
   "ead_card",
   "driving_licence",
-  "files_custom_html",
-  "html"
+  "old_resume",
+  "files_custom_html"
  ],
  "fields": [
   {
@@ -325,8 +327,7 @@
    "depends_on": "eval:doc.signature_method != \"Upload\"",
    "fieldname": "signature",
    "fieldtype": "Signature",
-   "label": "Signature",
-   "mandatory_depends_on": "eval:doc.signature_method != \"Upload\""
+   "label": "Signature"
   },
   {
    "fieldname": "column_break_reui",
@@ -371,7 +372,7 @@
   {
    "fieldname": "signature_custom_html",
    "fieldtype": "Data",
-   "label": "Signature Upload Box"
+   "label": "Signature Upload HTML"
   },
   {
    "fieldname": "signature_image",
@@ -382,18 +383,28 @@
   {
    "fieldname": "files_custom_html",
    "fieldtype": "Data",
-   "label": "Files Upload Box"
+   "label": "Files Upload HTML"
   },
   {
-   "fieldname": "html",
-   "fieldtype": "HTML",
-   "label": "html"
+   "fieldname": "agreement_section",
+   "fieldtype": "Section Break",
+   "label": "Agreement"
+  },
+  {
+   "fieldname": "old_resume",
+   "fieldtype": "Link",
+   "label": "Old Resume",
+   "options": "File"
+  },
+  {
+   "fieldname": "agreement_html",
+   "fieldtype": "Data"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-03 17:58:12.021348",
+ "modified": "2025-12-08 11:57:13.410887",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

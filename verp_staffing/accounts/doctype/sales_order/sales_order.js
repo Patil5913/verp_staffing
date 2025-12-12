@@ -218,6 +218,8 @@ function submit_inline(frm) {
         callback(r) {
             frappe.msgprint("Agreement saved & sent.");
             frm.reload_doc();
+            // in this collect the lead from customer of this sales order and send that in url to webform via search params
+            // collect aggrement file url from this callback response and send in agreement html in webform to display 
         }
     });
 }

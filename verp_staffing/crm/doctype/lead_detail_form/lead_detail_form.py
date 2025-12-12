@@ -1,73 +1,6 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
-# import frappe
-# from frappe.model.document import Document
-# from frappe.utils import now_datetime
-# import json
-
-
-# class LeadDetailForm(Document):
-# 	def before_save(self):
-# 		self.capture_signer_identity()
-# 		self.capture_signature_metadata()
-# 		self.build_audit_trail()
-
-
-# 	def capture_signer_identity(self):
-# 		req = frappe.local.request
-
-# 		# IP Address
-# 		self.signer_ip = (
-# 			frappe.get_request_header("X-Forwarded-For") or req.remote_addr
-# 		)
-
-# 		# Device fingerprint
-# 		self.signer_user_agent = frappe.get_request_header("User-Agent")
-
-# 		# Identity now based on entered fields
-# 		self.signer_full_name = f"{self.first_name} {self.surname}".strip()
-# 		self.signer_email = self.email
-# 		self.signer_father_name = self.father_name
-
-	
-# 	def capture_signature_metadata(self):
-# 		# Timestamp
-# 		self.signature_timestamp = now_datetime()
-
-# 		# Frappe Signature field type is always drawn
-# 		self.signature_type = "drawn"
-
-#         # Signature base64 is already in self.signature
-
-
-# 	def build_audit_trail(self):
-# 		events = []
-
-# 		events.append({
-#             "event": "document_opened",
-#             "timestamp": now_datetime(),
-#             "ip": self.signer_ip,
-#             "user_agent": self.signer_user_agent
-#         })
-
-# 		events.append({
-# 			"event": "consent_given",
-#             "timestamp": now_datetime(),
-#             "same_effect_handwritten": self.my_electronic_signature_has_same_effect_as_handwritten,
-#             "consent_electronic": self.i_consent_to_receive_sign_and_store_documents_electronically,
-#             "intentional_signing": self.i_confirm_my_identity_and_signing_this_document_intentionally
-#         })
-
-# 		events.append({
-#             "event": "signature_completed",
-#             "timestamp": self.signature_timestamp,
-#             "signature_type": "drawn"
-#         })
-
-# 		# JSON String (NOT a list)
-# 		self.audit_trail = json.dumps(events, default=str)
-
 import frappe
 from frappe.model.document import Document
 
@@ -112,4 +45,91 @@ class LeadDetailForm(Document):
         final_audit["form visit logs"] = form_logs
 
         self.audit_trail = json.dumps(final_audit, indent=2)
+
+
+    def after_insert(self):
+        import base64
+        print("Running after_insert...")
+
+        if self.signature_method != "Draw":
+            print("Method not draw:", self.signature_method)
+            return
+
+        if not self.signature:
+            print("No signature found")
+            return
+
+        if self.signature_image:
+            print("Already saved")
+            return
+
+        try:
+            img_base64 = self.signature.split(",")[-1]
+            img_bytes = base64.b64decode(img_base64)
+
+            cleaned_bytes = remove_signature_underline(img_bytes)
+
+            print("Lead ID:", self.lead)
+
+            filename = f"Signature.png"
+
+            file_doc = frappe.get_doc({
+                "doctype": "File",
+                "file_name": filename,
+                "is_private": 0,
+                "content": cleaned_bytes,
+                "folder": "Home",
+                "attached_to_doctype": self.doctype,
+                "attached_to_name": self.name
+            })
+            file_doc.save(ignore_permissions=True)
+
+            frappe.db.set_value(self.doctype, self.name, "signature_image", file_doc.name)
+            frappe.db.commit()
+
+            print("Signature saved:", file_doc.file_url)
+
+        except Exception as e:
+            frappe.log_error(f"Signature conversion failed: {str(e)}")
+            frappe.throw("Failed to process signature image.")
+
+
+@frappe.whitelist(allow_guest=True)
+def remove_signature_underline(img_bytes):
+    from PIL import Image
+    import io
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+    width, height = img.size
+    pixels = img.load()
+
+    # Underline color range (Frappe draws grey lines)
+    LINE_COLOR = (150, 150, 150)     # expected underline RGB
+    TOL = 25                          # tolerance so small variations match
+
+    def is_line_pixel(px):
+        r, g, b, a = px
+        return (
+            abs(r - LINE_COLOR[0]) < TOL and
+            abs(g - LINE_COLOR[1]) < TOL and
+            abs(b - LINE_COLOR[2]) < TOL
+        )
+
+    # Scan only the bottom half of the canvas
+    for y in range(int(height * 0.45), int(height * 0.75)):
+        # Count how many pixels in this row match underline color
+        matches = sum(1 for x in range(width) if is_line_pixel(pixels[x, y]))
+
+        # A perfectly straight underline = matches almost entire width
+        if matches > width * 0.80:  
+            # Remove EXACTLY that line (no signature pixel is this straight)
+            for x in range(width):
+                pixels[x, y] = (0, 0, 0, 0)
+
+            break  # underline removed safely
+
+    # Output final image
+    output = io.BytesIO()
+    img.save(output, format="PNG")
+    return output.getvalue()
 

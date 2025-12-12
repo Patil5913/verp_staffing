@@ -2,13 +2,93 @@ console.log("Webform JS Loaded!!!");
 
 // Unique storage key per form
 const AUDIT_KEY = "audit_trail_storage";
+// unique key for this webform
+let storage_key = "webform_filled_lead_details_form";
 
 frappe.ready(function () {
-
+    // Wait until Web Form UI loads
     add_audit_event("form", { event: "form_opened" });
 
-    // unique key for this webform
-    let storage_key = "webform_filled_lead_details_form";
+    // remove discard button
+    document.querySelector('.discard-btn').remove();
+
+    setTimeout(() => {
+        const wrapper = document.querySelector(
+            '.control-input-wrapper'
+        );
+
+        console.log("wrapper", wrapper);
+
+
+        if (wrapper) {
+            wrapper.style.borderBottom = "none";
+            wrapper.style.boxShadow = "none";
+
+            const inner = wrapper.querySelector(".control-input");
+            if (inner) {
+                inner.style.borderBottom = "none";
+                inner.style.boxShadow = "none";
+            }
+        }
+
+
+
+    }, 300);
+
+
+
+
+    setTimeout(() => {
+        controlNextButton();
+        controlSubmitButton();
+        attachCheckboxListeners();
+    }, 500);
+
+    // 1. Get PDF path from URL (?file=path/to.pdf)
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Supported key names
+    const agreementPath = urlParams.get("a")
+    const leadPath = urlParams.get("l");
+
+    // 2. If lead exists → store in webform field "lead"
+    if (leadPath) {
+        console.log("Lead value found:", leadPath);
+        frappe.web_form.set_value("lead", leadPath);
+    } else {
+        console.log("Lead value not found in URL");
+    }
+
+    // If no PDF provided → stop
+    if (agreementPath) {
+        console.warn("No PDF path found in URL");
+
+        // 2. Build absolute file URL (Frappe uses / files / directory)
+        let pdfURL = window.location.origin + "/" + agreementPath;
+
+        console.log("Loading PDF:", pdfURL);
+
+        // 3. Find the HTML field container Frappe allocates
+
+        frappe.call({
+            method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
+            args: { path: agreementPath },
+            callback: (r) => {
+                if (!r.message) return;
+
+                let innerHTML = "";
+
+                r.message.forEach(img => {
+                    innerHTML += `
+                <img src="${img}" style="width:100%; margin-bottom:20px; border:1px solid #ccc;">
+                `;
+                    frappe.web_form.set_value("agreement_html", innerHTML);
+                });
+            }
+        });
+    }
+
+
 
     frappe.web_form.on('signature_method', (field, value) => {
         if (value === "Upload") {
@@ -138,6 +218,11 @@ frappe.ready(function () {
                 return false;
             }
 
+            let signature_method = frappe.web_form.get_value("signature_method") || []
+            if (!validate_signature(signature_method)) {
+                return false
+            }
+
             return true;
         };
 
@@ -150,12 +235,29 @@ frappe.ready(function () {
     }
 
     frappe.web_form.on("signature", () => {
+        controlNextButton();
         add_audit_event("signature");
     });
+
+    function waitAndCheckFile(fieldname) {
+        setTimeout(() => {
+            let val = frappe.web_form.get_value(fieldname);
+            console.log(`${fieldname} final value:`, val);
+            controlSubmitButton();
+        }, 300);
+    }
+
+    frappe.web_form.on("visa_copy", () => waitAndCheckFile("visa_copy"));
+    frappe.web_form.on("ead_card", () => waitAndCheckFile("ead_card"));
+
 });
 
-
 window.addEventListener("beforeunload", () => {
+    // reset signature logs on refresh
+    let audit = load_audit_trail();
+    audit["signature update logs"] = [];
+    save_audit_trail(audit);
+
     add_audit_event("form", { event: "form_refreshed" });
 });
 
@@ -255,6 +357,34 @@ function validate_ssn_digit(value) {
     return true
 }
 
+function validate_signature(method) {
+
+    if (method === "Upload") {
+        let signature_image = frappe.web_form.get_value("signature_image");
+
+        if (!signature_image) {
+            frappe.msgprint("Please upload your signature image.");
+            return false;
+        }
+        return true;
+    }
+
+    if (method === "Draw") {
+        let signature = frappe.web_form.get_value("signature");
+
+        if (!signature) {
+            frappe.msgprint("Please draw your signature.");
+            return false;
+        }
+        return true;
+    }
+
+    // If no valid method selected
+    frappe.msgprint("Please select a signature method.");
+    return false;
+}
+
+
 function load_audit_trail() {
     try {
         return JSON.parse(localStorage.getItem(AUDIT_KEY)) || {
@@ -310,36 +440,12 @@ function format_timestamp() {
     return `${day}-${month}-${year}, ${hours}:${minutes}:${seconds}`;
 }
 
-function record_signature_event() {
-    let signature = frappe.web_form.get_value("signature");
-
-    if (!signature) {
-        console.log("signature not found")
-        return
-    };
-
-    let existing_json = frappe.web_form.get_value("signature_event_log");
-    let log = [];
-
-    if (existing_json) {
-        try { log = JSON.parse(existing_json); }
-        catch (e) { log = []; }
-    }
-
-    log.push({
-        event: "signature_updated",
-        timestamp: format_timestamp(),
-        signature_length: signature.length
-    });
-
-    frappe.web_form.set_value("signature_event_log", JSON.stringify(log));
-}
-
 function show_upload_button() {
     let html = `
         <button class="btn btn-primary" id="open_signature_upload">
             Upload Image
         </button>
+        <p style="color:red; font-size:12px; margin-top:5px;">* Image Upload is compulsory</p>
         <div id="signature_preview_area" style="margin-top: 15px;"></div>
     `;
 
@@ -370,7 +476,20 @@ function open_signature_dialog() {
                 fieldtype: "HTML",
                 options: `<div id="signature_preview" 
                             style="margin-top:10px; text-align:center;">
-                          </div>`
+                          </div>
+                          <p id="upload_notice"
+                   style="
+                        margin-top:15px;
+                        font-size:13px;
+                        color:#cc0000;
+                        background:#ffe6e6;
+                        padding:10px;
+                        border-left: 3px solid #cc0000;
+                        border-radius: 4px;
+                   ">
+                    <b>Note:</b> You may change your <span style="font-weight: 700;">signature</span> <u>only in this upload window</u>.
+                            Once uploaded, the <span style="font-weight: 700;">signature</span> cannot be changed again.
+                </p>`
             }
         ],
         primary_action_label: "Upload",
@@ -453,23 +572,31 @@ function upload_signature_file(file, dialog) {
 let label_map = {
     "visa_copy": "Visa Copy",
     "ead_card": "EAD Card",
-    "driving_licence": "Driving Licence"
+    "driving_licence": "Driving Licence",
+    "old_resume": "Old Resume"
 };
 
 function render_file_upload_buttons() {
     let html = `
-        <div id="visa_copy_container">
-            <button class="btn btn-primary file-btn" data-field="visa_copy">Upload Visa Copy</button>
-        </div>
+    <div id="visa_copy_container" style="margin-bottom: 15px;">
+        <button class="btn btn-primary file-btn" data-field="visa_copy">Upload Visa Copy</button>
+        <p style="color:red; font-size:12px; margin-top:5px;">* Visa Copy is compulsory</p>
+    </div>
 
-        <div id="ead_card_container" style="margin-top:10px;">
-            <button class="btn btn-primary file-btn" data-field="ead_card">Upload EAD Card</button>
-        </div>
+    <div id="ead_card_container" style="margin-bottom: 15px;">
+        <button class="btn btn-primary file-btn" data-field="ead_card">Upload EAD Card</button>
+        <p style="color:red; font-size:12px; margin-top:5px;">* EAD Card is compulsory</p>
+    </div>
 
-        <div id="driving_licence_container" style="margin-top:10px;">
-            <button class="btn btn-primary file-btn" data-field="driving_licence">Upload Driving Licence</button>
-        </div>
-    `;
+    <div id="driving_licence_container" style="margin-top:10px;">
+        <button class="btn btn-primary file-btn" data-field="driving_licence">Upload Driving Licence</button>
+    </div>
+
+    <div id="old_resume_container" style="margin-top:10px;">
+        <button class="btn btn-primary file-btn" data-field="old_resume">Upload Old Resume</button>
+    </div>
+`;
+
 
     frappe.web_form.set_value("files_custom_html", html);
 
@@ -503,7 +630,24 @@ function open_file_upload_dialog(target_field) {
                 label: "Preview",
                 fieldname: "preview",
                 fieldtype: "HTML",
-                options: `<div id="pdf_preview_area" style="margin-top:10px; color:#666;">No file selected</div>`
+                options: `<div id="pdf_preview_area" style="margin-top:10px; color:#666;">
+                    No file selected
+                </div>
+                
+                <!-- IMPORTANT NOTICE -->
+                <p id="upload_notice"
+                   style="
+                        margin-top:15px;
+                        font-size:13px;
+                        color:#cc0000;
+                        background:#ffe6e6;
+                        padding:10px;
+                        border-left: 3px solid #cc0000;
+                        border-radius: 4px;
+                   ">
+                    <b>Note:</b> You may change your <span style="font-weight: 700;">${label_map[target_field]}</span> <u>only in this upload window</u>.
+                            Once uploaded, the <span style="font-weight: 700;">${label_map[target_field]}</span> cannot be changed again.
+                </p>`
             }
         ],
         primary_action_label: "Upload",
@@ -548,6 +692,7 @@ function open_file_upload_dialog(target_field) {
                 <span id="delete_pdf_btn" 
                       style="position:absolute; top:0; right:-20px; color:white; background:red;
                              padding:2px 6px; border-radius:3px; cursor:pointer;">X</span>
+                             
             </div>
         `;
         $wrap.find("#pdf_preview_area").html(previewHtml);
@@ -604,9 +749,7 @@ function upload_pdf_file(file, target_field, dialog) {
     reader.readAsDataURL(file);
 }
 
-// ------------------------------
 // Show Uploaded File Below Buttons
-// ------------------------------
 function add_file_preview(field, url, name) {
 
 
@@ -621,4 +764,63 @@ function add_file_preview(field, url, name) {
 
     // REPLACE the button with preview
     $(container_id).html(preview_html);
+}
+
+// Disable/Enable the NEXT button dynamically
+function controlNextButton() {
+    let nextBtn = document.querySelector('.btn-next');
+    if (!nextBtn) return;
+
+    let c1 = frappe.web_form.get_value("my_electronic_signature_has_same_effect_as_handwritten");
+    let c2 = frappe.web_form.get_value("i_consent_to_receive_sign_and_store_documents_electronically");
+    let c3 = frappe.web_form.get_value("i_confirm_my_identity_and_signing_this_document_intentionally");
+
+    if (c1 && c2 && c3) {
+        console.log("Enabling NEXT button");
+        nextBtn.disabled = false;
+        nextBtn.classList.remove("btn-disabled");
+    } else {
+        console.log("Disabling NEXT button");
+        nextBtn.disabled = true;
+        nextBtn.classList.add("btn-disabled");
+    }
+}
+
+
+// Attach listener to checkboxes
+function attachCheckboxListeners() {
+
+    const nextButtonFields = [
+        "my_electronic_signature_has_same_effect_as_handwritten",
+        "i_consent_to_receive_sign_and_store_documents_electronically",
+        "i_confirm_my_identity_and_signing_this_document_intentionally"
+    ];
+
+    nextButtonFields.forEach(fieldname => {
+        let input = document.querySelector(`[data-fieldname="${fieldname}"] input`);
+        if (!input) return;
+
+        input.addEventListener("change", () => {
+            controlNextButton(); // Re-run validator when user checks/unchecks
+        });
+    });
+}
+
+
+function controlSubmitButton() {
+    console.log("controlSubmitButton called");
+    let submitBtn = document.querySelector('.submit-btn');
+    if (!submitBtn) return;
+
+    let visa_copy = frappe.web_form.get_value("visa_copy");
+    let ead_card = frappe.web_form.get_value("ead_card");
+    console.log("visa_copy:", visa_copy, "ead_card:", ead_card);
+
+    if (visa_copy && ead_card) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("btn-disabled");
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.classList.add("btn-disabled");
+    }
 }
