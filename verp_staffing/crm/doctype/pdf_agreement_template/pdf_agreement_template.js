@@ -45,15 +45,18 @@ frappe.ui.form.on("Pdf Agreement Template", {
 
                     <hr/>
 
-                    <div style="font-size:13px; color:#444;">
-                        <b>How to use</b>
-                        <ol style="padding-left:18px; margin:8px 0;">
-                            <li>Select field type.</li>
-                            <li>Click on the PDF where you want to place it.</li>
-                            <li>Enter a <i>unique field name</i> when prompted.</li>
-                            <li>Drag to adjust position. Click field for Edit / Delete.</li>
-                            <li>Save template when done.</li>
+                    <div class="agt-step">
+                        <b>Quick Steps</b>
+                        <ol style="margin:6px 0 0 18px; padding:0;">
+                            <li>Select a field type (button highlights).</li>
+                            <li>Click an empty area on PDF to place it.</li>
+                            <li>Drag to move, bottom-right to resize.</li>
+                            <li>Fields snap to a 10px grid & to other fields (edges/centers).</li>
                         </ol>
+                    </div>
+
+                    <div style="margin-top:auto; font-size:12px; color:#666;">
+                        Tip: Don’t overlap fields. Click existing field to edit/delete.
                     </div>
                 </div>
             </div>
@@ -216,7 +219,7 @@ function render_field_on_canvas(frm, field) {
     if (!field.field_id) field.field_id = id;
 
     // attach interactions
-    make_field_resizable($el, frm, field); 
+    make_field_resizable($el, frm, field);
     make_field_draggable($el, frm, field);
     attach_field_select_handlers($el, frm, field);
 }
@@ -436,8 +439,8 @@ function make_field_resizable($el, frm, field) {
         mode = $(this).attr("class").includes("resize-se")
             ? "se"
             : $(this).attr("class").includes("resize-e")
-            ? "e"
-            : "s";
+                ? "e"
+                : "s";
 
         startX = e.pageX;
         startY = e.pageY;

@@ -8,9 +8,9 @@
  "field_order": [
   "title",
   "upload_pdf_template",
-  "builder_html",
   "fields_json",
-  "is_active"
+  "is_active",
+  "builder_html"
  ],
  "fields": [
   {
@@ -25,11 +25,14 @@
    "description": "Upload your company's pdf template that you want to customize",
    "fieldname": "upload_pdf_template",
    "fieldtype": "Attach",
-   "label": "Upload PDF Template"
+   "in_list_view": 1,
+   "label": "Upload PDF Template",
+   "reqd": 1
   },
   {
    "fieldname": "fields_json",
    "fieldtype": "JSON",
+   "hidden": 1,
    "label": "Fields"
   },
   {
@@ -46,7 +49,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-02 11:19:55.312016",
+ "modified": "2025-12-08 14:25:58.118670",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Pdf Agreement Template",

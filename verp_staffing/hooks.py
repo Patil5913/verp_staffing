@@ -87,7 +87,7 @@ doctype_js = {doc: "public/js/validation.js" for doc in validation_docs}
 # ------------
 
 # before_install = "verp_staffing.install.before_install"
-after_install = "verp_staffing.install.after_install"
+# after_install = "verp_staffing.install.after_install"
 after_migrate = [
     "verp_staffing.migrate.after_migrate",
     "verp_staffing.install.after_install",
@@ -256,7 +256,7 @@ before_request = [
 # }
 
 fixtures = [
-    {"doctype": "Workspace"},
+    # {"doctype": "Workspace"},
 ]
 
 # pdflibjs Imports

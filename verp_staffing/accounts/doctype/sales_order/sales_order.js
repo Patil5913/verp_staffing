@@ -149,7 +149,7 @@ function load_form_fields(frm) {
             form_div.empty();
 
             blocks.forEach(b => {
-                if (b.type == "Text" || b.type == "Number") {
+                if (b.type == "Text" || b.type == "Number"|| b.type == "Date") {
 
                     form_div.append(`
                         <div style="margin-bottom: 10px;">
