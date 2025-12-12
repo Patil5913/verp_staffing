@@ -235,5 +235,20 @@ function collect_so_agreement_data(frm) {
         is_received: r.is_received
     }));
 
+    frappe.call({
+        method: "verp_staffing.crm.api.agreement.submit_and_generate",
+        args: {
+            sales_order: frm.doc.name,
+            template,
+            data: values
+        },
+        callback(r) {
+            frappe.msgprint("Agreement saved & sent.");
+            frm.reload_doc();
+            // in this collect the lead from customer of this sales order and send that in url to webform via search params
+            // collect aggrement file url from this callback response and send in agreement html in webform to display 
+        }
+    });
+    
     return data;
 }
