@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class SalesHierarchy(Document):
+class ChildRoles(Document):
 	pass

@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class child(Document):
+class Hierarchy(Document):
 	pass

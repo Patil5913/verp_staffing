@@ -1,14 +1,15 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "field:department",
  "creation": "2025-12-12 10:47:34.763064",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "department",
   "role_table_html",
+  "table_multiselect_fkig",
   "hierarchy_diagram",
-  "role_hierarchy_json",
-  "table_multiselect_fkig"
+  "role_hierarchy_json"
  ],
  "fields": [
   {
@@ -29,16 +30,25 @@
   {
    "fieldname": "table_multiselect_fkig",
    "fieldtype": "Table MultiSelect",
+   "hidden": 1,
    "options": "Child Roles"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "department",
+   "options": "Department",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-12 11:26:02.131726",
+ "modified": "2025-12-13 11:10:15.504372",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
- "name": "Sales Hierarchy",
+ "name": "Hierarchy",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
