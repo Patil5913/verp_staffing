@@ -189,9 +189,17 @@ function open_create_opportunity_dialog(frm) {
                             create_opportunity(frm, values.opportunity_owner);
                         } else {
                             // else get employee with lowest count and create opportunity
-                            auto_assign_opportunity_owner().then(owner => {
-                                create_opportunity(frm, owner);
-                            })
+                            frappe.call({
+                                method: "verp_staffing.crm.api.auto_assign.get_auto_assign_employee",
+                                args: {
+                                    department: "Sales"
+                                },
+                                callback(r) {
+                                    if (r.message) {
+                                        create_opportunity(frm, r.message);
+                                    }
+                                }
+                            });
                         }
                     }
                 });
@@ -201,44 +209,6 @@ function open_create_opportunity_dialog(frm) {
     })
 }
 
-function auto_assign_opportunity_owner() {
-    return new Promise((resolve, reject) => {
-
-        // get all the employees
-        frappe.call({
-            method: "frappe.client.get_list",
-            args: {
-                doctype: "Employee",
-                filters: { department: "Sales" },
-                fields: ["name"]
-            },
-            callback: function (empRes) {
-                employees = empRes.message || [];
-
-                if (!employees.length) {
-                    reject("No Employees Found.");
-                    return;
-                }
-
-                // making array of objects, object: {employee, count}
-                let promises = employees.map(emp => {
-                    return frappe.db.count("Opportunity", {
-                        filters: { "opportunity_owner": emp.name }
-                    }).then(count => ({
-                        employee: emp.name,
-                        count
-                    }));
-                });
-
-                // sorting array of object and sending the employee with lowest count 
-                Promise.all(promises).then(results => {
-                    results.sort((a, b) => a.count - b.count)
-                    resolve(results[0].employee)
-                })
-            }
-        })
-    })
-}
 
 function create_opportunity(frm, owner) {
     const opportunity_doc = {
