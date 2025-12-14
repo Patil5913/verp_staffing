@@ -9,14 +9,28 @@
   "title",
   "column_break_emkf",
   "status",
+  "stage",
   "section_break_roxl",
   "lead_details",
   "sales_tab",
   "section_break_gtmf",
   "sales_content",
+  "resume_tab",
+  "resume_assign_to",
+  "resume",
+  "column_break_xzvi",
+  "resume_status",
   "technical_tab",
+  "technical_assign_to",
+  "column_break_sfpd",
+  "session_status",
+  "section_break_ovxi",
   "technical_content",
   "marketing_tab",
+  "marketing_assign_to",
+  "column_break_kynl",
+  "marketing_status",
+  "section_break_cmpg",
   "marketing_content",
   "out_source_section",
   "outsource",
@@ -41,7 +55,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nForm Filled\nTech Department\nMarketing Department",
+   "options": "Open\nCandidate Placed\nCandidate Withdrawn",
    "reqd": 1
   },
   {
@@ -128,12 +142,85 @@
    "fieldname": "section_break_gtmf",
    "fieldtype": "Section Break",
    "label": "Sales Order"
+  },
+  {
+   "fieldname": "resume_tab",
+   "fieldtype": "Tab Break",
+   "label": "Resume"
+  },
+  {
+   "fieldname": "resume_assign_to",
+   "fieldtype": "Link",
+   "label": "Resume Assign TO",
+   "options": "Employee"
+  },
+  {
+   "description": "Upload your new resume",
+   "fieldname": "resume",
+   "fieldtype": "Attach",
+   "label": "Resume"
+  },
+  {
+   "fieldname": "technical_assign_to",
+   "fieldtype": "Link",
+   "label": "Technical Assign To",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "marketing_assign_to",
+   "fieldtype": "Link",
+   "label": "Recruiter",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "JSON",
+   "label": "stage"
+  },
+  {
+   "fieldname": "column_break_xzvi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resume_status",
+   "fieldtype": "Select",
+   "label": "Resume Status",
+   "options": "Resume Pending"
+  },
+  {
+   "fieldname": "column_break_sfpd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "session_status",
+   "fieldtype": "Select",
+   "label": "Session Status",
+   "options": "Ruc Pending\nRuc Completed"
+  },
+  {
+   "fieldname": "section_break_ovxi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_kynl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Marketing Pending",
+   "fieldname": "marketing_status",
+   "fieldtype": "Select",
+   "label": "Interview Status",
+   "options": "Marketing Pending\nInterview Pending\nCandidate Placed"
+  },
+  {
+   "fieldname": "section_break_cmpg",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-29 15:50:38.355057",
+ "modified": "2025-12-14 14:11:46.833695",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

@@ -176,11 +176,11 @@
 
 #     all_leads.extend(get_employee_list(user))  # get his own leads
 
-#     opp_leads = frappe.db.get_all(  # get leads from opportunities assigned to him
-#         "Opportunity",
-#         filters={"opportunity_owner": get_employee_name(user)},
-#         pluck="party_name",
-#     )
+    # opp_leads = frappe.db.get_all(  # get leads from opportunities assigned to him
+    #     "Opportunity",
+    #     filters={"opportunity_owner": get_employee_name(user)},
+    #     pluck="party_name",
+    # )
 #     own_leads = frappe.db.get_all(  # get leads assigned to him
 #         "Lead", filters={"lead_owner": get_employee_name(user)}, pluck="name"
 #     )
@@ -270,21 +270,21 @@ def secure_get(**kwargs):
         return original_get(**frappe.local.form_dict)
 
     if doctype == "Lead":
-        owners = get_visible_employee_names(user, roles, "Lead")
+        allowed_leads = get_allowed_leads(user)
         frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Lead", "lead_owner", "in", owners]]
+            [["Lead", "name", "in", allowed_leads]]
         )
         return original_get(**frappe.local.form_dict)
 
     if doctype == "Opportunity":
-        owners = get_visible_employee_names(user, roles, "Lead")
+        owners = get_visible_employee_names(user)
         frappe.local.form_dict["filters"] = frappe.as_json(
             [["Opportunity", "opportunity_owner", "in", owners]]
         )
         return original_get(**frappe.local.form_dict)
 
     if doctype == "Customer":
-        owners = get_visible_employee_names(user, roles, "Lead")
+        owners = get_visible_employee_names(user)
         opportunities = frappe.db.get_all(
             "Opportunity",
             filters={"opportunity_owner": ["in", owners]},
@@ -297,35 +297,56 @@ def secure_get(**kwargs):
 
     return original_get(**frappe.local.form_dict)
 
+# get allowed leads for sales person
+def get_allowed_leads(user):
+    root_employee = get_employee_name(user)
+    all_leads = []
+    if not root_employee:
+        return []
+    users = [root_employee]
+
+    sub_users = get_subordinate_users(root_employee_name=get_employee_name(user))
+    if sub_users:
+        users.extend(sub_users)
+
+    users = list(set(users)) 
+    
+    # Leads directly owned
+    own_leads = frappe.db.get_all(
+        "Lead",
+        filters={"lead_owner": ["in", users]},
+        pluck="name",
+    )
+
+    # Leads linked via opportunities
+    opp_leads = frappe.db.get_all(
+        "Opportunity",
+        filters={"opportunity_owner": ["in", users]},
+        pluck="party_name",  # assuming party_name = Lead
+    )
+
+
+    # Merge + dedupe
+    all_leads = list(set(own_leads + opp_leads))
+
+    return all_leads
+
+
 
 # =========================================================
 # CORE VISIBILITY LOGIC
 # =========================================================
-def get_visible_employee_names(user, roles, hierarchy_name):
+def get_visible_employee_names(user):
     root_employee = get_employee_name(user)
     if not root_employee:
         return []
 
-    hierarchy = get_role_hierarchy(hierarchy_name)
-    tree = build_role_tree(hierarchy)
-
-    allowed_roles = set()
-    for role in roles:
-        allowed_roles.add(role)
-        allowed_roles.update(get_all_child_roles(role, tree))
-
     users = get_subordinate_users(
         root_employee_name=root_employee,
-        allowed_roles=allowed_roles,
     )
 
-    users.add(user)
-
-    return frappe.db.get_all(
-        "Employee",
-        filters={"user": ["in", list(users)]},
-        pluck="employee_name",
-    )
+    users.add(root_employee)
+    return users
 
 
 # =========================================================
@@ -337,7 +358,6 @@ def get_role_hierarchy(name):
         name,
         "role_hierarchy_json",
     )
-
     if not hierarchy_json:
         return []
 
@@ -367,7 +387,6 @@ def get_all_child_roles(role, tree):
             if child not in collected:
                 collected.add(child)
                 stack.append(child)
-
     return collected
 
 
@@ -382,11 +401,10 @@ def get_employee_name(user):
     )
 
 
-def get_subordinate_users(root_employee_name, allowed_roles):
+def get_subordinate_users(root_employee_name):
     collected_users = set()
     stack = [root_employee_name]
 
-    print("allowed_roles", allowed_roles)
 
     while stack:
         current = stack.pop()
@@ -394,13 +412,12 @@ def get_subordinate_users(root_employee_name, allowed_roles):
         children = frappe.db.get_all(
             "Employee",
             filters={"assigned_to": current},
-            fields=["employee_name", "user", "designation"],
+            fields=["employee_name"],
         )
 
         for emp in children:
             stack.append(emp.employee_name)
 
-            if emp.user:
-                collected_users.add(emp.user)
-
+            if emp.employee_name:
+                collected_users.add(emp.employee_name)
     return collected_users

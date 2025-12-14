@@ -6,6 +6,7 @@ frappe.ui.form.on("Hierarchy", {
         // Only render if wrapper is empty or force re-render is needed
         if (!frm.get_field("role_table_html").$wrapper.find("#role-table-wrapper").length) {
             render_role_table_html(frm);
+            render_auto_assign_section(frm)
         }
 
         frm.department_roles = await load_department_roles(frm);
@@ -47,6 +48,12 @@ frappe.ui.form.on("Hierarchy", {
         // Validate that we have data
         if (!frm.doc.role_hierarchy_json) {
             frappe.msgprint(__("Please add at least one role hierarchy"));
+            frappe.validated = false;
+        }
+        if (!frm.doc.auto_assign_config) {
+            frappe.msgprint(
+                __("Please select a role for Auto Assignment so the system knows who can receive records.")
+            );
             frappe.validated = false;
         }
 
@@ -150,15 +157,15 @@ function add_row(frm, rowData) {
         <tr data-id="${row_id}" class="role-row">
             <td><div class="parent-role-container"></div></td>
             <td><div class="child-role-container"></div></td>
-            <td><button class="btn btn-danger btn-sm delete-row">Delete</button></td>
+            <td><button class="btn btn-danger btn-sm delete-row">Delete</button> </td>
         </tr>
     `);
-    
+
     $("#role-table tbody").append(tr);
-    
+
     let parent_container = tr.find(".parent-role-container");
     let child_container = tr.find(".child-role-container");
-    
+
     /* ---------------- Parent Role ---------------- */
     let parent_control = frappe.ui.form.make_control({
         parent: parent_container,
@@ -175,20 +182,20 @@ function add_row(frm, rowData) {
         },
         render_input: true
     });
-    
+
     parent_container.data("control", parent_control);
-    
+
     if (rowData?.parent_role) {
         parent_control.set_value(rowData.parent_role);
     }
-    
+
     parent_control.$input.on("change", () => {
         setTimeout(() => save_table_to_json(frm), 300);
     });
-    
+
     /* ---------------- Child Roles (CUSTOM MULTISELECT) ---------------- */
     let selected_roles = [];
-    
+
     let multiselect = $(`
         <div class="custom-multiselect">
             <div class="multiselect-content">
@@ -198,23 +205,23 @@ function add_row(frm, rowData) {
             <div class="multiselect-dropdown hidden"></div>
         </div>
     `);
-    
+
     child_container.append(multiselect);
     child_container.data("control", { get_value: () => selected_roles });
-    
+
     const content_area = multiselect.find(".multiselect-content");
     const chips = multiselect.find(".selected-items");
     const input = multiselect.find(".multiselect-input");
     const dropdown = multiselect.find(".multiselect-dropdown");
-    
+
     function render_chips() {
         chips.empty();
-        
+
         if (selected_roles.length === 0) {
             input.show();
             return;
         }
-        
+
         selected_roles.forEach(role => {
             chips.append(`
                 <span class="chip">
@@ -223,36 +230,36 @@ function add_row(frm, rowData) {
                 </span>
             `);
         });
-        
+
         input.show();
     }
-    
+
     function render_dropdown(filter = "") {
         dropdown.empty();
-        
+
         let roles = (frm.department_roles || [])
             .filter(r =>
                 r.toLowerCase().includes(filter.toLowerCase()) &&
                 !selected_roles.includes(r)
             );
-        
+
         if (!roles.length) {
             dropdown.addClass("hidden");
             return;
         }
-        
+
         roles.forEach(role => {
             dropdown.append(`<div class="item">${frappe.utils.escape_html(role)}</div>`);
         });
-        
+
         dropdown.removeClass("hidden");
     }
-    
+
     // Show dropdown on focus or input
     input.on("focus", () => {
         render_dropdown(input.val());
     });
-    
+
     input.on("keyup", (e) => {
         // Don't trigger on special keys
         if (e.key === "Escape") {
@@ -262,14 +269,14 @@ function add_row(frm, rowData) {
         }
         render_dropdown(input.val());
     });
-    
+
     // Allow input to be clicked even when there are chips
-    multiselect.on("click", function(e) {
+    multiselect.on("click", function (e) {
         if (!$(e.target).hasClass("remove")) {
             input.focus();
         }
     });
-    
+
     // Select item from dropdown
     multiselect.on("click", ".item", function () {
         let role = $(this).text();
@@ -280,7 +287,7 @@ function add_row(frm, rowData) {
         save_table_to_json(frm);
         input.focus();
     });
-    
+
     // Remove chip
     multiselect.on("click", ".remove", function (e) {
         e.stopPropagation();
@@ -289,14 +296,14 @@ function add_row(frm, rowData) {
         render_chips();
         save_table_to_json(frm);
     });
-    
+
     // Close dropdown when clicking outside
     $(document).on("click", function (e) {
         if (!multiselect.is(e.target) && !multiselect.has(e.target).length) {
             dropdown.addClass("hidden");
         }
     });
-    
+
     /* ---- Load existing child roles ---- */
     if (rowData?.child_roles?.length) {
         selected_roles = rowData.child_roles.map(r =>
@@ -304,7 +311,7 @@ function add_row(frm, rowData) {
         );
         render_chips();
     }
-    
+
     /* ---------------- Delete Row ---------------- */
     tr.find(".delete-row").on("click", function () {
         tr.remove();
@@ -837,4 +844,76 @@ function detect_cycle(graph) {
         if (result) return result;
     }
     return null;
+}
+
+function render_auto_assign_section(frm) {
+    const wrapper = frm.get_field("role_table_html").$wrapper;
+
+    if (wrapper.find("#auto-assign-wrapper").length) return;
+
+    wrapper.append(`
+        <div id="auto-assign-wrapper" style="margin-top:20px; padding:15px; border:1px solid #ddd; border-radius:6px; background:#f9f9f9;">
+            <h4 style="margin-bottom:8px;">Auto Assignment Rule</h4>
+            <p style="color:#555; font-size:13px; margin-bottom:10px;">
+                Select one role to enable automatic assignment.
+                Only users with this role will be considered for auto and manual assignment.
+            </p>
+            <div class="auto-assign-role"></div>
+        </div>
+    `);
+
+    create_auto_assign_control(frm);
+}
+
+async function create_auto_assign_control(frm) {
+    const container = $("#auto-assign-wrapper .auto-assign-role");
+    let dept_roles = await load_department_roles(frm)
+    console.log('dept_roles: ', dept_roles);
+
+    const control = frappe.ui.form.make_control({
+        parent: container,
+        df: {
+            fieldtype: "Select",
+            label: "Role for Auto Assignment",
+            fieldname: "auto_assign_role",
+            options: ["", ...(dept_roles || [])],
+            description: "This role will be used for automatic assignment"
+        },
+        render_input: true
+    });
+
+    container.data("control", control);
+
+    // Load existing value
+    if (frm.doc.auto_assign_config) {
+        try {
+            const cfg = JSON.parse(frm.doc.auto_assign_config);
+            if (cfg.role) {
+                control.set_value(cfg.role);
+            }
+        } catch { }
+    }
+
+    control.$input.on("change", () => {
+        save_auto_assign_config(frm);
+    });
+}
+
+function save_auto_assign_config(frm) {
+    const control = $("#auto-assign-wrapper .auto-assign-role").data("control");
+    if (!control) return;
+
+    const role = control.get_value();
+
+    if (!role) {
+        frm.set_value("auto_assign_config", "");
+        return;
+    }
+
+    const payload = {
+        role: role,
+        label: `Auto-assign to ${role}`
+    };
+
+    frm.set_value("auto_assign_config", JSON.stringify(payload));
 }
