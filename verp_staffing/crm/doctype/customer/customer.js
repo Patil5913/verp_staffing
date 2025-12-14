@@ -4,7 +4,6 @@
 frappe.ui.form.on("Customer", {
     refresh(frm) {
         render_notes(frm);
-        add_note_button(frm);
         render_activity_section(frm);
         toggle_tab_view(frm);
         render_technical_tab_content(frm);
@@ -13,19 +12,19 @@ frappe.ui.form.on("Customer", {
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
+        frappe.call({
+            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+            callback: (r) => {
+                let dept = r.message
+                apply_tab_visibility(frm, dept)
+                if (dept === "Sales") {
+                    add_forward_button(frm);
+                }
+            }
+        })
     },
-
 });
 
-function add_note_button(frm) {
-    frm.add_custom_button(__("Add Note"), function () {
-        frappe.new_doc("Note", {
-            reference_doctype: "Customer",
-            reference_name: frm.doc.name,
-            public: 0
-        });
-    }, __("Create"));
-}
 
 function render_notes(frm) {
     const $wrapper = frm.get_field("notes_html")?.$wrapper;
@@ -755,6 +754,71 @@ function render_lead_details(frm) {
                     frm.set_df_property("lead_details", "options", html);
                 }
             });
+        }
+    });
+}
+
+const DEPARTMENT_VISIBILITY = {
+    sales: ["lead_details", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],
+    resume: ["lead_details", "resume_tab"],
+    technical: ["lead_details", "resume_tab", "technical_tab"],
+    marketing: ["lead_details", "resume_tab", "technical_tab", "marketing_tab"]
+};
+
+function apply_tab_visibility(frm, department) {
+    const allowed = DEPARTMENT_VISIBILITY[department] || [];
+
+    const all_tabs = [
+        "sales_tab",
+        "resume_tab",
+        "technical_tab",
+        "marketing_tab",
+        "note_tab",
+        "activities_tab"
+    ];
+
+    all_tabs.forEach(tab => {
+        frm.set_df_property(tab, "hidden", !allowed.includes(tab));
+    });
+}
+
+function add_forward_button(frm) {
+    frm.add_custom_button(
+        "Forward Candidate",
+        () => {
+            frappe.prompt(
+                [
+                    {
+                        fieldname: "department",
+                        fieldtype: "Select",
+                        label: "Select Department",
+                        options: ["Resume", "Technical", "Marketing"],
+                        reqd: 1
+                    }
+                ],
+                (values) => {
+                    forward_candidate(frm, values.department.toLowerCase());
+                },
+                "Forward Candidate",
+                "Forward"
+            );
+        },
+        "Actions"
+    );
+}
+
+function forward_candidate(frm, department) {
+    frappe.call({
+        method: "verp_staffing.crm.api.auto_assign.forward_candidate",
+        args: {
+            customer: frm.doc.name,
+            department: department
+        },
+        callback(r) {
+            frappe.msgprint(
+                `Candidate forwarded to ${department} and assigned automatically.`
+            );
+            frm.reload_doc();
         }
     });
 }

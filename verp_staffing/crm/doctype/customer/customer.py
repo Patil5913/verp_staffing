@@ -11,3 +11,8 @@ class Customer(Document):
 			lead = frappe.db.get_value("Opportunity", self.opportunity, "party_name")
 			if lead:
 				self.title = frappe.db.get_value("Lead", lead, "name1")
+
+@frappe.whitelist()
+def get_employee_department():
+    emp = frappe.get_value("Employee", {"user": frappe.session.user}, ["department"], as_dict=True)
+    return emp.department if emp else None

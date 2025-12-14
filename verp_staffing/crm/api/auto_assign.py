@@ -83,3 +83,48 @@ def get_employees_with_role(role, department=None):
         filters=filters,
         pluck="name"
     )
+
+@frappe.whitelist()
+def forward_candidate(customer, department):
+    import json
+    from frappe.utils import now_datetime
+
+    doc = frappe.get_doc("Customer", customer)
+
+    stage = json.loads(doc.stage or "{}")
+    DEPARTMENT_ASSIGN_FIELD_MAP = {
+        "sales": "resume_assign_to",        # example if sales forwards to resume
+        "resume": "resume_assign_to",
+        "technical": "technical_assign_to",
+        "marketing": "marketing_assign_to",
+    }
+    dept_key = department.strip().lower()
+    if dept_key not in DEPARTMENT_ASSIGN_FIELD_MAP:
+        frappe.throw(f"Unsupported department: {department}")
+
+    assign_field = DEPARTMENT_ASSIGN_FIELD_MAP.get(dept_key)
+
+    # 1. Auto assign employee
+    assignee = get_auto_assign_employee(
+        department=department,
+        target_doctype="Customer",
+        owner_field=assign_field
+    )
+
+    # 2. Update stage
+    stage[department] = {
+        "status": "pending",
+        "assigned_to": assignee,
+        "timestamp": str(now_datetime())
+    }
+
+    # 3. Write assignment field
+    doc.set(assign_field, assignee)
+    doc.stage = json.dumps(stage)
+
+    doc.save(ignore_permissions=True)
+
+    return {
+        "assigned_to": assignee,
+        "department": department
+    }

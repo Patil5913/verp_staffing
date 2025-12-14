@@ -6,7 +6,6 @@ frappe.ui.form.on("Hierarchy", {
         // Only render if wrapper is empty or force re-render is needed
         if (!frm.get_field("role_table_html").$wrapper.find("#role-table-wrapper").length) {
             render_role_table_html(frm);
-            render_auto_assign_section(frm)
         }
 
         frm.department_roles = await load_department_roles(frm);
@@ -25,7 +24,7 @@ frappe.ui.form.on("Hierarchy", {
         });
 
         load_used_departments(frm);
-
+        render_auto_assign_section(frm);
         // If document already exists
         if (!frm.is_new()) {
             frm.set_df_property("department", "read_only", 1);
@@ -38,6 +37,16 @@ frappe.ui.form.on("Hierarchy", {
 
     async department(frm) {
         frm.department_roles = await load_department_roles(frm);
+        // Clear invalid auto-assign config
+        if (frm.doc.auto_assign_config) {
+            try {
+                const cfg = JSON.parse(frm.doc.auto_assign_config);
+                if (!frm.department_roles.includes(cfg.role)) {
+                    frm.set_value("auto_assign_config", "");
+                }
+            } catch { }
+        }
+        render_auto_assign_section(frm);
         init_role_table(frm);
     },
 
@@ -92,9 +101,9 @@ async function load_department_roles(frm) {
             name: frm.doc.department
         }
     });
-
+    console.log("res: ", res)
     let table = res.message.roles || [];
-    return table.map(r => r.role);
+    return table.map(r => r.name);
 }
 
 
@@ -849,7 +858,11 @@ function detect_cycle(graph) {
 function render_auto_assign_section(frm) {
     const wrapper = frm.get_field("role_table_html").$wrapper;
 
-    if (wrapper.find("#auto-assign-wrapper").length) return;
+    // Remove old section if exists
+    wrapper.find("#auto-assign-wrapper").remove();
+    frm._auto_assign_control = null;
+
+    if (!frm.department_roles || !frm.department_roles.length) return;
 
     wrapper.append(`
         <div id="auto-assign-wrapper" style="margin-top:20px; padding:15px; border:1px solid #ddd; border-radius:6px; background:#f9f9f9;">
@@ -858,50 +871,55 @@ function render_auto_assign_section(frm) {
                 Select one role to enable automatic assignment.
                 Only users with this role will be considered for auto and manual assignment.
             </p>
-            <div class="auto-assign-role"></div>
+            <div class="auto-assign-role" data="control"></div>
         </div>
     `);
 
     create_auto_assign_control(frm);
 }
 
-async function create_auto_assign_control(frm) {
+function create_auto_assign_control(frm) {
     const container = $("#auto-assign-wrapper .auto-assign-role");
-    let dept_roles = await load_department_roles(frm)
-    console.log('dept_roles: ', dept_roles);
 
-    const control = frappe.ui.form.make_control({
+    const roles = frm.department_roles || [];
+
+    frm._auto_assign_control = frappe.ui.form.make_control({
         parent: container,
         df: {
             fieldtype: "Select",
             label: "Role for Auto Assignment",
             fieldname: "auto_assign_role",
-            options: ["", ...(dept_roles || [])],
+            options: ["", ...roles],
             description: "This role will be used for automatic assignment"
         },
         render_input: true
     });
 
-    container.data("control", control);
+    const control = frm._auto_assign_control;
 
-    // Load existing value
+    // Restore existing value safely
     if (frm.doc.auto_assign_config) {
         try {
             const cfg = JSON.parse(frm.doc.auto_assign_config);
-            if (cfg.role) {
+            if (cfg.role && roles.includes(cfg.role)) {
                 control.set_value(cfg.role);
             }
         } catch { }
     }
 
     control.$input.on("change", () => {
+
         save_auto_assign_config(frm);
     });
 }
 
 function save_auto_assign_config(frm) {
-    const control = $("#auto-assign-wrapper .auto-assign-role").data("control");
-    if (!control) return;
+    const control = frm._auto_assign_control;
+
+    if (!control) {
+        console.warn("Auto assign control not initialized");
+        return;
+    }
 
     const role = control.get_value();
 
@@ -917,3 +935,4 @@ function save_auto_assign_config(frm) {
 
     frm.set_value("auto_assign_config", JSON.stringify(payload));
 }
+
