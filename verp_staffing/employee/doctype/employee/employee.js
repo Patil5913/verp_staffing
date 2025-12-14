@@ -8,7 +8,7 @@ frappe.ui.form.on("Employee", {
                 query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee"
             }
         });
-
+        fetchDepartmentDesignation(frm)
 
     },
 
@@ -24,48 +24,7 @@ frappe.ui.form.on("Employee", {
     department(frm) {
         if (!frm.doc.department) return;
 
-        frm._role_hierarchy = null;
-
-        frappe.call({
-            method: "frappe.client.get",
-            args: {
-                doctype: "Hierarchy",
-                name: frm.doc.department
-            },
-            callback(r) {
-                if (!r.message || !r.message.role_hierarchy_json) {
-                    frappe.msgprint("No hierarchy found for this department");
-                    return;
-                }
-
-                try {
-                    frm._role_hierarchy = JSON.parse(r.message.role_hierarchy_json);
-                } catch (e) {
-                    frappe.throw("Invalid role_hierarchy_json format");
-                }
-
-                // collect distinct roles
-                let roles = new Set();
-
-                frm._role_hierarchy.forEach(row => {
-                    if (row.parent_role) {
-                        roles.add(row.parent_role);
-                    }
-                    if (Array.isArray(row.child_roles)) {
-                        row.child_roles.forEach(cr => roles.add(cr));
-                    }
-                });
-
-                frm.set_df_property(
-                    "designation",
-                    "options",
-                    Array.from(roles).join("\n")
-                );
-
-                frm.set_value("designation", null);
-                frm.set_value("assigned_to", null);
-            }
-        });
+        fetchDepartmentDesignation(frm)
     },
 
     designation(frm) {
@@ -84,7 +43,7 @@ frappe.ui.form.on("Employee", {
             ) {
                 parent_role = row.parent_role;
             }
-        });        
+        });
 
         if (!parent_role) {
             // top-level role, no manager
@@ -107,3 +66,48 @@ frappe.ui.form.on("Employee", {
         frm.set_value("assigned_to", null);
     }
 });
+
+function fetchDepartmentDesignation(frm) {
+    
+    frm._role_hierarchy = null;
+    if(!frm.doc.department) return
+    console.log("function called new");
+
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Hierarchy",
+            name: frm.doc.department
+        },
+        callback(r) {
+            if (!r.message || !r.message.role_hierarchy_json) {
+                frappe.msgprint("No hierarchy found for this department");
+                return;
+            }
+
+            try {
+                frm._role_hierarchy = JSON.parse(r.message.role_hierarchy_json);
+            } catch (e) {
+                frappe.throw("Invalid role_hierarchy_json format");
+            }
+
+            // collect distinct roles
+            let roles = new Set();
+
+            frm._role_hierarchy.forEach(row => {
+                if (row.parent_role) {
+                    roles.add(row.parent_role);
+                }
+                if (Array.isArray(row.child_roles)) {
+                    row.child_roles.forEach(cr => roles.add(cr));
+                }
+            });
+            frm.set_df_property(
+                "designation",
+                "options",
+                Array.from(roles).join("\n")
+            );
+
+        }
+    });
+}
