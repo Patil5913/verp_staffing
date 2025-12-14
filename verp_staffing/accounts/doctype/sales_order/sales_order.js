@@ -38,7 +38,7 @@ function render_agreement_ui(frm) {
             method: "frappe.client.get",
             args: { doctype: "Agreement", name: frm.doc.agreement },
             callback(r) {
-                
+
                 if (!r.message) {
                     frappe.msgprint("Agreement not found.");
                 } else {
@@ -149,7 +149,7 @@ function load_form_fields(frm) {
             form_div.empty();
 
             blocks.forEach(b => {
-                if (b.type == "Text" || b.type == "Number"|| b.type == "Date") {
+                if (b.type == "Text" || b.type == "Number" || b.type == "Date") {
 
                     form_div.append(`
                         <div style="margin-bottom: 10px;">
@@ -210,10 +210,24 @@ function submit_inline(frm) {
                 data: JSON.stringify(data)
             },
             callback(r) {
-                if (r.message) {
-                    frappe.show_alert("Agreement created & sent");
-                    frm.reload_doc();
+                if (!r.message) {
+                    frappe.throw("Agreement generation failed.");
+                    return;
                 }
+
+                // fetch Customer.title explicitly
+                frappe.db.get_value(
+                    "Customer",
+                    frm.doc.customer,
+                    "title"
+                ).then(res => {
+                    if (!res || !res.message || !res.message.title) {
+                        frappe.throw("Customer title not found.");
+                        return;
+                    }
+
+                    window.location.href = `/details-form/new?so=${encodeURIComponent(frm.doc.name)}&l=${encodeURIComponent(res.message.title)}`;
+                });
             }
         });
     });
@@ -248,6 +262,6 @@ function collect_so_agreement_data(frm) {
     //         // collect aggrement file url from this callback response and send in agreement html in webform to display 
     //     }
     // });
-    
+
     return data;
 }

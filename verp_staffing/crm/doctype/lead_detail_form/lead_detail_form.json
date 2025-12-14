@@ -7,6 +7,7 @@
  "field_order": [
   "agreement_section",
   "agreement_html",
+  "agreement_link",
   "consent_and_electronic_signature_confirmation_section",
   "signature_method",
   "signature",
@@ -399,12 +400,18 @@
   {
    "fieldname": "agreement_html",
    "fieldtype": "Data"
+  },
+  {
+   "fieldname": "agreement_link",
+   "fieldtype": "Link",
+   "label": "Agreement Link",
+   "options": "Agreement"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-08 11:57:13.410887",
+ "modified": "2025-12-14 14:41:22.400495",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

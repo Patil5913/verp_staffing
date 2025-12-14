@@ -3,10 +3,23 @@ import frappe
 @frappe.whitelist(allow_guest=True)
 def pdf_to_images(path):
     import fitz  # PyMuPDF
-    import frappe
     import base64
+    import os
 
-    file_path = frappe.get_site_path("public", path)
+    if not path:
+        frappe.throw("PDF path not provided")
+
+    # strip leading slash and `files/`
+    if path.startswith("/files/"):
+        filename = path.replace("/files/", "", 1)
+    else:
+        filename = path
+
+    file_path = frappe.get_site_path("public", "files", filename)
+
+    if not os.path.exists(file_path):
+        frappe.throw(f"PDF file not found at {file_path}")
+
 
     doc = fitz.open(file_path)
     images = []

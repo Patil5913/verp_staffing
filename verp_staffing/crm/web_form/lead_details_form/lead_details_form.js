@@ -35,9 +35,6 @@ frappe.ready(function () {
 
     }, 300);
 
-
-
-
     setTimeout(() => {
         controlNextButton();
         controlSubmitButton();
@@ -48,45 +45,83 @@ frappe.ready(function () {
     const urlParams = new URLSearchParams(window.location.search);
 
     // Supported key names
-    const agreementPath = urlParams.get("a")
-    const leadPath = urlParams.get("l");
+    const salesOrder = urlParams.get("so")
+    const leadValue = urlParams.get("l");
 
     // 2. If lead exists → store in webform field "lead"
-    if (leadPath) {
-        console.log("Lead value found:", leadPath);
-        frappe.web_form.set_value("lead", leadPath);
+    if (leadValue) {
+        console.log("Lead value found:", leadValue);
+        frappe.web_form.set_value("lead", leadValue);
     } else {
         console.log("Lead value not found in URL");
     }
 
-    // If no PDF provided → stop
-    if (agreementPath) {
-        console.warn("No PDF path found in URL");
-
-        // 2. Build absolute file URL (Frappe uses / files / directory)
-        let pdfURL = window.location.origin + "/" + agreementPath;
-
-        console.log("Loading PDF:", pdfURL);
-
-        // 3. Find the HTML field container Frappe allocates
-
-        frappe.call({
-            method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
-            args: { path: agreementPath },
-            callback: (r) => {
-                if (!r.message) return;
-
-                let innerHTML = "";
-
-                r.message.forEach(img => {
-                    innerHTML += `
-                <img src="${img}" style="width:100%; margin-bottom:20px; border:1px solid #ccc;">
-                `;
-                    frappe.web_form.set_value("agreement_html", innerHTML);
-                });
-            }
-        });
+    // sales order is mandatory now
+    if (!salesOrder) {
+        console.error("Sales Order missing in URL");
+        return;
     }
+
+    // fetch Agreement by Sales Order
+    frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+            doctype: "Agreement",
+            filters: {
+                sales_order: salesOrder
+            },
+            fields: ["name", "pdf"],
+            limit_page_length: 1
+        },
+        callback: function (r) {
+            if (!r.message || !r.message.length) {
+                console.error("No Agreement found for Sales Order:", salesOrder);
+                return;
+            }
+
+            console.log("r.message", r.message);
+
+            if (r.message[0].name) {
+                frappe.web_form.set_value("agreement_link", r.message[0].name);
+            }
+            
+            const pdfPath = r.message[0].pdf;
+
+            if (!pdfPath) {
+                console.error("Agreement found but PDF field is empty");
+                return;
+            }
+
+            console.log("Agreement PDF path:", pdfPath);
+
+            // convert PDF to images
+            frappe.call({
+                method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
+                args: {
+                    path: pdfPath
+                },
+                callback: function (res) {
+                    if (!res.message || !res.message.length) {
+                        console.error("PDF to image conversion failed");
+                        return;
+                    }
+
+                    let html = "";
+
+                    res.message.forEach(img => {
+                        html += `
+                        <img 
+                            src="${img}" 
+                            style="width:100%; margin-bottom:20px; border:1px solid #ccc;"
+                        >
+                    `;
+                    });
+
+                    frappe.web_form.set_value("agreement_html", html);
+                }
+            });
+        }
+    });
 
 
 
