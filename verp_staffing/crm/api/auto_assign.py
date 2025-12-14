@@ -2,9 +2,23 @@ import json
 import frappe
 
 @frappe.whitelist()
-def get_auto_assign_employee(department):
-    import json
+def get_auto_assign_employee(
+    *,
+    department: str,
+    target_doctype: str,
+    owner_field: str,
+    extra_filters: dict | None = None
+):
+    """
+    Generic auto-assign resolver.
 
+    department     -> Department name
+    target_doctype -> DocType to count load from (Opportunity, Customer, Ticket, etc.)
+    owner_field    -> Fieldname that stores Employee link
+    extra_filters  -> Optional additional filters for load calculation
+    """
+
+    # 1. Fetch hierarchy config
     hierarchy = frappe.get_all(
         "Hierarchy",
         filters={"department": department},
@@ -13,7 +27,7 @@ def get_auto_assign_employee(department):
     )
 
     if not hierarchy:
-        frappe.throw("Hierarchy not configured")
+        frappe.throw(f"Hierarchy not configured for department {department}")
 
     try:
         config = json.loads(hierarchy[0].auto_assign_config or "{}")
@@ -22,24 +36,33 @@ def get_auto_assign_employee(department):
 
     role = config.get("role")
     if not role:
-        frappe.throw("Auto assign role missing")
+        frappe.throw("Auto assign role missing in hierarchy")
 
+    # 2. Resolve employees eligible for this role
     employees = get_employees_with_role(role, department)
 
     if not employees:
         frappe.throw("No employees available for auto assignment")
 
-    # Load balancing
+    # 3. Calculate load
     load = []
-    for emp in employees:
-        count = frappe.db.count(
-            "Opportunity",
-            filters={"opportunity_owner": emp}
-        )
-        load.append((emp, count))
 
-    load.sort(key=lambda x: x[1])
-    return load[0][0]
+    for emp in employees:
+        filters = {owner_field: emp}
+
+        if extra_filters:
+            filters.update(extra_filters)
+
+        count = frappe.db.count(target_doctype, filters=filters)
+
+        load.append({
+            "employee": emp,
+            "count": count
+        })
+
+    # 4. Pick least loaded
+    load.sort(key=lambda x: x["count"])
+    return load[0]["employee"]
 
 def get_employees_with_role(role, department=None):
     users = frappe.get_all(
