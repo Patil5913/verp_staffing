@@ -43,7 +43,7 @@ app_include_css = "/assets/verp_staffing/css/globel.css"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course"]
+validation_docs = ["Lead", "Lead Course","Resume","RUC"]
 
 doctype_js = {doc: "public/js/validation.js" for doc in validation_docs}
 
@@ -89,7 +89,7 @@ doctype_js = {doc: "public/js/validation.js" for doc in validation_docs}
 # before_install = "verp_staffing.install.before_install"
 # after_install = "verp_staffing.install.after_install"
 after_migrate = [
-    "verp_staffing.migrate.after_migrate",
+    "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
 ]
 

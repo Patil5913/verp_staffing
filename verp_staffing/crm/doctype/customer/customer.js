@@ -9,6 +9,9 @@ frappe.ui.form.on("Customer", {
         render_technical_tab_content(frm);
         render_marketing_tab_content(frm);
         render_lead_details(frm);
+        inject_department_css();
+        inject_status_badge_css();
+        load_department_panels(frm);
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
@@ -17,7 +20,7 @@ frappe.ui.form.on("Customer", {
             callback: (r) => {
                 let dept = r.message
                 apply_tab_visibility(frm, dept)
-                if (dept === "Sales") {
+                if (dept === "Sales" || frappe.user.has_role("System Manager")) {
                     add_forward_button(frm);
                 }
             }
@@ -759,6 +762,13 @@ const DEPARTMENT_VISIBILITY = {
     marketing: ["lead_details", "resume_tab", "technical_tab", "marketing_tab"]
 };
 
+const ALL_FORWARD_DEPARTMENTS = [
+    { label: "Resume", value: "resume" },
+    { label: "Technical", value: "technical" },
+    { label: "Marketing", value: "marketing" },
+];
+
+
 function apply_tab_visibility(frm, department) {
     const allowed = DEPARTMENT_VISIBILITY[department] || [];
 
@@ -780,26 +790,58 @@ function add_forward_button(frm) {
     frm.add_custom_button(
         "Forward Candidate",
         () => {
+            const forwarded = get_forwarded_departments(frm);
+
+            const available = ALL_FORWARD_DEPARTMENTS.filter(
+                d => !forwarded.includes(d.value)
+            );
+
+            if (!available.length) {
+                frappe.msgprint("Candidate has already been forwarded to all departments.");
+                return;
+            }
+
             frappe.prompt(
                 [
                     {
                         fieldname: "department",
                         fieldtype: "Select",
                         label: "Select Department",
-                        options: ["Resume", "Technical", "Marketing"],
+                        options: available.map(d => ({
+                            label: d.label,
+                            value: d.value
+                        })),
                         reqd: 1
                     }
                 ],
                 (values) => {
-                    forward_candidate(frm, values.department.toLowerCase());
+                    forward_candidate(frm, values.department);
                 },
-                "Forward Candidate",
+                "Forward Candidate to any department",
                 "Forward"
             );
         },
-        "Actions"
+        "Forward"
     );
 }
+
+
+function get_forwarded_departments(frm) {
+    const stage = get_stage_json(frm);
+    return Object.keys(stage);
+}
+
+function get_stage_json(frm) {
+    if (!frm.doc.stage) return {};
+
+    try {
+        return JSON.parse(frm.doc.stage);
+    } catch (e) {
+        console.warn("Invalid stage JSON");
+        return {};
+    }
+}
+
 
 function forward_candidate(frm, department) {
     frappe.call({
@@ -815,4 +857,139 @@ function forward_candidate(frm, department) {
             frm.reload_doc();
         }
     });
+}
+
+function inject_department_css() {
+    if (!document.getElementById("status-badge-css")) {
+
+        const style = document.createElement("style");
+        style.id = "status-badge-css";
+        style.innerHTML = `
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #e6f4ea;
+            color: #1e7e34;
+        }
+
+        .status-warning {
+            background: #fff4e5;
+            color: #b26a00;
+        }
+
+        .status-neutral {
+            background: #f0f0f0;
+            color: #555;
+        }
+        `;
+        document.head.appendChild(style);
+    }
+    if (!document.getElementById("department-panel-css")) {
+
+        const style = document.createElement("style");
+        style.id = "department-panel-css";
+        style.innerHTML = `
+        .department-box {
+            border: 1px solid #e0e0e0;
+            padding: 12px;
+            border-radius: 6px;
+            background: #fafafa;
+            margin-bottom: 10px;
+        }
+    `;
+        document.head.appendChild(style);
+    }
+}
+
+//load data of each department
+function load_department_panels(frm) {
+    frappe.call({
+        method: "verp_staffing.crm.api.customer.get_customer_department_panels",
+        args: {
+            customer: frm.doc.name
+        },
+        callback(r) {
+            if (!r.message) return;
+            console.log("r.message: ", r.message);
+
+            render_resume_panel(frm, r.message.resume);
+            render_technical_panel(frm, r.message.technical);
+        }
+    });
+}
+
+function render_resume_panel(frm, data) {
+    const wrapper = frm.fields_dict.resume_html.$wrapper;
+
+    if (!data) {
+        wrapper.html(`<div class="text-muted">Resume not forwarded yet.</div>`);
+        return;
+    }
+
+    const status_html = get_status_badge(data.status);
+
+    const html = `
+        <div class="department-box">
+            <h4>Resume Department</h4>
+            <p><strong>Status:</strong> ${status_html}</p>
+            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
+        data.assigned_to_name || data.assigned_to || "-"
+    )}</p>
+            <p class="text-muted">
+                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
+            </p>
+        </div>
+    `;
+
+    wrapper.html(html);
+}
+
+function render_technical_panel(frm, data) {
+    const wrapper = frm.fields_dict.technical_content.$wrapper;
+
+    if (!data) {
+        wrapper.html(`<div class="text-muted">Not forwarded to Technical yet.</div>`);
+        return;
+    }
+
+    const status_html = get_status_badge(data.status);
+
+    const html = `
+        <div class="department-box">
+            <h4>Technical Department</h4>
+            <p><strong>Status:</strong> ${status_html}</p>
+            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
+        data.assigned_to_name || data.assigned_to || "-"
+    )}</p>
+            <p class="text-muted">
+                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
+            </p>
+        </div>
+    `;
+
+    wrapper.html(html);
+}
+
+function get_status_badge(status) {
+    const s = (status || "").toLowerCase();
+
+    if (s.includes("completed") || s.includes("done")) {
+        return `<span class="status-badge status-success">${frappe.utils.escape_html(status)}</span>`;
+    }
+
+    if (s.includes("pending") || s.includes("open")) {
+        return `<span class="status-badge status-warning">${frappe.utils.escape_html(status)}</span>`;
+    }
+
+    return `<span class="status-badge status-neutral">${frappe.utils.escape_html(status || "-")}</span>`;
+}
+
+function inject_status_badge_css() {
+
 }

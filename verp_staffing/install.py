@@ -157,7 +157,7 @@ def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
     # Names of workspaces to keep visible
-    keep_list = ["CRM", "Users"]
+    keep_list = ["CRM", "Users","Technical"]
 
     # Hide all others
     frappe.db.sql("""
