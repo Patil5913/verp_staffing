@@ -27,7 +27,7 @@
   "email",
   "personal_linkedin",
   "date_of_birth",
-  "lead",
+  "customer",
   "educational_details_section",
   "educational_details",
   "past_experience_details_section",
@@ -68,13 +68,6 @@
   "files_custom_html"
  ],
  "fields": [
-  {
-   "fieldname": "lead",
-   "fieldtype": "Link",
-   "label": "Lead",
-   "options": "Lead",
-   "unique": 1
-  },
   {
    "fieldname": "email",
    "fieldtype": "Data",
@@ -406,12 +399,19 @@
    "fieldtype": "Link",
    "label": "Agreement Link",
    "options": "Agreement"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-14 14:41:22.400495",
+ "modified": "2025-12-15 14:57:21.992161",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

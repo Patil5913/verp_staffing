@@ -215,19 +215,8 @@ function submit_inline(frm) {
                     return;
                 }
 
-                // fetch Customer.title explicitly
-                frappe.db.get_value(
-                    "Customer",
-                    frm.doc.customer,
-                    "title"
-                ).then(res => {
-                    if (!res || !res.message || !res.message.title) {
-                        frappe.throw("Customer title not found.");
-                        return;
-                    }
-
-                    window.location.href = `/details-form/new?so=${encodeURIComponent(frm.doc.name)}&l=${encodeURIComponent(res.message.title)}`;
-                });
+                // redirect to form page now, in future we send email to customer
+                window.location.href = `/details-form/new?so=${encodeURIComponent(frm.doc.name)}&c=${encodeURIComponent(frm.doc.customer)}`;
             }
         });
     });

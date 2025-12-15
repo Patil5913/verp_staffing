@@ -654,106 +654,100 @@ function render_marketing_tab_content(frm) {
 }
 
 function render_lead_details(frm) {
-    const opportunity = frm.doc.opportunity;
-    if (!opportunity) {
-        frm.set_df_property("lead_details", "options", "<p style='color: gray;'>No opportunity linked</p>");
-        return;
-    }
-
     frappe.call({
         method: "frappe.client.get",
-        args: { doctype: "Opportunity", name: opportunity },
+        args: {
+            doctype: "Lead Detail Form",
+            filters: {
+                customer: frm.doc.name
+            },
+            fields: ["name"]
+        },
         callback: function (oppty_res) {
-            if (!oppty_res.message || !oppty_res.message.party_name) {
+            if (!oppty_res.message) {
                 frm.set_df_property("lead_details", "options", "<p style='color: gray;'>Lead not found</p>");
                 return;
             }
 
-            const party_name = oppty_res.message.party_name;
-            const party_doctype = oppty_res.message.opportunity_from;
 
-            frappe.call({
-                method: "frappe.client.get",
-                args: { doctype: party_doctype, name: party_name },
-                callback: function (lead_res) {
-                    if (!lead_res.message) return;
+            if (!oppty_res.message) return;
 
-                    const lead = lead_res.message;
+            const lead = oppty_res.message;
 
-                    let html = `
+            let html = `
                     <div style="padding:15px;">
                         <h4 style="margin-bottom:15px;">Lead Details</h4>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">`;
 
-                    const exclude = [
-                        "doctype", "name", "owner", "modified", "creation", "modified_by",
-                        "docstatus", "_comments", "_assign", "_user_tags", "idx"
-                    ];
+            const exclude = [
+                "doctype", "name", "owner", "modified", "creation", "modified_by",
+                "docstatus", "_comments", "_assign", "_user_tags", "idx"
+            ];
 
-                    const fetchLinkValue = (field, value) => {
-                        return frappe.call({
-                            method: "frappe.client.get",
-                            args: { doctype: field.options, name: value },
-                            callback: function (data) {
-                                const finalValue = data.message?.name || value;
-                                $(`#field-${field.fieldname}`).html(finalValue);
-                            }
-                        });
-                    };
+            const fetchLinkValue = (field, value) => {
+                return frappe.call({
+                    method: "frappe.client.get",
+                    args: { doctype: field.options, name: value },
+                    callback: function (data) {
+                        const finalValue = data.message?.name || value;
+                        $(`#field-${field.fieldname}`).html(finalValue);
+                    }
+                });
+            };
 
-                    Object.keys(lead).forEach(key => {
-                        const value = lead[key];
+            Object.keys(lead).forEach(key => {
+                const value = lead[key];
 
-                        if (exclude.includes(key) || value === null || value === "" || key === "past_experience" || key === "education_table") return;
-                        const field = frappe.meta.get_docfield(party_doctype, key);
-                        const label = frappe.model.unscrub(key);
+                if (exclude.includes(key) || value === null || value === "" || key === "past_experience" || key === "education_table") return;
+                const field = frappe.meta.get_docfield("Lead Detail Form", key);
+                const label = frappe.model.unscrub(key);
 
-                        if (field && field.fieldtype === "Link") {
-                            html += `
+                if (field && field.fieldtype === "Link") {
+                    html += `
                             <div style="border:1px solid #e5e5e5; padding:10px; border-radius:8px;">
                                 <strong>${label}</strong><br>
                                 <span id="field-${key}">Loading...</span>
                             </div>`;
-                            fetchLinkValue(field, value);
+                    fetchLinkValue(field, value);
 
-                        } else if (typeof value !== "object" && !Array.isArray(value)) {
-                            html += `
+                } else if (typeof value !== "object" && !Array.isArray(value)) {
+                    html += `
                             <div style="border:1px solid #e5e5e5; padding:10px; border-radius:8px;">
                                 <strong>${label}</strong><br>
                                 <span>${value}</span>
                             </div>`;
-                        }
-                    });
-
-                    html += `</div><br>`;
-                    // Table Data (Array of Objects UI)
-                    ["past_experience", "education_table"].forEach(tblKey => {
-                        if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
-                            html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
-                            html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
-                                <tr>`;
-
-                            Object.keys(lead[tblKey][0]).forEach(col => {
-                                html += `<th>${frappe.model.unscrub(col)}</th>`;
-                            });
-
-                            html += `</tr>`;
-
-                            lead[tblKey].forEach(row => {
-                                html += `<tr>`;
-                                Object.keys(row).forEach(col => {
-                                    html += `<td>${row[col] || "-"}</td>`;
-                                });
-                                html += `</tr>`;
-                            });
-
-                            html += `</table>`;
-                        }
-                    });
-                    html += `</div>`;
-                    frm.set_df_property("lead_details", "options", html);
                 }
             });
+
+            html += `</div><br>`;
+            // Table Data (Array of Objects UI)
+            ["past_experience", "education_table"].forEach(tblKey => {
+                if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
+                    html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
+                    html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
+                                <tr>`;
+
+                    Object.keys(lead[tblKey][0]).forEach(col => {
+                        html += `<th>${frappe.model.unscrub(col)}</th>`;
+                    });
+
+                    html += `</tr>`;
+
+                    lead[tblKey].forEach(row => {
+                        html += `<tr>`;
+                        Object.keys(row).forEach(col => {
+                            html += `<td>${row[col] || "-"}</td>`;
+                        });
+                        html += `</tr>`;
+                    });
+
+                    html += `</table>`;
+                }
+            });
+            html += `</div>`;
+            frm.set_df_property("lead_details", "options", html);
+
+
         }
     });
 }

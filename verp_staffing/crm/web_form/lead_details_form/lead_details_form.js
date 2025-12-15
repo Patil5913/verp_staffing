@@ -1,5 +1,3 @@
-console.log("Webform JS Loaded!!!");
-
 // Unique storage key per form
 const AUDIT_KEY = "audit_trail_storage";
 // unique key for this webform
@@ -17,9 +15,6 @@ frappe.ready(function () {
             '.control-input-wrapper'
         );
 
-        console.log("wrapper", wrapper);
-
-
         if (wrapper) {
             wrapper.style.borderBottom = "none";
             wrapper.style.boxShadow = "none";
@@ -30,9 +25,6 @@ frappe.ready(function () {
                 inner.style.boxShadow = "none";
             }
         }
-
-
-
     }, 300);
 
     setTimeout(() => {
@@ -46,14 +38,11 @@ frappe.ready(function () {
 
     // Supported key names
     const salesOrder = urlParams.get("so")
-    const leadValue = urlParams.get("l");
+    const customerValue = urlParams.get("c");
 
     // 2. If lead exists → store in webform field "lead"
-    if (leadValue) {
-        console.log("Lead value found:", leadValue);
-        frappe.web_form.set_value("lead", leadValue);
-    } else {
-        console.log("Lead value not found in URL");
+    if (customerValue) {
+        frappe.web_form.set_value("customer", customerValue);
     }
 
     // sales order is mandatory now
@@ -79,8 +68,6 @@ frappe.ready(function () {
                 return;
             }
 
-            console.log("r.message", r.message);
-
             if (r.message[0].name) {
                 frappe.web_form.set_value("agreement_link", r.message[0].name);
             }
@@ -91,8 +78,6 @@ frappe.ready(function () {
                 console.error("Agreement found but PDF field is empty");
                 return;
             }
-
-            console.log("Agreement PDF path:", pdfPath);
 
             // convert PDF to images
             frappe.call({
@@ -142,7 +127,6 @@ frappe.ready(function () {
 
     // check if already filled
     if (localStorage.getItem(storage_key) === "1") {
-        console.log("Form already submitted previously.");
         // hide form and show message
         $(".web-form-container").html(`
     <div style="
@@ -222,7 +206,6 @@ frappe.ready(function () {
     // when submit button is clicked
     if (frappe.web_form) {
         frappe.web_form.validate = () => {
-            console.log("Validating form...");
 
             let entry_date = frappe.web_form.get_value("entry_date");
             if (!validate_entry_date(entry_date)) {
@@ -277,7 +260,6 @@ frappe.ready(function () {
     function waitAndCheckFile(fieldname) {
         setTimeout(() => {
             let val = frappe.web_form.get_value(fieldname);
-            console.log(`${fieldname} final value:`, val);
             controlSubmitButton();
         }, 300);
     }
@@ -292,8 +274,6 @@ window.addEventListener("beforeunload", () => {
     let audit = load_audit_trail();
     audit["signature update logs"] = [];
     save_audit_trail(audit);
-
-    add_audit_event("form", { event: "form_refreshed" });
 });
 
 function is_valid_mm_yyyy(value) {
@@ -383,7 +363,6 @@ function validate_entry_date(value) {
 }
 
 function validate_ssn_digit(value) {
-    console.log("validate_ssn_digit")
 
     if (value && String(value).length !== 4) {
         frappe.msgprint("SSN must contain only last 4 digits.");
@@ -587,7 +566,6 @@ function upload_signature_file(file, dialog) {
                 if (r.message && r.message.success) {
                     frappe.msgprint("Image Uploaded Successfully!");
                     dialog.hide();
-                    console.log(r.message);
                     frappe.web_form.set_value("signature_image", r.message.file_name);
 
                     // Set image in HTML field
@@ -811,11 +789,9 @@ function controlNextButton() {
     let c3 = frappe.web_form.get_value("i_confirm_my_identity_and_signing_this_document_intentionally");
 
     if (c1 && c2 && c3) {
-        console.log("Enabling NEXT button");
         nextBtn.disabled = false;
         nextBtn.classList.remove("btn-disabled");
     } else {
-        console.log("Disabling NEXT button");
         nextBtn.disabled = true;
         nextBtn.classList.add("btn-disabled");
     }
@@ -843,13 +819,11 @@ function attachCheckboxListeners() {
 
 
 function controlSubmitButton() {
-    console.log("controlSubmitButton called");
     let submitBtn = document.querySelector('.submit-btn');
     if (!submitBtn) return;
 
     let visa_copy = frappe.web_form.get_value("visa_copy");
     let ead_card = frappe.web_form.get_value("ead_card");
-    console.log("visa_copy:", visa_copy, "ead_card:", ead_card);
 
     if (visa_copy && ead_card) {
         submitBtn.disabled = false;

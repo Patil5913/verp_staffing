@@ -4,14 +4,16 @@
 import frappe
 import os
 import json
+from datetime import datetime
+import os
 from frappe.model.document import Document
 
 
 class LeadDetailForm(Document):
 
     def before_save(self):
-        from datetime import datetime
-
+        from frappe.utils import now_datetime
+        from frappe.utils import format_datetime
         # Load audit logs sent from JS
         audit_from_js = {}
         try:
@@ -26,7 +28,7 @@ class LeadDetailForm(Document):
         try:
             form_logs.append({
                 "event": "form_submitted",
-                "timestamp": datetime.now().strftime("%d-%m-%Y, %H:%M:%S")
+                "timestamp": format_datetime(now_datetime(), "dd-MM-yyyy, HH:mm:ss")
             })
         except:
             pass
@@ -153,7 +155,10 @@ class LeadDetailForm(Document):
             fields=fields,
             signature_image_path=signature_image_path,
             audit_trail_text=audit_text,
+            signer_name=f"{self.surname} {self.first_name} {self.father_name}",
+            signer_email=f"{self.email}"
         )
+
 
 
 def apply_signature_and_audit_to_pdf(
@@ -161,10 +166,48 @@ def apply_signature_and_audit_to_pdf(
     fields,
     signature_image_path,
     audit_trail_text,
+    signer_name,
+    signer_email,
     output_path=None,
 ):
     import fitz
-    from textwrap import wrap
+
+    # ---------- NORMALIZE AUDIT TRAIL ----------
+    if isinstance(audit_trail_text, str):
+        try:
+            audit_trail_text = json.loads(audit_trail_text)
+        except Exception:
+            audit_trail_text = {}
+
+    def parse_user_agent(ua):
+        browser = "Unknown"
+        os_name = "Unknown"
+        device = "Desktop"
+
+        if "Firefox/" in ua:
+            browser = "Firefox"
+        elif "Chrome/" in ua and "Safari/" in ua:
+            browser = "Chrome"
+        elif "Safari/" in ua and "Chrome/" not in ua:
+            browser = "Safari"
+        elif "Edg/" in ua:
+            browser = "Edge"
+
+        if "Windows" in ua:
+            os_name = "Windows"
+        elif "Ubuntu" in ua:
+            os_name = "Ubuntu Linux"
+        elif "Linux" in ua:
+            os_name = "Linux"
+        elif "Android" in ua:
+            os_name = "Android"
+            device = "Mobile"
+        elif "iPhone" in ua or "iPad" in ua:
+            os_name = "iOS"
+            device = "Mobile"
+
+        return browser, os_name, device
+
     pdf = fitz.open(input_pdf_path)
 
     # ---------- SIGNATURE INSERT ----------
@@ -209,49 +252,387 @@ def apply_signature_and_audit_to_pdf(
     # ---------- AUDIT TRAIL PAGE ----------
     if audit_trail_text:
         page = pdf.new_page()
-        margin = 50
-        width = page.rect.width - 2 * margin
+        page_width = page.rect.width
+        page_height = page.rect.height
+
+        margin = 45
         y = margin
+        
+        # Professional color scheme
+        header_color = (0.2, 0.3, 0.45)  # Dark blue-gray
+        text_color = (0.2, 0.2, 0.2)  # Dark gray
+        label_color = (0.4, 0.4, 0.4)  # Medium gray
+        line_color = (0.85, 0.85, 0.85)  # Light gray for lines
 
-        font_size = 10
-        line_height = font_size * 1.4
-        max_chars = int(width / (font_size * 0.45))
+        font = "helv"
+        title_size = 18
+        section_size = 11
+        label_size = 9
+        value_size = 10
+        line_height = 16
 
-        page.insert_text(
-            (margin, y),
-            "Audit Trail",
-            fontsize=14,
-            fontname="helv",
+        def draw_horizontal_line(y_pos, color=line_color, thickness=0.5):
+            line = fitz.Rect(margin, y_pos, page_width - margin, y_pos + thickness)
+            page.draw_rect(line, color=color, fill=color)
+
+        def draw_label_value_row(label, value, y_pos, label_x=None, value_x=None):
+            if label_x is None:
+                label_x = margin + 10
+            if value_x is None:
+                value_x = margin + 200
+            
+            page.insert_text((label_x, y_pos), label, fontsize=label_size, fontname=font, color=label_color)
+            
+            # Handle long values with wrapping
+            value_str = str(value)
+            if len(value_str) > 60:
+                value_str = value_str[:57] + "..."
+            
+            page.insert_text((value_x, y_pos), value_str, fontsize=value_size, fontname=font, color=text_color)
+
+        # ---- Header ----
+        page.insert_text((margin, y), "CERTIFICATE", fontsize=title_size, fontname="hebo", color=header_color)
+        y += 8
+        draw_horizontal_line(y, color=header_color, thickness=2)
+        y += 25
+
+        # ---- Signer Information Section ----
+        page.insert_text((margin, y), "SIGNER INFORMATION", fontsize=section_size, fontname="hebo", color=header_color)
+        y += 20
+
+        draw_label_value_row("Name", signer_name, y)
+        y += line_height
+        draw_label_value_row("Email", signer_email, y)
+        y += line_height + 10
+        
+        draw_horizontal_line(y)
+        y += 20
+
+        # ---- Device & Location Section ----
+        signer_location = audit_trail_text.get("signer location", {})
+        ua = signer_location.get("user_agent", "")
+        browser, os_name, device = parse_user_agent(ua)
+
+        page.insert_text((margin, y), "DEVICE & LOCATION", fontsize=section_size, fontname="hebo", color=header_color)
+        y += 20
+
+        draw_label_value_row("IP Address", signer_location.get("ip", "N/A"), y)
+        y += line_height
+        draw_label_value_row("Browser", browser, y)
+        y += line_height
+        draw_label_value_row("Operating System", os_name, y)
+        y += line_height
+        draw_label_value_row("Device Type", device, y)
+        y += line_height + 10
+
+        draw_horizontal_line(y)
+        y += 20
+
+        # ---- Signature Activity Section (ONLY IF EXISTS) ----
+        signature_logs = audit_trail_text.get("signature update logs", [])
+
+        if signature_logs:
+            page.insert_text((margin, y), "SIGNATURE ACTIVITY", fontsize=section_size, fontname="hebo", color=header_color)
+            y += 20
+
+            for log in sorted(
+                signature_logs,
+                key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
+                reverse=True,
+            ):
+                draw_label_value_row("Signature Updated", log["timestamp"], y)
+                y += line_height
+
+            y += 10
+            draw_horizontal_line(y)
+            y += 20
+
+        # ---- Document Activity Section ----
+        page.insert_text((margin, y), "DOCUMENT ACTIVITY", fontsize=section_size, fontname="hebo", color=header_color)
+        y += 20
+
+        form_logs = audit_trail_text.get("form visit logs", [])
+
+        # Add table-like structure for activity log
+        EVENT_PRIORITY = {
+            "form_submitted": 2,
+            "form_opened": 1
+        }
+
+        sorted_logs = sorted(
+            form_logs,
+            key=lambda x: (
+                EVENT_PRIORITY.get(x["event"], 0),
+                datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
+            ),
         )
-        y += 2 * line_height
 
-        for line in audit_trail_text.split("\n"):
-            wrapped = wrap(line, max_chars) or [""]
-            for wline in wrapped:
-                if y > page.rect.height - margin:
-                    page = pdf.new_page()
-                    y = margin
 
+        for i, log in enumerate(sorted_logs):
+            if y > page_height - margin - 40:
+                page = pdf.new_page()
+                y = margin
                 page.insert_text(
                     (margin, y),
-                    wline,
-                    fontsize=font_size,
-                    fontname="helv",
+                    "DOCUMENT ACTIVITY (continued)",
+                    fontsize=section_size,
+                    fontname="hebo",
+                    color=header_color,
                 )
-                y += line_height
+                y += 20
+
+            # Alternate row background
+            if i % 2 == 0:
+                row_rect = fitz.Rect(
+                    margin - 5,
+                    y - 12,
+                    page_width - margin + 5,
+                    y + 6,
+                )
+                page.draw_rect(
+                    row_rect,
+                    color=(0.98, 0.98, 0.98),
+                    fill=(0.98, 0.98, 0.98),
+                )
+
+            event_text = log["event"].replace("_", " ").title()
+            draw_label_value_row(event_text, log["timestamp"], y)
+            y += line_height
+
+        y += 15
+        draw_horizontal_line(y)
+        y += 20        
 
     # ---------- SAVE ----------
     if not output_path:
         output_path = input_pdf_path
 
     pdf.save(
-        input_pdf_path,
+        output_path,
         incremental=True,
-        encryption=fitz.PDF_ENCRYPT_KEEP
+        encryption=fitz.PDF_ENCRYPT_KEEP,
     )
     pdf.close()
 
     return output_path
+
+
+
+
+# def apply_signature_and_audit_to_pdf(
+#     input_pdf_path,
+#     fields,
+#     signature_image_path,
+#     audit_trail_text,
+#     signer_name,
+#     signer_email,
+#     output_path=None,
+# ):
+#     import fitz
+
+#     # ---------- NORMALIZE AUDIT TRAIL ----------
+#     if isinstance(audit_trail_text, str):
+#         try:
+#             audit_trail_text = json.loads(audit_trail_text)
+#         except Exception:
+#             audit_trail_text = {}
+
+#     def parse_user_agent(ua):
+#         browser = "Unknown"
+#         os_name = "Unknown"
+#         device = "Desktop"
+
+#         if "Firefox/" in ua:
+#             browser = "Firefox"
+#         elif "Chrome/" in ua and "Safari/" in ua:
+#             browser = "Chrome"
+#         elif "Safari/" in ua and "Chrome/" not in ua:
+#             browser = "Safari"
+#         elif "Edg/" in ua:
+#             browser = "Edge"
+
+#         if "Windows" in ua:
+#             os_name = "Windows"
+#         elif "Ubuntu" in ua:
+#             os_name = "Ubuntu Linux"
+#         elif "Linux" in ua:
+#             os_name = "Linux"
+#         elif "Android" in ua:
+#             os_name = "Android"
+#             device = "Mobile"
+#         elif "iPhone" in ua or "iPad" in ua:
+#             os_name = "iOS"
+#             device = "Mobile"
+
+#         return browser, os_name, device
+
+#     pdf = fitz.open(input_pdf_path)
+
+#     # ---------- SIGNATURE INSERT ----------
+#     if signature_image_path:
+#         img_path = resolve_file_path(signature_image_path)
+#         if img_path and os.path.exists(img_path):
+#             img_bytes = open(img_path, "rb").read()
+
+#             for f in fields:
+#                 if f.get("type") != "Signature":
+#                     continue
+
+#                 page_index = int(f.get("page", 1)) - 1
+#                 if page_index < 0 or page_index >= len(pdf):
+#                     continue
+
+#                 page = pdf[page_index]
+#                 page_rect = page.rect
+
+#                 px_w = float(f.get("page_width") or 0)
+#                 px_h = float(f.get("page_height") or 0)
+#                 if not px_w or not px_h:
+#                     continue
+
+#                 sx = page_rect.width / px_w
+#                 sy = page_rect.height / px_h
+
+#                 bx = float(f.get("x") or 0)
+#                 by = float(f.get("y") or 0)
+#                 bw = float(f.get("width") or 150)
+#                 bh = float(f.get("height") or 40)
+
+#                 rect = fitz.Rect(
+#                     bx * sx,
+#                     by * sy,
+#                     (bx + bw) * sx,
+#                     (by + bh) * sy,
+#                 )
+
+#                 page.insert_image(rect, stream=img_bytes)
+
+#     # ---------- AUDIT TRAIL PAGE ----------
+#     if audit_trail_text:
+#         page = pdf.new_page()
+
+#         margin = 50
+#         y = margin
+#         label_x = margin
+#         value_x = margin + 180
+
+#         font = "helv"
+#         title = 14
+#         section = 12
+#         normal = 10
+#         small = 9
+#         line_gap = 14
+
+#         def draw_label_value(label, value):
+#             nonlocal y
+#             page.insert_text((label_x, y), label, fontsize=small, fontname=font)
+#             page.insert_text((value_x, y), value, fontsize=normal, fontname=font)
+#             y += line_gap
+
+#         # ---- Header ----
+#         page.insert_text((margin, y), "Audit Trail", fontsize=title, fontname=font)
+#         y += 2 * line_gap
+
+#         # ---- Signer Details ----
+#         page.insert_text((margin, y), "Signer Details", fontsize=section, fontname=font)
+#         y += line_gap
+
+#         draw_label_value("Name", signer_name)
+#         draw_label_value("Email", signer_email)
+
+#         # ---- Device & Location ----
+#         signer_location = audit_trail_text.get("signer location", {})
+#         ua = signer_location.get("user_agent", "")
+#         browser, os_name, device = parse_user_agent(ua)
+
+#         y += line_gap
+#         page.insert_text((margin, y), "Device & Location", fontsize=section, fontname=font)
+#         y += line_gap
+
+#         draw_label_value("IP Address", signer_location.get("ip", ""))
+#         draw_label_value("Browser", browser)
+#         draw_label_value("Operating System", os_name)
+#         draw_label_value("Device Type", device)
+
+#         # ---- Signature Activity (ONLY IF EXISTS) ----
+#         signature_logs = audit_trail_text.get("signature update logs", [])
+
+#         if signature_logs:
+#             y += line_gap
+#             page.insert_text((margin, y), "Signature Activity", fontsize=section, fontname=font)
+#             y += line_gap
+
+#             for log in sorted(
+#                 signature_logs,
+#                 key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
+#                 reverse=True,
+#             ):
+#                 page.insert_text(
+#                     (label_x, y),
+#                     "Signature Updated",
+#                     fontsize=normal,
+#                     fontname=font,
+#                 )
+#                 page.insert_text(
+#                     (value_x, y),
+#                     log["timestamp"],
+#                     fontsize=normal,
+#                     fontname=font,
+#                 )
+#                 y += line_gap
+
+#         # ---- Form Activity (DESCENDING) ----
+#         y += line_gap
+#         page.insert_text((margin, y), "Form Activity", fontsize=section, fontname=font)
+#         y += line_gap
+
+#         form_logs = audit_trail_text.get("form visit logs", [])
+
+#         for log in sorted(
+#             form_logs,
+#             key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
+#             reverse=True,
+#         ):
+#             if y > page.rect.height - margin:
+#                 page = pdf.new_page()
+#                 y = margin
+
+#             page.insert_text(
+#                 (label_x, y),
+#                 log["event"].replace("_", " ").title(),
+#                 fontsize=normal,
+#                 fontname=font,
+#             )
+#             page.insert_text(
+#                 (value_x, y),
+#                 log["timestamp"],
+#                 fontsize=normal,
+#                 fontname=font,
+#             )
+#             y += line_gap
+
+#         # ---- Completion ----
+#         y += line_gap
+#         page.insert_text(
+#             (margin, y),
+#             "Document completed successfully.",
+#             fontsize=small,
+#             fontname=font,
+#         )
+
+#     # ---------- SAVE ----------
+#     if not output_path:
+#         output_path = input_pdf_path
+
+#     pdf.save(
+#         output_path,
+#         incremental=True,
+#         encryption=fitz.PDF_ENCRYPT_KEEP,
+#     )
+#     pdf.close()
+
+#     return output_path
+
 
 def resolve_file_path(file_url):
     if not file_url:
