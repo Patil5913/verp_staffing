@@ -16,20 +16,11 @@
   "section_break_gtmf",
   "sales_content",
   "resume_tab",
-  "resume_assign_to",
-  "resume",
-  "column_break_xzvi",
-  "resume_status",
+  "resume_html",
   "technical_tab",
-  "technical_assign_to",
-  "column_break_sfpd",
-  "session_status",
   "section_break_ovxi",
   "technical_content",
   "marketing_tab",
-  "marketing_assign_to",
-  "column_break_kynl",
-  "marketing_status",
   "section_break_cmpg",
   "marketing_content",
   "out_source_section",
@@ -149,78 +140,28 @@
    "label": "Resume"
   },
   {
-   "fieldname": "resume_assign_to",
-   "fieldtype": "Link",
-   "label": "Resume Assign TO",
-   "options": "Employee"
-  },
-  {
-   "description": "Upload your new resume",
-   "fieldname": "resume",
-   "fieldtype": "Attach",
-   "label": "Resume"
-  },
-  {
-   "fieldname": "technical_assign_to",
-   "fieldtype": "Link",
-   "label": "Technical Assign To",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "marketing_assign_to",
-   "fieldtype": "Link",
-   "label": "Recruiter",
-   "options": "Employee"
-  },
-  {
    "fieldname": "stage",
-   "fieldtype": "JSON",
-   "label": "stage"
-  },
-  {
-   "fieldname": "column_break_xzvi",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "resume_status",
-   "fieldtype": "Select",
-   "label": "Resume Status",
-   "options": "Resume Pending"
-  },
-  {
-   "fieldname": "column_break_sfpd",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "session_status",
-   "fieldtype": "Select",
-   "label": "Session Status",
-   "options": "Ruc Pending\nRuc Completed"
+   "fieldtype": "Text",
+   "label": "Stage"
   },
   {
    "fieldname": "section_break_ovxi",
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "column_break_kynl",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "Marketing Pending",
-   "fieldname": "marketing_status",
-   "fieldtype": "Select",
-   "label": "Interview Status",
-   "options": "Marketing Pending\nInterview Pending\nCandidate Placed"
-  },
-  {
    "fieldname": "section_break_cmpg",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resume_html",
+   "fieldtype": "HTML",
+   "label": "Resume Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-14 14:11:46.833695",
+ "modified": "2025-12-15 14:34:57.737946",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

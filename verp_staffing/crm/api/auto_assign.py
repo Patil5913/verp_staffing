@@ -86,45 +86,59 @@ def get_employees_with_role(role, department=None):
 
 @frappe.whitelist()
 def forward_candidate(customer, department):
-    import json
     from frappe.utils import now_datetime
 
     doc = frappe.get_doc("Customer", customer)
 
-    stage = json.loads(doc.stage or "{}")
-    DEPARTMENT_ASSIGN_FIELD_MAP = {
-        "sales": "resume_assign_to",        # example if sales forwards to resume
-        "resume": "resume_assign_to",
-        "technical": "technical_assign_to",
-        "marketing": "marketing_assign_to",
-    }
     dept_key = department.strip().lower()
-    if dept_key not in DEPARTMENT_ASSIGN_FIELD_MAP:
-        frappe.throw(f"Unsupported department: {department}")
 
-    assign_field = DEPARTMENT_ASSIGN_FIELD_MAP.get(dept_key)
+    DEPARTMENT_DOC_MAP = {
+        "resume": "Resume",
+        "technical": "RUC",
+    }
 
-    # 1. Auto assign employee
+    doctype = DEPARTMENT_DOC_MAP.get(dept_key)
+    if not doctype:
+        frappe.throw("Invalid department")
+
+    # ---- parse stage safely ----
+    try:
+        stage = json.loads(doc.stage) if doc.stage else {}
+    except Exception:
+        stage = {}
+
+    # ---- prevent duplicate forwarding ----
+    if dept_key in stage:
+        frappe.throw(f"Candidate already forwarded to {dept_key.title()} department")
+    # Parse existing stage safely
+    try:
+        stage = json.loads(doc.stage) if doc.stage else {}
+    except Exception:
+        stage = {}
+
     assignee = get_auto_assign_employee(
         department=department,
-        target_doctype="Customer",
-        owner_field=assign_field
+        target_doctype=doctype,
+        owner_field="assign_to"
     )
 
-    # 2. Update stage
-    stage[department] = {
-        "status": "pending",
+    # ---- create department document ----
+    dept_doc = frappe.get_doc({
+        "doctype": doctype,
+        "customer": customer,
+        "assign_to": assignee,
+        "status": "Pending",
+    })
+
+    dept_doc.insert(ignore_permissions=True)
+
+    stage[dept_key] = {
         "assigned_to": assignee,
         "timestamp": str(now_datetime())
     }
 
-    # 3. Write assignment field
-    doc.set(assign_field, assignee)
     doc.stage = json.dumps(stage)
 
     doc.save(ignore_permissions=True)
 
-    return {
-        "assigned_to": assignee,
-        "department": department
-    }
+    return stage

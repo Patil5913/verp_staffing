@@ -294,6 +294,11 @@ def secure_get(**kwargs):
             [["Customer", "opportunity", "in", opportunities]]
         )
         return original_get(**frappe.local.form_dict)
+    if doctype == "Resume" or doctype == "RUC":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Resume","assign_to","in",owners]]
+        )
 
     return original_get(**frappe.local.form_dict)
 
