@@ -116,49 +116,20 @@ frappe.ui.form.on("Lead", {
             }, 200);
         }
     },
+});
 
-    before_save(frm) {
-        validate_rows(frm.doc.education_table, "Education Details");
-        validate_rows(frm.doc.past_experience, "Past Experience");
-
-        function validate_rows(rows, table_label) {
-            if (!Array.isArray(rows) || rows.length === 0) {
-                console.log("No rows in education_table table");
-                return;
-            }
-
-            rows.forEach(row => {
-                validate_mm_yyyy(row.start_date, `Start Date of '${table_label}'`);
-                validate_mm_yyyy(row.end_date, `End Date of '${table_label}'`);
-
-                if (table_label === "Past Experience") {
-                    validate_description(row.description, table_label);
-                }
-            });
-        }
-
-        function validate_mm_yyyy(value, label) {
-            if (!value) return;
-
-            const regex = /^(0[1-9]|1[0-2])-\d{4}$/;
-
-            if (!regex.test(value)) {
-                frappe.throw(`${label} must be in format MM-YYYY.<br>Invalid value: ${value}`);
-            }
-        }
-
-        function validate_description(value, table_label) {
-            if (!value) return;
-
-            const text = value.replace(/\s+/g, '');
-
-            if (text.length < 800) {
-                frappe.throw(
-                    `Description in '${table_label}' must contain at least 800 characters (excluding spaces).<br>` +
-                    `Entered: ${text.length} characters.`
-                );
-            }
-        }
+frappe.ui.form.on("Lead Course", {
+    start_date(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        window.LeadCourse.check_row(row);
+    },
+    end_date(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        window.LeadCourse.check_row(row);
+    },
+    grade(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        window.LeadCourse.check_row(row);
     }
 });
 
@@ -218,9 +189,19 @@ function open_create_opportunity_dialog(frm) {
                             create_opportunity(frm, values.opportunity_owner);
                         } else {
                             // else get employee with lowest count and create opportunity
-                            auto_assign_opportunity_owner().then(owner => {
-                                create_opportunity(frm, owner);
-                            })
+                            frappe.call({
+                                method: "verp_staffing.crm.api.auto_assign.get_auto_assign_employee",
+                                args: {
+                                    department: "Sales",
+                                    target_doctype:"Opportunity",
+                                    owner_field:"opportunity_owner"
+                                },
+                                callback(r) {
+                                    if (r.message) {
+                                        create_opportunity(frm, r.message);
+                                    }
+                                }
+                            });
                         }
                     }
                 });
@@ -230,44 +211,6 @@ function open_create_opportunity_dialog(frm) {
     })
 }
 
-function auto_assign_opportunity_owner() {
-    return new Promise((resolve, reject) => {
-
-        // get all the employees
-        frappe.call({
-            method: "frappe.client.get_list",
-            args: {
-                doctype: "Employee",
-                filters: { department: "Sales" },
-                fields: ["name"]
-            },
-            callback: function (empRes) {
-                employees = empRes.message || [];
-
-                if (!employees.length) {
-                    reject("No Employees Found.");
-                    return;
-                }
-
-                // making array of objects, object: {employee, count}
-                let promises = employees.map(emp => {
-                    return frappe.db.count("Opportunity", {
-                        filters: { "opportunity_owner": emp.name }
-                    }).then(count => ({
-                        employee: emp.name,
-                        count
-                    }));
-                });
-
-                // sorting array of object and sending the employee with lowest count 
-                Promise.all(promises).then(results => {
-                    results.sort((a, b) => a.count - b.count)
-                    resolve(results[0].employee)
-                })
-            }
-        })
-    })
-}
 
 function create_opportunity(frm, owner) {
     const opportunity_doc = {

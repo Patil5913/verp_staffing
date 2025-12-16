@@ -28,7 +28,7 @@ frappe.ui.form.on("Opportunity", {
         render_activity_section(frm);
         if (frm.doc.status == "Converted") {
             console.log("Converted");
-            
+
             frm.set_df_property("status", "read_only", 1)
         }
 
@@ -243,12 +243,12 @@ function open_create_sales_order_dialog(frm) {
                         fieldtype: "Select",
                         fieldname: "payment_condition",
                         label: "Payment Condition",
-                        options: "\nNumber of Days\nNumber of Interviews",
+                        options: "Number of Days\nNumber of Interviews",
                         default: "Number of Days",
                         reqd: 1,
                         in_list_view: 1
                     },
-                       {
+                    {
                         fieldtype: "Int",
                         fieldname: "counter",
                         label: "Counter",
@@ -261,6 +261,7 @@ function open_create_sales_order_dialog(frm) {
                         fieldtype: "Check",
                         fieldname: "is_received",
                         label: "Received?",
+                        default: 0,
                         in_list_view: 1
                     }
                 ]
@@ -268,6 +269,8 @@ function open_create_sales_order_dialog(frm) {
         ],
         primary_action_label: "Create Sales Order",
         primary_action(values) {
+            console.log("values", values);
+
             dialog.hide();
             frappe.call({
                 method: "verp_staffing.crm.api.sales_order_api.create_sales_order",

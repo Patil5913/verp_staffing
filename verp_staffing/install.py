@@ -66,7 +66,7 @@ def after_install():
     seed_sales_stages()
     seed_employee_departments()
     create_all_roles()
-    set_all_role_permissions()
+    # set_all_role_permissions()  
     remove_default_workspaces()
 
 
@@ -107,8 +107,9 @@ def create_all_roles():
 
     frappe.clear_cache()
 
-
 def set_all_role_permissions():
+
+    protected_roles = {"Administrator"}
 
     perm_map = {
         "select": "select",
@@ -125,25 +126,15 @@ def set_all_role_permissions():
     }
 
     for role_name, doctype_list in ROLE_PERMISSIONS.items():
+
+        # 1️⃣ Skip protected roles
+        if role_name in protected_roles:
+            continue
+
         for doctype, perms in doctype_list.items():
-
-            # 1️⃣ Delete Default DocPerm for that Doctype + Role
-            frappe.db.delete(
-                "DocPerm",
-                {
-                    "role": role_name,
-                    "parent": doctype
-                }
-            )
-
-            # 2️⃣ Delete Custom DocPerm for that Doctype + Role
-            frappe.db.delete(
-                "Custom DocPerm",
-                {
-                    "role": role_name,
-                    "parent": doctype
-                }
-            )
+            # # Delete existing perms
+            # frappe.db.delete("DocPerm", {"role": role_name, "parent": doctype})
+            # frappe.db.delete("Custom DocPerm", {"role": role_name, "parent": doctype})
 
             # Create new permission doc
             perm_doc = frappe.new_doc("Custom DocPerm")
@@ -153,21 +144,20 @@ def set_all_role_permissions():
             perm_doc.role = role_name
             perm_doc.idx = 1
 
-            # Apply permissions
             for p in perms:
                 if p in perm_map:
                     setattr(perm_doc, perm_map[p], 1)
 
             perm_doc.save(ignore_permissions=True)
 
-    # Clear cache so permissions apply immediately
-    frappe.clear_cache(doctype=doctype)
+    frappe.clear_cache()
     frappe.db.commit()
+
 def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
     # Names of workspaces to keep visible
-    keep_list = ["CRM", "Users"]
+    keep_list = ["CRM", "Users","Technical"]
 
     # Hide all others
     frappe.db.sql("""

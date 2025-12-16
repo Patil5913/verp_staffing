@@ -10,8 +10,11 @@
   "column_break_wknv",
   "date",
   "opportunity",
+  "agreement",
   "payment_terms_section",
-  "payment_terms"
+  "payment_terms",
+  "agreement_tab",
+  "agreement_html"
  ],
  "fields": [
   {
@@ -49,12 +52,29 @@
    "fieldtype": "Link",
    "label": "Opportunity",
    "options": "Opportunity"
+  },
+  {
+   "fieldname": "agreement",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Agreement",
+   "options": "Agreement",
+   "unique": 1
+  },
+  {
+   "fieldname": "agreement_tab",
+   "fieldtype": "Tab Break",
+   "label": "Agreement"
+  },
+  {
+   "fieldname": "agreement_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-29 12:11:43.989591",
+ "modified": "2025-12-01 15:13:26.861362",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",

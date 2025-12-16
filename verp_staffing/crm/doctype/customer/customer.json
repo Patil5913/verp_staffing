@@ -9,14 +9,19 @@
   "title",
   "column_break_emkf",
   "status",
+  "stage",
   "section_break_roxl",
   "lead_details",
   "sales_tab",
   "section_break_gtmf",
   "sales_content",
+  "resume_tab",
+  "resume_html",
   "technical_tab",
+  "section_break_ovxi",
   "technical_content",
   "marketing_tab",
+  "section_break_cmpg",
   "marketing_content",
   "out_source_section",
   "outsource",
@@ -41,7 +46,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nForm Filled\nTech Department\nMarketing Department",
+   "options": "Open\nCandidate Placed\nCandidate Withdrawn",
    "reqd": 1
   },
   {
@@ -128,12 +133,35 @@
    "fieldname": "section_break_gtmf",
    "fieldtype": "Section Break",
    "label": "Sales Order"
+  },
+  {
+   "fieldname": "resume_tab",
+   "fieldtype": "Tab Break",
+   "label": "Resume"
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Text",
+   "label": "Stage"
+  },
+  {
+   "fieldname": "section_break_ovxi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_cmpg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resume_html",
+   "fieldtype": "HTML",
+   "label": "Resume Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-29 15:50:38.355057",
+ "modified": "2025-12-15 14:34:57.737946",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

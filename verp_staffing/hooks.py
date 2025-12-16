@@ -25,7 +25,7 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/verp_staffing/css/verp_staffing.css"
+app_include_css = "/assets/verp_staffing/css/globel.css"
 # app_include_js = "/assets/verp_staffing/js/verp_staffing.js"
 
 # include js, css files in header of web template
@@ -43,7 +43,11 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+validation_docs = ["Lead", "Lead Course","Resume","RUC"]
+
+doctype_js = {doc: "public/js/validation.js" for doc in validation_docs}
+
+
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -83,11 +87,11 @@ app_license = "mit"
 # ------------
 
 # before_install = "verp_staffing.install.before_install"
-after_install = "verp_staffing.install.after_install"
+# after_install = "verp_staffing.install.after_install"
 after_migrate = [
-    "verp_staffing.migrate.after_migrate",
-    "verp_staffing.install.after_install"
-    ]
+    "verp_staffing.install.remove_default_workspaces",
+    "verp_staffing.install.after_install",
+]
 
 # Uninstallation
 # ------------
@@ -142,33 +146,33 @@ after_migrate = [
 # Hook on document methods and events
 
 doc_events = {
-	"User" : {
+    "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
-    }
+    },
+    "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
 }
 
 # Scheduled Tasks
 # ---------------
 
+# files delete from "file" doctype, time : weekly on sunday at 1 am (depends on site_config.json)
+# DB and file storage backup everyday morning, time : (depends on site_config.json)
+
 scheduler_events = {
-	"hourly": [
-		"verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
-	],
-    "daily": [
-        "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"
+    "hourly": [
+        "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
+        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
     ],
+    "daily": ["verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"],
     "cron": {
-        "*/15 * * * *": [
-            "verp_staffing.crm.api.event_remainders.send_event_reminders"
-        ],
+        "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
-        ]
-    }
+        ],
+    },
 }
 
 # Testing
@@ -180,7 +184,7 @@ scheduler_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
-	"frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
+    "frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
 }
 #
 
@@ -203,7 +207,7 @@ override_whitelisted_methods = {
 # ----------------
 before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin"
+    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
 ]
 
 # after_request = ["verp_staffing.utils.after_request"]
@@ -252,5 +256,14 @@ before_request = [
 # }
 
 fixtures = [
-    {"doctype": "Workspace"},
+    # {"doctype": "Workspace"},
 ]
+
+# pdflibjs Imports
+
+app_include_js = [
+    "/assets/verp_staffing/js/pdf.js",
+]
+
+# include worker
+web_include_js = ["/assets/verp_staffing/js/pdf.worker.js"]

@@ -8,7 +8,9 @@
  "field_order": [
   "section_break_shap",
   "department_name",
-  "column_break_ocvi",
+  "section_break_cbtl",
+  "roles",
+  "column_break_zerj",
   "head_of_department"
  ],
  "fields": [
@@ -31,14 +33,24 @@
    "options": "Employee"
   },
   {
-   "fieldname": "column_break_ocvi",
+   "fieldname": "section_break_cbtl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Roles",
+   "options": "Child Roles"
+  },
+  {
+   "fieldname": "column_break_zerj",
    "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-24 14:43:11.390000",
+ "modified": "2025-12-12 16:58:05.670288",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Department",

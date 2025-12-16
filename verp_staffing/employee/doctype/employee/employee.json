@@ -9,11 +9,9 @@
   "user",
   "employee_name",
   "department",
-  "position",
   "column_break_ookt",
   "designation",
-  "manager",
-  "master_manager"
+  "assigned_to"
  ],
  "fields": [
   {
@@ -39,42 +37,27 @@
    "reqd": 1
   },
   {
-   "default": "employee",
    "fieldname": "designation",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Designation",
-   "options": "employee\nmanager\nmaster_manager\nCEO\nCTO\nfounder",
    "reqd": 1
-  },
-  {
-   "depends_on": "eval:doc.designation == 'employee'",
-   "fieldname": "manager",
-   "fieldtype": "Link",
-   "label": "Manager",
-   "options": "Employee"
-  },
-  {
-   "depends_on": "eval:doc.designation == 'employee' || doc.designation == 'manager'",
-   "fieldname": "master_manager",
-   "fieldtype": "Link",
-   "label": "Master Manager",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "position",
-   "fieldtype": "Data",
-   "label": "Position"
   },
   {
    "fieldname": "column_break_ookt",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "Employee"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-24 15:50:06.469824",
+ "modified": "2025-12-13 14:21:31.751652",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",

@@ -2,69 +2,112 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Employee", {
-refresh(frm) {
-        frm.set_query("user", function() {
-            return{
+    refresh(frm) {
+        frm.set_query("user", function () {
+            return {
                 query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee"
             }
         });
+        fetchDepartmentDesignation(frm)
 
-        frm.set_query("manager", function () {
-            return {
-                query: "verp_staffing.employee.doctype.employee.employee.get_manager_filter",
-                filters: {
-                    department: frm.doc.department
-                }
-            };
-        });
+    },
 
-        frm.set_query("master_manager", function () {
-            return {
-                query: "verp_staffing.employee.doctype.employee.employee.get_master_manager_filter",
-                filters: {
-                    department: frm.doc.department
-                }
-            };
+    user(frm) {
+        if (!frm.doc.user) return;
+
+        frappe.db.get_doc("User", frm.doc.user).then(user_doc => {
+            const name = user_doc.full_name || user_doc.first_name || user_doc.name;
+            frm.set_value("employee_name", name);
         });
     },
 
     department(frm) {
-        // Refresh filters when department changes
-        frm.set_query("manager", function () {
-            return {
-                query: "verp_staffing.employee.doctype.employee.employee.get_manager_filter",
-                filters: {
-                    department: frm.doc.department
-                }
-            };
-        });
+        if (!frm.doc.department) return;
 
-        frm.set_query("master_manager", function () {
-            return {
-                query: "verp_staffing.employee.doctype.employee.employee.get_master_manager_filter",
-                filters: {
-                    department: frm.doc.department
-                }
-            };
-        });
+        fetchDepartmentDesignation(frm)
     },
 
     designation(frm) {
-        let designation = frm.doc.designation;
-        if(designation == "manager"){
-            frm.set_value("manager", null);
-        }else if(designation == "master_manager"){
-            frm.set_value("master_manager", null);
-            frm.set_value("manager", null);
-        }
-    },
-   user(frm) {
-    if (!frm.doc.user) return;
+        if (!frm.doc.designation) return;
 
-   frappe.db.get_doc("User", frm.doc.user).then(user_doc => {
-        const name = user_doc.full_name || user_doc.first_name || user_doc.name;
-        frm.set_value("employee_name", name);
-    });
-}
+        if (!frm._role_hierarchy) {
+            frappe.throw("Role hierarchy not loaded. Select department first.");
+        }
+
+        let parent_role = null;
+
+        frm._role_hierarchy.forEach(row => {
+            if (
+                Array.isArray(row.child_roles) &&
+                row.child_roles.includes(frm.doc.designation)
+            ) {
+                parent_role = row.parent_role;
+            }
+        });
+
+        if (!parent_role) {
+            // top-level role, no manager
+            frm.set_query("assigned_to", () => ({
+                filters: { name: ["=", ""] }
+            }));
+            frm.set_value("assigned_to", null);
+            return;
+        }
+
+        frm.set_query("assigned_to", () => {
+            return {
+                filters: {
+                    designation: parent_role,
+                    department: frm.doc.department
+                }
+            };
+        });
+
+        frm.set_value("assigned_to", null);
+    }
 });
 
+function fetchDepartmentDesignation(frm) {
+    
+    frm._role_hierarchy = null;
+    if(!frm.doc.department) return
+    console.log("function called new");
+
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Hierarchy",
+            name: frm.doc.department
+        },
+        callback(r) {
+            if (!r.message || !r.message.role_hierarchy_json) {
+                frappe.msgprint("No hierarchy found for this department");
+                return;
+            }
+
+            try {
+                frm._role_hierarchy = JSON.parse(r.message.role_hierarchy_json);
+            } catch (e) {
+                frappe.throw("Invalid role_hierarchy_json format");
+            }
+
+            // collect distinct roles
+            let roles = new Set();
+
+            frm._role_hierarchy.forEach(row => {
+                if (row.parent_role) {
+                    roles.add(row.parent_role);
+                }
+                if (Array.isArray(row.child_roles)) {
+                    row.child_roles.forEach(cr => roles.add(cr));
+                }
+            });
+            frm.set_df_property(
+                "designation",
+                "options",
+                Array.from(roles).join("\n")
+            );
+
+        }
+    });
+}
