@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/verp_staffing/css/globel.css"
-# app_include_js = "/assets/verp_staffing/js/verp_staffing.js"
+app_include_js = "/assets/verp_staffing/js/interview_list.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/verp_staffing/css/verp_staffing.css"
@@ -43,9 +43,9 @@ app_include_css = "/assets/verp_staffing/css/globel.css"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course"]
+validation_docs = ["Lead", "Lead Course", "Marketing"]
 
-doctype_js = {doc: "public/js/validation.js" for doc in validation_docs}
+doctype_js = {doc: "public/js/reusable.js" for doc in validation_docs}
 
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -257,6 +257,7 @@ before_request = [
 
 fixtures = [
     # {"doctype": "Workspace"},
+    {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "interview"]]}
 ]
 
 # pdflibjs Imports
