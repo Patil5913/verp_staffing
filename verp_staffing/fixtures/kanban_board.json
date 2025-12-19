@@ -1,0 +1,53 @@
+[
+ {
+  "columns": [
+   {
+    "column_name": "Interview Scheduled",
+    "indicator": "Gray",
+    "order": "[]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Ongoing Interview",
+    "indicator": "Gray",
+    "order": "[\"f24tr1hkbi\"]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Accepted",
+    "indicator": "Gray",
+    "order": "[]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Rejected",
+    "indicator": "Gray",
+    "order": "[]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Kanban Board",
+  "field_name": "status",
+  "fields": "[\"company\",\"role\"]",
+  "filters": null,
+  "kanban_board_name": "Interview",
+  "modified": "2025-12-19 14:59:26.274947",
+  "name": "Interview",
+  "private": 0,
+  "reference_doctype": "Interview",
+  "show_labels": 1
+ }
+]
