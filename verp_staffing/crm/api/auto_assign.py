@@ -142,4 +142,4 @@ def forward_candidate(customer, department):
 
     doc.save(ignore_permissions=True)
 
-    return stage
+    return dept_doc
