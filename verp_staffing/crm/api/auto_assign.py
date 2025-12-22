@@ -121,7 +121,7 @@ def forward_candidate(customer, department):
         target_doctype=doctype,
         owner_field="assign_to"
     )
-
+    frappe.errprint(f"Auto-assigned to {assignee}")
     # ---- create department document ----
     dept_doc = frappe.get_doc({
         "doctype": doctype,
@@ -129,6 +129,7 @@ def forward_candidate(customer, department):
         "assign_to": assignee,
         "status": "Pending",
     })
+    frappe.errprint(f"dept_doc {dept_doc}")
 
     dept_doc.insert(ignore_permissions=True)
 
