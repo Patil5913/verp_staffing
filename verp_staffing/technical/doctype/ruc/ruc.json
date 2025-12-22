@@ -9,17 +9,21 @@
   "assign_to",
   "column_break_rtjg",
   "status",
+  "outsource",
   "session_details_section",
-  "session_data",
-  "details_tab",
-  "candidate_details"
+  "session_details",
+  "notes_tab",
+  "notes_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
    "fieldname": "assign_to",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Assign To",
-   "options": "Customer"
+   "options": "Employee"
   },
   {
    "fieldname": "customer",
@@ -36,18 +40,9 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Pending\nCompleted"
-  },
-  {
-   "fieldname": "details_tab",
-   "fieldtype": "Tab Break",
-   "label": "Candidate Details"
-  },
-  {
-   "fieldname": "candidate_details",
-   "fieldtype": "HTML",
-   "label": "Candidate Details"
   },
   {
    "fieldname": "session_details_section",
@@ -55,15 +50,40 @@
    "label": "Session Details"
   },
   {
-   "fieldname": "session_data",
-   "fieldtype": "Long Text",
-   "label": "Session data"
+   "fieldname": "notes_tab",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "session_details",
+   "fieldtype": "Table",
+   "options": "Session Details"
+  },
+  {
+   "description": "Only Select this when outsourcing the sessions",
+   "fieldname": "outsource",
+   "fieldtype": "Link",
+   "label": "Outsource Person",
+   "options": "Outsource"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-15 15:33:00.575318",
+ "modified": "2025-12-22 16:16:14.035078",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",

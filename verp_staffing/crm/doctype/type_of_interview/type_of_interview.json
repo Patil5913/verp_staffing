@@ -1,50 +1,30 @@
 {
  "actions": [],
- "allow_rename": 1,
- "creation": "2025-11-14 21:04:43.617558",
+ "autoname": "field:type",
+ "creation": "2025-12-19 17:30:49.784693",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "name1",
-  "email",
-  "phone",
-  "remarks"
+  "type"
  ],
  "fields": [
   {
-   "fieldname": "name1",
+   "fieldname": "type",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Name",
-   "reqd": 1
-  },
-  {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Email",
-   "reqd": 1
-  },
-  {
-   "fieldname": "phone",
-   "fieldtype": "Phone",
-   "in_list_view": 1,
-   "label": "Phone",
-   "reqd": 1
-  },
-  {
-   "fieldname": "remarks",
-   "fieldtype": "Small Text",
-   "label": "Remarks"
+   "label": "Type",
+   "reqd": 1,
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-22 16:55:54.041978",
+ "modified": "2025-12-19 17:34:11.623488",
  "modified_by": "Administrator",
- "module": "Technical",
- "name": "Outsource",
+ "module": "CRM",
+ "name": "Type Of Interview",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -62,7 +42,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "type",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "type"
 }

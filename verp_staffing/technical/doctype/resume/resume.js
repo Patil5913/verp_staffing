@@ -5,6 +5,14 @@ frappe.ui.form.on("Resume", {
     refresh(frm) {
         render_notes(frm);
         frm.set_df_property("status", "read_only", 1);
+        frappe.call({
+            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+            callback: (r) => {
+                if (frm.doc.status == "Completed") {
+                    add_forward_button(frm);
+                }
+            }
+        })
     },
     validate(frm) {
         if (
@@ -29,6 +37,16 @@ frappe.ui.form.on("Resume", {
                 indicator: "green"
             });
         }
+    },
+    status(frm){
+        frappe.call({
+            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+            callback: (r) => {
+                if (frm.doc.status == "Completed") {
+                    add_forward_button(frm);
+                }
+            }
+        })
     }
 });
 
@@ -190,4 +208,148 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
         }
     });
     d.show();
+}
+
+async function add_forward_button(frm) {
+    frm.add_custom_button(
+        "Forward Candidate",
+        async () => {
+            const forwarded = await get_stage_json(frm);
+
+            const available = ALL_FORWARD_DEPARTMENTS.filter(
+                d => !forwarded.includes(d.value)
+            );
+
+            if (!available.length) {
+                frappe.msgprint("Candidate has already been forwarded to all departments.");
+                return;
+            }
+
+            open_forward_prompt(frm, available);
+        },
+        "Forward"
+    );
+}
+
+function open_forward_prompt(frm, available) {
+    const d = new frappe.ui.Dialog({
+        title: "Forward Candidate",
+        fields: [
+            {
+                fieldname: "department",
+                fieldtype: "Select",
+                label: "Select Department",
+                options: available.map(d => ({
+                    label: d.label,
+                    value: d.value
+                })),
+                reqd: 1,
+                onchange() {
+                    toggle_ruc_note_field(d);
+                }
+            },
+            {
+                fieldname: "note",
+                fieldtype: "Text Editor",
+                label: "Note (Required for RUC)",
+                depends_on: "eval:doc.department === 'RUC'",
+                hidden: 1
+            }
+        ],
+        primary_action_label: "Forward",
+        primary_action(values) {
+            if (values.department === "RUC" && !values.note) {
+                frappe.msgprint("Note is required when forwarding to RUC.");
+                return;
+            }
+
+            d.disable_primary_action();
+
+            if (values.department === "RUC") {
+                // save note first
+                frappe.call({
+                    method: "verp_staffing.crm.api.notes.add_note",
+                    args: {
+                        reference_doctype: "RUC",
+                        reference_name: frm.doc.name,
+                        note: values.note
+                    },
+                    callback() {
+                        forward_candidate(frm, values.department);
+                        d.hide();
+                    },
+                    error() {
+                        frappe.msgprint("Failed to add note");
+                        d.enable_primary_action();
+                    }
+                });
+            } else {
+                forward_candidate(frm, values.department);
+                d.hide();
+            }
+        }
+    });
+
+    d.show();
+}
+
+function toggle_ruc_note_field(dialog) {
+    const dept = dialog.get_value("department");
+
+    if (dept === "RUC") {
+        dialog.set_df_property("note", "hidden", 0);
+        dialog.set_df_property("note", "reqd", 1);
+    } else {
+        dialog.set_df_property("note", "hidden", 1);
+        dialog.set_df_property("note", "reqd", 0);
+        dialog.set_value("note", "");
+    }
+
+    dialog.refresh();
+}
+
+
+function get_stage_json(frm) {
+    return new Promise((resolve) => {
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Customer",
+                name: frm.doc.customer,
+            },
+            callback: function (r) {
+                if (!r.message || !r.message.stage) {
+                    resolve([]);   // no stage yet
+                    return;
+                }
+
+                try {
+                    const parsedStage = JSON.parse(r.message.stage);
+                    resolve(Object.keys(parsedStage));
+                } catch (e) {
+                    console.warn("Invalid stage JSON");
+                    resolve([]);
+                }
+            },
+            error: function () {
+                resolve([]);
+            }
+        });
+    });
+}
+
+function forward_candidate(frm, department) {
+    frappe.call({
+        method: "verp_staffing.crm.api.auto_assign.forward_candidate",
+        args: {
+            customer: frm.doc.customer,
+            department: department
+        },
+        callback(r) {
+            frappe.msgprint(
+                `Candidate forwarded to ${department} and assigned automatically.`
+            );
+            frm.reload_doc();
+        }
+    });
 }

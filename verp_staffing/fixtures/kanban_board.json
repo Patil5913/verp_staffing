@@ -3,7 +3,7 @@
   "columns": [
    {
     "column_name": "Interview Scheduled",
-    "indicator": "Gray",
+    "indicator": "Blue",
     "order": "[]",
     "parent": "Interview",
     "parentfield": "columns",
@@ -12,7 +12,7 @@
    },
    {
     "column_name": "Ongoing Interview",
-    "indicator": "Gray",
+    "indicator": "Yellow",
     "order": "[\"f24tr1hkbi\"]",
     "parent": "Interview",
     "parentfield": "columns",
@@ -21,7 +21,7 @@
    },
    {
     "column_name": "Accepted",
-    "indicator": "Gray",
+    "indicator": "Green",
     "order": "[]",
     "parent": "Interview",
     "parentfield": "columns",
@@ -30,7 +30,7 @@
    },
    {
     "column_name": "Rejected",
-    "indicator": "Gray",
+    "indicator": "Red",
     "order": "[]",
     "parent": "Interview",
     "parentfield": "columns",

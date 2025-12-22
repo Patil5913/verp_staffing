@@ -6,8 +6,10 @@
  "engine": "InnoDB",
  "field_order": [
   "customer",
-  "column_break_ongp",
-  "interview",
+  "column_break_ktta",
+  "assigned_to",
+  "column_break_jejh",
+  "interview_list",
   "customer_details_section",
   "customer_details_html"
  ],
@@ -18,17 +20,8 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1
-  },
-  {
-   "fieldname": "interview",
-   "fieldtype": "Link",
-   "label": "Interview",
-   "options": "Interview"
-  },
-  {
-   "fieldname": "column_break_ongp",
-   "fieldtype": "Column Break"
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "customer_details_section",
@@ -38,12 +31,31 @@
   {
    "fieldname": "customer_details_html",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "column_break_ktta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interview_list",
+   "fieldtype": "HTML",
+   "label": "Interview List"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_jejh",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-19 15:22:34.295805",
+ "modified": "2025-12-21 14:11:37.394951",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Marketing",

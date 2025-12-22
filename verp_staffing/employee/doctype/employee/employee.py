@@ -34,3 +34,35 @@ def get_users_not_linked_to_employee(doctype, txt, searchfield, start, page_len,
     )
 
     return [(u["name"], ) for u in user_list]
+
+
+@frappe.whitelist()
+def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filters):
+    department = filters.get("department")
+    designation = filters.get("designation")
+
+    if not department or not designation:
+        print("Department or Designation filter missing")
+        return []
+
+    return frappe.db.sql(
+        """
+        SELECT DISTINCT e.name, e.employee_name
+        FROM `tabEmployee` e
+        INNER JOIN `tabEmployee Assignment Detail` d
+            ON d.parent = e.name
+        WHERE
+            d.department = %s
+            AND d.designation = %s
+            AND (e.name LIKE %s OR e.employee_name LIKE %s)
+        LIMIT %s OFFSET %s
+        """,
+        (
+            department,
+            designation,
+            f"%{txt}%",
+            f"%{txt}%",
+            page_len,
+            start,
+        ),
+    )

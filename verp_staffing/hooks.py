@@ -184,7 +184,7 @@ scheduler_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
-    "frappe.desk.reportview.get": "verp_staffing.crm.doctype.lead.lead_list.secure_get"
+    "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
 }
 #
 

@@ -12,9 +12,6 @@ frappe.ui.form.on("Customer", {
         inject_department_css();
         inject_status_badge_css();
         load_department_panels(frm);
-        if (frm.doc.opportunity) {
-            show_sales_order(frm);
-        }
         frappe.call({
             method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
             callback: (r) => {
@@ -25,6 +22,9 @@ frappe.ui.form.on("Customer", {
                 }
             }
         })
+        if (frm.doc.opportunity) {
+            show_sales_order(frm);
+        }
     },
 });
 
@@ -657,103 +657,165 @@ function render_marketing_tab_content(frm) {
 }
 
 function render_lead_details(frm) {
+    frm.set_df_property(
+        "lead_details",
+        "options",
+        `<p style="color:#888;padding:10px;">Loading Lead Details...</p>`
+    );
+
+    // STEP 1: Check existence
     frappe.call({
-        method: "frappe.client.get",
+        method: "frappe.client.get_list",
         args: {
             doctype: "Lead Detail Form",
             filters: {
                 customer: frm.doc.name
             },
-            fields: ["name"]
+            fields: ["name"],
+            limit_page_length: 1
         },
-        callback: function (oppty_res) {
-            if (!oppty_res.message) {
-                frm.set_df_property("lead_details", "options", "<p style='color: gray;'>Lead not found</p>");
+        callback: function (res) {
+
+            // ✅ CASE 1: No Lead Detail linked
+            if (!res.message || res.message.length === 0) {
+                frm.set_df_property(
+                    "lead_details",
+                    "options",
+                    `
+                    <div style="padding:15px;color:#999;">
+                        <h4>Lead Details</h4>
+                        <p>No Lead Detail form not filled yet by customer.</p>
+                    </div>
+                    `
+                );
                 return;
             }
 
+            // STEP 2: Fetch full document
+            const c_name = res.message[0].name;
 
-            if (!oppty_res.message) return;
+            frappe.call({
+                method: "frappe.client.get",
+                args: {
+                    doctype: "Lead Detail Form",
+                    name: c_name
+                },
+                callback: function (lead_res) {
 
-            const lead = oppty_res.message;
-
-            let html = `
-                    <div style="padding:15px;">
-                        <h4 style="margin-bottom:15px;">Lead Details</h4>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">`;
-
-            const exclude = [
-                "doctype", "name", "owner", "modified", "creation", "modified_by",
-                "docstatus", "_comments", "_assign", "_user_tags", "idx"
-            ];
-
-            const fetchLinkValue = (field, value) => {
-                return frappe.call({
-                    method: "frappe.client.get",
-                    args: { doctype: field.options, name: value },
-                    callback: function (data) {
-                        const finalValue = data.message?.name || value;
-                        $(`#field-${field.fieldname}`).html(finalValue);
+                    if (!lead_res.message) {
+                        frm.set_df_property(
+                            "lead_details",
+                            "options",
+                            `<p style="color:red;">Failed to load Lead Details.</p>`
+                        );
+                        return;
                     }
-                });
-            };
 
-            Object.keys(lead).forEach(key => {
-                const value = lead[key];
+                    // show forward button only when form is filled
+                    frappe.call({
+                        method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+                        callback: (r) => {
+                            let dept = r.message
+                            apply_tab_visibility(frm, dept)
+                            if (dept === "Sales" || frappe.user.has_role("System Manager")) {
+                                add_forward_button(frm);
+                            }
+                        }
+                    })
+                    const lead = lead_res.message;
 
-                if (exclude.includes(key) || value === null || value === "" || key === "past_experience" || key === "education_table") return;
-                const field = frappe.meta.get_docfield("Lead Detail Form", key);
-                const label = frappe.model.unscrub(key);
+                    let html = `
+                        <div style="padding:15px;">
+                            <h4 style="margin-bottom:15px;">Lead Details</h4>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    `;
 
-                if (field && field.fieldtype === "Link") {
-                    html += `
-                            <div style="border:1px solid #e5e5e5; padding:10px; border-radius:8px;">
-                                <strong>${label}</strong><br>
-                                <span id="field-${key}">Loading...</span>
-                            </div>`;
-                    fetchLinkValue(field, value);
+                    const exclude = [
+                        "doctype", "name", "owner", "modified", "creation", "modified_by",
+                        "docstatus", "_comments", "_assign", "_user_tags", "idx"
+                    ];
 
-                } else if (typeof value !== "object" && !Array.isArray(value)) {
-                    html += `
-                            <div style="border:1px solid #e5e5e5; padding:10px; border-radius:8px;">
-                                <strong>${label}</strong><br>
-                                <span>${value}</span>
-                            </div>`;
-                }
-            });
-
-            html += `</div><br>`;
-            // Table Data (Array of Objects UI)
-            ["past_experience", "education_table"].forEach(tblKey => {
-                if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
-                    html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
-                    html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
-                                <tr>`;
-
-                    Object.keys(lead[tblKey][0]).forEach(col => {
-                        html += `<th>${frappe.model.unscrub(col)}</th>`;
-                    });
-
-                    html += `</tr>`;
-
-                    lead[tblKey].forEach(row => {
-                        html += `<tr>`;
-                        Object.keys(row).forEach(col => {
-                            html += `<td>${row[col] || "-"}</td>`;
+                    // Helper for Link fields
+                    const fetchLinkValue = (field, value, key) => {
+                        frappe.call({
+                            method: "frappe.client.get",
+                            args: {
+                                doctype: field.options,
+                                name: value
+                            },
+                            callback: function (data) {
+                                const finalValue = data.message?.name || value;
+                                $(`#field-${key}`).text(finalValue);
+                            }
                         });
-                        html += `</tr>`;
+                    };
+
+                    Object.keys(lead).forEach(key => {
+                        const value = lead[key];
+
+                        if (
+                            exclude.includes(key) ||
+                            value === null ||
+                            value === "" ||
+                            key === "past_experience" ||
+                            key === "education_table"
+                        ) return;
+
+                        const field = frappe.meta.get_docfield("Lead Detail Form", key);
+                        const label = frappe.model.unscrub(key);
+
+                        if (field && field.fieldtype === "Link") {
+                            html += `
+                                <div style="border:1px solid #e5e5e5;padding:10px;border-radius:8px;">
+                                    <strong>${label}</strong><br>
+                                    <span id="field-${key}">Loading...</span>
+                                </div>`;
+                            fetchLinkValue(field, value, key);
+
+                        } else if (typeof value !== "object") {
+                            html += `
+                                <div style="border:1px solid #e5e5e5;padding:10px;border-radius:8px;">
+                                    <strong>${label}</strong><br>
+                                    <span>${value}</span>
+                                </div>`;
+                        }
                     });
 
-                    html += `</table>`;
+                    html += `</div><br>`;
+
+                    // Child tables
+                    ["past_experience", "education_table"].forEach(tblKey => {
+                        if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
+                            html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
+                            html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
+                                        <tr>`;
+
+                            Object.keys(lead[tblKey][0]).forEach(col => {
+                                html += `<th>${frappe.model.unscrub(col)}</th>`;
+                            });
+
+                            html += `</tr>`;
+
+                            lead[tblKey].forEach(row => {
+                                html += `<tr>`;
+                                Object.keys(row).forEach(col => {
+                                    html += `<td>${row[col] || "-"}</td>`;
+                                });
+                                html += `</tr>`;
+                            });
+
+                            html += `</table>`;
+                        }
+                    });
+
+                    html += `</div>`;
+                    frm.set_df_property("lead_details", "options", html);
                 }
             });
-            html += `</div>`;
-            frm.set_df_property("lead_details", "options", html);
-
-
         }
     });
 }
+
 
 const DEPARTMENT_VISIBILITY = {
     sales: ["lead_details", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],
@@ -786,11 +848,11 @@ function apply_tab_visibility(frm, department) {
     });
 }
 
-function add_forward_button(frm) {
+async function add_forward_button(frm) {
     frm.add_custom_button(
         "Forward Candidate",
-        () => {
-            const forwarded = get_forwarded_departments(frm);
+        async () => {
+            const forwarded = await get_stage_json(frm);
 
             const available = ALL_FORWARD_DEPARTMENTS.filter(
                 d => !forwarded.includes(d.value)
@@ -801,58 +863,120 @@ function add_forward_button(frm) {
                 return;
             }
 
-            frappe.prompt(
-                [
-                    {
-                        fieldname: "department",
-                        fieldtype: "Select",
-                        label: "Select Department",
-                        options: available.map(d => ({
-                            label: d.label,
-                            value: d.value
-                        })),
-                        reqd: 1
-                    }
-                ],
-                (values) => {
-                    forward_candidate(frm, values.department);
-                },
-                "Forward Candidate to any department",
-                "Forward"
-            );
+            open_forward_prompt(frm, available);
         },
         "Forward"
     );
 }
 
+function open_forward_prompt(frm, available) {
+    const d = new frappe.ui.Dialog({
+        title: "Forward Candidate",
+        fields: [
+            {
+                fieldname: "department",
+                fieldtype: "Select",
+                label: "Select Department",
+                options: available.map(d => ({
+                    label: d.label,
+                    value: d.value
+                })),
+                reqd: 1,
+                onchange() {
+                    toggle_ruc_note_field(d);
+                }
+            },
+            {
+                fieldname: "note",
+                fieldtype: "Text Editor",
+                label: "Note (Required for RUC)",
+                depends_on: "eval:doc.department === 'technical'",
+                hidden: 1
+            }
+        ],
+        primary_action_label: "Forward",
+        primary_action(values) {
+            if (values.department === "technical" && !values.note) {
+                frappe.msgprint("Note is required when forwarding to RUC.");
+                return;
+            }
 
-function get_forwarded_departments(frm) {
-    const stage = get_stage_json(frm);
-    return Object.keys(stage);
+            d.disable_primary_action();
+            forward_candidate(frm, values);
+            d.hide();
+        }
+    });
+
+    d.show();
+}
+
+function toggle_ruc_note_field(dialog) {
+    const dept = dialog.get_value("department");
+
+    if (dept === "technical") {
+        dialog.set_df_property("note", "hidden", 0);
+        dialog.set_df_property("note", "reqd", 1);
+    } else {
+        dialog.set_df_property("note", "hidden", 1);
+        dialog.set_df_property("note", "reqd", 0);
+        dialog.set_value("note", "");
+    }
+
+    dialog.refresh();
 }
 
 function get_stage_json(frm) {
-    if (!frm.doc.stage) return {};
+    return new Promise((resolve) => {
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Customer",
+                name: frm.doc.name,
+            },
+            callback: function (r) {
+                if (!r.message || !r.message.stage) {
+                    resolve([]);   // no stage yet
+                    return;
+                }
 
-    try {
-        return JSON.parse(frm.doc.stage);
-    } catch (e) {
-        console.warn("Invalid stage JSON");
-        return {};
-    }
+                try {
+                    const parsedStage = JSON.parse(r.message.stage);
+                    resolve(Object.keys(parsedStage));
+                } catch (e) {
+                    console.warn("Invalid stage JSON");
+                    resolve([]);
+                }
+            },
+            error: function () {
+                resolve([]);
+            }
+        });
+    });
 }
 
-
-function forward_candidate(frm, department) {
+function forward_candidate(frm, values) {
     frappe.call({
         method: "verp_staffing.crm.api.auto_assign.forward_candidate",
         args: {
             customer: frm.doc.name,
-            department: department
+            department: values.department
         },
         callback(r) {
+            console.log(r);
+            frappe.call({
+                method: "verp_staffing.crm.api.notes.add_note",
+                args: {
+                    reference_doctype: "RUC",
+                    reference_name: r.message.name,
+                    note: values.note
+                },
+                error() {
+                    frappe.msgprint("Failed to add note");
+                    d.enable_primary_action();
+                }
+            });
             frappe.msgprint(
-                `Candidate forwarded to ${department} and assigned automatically.`
+                `Candidate forwarded to ${values.department} and assigned automatically.`
             );
             frm.reload_doc();
         }

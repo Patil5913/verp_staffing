@@ -10,8 +10,6 @@ frappe.ui.form.on("Hierarchy", {
 
         frm.department_roles = await load_department_roles(frm);
 
-        console.log("Loaded department roles: ", frm.department_roles);
-
         init_role_table(frm);
         render_hierarchy_diagram(frm);
 
@@ -101,9 +99,27 @@ async function load_department_roles(frm) {
             name: frm.doc.department
         }
     });
-    console.log("res: ", res)
-    let table = res.message.roles || [];
-    return table.map(r => r.name);
+    const roles = res?.message?.roles || [];
+
+    if (!roles.length) {
+        frappe.msgprint({
+            title: "No Roles Configured",
+            indicator: "orange",
+            message: `
+                The selected department <b>${frm.doc.department}</b> does not have any roles assigned.
+                <br><br>
+                Please add roles to this department first.
+                <br>
+                Path: <b>Department → Roles</b>
+                <br><br>
+                Once roles are configured, you can define the hierarchy and continue.
+            `
+        });
+
+        return [];
+    }
+
+    return roles.map(r => r.name);
 }
 
 

@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-22 16:05:30.147482",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "session_duration_in_hour",
+  "date",
+  "projects",
+  "quality",
+  "candidate_doubts",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "session_duration_in_hour",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Session Duration (in Hour)"
+  },
+  {
+   "description": "List out Projects with their short description given to candidate",
+   "fieldname": "projects",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Projects"
+  },
+  {
+   "fieldname": "quality",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Quality of Session",
+   "options": "EXCELLENT\nGOOD\nAVERAGE\nBAD\nWORST"
+  },
+  {
+   "description": "List out doubts asked by candidate and how did you solved it.",
+   "fieldname": "candidate_doubts",
+   "fieldtype": "Text",
+   "in_list_view": 1,
+   "label": "Candidate Doubts"
+  },
+  {
+   "description": "Any additional remarks on session",
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Session Date"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-12-22 16:13:45.239127",
+ "modified_by": "Administrator",
+ "module": "Technical",
+ "name": "Session Details",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
