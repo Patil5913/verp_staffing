@@ -1,0 +1,168 @@
+import frappe
+from frappe.desk.reportview import get as original_get
+
+# get employee name from user
+def get_employee_name(user):
+    return frappe.db.get_value(
+        "Employee",
+        {"user": user},
+        "name",
+    )
+
+
+# function to get all subordinate Employee names under root_employee
+def get_all_subordinates(
+    root_employee: str,
+    department: str | None = None
+) -> set[str]:
+    
+    collected = set()
+    stack = [root_employee]
+
+    while stack:
+        current = stack.pop()
+
+        filters = {"assigned_to": current}
+        if department:
+            filters["department"] = department
+
+        children = frappe.db.get_all(
+            "Employee Assignment Detail",
+            filters=filters,
+            pluck="parent",
+        )
+
+        for emp in children:
+            if emp and emp not in collected:
+                collected.add(emp)
+                stack.append(emp)
+
+    return collected
+
+
+# function to filter out only subordinate employees
+@frappe.whitelist()
+def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filters):
+    user = frappe.session.user
+
+    if user == "Administrator":
+        return frappe.db.sql("""
+            SELECT name
+            FROM `tabEmployee`
+            WHERE name LIKE %s
+            ORDER BY name
+            LIMIT %s OFFSET %s
+        """, (f"%{txt}%", page_len, start))
+
+    employee = get_employee_name(user)
+    if not employee:
+        return []
+
+    department = filters.get("department") if filters else None
+
+    allowed = get_all_subordinates(employee, department)
+
+    if not allowed:
+        return []
+
+    placeholders = ", ".join(["%s"] * len(allowed))
+
+    return frappe.db.sql(
+        f"""
+        SELECT name
+        FROM `tabEmployee`
+        WHERE name IN ({placeholders})
+          AND name LIKE %s
+        ORDER BY name
+        LIMIT %s OFFSET %s
+        """,
+        allowed + [f"%{txt}%", page_len, start]
+    )
+
+
+# to get visible employee names for a user
+def get_visible_employee_names(user, department=None):
+    root_employee = get_employee_name(user)
+    if not root_employee:
+        return []
+
+    users = get_all_subordinates(
+        root_employee=root_employee,
+        department=department,
+    )
+
+    users.add(root_employee)
+    return list(users)
+
+
+# get allowed leads for sales person
+def get_allowed_leads(user):
+    root_employee = get_employee_name(user)
+    if not root_employee:
+        return []
+
+    users = get_visible_employee_names(user)
+
+    own_leads = frappe.db.get_all(
+        "Lead",
+        filters={"lead_owner": ["in", users]},
+        pluck="name",
+    )
+
+    opp_leads = frappe.db.get_all(
+        "Opportunity",
+        filters={"opportunity_owner": ["in", users]},
+        pluck="party_name",
+    )
+
+    return list(set(own_leads + opp_leads))
+
+
+# to add list view restriction based on employee hierarchy
+@frappe.whitelist()
+def secure_get(**kwargs):
+    user = frappe.session.user
+    doctype = frappe.local.form_dict.get("doctype")
+
+    if user == "Administrator":
+        return original_get(**frappe.local.form_dict)
+
+    if doctype == "Lead":
+        allowed_leads = get_allowed_leads(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Lead", "name", "in", allowed_leads]]
+        )
+        return original_get(**frappe.local.form_dict)
+
+    if doctype == "Opportunity":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Opportunity", "opportunity_owner", "in", owners]]
+        )
+        return original_get(**frappe.local.form_dict)
+
+    if doctype == "Customer":
+        owners = get_visible_employee_names(user)
+        opportunities = frappe.db.get_all(
+            "Opportunity",
+            filters={"opportunity_owner": ["in", owners]},
+            pluck="name",
+        )
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Customer", "opportunity", "in", opportunities]]
+        )
+        return original_get(**frappe.local.form_dict)
+    
+    if doctype == "Resume" or doctype == "RUC":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Resume","assign_to","in",owners]]
+        )
+
+    if doctype == "Marketing":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Marketing","assigned_to","in",owners]]
+        )
+
+    return original_get(**frappe.local.form_dict)

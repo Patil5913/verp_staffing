@@ -3,8 +3,18 @@
 
 frappe.ui.form.on("Interview", {
     refresh(frm) {
-        console.log('Interview');
         set_round_numbers(frm);
+
+        const grid = frm.fields_dict.interview_rounds_table?.grid;
+        if (!grid) return;
+
+        grid.update_docfield_property("date", "read_only", 1);
+        grid.update_docfield_property("round", "read_only", 1);
+
+        if (!frm.is_new()) {
+            frm.set_df_property("marketing_link", "read_only", 1);
+            frm.set_df_property("role", "read_only", 1);
+        }
     },
 
     validate(frm){
@@ -13,25 +23,51 @@ frappe.ui.form.on("Interview", {
 });
 
 frappe.ui.form.on("Interview Round", {
-    interview_rounds_table_add(frm) {
+    interview_rounds_table_add(frm, cdt, cdn) {
         console.log("interview_rounds_table_add");
         
         set_round_numbers(frm);
+
+        const row = locals[cdt][cdn];
+        
+        // set default today's date
+         if (!row.date) {
+            row.date = frappe.datetime.get_today();
+        }
+
+        // adding previos follow up value in state
+        row.__prev_follow_up = row.follow_up || 0;
     },
+
     interview_rounds_table_remove(frm) {
         console.log("interview_rounds_table_remove");
 
         set_round_numbers(frm);
+    },
+
+    follow_up(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+
+        const prev = row.__prev_follow_up ?? 0;
+        const curr = row.follow_up;
+
+        if (curr !== prev + 1) {
+            frappe.msgprint(
+                `Invalid Follow Up value. Only allowed value is ${prev + 1}`
+            );
+
+            row.follow_up = prev;
+            frm.refresh_field("interview_rounds_table");
+            return;
+        }
+
+        row.__prev_follow_up = curr;
     }
 });
 
 function set_round_numbers(frm) {
-    console.log("set_round_numbers");
-
     (frm.doc.interview_rounds_table || []).forEach(row => {
-        
         row.round = row.idx;
-        console.log("row.round", row.round);
     });
     frm.refresh_field("interview_rounds_table");
 }

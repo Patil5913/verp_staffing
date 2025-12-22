@@ -64,6 +64,7 @@ ROLE_PERMISSIONS = {
 
 def after_install():
     seed_sales_stages()
+    seed_type_of_interview()
     seed_employee_departments()
     create_all_roles()
     # set_all_role_permissions()  
@@ -79,6 +80,19 @@ def seed_sales_stages():
             doc = frappe.get_doc({
                 "doctype": doctype,
                 "name1": stage,
+            })
+            doc.insert(ignore_permissions=True)
+
+
+def seed_type_of_interview():
+    doctype = "Type Of Interview"
+    types = ["Google Meet", "Microsoft Teams", "Joom call", "WebEx", "Skype", "Phone Call", "On-site"]
+
+    for t in types:
+        if not frappe.db.exists(doctype, t):
+            doc = frappe.get_doc({
+                "doctype": doctype,
+                "type": t,
             })
             doc.insert(ignore_permissions=True)
 

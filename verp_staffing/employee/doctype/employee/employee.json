@@ -7,11 +7,10 @@
  "engine": "InnoDB",
  "field_order": [
   "user",
-  "employee_name",
-  "department",
   "column_break_ookt",
-  "designation",
-  "assigned_to"
+  "employee_name",
+  "employee_assignment_details_table_section",
+  "employee_assignment_details_table"
  ],
  "fields": [
   {
@@ -29,35 +28,24 @@
    "unique": 1
   },
   {
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Department",
-   "options": "Department",
-   "reqd": 1
-  },
-  {
-   "fieldname": "designation",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Designation",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_ookt",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "assigned_to",
-   "fieldtype": "Link",
-   "label": "Assigned To",
-   "options": "Employee"
+   "fieldname": "employee_assignment_details_table_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Assignment Details Table"
+  },
+  {
+   "fieldname": "employee_assignment_details_table",
+   "fieldtype": "Table",
+   "options": "Employee Assignment Detail"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-13 14:21:31.751652",
+ "modified": "2025-12-21 10:28:27.710307",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",

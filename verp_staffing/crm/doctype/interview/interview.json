@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:company",
  "creation": "2025-12-17 12:10:25.512845",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -8,8 +9,9 @@
   "marketing_link",
   "company",
   "column_break_iehb",
-  "status",
   "role",
+  "column_break_ljfz",
+  "status",
   "section_break_mfnk",
   "interview_rounds_table"
  ],
@@ -20,12 +22,6 @@
    "options": "Interview Round"
   },
   {
-   "fieldname": "marketing_link",
-   "fieldtype": "Link",
-   "label": "Marketing Link",
-   "options": "Marketing"
-  },
-  {
    "fieldname": "column_break_iehb",
    "fieldtype": "Column Break"
   },
@@ -34,7 +30,8 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Company",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "role",
@@ -54,15 +51,26 @@
    "label": "Status",
    "options": "Interview Scheduled\nOngoing Interview\nAccepted\nRejected",
    "reqd": 1
+  },
+  {
+   "fieldname": "marketing_link",
+   "fieldtype": "Link",
+   "label": "Marketing",
+   "options": "Marketing"
+  },
+  {
+   "fieldname": "column_break_ljfz",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-19 16:22:04.587076",
+ "modified": "2025-12-22 15:14:44.773975",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Interview",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -80,7 +88,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "company"
 }

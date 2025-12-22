@@ -46,8 +46,6 @@ window.render_customer_related_html = function ({
     fields,
     label_map = {}
 }) {
-    console.log("hisduhgisdu");
-
     if (!customer) {
         frm.set_df_property(html_field, "options", "<p>No customer selected</p>");
         return;
