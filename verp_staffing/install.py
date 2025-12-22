@@ -9,6 +9,31 @@ ROLES = [
     "Extra Menu Item Not Show",
 ]
 
+PERM_FIELDS = [
+    "select",
+    "read",
+    "write",
+    "create",
+    "delete",
+    "print",
+    "email",
+    "report",
+    "import",
+    "export",
+    "share",
+]
+PROTECTED_DOCTYPES = {
+    "Role",
+    "Has Role",
+    "DocPerm",
+    "Custom DocPerm",
+    "Module Def",
+    "Page",
+    "Report",
+    "Dashboard",
+    "Workspace",
+}
+
 ROLE_PERMISSIONS = {
     "Lead Employee": {
         "Lead": ["read", "write", "create"],
@@ -67,7 +92,7 @@ def after_install():
     seed_type_of_interview()
     seed_employee_departments()
     create_all_roles()
-    # set_all_role_permissions()  
+    assign_permissions_to_roles(ROLE_PERMISSIONS)
     remove_default_workspaces()
 
 
@@ -121,51 +146,57 @@ def create_all_roles():
 
     frappe.clear_cache()
 
-def set_all_role_permissions():
 
-    protected_roles = {"Administrator"}
+def assign_permissions_to_roles(role_permissions: dict):
+    """
+    Assign permissions strictly from ROLE_PERMISSIONS object.
+    """
 
-    perm_map = {
-        "select": "select",
-        "read": "read",
-        "write": "write",
-        "create": "create",
-        "delete": "delete",
-        "print": "print",
-        "email": "email",
-        "report": "report",
-        "import": "import",
-        "export": "export",
-        "share": "share",
-    }
+    for role, doctypes in role_permissions.items():
 
-    for role_name, doctype_list in ROLE_PERMISSIONS.items():
-
-        # 1️⃣ Skip protected roles
-        if role_name in protected_roles:
+        # Never touch Administrator
+        if role == "Administrator":
             continue
 
-        for doctype, perms in doctype_list.items():
-            # # Delete existing perms
-            # frappe.db.delete("DocPerm", {"role": role_name, "parent": doctype})
-            # frappe.db.delete("Custom DocPerm", {"role": role_name, "parent": doctype})
+        # Role must exist
+        if not frappe.db.exists("Role", role):
+            continue
 
-            # Create new permission doc
-            perm_doc = frappe.new_doc("Custom DocPerm")
-            perm_doc.parent = doctype
-            perm_doc.parentfield = "permissions"
-            perm_doc.parenttype = "DocType"
-            perm_doc.role = role_name
-            perm_doc.idx = 1
+        for doctype, allowed_perms in doctypes.items():
 
-            for p in perms:
-                if p in perm_map:
-                    setattr(perm_doc, perm_map[p], 1)
+            # Doctype must exist
+            if not frappe.db.exists("DocType", doctype):
+                continue
 
-            perm_doc.save(ignore_permissions=True)
+            # Skip core/system doctypes
+            if doctype in PROTECTED_DOCTYPES:
+                continue
+
+            # 1. Remove existing permissions for this role + doctype
+            frappe.db.delete(
+                "DocPerm",
+                {
+                    "parent": doctype,
+                    "role": role,
+                },
+            )
+
+            # 2. Create fresh permission row
+            perm = frappe.new_doc("DocPerm")
+            perm.parent = doctype
+            perm.parenttype = "DocType"
+            perm.parentfield = "permissions"
+            perm.role = role
+            perm.permlevel = 0
+
+            # 3. Explicitly set ALL permission flags
+            for field in PERM_FIELDS:
+                setattr(perm, field, 1 if field in allowed_perms else 0)
+
+            perm.insert(ignore_permissions=True)
 
     frappe.clear_cache()
-    frappe.db.commit()
+
 
 def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
