@@ -5,6 +5,13 @@ ROLES = [
     "Lead Manager",
     "Lead Master Manager",
     "Sales Employee",
+    "Marketing Employee",
+    "Marketing Manager",
+    "Marketing Master Manager",
+    "Resume Employee",
+    "Resume Manager",
+    "Resume Master Manager",
+    "Technical Coordinator",
     "HR",
     "Extra Menu Item Not Show",
 ]
@@ -37,19 +44,19 @@ PROTECTED_DOCTYPES = {
 ROLE_PERMISSIONS = {
     "Lead Employee": {
         "Lead": ["read", "write", "create"],
-        "Opportunity": ["read", "create"],
+        "Opportunity": ["create"],
         "Employee": ["read"],
     },
 
     "Lead Manager": {
         "Lead": ["read", "write", "create"],
-        "Opportunity": ["read", "create"],
+        "Opportunity": ["create"],
         "Employee": ["read"],
     },
 
     "Lead Master Manager": {
         "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
-        "Opportunity": ["read", "create"],
+        "Opportunity": ["create"],
         "Employee": ["read"],
     },
 
@@ -60,6 +67,13 @@ ROLE_PERMISSIONS = {
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order":["select","read", "write", "create"],
+        "Agreement":["select","read", "write", "create"],
+        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Lead Detail Form": ["read"],
+        "Resume": ["read"],
+        "RUC": ["read"],
+        "Marketing": ["read"],
+        "Interview": ["read"],
     },
 
     "Sales Manager" :{
@@ -69,6 +83,13 @@ ROLE_PERMISSIONS = {
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order":["select","read", "write", "create"],
+        "Agreement":["select","read", "write", "create"],
+        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Lead Detail Form": ["read"],
+        "Resume": ["read"],
+        "RUC": ["read"],
+        "Marketing": ["read"],
+        "Interview": ["read"],
     },
 
     "Sales Master Manager" :{
@@ -78,11 +99,41 @@ ROLE_PERMISSIONS = {
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order":["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
+        "Agreement":["select","read", "write", "create"],
+        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Lead Detail Form": ["read"],
+        "Resume": ["read"],
+        "RUC": ["read"],
+        "Marketing": ["read"],
+        "Interview": ["read"],
     },
 
     "HR": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
+    },
+
+    "Technical Coordinator": {
+        "Employee": ["read"],
+        "User": ["read"],
+    },
+
+    "Marketing Employee": {
+        "Marketing": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+    },
+
+    "Marketing Manager": {
+        "Marketing": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+    },
+
+    "Marketing Master Manager": {
+        "Ma": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
+        "Opportunity": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", 	"export",
+                      	"share"],
     },
 }
 
