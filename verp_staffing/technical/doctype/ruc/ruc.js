@@ -503,13 +503,11 @@ const ALL_FORWARD_DEPARTMENTS = [
     { label: "Technical", value: "technical" },
     { label: "Marketing", value: "marketing" },
 ];
-
-function add_forward_button(frm) {
+async function add_forward_button(frm) {
     frm.add_custom_button(
         "Forward Candidate",
         async () => {
             const forwarded = await get_stage_json(frm);
-            console.log("forwarded: ", forwarded);
 
             const available = ALL_FORWARD_DEPARTMENTS.filter(
                 d => !forwarded.includes(d.value)
@@ -520,29 +518,89 @@ function add_forward_button(frm) {
                 return;
             }
 
-            frappe.prompt(
-                [
-                    {
-                        fieldname: "department",
-                        fieldtype: "Select",
-                        label: "Select Department",
-                        options: available.map(d => ({
-                            label: d.label,
-                            value: d.value
-                        })),
-                        reqd: 1
-                    }
-                ],
-                (values) => {
-                    forward_candidate(frm, values.department);
-                },
-                "Forward Candidate to any department",
-                "Forward"
-            );
+            open_forward_prompt(frm, available);
         },
         "Forward"
     );
 }
+
+function open_forward_prompt(frm, available) {
+    const d = new frappe.ui.Dialog({
+        title: "Forward Candidate",
+        fields: [
+            {
+                fieldname: "department",
+                fieldtype: "Select",
+                label: "Select Department",
+                options: available.map(d => ({
+                    label: d.label,
+                    value: d.value
+                })),
+                reqd: 1,
+                onchange() {
+                    toggle_ruc_note_field(d);
+                }
+            },
+            {
+                fieldname: "note",
+                fieldtype: "Text Editor",
+                label: "Note (Required for RUC)",
+                depends_on: "eval:doc.department === 'RUC'",
+                hidden: 1
+            }
+        ],
+        primary_action_label: "Forward",
+        primary_action(values) {
+            if (values.department === "RUC" && !values.note) {
+                frappe.msgprint("Note is required when forwarding to RUC.");
+                return;
+            }
+
+            d.disable_primary_action();
+
+            if (values.department === "RUC") {
+                // save note first
+                frappe.call({
+                    method: "verp_staffing.crm.api.notes.add_note",
+                    args: {
+                        reference_doctype: "RUC",
+                        reference_name: frm.doc.name,
+                        note: values.note
+                    },
+                    callback() {
+                        forward_candidate(frm, values.department);
+                        d.hide();
+                    },
+                    error() {
+                        frappe.msgprint("Failed to add note");
+                        d.enable_primary_action();
+                    }
+                });
+            } else {
+                forward_candidate(frm, values.department);
+                d.hide();
+            }
+        }
+    });
+
+    d.show();
+}
+
+function toggle_ruc_note_field(dialog) {
+    const dept = dialog.get_value("department");
+
+    if (dept === "RUC") {
+        dialog.set_df_property("note", "hidden", 0);
+        dialog.set_df_property("note", "reqd", 1);
+    } else {
+        dialog.set_df_property("note", "hidden", 1);
+        dialog.set_df_property("note", "reqd", 0);
+        dialog.set_value("note", "");
+    }
+
+    dialog.refresh();
+}
+
 
 function get_stage_json(frm) {
     return new Promise((resolve) => {
