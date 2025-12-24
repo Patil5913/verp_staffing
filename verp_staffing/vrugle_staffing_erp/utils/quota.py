@@ -1,6 +1,7 @@
 import frappe
 from frappe.installer import update_site_config
 from datetime import datetime
+from verp_staffing.crm.api.helpers import send_notification
 
 
 # user limit validate 
@@ -16,6 +17,19 @@ def user_limit(doc=None, method=None):
     total_users = frappe.db.count("User")
 
     if total_users > users_limit:
+        send_notification(
+            recipients=["Administrator"],
+            subject="User Limit Exceeded",
+            message=(
+                f"Your site has exceeded the allowed user limit.\n\n"
+                f"Allowed Users: {users_limit}\n"
+                f"Current Users: {total_users}\n\n"
+                f"Please upgrade your plan or remove inactive users."
+            ),
+            reference_doctype="User",
+            send_email=1,
+            send_system=1,
+        )
         frappe.throw(f"User limit exceeded. Limit = {users_limit}, Current = {total_users}")
 
 
@@ -61,6 +75,18 @@ def site_space_limit(doc=None, method=None):
     total_space = get_site_storage_usage()
     
     if total_space > site_space_limit_gb:
+        send_notification(
+            recipients=["Administrator"],
+            subject="Site Storage Limit Exceeded",
+            message=(
+                f"Your site storage usage has exceeded the allowed limit.\n\n"
+                f"Allowed Storage: {site_space_limit_gb} GB\n"
+                f"Current Usage: {total_space} GB\n\n"
+                f"Please delete unused files or upgrade your storage plan."
+            ),
+            send_email=1,
+            send_system=1,
+        )
         frappe.throw(f"Site used space {total_space}GB exceed the limit of {site_space_limit_gb}GB")
     
 
@@ -77,9 +103,10 @@ def site_expiry_check():
             enable_archive_mode()
 
             if frappe.session.user and frappe.session.user != "Administrator":
-                frappe.msgprint("Site expired. Only Administrator can login.")
+                frappe.msgprint(
+                    "This site has expired. Please contact the Administrator."
+                )
                 frappe.local.login_manager.logout()
-
 
 # enable archive mode
 def enable_archive_mode():
@@ -105,6 +132,7 @@ def check_site_expiry():
     # Only notify if 1–5 days are remaining
     if 0 < days_left <= 5:
         admin_user = "Administrator"
+        subject = f"Site Expiring in {days_left} Day(s)"
         message = f"Your site will expire in {days_left} day(s). Expiry Date: {expiry_date}"
 
         existing = frappe.get_all(
@@ -118,13 +146,13 @@ def check_site_expiry():
 
         if  not existing:
             # Insert Notification Log
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": f"Site Expiry in {days_left} Day(s)",
-                "email_content": message,
-                "for_user": admin_user,
-                "type": "Alert"
-            }).insert(ignore_permissions=True)
+            send_notification(
+                recipients=["Administrator"],
+                subject=subject,
+                message=message,
+                send_email=1,
+                send_system=1,
+            )
 
             # Show real-time notification
             frappe.publish_realtime(

@@ -1,5 +1,6 @@
 import json
 import frappe
+from verp_staffing.crm.api.helpers import send_notification
 
 @frappe.whitelist()
 def get_auto_assign_employee(
@@ -141,5 +142,25 @@ def forward_candidate(customer, department):
     doc.stage = json.dumps(stage)
 
     doc.save(ignore_permissions=True)
+
+    # ---- send notification ----
+     # Resolve assignee user email
+    assignee_user = frappe.db.get_value("Employee", assignee, "user")
+
+    if assignee_user:
+        send_notification(
+            recipients=[assignee_user],
+            subject=f"New Candidate Assigned ({department})",
+            message=(
+                f"You have been assigned a new candidate.\n\n"
+                f"Customer: {doc.name}\n"
+                f"Department: {department}\n"
+                f"Status: Pending"
+            ),
+            reference_doctype=doctype,
+            reference_name=dept_doc.name,
+            send_email=1,
+            send_system=1,
+        )
 
     return dept_doc
