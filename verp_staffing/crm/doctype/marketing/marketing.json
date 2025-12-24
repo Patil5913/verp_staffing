@@ -7,7 +7,7 @@
  "field_order": [
   "customer",
   "column_break_ktta",
-  "assigned_to",
+  "assign_to",
   "column_break_jejh",
   "interview_list",
   "customer_details_section",
@@ -42,20 +42,20 @@
    "label": "Interview List"
   },
   {
-   "fieldname": "assigned_to",
+   "fieldname": "column_break_jejh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assign_to",
    "fieldtype": "Link",
    "label": "Assigned To",
    "options": "Employee"
-  },
-  {
-   "fieldname": "column_break_jejh",
-   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-21 14:11:37.394951",
+ "modified": "2025-12-24 16:44:34.782897",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Marketing",

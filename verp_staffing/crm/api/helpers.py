@@ -162,7 +162,7 @@ def secure_get(**kwargs):
     if doctype == "Marketing":
         owners = get_visible_employee_names(user)
         frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Marketing","assigned_to","in",owners]]
+            [["Marketing","assign_to","in",owners]]
         )
 
     return original_get(**frappe.local.form_dict)

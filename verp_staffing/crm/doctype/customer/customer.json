@@ -23,8 +23,6 @@
   "marketing_tab",
   "section_break_cmpg",
   "marketing_content",
-  "out_source_section",
-  "outsource",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -50,11 +48,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "outsource",
-   "fieldtype": "Table",
-   "options": "Outsource"
-  },
-  {
    "fieldname": "note_tab",
    "fieldtype": "Tab Break",
    "label": "Note"
@@ -77,11 +70,6 @@
   {
    "fieldname": "column_break_emkf",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "out_source_section",
-   "fieldtype": "Section Break",
-   "label": "Out Source"
   },
   {
    "fieldname": "sales_tab",
@@ -161,7 +149,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-15 14:34:57.737946",
+ "modified": "2025-12-24 16:32:35.339405",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -177,6 +165,24 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Employee",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
    "write": 1
   }
  ],

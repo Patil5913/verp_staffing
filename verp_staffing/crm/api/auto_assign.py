@@ -96,6 +96,7 @@ def forward_candidate(customer, department):
     DEPARTMENT_DOC_MAP = {
         "resume": "Resume",
         "technical": "RUC",
+        "marketing": "Marketing",
     }
 
     doctype = DEPARTMENT_DOC_MAP.get(dept_key)
