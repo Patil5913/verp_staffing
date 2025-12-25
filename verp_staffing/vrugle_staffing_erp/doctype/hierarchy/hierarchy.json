@@ -7,7 +7,6 @@
  "field_order": [
   "department",
   "role_table_html",
-  "table_multiselect_fkig",
   "hierarchy_diagram",
   "role_hierarchy_json",
   "auto_assign_config"
@@ -20,19 +19,13 @@
   },
   {
    "fieldname": "role_hierarchy_json",
-   "fieldtype": "JSON",
+   "fieldtype": "Small Text",
    "label": "role hierarchy json"
   },
   {
    "fieldname": "hierarchy_diagram",
    "fieldtype": "HTML",
    "label": "hierarchy diagram"
-  },
-  {
-   "fieldname": "table_multiselect_fkig",
-   "fieldtype": "Table MultiSelect",
-   "hidden": 1,
-   "options": "Child Roles"
   },
   {
    "fieldname": "department",
@@ -43,14 +36,14 @@
   },
   {
    "fieldname": "auto_assign_config",
-   "fieldtype": "JSON",
+   "fieldtype": "Data",
    "label": "Auto assign config"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-14 14:45:15.846785",
+ "modified": "2025-12-24 14:36:33.400147",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
  "name": "Hierarchy",
