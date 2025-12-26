@@ -10,6 +10,7 @@ frappe.ui.form.on("Hierarchy", {
 
         frm.department_roles = await load_department_roles(frm);
 
+
         init_role_table(frm);
         render_hierarchy_diagram(frm);
 
@@ -99,7 +100,16 @@ async function load_department_roles(frm) {
             name: frm.doc.department
         }
     });
-    const roles = res?.message?.roles || [];
+    let roles = [];
+
+    try {
+        roles = res?.message?.roles_json
+            ? JSON.parse(res.message.roles_json)
+            : [];
+    } catch (e) {
+        console.log("Invalid roles_json in Department:", e);
+        roles = [];
+    }
 
     if (!roles.length) {
         frappe.msgprint({
@@ -119,7 +129,7 @@ async function load_department_roles(frm) {
         return [];
     }
 
-    return roles.map(r => r.name);
+    return roles;
 }
 
 
@@ -155,7 +165,7 @@ function init_role_table(frm) {
     try {
         data = frm.doc.role_hierarchy_json ? JSON.parse(frm.doc.role_hierarchy_json) : [];
     } catch (e) {
-        console.error("Error parsing role_hierarchy_json:", e);
+        console.log("Error parsing role_hierarchy_json:", e);
         data = [];
     }
 
@@ -897,7 +907,18 @@ function render_auto_assign_section(frm) {
 function create_auto_assign_control(frm) {
     const container = $("#auto-assign-wrapper .auto-assign-role");
 
-    const roles = frm.department_roles || [];
+    const roles = Array.isArray(frm.department_roles) ? frm.department_roles : [];
+
+    let saved_role = "";
+
+    if (frm.doc.auto_assign_config) {
+        try {
+            const cfg = JSON.parse(frm.doc.auto_assign_config);
+            saved_role = cfg.role || "";
+        } catch {
+            saved_role = "";
+        }
+    }
 
     frm._auto_assign_control = frappe.ui.form.make_control({
         parent: container,
@@ -913,18 +934,17 @@ function create_auto_assign_control(frm) {
 
     const control = frm._auto_assign_control;
 
-    // Restore existing value safely
-    if (frm.doc.auto_assign_config) {
-        try {
-            const cfg = JSON.parse(frm.doc.auto_assign_config);
-            if (cfg.role && roles.includes(cfg.role)) {
-                control.set_value(cfg.role);
-            }
-        } catch { }
+    // Force render before setting value
+    control.refresh();
+
+    // Restore value ONLY if valid
+    if (saved_role && roles.includes(saved_role)) {
+        control.set_value(saved_role);
+    } else {
+        control.set_value("");
     }
 
     control.$input.on("change", () => {
-
         save_auto_assign_config(frm);
     });
 }
@@ -944,11 +964,6 @@ function save_auto_assign_config(frm) {
         return;
     }
 
-    const payload = {
-        role: role,
-        label: `Auto-assign to ${role}`
-    };
-
-    frm.set_value("auto_assign_config", JSON.stringify(payload));
+    frm.set_value("auto_assign_config", JSON.stringify({ role }));
 }
 
