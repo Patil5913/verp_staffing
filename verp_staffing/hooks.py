@@ -267,10 +267,6 @@ fixtures = [
 ]
 
 # pdflibjs Imports
-
 app_include_js = [
     "/assets/verp_staffing/js/pdf.js",
 ]
-
-# include worker
-web_include_js = ["/assets/verp_staffing/js/pdf.worker.js"]
