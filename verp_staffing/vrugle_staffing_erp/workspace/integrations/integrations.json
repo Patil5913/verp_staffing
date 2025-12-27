@@ -1,7 +1,7 @@
 {
  "charts": [],
  "content": "[{\"id\":\"NPK_AfSLQ2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"lDOo58F7ZI\",\"type\":\"card\",\"data\":{\"card_name\":\"Backup\",\"col\":4}},{\"id\":\"ij1pcK8jst\",\"type\":\"card\",\"data\":{\"card_name\":\"Google Services\",\"col\":4}},{\"id\":\"aTlMujEHpN\",\"type\":\"card\",\"data\":{\"card_name\":\"Authentication\",\"col\":4}},{\"id\":\"gY5NXKtXss\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}},{\"id\":\"n_CI3GGqW-\",\"type\":\"card\",\"data\":{\"card_name\":\"Push Notifications\",\"col\":4}}]",
- "creation": "2020-03-02 15:16:18.714190",
+ "creation": "2025-12-26 15:38:07.963966",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -218,7 +218,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-11-21 10:46:39.729833",
+ "modified": "2025-12-26 18:09:17.907168",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
  "name": "Integrations",
@@ -233,7 +233,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 20.0,
+ "sequence_id": 10.0,
  "shortcuts": [],
  "title": "Integrations"
 }

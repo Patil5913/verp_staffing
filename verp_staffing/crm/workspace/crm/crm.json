@@ -1,7 +1,7 @@
 {
  "charts": [],
- "content": "[{\"id\":\"XW9asZMuz_\",\"type\":\"header\",\"data\":{\"text\":\"<span style=\\\"font-size: 18px; letter-spacing: 0.18px;\\\"><b>CRM</b></span>\",\"col\":12}},{\"id\":\"OhZUSgEk6s\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lead\",\"col\":3}},{\"id\":\"rRpKrl2xN8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"Rby1RLwbqk\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer\",\"col\":3}}]",
- "creation": "2025-12-24 17:16:20.221139",
+ "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"_PZbhqba48\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
+ "creation": "2025-12-26 15:38:08.141252",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -9,11 +9,11 @@
  "hide_custom": 0,
  "icon": "crm",
  "idx": 0,
- "indicator_color": "",
+ "indicator_color": "orange",
  "is_hidden": 0,
  "label": "CRM",
  "links": [],
- "modified": "2025-12-24 17:48:29.397547",
+ "modified": "2025-12-27 15:23:27.613621",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "CRM",
@@ -22,14 +22,26 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
- "sequence_id": 30.0,
+ "roles": [
+  {
+   "role": "_show_crm"
+  }
+ ],
+ "sequence_id": 5.0,
  "shortcuts": [
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Lead",
+   "label": "Leads",
    "link_to": "Lead",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Customers",
+   "link_to": "Customer",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -38,14 +50,6 @@
    "doc_view": "List",
    "label": "Opportunity",
    "link_to": "Opportunity",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Customer",
-   "link_to": "Customer",
    "stats_filter": "[]",
    "type": "DocType"
   }

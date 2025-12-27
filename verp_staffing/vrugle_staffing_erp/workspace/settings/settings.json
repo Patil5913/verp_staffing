@@ -1,0 +1,74 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"WGKPFIc5ki\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Settings</span>\",\"col\":12}},{\"id\":\"cm7nrIAzHm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Hierarchy\",\"col\":3}},{\"id\":\"IlwABZJslo\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Department\",\"col\":3}},{\"id\":\"57qzVPBS2X\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Agreement Template\",\"col\":3}},{\"id\":\"ZNGZ6g1NU4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Email Domain\",\"col\":3}},{\"id\":\"4vkzLjCgQc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Employee\",\"col\":3}}]",
+ "creation": "2025-12-26 16:07:48.623280",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "setting-gear",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Settings",
+ "links": [],
+ "modified": "2025-12-27 15:24:19.934343",
+ "modified_by": "Administrator",
+ "module": "Vrugle Staffing ERP",
+ "name": "Settings",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Administrator"
+  }
+ ],
+ "sequence_id": 2.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Hierarchy",
+   "link_to": "Hierarchy",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Department",
+   "link_to": "Department",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Agreement Template",
+   "link_to": "Pdf Agreement Template",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Email Domain",
+   "link_to": "Email Domain",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Employee",
+   "link_to": "Employee",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Settings"
+}

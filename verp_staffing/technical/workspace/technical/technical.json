@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2025-12-24 17:14:00.339955",
+ "modified": "2025-12-27 15:22:55.341327",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical",
@@ -22,8 +22,12 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
- "sequence_id": 29.0,
+ "roles": [
+  {
+   "role": "_show_technical"
+  }
+ ],
+ "sequence_id": 7.0,
  "shortcuts": [
   {
    "color": "Grey",

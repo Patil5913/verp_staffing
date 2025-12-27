@@ -1,7 +1,7 @@
 {
  "charts": [],
  "content": "[{\"id\":\"YpGCeLfign\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"b7abeqw4NZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}},{\"id\":\"eghSJPhZRC\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Role\",\"col\":3}},{\"id\":\"uAzl_lT_C0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Permission Manager\",\"col\":3}},{\"id\":\"EpBz2lplSt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Profile\",\"col\":3}},{\"id\":\"vHWhzaFoAH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Type\",\"col\":3}},{\"id\":\"oFB4l28FMU\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"yJNNylguxk\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"NMpIkExl3i\",\"type\":\"card\",\"data\":{\"card_name\":\"Users\",\"col\":4}},{\"id\":\"VepG3durKm\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"S9FeWt7xXE\",\"type\":\"card\",\"data\":{\"card_name\":\"Permissions\",\"col\":4}}]",
- "creation": "2025-12-24 16:24:37.444818",
+ "creation": "2025-12-26 15:38:08.067413",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -160,7 +160,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-12-24 17:24:23.839087",
+ "modified": "2025-12-27 15:24:47.608256",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
  "name": "Users",
@@ -172,10 +172,10 @@
  "restrict_to_domain": "",
  "roles": [
   {
-   "role": "All"
+   "role": "Administrator"
   }
  ],
- "sequence_id": 1.0,
+ "sequence_id": 3.0,
  "shortcuts": [
   {
    "label": "User",

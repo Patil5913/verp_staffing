@@ -66,24 +66,42 @@ def get_auto_assign_employee(
     return load[0]["employee"]
 
 def get_employees_with_role(role, department=None):
+    # Get users with role
     users = frappe.get_all(
         "Has Role",
         filters={"role": role},
         pluck="parent"
     )
-
+    frappe.errprint(f"Users with role {role}: {users}")
     if not users:
         return []
 
-    filters = {"user": ["in", users]}
-    if department:
-        filters["department"] = department
-
-    return frappe.get_all(
+    # Get employees linked to those users
+    employees = frappe.get_all(
         "Employee",
-        filters=filters,
+        filters={"user": ["in", users]},
         pluck="name"
     )
+    frappe.errprint(f"Employees with role {role}: {employees}")
+    if not employees:
+        return []
+
+    # If department filter is NOT required
+    if not department:
+        return employees
+
+    # Filter via child table
+    assigned_employees = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={
+            "parent": ["in", employees],
+            "department": department
+        },
+        pluck="parent",
+        distinct=True
+    )
+    frappe.errprint(f"Assigned employees in dept {department}: {assigned_employees}")
+    return assigned_employees
 
 @frappe.whitelist()
 def forward_candidate(customer, department):
