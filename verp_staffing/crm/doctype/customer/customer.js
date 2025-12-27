@@ -6,8 +6,6 @@ frappe.ui.form.on("Customer", {
         render_notes(frm);
         render_activity_section(frm);
         toggle_tab_view(frm);
-        render_technical_tab_content(frm);
-        render_marketing_tab_content(frm);
         render_lead_details(frm);
         inject_department_css();
         inject_status_badge_css();
@@ -506,21 +504,21 @@ function toggle_tab_view(frm) {
         args: {
             doctype: "Employee",
             filters: { user: frappe.session.user },
-            fieldname: ["department"]
+            fieldname: ["employee_assignment_details_table"]
         },
         callback: function (r) {
             if (!r.message) return;
 
-            const department = r.message.department;
+            const department = r.message.employee_assignment_details_table.map((d) => d.department);
             // Hide other tabs based on department
-            if (department === "Technical") {
+            if (department.includes("Technical")) {
                 frm.toggle_display("sales_tab", false);
                 frm.toggle_display("sales_content", false);
                 frm.toggle_display("marketing_tab", false);
                 frm.toggle_display("marketing_content", false);
             }
 
-            if (department === "Marketing") {
+            if (department.includes("Marketing")) {
                 frm.toggle_display("sales_tab", false);
                 frm.toggle_display("sales_content", false);
                 frm.toggle_display("technical_tab", false);
@@ -639,21 +637,6 @@ function load_payment_terms(so_name, frm) {
                 .html(html);
         }
     });
-}
-
-
-// Render technical tab content
-function render_technical_tab_content(frm) {
-    const $wrapper = frm.get_field("technical_content")?.$wrapper;
-    if (!$wrapper) return;
-    $wrapper.html(`<div class="p-3">Technical tab content goes here.</div>`);
-}
-
-// Render marketing tab content
-function render_marketing_tab_content(frm) {
-    const $wrapper = frm.get_field("marketing_content")?.$wrapper;
-    if (!$wrapper) return;
-    $wrapper.html(`<div class="p-3">Marketing tab content goes here.</div>`);
 }
 
 function render_lead_details(frm) {
@@ -962,19 +945,21 @@ function forward_candidate(frm, values) {
             department: values.department
         },
         callback(r) {
-            console.log(r);
-            frappe.call({
-                method: "verp_staffing.crm.api.notes.add_note",
-                args: {
-                    reference_doctype: "RUC",
-                    reference_name: r.message.name,
-                    note: values.note
-                },
-                error() {
-                    frappe.msgprint("Failed to add note");
-                    d.enable_primary_action();
-                }
-            });
+            console.log("r: ", r);
+            if (values.department === "technical") {
+                frappe.call({
+                    method: "verp_staffing.crm.api.notes.add_note",
+                    args: {
+                        reference_doctype: "RUC",
+                        reference_name: r.message.name,
+                        note: values.note
+                    },
+                    error() {
+                        frappe.msgprint("Failed to add note");
+                        d.enable_primary_action();
+                    }
+                });
+            }
             frappe.msgprint(
                 `Candidate forwarded to ${values.department} and assigned automatically.`
             );
@@ -1044,6 +1029,7 @@ function load_department_panels(frm) {
 
             render_resume_panel(frm, r.message.resume);
             render_technical_panel(frm, r.message.technical);
+            render_marketing_panel(frm, r.message.marketing);
         }
     });
 }
@@ -1091,6 +1077,56 @@ function render_technical_panel(frm, data) {
             <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
         data.assigned_to_name || data.assigned_to || "-"
     )}</p>
+            <p class="text-muted">
+                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
+            </p>
+        </div>
+    `;
+
+    wrapper.html(html);
+}
+
+function render_marketing_panel(frm, data) {
+    const wrapper = frm.fields_dict.marketing_content.$wrapper;
+
+    if (!data) {
+        wrapper.html(`<div class="text-muted">Not forwarded to Marketing yet.</div>`);
+        return;
+    }
+
+    let status_label = "No Interviews";
+    let badge_class = "gray";
+
+    if (data.current_interviews > 0) {
+        status_label = "In Progress";
+        badge_class = "blue";
+    } else if (data.total_interviews > 0) {
+        status_label = "Completed";
+        badge_class = "green";
+    }
+
+    const html = `
+        <div class="department-box">
+            <h4>Marketing Department</h4>
+
+            <p>
+                <strong>Status:</strong>
+                <span class="indicator ${badge_class}">${status_label}</span>
+            </p>
+
+            <p>
+                <strong>Assigned To:</strong>
+                ${frappe.utils.escape_html(data.assigned_to || "-")}
+            </p>
+
+            <p>
+                <strong>Total Interviews:</strong> ${data.total_interviews}
+            </p>
+
+            <p>
+                <strong>Current Interviews:</strong> ${data.current_interviews}
+            </p>
+
             <p class="text-muted">
                 Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
             </p>
