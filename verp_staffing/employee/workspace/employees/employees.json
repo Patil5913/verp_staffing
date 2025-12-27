@@ -1,0 +1,50 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"DYz4Nf9hwD\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Employes</span>\",\"col\":12}},{\"id\":\"sqWKYctAFS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Employee\",\"col\":3}},{\"id\":\"ECZLYHOtZ2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}}]",
+ "creation": "2025-12-26 15:56:22.971413",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "customer",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Employees",
+ "links": [],
+ "modified": "2025-12-27 15:23:45.432362",
+ "modified_by": "Administrator",
+ "module": "Employee",
+ "name": "Employees",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "_show_employees"
+  }
+ ],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Employee",
+   "link_to": "Employee",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "User",
+   "link_to": "User",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Employees"
+}

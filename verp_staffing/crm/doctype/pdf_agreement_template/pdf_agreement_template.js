@@ -1,5 +1,9 @@
 // // Copyright (c) 2025, Vrugle and contributors
 // // For license information, please see license.txt
+if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "/assets/verp_staffing/js/pdf.worker.js";
+}
 
 frappe.ui.form.on("Pdf Agreement Template", {
     refresh(frm) {
@@ -70,7 +74,13 @@ frappe.ui.form.on("Pdf Agreement Template", {
 
 
 async function load_pdf_into_builder(frm) {
-    const pdf_url = frm.doc.upload_pdf_template ? frm.doc.upload_pdf_template : null;
+    console.log("pdfjsLib:", window.pdfjsLib);
+
+    if (!window.pdfjsLib) {
+        frappe.throw("PDF.js not loaded. Check app_include_js.");
+    }
+    const pdf_url = frappe.urllib.get_full_url(frm.doc.upload_pdf_template);
+
     if (!pdf_url) return;
 
     // ensure temp fields container
