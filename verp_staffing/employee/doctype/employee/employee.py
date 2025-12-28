@@ -12,7 +12,9 @@ class Employee(Document):
         date_str = today()
 
         # Naming pattern: EMP-YYYY-MM-DD-####
-        series = f"EMP-{date_str}-.####"
+        email = self.user_email.strip().lower() if self.user_email else ''
+        name = email.split('@')[0] if email else 'EMP'
+        series = f"{name}-{date_str}-.####"
 
         # Generate incrementing name
         self.name = make_autoname(series)

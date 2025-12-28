@@ -11,8 +11,10 @@ DEPARTMENT_WORKSPACE_ROLE_MAP = {
 
 def sync_user_workspace_roles(doc, method=None):
     """
-    Sync system workspace roles based on
-    Employee Assignment Detail child table
+    Sync BOTH:
+    1. Workspace roles (show_*)
+    2. Functional roles (designation == role)
+    Derived ONLY from Employee Assignment Detail child table
     """
 
     if not doc.user:
@@ -22,37 +24,62 @@ def sync_user_workspace_roles(doc, method=None):
 
     user = frappe.get_doc("User", doc.user)
 
-    # ---- STEP 1: collect departments from child table ----
-    departments = {
-        row.department
-        for row in doc.employee_assignment_details_table
-        if row.department
-    }
+    # 1. Collect departments & designations
+    departments = set()
+    designation_roles = set()
 
-    # ---- STEP 2: compute required workspace roles ----
-    required_roles = set()
+    for row in doc.employee_assignment_details_table:
+        if row.department:
+            departments.add(row.department)
 
+        if row.designation:
+            designation_roles.add(row.designation)
+
+    # 2. Workspace roles (system roles)
+    workspace_roles = set()
     for dept in departments:
         roles = DEPARTMENT_WORKSPACE_ROLE_MAP.get(dept)
         if roles:
-            required_roles.update(roles)
+            workspace_roles.update(roles)
 
-    # ---- STEP 3: identify all system-managed workspace roles ----
-    system_roles = {
+    # All system-managed workspace roles
+    system_workspace_roles = {
         role
         for roles in DEPARTMENT_WORKSPACE_ROLE_MAP.values()
         for role in roles
     }
 
+    # 3. Validate designation roles exist
+    existing_roles = set(
+        frappe.get_all("Role", pluck="name")
+    )
+
+    invalid = designation_roles - existing_roles
+    if invalid:
+        frappe.throw(
+            f"Invalid designation(s). Role not found: {', '.join(invalid)}"
+        )
+
+    # 4. Current user roles
     current_roles = {r.role for r in user.roles}
 
-    # ---- STEP 4: remove obsolete system roles ----
-    for role in system_roles:
-        if role in current_roles and role not in required_roles:
+    # 5. Remove obsolete system workspace roles
+    for role in system_workspace_roles:
+        if role in current_roles and role not in workspace_roles:
             user.remove_roles(role)
 
-    # ---- STEP 5: add missing required roles ----
-    for role in required_roles:
+    # 6. Remove obsolete designation roles
+    for role in current_roles:
+        if role in existing_roles and role not in designation_roles and role not in system_workspace_roles:
+            user.remove_roles(role)
+
+    # 7. Add missing workspace roles
+    for role in workspace_roles:
+        if role not in current_roles:
+            user.add_roles(role)
+
+    # 8. Add missing designation roles
+    for role in designation_roles:
         if role not in current_roles:
             user.add_roles(role)
 

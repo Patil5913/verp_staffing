@@ -1,33 +1,29 @@
 {
  "charts": [],
- "content": "[{\"id\":\"gO2iXJHxr5\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Market</span>\",\"col\":12}},{\"id\":\"J7hgfvGesN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing\",\"col\":3}},{\"id\":\"wiTQ61owTH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interview\",\"col\":3}}]",
- "creation": "2025-12-26 16:13:54.492695",
+ "content": "[{\"id\":\"CvguilvdJU\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Marketings</span>\",\"col\":12}},{\"id\":\"bZaJ9m3J-8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing\",\"col\":3}},{\"id\":\"3ezmH3bM_F\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interview\",\"col\":3}}]",
+ "creation": "2025-12-27 17:40:55.102905",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "expenses",
+ "icon": "milestone",
  "idx": 0,
  "indicator_color": "green",
  "is_hidden": 0,
- "label": "Market",
+ "label": "Marketings",
  "links": [],
- "modified": "2025-12-27 15:23:07.622351",
+ "modified": "2025-12-28 15:23:25.307410",
  "modified_by": "Administrator",
  "module": "Marketing",
- "name": "Market",
+ "name": "Marketings",
  "number_cards": [],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [
-  {
-   "role": "_show_marketing"
-  }
- ],
- "sequence_id": 11.0,
+ "roles": [],
+ "sequence_id": 23.0,
  "shortcuts": [
   {
    "color": "Grey",
@@ -46,5 +42,5 @@
    "type": "DocType"
   }
  ],
- "title": "Market"
+ "title": "Marketings"
 }

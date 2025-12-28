@@ -17,13 +17,10 @@
  ],
  "fields": [
   {
-   "fieldname": "interview_rounds_table",
-   "fieldtype": "Table",
-   "options": "Interview Round"
-  },
-  {
-   "fieldname": "column_break_iehb",
-   "fieldtype": "Column Break"
+   "fieldname": "marketing_link",
+   "fieldtype": "Link",
+   "label": "Marketing",
+   "options": "Marketing"
   },
   {
    "fieldname": "company",
@@ -34,6 +31,10 @@
    "unique": 1
   },
   {
+   "fieldname": "column_break_iehb",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "role",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -41,8 +42,8 @@
    "reqd": 1
   },
   {
-   "fieldname": "section_break_mfnk",
-   "fieldtype": "Section Break"
+   "fieldname": "column_break_ljfz",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "status",
@@ -53,26 +54,29 @@
    "reqd": 1
   },
   {
-   "fieldname": "marketing_link",
-   "fieldtype": "Link",
-   "label": "Marketing",
-   "options": "Marketing"
+   "fieldname": "section_break_mfnk",
+   "fieldtype": "Section Break"
   },
   {
-   "fieldname": "column_break_ljfz",
-   "fieldtype": "Column Break"
+   "fieldname": "interview_rounds_table",
+   "fieldtype": "Table",
+   "options": "Interview Round"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-22 15:14:44.773975",
+ "modified": "2025-12-28 16:52:06.724640",
  "modified_by": "Administrator",
- "module": "CRM",
+ "module": "Marketing",
  "name": "Interview",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
   {
    "create": 1,
    "delete": 1,
@@ -83,6 +87,65 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "recruiter",
+   "select": 1,
    "write": 1
   }
  ],
