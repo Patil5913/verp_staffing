@@ -52,7 +52,7 @@ PROTECTED_DOCTYPES = {
 
 ROLE_PERMISSIONS = {
     "Lead Master Manager": {
-        "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
+        "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report",   "share"],
         "Opportunity": ["create"],
         "Employee": ["read"],
     },
@@ -76,12 +76,12 @@ ROLE_PERMISSIONS = {
     },
 
     "Sales Master Manager" :{
-        "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
-        "Opportunity": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
+        "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report",   "share"],
+        "Opportunity": ["select", "read", "write", "create", "delete", "print", "email", "report",   "share"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
-        "Sales Order":["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
+        "Sales Order":["select", "read", "write", "create", "delete", "print", "email", "report",   "share"],
         "Agreement":["select","read", "write", "create"],
         "Pdf Agreement Template":["select","read", "write", "create"],
         "Lead Detail Form": ["read"],
@@ -140,8 +140,8 @@ ROLE_PERMISSIONS = {
     },    
 
     "Marketing Master Manager": {
-        "Marketing": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
-        "Interview": ["select", "read", "write", "create", "delete", "print", "email", "report", "import", "export", "share"],
+        "Marketing": ["select", "read", "write", "create", "delete", "print", "email", "report",   "share"],
+        "Interview": ["select", "read", "write", "create", "delete", "print", "email", "report",   "share"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -457,7 +457,7 @@ def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
     # Names of workspaces to keep visible
-    keep_list = ["CRM", "Users","Technical"]
+    keep_list = ["CRM", "Users","Technical","Marketings","Settings","Employees"]
 
     # Hide all others
     frappe.db.sql("""
