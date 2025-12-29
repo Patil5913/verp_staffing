@@ -34,7 +34,14 @@ frappe.ui.form.on("Opportunity", {
 
         frm.add_custom_button(__("Create Customer"), function () {
             open_create_sales_order_dialog(frm);
-        }, __("Create"))
+        });
+
+        frm.add_custom_button("Show Form Tour", () => {
+            const tour_name = 'Opportunity Form';
+
+            frm.tour.init({ tour_name })
+                .then(() => frm.tour.start());
+        });
 
         if (!frm.doc.opportunity_owner) {
             frappe.call({

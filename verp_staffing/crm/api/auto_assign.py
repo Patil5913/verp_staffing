@@ -1,5 +1,6 @@
 import json
 import frappe
+from verp_staffing.crm.api.helpers import send_notification
 
 @frappe.whitelist()
 def get_auto_assign_employee(
@@ -65,24 +66,42 @@ def get_auto_assign_employee(
     return load[0]["employee"]
 
 def get_employees_with_role(role, department=None):
+    # Get users with role
     users = frappe.get_all(
         "Has Role",
         filters={"role": role},
         pluck="parent"
     )
-
+    frappe.errprint(f"Users with role {role}: {users}")
     if not users:
         return []
 
-    filters = {"user": ["in", users]}
-    if department:
-        filters["department"] = department
-
-    return frappe.get_all(
+    # Get employees linked to those users
+    employees = frappe.get_all(
         "Employee",
-        filters=filters,
+        filters={"user": ["in", users]},
         pluck="name"
     )
+    frappe.errprint(f"Employees with role {role}: {employees}")
+    if not employees:
+        return []
+
+    # If department filter is NOT required
+    if not department:
+        return employees
+
+    # Filter via child table
+    assigned_employees = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={
+            "parent": ["in", employees],
+            "department": department
+        },
+        pluck="parent",
+        distinct=True
+    )
+    frappe.errprint(f"Assigned employees in dept {department}: {assigned_employees}")
+    return assigned_employees
 
 @frappe.whitelist()
 def forward_candidate(customer, department):
@@ -95,6 +114,7 @@ def forward_candidate(customer, department):
     DEPARTMENT_DOC_MAP = {
         "resume": "Resume",
         "technical": "RUC",
+        "marketing": "Marketing",
     }
 
     doctype = DEPARTMENT_DOC_MAP.get(dept_key)
@@ -141,5 +161,25 @@ def forward_candidate(customer, department):
     doc.stage = json.dumps(stage)
 
     doc.save(ignore_permissions=True)
+
+    # ---- send notification ----
+     # Resolve assignee user email
+    assignee_user = frappe.db.get_value("Employee", assignee, "user")
+
+    if assignee_user:
+        send_notification(
+            recipients=[assignee_user],
+            subject=f"New Candidate Assigned ({department})",
+            message=(
+                f"You have been assigned a new candidate.\n\n"
+                f"Customer: {doc.name}\n"
+                f"Department: {department}\n"
+                f"Status: Pending"
+            ),
+            reference_doctype=doctype,
+            reference_name=dept_doc.name,
+            send_email=1,
+            send_system=1,
+        )
 
     return dept_doc

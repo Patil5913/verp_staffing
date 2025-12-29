@@ -41,11 +41,10 @@ frappe.ui.form.on("Lead", {
         });
 
         frm.add_custom_button("Show Form Tour", () => {
-            // frappe.tour.show("Lead");
-             const tour_name = 'Lead Form'; 
-        
-        frm.tour.init({ tour_name })
-            .then(() => frm.tour.start());
+            const tour_name = 'Lead Form';
+
+            frm.tour.init({ tour_name })
+                .then(() => frm.tour.start());
         });
 
         const roles = frappe.user_roles
@@ -202,8 +201,8 @@ function open_create_opportunity_dialog(frm) {
                                 method: "verp_staffing.crm.api.auto_assign.get_auto_assign_employee",
                                 args: {
                                     department: "Sales",
-                                    target_doctype:"Opportunity",
-                                    owner_field:"opportunity_owner"
+                                    target_doctype: "Opportunity",
+                                    owner_field: "opportunity_owner"
                                 },
                                 callback(r) {
                                     if (r.message) {

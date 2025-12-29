@@ -3,3 +3,6 @@ CRM
 Employee
 Technical
 Accounts
+Marketing
+Settings
+User

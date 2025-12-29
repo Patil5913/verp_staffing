@@ -1,46 +1,67 @@
 import frappe
 
-def get_department_info(customer, doctype, assign_field="assign_to"):
-    docs = frappe.get_all(
-        doctype,
+@frappe.whitelist()
+
+def get_customer_department_panels(customer):
+    result = {}
+
+    # ---------------- Resume ----------------
+    resume = frappe.get_all(
+        "Resume",
         filters={"customer": customer},
-        fields=["name", assign_field, "status", "modified"],
-        order_by="modified desc",
-        limit=1,
+        fields=["name", "status", "assign_to", "modified"],
+        limit=1
+    )
+    if resume:
+        result["resume"] = {
+            "status": resume[0].status,
+            "assigned_to": resume[0].assign_to,
+            "last_updated": resume[0].modified
+        }
+
+    # ---------------- Technical ----------------
+    technical = frappe.get_all(
+        "RUC",
+        filters={"customer": customer},
+        fields=["name", "status", "assign_to", "modified"],
+        limit=1
+    )
+    if technical:
+        result["technical"] = {
+            "status": technical[0].status,
+            "assigned_to": technical[0].assign_to,
+            "last_updated": technical[0].modified
+        }
+
+    # ---------------- Marketing ----------------
+    marketing = frappe.get_all(
+        "Marketing",
+        filters={"customer": customer},
+        fields=["name", "assigned_to", "modified"],
+        limit=1
     )
 
-    if not docs:
-        return None
+    if marketing:
+        marketing_name = marketing[0].name
 
-    doc = docs[0]
-
-    employee_name = None
-    if doc.get(assign_field):
-        employee_name = frappe.db.get_value(
-            "Employee",
-            doc[assign_field],
-            "employee_name"
+        total_interviews = frappe.db.count(
+            "Interview",
+            filters={"marketing_link": marketing_name}
         )
 
-    return {
-        "docname": doc.name,
-        "assigned_to": doc.get(assign_field),
-        "assigned_to_name": employee_name,
-        "status": doc.get("status"),
-        "last_updated": doc.get("modified"),
-    }
+        current_interviews = frappe.db.count(
+            "Interview",
+            filters={
+                "marketing_link": marketing_name,
+                "status": ["not in", ["Accepted", "Rejected"]]
+            }
+        )
 
-@frappe.whitelist()
-def get_customer_department_panels(customer):
-    return {
-        "resume": get_department_info(
-            customer=customer,
-            doctype="Resume",
-            assign_field="assign_to",
-        ),
-        "technical": get_department_info(
-            customer=customer,
-            doctype="RUC",
-            assign_field="assign_to",
-        ),
-    }
+        result["marketing"] = {
+            "assigned_to": marketing[0].assigned_to,
+            "total_interviews": total_interviews,
+            "current_interviews": current_interviews,
+            "last_updated": marketing[0].modified
+        }
+
+    return result

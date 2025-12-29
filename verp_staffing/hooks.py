@@ -89,7 +89,7 @@ validation_docs = ["Lead", "Lead Course","Resume","RUC", "Marketing"]
 # before_install = "verp_staffing.install.before_install"
 # after_install = "verp_staffing.install.after_install"
 after_migrate = [
-    "verp_staffing.install.remove_default_workspaces",
+    # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
 ]
 
@@ -148,11 +148,17 @@ after_migrate = [
 doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
+         "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles"
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
     },
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
+   "Employee": {
+        "after_insert": "verp_staffing.employee.api.user_sync.create_user_from_employee",
+        "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
+        "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
+    },
 }
 
 # Scheduled Tasks
@@ -256,15 +262,10 @@ before_request = [
 # }
 
 fixtures = [
-    # {"doctype": "Workspace"},
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "interview"]]}
 ]
 
 # pdflibjs Imports
-
 app_include_js = [
     "/assets/verp_staffing/js/pdf.js",
 ]
-
-# include worker
-web_include_js = ["/assets/verp_staffing/js/pdf.worker.js"]

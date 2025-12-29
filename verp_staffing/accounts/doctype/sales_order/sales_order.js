@@ -21,7 +21,37 @@ frappe.ui.form.on("Sales Order", {
                     }
                 });
             });
+        } else {
+            frm.add_custom_button("Show Agreement Form Tour", () => {
+                const tour_name = "Sales Order Agreement Form";
+
+                // Find the Agreement tab button and click it
+                const agreement_tab = frm.$wrapper
+                    .find('.nav-link')
+                    .filter(function () {
+                        return $(this).text().trim() === "Agreement";
+                    });
+
+                if (!agreement_tab.length) {
+                    frappe.msgprint("Agreement tab not found");
+                    return;
+                }
+
+                agreement_tab.trigger("click");
+
+                // Wait until the HTML field is visible, then start tour
+                const wait_for_tab = setInterval(() => {
+                    const field = frm.get_field("agreement_html");
+                    if (field && field.$wrapper && field.$wrapper.is(":visible")) {
+                        clearInterval(wait_for_tab);
+
+                        frm.tour.init({ tour_name })
+                            .then(() => frm.tour.start());
+                    }
+                }, 200);
+            });
         }
+
         render_agreement_ui(frm);
     }
 });

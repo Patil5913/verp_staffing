@@ -1,21 +1,21 @@
 {
  "charts": [],
- "content": "[{\"id\":\"fZLUFj7Tat\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"ndDJm9pyuz\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"OZbSzinVxt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RUC Sessions\",\"col\":3}}]",
- "creation": "2025-12-15 10:50:54.421279",
+ "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"9QJr2wt8Pg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"3ojxLSPDk6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ruc\",\"col\":3}}]",
+ "creation": "2025-12-24 17:12:02.669811",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "small-file",
+ "icon": "website",
  "idx": 0,
- "indicator_color": "green",
+ "indicator_color": "",
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2025-12-22 15:58:27.951955",
+ "modified": "2025-12-27 15:22:55.341327",
  "modified_by": "Administrator",
- "module": "CRM",
+ "module": "Technical",
  "name": "Technical",
  "number_cards": [],
  "owner": "Administrator",
@@ -24,16 +24,10 @@
  "quick_lists": [],
  "roles": [
   {
-   "role": "Technical Coordinator"
-  },
-  {
-   "role": "Resume Employee"
-  },
-  {
-   "role": "Resume Lead"
+   "role": "_show_technical"
   }
  ],
- "sequence_id": 28.0,
+ "sequence_id": 7.0,
  "shortcuts": [
   {
    "color": "Grey",
@@ -46,7 +40,7 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "RUC Sessions",
+   "label": "Ruc",
    "link_to": "RUC",
    "stats_filter": "[]",
    "type": "DocType"

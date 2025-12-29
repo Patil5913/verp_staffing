@@ -1,13 +1,14 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "field:title",
  "creation": "2025-12-15 16:01:57.359022",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "customer",
+  "title",
   "column_break_ktta",
-  "assigned_to",
+  "assign_to",
   "column_break_jejh",
   "interview_list",
   "customer_details_section",
@@ -24,6 +25,25 @@
    "unique": 1
   },
   {
+   "fieldname": "column_break_ktta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "column_break_jejh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interview_list",
+   "fieldtype": "HTML",
+   "label": "Interview List"
+  },
+  {
    "fieldname": "customer_details_section",
    "fieldtype": "Section Break",
    "label": "Customer Details"
@@ -33,37 +53,26 @@
    "fieldtype": "HTML"
   },
   {
-   "fieldname": "column_break_ktta",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "interview_list",
-   "fieldtype": "HTML",
-   "label": "Interview List"
-  },
-  {
-   "fieldname": "assigned_to",
-   "fieldtype": "Link",
-   "label": "Assigned To",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "column_break_jejh",
-   "fieldtype": "Column Break"
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-27 17:57:13.696867",
+ "modified": "2025-12-29 16:14:22.638542",
  "modified_by": "Administrator",
- "module": "CRM",
+ "module": "Marketing",
  "name": "Marketing",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Employee"
+   "role": "Sales Master Manager"
   },
   {
    "create": 1,
@@ -78,17 +87,6 @@
    "write": 1
   },
   {
-   "create": 1,
-   "read": 1,
-   "role": "marketing Employee",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Master Manager"
-  },
-  {
    "read": 1,
    "role": "Sales Manager"
   },
@@ -99,13 +97,6 @@
   {
    "read": 1,
    "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "marketing Manager",
-   "select": 1,
-   "write": 1
   },
   {
    "create": 1,
@@ -122,14 +113,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Team Lead",
+   "role": "marketing Manager",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Mentor",
+   "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   },
@@ -143,6 +134,13 @@
   {
    "create": 1,
    "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
    "role": "Recruiter",
    "select": 1,
    "write": 1
@@ -150,7 +148,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }

@@ -2,6 +2,7 @@ import frappe, json, fitz
 from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 import os
+from verp_staffing.crm.api.helpers import send_notification
 
 
 @frappe.whitelist()
@@ -131,6 +132,15 @@ def submit_and_generate(sales_order, template, data):
         frappe.log_error(message=f"Email send error: {e}", title="Agreement Email")
 
     frappe.db.commit()
+    send_notification(
+            recipients=[recipient],
+            subject=f"Agreement Created.",
+            message=(
+                f"Agreement has been created please check the agreement and fill the form "
+            ),
+            send_email=1,
+            send_system=0,
+        )
     return {"agreement": agreement.name, "file_url": url}
 
 

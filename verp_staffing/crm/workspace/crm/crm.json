@@ -1,7 +1,7 @@
 {
  "charts": [],
- "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"ZuN75edkDM\",\"type\":\"onboarding\",\"data\":{\"onboarding_name\":\"Lead Form Tutorial\",\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}}]",
- "creation": "2025-12-27 12:04:56.744919",
+ "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"_PZbhqba48\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
+ "creation": "2025-12-28 15:41:07.289866",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "CRM",
  "links": [],
- "modified": "2025-12-28 18:09:48.332985",
+ "modified": "2025-12-28 16:54:25.249284",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "CRM",
@@ -27,7 +27,7 @@
    "role": "All"
   }
  ],
- "sequence_id": 2.0,
+ "sequence_id": 3.0,
  "shortcuts": [
   {
    "color": "Grey",

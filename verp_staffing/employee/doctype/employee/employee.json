@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "user",
+  "user_email",
   "column_break_ookt",
   "employee_name",
   "employee_assignment_details_table_section",
@@ -16,6 +17,7 @@
   {
    "fieldname": "user",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "User",
    "options": "User"
   },
@@ -40,18 +42,28 @@
    "fieldname": "employee_assignment_details_table",
    "fieldtype": "Table",
    "options": "Employee Assignment Detail"
+  },
+  {
+   "fieldname": "user_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "User Email"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-21 10:28:27.710307",
+ "modified": "2025-12-28 14:56:17.300076",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Lead Team Lead"
+  },
   {
    "create": 1,
    "delete": 1,
@@ -63,6 +75,114 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "JD",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Employee"
+  },
+  {
+   "read": 1,
+   "role": "Lead Employee"
   }
  ],
  "row_format": "Dynamic",

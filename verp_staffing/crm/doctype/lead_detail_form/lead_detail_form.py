@@ -7,6 +7,7 @@ import json
 from datetime import datetime
 import os
 from frappe.model.document import Document
+from verp_staffing.crm.api.helpers import send_notification
 
 
 class LeadDetailForm(Document):
@@ -156,7 +157,8 @@ class LeadDetailForm(Document):
             signature_image_path=signature_image_path,
             audit_trail_text=audit_text,
             signer_name=f"{self.surname} {self.first_name} {self.father_name}",
-            signer_email=f"{self.email}"
+            signer_email=f"{self.email}",
+            agreement=agreement
         )
 
 
@@ -169,6 +171,7 @@ def apply_signature_and_audit_to_pdf(
     signer_name,
     signer_email,
     output_path=None,
+    agreement=None
 ):
     import fitz
 
@@ -414,6 +417,58 @@ def apply_signature_and_audit_to_pdf(
     )
     pdf.close()
 
+    # 1. Resolve Sales Order linked with Agreement
+    if not agreement.sales_order:
+        return  # fail silently, signing already succeeded
+
+    sales_order = frappe.get_doc("Sales Order", agreement.sales_order)
+
+    if not sales_order.opportunity:
+        return
+
+    # 2. Resolve Opportunity
+    opportunity = frappe.get_doc("Opportunity", sales_order.opportunity)
+
+    if not opportunity.opportunity_owner:
+        return
+
+    # 3. Resolve user from Employee
+    opp_owner_user = frappe.db.get_value(
+        "Employee",
+        opportunity.opportunity_owner,
+        "user"
+    )
+
+    if not opp_owner_user:
+        return
+    # Send email to signer
+    send_notification(
+        recipients=[signer_email],
+        subject="Agreement signed successfully",
+        message=(
+            f"Thankyou for signing the agreement.\n\n Please find the signed agreement attached."
+        ),
+        reference_doctype="Agreement",
+        reference_name=agreement.name,
+        attachments=[output_path],
+        send_email=1,
+        send_system=0,
+    )
+    # 4. Send internal notification + email to assignee
+    send_notification(
+        recipients=[opp_owner_user],
+        subject="Agreement Signed by Customer",
+        message=(
+            f"The customer has signed the agreement.\n\n"
+            f"Customer: {agreement.customer or 'N/A'}\n"
+            f"Sales Order: {sales_order.name}\n\n"
+            f"Please proceed with the next required action."
+        ),
+        reference_doctype="Agreement",
+        reference_name=agreement.name,
+        send_email=0,
+        send_system=1,
+    )
     return output_path
 
 

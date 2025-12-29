@@ -162,7 +162,134 @@ def secure_get(**kwargs):
     if doctype == "Marketing":
         owners = get_visible_employee_names(user)
         frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Marketing","assigned_to","in",owners]]
+            [["Marketing","assign_to","in",owners]]
         )
 
     return original_get(**frappe.local.form_dict)
+
+import json
+
+def send_system_notification(
+    *,
+    user,
+    subject,
+    message,
+    reference_doctype=None,
+    reference_name=None,
+):
+    frappe.get_doc({
+        "doctype": "Notification Log",
+        "subject": subject,
+        "email_content": message,
+        "for_user": user,
+        "document_type": reference_doctype,
+        "document_name": reference_name,
+        "type": "Alert",
+    }).insert(ignore_permissions=True)
+
+
+def send_email(recipients, subject, message, attachments=None):
+    frappe.sendmail(
+        recipients=recipients,
+        subject=subject,
+        message=message,
+        attachments=attachments,
+        delayed=True,  # scalable
+    )
+
+
+def notify(
+    *,
+    recipients,
+    subject,
+    message,
+    reference_doctype=None,
+    reference_name=None,
+    send_email_flag=True,
+    send_system_flag=True,
+    attachments=None
+):
+    """
+    Internal dispatcher
+    """
+
+    if not recipients:
+        return
+
+    if send_system_flag:
+        for user in recipients:
+            send_system_notification(
+                user=user,
+                subject=subject,
+                message=message,
+                reference_doctype=reference_doctype,
+                reference_name=reference_name,
+            )
+
+    if send_email_flag:
+        send_email(
+            recipients=recipients,
+            subject=subject,
+            message=message,
+            attachments=attachments
+        )
+
+@frappe.whitelist()
+def send_notification(**kwargs):
+    """
+    Universal notification API
+    Accepts everything via props
+    """
+
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required")
+
+    # Required
+    recipients = kwargs.get("recipients")
+    subject = kwargs.get("subject")
+    message = kwargs.get("message")
+
+    # Optional metadata
+    event = kwargs.get("event")
+    context = kwargs.get("context")
+    reference_doctype = kwargs.get("reference_doctype")
+    reference_name = kwargs.get("reference_name")
+    attchments = kwargs.get("attchments")
+    send_email = int(kwargs.get("send_email", 1))
+    send_system = int(kwargs.get("send_system", 1))
+
+    # ---- Validation ----
+    if not recipients:
+        frappe.throw("recipients is required")
+
+    if not subject:
+        frappe.throw("subject is required")
+
+    if not message:
+        frappe.throw("message is required")
+
+    if isinstance(recipients, str):
+        recipients = json.loads(recipients)
+
+    if isinstance(context, str):
+        context = json.loads(context)
+
+    if not isinstance(recipients, list):
+        frappe.throw("recipients must be a list")
+
+    # ---- Dispatch ----
+    notify(
+        recipients=recipients,
+        subject=subject,
+        message=message,
+        reference_doctype=reference_doctype,
+        reference_name=reference_name,
+        send_email_flag=bool(send_email),
+        send_system_flag=bool(send_system),
+    )
+
+    return {
+        "status": "success",
+        "event": event,
+        "recipients": recipients,
+    }
