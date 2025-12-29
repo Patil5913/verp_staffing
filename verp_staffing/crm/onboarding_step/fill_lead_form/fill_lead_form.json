@@ -1,0 +1,21 @@
+{
+ "action": "Show Form Tour",
+ "action_label": "Start Lead Form Tutorial",
+ "creation": "2025-12-27 15:27:48.170273",
+ "description": "Learn how to fill the Lead form correctly.",
+ "docstatus": 0,
+ "doctype": "Onboarding Step",
+ "idx": 0,
+ "is_complete": 0,
+ "is_single": 0,
+ "is_skipped": 0,
+ "modified": "2025-12-27 15:44:06.635656",
+ "modified_by": "Administrator",
+ "name": "Fill Lead Form",
+ "owner": "Administrator",
+ "reference_document": "Lead",
+ "show_form_tour": 0,
+ "show_full_form": 0,
+ "title": "Fill Lead Form",
+ "validate_action": 1
+}

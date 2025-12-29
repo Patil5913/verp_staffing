@@ -55,12 +55,16 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-21 14:11:37.394951",
+ "modified": "2025-12-27 17:57:13.696867",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Marketing",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Sales Employee"
+  },
   {
    "create": 1,
    "delete": 1,
@@ -71,6 +75,76 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "marketing Employee",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1,
    "write": 1
   }
  ],

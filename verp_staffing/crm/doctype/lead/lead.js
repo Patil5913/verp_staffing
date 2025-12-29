@@ -1,5 +1,6 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
+
 frappe.ui.form.on("Lead", {
     onload(frm) {
         // Always keep field visible
@@ -35,9 +36,17 @@ frappe.ui.form.on("Lead", {
         render_notes(frm);
         render_activity_section(frm);
 
-        frm.add_custom_button(__('Opportunity'), () => {
+        frm.add_custom_button(__('Create Opportunity'), () => {
             open_create_opportunity_dialog(frm);
-        }, __('Create'));
+        });
+
+        frm.add_custom_button("Show Form Tour", () => {
+            // frappe.tour.show("Lead");
+             const tour_name = 'Lead Form'; 
+        
+        frm.tour.init({ tour_name })
+            .then(() => frm.tour.start());
+        });
 
         const roles = frappe.user_roles
 
