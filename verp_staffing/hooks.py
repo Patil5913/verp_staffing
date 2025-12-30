@@ -46,8 +46,6 @@ app_include_css = ["/assets/verp_staffing/css/globel.css"]
 validation_docs = ["Lead", "Lead Course","Resume","RUC", "Marketing"]
 
 # doctype_js = {doc: "public/js/reusable.js" for doc in validation_docs}
-
-
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -148,14 +146,14 @@ after_migrate = [
 doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
-         "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles"
+        "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles",
+        "after_insert": "verp_staffing.overrides.user.after_insert"
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
     },
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
    "Employee": {
-        "after_insert": "verp_staffing.employee.api.user_sync.create_user_from_employee",
         "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
         "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
     },
@@ -268,4 +266,5 @@ fixtures = [
 # pdflibjs Imports
 app_include_js = [
     "/assets/verp_staffing/js/pdf.js",
+    "/assets/verp_staffing/js/reusable.js",
 ]

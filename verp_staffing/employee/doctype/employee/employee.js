@@ -46,9 +46,6 @@ frappe.ui.form.on("Employee", {
                     }
                 };
             };
-        if (frm.doc.user) {
-            frm.set_df_property("user_email", "read_only", 1);
-        }
     },
 
     user(frm) {

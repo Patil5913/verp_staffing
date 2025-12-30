@@ -1049,7 +1049,7 @@ function render_resume_panel(frm, data) {
             <h4>Resume Department</h4>
             <p><strong>Status:</strong> ${status_html}</p>
             <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
-        data.assigned_to_name || data.assigned_to || "-"
+        data.assign_to || "-"
     )}</p>
             <p class="text-muted">
                 Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
@@ -1075,7 +1075,7 @@ function render_technical_panel(frm, data) {
             <h4>Technical Department</h4>
             <p><strong>Status:</strong> ${status_html}</p>
             <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
-        data.assigned_to_name || data.assigned_to || "-"
+        data.assign_to || "-"
     )}</p>
             <p class="text-muted">
                 Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
@@ -1116,7 +1116,7 @@ function render_marketing_panel(frm, data) {
 
             <p>
                 <strong>Assigned To:</strong>
-                ${frappe.utils.escape_html(data.assigned_to || "-")}
+                ${frappe.utils.escape_html(data.assign_to || "-")}
             </p>
 
             <p>

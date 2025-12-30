@@ -1,14 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:employee_name",
+ "autoname": "field:series",
  "creation": "2025-11-14 12:06:33.180575",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "user",
-  "user_email",
   "column_break_ookt",
+  "series",
   "employee_name",
   "employee_assignment_details_table_section",
   "employee_assignment_details_table"
@@ -17,7 +17,6 @@
   {
    "fieldname": "user",
    "fieldtype": "Link",
-   "hidden": 1,
    "label": "User",
    "options": "User"
   },
@@ -25,9 +24,8 @@
    "fieldname": "employee_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Employee Name",
-   "reqd": 1,
-   "unique": 1
+   "label": "Employee Full Name",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_ookt",
@@ -44,16 +42,17 @@
    "options": "Employee Assignment Detail"
   },
   {
-   "fieldname": "user_email",
+   "fieldname": "series",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "User Email"
+   "hidden": 1,
+   "label": "Series",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-28 14:56:17.300076",
+ "modified": "2025-12-29 18:06:34.551510",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -62,7 +61,11 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Lead Team Lead"
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Person"
   },
   {
    "create": 1,
@@ -78,15 +81,11 @@
   },
   {
    "read": 1,
+   "role": "Lead Team Lead"
+  },
+  {
+   "read": 1,
    "role": "Lead Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Person"
   },
   {
    "read": 1,
@@ -106,7 +105,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager",
+   "role": "Marketing Team Lead",
    "select": 1
   },
   {
@@ -116,7 +115,7 @@
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Marketing Master Manager",
    "select": 1
   },
   {
@@ -126,22 +125,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "RUC Person",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Resume Person",
    "select": 1
   },
   {
@@ -151,7 +135,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Senior Recruiter",
    "select": 1
   },
   {
@@ -162,6 +146,21 @@
   {
    "read": 1,
    "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
    "select": 1
   },
   {
