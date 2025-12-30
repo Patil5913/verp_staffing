@@ -60,10 +60,12 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
 
     department = filters.get("department") if filters else None
 
-    allowed = get_all_subordinates(employee, department)
+    allowed_set = get_all_subordinates(employee, department)
 
-    if not allowed:
+    if not allowed_set:
         return []
+    
+    allowed = list(allowed_set)  # THIS is the missing piece
 
     placeholders = ", ".join(["%s"] * len(allowed))
 

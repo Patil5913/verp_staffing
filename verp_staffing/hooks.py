@@ -45,7 +45,7 @@ app_include_css = ["/assets/verp_staffing/css/globel.css"]
 # include js in doctype views
 validation_docs = ["Lead", "Lead Course","Resume","RUC", "Marketing"]
 
-# doctype_js = {doc: "public/js/reusable.js" for doc in validation_docs}
+doctype_js = {doc: "public/js/reusable.js" for doc in validation_docs}
 
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}

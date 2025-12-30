@@ -11,3 +11,15 @@ class Marketing(Document):
 			title = frappe.db.get_value("Customer", self.customer, "title")
 			if title:
 				self.title = title
+
+
+@frappe.whitelist()
+def get_interviews_by_marketing(marketing):
+	if not marketing:
+		return []
+	
+	return frappe.get_all(
+        "Interview",
+        filters={"marketing_link": marketing},
+        fields=["name"]
+    )
