@@ -69,7 +69,7 @@
   },
   {
    "fieldname": "column_break_emkf",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break"  
   },
   {
    "fieldname": "sales_tab",

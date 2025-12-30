@@ -17,7 +17,6 @@
   {
    "fieldname": "user",
    "fieldtype": "Link",
-   "hidden": 1,
    "label": "User",
    "options": "User"
   },
@@ -53,7 +52,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-28 14:56:17.300076",
+ "modified": "2025-12-29 17:23:54.250669",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -62,7 +61,7 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Lead Team Lead"
+   "role": "Lead Master Manager"
   },
   {
    "create": 1,
@@ -78,11 +77,7 @@
   },
   {
    "read": 1,
-   "role": "Lead Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Manager"
+   "role": "Sales Master Manager"
   },
   {
    "read": 1,
@@ -90,7 +85,11 @@
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Team Lead"
   },
   {
    "read": 1,
@@ -106,22 +105,12 @@
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager",
+   "role": "marketing Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
+   "role": "marketing Master Manager",
    "select": 1
   },
   {
@@ -131,17 +120,17 @@
   },
   {
    "read": 1,
-   "role": "RUC Person",
+   "role": "Senior Recruiter",
    "select": 1
   },
   {
    "read": 1,
-   "role": "recruiter",
+   "role": "Recruiter",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Resume Person",
+   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -151,17 +140,27 @@
   },
   {
    "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
+   "select": 1
+  },
+  {
+   "read": 1,
    "role": "Technical Coordinator",
    "select": 1
   },
   {
    "read": 1,
-   "role": "JD",
+   "role": "Resume Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Training Person",
+   "role": "JD",
    "select": 1
   },
   {

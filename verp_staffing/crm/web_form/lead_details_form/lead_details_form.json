@@ -20,7 +20,7 @@
  "list_columns": [],
  "login_required": 0,
  "max_attachment_size": 0,
- "modified": "2025-12-15 14:57:43.674387",
+ "modified": "2025-12-27 09:49:53.801162",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "lead-details-form",
@@ -277,7 +277,7 @@
   {
    "allow_read_on_all_link_options": 0,
    "fieldname": "personl_phone_number",
-   "fieldtype": "Phone",
+   "fieldtype": "Data",
    "hidden": 0,
    "label": "Phone Number",
    "max_length": 0,
@@ -601,7 +601,7 @@
   {
    "allow_read_on_all_link_options": 0,
    "fieldname": "number_for_marketing",
-   "fieldtype": "Phone",
+   "fieldtype": "Data",
    "hidden": 0,
    "label": "Phone Number",
    "max_length": 0,
