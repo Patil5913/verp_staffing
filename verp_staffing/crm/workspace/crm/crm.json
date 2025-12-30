@@ -40,14 +40,6 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Customers",
-   "link_to": "Customer",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
    "label": "Opportunity",
    "link_to": "Opportunity",
    "stats_filter": "[]",

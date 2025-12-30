@@ -23,6 +23,13 @@ frappe.ui.form.on("Customer", {
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
+
+        frm.add_custom_button("Show Form Tour", () => {
+            const tour_name = 'Customer Form';
+
+            frm.tour.init({ tour_name })
+                .then(() => frm.tour.start());
+        });
     },
 });
 
@@ -847,8 +854,7 @@ async function add_forward_button(frm) {
             }
 
             open_forward_prompt(frm, available);
-        },
-        "Forward"
+        }
     );
 }
 

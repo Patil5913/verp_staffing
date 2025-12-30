@@ -14,6 +14,13 @@ frappe.ui.form.on("Pdf Agreement Template", {
             const wrapper = frm.fields_dict && frm.fields_dict.builder_html && frm.fields_dict.builder_html.$wrapper;
             if (wrapper) wrapper.html("<div style='padding:10px;color:#666'>Upload a PDF template to start building.</div>");
         }
+
+        frm.add_custom_button("Show Form Tour", () => {
+            const tour_name = 'PDF Agreement Template Form';
+
+            frm.tour.init({ tour_name })
+                .then(() => frm.tour.start());
+        });
     },
 
     upload_pdf_template(frm) {

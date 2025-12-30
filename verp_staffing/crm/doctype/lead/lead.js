@@ -1,5 +1,6 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
+
 frappe.ui.form.on("Lead", {
     onload(frm) {
         // Always keep field visible
@@ -35,9 +36,16 @@ frappe.ui.form.on("Lead", {
         render_notes(frm);
         render_activity_section(frm);
 
-        frm.add_custom_button(__('Opportunity'), () => {
+        frm.add_custom_button(__('Create Opportunity'), () => {
             open_create_opportunity_dialog(frm);
-        }, __('Create'));
+        });
+
+        frm.add_custom_button("Show Form Tour", () => {
+            const tour_name = 'Lead Form';
+
+            frm.tour.init({ tour_name })
+                .then(() => frm.tour.start());
+        });
 
         const roles = frappe.user_roles
 
@@ -193,8 +201,8 @@ function open_create_opportunity_dialog(frm) {
                                 method: "verp_staffing.crm.api.auto_assign.get_auto_assign_employee",
                                 args: {
                                     department: "Sales",
-                                    target_doctype:"Opportunity",
-                                    owner_field:"opportunity_owner"
+                                    target_doctype: "Opportunity",
+                                    owner_field: "opportunity_owner"
                                 },
                                 callback(r) {
                                     if (r.message) {
