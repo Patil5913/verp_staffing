@@ -1,14 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:employee_name",
+ "autoname": "field:series",
  "creation": "2025-11-14 12:06:33.180575",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "user",
-  "user_email",
   "column_break_ookt",
+  "series",
   "employee_name",
   "employee_assignment_details_table_section",
   "employee_assignment_details_table"
@@ -24,9 +24,8 @@
    "fieldname": "employee_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Employee Name",
-   "reqd": 1,
-   "unique": 1
+   "label": "Employee Full Name",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_ookt",
@@ -43,16 +42,17 @@
    "options": "Employee Assignment Detail"
   },
   {
-   "fieldname": "user_email",
+   "fieldname": "series",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "User Email"
+   "hidden": 1,
+   "label": "Series",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-29 17:23:54.250669",
+ "modified": "2025-12-29 18:06:34.551510",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",

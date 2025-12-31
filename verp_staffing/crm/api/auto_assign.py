@@ -18,7 +18,7 @@ def get_auto_assign_employee(
     owner_field    -> Fieldname that stores Employee link
     extra_filters  -> Optional additional filters for load calculation
     """
-
+    frappe.errprint(f"Auto-assigning for department {department}, doctype {target_doctype}")
     # 1. Fetch hierarchy config
     hierarchy = frappe.get_all(
         "Hierarchy",
@@ -167,6 +167,7 @@ def forward_candidate(customer, department):
     assignee_user = frappe.db.get_value("Employee", assignee, "user")
 
     if assignee_user:
+        frappe.errprint(f"Sending notification to {assignee_user}")
         send_notification(
             recipients=[assignee_user],
             subject=f"New Candidate Assigned ({department})",
