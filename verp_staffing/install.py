@@ -487,7 +487,7 @@ FORM_TOURS = {
                 "fieldname": "employee_assignment_details_table",
                 "description": "Click <b>Add Row</b>, then Enter the department, designation, and reporting employee for the employee being created",
                 "position": "Bottom",
-                "label": "Session Details",
+                "label": "Employee Assignment Details Table",
                 "fieldtype": "HTML",
             }
         ]
@@ -580,6 +580,7 @@ FORM_TOURS = {
 def after_install():
     seed_sales_stages()
     seed_type_of_interview()
+    seed_form_tours()
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
@@ -660,7 +661,6 @@ def seed_form_tours():
             "name": tour_name,
             "title": config.get("title", reference_doctype),
             "reference_doctype": reference_doctype,
-            "is_standard": 1,
             "save_on_completion": save_on_completion,
             "steps": steps
         })
