@@ -661,7 +661,6 @@ def seed_form_tours():
             "name": tour_name,
             "title": config.get("title", reference_doctype),
             "reference_doctype": reference_doctype,
-            "is_standard": 1,
             "save_on_completion": save_on_completion,
             "steps": steps
         })
