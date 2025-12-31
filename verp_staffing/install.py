@@ -322,7 +322,9 @@ FORM_TOURS = {
                 "title": "Lead Name",
                 "fieldname": "name1",
                 "description": "Enter the full name of the lead.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Full Name",
+                "fieldtype": "Data",
             }
         ]
     },
@@ -334,13 +336,17 @@ FORM_TOURS = {
                 "title": "Opportunity Type",
                 "fieldname": "opportunity_from",
                 "description": "Choose whether this opportunity is coming from a Lead or an existing Customer.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Opportunity From",
+                "fieldtype": "Link",
             },
             {
                 "title": "Source",
                 "fieldname": "party_name",
                 "description": "Based on the selected Opportunity Type, choose the correct Lead or Customer from the list.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Party",
+                "fieldtype": "Dynamic Link",
             }
         ]
     },
@@ -352,25 +358,33 @@ FORM_TOURS = {
                 "title": "Select Customer",
                 "fieldname": "customer",
                 "description": "Select the customer for whom you want to create a resume.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Customer",
+                "fieldtype": "Link",
             },
             {
                 "title": "Select Employee",
                 "fieldname": "assign_to",
                 "description": "Select the employee to whom you want to assign this resume.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Assign To",
+                "fieldtype": "Link",
             },
             {
                 "title": "Select Status",
                 "fieldname": "status",
                 "description": "Select the status of this resume process.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Status",
+                "fieldtype": "Select",
             },
             {
                 "title": "Upload Resume",
                 "fieldname": "resume",
                 "description": "Upload the resume you created for this customer.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Upload Resume",
+                "fieldtype": "Attach",
             }
         ]
     },
@@ -382,13 +396,17 @@ FORM_TOURS = {
                 "title": "Select Customer",
                 "fieldname": "customer",
                 "description": "Select the customer for whom you want to do marketing.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Customer",
+                "fieldtype": "Link",
             },
             {
                 "title": "Select Employee",
                 "fieldname": "assign_to",
                 "description": "Select an employee for marketing activities for this customer.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Assign To",
+                "fieldtype": "Link",
             }
         ]
     },
@@ -400,31 +418,41 @@ FORM_TOURS = {
                 "title": "Select Customer",
                 "fieldname": "customer",
                 "description": "Select the customer for whom you want to conduct a resume understanding session.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Customer",
+                "fieldtype": "Link",
             },
             {
                 "title": "Select Employee",
                 "fieldname": "assign_to",
                 "description": "Select the employee to whom you want to assign this resume understanding session.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Assign To",
+                "fieldtype": "Link",
             },
             {
                 "title": "Select Status",
                 "fieldname": "status",
                 "description": "Select the status of this resume understanding session.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Assiged To",
+                "fieldtype": "Select",
             },
             {
                 "title": "Select Outsource Person",
                 "fieldname": "outsource",
                 "description": "Select an outsourced person if no employee is available for this session.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Outsource Person",
+                "fieldtype": "Link",
             },
             {
                 "title": "Fill Session details",
                 "fieldname": "session_details",
                 "description": "Fill the session details if it's completed.",
-                "position": "Top"
+                "position": "Top",
+                "label": "Session Details",
+                "fieldtype": "Table",
             }
         ]
     },
@@ -433,10 +461,12 @@ FORM_TOURS = {
         "title": "Sales Order Agreement Form",
         "steps": [
             {
-                "title": "Lead Name",
-                "fieldname": "name1",
+                "title": "Agreement Section",
+                "fieldname": "agreement_html",
                 "description": '1. Select the template.<br>2. Preview the template by clicking the <b>“Preview”</b> button.<br>3. Click the <b>“Save & Send”</b> button to save the template and send the agreement to the customer.',
-                "position": "Bottom"
+                "position": "Bottom",
+                "label": "Session Details",
+                "fieldtype": "HTML",
             }
         ]
     },
@@ -448,13 +478,17 @@ FORM_TOURS = {
                 "title": "Select User",
                 "fieldname": "user",
                 "description": "Select the user for whom you want to create a employee.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Session Details",
+                "fieldtype": "HTML",
             },
             {
                 "title": "Enter Department Details",
                 "fieldname": "assign_to",
                 "description": "Click <b>Add Row</b>, then Enter the department, designation, and reporting employee for the employee being created",
-                "position": "Bottom"
+                "position": "Bottom",
+                "label": "Session Details",
+                "fieldtype": "HTML",
             }
         ]
     },
@@ -466,19 +500,25 @@ FORM_TOURS = {
                 "title": "Select Customer",
                 "fieldname": "marketing_link",
                 "description": "Select the customer for whom you want to create an interview.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Marketing",
+                "fieldtype": "Link",
             },
             {
                 "title": "Company Name ",
                 "fieldname": "company",
                 "description": "Select the company name for the interview.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Data",
             },
             {
                 "title": "Interview Role",
                 "fieldname": "role",
                 "description": "Enter the role for which the interview is scheduled.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Role",
+                "fieldtype": "Data",
             }
         ]
     },
@@ -490,25 +530,33 @@ FORM_TOURS = {
                 "title": "Template Name",
                 "fieldname": "title",
                 "description": "Enter unique template name.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Template Name",
+                "fieldtype": "Data",
             },
             {
                 "title": "Upload Template",
                 "fieldname": "upload_pdf_template",
                 "description": "Upload the <b>Agreement</b> template PDF.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Upload PDF Template",
+                "fieldtype": "Attach",
             },
             {
                 "title": "Is Template Active",
                 "fieldname": "is_active",
                 "description": "Select the checkbox to <b>activate</b> the current template.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Is Active",
+                "fieldtype": "Check",
             },
             {
                 "title": "Build Template",
                 "fieldname": "builder_html",
                 "description": "1. Click the button which you wantr to add in template from the right side of section having name <strong>Fields</strong><br/>2. click on the template pdf where want to place the selected field<br/>3. enter the field name in that dialog<br/>4. manage teh size of created field<br/>5. repeat step untill all fields got add<br/>6. At last click <strong>Save Template</strong> Button under <strong>Fields<strong> section to save the created template",
-                "position": "Top"
+                "position": "Top",
+                "label": "Build Template",
+                "fieldtype": "HTML",
             }
         ]
     },
@@ -520,7 +568,9 @@ FORM_TOURS = {
                 "title": "Select Opportunity",
                 "fieldname": "opportunity",
                 "description": "Select the opportunity which you want to convert as customer.",
-                "position": "Right Center"
+                "position": "Right Center",
+                "label": "Opportunity",
+                "fieldtype": "Link",
             }
         ]
     },
@@ -579,7 +629,9 @@ def seed_form_tours():
                 "doctype": "Form Tour Step",
                 "title": step["title"],
                 "description": step["description"],
-                "position": step["position"]
+                "position": step["position"],
+                "label": step.get("label", ""),
+                "fieldtype": step.get("fieldtype", ""),
             }
 
             # Mutually exclusive fields
