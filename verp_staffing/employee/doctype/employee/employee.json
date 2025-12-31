@@ -33,12 +33,13 @@
   },
   {
    "fieldname": "employee_assignment_details_table_section",
-   "fieldtype": "Section Break",
-   "label": "Employee Assignment Details Table"
+   "fieldtype": "Section Break"
   },
   {
+   "bold": 1,
    "fieldname": "employee_assignment_details_table",
    "fieldtype": "Table",
+   "label": "Employee Assignment Details Table",
    "options": "Employee Assignment Detail"
   },
   {
@@ -52,7 +53,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-29 18:06:34.551510",
+ "modified": "2025-12-31 16:56:45.755870",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",

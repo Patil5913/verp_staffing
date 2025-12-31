@@ -484,7 +484,7 @@ FORM_TOURS = {
             },
             {
                 "title": "Enter Department Details",
-                "fieldname": "assign_to",
+                "fieldname": "employee_assignment_details_table",
                 "description": "Click <b>Add Row</b>, then Enter the department, designation, and reporting employee for the employee being created",
                 "position": "Bottom",
                 "label": "Session Details",
@@ -580,7 +580,6 @@ FORM_TOURS = {
 def after_install():
     seed_sales_stages()
     seed_type_of_interview()
-    seed_form_tours()
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
@@ -623,6 +622,8 @@ def seed_form_tours():
         if frappe.db.exists("Form Tour", tour_name):
             continue
 
+        meta = frappe.get_meta(reference_doctype)
+
         steps = []
         for step in config["steps"]:
             step_doc = {
@@ -636,7 +637,16 @@ def seed_form_tours():
 
             # Mutually exclusive fields
             if step.get("fieldname"):
-                step_doc["fieldname"] = step["fieldname"]
+                # Validate field exists
+                if meta.has_field(step["fieldname"]):
+                    step_doc["fieldname"] = step["fieldname"]
+                else:
+                    # Skip invalid step, do NOT crash migrate
+                    frappe.log_error(
+                        title="Invalid Form Tour Field",
+                        message=f"{reference_doctype}.{step['fieldname']} does not exist"
+                    )
+                    continue
 
             if step.get("selector"):
                 step_doc["selector"] = step["selector"]
