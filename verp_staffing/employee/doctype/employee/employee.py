@@ -12,12 +12,12 @@ class Employee(Document):
         date_str = today()
 
         # Naming pattern: EMP-YYYY-MM-DD-####
-        email = self.user_email.strip().lower() if self.user_email else ''
+        email = self.employee_name.strip().lower() if self.employee_name else ''
         name = email.split('@')[0] if email else 'EMP'
         series = f"{name}-{date_str}-.####"
 
         # Generate incrementing name
-        self.name = make_autoname(series)
+        self.series = make_autoname(series)
 
 
 @frappe.whitelist()
