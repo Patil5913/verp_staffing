@@ -4,7 +4,7 @@
 frappe.ui.form.on("Interview", {
     refresh(frm) {
         frm.add_custom_button("Show Form Tour", () => {
-            const tour_name = 'Interview';
+            const tour_name = 'Interview Form';
 
             frm.tour.init({ tour_name })
                 .then(() => frm.tour.start());

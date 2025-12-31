@@ -314,10 +314,223 @@ HIERARCHY_DATA = [
     },
 ]
 
+FORM_TOURS = {
+    "Lead": {
+        "title": "Lead Form",
+        "steps": [
+            {
+                "title": "Lead Name",
+                "fieldname": "name1",
+                "description": "Enter the full name of the lead.",
+                "position": "Top"
+            }
+        ]
+    },
+
+    "Opportunity": {
+        "title": "Opportunity Form",
+        "steps": [
+            {
+                "title": "Opportunity Type",
+                "fieldname": "opportunity_from",
+                "description": "Choose whether this opportunity is coming from a Lead or an existing Customer.",
+                "position": "Top"
+            },
+            {
+                "title": "Source",
+                "fieldname": "party_name",
+                "description": "Based on the selected Opportunity Type, choose the correct Lead or Customer from the list.",
+                "position": "Top"
+            }
+        ]
+    },
+
+    "Resume": {
+        "title": "Resume Form",
+        "steps": [
+            {
+                "title": "Select Customer",
+                "fieldname": "customer",
+                "description": "Select the customer for whom you want to create a resume.",
+                "position": "Top"
+            },
+            {
+                "title": "Select Employee",
+                "fieldname": "assign_to",
+                "description": "Select the employee to whom you want to assign this resume.",
+                "position": "Top"
+            },
+            {
+                "title": "Select Status",
+                "fieldname": "status",
+                "description": "Select the status of this resume process.",
+                "position": "Top"
+            },
+            {
+                "title": "Upload Resume",
+                "fieldname": "resume",
+                "description": "Upload the resume you created for this customer.",
+                "position": "Top"
+            }
+        ]
+    },
+
+    "Marketing": {
+        "title": "Marketing Form",
+        "steps": [
+            {
+                "title": "Select Customer",
+                "fieldname": "customer",
+                "description": "Select the customer for whom you want to do marketing.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Select Employee",
+                "fieldname": "assign_to",
+                "description": "Select an employee for marketing activities for this customer.",
+                "position": "Right Center"
+            }
+        ]
+    },
+
+    "RUC": {
+        "title": "RUC Form",
+        "steps": [
+            {
+                "title": "Select Customer",
+                "fieldname": "customer",
+                "description": "Select the customer for whom you want to conduct a resume understanding session.",
+                "position": "Top"
+            },
+            {
+                "title": "Select Employee",
+                "fieldname": "assign_to",
+                "description": "Select the employee to whom you want to assign this resume understanding session.",
+                "position": "Top"
+            },
+            {
+                "title": "Select Status",
+                "fieldname": "status",
+                "description": "Select the status of this resume understanding session.",
+                "position": "Top"
+            },
+            {
+                "title": "Select Outsource Person",
+                "fieldname": "outsource",
+                "description": "Select an outsourced person if no employee is available for this session.",
+                "position": "Top"
+            },
+            {
+                "title": "Fill Session details",
+                "fieldname": "session_details",
+                "description": "Fill the session details if it's completed.",
+                "position": "Top"
+            }
+        ]
+    },
+
+    "Sales Order": {
+        "title": "Sales Order Agreement Form",
+        "steps": [
+            {
+                "title": "Lead Name",
+                "fieldname": "name1",
+                "description": '1. Select the template.<br>2. Preview the template by clicking the <b>“Preview”</b> button.<br>3. Click the <b>“Save & Send”</b> button to save the template and send the agreement to the customer.',
+                "position": "Bottom"
+            }
+        ]
+    },
+
+    "Employee": {
+        "title": "Employee Form",
+        "steps": [
+            {
+                "title": "Select User",
+                "fieldname": "user",
+                "description": "Select the user for whom you want to create a employee.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Enter Department Details",
+                "fieldname": "assign_to",
+                "description": "Click <b>Add Row</b>, then Enter the department, designation, and reporting employee for the employee being created",
+                "position": "Bottom"
+            }
+        ]
+    },
+
+    "Interview": {
+        "title": "Interview Form",
+        "steps": [
+            {
+                "title": "Select Customer",
+                "fieldname": "marketing_link",
+                "description": "Select the customer for whom you want to create an interview.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Company Name ",
+                "fieldname": "company",
+                "description": "Select the company name for the interview.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Interview Role",
+                "fieldname": "role",
+                "description": "Enter the role for which the interview is scheduled.",
+                "position": "Right Center"
+            }
+        ]
+    },
+
+    "Pdf Agreement Template": {
+        "title": "PDF Agreement Template Form",
+        "steps": [
+            {
+                "title": "Template Name",
+                "fieldname": "title",
+                "description": "Enter unique template name.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Upload Template",
+                "fieldname": "upload_pdf_template",
+                "description": "Upload the <b>Agreement</b> template PDF.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Is Template Active",
+                "fieldname": "is_active",
+                "description": "Select the checkbox to <b>activate</b> the current template.",
+                "position": "Right Center"
+            },
+            {
+                "title": "Build Template",
+                "fieldname": "builder_html",
+                "description": "1. Click the button which you wantr to add in template from the right side of section having name <strong>Fields</strong><br/>2. click on the template pdf where want to place the selected field<br/>3. enter the field name in that dialog<br/>4. manage teh size of created field<br/>5. repeat step untill all fields got add<br/>6. At last click <strong>Save Template</strong> Button under <strong>Fields<strong> section to save the created template",
+                "position": "Top"
+            }
+        ]
+    },
+
+    "Customer": {
+        "title": "Customer Form",
+        "steps": [
+            {
+                "title": "Select Opportunity",
+                "fieldname": "opportunity",
+                "description": "Select the opportunity which you want to convert as customer.",
+                "position": "Right Center"
+            }
+        ]
+    },
+}
+
 
 def after_install():
     seed_sales_stages()
     seed_type_of_interview()
+    seed_form_tours()
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
@@ -349,6 +562,50 @@ def seed_type_of_interview():
                 "type": t,
             })
             doc.insert(ignore_permissions=True)
+
+
+def seed_form_tours():
+    for reference_doctype, config in FORM_TOURS.items():
+
+        # Use reference_doctype as the Form Tour name
+        tour_name = reference_doctype
+
+        if frappe.db.exists("Form Tour", tour_name):
+            continue
+
+        steps = []
+        for step in config["steps"]:
+            step_doc = {
+                "doctype": "Form Tour Step",
+                "title": step["title"],
+                "description": step["description"],
+                "position": step["position"]
+            }
+
+            # Mutually exclusive fields
+            if step.get("fieldname"):
+                step_doc["fieldname"] = step["fieldname"]
+
+            if step.get("selector"):
+                step_doc["selector"] = step["selector"]
+
+            steps.append(step_doc)
+
+        save_on_completion = 0 if reference_doctype == "Sales Order" else 1
+
+        tour = frappe.get_doc({
+            "doctype": "Form Tour",
+            "name": tour_name,
+            "title": config.get("title", reference_doctype),
+            "reference_doctype": reference_doctype,
+            "is_standard": 1,
+            "save_on_completion": save_on_completion,
+            "steps": steps
+        })
+
+        tour.insert(ignore_permissions=True)
+
+    frappe.db.commit()
 
 
 def create_all_roles():
