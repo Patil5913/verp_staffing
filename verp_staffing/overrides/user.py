@@ -99,26 +99,21 @@ def check_employee_missing(user):
     # )
 #     return
 
+from frappe.core.doctype.user.user import User as FrappeUser
 
-def after_insert(doc, method):
-    frappe.errprint(f"User after_insert hook triggered for user: {doc.name}")
-    # # creator is doc.owner
-    # primary_action = {
-    #     'label': 'Click Me',
-    #     "client_action": "redirect_to_employee_form", # Dotted path to global JS function
-    #     'is_primary': True, # optional, makes the button blue
-    #     "hide_on_success": True
-    # }
-    frappe.msgprint(
-        msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
-        title=_("Missing Employee Record"),
-        primary_action={
-            'label': _("Create Employee"),
-            'server_action': 'verp_staffing.overrides.user.redirect_to_employee_form',
-            'hide_on_success': True 
-        }
-    )
 
+class CustomUser(FrappeUser):
+    def after_insert(self):
+        super().after_insert()
+        frappe.msgprint(
+            msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
+            title=_("Missing Employee Record"),
+            primary_action={
+                'label': _("Create Employee"),
+                'server_action': 'verp_staffing.overrides.user.redirect_to_employee_form',
+                'hide_on_success': True 
+            }
+        )
 
 @frappe.whitelist()
 def redirect_to_employee_form():

@@ -135,9 +135,10 @@ after_migrate = [
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	# "ToDo": "custom_app.overrides.CustomToDo",
+    "User":"verp_staffing.overrides.user.CustomUser"
+}
 
 # Document Events
 # ---------------
@@ -147,7 +148,6 @@ doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
         "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles",
-        "after_insert": "verp_staffing.overrides.user.after_insert"
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
