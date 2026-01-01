@@ -137,7 +137,7 @@ after_migrate = [
 
 override_doctype_class = {
 	# "ToDo": "custom_app.overrides.CustomToDo",
-    "User":"verp_staffing.overrides.user.CustomUser"
+    "User":"verp_staffing.overrides.override_user.CustomUser"
 }
 
 # Document Events
