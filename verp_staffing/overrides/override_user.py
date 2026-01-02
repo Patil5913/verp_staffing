@@ -3,8 +3,9 @@ from frappe.core.doctype.user.user import User as FrappeUser
 from frappe import _
 
 class CustomUser(FrappeUser):
-    def on_update(self):
-        super().on_update()
+    def after_insert(self):
+        super().after_insert()
+        frappe.errprint(f"CustomUser after_insert called for user: {self.name}")
         frappe.msgprint(
             msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
             title=_("Missing Employee Record"),
@@ -15,4 +16,3 @@ class CustomUser(FrappeUser):
                 'hide_on_success': True 
             }
         )
-        frappe.errprint(f"CustomUser on_update called for user: {self.name}")
