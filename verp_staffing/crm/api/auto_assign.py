@@ -154,7 +154,7 @@ def forward_candidate(customer, department):
     dept_doc.insert(ignore_permissions=True)
 
     stage[dept_key] = {
-        "assigned_to": assignee,
+        "assign_to": assignee,
         "timestamp": str(now_datetime())
     }
 
