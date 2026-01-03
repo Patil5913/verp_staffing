@@ -580,7 +580,7 @@ FORM_TOURS = {
 def after_install():
     seed_sales_stages()
     seed_type_of_interview()
-    seed_form_tours()
+    # seed_form_tours()
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)

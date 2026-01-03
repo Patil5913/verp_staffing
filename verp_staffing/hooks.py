@@ -26,6 +26,12 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = ["/assets/verp_staffing/css/globel.css"]
+# pdflibjs Imports
+app_include_js = [
+    "pdf_lib_bundle.bundle.js",
+    "/assets/verp_staffing/js/reusable.js",
+]
+
 # app_include_js = "/assets/verp_staffing/js/verp_staffing.js"
 
 # include js, css files in header of web template
@@ -135,9 +141,8 @@ after_migrate = [
 # ---------------
 # Override standard doctype classes
 
-override_doctype_class = {
-	# "ToDo": "custom_app.overrides.CustomToDo",
-    "User":"verp_staffing.overrides.override_user.CustomUser"
+extends_doctype_class = {
+    "User": "verp_staffing.overrides.override_user.CustomUser"
 }
 
 # Document Events
@@ -263,8 +268,3 @@ fixtures = [
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "interview"]]}
 ]
 
-# pdflibjs Imports
-app_include_js = [
-    "/assets/verp_staffing/js/pdf.js",
-    "/assets/verp_staffing/js/reusable.js",
-]
