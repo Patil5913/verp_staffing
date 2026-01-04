@@ -1,5 +1,6 @@
 import frappe
 import json
+import re
 
 ROLES = [
     "Lead Master Manager",
@@ -33,6 +34,34 @@ ROLES = [
     "_show_marketing",
     "_show_employees",
 ]
+
+ROLE_PROFILES_TO_SEED = {
+    "Lead Master Manager",
+    "Lead Manager",
+    "Lead Team Lead",
+    "Lead Person",
+    "Sales Team Lead",
+    "Sales Person",
+    "Sales Manager",
+    "Sales Master Manager",
+    "Marketing Master Manager",
+    "Marketing Manager",
+    "Marketing Team Lead",
+    "Senior Recruiter",
+    "Marketing Mentor",
+    "Recruiter",
+    "Senior Resume Person",
+    "Resume Person",
+    "Technical Coordinator",
+    "RUC Person",
+    "Training Person",
+    "Support Person",
+    "JDC",
+    "Technical Manager",
+    "Technical Master Manager",
+    "HR Manager",
+    "HR",
+}
 
 PERM_FIELDS = [
     "select",
@@ -678,8 +707,11 @@ def after_install():
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
     seed_hierarchy()
+    seed_role_profiles()
     remove_default_workspaces()
-    seed_form_tours()
+    seed_bulk_users_with_password()
+    seed_employees_with_hierarchy(HIERARCHY_DATA)
+    # seed_form_tours()
 
 
 def seed_sales_stages():
@@ -789,6 +821,41 @@ def create_all_roles():
             role.save(ignore_permissions=True)
 
     frappe.clear_cache()
+
+def seed_role_profiles():
+    for role in ROLE_PROFILES_TO_SEED:
+
+        # Never touch Administrator
+        if role == "Administrator":
+            continue
+
+        # Role must exist
+        if not frappe.db.exists("Role", role):
+            frappe.log_error(
+                title="Missing Role",
+                message=f"Role '{role}' does not exist, skipping Role Profile"
+            )
+            continue
+
+        # Role Profile name = role name
+        profile_name = role
+
+        # Skip if already exists
+        if frappe.db.exists("Role Profile", profile_name):
+            continue
+
+        # Create Role Profile
+        profile = frappe.new_doc("Role Profile")
+        profile.role_profile = profile_name
+
+        # Add single role
+        profile.append("roles", {
+            "role": role
+        })
+
+        profile.insert(ignore_permissions=True)
+
+    frappe.db.commit()
 
 
 def seed_employee_departments():
@@ -916,3 +983,203 @@ def remove_default_workspaces():
     frappe.db.commit()
 
     print("Workspaces updated successfully.")
+COMMON_PASSWORD = "Vrugle@2026"
+
+ROLE_USER_COUNTS = {
+    "Lead Master Manager": 1,
+    "Lead Manager": 3,
+    "Lead Team Lead": 9,
+    "Lead Person": 27,
+
+    "Sales Master Manager": 1,
+    "Sales Manager": 2,
+    "Sales Team Lead": 6,
+    "Sales Person": 24,
+
+    "Marketing Master Manager": 1,
+    "Marketing Manager": 2,
+    "Marketing Team Lead": 4,
+    "Senior Recruiter": 12,
+    "Marketing Mentor": 36,
+    "Recruiter": 180,
+
+    "Technical Master Manager": 1,
+    "Technical Manager": 2,
+    "Technical Coordinator": 4,
+    "RUC Person": 8,
+    "Training Person": 8,
+    "JDC": 8,
+    "Support Person": 8,
+
+    "Senior Resume Person": 1,
+    "Resume Person": 5,
+
+    "HR Manager": 1,
+    "HR": 2,
+}
+
+
+def _safe_role_slug(role: str) -> str:
+    """
+    Convert role to safe lowercase slug.
+    'Lead Person' -> 'lead_person'
+    """
+    role = role.lower()
+    role = re.sub(r"[^a-z0-9 ]", "", role)
+    return role.replace(" ", "_")
+
+
+def seed_bulk_users_with_password():
+    created = 0
+    skipped = 0
+
+    for role_profile, count in ROLE_USER_COUNTS.items():
+
+        # Role Profile must exist
+        if not frappe.db.exists("Role Profile", role_profile):
+            frappe.log_error(
+                "Missing Role Profile",
+                f"Role Profile '{role_profile}' not found. Skipping users."
+            )
+            continue
+
+        role_slug = _safe_role_slug(role_profile)
+
+        for i in range(1, count + 1):
+            email = f"{role_slug}_{i}@gmail.com"
+            full_name = f"{role_profile}${i}"
+
+            # Skip if user already exists
+            if frappe.db.exists("User", email):
+                skipped += 1
+                continue
+
+            user = frappe.new_doc("User")
+            user.email = email
+            user.first_name = full_name
+            user.enabled = 1
+
+            # Absolutely critical flags
+            user.send_welcome_email = 0
+            user.send_me_a_copy = 0
+
+            # Assign role profile
+            user.role_profile_name = role_profile
+
+            # Insert user
+            user.insert(ignore_permissions=True)
+
+            # Set password explicitly
+            frappe.utils.password.update_password(
+                user=email,
+                pwd=COMMON_PASSWORD,
+                logout_all_sessions=False
+            )
+
+            created += 1
+
+    frappe.db.commit()
+    print(f"Created {created} users, skipped {skipped} existing users.")
+    return {
+        "created": created,
+        "skipped_existing": skipped,
+        "total_expected": sum(ROLE_USER_COUNTS.values())
+    }
+
+
+# Seed Employees ----------------------------------------------------------------------
+
+from collections import defaultdict
+
+TECH_PLACEHOLDER = "General"
+
+
+def seed_employees_with_hierarchy(HIERARCHY_DATA):
+    """
+    Create Employees for Users and assign hierarchy evenly.
+    """
+
+    # -------------------------------------------------
+    # 1. Build hierarchy edges per department
+    # -------------------------------------------------
+    hierarchy_edges = defaultdict(list)  # dept -> [(parent_role, child_role)]
+
+    for dept in HIERARCHY_DATA:
+        department = dept["department"]
+        for edge in dept["role_hierarchy_json"]:
+            parent = edge["parent_role"]
+            for child in edge["child_roles"]:
+                hierarchy_edges[department].append((parent.strip(), child.strip()))
+
+    # -------------------------------------------------
+    # 2. Fetch users grouped by role profile
+    # -------------------------------------------------
+    users_by_role = defaultdict(list)
+
+    users = frappe.get_all(
+        "User",
+        filters={"enabled": 1},
+        fields=["name", "email", "role_profile_name"],
+    )
+
+    for u in users:
+        if u.role_profile_name:
+            users_by_role[u.role_profile_name].append(u)
+
+    # -------------------------------------------------
+    # 3. Create Employees (idempotent)
+    # -------------------------------------------------
+    employee_by_user = {}
+    employee_by_role = defaultdict(list)
+
+    for role, role_users in users_by_role.items():
+        for u in role_users:
+            emp_name = frappe.db.get_value("Employee", {"user": u.email}, "name")
+            if emp_name:
+                emp = frappe.get_doc("Employee", emp_name)
+            else:
+                emp = frappe.new_doc("Employee")
+                emp.user = u.email
+                emp.employee_name = u.name
+                emp.insert(ignore_permissions=True)
+
+            employee_by_user[u.email] = emp
+            employee_by_role[role].append(emp)
+
+    # -------------------------------------------------
+    # 4. Clear existing assignment tables
+    # -------------------------------------------------
+    for emp in employee_by_user.values():
+        emp.set("employee_assignment_details_table", [])
+        emp.save(ignore_permissions=True)
+
+    # -------------------------------------------------
+    # 5. Assign hierarchy (round-robin)
+    # -------------------------------------------------
+    for department, edges in hierarchy_edges.items():
+        for parent_role, child_role in edges:
+
+            parents = employee_by_role.get(parent_role, [])
+            children = employee_by_role.get(child_role, [])
+
+            if not parents or not children:
+                continue
+
+            parent_count = len(parents)
+
+            for idx, child in enumerate(children):
+                parent = parents[idx % parent_count]
+
+                child.append(
+                    "employee_assignment_details_table",
+                    {
+                        "department": department,
+                        "designation": child_role,
+                        "assigned_to": parent.name,
+                        "technology": TECH_PLACEHOLDER,
+                    },
+                )
+
+                child.save(ignore_permissions=True)
+
+    frappe.db.commit()
