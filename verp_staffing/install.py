@@ -701,15 +701,15 @@ FORM_TOURS = {
 
 
 def after_install():
-    seed_sales_stages()
-    seed_type_of_interview()
-    create_all_roles()
-    seed_employee_departments()
-    assign_permissions_to_roles(ROLE_PERMISSIONS)
-    seed_hierarchy()
-    seed_role_profiles()
-    remove_default_workspaces()
-    seed_bulk_users_with_password()
+    # seed_sales_stages()
+    # seed_type_of_interview()
+    # create_all_roles()
+    # seed_employee_departments()
+    # assign_permissions_to_roles(ROLE_PERMISSIONS)
+    # seed_hierarchy()
+    # seed_role_profiles()
+    # remove_default_workspaces()
+    # seed_bulk_users_with_password()
     seed_employees_with_hierarchy(HIERARCHY_DATA)
     # seed_form_tours()
 
@@ -1087,6 +1087,14 @@ from collections import defaultdict
 
 TECH_PLACEHOLDER = "General"
 
+DEPARTMENT_WORKSPACE_ROLE_MAP = {
+    "Sales": ["_show_crm"],
+    "Lead": ["_show_crm"],
+    "Resume": ["_show_technical"],
+    "Technical": ["_show_technical"],
+    "Marketing": ["_show_marketing"],
+    "HR": ["_show_employees"],
+}
 
 def seed_employees_with_hierarchy(HIERARCHY_DATA):
     """
@@ -1175,5 +1183,43 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
                 )
 
                 child.save(ignore_permissions=True)
+                # ---- ADD WORKSPACE ROLES BASED ON DEPARTMENT ----
+                workspace_roles = DEPARTMENT_WORKSPACE_ROLE_MAP.get(department, [])
+                if workspace_roles:
+                    ensure_user_has_roles(child.user, workspace_roles)
+                    frappe.db.commit()
 
-    frappe.db.commit()
+def ensure_user_has_roles(user_email: str, roles: list[str]):
+    """
+    Add roles to user if missing.
+    Safe to call multiple times.
+    """
+    if not roles:
+        return
+
+    existing_roles = set(
+        frappe.get_all(
+            "Has Role",
+            filters={"parent": user_email},
+            pluck="role"
+        )
+    )
+
+    for role in roles:
+        if role in existing_roles:
+            continue
+
+        if not frappe.db.exists("Role", role):
+            frappe.log_error(
+                "Missing Workspace Role",
+                f"Role '{role}' does not exist"
+            )
+            continue
+
+        frappe.get_doc({
+            "doctype": "Has Role",
+            "parent": user_email,
+            "parenttype": "User",
+            "parentfield": "roles",
+            "role": role
+        }).insert(ignore_permissions=True)

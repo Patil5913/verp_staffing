@@ -152,7 +152,7 @@ override_doctype_class = {
 doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
-        "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles",
+        # "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles",
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
