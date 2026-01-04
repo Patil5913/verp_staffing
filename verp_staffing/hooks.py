@@ -141,7 +141,7 @@ after_migrate = [
 # ---------------
 # Override standard doctype classes
 
-extends_doctype_class = {
+override_doctype_class = {
     "User": "verp_staffing.overrides.override_user.CustomUser"
 }
 
