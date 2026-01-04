@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "CRM",
  "links": [],
- "modified": "2026-01-02 00:27:00.212576",
+ "modified": "2026-01-04 14:15:18.705348",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "CRM",
@@ -29,7 +29,7 @@
  "quick_lists": [],
  "roles": [
   {
-   "role": "All"
+   "role": "_show_crm"
   }
  ],
  "sequence_id": 3.0,

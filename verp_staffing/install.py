@@ -8,6 +8,8 @@ ROLES = [
     "Lead Person",
     "Sales Team Lead",
     "Sales Person",
+    "Sales Manager",
+    "Sales Master Manager",
     "Marketing Master Manager",
     "Marketing Manager",
     "Marketing Team Lead",
@@ -19,10 +21,17 @@ ROLES = [
     "Technical Coordinator",
     "RUC Person",
     "Training Person",
-    "JD",
+    "Support Person",
+    "JDC",
+    "Technical Manager",
+    "Technical Master Manager",
     "HR Manager",
     "HR",
     "Extra Menu Item Not Show",
+    "_show_crm",
+    "_show_technical",
+    "_show_marketing",
+    "_show_employees",
 ]
 
 PERM_FIELDS = [
@@ -52,101 +61,152 @@ PROTECTED_DOCTYPES = {
 
 ROLE_PERMISSIONS = {
     "Lead Master Manager": {
-        "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report", "share"],
-        "Opportunity": ["create"],
+        "Lead": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
         "Employee": ["read"],
     },
-
     "Lead Manager": {
         "Lead": ["read", "write", "create"],
-        "Opportunity": ["create"],
+        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
         "Employee": ["read"],
     },
-
     "Lead Team Lead": {
         "Lead": ["read", "write", "create"],
-        "Opportunity": ["create"],
+        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
         "Employee": ["read"],
     },
-
     "Lead Person": {
         "Lead": ["read", "write", "create"],
-        "Opportunity": ["create"],
+        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
         "Employee": ["read"],
     },
-
-    "Sales Master Manager" :{
-        "Lead": ["select", "read", "write", "create", "delete", "print", "email", "report", "share"],
-        "Opportunity": ["select", "read", "write", "create", "delete", "print", "email", "report", "share"],
+    "Sales Master Manager": {
+        "Lead": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Opportunity": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
-        "Sales Order":["select", "read", "write", "create", "delete", "print", "email", "report", "share"],
-        "Agreement":["select","read", "write", "create"],
-        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Sales Order": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Agreement": ["select", "read", "write", "create"],
+        "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
     },
-
-    "Sales Manager" :{
+    "Sales Manager": {
         "Lead": ["read", "write", "create"],
         "Opportunity": ["read", "write", "create"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
-        "Sales Order":["select","read", "write", "create"],
-        "Agreement":["select","read", "write", "create"],
-        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Sales Order": ["select", "read", "write", "create"],
+        "Agreement": ["select", "read", "write", "create"],
+        "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
     },
-
-    "Sales Team Lead" :{
+    "Sales Team Lead": {
         "Lead": ["read", "write", "create"],
         "Opportunity": ["read", "write", "create"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
-        "Sales Order":["select","read", "write", "create"],
-        "Agreement":["select","read", "write", "create"],
-        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Sales Order": ["select", "read", "write", "create"],
+        "Agreement": ["select", "read", "write", "create"],
+        "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
     },
-
-    "Sales Person" :{
+    "Sales Person": {
         "Lead": ["read", "write", "create"],
         "Opportunity": ["read", "write", "create"],
         "Customer": ["read", "write", "create"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
-        "Sales Order":["select","read", "write", "create"],
-        "Agreement":["select","read", "write", "create"],
-        "Pdf Agreement Template":["select","read", "write", "create"],
+        "Sales Order": ["select", "read", "write", "create"],
+        "Agreement": ["select", "read", "write", "create"],
+        "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
-    },    
-
+    },
     "Marketing Master Manager": {
-        "Marketing": ["select", "read", "write", "create", "delete", "print", "email", "report", "share"],
-        "Interview": ["select", "read", "write", "create", "delete", "print", "email", "report", "share"],
+        "Marketing": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Interview": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Marketing Manager": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select"],
@@ -154,7 +214,6 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Marketing Team Lead": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select"],
@@ -162,7 +221,6 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Senior Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select"],
@@ -170,7 +228,6 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Marketing Mentor": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select"],
@@ -178,7 +235,6 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select"],
@@ -186,21 +242,18 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Senior Resume Person": {
         "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Resume Person": {
         "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Technical Coordinator": {
         "RUC": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
@@ -208,7 +261,20 @@ ROLE_PERMISSIONS = {
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
     },
-
+    "Technical Manager": {
+        "RUC": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+        "Employee": ["read", "select"],
+        "Outsource": ["read", "write", "create", "select"],
+        "Lead Detail Form": ["read"],
+    },
+    "Technical Master Manager": {
+        "RUC": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+        "Employee": ["read", "select"],
+        "Outsource": ["read", "write", "create", "select"],
+        "Lead Detail Form": ["read"],
+    },
     "RUC Person": {
         "RUC": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
@@ -216,7 +282,6 @@ ROLE_PERMISSIONS = {
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
     },
-
     "Training Person": {
         "RUC": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
@@ -224,20 +289,24 @@ ROLE_PERMISSIONS = {
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
     },
-
-    "JD": {
+    "Support Person": {
         "RUC": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
     },
-
-     "HR Manager": {
+    "JDC": {
+        "RUC": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+        "Employee": ["read", "select"],
+        "Outsource": ["read", "write", "create", "select"],
+        "Lead Detail Form": ["read"],
+    },
+    "HR Manager": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
     },
-
     "HR": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
@@ -247,11 +316,31 @@ ROLE_PERMISSIONS = {
 
 DEPARTMENTS_ROLES = {
     "Lead": ["Lead Master Manager", "Lead Manager", "Lead Team Lead", "Lead Person"],
-    "Sales": ["Sales Master Manager", "Sales Manager", "Sales Team Lead", "Sales Person"],
-    "Marketing": ["Marketing Master Manager", "Marketing Manager", "Marketing Team Lead", "Senior Recruiter", "Marketing Mentor", "Recruiter"],
+    "Sales": [
+        "Sales Master Manager",
+        "Sales Manager",
+        "Sales Team Lead",
+        "Sales Person",
+    ],
+    "Marketing": [
+        "Marketing Master Manager",
+        "Marketing Manager",
+        "Marketing Team Lead",
+        "Senior Recruiter",
+        "Marketing Mentor",
+        "Recruiter",
+    ],
     "Resume": ["Senior Resume Person", "Resume Person"],
-    "Technical": ["Technical Coordinator", "RUC Person", "Training Person", "JD"],
-    "HR": ["HR Manager", "HR"],  
+    "Technical": [
+        "Technical Coordinator",
+        "RUC Person",
+        "Training Person",
+        "JDC",
+        "Technical Manager",
+        "Technical Master Manager",
+        "Support Person"
+    ],
+    "HR": ["HR Manager", "HR"],
 }
 
 
@@ -266,7 +355,7 @@ HIERARCHY_DATA = [
             {"parent_role": "Lead Manager", "child_roles": ["Lead Team Lead"]},
             {"parent_role": "Lead Team Lead", "child_roles": ["Lead Person"]},
         ],
-        "auto_assign_config": {"role": "Lead Employee"},
+        "auto_assign_config": {"role": "Lead Person"},
     },
     {
         "department": "Sales",
@@ -280,8 +369,14 @@ HIERARCHY_DATA = [
     {
         "department": "Marketing",
         "role_hierarchy_json": [
-            {"parent_role": "Marketing Master Manager", "child_roles": ["Marketing Manager"]},
-            {"parent_role": "Marketing Manager", "child_roles": ["Marketing Team Lead"]},
+            {
+                "parent_role": "Marketing Master Manager",
+                "child_roles": ["Marketing Manager"],
+            },
+            {
+                "parent_role": "Marketing Manager",
+                "child_roles": ["Marketing Team Lead"],
+            },
             {"parent_role": "Marketing Team Lead", "child_roles": ["Senior Recruiter"]},
             {"parent_role": "Senior Recruiter", "child_roles": ["Marketing Mentor"]},
             {"parent_role": "Marketing Mentor", "child_roles": ["Recruiter"]},
@@ -299,8 +394,16 @@ HIERARCHY_DATA = [
         "department": "Technical",
         "role_hierarchy_json": [
             {
+                "parent_role": "Technical Master Manager",
+                "child_roles": ["Technical Manager"],
+            },
+            {
+                "parent_role": "Technical Manager",
+                "child_roles": ["Technical Coordinator"],
+            },
+            {
                 "parent_role": "Technical Coordinator",
-                "child_roles": ["RUC Person", "Training Person", "JD"],
+                "child_roles": ["RUC Person", "Training Person", "JDC"," Support Person"],
             },
         ],
         "auto_assign_config": {"role": "Technical Coordinator"},
@@ -326,9 +429,8 @@ FORM_TOURS = {
                 "label": "Full Name",
                 "fieldtype": "Data",
             }
-        ]
+        ],
     },
-
     "Opportunity": {
         "title": "Opportunity Form",
         "steps": [
@@ -347,10 +449,9 @@ FORM_TOURS = {
                 "position": "Top",
                 "label": "Party",
                 "fieldtype": "Dynamic Link",
-            }
-        ]
+            },
+        ],
     },
-
     "Resume": {
         "title": "Resume Form",
         "steps": [
@@ -385,10 +486,9 @@ FORM_TOURS = {
                 "position": "Top",
                 "label": "Upload Resume",
                 "fieldtype": "Attach",
-            }
-        ]
+            },
+        ],
     },
-
     "Marketing": {
         "title": "Marketing Form",
         "steps": [
@@ -407,10 +507,9 @@ FORM_TOURS = {
                 "position": "Right Center",
                 "label": "Assign To",
                 "fieldtype": "Link",
-            }
-        ]
+            },
+        ],
     },
-
     "RUC": {
         "title": "RUC Form",
         "steps": [
@@ -453,24 +552,22 @@ FORM_TOURS = {
                 "position": "Top",
                 "label": "Session Details",
                 "fieldtype": "Table",
-            }
-        ]
+            },
+        ],
     },
-
     "Sales Order": {
         "title": "Sales Order Agreement Form",
         "steps": [
             {
                 "title": "Agreement Section",
                 "fieldname": "agreement_html",
-                "description": '1. Select the template.<br>2. Preview the template by clicking the <b>“Preview”</b> button.<br>3. Click the <b>“Save & Send”</b> button to save the template and send the agreement to the customer.',
+                "description": "1. Select the template.<br>2. Preview the template by clicking the <b>“Preview”</b> button.<br>3. Click the <b>“Save & Send”</b> button to save the template and send the agreement to the customer.",
                 "position": "Bottom",
                 "label": "Session Details",
                 "fieldtype": "HTML",
             }
-        ]
+        ],
     },
-
     "Employee": {
         "title": "Employee Form",
         "steps": [
@@ -489,10 +586,9 @@ FORM_TOURS = {
                 "position": "Bottom",
                 "label": "Employee Assignment Details Table",
                 "fieldtype": "HTML",
-            }
-        ]
+            },
+        ],
     },
-
     "Interview": {
         "title": "Interview Form",
         "steps": [
@@ -519,10 +615,9 @@ FORM_TOURS = {
                 "position": "Right Center",
                 "label": "Role",
                 "fieldtype": "Data",
-            }
-        ]
+            },
+        ],
     },
-
     "Pdf Agreement Template": {
         "title": "PDF Agreement Template Form",
         "steps": [
@@ -557,10 +652,9 @@ FORM_TOURS = {
                 "position": "Top",
                 "label": "Build Template",
                 "fieldtype": "HTML",
-            }
-        ]
+            },
+        ],
     },
-
     "Customer": {
         "title": "Customer Form",
         "steps": [
@@ -572,7 +666,7 @@ FORM_TOURS = {
                 "label": "Opportunity",
                 "fieldtype": "Link",
             }
-        ]
+        ],
     },
 }
 
@@ -580,52 +674,80 @@ FORM_TOURS = {
 def after_install():
     seed_sales_stages()
     seed_type_of_interview()
-    # seed_form_tours()
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
     seed_hierarchy()
     remove_default_workspaces()
+    seed_form_tours()
 
 
 def seed_sales_stages():
     doctype = "Sales Stage"
-    sales_stages = ["Prospecting", "Qualification", "Needs Analysis", "Value Proposition", "Identifying Decision Makers", "Perception Analysis", "Proposal/Price Quote", "Negotiation/Review"]
+    sales_stages = [
+        "Prospecting",
+        "Qualification",
+        "Needs Analysis",
+        "Value Proposition",
+        "Identifying Decision Makers",
+        "Perception Analysis",
+        "Proposal/Price Quote",
+        "Negotiation/Review",
+    ]
 
     for stage in sales_stages:
         if not frappe.db.exists(doctype, stage):
-            doc = frappe.get_doc({
-                "doctype": doctype,
-                "name1": stage,
-            })
+            doc = frappe.get_doc(
+                {
+                    "doctype": doctype,
+                    "name1": stage,
+                }
+            )
             doc.insert(ignore_permissions=True)
 
 
 def seed_type_of_interview():
     doctype = "Type Of Interview"
-    types = ["Google Meet", "Microsoft Teams", "Joom call", "WebEx", "Skype", "Phone Call", "On-site"]
+    types = [
+        "Google Meet",
+        "Microsoft Teams",
+        "Joom call",
+        "WebEx",
+        "Skype",
+        "Phone Call",
+        "On-site",
+    ]
 
     for t in types:
         if not frappe.db.exists(doctype, t):
-            doc = frappe.get_doc({
-                "doctype": doctype,
-                "type": t,
-            })
+            doc = frappe.get_doc(
+                {
+                    "doctype": doctype,
+                    "type": t,
+                }
+            )
             doc.insert(ignore_permissions=True)
-
 
 def seed_form_tours():
     for reference_doctype, config in FORM_TOURS.items():
 
-        # Use reference_doctype as the Form Tour name
         tour_name = reference_doctype
-
-        if frappe.db.exists("Form Tour", tour_name):
-            continue
-
         meta = frappe.get_meta(reference_doctype)
 
-        steps = []
+        # Load or create Form Tour
+        if frappe.db.exists("Form Tour", tour_name):
+            tour = frappe.get_doc("Form Tour", tour_name)
+            # Clear existing steps to avoid duplication
+            tour.set("steps", [])
+        else:
+            tour = frappe.new_doc("Form Tour")
+            tour.name = tour_name
+            tour.reference_doctype = reference_doctype
+
+        tour.title = config.get("title", reference_doctype)
+        tour.save_on_completion = 0 if reference_doctype == "Sales Order" else 1
+
+        # Build steps fresh
         for step in config["steps"]:
             step_doc = {
                 "doctype": "Form Tour Step",
@@ -636,36 +758,23 @@ def seed_form_tours():
                 "fieldtype": step.get("fieldtype", ""),
             }
 
-            # Mutually exclusive fields
+            # Validate mutually exclusive selectors
             if step.get("fieldname"):
-                # Validate field exists
                 if meta.has_field(step["fieldname"]):
                     step_doc["fieldname"] = step["fieldname"]
                 else:
-                    # Skip invalid step, do NOT crash migrate
                     frappe.log_error(
                         title="Invalid Form Tour Field",
-                        message=f"{reference_doctype}.{step['fieldname']} does not exist"
+                        message=f"{reference_doctype}.{step['fieldname']} does not exist",
                     )
                     continue
 
             if step.get("selector"):
                 step_doc["selector"] = step["selector"]
 
-            steps.append(step_doc)
+            tour.append("steps", step_doc)
 
-        save_on_completion = 0 if reference_doctype == "Sales Order" else 1
-
-        tour = frappe.get_doc({
-            "doctype": "Form Tour",
-            "name": tour_name,
-            "title": config.get("title", reference_doctype),
-            "reference_doctype": reference_doctype,
-            "save_on_completion": save_on_completion,
-            "steps": steps
-        })
-
-        tour.insert(ignore_permissions=True)
+        tour.save(ignore_permissions=True)
 
     frappe.db.commit()
 
@@ -687,14 +796,16 @@ def seed_employee_departments():
         if frappe.db.exists("Department", department_name):
             continue
 
-        doc = frappe.get_doc({
-            "doctype": "Department",
-            "department_name": department_name,
-            "roles_json": json.dumps(roles),
-        })
+        doc = frappe.get_doc(
+            {
+                "doctype": "Department",
+                "department_name": department_name,
+                "roles_json": json.dumps(roles),
+            }
+        )
 
         doc.insert(ignore_permissions=True)
-        
+
 
 def assign_permissions_to_roles(role_permissions: dict):
     """
@@ -711,17 +822,28 @@ def assign_permissions_to_roles(role_permissions: dict):
         if not frappe.db.exists("Role", role):
             continue
 
-        for doctype, allowed_perms in doctypes.items():
+        for doctype, config in doctypes.items():
 
             # Doctype must exist
             if not frappe.db.exists("DocType", doctype):
                 continue
 
-            # Skip core/system doctypes
+            # Skip protected/system doctypes
             if doctype in PROTECTED_DOCTYPES:
                 continue
 
-            # 1. Remove existing permissions for this role + doctype
+            # ---- normalize config ----
+            if isinstance(config, list):
+                allowed_perms = config
+                if_owner = 0
+            elif isinstance(config, dict):
+                allowed_perms = config.get("perms", [])
+                if_owner = 1 if config.get("if_owner") else 0
+            else:
+                continue
+            # --------------------------
+
+            # Remove existing permissions for this role + doctype
             frappe.db.delete(
                 "DocPerm",
                 {
@@ -730,15 +852,16 @@ def assign_permissions_to_roles(role_permissions: dict):
                 },
             )
 
-            # 2. Create fresh permission row
+            # Create new permission row
             perm = frappe.new_doc("DocPerm")
             perm.parent = doctype
             perm.parenttype = "DocType"
             perm.parentfield = "permissions"
             perm.role = role
             perm.permlevel = 0
+            perm.if_owner = if_owner
 
-            # 3. Explicitly set ALL permission flags
+            # Explicitly set all permission flags
             for field in PERM_FIELDS:
                 setattr(perm, field, 1 if field in allowed_perms else 0)
 
@@ -776,14 +899,19 @@ def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
     # Names of workspaces to keep visible
-    keep_list = ["CRM", "Users","Technical","Marketings","Settings","Employees"]
+    keep_list = ["CRM", "Users", "Technical", "Marketings", "Settings", "Employees"]
 
     # Hide all others
-    frappe.db.sql("""
+    frappe.db.sql(
+        """
         UPDATE `tabWorkspace`
         SET is_hidden = 1
         WHERE name NOT IN ({})
-    """.format(", ".join(["%s"] * len(keep_list))), tuple(keep_list))
+    """.format(
+            ", ".join(["%s"] * len(keep_list))
+        ),
+        tuple(keep_list),
+    )
 
     frappe.db.commit()
 
