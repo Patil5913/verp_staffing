@@ -1033,57 +1033,51 @@ def seed_bulk_users_with_password():
     created = 0
     skipped = 0
 
-    for role_profile, count in ROLE_USER_COUNTS.items():
+    # ---- DISABLE USER CREATION THROTTLING ----
+    frappe.flags.in_import = True
 
-        # Role Profile must exist
-        if not frappe.db.exists("Role Profile", role_profile):
-            frappe.log_error(
-                "Missing Role Profile",
-                f"Role Profile '{role_profile}' not found. Skipping users."
-            )
-            continue
-
-        role_slug = _safe_role_slug(role_profile)
-
-        for i in range(1, count + 1):
-            email = f"{role_slug}_{i}@gmail.com"
-            full_name = f"{role_profile}${i}"
-
-            # Skip if user already exists
-            if frappe.db.exists("User", email):
-                skipped += 1
+    try:
+        for role_profile, count in ROLE_USER_COUNTS.items():
+            if not frappe.db.exists("Role Profile", role_profile):
                 continue
 
-            user = frappe.new_doc("User")
-            user.email = email
-            user.first_name = full_name
-            user.enabled = 1
+            role_slug = _safe_role_slug(role_profile)
 
-            # Absolutely critical flags
-            user.send_welcome_email = 0
-            user.send_me_a_copy = 0
+            for i in range(1, count + 1):
+                email = f"{role_slug}_{i}@gmail.com"
+                full_name = f"{role_profile}{i}"
 
-            # Assign role profile
-            user.role_profile_name = role_profile
+                if frappe.db.exists("User", email):
+                    skipped += 1
+                    continue
 
-            # Insert user
-            user.insert(ignore_permissions=True)
+                user = frappe.new_doc("User")
+                user.email = email
+                user.first_name = full_name
+                user.enabled = 1
+                user.send_welcome_email = 0
+                user.send_me_a_copy = 0
+                user.role_profile_name = role_profile
 
-            # Set password explicitly
-            frappe.utils.password.update_password(
-                user=email,
-                pwd=COMMON_PASSWORD,
-                logout_all_sessions=False
-            )
+                user.insert(ignore_permissions=True)
 
-            created += 1
+                frappe.utils.password.update_password(
+                    user=email,
+                    pwd=COMMON_PASSWORD,
+                    logout_all_sessions=False
+                )
+
+                created += 1
+
+    finally:
+        # ---- ALWAYS RE-ENABLE ----
+        frappe.flags.in_import = False
 
     frappe.db.commit()
     print(f"Created {created} users, skipped {skipped} existing users.")
     return {
         "created": created,
         "skipped_existing": skipped,
-        "total_expected": sum(ROLE_USER_COUNTS.values())
     }
 
 
