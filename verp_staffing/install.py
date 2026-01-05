@@ -35,34 +35,6 @@ ROLES = [
     "_show_employees",
 ]
 
-ROLE_PROFILES_TO_SEED = {
-    "Lead Master Manager",
-    "Lead Manager",
-    "Lead Team Lead",
-    "Lead Person",
-    "Sales Team Lead",
-    "Sales Person",
-    "Sales Manager",
-    "Sales Master Manager",
-    "Marketing Master Manager",
-    "Marketing Manager",
-    "Marketing Team Lead",
-    "Senior Recruiter",
-    "Marketing Mentor",
-    "Recruiter",
-    "Senior Resume Person",
-    "Resume Person",
-    "Technical Coordinator",
-    "RUC Person",
-    "Training Person",
-    "Support Person",
-    "JDC",
-    "Technical Manager",
-    "Technical Master Manager",
-    "HR Manager",
-    "HR",
-}
-
 PERM_FIELDS = [
     "select",
     "read",
@@ -367,7 +339,7 @@ DEPARTMENTS_ROLES = {
         "JDC",
         "Technical Manager",
         "Technical Master Manager",
-        "Support Person"
+        "Support Person",
     ],
     "HR": ["HR Manager", "HR"],
 }
@@ -432,7 +404,12 @@ HIERARCHY_DATA = [
             },
             {
                 "parent_role": "Technical Coordinator",
-                "child_roles": ["RUC Person", "Training Person", "JDC"," Support Person"],
+                "child_roles": [
+                    "RUC Person",
+                    "Training Person",
+                    "JDC",
+                    " Support Person",
+                ],
             },
         ],
         "auto_assign_config": {"role": "Technical Coordinator"},
@@ -707,9 +684,8 @@ def after_install():
     # seed_employee_departments()
     # assign_permissions_to_roles(ROLE_PERMISSIONS)
     # seed_hierarchy()
-    # seed_role_profiles()
     # remove_default_workspaces()
-    # seed_bulk_users_with_password()
+    seed_bulk_users_with_password()
     seed_employees_with_hierarchy(HIERARCHY_DATA)
     # seed_form_tours()
 
@@ -759,6 +735,7 @@ def seed_type_of_interview():
                 }
             )
             doc.insert(ignore_permissions=True)
+
 
 def seed_form_tours():
     for reference_doctype, config in FORM_TOURS.items():
@@ -821,41 +798,6 @@ def create_all_roles():
             role.save(ignore_permissions=True)
 
     frappe.clear_cache()
-
-def seed_role_profiles():
-    for role in ROLE_PROFILES_TO_SEED:
-
-        # Never touch Administrator
-        if role == "Administrator":
-            continue
-
-        # Role must exist
-        if not frappe.db.exists("Role", role):
-            frappe.log_error(
-                title="Missing Role",
-                message=f"Role '{role}' does not exist, skipping Role Profile"
-            )
-            continue
-
-        # Role Profile name = role name
-        profile_name = role
-
-        # Skip if already exists
-        if frappe.db.exists("Role Profile", profile_name):
-            continue
-
-        # Create Role Profile
-        profile = frappe.new_doc("Role Profile")
-        profile.role_profile = profile_name
-
-        # Add single role
-        profile.append("roles", {
-            "role": role
-        })
-
-        profile.insert(ignore_permissions=True)
-
-    frappe.db.commit()
 
 
 def seed_employee_departments():
@@ -983,6 +925,8 @@ def remove_default_workspaces():
     frappe.db.commit()
 
     print("Workspaces updated successfully.")
+
+
 COMMON_PASSWORD = "Vrugle@2026"
 
 ROLE_USER_COUNTS = {
@@ -990,19 +934,16 @@ ROLE_USER_COUNTS = {
     "Lead Manager": 3,
     "Lead Team Lead": 9,
     "Lead Person": 27,
-
     "Sales Master Manager": 1,
     "Sales Manager": 2,
     "Sales Team Lead": 6,
     "Sales Person": 24,
-
     "Marketing Master Manager": 1,
     "Marketing Manager": 2,
     "Marketing Team Lead": 4,
     "Senior Recruiter": 12,
     "Marketing Mentor": 36,
     "Recruiter": 180,
-
     "Technical Master Manager": 1,
     "Technical Manager": 2,
     "Technical Coordinator": 4,
@@ -1010,10 +951,8 @@ ROLE_USER_COUNTS = {
     "Training Person": 8,
     "JDC": 8,
     "Support Person": 8,
-
     "Senior Resume Person": 1,
     "Resume Person": 5,
-
     "HR Manager": 1,
     "HR": 2,
 }
@@ -1033,19 +972,25 @@ def seed_bulk_users_with_password():
     created = 0
     skipped = 0
 
-    # ---- DISABLE USER CREATION THROTTLING ----
+    # Disable throttling for bulk import
     frappe.flags.in_import = True
 
     try:
-        for role_profile, count in ROLE_USER_COUNTS.items():
-            if not frappe.db.exists("Role Profile", role_profile):
+        for role_name, count in ROLE_USER_COUNTS.items():
+
+            # Role must exist
+            if not frappe.db.exists("Role", role_name):
+                frappe.log_error(
+                    "Missing Role",
+                    f"Role '{role_name}' does not exist. Skipping users.",
+                )
                 continue
 
-            role_slug = _safe_role_slug(role_profile)
+            role_slug = _safe_role_slug(role_name)
 
             for i in range(1, count + 1):
                 email = f"{role_slug}_{i}@gmail.com"
-                full_name = f"{role_profile}{i}"
+                full_name = f"{role_name}{i}"
 
                 if frappe.db.exists("User", email):
                     skipped += 1
@@ -1055,25 +1000,28 @@ def seed_bulk_users_with_password():
                 user.email = email
                 user.first_name = full_name
                 user.enabled = 1
+
+                # Prevent emails
                 user.send_welcome_email = 0
                 user.send_me_a_copy = 0
-                user.role_profile_name = role_profile
+
+                # Assign ONLY the role (no role profile, no permissions)
+                user.append("roles", {"role": role_name})
 
                 user.insert(ignore_permissions=True)
 
+                # Set password
                 frappe.utils.password.update_password(
-                    user=email,
-                    pwd=COMMON_PASSWORD,
-                    logout_all_sessions=False
+                    user=email, pwd=COMMON_PASSWORD, logout_all_sessions=False
                 )
 
                 created += 1
 
     finally:
-        # ---- ALWAYS RE-ENABLE ----
         frappe.flags.in_import = False
 
     frappe.db.commit()
+
     print(f"Created {created} users, skipped {skipped} existing users.")
     return {
         "created": created,
@@ -1096,9 +1044,11 @@ DEPARTMENT_WORKSPACE_ROLE_MAP = {
     "HR": ["_show_employees"],
 }
 
+
 def seed_employees_with_hierarchy(HIERARCHY_DATA):
     """
-    Create Employees for Users and assign hierarchy evenly.
+    Create Employees for Users and assign hierarchy evenly
+    based strictly on User roles (NO role profiles).
     """
 
     # -------------------------------------------------
@@ -1109,24 +1059,38 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
     for dept in HIERARCHY_DATA:
         department = dept["department"]
         for edge in dept["role_hierarchy_json"]:
-            parent = edge["parent_role"]
+            parent = edge["parent_role"].strip()
             for child in edge["child_roles"]:
-                hierarchy_edges[department].append((parent.strip(), child.strip()))
+                hierarchy_edges[department].append((parent, child.strip()))
 
     # -------------------------------------------------
-    # 2. Fetch users grouped by role profile
+    # 2. Fetch users and their single role
     # -------------------------------------------------
     users_by_role = defaultdict(list)
 
     users = frappe.get_all(
         "User",
         filters={"enabled": 1},
-        fields=["name", "email", "role_profile_name"],
+        fields=["name", "email"],
     )
 
     for u in users:
-        if u.role_profile_name:
-            users_by_role[u.role_profile_name].append(u)
+        roles = frappe.get_all(
+            "Has Role",
+            filters={"parent": u.email},
+            pluck="role",
+        )
+
+        # Enforce exactly one role
+        if len(roles) != 1:
+            frappe.log_error(
+                "Invalid User Role State",
+                f"User {u.email} has roles: {roles}",
+            )
+            continue
+
+        role = roles[0]
+        users_by_role[role].append(u)
 
     # -------------------------------------------------
     # 3. Create Employees (idempotent)
@@ -1137,6 +1101,7 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
     for role, role_users in users_by_role.items():
         for u in role_users:
             emp_name = frappe.db.get_value("Employee", {"user": u.email}, "name")
+
             if emp_name:
                 emp = frappe.get_doc("Employee", emp_name)
             else:
@@ -1167,10 +1132,8 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
             if not parents or not children:
                 continue
 
-            parent_count = len(parents)
-
             for idx, child in enumerate(children):
-                parent = parents[idx % parent_count]
+                parent = parents[idx % len(parents)]
 
                 child.append(
                     "employee_assignment_details_table",
@@ -1184,29 +1147,26 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
 
                 child.save(ignore_permissions=True)
                 # ---- ADD WORKSPACE ROLES BASED ON DEPARTMENT ----
+
                 workspace_roles = DEPARTMENT_WORKSPACE_ROLE_MAP.get(department, [])
                 if workspace_roles:
-                    ensure_user_has_roles(child.user, workspace_roles)
-                    frappe.db.commit()
+                    ensure_user_has_workspace_roles(child.user, workspace_roles)
+    frappe.db.commit()
 
-def ensure_user_has_roles(user_email: str, roles: list[str]):
-    """
-    Add roles to user if missing.
-    Safe to call multiple times.
-    """
+def ensure_user_has_workspace_roles(user_email: str, roles: list[str]):
     if not roles:
         return
 
-    existing_roles = set(
+    existing = set(
         frappe.get_all(
             "Has Role",
             filters={"parent": user_email},
-            pluck="role"
+            pluck="role",
         )
     )
 
     for role in roles:
-        if role in existing_roles:
+        if role in existing:
             continue
 
         if not frappe.db.exists("Role", role):
@@ -1221,5 +1181,28 @@ def ensure_user_has_roles(user_email: str, roles: list[str]):
             "parent": user_email,
             "parenttype": "User",
             "parentfield": "roles",
-            "role": role
+            "role": role,
         }).insert(ignore_permissions=True)
+
+
+def get_primary_business_role(user_email: str) -> str | None:
+    """
+    Return the single non-workspace role for a user.
+    Workspace roles (_show_*) are ignored.
+    """
+    roles = frappe.get_all(
+        "Has Role",
+        filters={"parent": user_email},
+        pluck="role",
+    )
+
+    business_roles = [r for r in roles if not r.startswith("_show_")]
+
+    if len(business_roles) != 1:
+        frappe.log_error(
+            "Invalid Business Role State",
+            f"User {user_email} has business roles: {business_roles}",
+        )
+        return None
+
+    return business_roles[0]
