@@ -20,5 +20,14 @@ class Customer(Document):
 
 @frappe.whitelist()
 def get_employee_department():
-    emp = frappe.get_value("Employee", {"user": frappe.session.user}, ["employee_assignment_details_table"], as_dict=True)
-    return emp.employee_assignment_details_table if emp else None
+    employee_name = frappe.get_value(
+        "Employee",
+        {"user": frappe.session.user},
+        "name"
+    )
+
+    if not employee_name:
+        return None
+
+    emp = frappe.get_doc("Employee", employee_name)
+    return emp.employee_assignment_details_table

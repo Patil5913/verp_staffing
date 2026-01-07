@@ -110,8 +110,9 @@ def submit_and_generate(sales_order, template, data):
 
     agreement.db_set("pdf", url)
     base_url = get_url()
+    frappe.errprint(f"Base URL: {url}")
     form_url = (
-        f"{base_url}/details-form/new?so=${quote(sales_order)}&c=${quote(so.customer)}"
+        f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}"
     )
 
     frappe.db.commit()
@@ -183,6 +184,9 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
 
         name = f.get("name")
         val = data_dict.get(name, "")
+        fontsize = int(f.get("font_size") or 11)
+        line_height = float(f.get("line_height", 1.2))
+        
         ftype = f.get("type", "Text")
 
         # EXISTING FIELD TYPES
@@ -195,8 +199,7 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
             render_signature(page, rect, val)
 
         else:
-            fontsize = max(8, int(th * 0.55))
-            render_text(page, rect, str(val), fontsize=fontsize)
+            render_text(page, rect, str(val), fontsize=fontsize, line_height=line_height)
 
     filename = f"agreement_{frappe.generate_hash(6)}.pdf"
 
@@ -214,84 +217,53 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
 
     return out_path, url
 
+def flip_rect_y(rect, page_height):
+    return fitz.Rect(
+        rect.x0,
+        page_height - rect.y1,
+        rect.x1,
+        page_height - rect.y0,
+    )
+def wrap_text_for_annotation(text, max_chars):
+    words = text.split(" ")
+    lines, line = [], ""
+    for w in words:
+        if len(line + " " + w) <= max_chars:
+            line = (line + " " + w).strip()
+        else:
+            lines.append(line)
+            line = w
+    if line:
+        lines.append(line)
+    return "\n".join(lines)
 
-# Helpers for rendering different field types
-# TEXT FIELD
-
-
-def render_text(page, rect, text, fontsize=12):
+def render_text(page, rect, value, fontsize=15, line_height=1.2):
     """
-    Render wrapped and auto-fitted text using FreeText annotation only.
+    Render text using FreeText annotation.
+    Font size and wrapping are fully controlled by frontend.
     """
-    text = text or ""
+    text = str(value or "").strip()
+    if not text:
+        return
 
-    # Min/max font
-    max_font = fontsize
-    min_font = 6
-
-    width = rect.width
-    height = rect.height
-
-    # A good baseline character width (PDF Helvetica)
-    def char_width(font):
-        return font * 0.45  # average Helvetica width
-
-    # A good baseline line height
-    def line_height(font):
-        return font * 1.2
-
-    # Try decreasing font until the text fits
-    font = max_font
-    while font >= min_font:
-
-        cw = char_width(font)
-        lh = line_height(font)
-
-        max_chars = int(width / cw)
-        max_lines = int(height / lh)
-
-        # Estimate wrapped text
-        wrapped_lines = []
-        for word_block in text.split("\n"):
-            words = word_block.split(" ")
-            line = ""
-            for w in words:
-                if len(line + " " + w) <= max_chars:
-                    line = (line + " " + w).strip()
-                else:
-                    wrapped_lines.append(line)
-                    line = w
-            if line:
-                wrapped_lines.append(line)
-
-        # Check if fits
-        if len(wrapped_lines) <= max_lines:
-            final_text = "\n".join(wrapped_lines)
-
-            annot = page.add_freetext_annot(
-                rect,
-                final_text,
-                fontsize=font,
-                fontname="helv",
-                text_color=(0, 0, 0),
-                fill_color=None,
-                align=0,
-            )
-            annot.update()
-            return
-
-        font -= 1
-
-    # If nothing fits — render smallest possible text
     annot = page.add_freetext_annot(
         rect,
         text,
-        fontsize=min_font,
+        fontsize=fontsize,
         fontname="helv",
         text_color=(0, 0, 0),
         fill_color=None,
-        align=0,
+        align=0
     )
+
+    try:
+        annot.set_info({
+            "wrap": "true",
+            "line_height": str(line_height)
+        })
+    except Exception:
+        pass
+
     annot.update()
 
 
@@ -345,7 +317,7 @@ def render_payment_terms_table(page, rect, terms):
 
     # quick guard
     if not terms:
-        render_text(page, rect, "No Payment Terms", fontsize=10)
+        render_text(page, rect, "No Payment Terms", fontsize=10, line_height=1.2)
         return
 
     try:
@@ -488,4 +460,4 @@ def render_payment_terms_table(page, rect, terms):
         # As last resort log exception so you can paste it here
         frappe.errprint(f"render_payment_terms_table exception: {exc}")
         # fallback: draw simple text to avoid failing the whole PDF
-        render_text(page, rect, "Payment terms rendering failed", fontsize=10)
+        render_text(page, rect, "Payment terms rendering failed", fontsize=10,line_height=1.2)

@@ -1,6 +1,19 @@
 {
- "charts": [],
- "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"haF9q-oQhY\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Leads\",\"col\":4}},{\"id\":\"2_SlHCA1a-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"_PZbhqba48\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
+ "charts": [
+  {
+   "chart_name": "Leads Created Over Time",
+   "label": "Leads Created Over Time"
+  },
+  {
+   "chart_name": "Leads by Owner",
+   "label": "Leads by Owner"
+  },
+  {
+   "chart_name": "Lead Conversion Funnel",
+   "label": "Lead Conversion Funnel"
+  }
+ ],
+ "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"UNzWAfq34K\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Leads Created Over Time\",\"col\":6}},{\"id\":\"BSmH4a71DO\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Leads by Owner\",\"col\":6}},{\"id\":\"Wh21C0e3aM\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"haF9q-oQhY\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Leads\",\"col\":4}},{\"id\":\"2_SlHCA1a-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"_PZbhqba48\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
  "creation": "2025-12-28 15:41:07.289866",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +26,7 @@
  "is_hidden": 0,
  "label": "CRM",
  "links": [],
- "modified": "2026-01-04 14:15:18.705348",
+ "modified": "2026-01-06 17:57:26.898569",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "CRM",
