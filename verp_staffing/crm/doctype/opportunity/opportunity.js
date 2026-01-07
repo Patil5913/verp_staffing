@@ -32,6 +32,15 @@ frappe.ui.form.on("Opportunity", {
             frm.set_df_property("status", "read_only", 1)
         }
 
+        frm.set_query("opportunity_owner", function () {
+            return {
+                filters: {
+                    department: "Sales"
+                }
+            };
+        });
+
+
         frm.add_custom_button(__("Create Customer"), function () {
             open_create_sales_order_dialog(frm);
         });
@@ -48,7 +57,10 @@ frappe.ui.form.on("Opportunity", {
                 method: "frappe.client.get_value",
                 args: {
                     doctype: "Employee",
-                    filters: { user: frappe.session.user },
+                    filters: {
+                        user: frappe.session.user,
+                        department: "Sales"
+                    },
                     fieldname: "name"
                 },
                 callback: function (r) {

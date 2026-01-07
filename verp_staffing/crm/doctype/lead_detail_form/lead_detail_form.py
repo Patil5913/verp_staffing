@@ -58,6 +58,12 @@ class LeadDetailForm(Document):
 
             self.apply_pdf_signature(self.signature_image)
 
+        elif self.signature_method == "Text":
+            if not self.signature_image:
+                frappe.throw("Text Signature image missing for Text method")
+
+            self.apply_pdf_signature(self.signature_image)
+
         elif self.signature_method == "Draw":
             self._process_drawn_signature_and_apply()
 

@@ -71,7 +71,7 @@ frappe.ready(function () {
             if (r.message[0].name) {
                 frappe.web_form.set_value("agreement_link", r.message[0].name);
             }
-            
+
             const pdfPath = r.message[0].pdf;
 
             if (!pdfPath) {
@@ -113,6 +113,8 @@ frappe.ready(function () {
     frappe.web_form.on('signature_method', (field, value) => {
         if (value === "Upload") {
             show_upload_button();
+        } else if (value === "Text") {
+            show_text_button()
         } else {
             frappe.web_form.set_value("signature_custom_html", "");
         }
@@ -121,6 +123,11 @@ frappe.ready(function () {
     // If method is already Upload on load
     if (frappe.web_form.get_value("signature_method") === "Upload") {
         show_upload_button();
+    }
+
+    // If method is already Upload on load
+    if (frappe.web_form.get_value("signature_method") === "Text") {
+        show_text_button();
     }
 
     render_file_upload_buttons();
@@ -383,6 +390,16 @@ function validate_signature(method) {
         return true;
     }
 
+    if (method === "Text") {
+        let signature_image = frappe.web_form.get_value("signature_image");
+
+        if (!signature_image) {
+            frappe.msgprint("Please provide your Text signature image.");
+            return false;
+        }
+        return true;
+    }
+
     if (method === "Draw") {
         let signature = frappe.web_form.get_value("signature");
 
@@ -453,6 +470,241 @@ function format_timestamp() {
 
     return `${day}-${month}-${year}, ${hours}:${minutes}:${seconds}`;
 }
+
+function show_text_button() {
+    let html = `
+        <button class="btn btn-primary" id="open_signature_upload">
+            Provide Text Signature
+        </button>
+        <p style="color:red; font-size:12px; margin-top:5px;">
+            * Text Signature is compulsory
+        </p>
+        <div id="signature_preview_area" style="margin-top: 15px;"></div>
+    `;
+
+    frappe.web_form.set_value("signature_custom_html", html);
+
+    setTimeout(() => {
+        $("#open_signature_upload").on("click", function () {
+            open_text_dialog();
+        });
+    }, 300);
+}
+
+function load_signature_fonts() {
+    if (document.getElementById("signature-fonts")) return;
+
+    const link = document.createElement("link");
+    link.id = "signature-fonts";
+    link.rel = "stylesheet";
+    link.href =
+        "https://fonts.googleapis.com/css2?" +
+        "family=Sacramento&" +
+        "family=Mr+Dafoe&" +
+        "family=Yellowtail&" +
+        "family=Marck+Script&" +
+        "family=Alex+Brush&" +
+        "display=swap";
+
+    document.head.appendChild(link);
+}
+
+function open_text_dialog() {
+    load_signature_fonts();
+
+    const fonts = [
+        "Sacramento",      // ⭐ most natural handwritten signature
+        "Mr Dafoe",        // bold, marker-style signature
+        "Yellowtail",      // smooth cursive signature
+        "Marck Script",    // clean handwritten look
+        "Alex Brush"       // elegant but still signature-like
+    ];
+
+
+    let selectedFont = fonts[0];
+
+    let d = new frappe.ui.Dialog({
+        title: "Create Text Signature",
+        fields: [
+            {
+                label: "Your Name",
+                fieldname: "signature_text",
+                fieldtype: "Data",
+                reqd: 1
+            },
+            {
+                fieldname: "preview_html",
+                fieldtype: "HTML",
+                options: `
+                    <div style="margin-top:16px;">
+                        <div id="signature_text_preview"
+                             style="
+                                font-size:44px;
+                                font-weight: 400;
+                                letter-spacing: 0.5px;
+                                line-height: 1.2;
+                                font-family:${selectedFont};
+                                padding:12px;
+                                border-bottom:1px solid #ddd;
+                             ">
+                        </div>
+
+                        <div id="font_buttons" style="margin-top:14px;"></div>
+
+                        <p style="
+                            margin-top:16px;
+                            font-size:13px;
+                            color:#842029;
+                            background:#f8d7da;
+                            padding:12px;
+                            border-radius:8px;
+                        ">
+                            <b>Important:</b>
+                            Once you click <b>Upload Signature</b>,
+                            this signature will be <u>locked</u> and cannot be changed.
+                        </p>
+                    </div>
+                `
+            }
+        ],
+        primary_action_label: "Upload Signature",
+        primary_action(values) {
+            if (!values.signature_text) {
+                frappe.msgprint("Please enter your name.");
+                return;
+            }
+
+            generate_signature_image(
+                values.signature_text,
+                selectedFont,
+                d
+            );
+        }
+    });
+
+    d.show();
+
+    const $wrap = d.wrapper;
+
+    const rotate = (Math.random() * 1.5 - 0.75).toFixed(2);
+
+    $wrap.find("#signature_text_preview").css(
+        "transform",
+        `rotate(${rotate}deg)`
+    );
+
+
+    // Inject clean CSS once
+    if (!document.getElementById("signature-style")) {
+        $("<style id='signature-style'>\
+            .signature-font-grid {\
+                display:grid;\
+                grid-template-columns:repeat(auto-fit,minmax(130px,1fr));\
+                gap:10px;\
+            }\
+            .signature-font-btn {\
+                background:#ffffff;\
+                border:1px solid #e5e7eb;\
+                border-radius:10px;\
+                padding:10px;\
+                font-size:14px;\
+                cursor:pointer;\
+                transition:all .15s ease;\
+                text-align:center;\
+            }\
+            .signature-font-btn:hover {\
+                background:#f9fafb;\
+            }\
+            .signature-font-btn.active {\
+                border-color:#2563eb;\
+                background:#eef2ff;\
+                box-shadow:0 0 0 2px rgba(37,99,235,.15);\
+            }\
+        </style>").appendTo("head");
+    }
+
+    // Render font buttons
+    let btnHtml = `<div class="signature-font-grid">`;
+
+    fonts.forEach(font => {
+        btnHtml += `
+            <button type="button"
+                    class="signature-font-btn ${font === selectedFont ? "active" : ""}"
+                    data-font="${font}"
+                    style="font-family:${font};">
+                ${font}
+            </button>
+        `;
+    });
+
+    btnHtml += `</div>`;
+
+    $wrap.find("#font_buttons").html(btnHtml);
+
+    // Live typing preview
+    $wrap.find('input[data-fieldname="signature_text"]').on("input", function () {
+        const text = $(this).val();
+        $wrap.find("#signature_text_preview")
+            .css("font-family", selectedFont)
+            .text(text);
+    });
+
+    // Font selection
+    $wrap.on("click", ".signature-font-btn", function () {
+        selectedFont = $(this).data("font");
+
+        $wrap.find(".signature-font-btn").removeClass("active");
+        $(this).addClass("active");
+
+        const text = $wrap.find('input[data-fieldname="signature_text"]').val();
+        $wrap.find("#signature_text_preview")
+            .css("font-family", selectedFont)
+            .text(text);
+    });
+}
+
+
+function generate_signature_image(text, font, dialog) {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = 600;
+    canvas.height = 150;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#000";
+    ctx.font = `48px ${font}`;
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 20, canvas.height / 2);
+
+    const base64_img = canvas.toDataURL("image/png");
+
+    frappe.call({
+        method: "verp_staffing.crm.api.upload.upload_file",
+        args: {
+            filename: "signature.png",
+            filedata: base64_img
+        },
+        callback: function (r) {
+            if (r.message && r.message.success) {
+                frappe.msgprint("Signature uploaded successfully.");
+                dialog.hide();
+
+                frappe.web_form.set_value(
+                    "signature_image",
+                    r.message.file_name
+                );
+
+                frappe.web_form.set_value(
+                    "signature_custom_html",
+                    `<img src="${r.message.file_url}" 
+                              style="max-width:200px; margin-top:10px;">`
+                );
+            }
+        }
+    });
+}
+
 
 function show_upload_button() {
     let html = `
@@ -629,6 +881,8 @@ function open_file_upload_dialog(target_field) {
     // generate a unique id for the file input so multiple dialogs don't clash
     const input_id = "custom_pdf_input_" + Date.now();
 
+    const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
+
     let d = new frappe.ui.Dialog({
         title: "Upload PDF File",
         fields: [
@@ -637,7 +891,12 @@ function open_file_upload_dialog(target_field) {
                 fieldname: "file_input",
                 fieldtype: "HTML",
                 // use the unique id in the markup
-                options: `<input type="file" accept="application/pdf" id="${input_id}">`
+                options: `
+                            <input type="file" accept="application/pdf" id="${input_id}">
+                            <div style="margin-top:6px; font-size:12px; color:#cc0000;">
+                                Max file size allowed: <b>1 MB</b>. Larger files will be rejected.
+                            </div>
+                        `
             },
             {
                 label: "Preview",
@@ -676,6 +935,12 @@ function open_file_upload_dialog(target_field) {
 
     d.show();
 
+    function reset_selection() {
+        selected_file = null;
+        $wrap.find(`#${input_id}`).val("");
+        $wrap.find("#pdf_preview_area").html("No file selected");
+    }
+
     // cache wrapper for event delegation limited to this dialog
     const $wrap = d.wrapper;
 
@@ -691,10 +956,17 @@ function open_file_upload_dialog(target_field) {
 
         if (selected_file.type !== "application/pdf") {
             frappe.msgprint("Only PDF files are allowed.");
-            // clear selected_file and input
-            selected_file = null;
-            $wrap.find(`#${input_id}`).val("");
-            $wrap.find("#pdf_preview_area").html("No file selected");
+            reset_selection();
+            return;
+        }
+
+        if (selected_file.size > MAX_PDF_SIZE) {
+            frappe.msgprint({
+                title: "File Too Large",
+                message: "PDF size must not exceed 1 MB.",
+                indicator: "red"
+            });
+            reset_selection();
             return;
         }
 
@@ -713,10 +985,7 @@ function open_file_upload_dialog(target_field) {
 
     // delete button (scoped to this dialog)
     $wrap.on("click", "#delete_pdf_btn", function () {
-        selected_file = null;
-        // reset input element
-        $wrap.find(`#${input_id}`).val("");
-        $wrap.find("#pdf_preview_area").html("No file selected");
+        reset_selection();
     });
 
     // When dialog is hidden, remove listeners attached to wrapper to avoid leaks
