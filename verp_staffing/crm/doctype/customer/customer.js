@@ -10,16 +10,6 @@ frappe.ui.form.on("Customer", {
         inject_department_css();
         inject_status_badge_css();
         load_department_panels(frm);
-        frappe.call({
-            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-            callback: (r) => {
-                let dept = r.message
-                apply_tab_visibility(frm, dept)
-                if (dept === "Sales" || frappe.user.has_role("System Manager")) {
-                    add_forward_button(frm);
-                }
-            }
-        })
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
@@ -707,7 +697,7 @@ function render_lead_details(frm) {
                         callback: (r) => {
                             let dept = r.message
                             apply_tab_visibility(frm, dept)
-                            if (dept === "Sales" || frappe.user.has_role("System Manager")) {
+                            if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
                                 add_forward_button(frm);
                             }
                         }

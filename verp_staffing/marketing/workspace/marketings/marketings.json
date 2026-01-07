@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Marketings",
  "links": [],
- "modified": "2025-12-28 15:23:25.307410",
+ "modified": "2026-01-04 14:17:47.974182",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketings",
@@ -22,7 +22,11 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "_show_marketing"
+  }
+ ],
  "sequence_id": 23.0,
  "shortcuts": [
   {

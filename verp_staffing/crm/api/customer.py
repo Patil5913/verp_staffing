@@ -15,7 +15,7 @@ def get_customer_department_panels(customer):
     if resume:
         result["resume"] = {
             "status": resume[0].status,
-            "assigned_to": resume[0].assign_to,
+            "assign_to": resume[0].assign_to,
             "last_updated": resume[0].modified
         }
 
@@ -29,7 +29,7 @@ def get_customer_department_panels(customer):
     if technical:
         result["technical"] = {
             "status": technical[0].status,
-            "assigned_to": technical[0].assign_to,
+            "assign_to": technical[0].assign_to,
             "last_updated": technical[0].modified
         }
 
@@ -37,7 +37,7 @@ def get_customer_department_panels(customer):
     marketing = frappe.get_all(
         "Marketing",
         filters={"customer": customer},
-        fields=["name", "assigned_to", "modified"],
+        fields=["name", "assign_to", "modified"],
         limit=1
     )
 
@@ -58,7 +58,7 @@ def get_customer_department_panels(customer):
         )
 
         result["marketing"] = {
-            "assigned_to": marketing[0].assigned_to,
+            "assign_to": marketing[0].assign_to,
             "total_interviews": total_interviews,
             "current_interviews": current_interviews,
             "last_updated": marketing[0].modified

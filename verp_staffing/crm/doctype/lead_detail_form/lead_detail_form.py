@@ -15,6 +15,7 @@ class LeadDetailForm(Document):
     def before_save(self):
         from frappe.utils import now_datetime
         from frappe.utils import format_datetime
+
         # Load audit logs sent from JS
         audit_from_js = {}
         try:
@@ -27,10 +28,14 @@ class LeadDetailForm(Document):
 
         # Add form submit event
         try:
-            form_logs.append({
-                "event": "form_submitted",
-                "timestamp": format_datetime(now_datetime(), "dd-MM-yyyy, HH:mm:ss")
-            })
+            form_logs.append(
+                {
+                    "event": "form_submitted",
+                    "timestamp": format_datetime(
+                        now_datetime(), "dd-MM-yyyy, HH:mm:ss"
+                    ),
+                }
+            )
         except:
             pass
 
@@ -38,8 +43,9 @@ class LeadDetailForm(Document):
         final_audit = {}
 
         final_audit["signer location"] = {
-            "ip": frappe.get_request_header("X-Forwarded-For") or frappe.local.request.remote_addr,
-            "user_agent": frappe.get_request_header("User-Agent")
+            "ip": frappe.get_request_header("X-Forwarded-For")
+            or frappe.local.request.remote_addr,
+            "user_agent": frappe.get_request_header("User-Agent"),
         }
 
         # Add signature logs ONLY IF not empty
@@ -49,7 +55,6 @@ class LeadDetailForm(Document):
         final_audit["form visit logs"] = form_logs
 
         self.audit_trail = json.dumps(final_audit, indent=2)
-
 
     def after_insert(self):
         if self.signature_method == "Upload":
@@ -67,7 +72,6 @@ class LeadDetailForm(Document):
         elif self.signature_method == "Draw":
             self._process_drawn_signature_and_apply()
 
-
     def _process_drawn_signature_and_apply(self):
         import base64
 
@@ -82,25 +86,25 @@ class LeadDetailForm(Document):
             img_base64 = self.signature.split(",")[-1]
             img_bytes = base64.b64decode(img_base64)
 
-            file_doc = frappe.get_doc({
-                "doctype": "File",
-                "file_name": "Signature.png",
-                "is_private": 0,
-                "content": img_bytes,
-                "attached_to_doctype": self.doctype,
-                "attached_to_name": self.name
-            }).insert(ignore_permissions=True)
+            file_doc = frappe.get_doc(
+                {
+                    "doctype": "File",
+                    "file_name": "Signature.png",
+                    "is_private": 0,
+                    "content": img_bytes,
+                    "attached_to_doctype": self.doctype,
+                    "attached_to_name": self.name,
+                }
+            ).insert(ignore_permissions=True)
 
             frappe.db.set_value(
-                self.doctype,
-                self.name,
-                "signature_image",
-                file_doc.name
+                self.doctype, self.name, "signature_image", file_doc.name
             )
 
             self.apply_pdf_signature(file_doc.file_url)
 
         except Exception as e:
+            frappe.errprint(f"Error processing drawn signature: {e}")
             frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
             frappe.throw("Failed to process drawn signature")
 
@@ -126,7 +130,6 @@ class LeadDetailForm(Document):
         else:
             signature_image_path = signature_image_file
 
-
         if not self.agreement_link:
             frappe.throw("Agreement link missing")
 
@@ -148,10 +151,7 @@ class LeadDetailForm(Document):
         except Exception:
             frappe.throw("Invalid fields_json in template")
 
-        audit_text = json.dumps(
-            json.loads(self.audit_trail),
-            indent=2
-        )
+        audit_text = json.dumps(json.loads(self.audit_trail), indent=2)
 
         input_pdf_path = resolve_file_path(agreement.pdf)
         if not input_pdf_path:
@@ -164,9 +164,8 @@ class LeadDetailForm(Document):
             audit_trail_text=audit_text,
             signer_name=f"{self.surname} {self.first_name} {self.father_name}",
             signer_email=f"{self.email}",
-            agreement=agreement
+            agreement=agreement,
         )
-
 
 
 def apply_signature_and_audit_to_pdf(
@@ -177,7 +176,7 @@ def apply_signature_and_audit_to_pdf(
     signer_name,
     signer_email,
     output_path=None,
-    agreement=None
+    agreement=None,
 ):
     import fitz
 
@@ -266,7 +265,7 @@ def apply_signature_and_audit_to_pdf(
 
         margin = 45
         y = margin
-        
+
         # Professional color scheme
         header_color = (0.2, 0.3, 0.45)  # Dark blue-gray
         text_color = (0.2, 0.2, 0.2)  # Dark gray
@@ -289,31 +288,55 @@ def apply_signature_and_audit_to_pdf(
                 label_x = margin + 10
             if value_x is None:
                 value_x = margin + 200
-            
-            page.insert_text((label_x, y_pos), label, fontsize=label_size, fontname=font, color=label_color)
-            
+
+            page.insert_text(
+                (label_x, y_pos),
+                label,
+                fontsize=label_size,
+                fontname=font,
+                color=label_color,
+            )
+
             # Handle long values with wrapping
             value_str = str(value)
             if len(value_str) > 60:
                 value_str = value_str[:57] + "..."
-            
-            page.insert_text((value_x, y_pos), value_str, fontsize=value_size, fontname=font, color=text_color)
+
+            page.insert_text(
+                (value_x, y_pos),
+                value_str,
+                fontsize=value_size,
+                fontname=font,
+                color=text_color,
+            )
 
         # ---- Header ----
-        page.insert_text((margin, y), "CERTIFICATE", fontsize=title_size, fontname="hebo", color=header_color)
+        page.insert_text(
+            (margin, y),
+            "CERTIFICATE",
+            fontsize=title_size,
+            fontname="hebo",
+            color=header_color,
+        )
         y += 8
         draw_horizontal_line(y, color=header_color, thickness=2)
         y += 25
 
         # ---- Signer Information Section ----
-        page.insert_text((margin, y), "SIGNER INFORMATION", fontsize=section_size, fontname="hebo", color=header_color)
+        page.insert_text(
+            (margin, y),
+            "SIGNER INFORMATION",
+            fontsize=section_size,
+            fontname="hebo",
+            color=header_color,
+        )
         y += 20
 
         draw_label_value_row("Name", signer_name, y)
         y += line_height
         draw_label_value_row("Email", signer_email, y)
         y += line_height + 10
-        
+
         draw_horizontal_line(y)
         y += 20
 
@@ -322,7 +345,13 @@ def apply_signature_and_audit_to_pdf(
         ua = signer_location.get("user_agent", "")
         browser, os_name, device = parse_user_agent(ua)
 
-        page.insert_text((margin, y), "DEVICE & LOCATION", fontsize=section_size, fontname="hebo", color=header_color)
+        page.insert_text(
+            (margin, y),
+            "DEVICE & LOCATION",
+            fontsize=section_size,
+            fontname="hebo",
+            color=header_color,
+        )
         y += 20
 
         draw_label_value_row("IP Address", signer_location.get("ip", "N/A"), y)
@@ -341,7 +370,13 @@ def apply_signature_and_audit_to_pdf(
         signature_logs = audit_trail_text.get("signature update logs", [])
 
         if signature_logs:
-            page.insert_text((margin, y), "SIGNATURE ACTIVITY", fontsize=section_size, fontname="hebo", color=header_color)
+            page.insert_text(
+                (margin, y),
+                "SIGNATURE ACTIVITY",
+                fontsize=section_size,
+                fontname="hebo",
+                color=header_color,
+            )
             y += 20
 
             for log in sorted(
@@ -357,16 +392,19 @@ def apply_signature_and_audit_to_pdf(
             y += 20
 
         # ---- Document Activity Section ----
-        page.insert_text((margin, y), "DOCUMENT ACTIVITY", fontsize=section_size, fontname="hebo", color=header_color)
+        page.insert_text(
+            (margin, y),
+            "DOCUMENT ACTIVITY",
+            fontsize=section_size,
+            fontname="hebo",
+            color=header_color,
+        )
         y += 20
 
         form_logs = audit_trail_text.get("form visit logs", [])
 
         # Add table-like structure for activity log
-        EVENT_PRIORITY = {
-            "form_submitted": 2,
-            "form_opened": 1
-        }
+        EVENT_PRIORITY = {"form_submitted": 2, "form_opened": 1}
 
         sorted_logs = sorted(
             form_logs,
@@ -375,7 +413,6 @@ def apply_signature_and_audit_to_pdf(
                 datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
             ),
         )
-
 
         for i, log in enumerate(sorted_logs):
             if y > page_height - margin - 40:
@@ -410,7 +447,7 @@ def apply_signature_and_audit_to_pdf(
 
         y += 15
         draw_horizontal_line(y)
-        y += 20        
+        y += 20
 
     # ---------- SAVE ----------
     if not output_path:
@@ -440,9 +477,7 @@ def apply_signature_and_audit_to_pdf(
 
     # 3. Resolve user from Employee
     opp_owner_user = frappe.db.get_value(
-        "Employee",
-        opportunity.opportunity_owner,
-        "user"
+        "Employee", opportunity.opportunity_owner, "user"
     )
 
     if not opp_owner_user:
@@ -456,7 +491,14 @@ def apply_signature_and_audit_to_pdf(
         ),
         reference_doctype="Agreement",
         reference_name=agreement.name,
-        attachments=[output_path],
+        attachments=[
+            {
+                "fname": output_path,
+                "fcontent": open(
+                    output_path.lstrip("/"), "rb"
+                ).read(),
+            }
+        ],
         send_email=1,
         send_system=0,
     )
@@ -466,7 +508,6 @@ def apply_signature_and_audit_to_pdf(
         subject="Agreement Signed by Customer",
         message=(
             f"The customer has signed the agreement.\n\n"
-            f"Customer: {agreement.customer or 'N/A'}\n"
             f"Sales Order: {sales_order.name}\n\n"
             f"Please proceed with the next required action."
         ),
@@ -476,8 +517,6 @@ def apply_signature_and_audit_to_pdf(
         send_system=1,
     )
     return output_path
-
-
 
 
 # def apply_signature_and_audit_to_pdf(

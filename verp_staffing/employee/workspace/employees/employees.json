@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"DYz4Nf9hwD\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Employes</span>\",\"col\":12}},{\"id\":\"sqWKYctAFS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Employee\",\"col\":3}},{\"id\":\"ECZLYHOtZ2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}}]",
+ "content": "[{\"id\":\"DYz4Nf9hwD\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Employees</span>\",\"col\":12}},{\"id\":\"sqWKYctAFS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Employee\",\"col\":3}},{\"id\":\"ECZLYHOtZ2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}}]",
  "creation": "2025-12-26 15:56:22.971413",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Employees",
  "links": [],
- "modified": "2025-12-28 16:54:24.989203",
+ "modified": "2026-01-04 12:00:08.833327",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employees",

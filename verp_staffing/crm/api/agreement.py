@@ -3,6 +3,8 @@ from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 import os
 from verp_staffing.crm.api.helpers import send_notification
+from frappe.utils import get_url
+from urllib.parse import quote
 
 
 @frappe.whitelist()
@@ -107,40 +109,35 @@ def submit_and_generate(sales_order, template, data):
     so.save(ignore_permissions=True)
 
     agreement.db_set("pdf", url)
-
-    # send email optionally
-    try:
-        so = frappe.get_doc("Sales Order", sales_order)
-        recipient = getattr(so, "contact_email", None) or getattr(
-            so, "customer_email", None
-        )
-        if recipient:
-            frappe.sendmail(
-                recipients=[recipient],
-                subject=f"Agreement for {sales_order}",
-                message="Please find attached agreement.",
-                attachments=[
-                    {
-                        "fname": os.path.basename(url),
-                        "fcontent": open(
-                            frappe.get_site_path("public", url.lstrip("/")), "rb"
-                        ).read(),
-                    }
-                ],
-            )
-    except Exception as e:
-        frappe.log_error(message=f"Email send error: {e}", title="Agreement Email")
+    base_url = get_url()
+    form_url = (
+        f"{base_url}/details-form/new?so=${quote(sales_order)}&c=${quote(so.customer)}"
+    )
 
     frappe.db.commit()
+    opportunity = so.get("opportunity")
+    if not opportunity:
+        return
+    lead_name = frappe.db.get_value("Opportunity", opportunity, "party_name")
+    Lead = frappe.get_doc("Lead", lead_name)
+    recipient = getattr(Lead, "email", None)
     send_notification(
-            recipients=[recipient],
-            subject=f"Agreement Created.",
-            message=(
-                f"Agreement has been created please check the agreement and fill the form "
-            ),
-            send_email=1,
-            send_system=0,
-        )
+        recipients=[recipient],
+        subject=f"Agreement Created.",
+        message=(
+            f"Agreement has been created please check the agreement and fill the form :{form_url}"
+        ),
+        attachments=[
+            {
+                "fname": os.path.basename(url),
+                "fcontent": open(
+                    frappe.get_site_path("public", url.lstrip("/")), "rb"
+                ).read(),
+            }
+        ],
+        send_email=1,
+        send_system=0,
+    )
     return {"agreement": agreement.name, "file_url": url}
 
 
@@ -332,6 +329,7 @@ def render_signature(page, rect, file_url):
             title="Agreement PDF",
         )
 
+
 def render_payment_terms_table(page, rect, terms):
     """
     Render a small table using annotations only.
@@ -412,14 +410,21 @@ def render_payment_terms_table(page, rect, terms):
             # Log rect and annot bbox
             try:
                 frappe.errprint(f"draw_cell - cell_rect: {cell_rect}")
-                frappe.errprint(f"draw_cell - rect_annot.bbox: {getattr(r_annot, 'bbox', getattr(r_annot, 'rect', None))}")
+                frappe.errprint(
+                    f"draw_cell - rect_annot.bbox: {getattr(r_annot, 'bbox', getattr(r_annot, 'rect', None))}"
+                )
             except Exception:
                 pass
 
             # Create freetext annot for text inside same rect
             # Small inset so text not touch border
             inset = 3
-            text_rect = fitz.Rect(cell_rect.x0 + inset, cell_rect.y0 + inset, cell_rect.x1 - inset, cell_rect.y1 - inset)
+            text_rect = fitz.Rect(
+                cell_rect.x0 + inset,
+                cell_rect.y0 + inset,
+                cell_rect.x1 - inset,
+                cell_rect.y1 - inset,
+            )
 
             t_annot = page.add_freetext_annot(
                 text_rect,
@@ -437,7 +442,9 @@ def render_payment_terms_table(page, rect, terms):
 
             # Log freetext bbox
             try:
-                frappe.errprint(f"draw_cell - freetext.bbox: {getattr(t_annot, 'bbox', getattr(t_annot, 'rect', None))}")
+                frappe.errprint(
+                    f"draw_cell - freetext.bbox: {getattr(t_annot, 'bbox', getattr(t_annot, 'rect', None))}"
+                )
             except Exception:
                 pass
 
@@ -467,7 +474,9 @@ def render_payment_terms_table(page, rect, terms):
 
                 value = row.get(key, "")
                 if key == "is_received":
-                    value = "Yes" if str(value).lower() in ("1", "true", "yes") else "No"
+                    value = (
+                        "Yes" if str(value).lower() in ("1", "true", "yes") else "No"
+                    )
 
                 draw_cell_with_annots(cell, value, font=9)
 

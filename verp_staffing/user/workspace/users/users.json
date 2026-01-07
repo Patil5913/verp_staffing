@@ -160,7 +160,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-12-28 16:54:25.098234",
+ "modified": "2026-01-04 14:17:12.318924",
  "modified_by": "Administrator",
  "module": "User",
  "name": "Users",
@@ -172,7 +172,7 @@
  "restrict_to_domain": "",
  "roles": [
   {
-   "role": "All"
+   "role": "Administrator"
   }
  ],
  "sequence_id": 2.0,

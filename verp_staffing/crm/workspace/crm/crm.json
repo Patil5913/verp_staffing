@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"_PZbhqba48\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
+ "content": "[{\"id\":\"SZiIgZtI5-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CRM</span>\",\"col\":12}},{\"id\":\"haF9q-oQhY\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Leads\",\"col\":4}},{\"id\":\"2_SlHCA1a-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"J_jy_rYe94\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"4Ujh6jtWJV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunity\",\"col\":3}},{\"id\":\"_PZbhqba48\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
  "creation": "2025-12-28 15:41:07.289866",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,18 +13,23 @@
  "is_hidden": 0,
  "label": "CRM",
  "links": [],
- "modified": "2025-12-28 16:54:25.249284",
+ "modified": "2026-01-04 14:15:18.705348",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "CRM",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Total Leads",
+   "number_card_name": "Total Leads"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
  "roles": [
   {
-   "role": "All"
+   "role": "_show_crm"
   }
  ],
  "sequence_id": 3.0,
@@ -34,6 +39,14 @@
    "doc_view": "List",
    "label": "Leads",
    "link_to": "Lead",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Customers",
+   "link_to": "Customer",
    "stats_filter": "[]",
    "type": "DocType"
   },

@@ -190,13 +190,14 @@ def send_system_notification(
     }).insert(ignore_permissions=True)
 
 
-def send_email(recipients, subject, message, attachments=None):
+def send_email(recipients, subject, message, attachments=None, now=None):
     frappe.sendmail(
         recipients=recipients,
         subject=subject,
         message=message,
         attachments=attachments,
-        delayed=True,  # scalable
+        delayed=(not now) if now is not None else self.flags.delay_emails,
+		retry=3,
     )
 
 
@@ -233,32 +234,25 @@ def notify(
             recipients=recipients,
             subject=subject,
             message=message,
-            attachments=attachments
+            attachments=attachments,
+            now=True,
         )
 
 @frappe.whitelist()
 def send_notification(**kwargs):
-    """
-    Universal notification API
-    Accepts everything via props
-    """
 
     if frappe.session.user == "Guest":
         frappe.throw("Authentication required")
 
-    # Required
     recipients = kwargs.get("recipients")
     subject = kwargs.get("subject")
     message = kwargs.get("message")
 
-    # Optional metadata
-    event = kwargs.get("event")
-    context = kwargs.get("context")
     reference_doctype = kwargs.get("reference_doctype")
     reference_name = kwargs.get("reference_name")
-    attchments = kwargs.get("attchments")
-    send_email = int(kwargs.get("send_email", 1))
-    send_system = int(kwargs.get("send_system", 1))
+    attachments = kwargs.get("attachments")  # FIXED
+    send_email_flag = int(kwargs.get("send_email", 1))
+    send_system_flag = int(kwargs.get("send_system", 1))
 
     # ---- Validation ----
     if not recipients:
@@ -273,9 +267,6 @@ def send_notification(**kwargs):
     if isinstance(recipients, str):
         recipients = json.loads(recipients)
 
-    if isinstance(context, str):
-        context = json.loads(context)
-
     if not isinstance(recipients, list):
         frappe.throw("recipients must be a list")
 
@@ -284,14 +275,14 @@ def send_notification(**kwargs):
         recipients=recipients,
         subject=subject,
         message=message,
+        attachments=attachments,
         reference_doctype=reference_doctype,
         reference_name=reference_name,
-        send_email_flag=bool(send_email),
-        send_system_flag=bool(send_system),
+        send_email_flag=bool(send_email_flag),
+        send_system_flag=bool(send_system_flag),
     )
 
     return {
         "status": "success",
-        "event": event,
         "recipients": recipients,
     }

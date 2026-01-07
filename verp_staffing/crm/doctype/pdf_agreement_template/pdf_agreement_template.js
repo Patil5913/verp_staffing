@@ -125,7 +125,6 @@ async function load_pdf_into_builder(frm) {
     // after pages created, load existing fields and enable interactions
     load_existing_fields(frm);
     setup_drag_drop(frm);
-    setup_field_events(frm);
 }
 
 

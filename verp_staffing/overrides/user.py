@@ -1,5 +1,4 @@
 import frappe
-from frappe import _
 
 SYSTEM_WORKSPACE_ROLES = {
     "_show_crm",
@@ -98,29 +97,3 @@ def check_employee_missing(user):
     #     wide=True,
     # )
 #     return
-
-
-def after_insert(doc, method):
-    frappe.errprint(f"User after_insert hook triggered for user: {doc.name}")
-    # # creator is doc.owner
-    # primary_action = {
-    #     'label': 'Click Me',
-    #     "client_action": "redirect_to_employee_form", # Dotted path to global JS function
-    #     'is_primary': True, # optional, makes the button blue
-    #     "hide_on_success": True
-    # }
-    frappe.msgprint(
-        msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
-        title=_("Missing Employee Record"),
-        primary_action={
-            'label': _("Create Employee"),
-            'server_action': 'verp_staffing.overrides.user.redirect_to_employee_form',
-            'hide_on_success': True 
-        }
-    )
-
-
-@frappe.whitelist()
-def redirect_to_employee_form():
-    frappe.errprint("Redirecting to Employee form")
-    frappe.set_route("Form", "Employee", "new-employee-1")
