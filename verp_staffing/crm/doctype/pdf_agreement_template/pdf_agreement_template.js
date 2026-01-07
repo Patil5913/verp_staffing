@@ -40,13 +40,24 @@ frappe.ui.form.on("Pdf Agreement Template", {
 
                 <div id="sidebar" style="width:320px; border-left:1px solid #ddd; padding:15px; background:#fff; position:relative;">
                     <h4 style="margin-top:0">Fields</h4>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+                    <div style="display:flex; flex-direction:column; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+                    <div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:6px;">
+                        <p>Standard fields</p>
+                        <div style="margin-bottom:6px; display:flex; gap:6px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-primary add-field" data-type="Text">Text</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Number">Number</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Payment_Terms">Payment Terms</button>
                         <button class="btn btn-sm btn-primary add-field" data-type="Date">Date</button>
-                        <button class="btn btn-sm btn-primary add-field" data-type="Checkbox">Checkbox</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; flex-direction:column; gap:6px;">
+                    
+                    <p>Customer use fields</p>
+                        <div style="margin-bottom:6px; display:flex; gap:6px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-primary add-field" data-type="Signature">Signature</button>
+                        </div>
+                    </div>
                     </div>
 
                     <div style="margin-top:12px;">
@@ -149,6 +160,16 @@ function load_existing_fields(frm) {
     });
 }
 
+// Place holders for each field type
+const PREVIEW_VALUES = {
+    Text: "Acme Corporation Private Limited",
+    Number: "₹ 12,45,000",
+    Payment_Terms: "Net 30 days from invoice date",
+    Date: "31 March 2026",
+    Checkbox: "☑",
+    Signature: "Johnathan Smith"
+};
+
 // central renderer for a single field object { field_id, name, type, page, x, y, width, height }
 function render_field_on_canvas(frm, field) {
     const layer = $(`.pdf-page-container[data-page="${field.page}"] .fields-layer`);
@@ -159,7 +180,7 @@ function render_field_on_canvas(frm, field) {
 
     // If element already exists, remove and re-create (to update)
     layer.find(`[data-id="${id}"]`).remove();
-
+    const previewText = PREVIEW_VALUES[field.type] || field.name;
     const $el = $(`
     <div class="pdf-field" data-id="${id}" data-type="${field.type}" style="
         position:absolute;
@@ -212,9 +233,18 @@ function render_field_on_canvas(frm, field) {
     }
     </style>
 
-        <div class="pdf-field-label" style="padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            ${escape_html(field.name || field.type)}
-        </div>
+        <div class="pdf-field-preview"
+     style="
+       font-family: Helvetica, Arial, sans-serif;
+       font-size:${field.font_size}px;
+       line-height:${field.line_height};
+       white-space: normal;
+       overflow: hidden;
+       width:100%;
+       height:100%;
+     ">
+  ${escape_html(previewText)}
+</div>
 
         <div class="pdf-field-toolbar" style="display:none; gap:6px;">
             <button class="btn btn-xs btn-default edit-field" title="Edit">✎</button>
@@ -259,7 +289,9 @@ function setup_drag_drop(frm) {
 
             // require field name
             frappe.prompt([
-                { fieldname: "field_name", label: "Field Name (unique)", fieldtype: "Data", reqd: 1 }
+                { fieldname: "field_name", label: "Field Name (unique)", fieldtype: "Data", reqd: 1 },
+                { fieldname: "font_size", label: "Font Size", fieldtype: "Int", default: 12 },
+                { fieldname: "line_height", label: "Line Height", fieldtype: "Float", default: 1.2 }
             ], function (values) {
                 // build field object
                 const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || { width: $pc.width(), height: $pc.height() };
@@ -273,7 +305,13 @@ function setup_drag_drop(frm) {
                     x: Math.round(x),
                     y: Math.round(y),
                     width: 150,
-                    height: 30
+                    height: 30,
+
+                    font_size: values.font_size,
+                    line_height: values.line_height,
+                    font_family: "helv",
+                    wrap: true,
+                    overflow: "warn"
                 };
 
                 // store and render
@@ -308,11 +346,15 @@ function attach_field_select_handlers($el, frm, field) {
     $el.find(".edit-field").off("click").on("click", function (e) {
         e.stopPropagation();
         frappe.prompt([
-            { fieldname: "field_name", label: "Field Name", fieldtype: "Data", reqd: 1, default: field.name }
+            { fieldname: "field_name", label: "Field Name", fieldtype: "Data", reqd: 1, default: field.name },
+            { fieldname: "font_size", label: "Font Size", fieldtype: "Int", default: field.font_size },
+            { fieldname: "line_height", label: "Line Height", fieldtype: "Float", default: field.line_height }
         ], function (vals) {
             // update in temp store and DOM
             const newName = vals.field_name.trim();
             field.name = newName;
+            field.font_size = vals.font_size;
+            field.line_height = vals.line_height;
             $el.find(".pdf-field-label").text(newName);
 
             update_temp_field(frm, field.field_id, { name: newName });

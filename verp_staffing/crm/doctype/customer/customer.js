@@ -532,7 +532,8 @@ function show_sales_order(frm) {
             doctype: "Sales Order",
             filters: { opportunity: frm.doc.opportunity },
             fields: ["name", "title", "date", "customer"],
-            limit_page_length: 50
+            limit_page_length: 50,
+            order_by:"creation desc"
         },
         callback(r) {
             let sales_orders = r.message || [];
@@ -561,8 +562,8 @@ function show_sales_order(frm) {
                         </div>
 
                         <p><b>Title:</b> ${so.title || ""}</p>
-                        <p><b>Date:</b> ${so.transaction_date || ""}</p>
-                        <p><b>Customer:</b> ${so.customer_name || ""}</p>
+                        <p><b>Date:</b> ${so.date || ""}</p>
+                        <p><b>Customer:</b> ${so.customer || ""}</p>
 
                         <div id="terms_${so.name}">
                             <i>Loading Payment Terms...</i>
@@ -596,9 +597,11 @@ function load_payment_terms(so_name, frm) {
         method: "frappe.client.get",
         args: {
             doctype: "Sales Order",
-            name: so_name
+            name: so_name,
         },
         callback: function (r) {
+            console.log("r: ",r);
+            
             if (!r.message) return;
 
             let so = r.message;
@@ -941,7 +944,6 @@ function forward_candidate(frm, values) {
             department: values.department
         },
         callback(r) {
-            console.log("r: ", r);
             if (values.department === "technical") {
                 frappe.call({
                     method: "verp_staffing.crm.api.notes.add_note",
@@ -1021,7 +1023,6 @@ function load_department_panels(frm) {
         },
         callback(r) {
             if (!r.message) return;
-            console.log("r.message: ", r.message);
 
             render_resume_panel(frm, r.message.resume);
             render_technical_panel(frm, r.message.technical);

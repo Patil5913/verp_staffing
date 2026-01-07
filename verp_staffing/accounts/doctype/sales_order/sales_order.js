@@ -244,9 +244,6 @@ function submit_inline(frm) {
                     frappe.throw("Agreement generation failed.");
                     return;
                 }
-
-                // redirect to form page now, in future we send email to customer
-                window.location.href = `/details-form/new?so=${encodeURIComponent(frm.doc.name)}&c=${encodeURIComponent(frm.doc.customer)}`;
             }
         });
     });
