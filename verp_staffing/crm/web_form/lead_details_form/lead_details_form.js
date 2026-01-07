@@ -39,10 +39,17 @@ frappe.ready(function () {
     // Supported key names
     const salesOrder = urlParams.get("so")
     const customerValue = urlParams.get("c");
+    const agreementValue = urlParams.get("agr");
+    const pdfValue = urlParams.get("p");
+
 
     // 2. If lead exists → store in webform field "lead"
     if (customerValue) {
         frappe.web_form.set_value("customer", customerValue);
+    }
+
+    if (agreementValue) {
+        frappe.web_form.set_value("agreement_link", agreementValue);
     }
 
     // sales order is mandatory now
@@ -51,64 +58,34 @@ frappe.ready(function () {
         return;
     }
 
-    // fetch Agreement by Sales Order
-    frappe.call({
-        method: "frappe.client.get_list",
-        args: {
-            doctype: "Agreement",
-            filters: {
-                sales_order: salesOrder
+    if (pdfValue) {
+        // fetch Agreement by Sales Order
+        frappe.call({
+            method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
+            args: {
+                path: pdfValue
             },
-            fields: ["name", "pdf"],
-            limit_page_length: 1
-        },
-        callback: function (r) {
-            if (!r.message || !r.message.length) {
-                console.error("No Agreement found for Sales Order:", salesOrder);
-                return;
-            }
+            callback: function (res) {
+                if (!res.message || !res.message.length) {
+                    console.error("PDF to image conversion failed");
+                    return;
+                }
 
-            if (r.message[0].name) {
-                frappe.web_form.set_value("agreement_link", r.message[0].name);
-            }
+                let html = "";
 
-            const pdfPath = r.message[0].pdf;
-
-            if (!pdfPath) {
-                console.error("Agreement found but PDF field is empty");
-                return;
-            }
-
-            // convert PDF to images
-            frappe.call({
-                method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
-                args: {
-                    path: pdfPath
-                },
-                callback: function (res) {
-                    if (!res.message || !res.message.length) {
-                        console.error("PDF to image conversion failed");
-                        return;
-                    }
-
-                    let html = "";
-
-                    res.message.forEach(img => {
-                        html += `
+                res.message.forEach(img => {
+                    html += `
                         <img 
                             src="${img}" 
                             style="width:100%; margin-bottom:20px; border:1px solid #ccc;"
                         >
                     `;
-                    });
+                });
 
-                    frappe.web_form.set_value("agreement_html", html);
-                }
-            });
-        }
-    });
-
-
+                frappe.web_form.set_value("agreement_html", html);
+            }
+        });
+    }
 
     frappe.web_form.on('signature_method', (field, value) => {
         if (value === "Upload") {

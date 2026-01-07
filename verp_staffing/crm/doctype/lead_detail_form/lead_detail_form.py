@@ -112,14 +112,14 @@ class LeadDetailForm(Document):
 
     def apply_pdf_signature(self, signature_image_file):
         """
-        signature can be: File doc name (Upload) or file_url (Draw)
+        signature can be: File doc name (Upload / Text) or file_url (Draw)
         + audit trail to PDF
         """
 
         if not signature_image_file:
             frappe.throw("Signature file missing")
 
-        if self.signature_method == "Upload":
+        if self.signature_method == "Upload" or self.signature_method == "Text":
             # ---- ALWAYS RESOLVE FILE DOC ----
             file_doc = frappe.get_doc("File", signature_image_file)
 

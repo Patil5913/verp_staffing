@@ -40,12 +40,14 @@ frappe.ui.form.on("Lead", {
             open_create_opportunity_dialog(frm);
         });
 
-        frm.add_custom_button("Show Form Tour", () => {
-            const tour_name = 'Lead Form';
-
-            frm.tour.init({ tour_name })
+        if(frm.is_new()){
+            frm.add_custom_button("Show Form Tour", () => {
+                const tour_name = 'Lead Form';
+                
+                frm.tour.init({ tour_name })
                 .then(() => frm.tour.start());
-        });
+            });
+        }
 
         const roles = frappe.user_roles
 

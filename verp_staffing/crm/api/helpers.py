@@ -241,8 +241,8 @@ def notify(
 @frappe.whitelist()
 def send_notification(**kwargs):
 
-    if frappe.session.user == "Guest":
-        frappe.throw("Authentication required")
+    # if frappe.session.user == "Guest":
+    #     frappe.throw("Authentication required")
 
     recipients = kwargs.get("recipients")
     subject = kwargs.get("subject")
