@@ -233,27 +233,45 @@ def apply_signature_and_audit_to_pdf(
                     continue
 
                 page = pdf[page_index]
-                page_rect = page.rect
 
-                px_w = float(f.get("page_width") or 0)
-                px_h = float(f.get("page_height") or 0)
-                if not px_w or not px_h:
+                # ---- HARD NORMALIZATION (CRITICAL) ----
+                page.set_rotation(0)
+                page_rect = page.cropbox  # NEVER use page.rect blindly
+
+                page_width = page_rect.width
+                page_height = page_rect.height
+
+                # Template page size (from designer)
+                tpl_w = float(f.get("page_width") or 0)
+                tpl_h = float(f.get("page_height") or 0)
+                if not tpl_w or not tpl_h:
                     continue
 
-                sx = page_rect.width / px_w
-                sy = page_rect.height / px_h
+                # Scale factors
+                sx = page_width / tpl_w
+                sy = page_height / tpl_h
 
+                # Template coordinates (TOP-LEFT based)
                 bx = float(f.get("x") or 0)
                 by = float(f.get("y") or 0)
                 bw = float(f.get("width") or 150)
                 bh = float(f.get("height") or 40)
 
-                rect = fitz.Rect(
-                    bx * sx,
-                    by * sy,
-                    (bx + bw) * sx,
-                    (by + bh) * sy,
-                )
+                # ---- COORDINATE CONVERSION (THIS FIXES PROD) ----
+                x1 = bx * sx
+                x2 = (bx + bw) * sx
+
+                # Convert top-left Y → PDF bottom-left Y
+                y2 = page_height - (by * sy)
+                y1 = page_height - ((by + bh) * sy)
+
+                rect = fitz.Rect(x1, y1, x2, y2)
+
+                # Clamp rect inside page bounds
+                rect = rect & page_rect
+
+                if rect.is_empty or rect.is_infinite:
+                    continue
 
                 page.insert_image(rect, stream=img_bytes)
 
