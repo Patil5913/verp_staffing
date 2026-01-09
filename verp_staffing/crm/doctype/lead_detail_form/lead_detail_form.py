@@ -168,32 +168,18 @@ class LeadDetailForm(Document):
         )
 
 
-def normalize_and_fit_image(img_path, box_w, box_h):
-    from PIL import Image
-    import io
+from PIL import Image
+import io
+
+def load_signature_clean(img_path):
     img = Image.open(img_path)
 
-    # ---- FIX EXIF ORIENTATION ----
-    try:
-        exif = img._getexif()
-        if exif:
-            orientation = exif.get(274)
-            if orientation == 3:
-                img = img.rotate(180, expand=True)
-            elif orientation == 6:
-                img = img.rotate(270, expand=True)
-            elif orientation == 8:
-                img = img.rotate(90, expand=True)
-    except Exception:
-        pass
-
-    # ---- SCALE TO FIT BOX (NOT FILL) ----
-    img.thumbnail((int(box_w), int(box_h)), Image.LANCZOS)
+    # Force raster rewrite (kills EXIF, orientation, DPI)
+    img = img.convert("RGBA")
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    return buf.getvalue(), img.width, img.height
-
+    return buf.getvalue()
 
 
 def apply_signature_and_audit_to_pdf(
@@ -247,16 +233,22 @@ def apply_signature_and_audit_to_pdf(
     pdf = fitz.open(input_pdf_path)
 
    # ---- SIGNATURE INSERT (TEMPLATE-AUTHORITATIVE) ----
+    # ---------- SIGNATURE INSERT (RECT-SAFE, NON-INVERTED) ----------
     if signature_image_path:
         img_path = resolve_file_path(signature_image_path)
         if not img_path or not os.path.exists(img_path):
             return
+
+        img_bytes = load_signature_clean(img_path)
 
         for f in fields:
             if f.get("type") != "Signature":
                 continue
 
             page_index = int(f["page"]) - 1
+            if page_index < 0 or page_index >= len(pdf):
+                continue
+
             page = pdf[page_index]
             page.set_rotation(0)
 
@@ -270,35 +262,36 @@ def apply_signature_and_audit_to_pdf(
             sx = page_w / tpl_w
             sy = page_h / tpl_h
 
-            # Template box (TOP-LEFT origin)
             bx = float(f["x"])
             by = float(f["y"])
             bw = float(f["width"])
             bh = float(f["height"])
 
-            # Convert to PDF space
+            # Convert template top-left → PDF bottom-left
             x1 = bx * sx
             x2 = (bx + bw) * sx
-            y2 = page_h - (by * sy)
-            y1 = page_h - ((by + bh) * sy)
 
-            box = fitz.Rect(x1, y1, x2, y2) & page_rect
-            if box.is_empty:
+            y_top = page_h - (by * sy)
+            y_bottom = page_h - ((by + bh) * sy)
+
+            # 🔴 CRITICAL: NORMALIZE RECT
+            x_min = min(x1, x2)
+            x_max = max(x1, x2)
+            y_min = min(y_top, y_bottom)
+            y_max = max(y_top, y_bottom)
+
+            rect = fitz.Rect(x_min, y_min, x_max, y_max) & page_rect
+
+            if rect.is_empty:
                 continue
 
-            # ---- FORCE IMAGE INTO TEMPLATE SIZE ----
-            img_bytes, iw, ih = normalize_and_fit_image(
-                img_path,
-                box.width,
-                box.height,
+            # 🔒 NO AUTOSCALE, NO ROTATE
+            page.insert_image(
+                rect,
+                stream=img_bytes,
+                keep_proportion=True,
+                rotate=0,
             )
-
-            # Center image inside template box
-            cx = box.x0 + (box.width - iw) / 2
-            cy = box.y0 + (box.height - ih) / 2
-            final_rect = fitz.Rect(cx, cy, cx + iw, cy + ih)
-
-            page.insert_image(final_rect, stream=img_bytes)
 
 
     # ---------- AUDIT TRAIL PAGE ----------
