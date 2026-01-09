@@ -173,9 +173,7 @@ import io
 
 def load_signature_clean(img_path):
     img = Image.open(img_path)
-
-    # Force raster rewrite (kills EXIF, orientation, DPI)
-    img = img.convert("RGBA")
+    img = img.convert("RGBA")  # kill EXIF, DPI, orientation
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -232,8 +230,8 @@ def apply_signature_and_audit_to_pdf(
 
     pdf = fitz.open(input_pdf_path)
 
-   # ---- SIGNATURE INSERT (TEMPLATE-AUTHORITATIVE) ----
-    # ---------- SIGNATURE INSERT (RECT-SAFE, NON-INVERTED) ----------
+   
+    # ---------- SIGNATURE INSERT (ROTATION SAFE) ----------
     if signature_image_path:
         img_path = resolve_file_path(signature_image_path)
         if not img_path or not os.path.exists(img_path):
@@ -250,7 +248,6 @@ def apply_signature_and_audit_to_pdf(
                 continue
 
             page = pdf[page_index]
-            page.set_rotation(0)
 
             page_rect = page.cropbox
             page_w = page_rect.width
@@ -267,25 +264,51 @@ def apply_signature_and_audit_to_pdf(
             bw = float(f["width"])
             bh = float(f["height"])
 
-            # Convert template top-left → PDF bottom-left
+            # Template (top-left) → PDF (bottom-left)
             x1 = bx * sx
             x2 = (bx + bw) * sx
 
             y_top = page_h - (by * sy)
             y_bottom = page_h - ((by + bh) * sy)
 
-            # 🔴 CRITICAL: NORMALIZE RECT
             x_min = min(x1, x2)
             x_max = max(x1, x2)
             y_min = min(y_top, y_bottom)
             y_max = max(y_top, y_bottom)
 
             rect = fitz.Rect(x_min, y_min, x_max, y_max) & page_rect
-
             if rect.is_empty:
                 continue
 
-            # 🔒 NO AUTOSCALE, NO ROTATE
+            # ---- ROTATION COMPENSATION (THE ACTUAL FIX) ----
+            rotation = page.rotation  # 0, 90, 180, 270
+
+            if rotation == 90:
+                rect = fitz.Rect(
+                    rect.y0,
+                    page_w - rect.x1,
+                    rect.y1,
+                    page_w - rect.x0,
+                )
+            elif rotation == 180:
+                rect = fitz.Rect(
+                    page_w - rect.x1,
+                    page_h - rect.y1,
+                    page_w - rect.x0,
+                    page_h - rect.y0,
+                )
+            elif rotation == 270:
+                rect = fitz.Rect(
+                    page_h - rect.y1,
+                    rect.x0,
+                    page_h - rect.y0,
+                    rect.x1,
+                )
+
+            rect = rect & page_rect
+            if rect.is_empty:
+                continue
+
             page.insert_image(
                 rect,
                 stream=img_bytes,
