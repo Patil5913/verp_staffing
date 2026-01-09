@@ -168,6 +168,34 @@ class LeadDetailForm(Document):
         )
 
 
+def normalize_and_fit_image(img_path, box_w, box_h):
+    from PIL import Image
+    import io
+    img = Image.open(img_path)
+
+    # ---- FIX EXIF ORIENTATION ----
+    try:
+        exif = img._getexif()
+        if exif:
+            orientation = exif.get(274)
+            if orientation == 3:
+                img = img.rotate(180, expand=True)
+            elif orientation == 6:
+                img = img.rotate(270, expand=True)
+            elif orientation == 8:
+                img = img.rotate(90, expand=True)
+    except Exception:
+        pass
+
+    # ---- SCALE TO FIT BOX (NOT FILL) ----
+    img.thumbnail((int(box_w), int(box_h)), Image.LANCZOS)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue(), img.width, img.height
+
+
+
 def apply_signature_and_audit_to_pdf(
     input_pdf_path,
     fields,
@@ -218,62 +246,60 @@ def apply_signature_and_audit_to_pdf(
 
     pdf = fitz.open(input_pdf_path)
 
-    # ---------- SIGNATURE INSERT ----------
+   # ---- SIGNATURE INSERT (TEMPLATE-AUTHORITATIVE) ----
     if signature_image_path:
         img_path = resolve_file_path(signature_image_path)
-        if img_path and os.path.exists(img_path):
-            img_bytes = open(img_path, "rb").read()
+        if not img_path or not os.path.exists(img_path):
+            return
 
-            for f in fields:
-                if f.get("type") != "Signature":
-                    continue
+        for f in fields:
+            if f.get("type") != "Signature":
+                continue
 
-                page_index = int(f.get("page", 1)) - 1
-                if page_index < 0 or page_index >= len(pdf):
-                    continue
+            page_index = int(f["page"]) - 1
+            page = pdf[page_index]
+            page.set_rotation(0)
 
-                page = pdf[page_index]
+            page_rect = page.cropbox
+            page_w = page_rect.width
+            page_h = page_rect.height
 
-                # ---- HARD NORMALIZATION (CRITICAL) ----
-                page.set_rotation(0)
-                page_rect = page.cropbox  # NEVER use page.rect blindly
+            tpl_w = float(f["page_width"])
+            tpl_h = float(f["page_height"])
 
-                page_width = page_rect.width
-                page_height = page_rect.height
+            sx = page_w / tpl_w
+            sy = page_h / tpl_h
 
-                # Template page size (from designer)
-                tpl_w = float(f.get("page_width") or 0)
-                tpl_h = float(f.get("page_height") or 0)
-                if not tpl_w or not tpl_h:
-                    continue
+            # Template box (TOP-LEFT origin)
+            bx = float(f["x"])
+            by = float(f["y"])
+            bw = float(f["width"])
+            bh = float(f["height"])
 
-                # Scale factors
-                sx = page_width / tpl_w
-                sy = page_height / tpl_h
+            # Convert to PDF space
+            x1 = bx * sx
+            x2 = (bx + bw) * sx
+            y2 = page_h - (by * sy)
+            y1 = page_h - ((by + bh) * sy)
 
-                # Template coordinates (TOP-LEFT based)
-                bx = float(f.get("x") or 0)
-                by = float(f.get("y") or 0)
-                bw = float(f.get("width") or 150)
-                bh = float(f.get("height") or 40)
+            box = fitz.Rect(x1, y1, x2, y2) & page_rect
+            if box.is_empty:
+                continue
 
-                # ---- COORDINATE CONVERSION (THIS FIXES PROD) ----
-                x1 = bx * sx
-                x2 = (bx + bw) * sx
+            # ---- FORCE IMAGE INTO TEMPLATE SIZE ----
+            img_bytes, iw, ih = normalize_and_fit_image(
+                img_path,
+                box.width,
+                box.height,
+            )
 
-                # Convert top-left Y → PDF bottom-left Y
-                y2 = page_height - (by * sy)
-                y1 = page_height - ((by + bh) * sy)
+            # Center image inside template box
+            cx = box.x0 + (box.width - iw) / 2
+            cy = box.y0 + (box.height - ih) / 2
+            final_rect = fitz.Rect(cx, cy, cx + iw, cy + ih)
 
-                rect = fitz.Rect(x1, y1, x2, y2)
+            page.insert_image(final_rect, stream=img_bytes)
 
-                # Clamp rect inside page bounds
-                rect = rect & page_rect
-
-                if rect.is_empty or rect.is_infinite:
-                    continue
-
-                page.insert_image(rect, stream=img_bytes)
 
     # ---------- AUDIT TRAIL PAGE ----------
     if audit_trail_text:

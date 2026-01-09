@@ -31,6 +31,7 @@ app_include_js = [
     "pdf_lib_bundle.bundle.js",
     "/assets/verp_staffing/js/reusable.js",
     "/assets/verp_staffing/js/user_custom.js",
+    "/assets/verp_staffing/js/about_override.js",
 ]
 
 # app_include_js = "/assets/verp_staffing/js/verp_staffing.js"

@@ -678,16 +678,59 @@ FORM_TOURS = {
 
 
 def after_install():
+    setup_navbar_settings()
     # seed_sales_stages()
     # seed_type_of_interview()
     # create_all_roles()
     # seed_employee_departments()
     # assign_permissions_to_roles(ROLE_PERMISSIONS)
     # seed_hierarchy()
-    remove_default_workspaces()
+    # remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     # seed_form_tours()
+
+
+
+def setup_navbar_settings():
+    import requests
+    from frappe.utils.file_manager import save_file
+    
+    navbar = frappe.get_single("Navbar Settings")
+    updated = False
+
+    for row in navbar.settings_dropdown:
+        if row.item_label == "Session Defaults":
+            row.hidden = 1
+            updated = True
+
+    for row in navbar.help_dropdown:
+        if row.item_label == "Frappe Support":
+            row.hidden = 1
+            updated = True
+            
+    url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
+
+    response = requests.get(url, timeout=20)
+    content_type = response.headers.get("Content-Type", "")
+
+    if not content_type.startswith("image/"):
+        frappe.throw(f"Downloaded file is not an image. Content-Type: {content_type}")
+
+    file_doc = save_file(
+        fname="app_logo.png",
+        content=response.content,
+        dt="Navbar Settings",
+        dn="Navbar Settings",
+        is_private=0
+    )
+
+    navbar.app_logo = file_doc.file_url
+    updated = True
+
+    if updated:
+        navbar.save(ignore_permissions=True)
+        frappe.db.commit()  
 
 
 def seed_sales_stages():
