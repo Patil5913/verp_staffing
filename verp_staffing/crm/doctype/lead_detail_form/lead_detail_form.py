@@ -173,7 +173,7 @@ import io
 
 def load_signature_clean(img_path):
     img = Image.open(img_path)
-    img = img.convert("RGBA")  # kill EXIF, DPI, orientation
+    img = img.convert("RGBA")
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -191,6 +191,8 @@ def apply_signature_and_audit_to_pdf(
     agreement=None,
 ):
     import fitz
+    print("\n=== SIGNATURE DEBUG START ===")
+    print("Input PDF:", input_pdf_path)
 
     # ---------- NORMALIZE AUDIT TRAIL ----------
     if isinstance(audit_trail_text, str):
@@ -229,29 +231,34 @@ def apply_signature_and_audit_to_pdf(
         return browser, os_name, device
 
     pdf = fitz.open(input_pdf_path)
-
+    print("Total pages:", len(pdf))
    
     # ---------- SIGNATURE INSERT (ROTATION SAFE) ----------
     if signature_image_path:
         img_path = resolve_file_path(signature_image_path)
         if not img_path or not os.path.exists(img_path):
+            print("❌ Signature image not found")
             return
 
         img_bytes = load_signature_clean(img_path)
+        print("Signature image loaded")
 
         for f in fields:
             if f.get("type") != "Signature":
                 continue
 
             page_index = int(f["page"]) - 1
-            if page_index < 0 or page_index >= len(pdf):
-                continue
-
             page = pdf[page_index]
+
+            print("\n--- Processing Signature Field ---")
+            print("Page index:", page_index)
+            print("Page rotation:", page.rotation)
 
             page_rect = page.cropbox
             page_w = page_rect.width
             page_h = page_rect.height
+
+            print("Page size:", page_w, page_h)
 
             tpl_w = float(f["page_width"])
             tpl_h = float(f["page_height"])
@@ -264,57 +271,35 @@ def apply_signature_and_audit_to_pdf(
             bw = float(f["width"])
             bh = float(f["height"])
 
-            # Template (top-left) → PDF (bottom-left)
-            x1 = bx * sx
-            x2 = (bx + bw) * sx
+            print("Template rect:", bx, by, bw, bh)
+            print("Scale factors:", sx, sy)
 
-            y_top = page_h - (by * sy)
-            y_bottom = page_h - ((by + bh) * sy)
+            # TEMPLATE (top-left) → PDF (bottom-left)
+            x0 = bx * sx
+            y0 = page_h - ((by + bh) * sy)
+            x1 = (bx + bw) * sx
+            y1 = page_h - (by * sy)
 
-            x_min = min(x1, x2)
-            x_max = max(x1, x2)
-            y_min = min(y_top, y_bottom)
-            y_max = max(y_top, y_bottom)
+            rect = fitz.Rect(x0, y0, x1, y1) & page_rect
 
-            rect = fitz.Rect(x_min, y_min, x_max, y_max) & page_rect
+            print("Computed rect:", rect)
+
             if rect.is_empty:
+                print("❌ Rect is empty, skipping")
                 continue
 
-            # ---- ROTATION COMPENSATION (THE ACTUAL FIX) ----
-            rotation = page.rotation  # 0, 90, 180, 270
-
-            if rotation == 90:
-                rect = fitz.Rect(
-                    rect.y0,
-                    page_w - rect.x1,
-                    rect.y1,
-                    page_w - rect.x0,
-                )
-            elif rotation == 180:
-                rect = fitz.Rect(
-                    page_w - rect.x1,
-                    page_h - rect.y1,
-                    page_w - rect.x0,
-                    page_h - rect.y0,
-                )
-            elif rotation == 270:
-                rect = fitz.Rect(
-                    page_h - rect.y1,
-                    rect.x0,
-                    page_h - rect.y0,
-                    rect.x1,
-                )
-
-            rect = rect & page_rect
-            if rect.is_empty:
-                continue
+            # 🔥 FINAL FIX: COUNTER-ROTATE IMAGE
+            rotate_fix = (-page.rotation) % 360
+            print("Applying image rotate:", rotate_fix)
 
             page.insert_image(
                 rect,
                 stream=img_bytes,
                 keep_proportion=True,
-                rotate=0,
+                rotate=rotate_fix,
             )
+
+            print("✅ Signature inserted correctly")
 
 
     # ---------- AUDIT TRAIL PAGE ----------
@@ -576,6 +561,8 @@ def apply_signature_and_audit_to_pdf(
         send_email=0,
         send_system=1,
     )
+    
+    print("=== SIGNATURE DEBUG END ===\n")
     return output_path
 
 
