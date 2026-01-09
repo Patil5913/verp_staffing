@@ -85,6 +85,7 @@ class LeadDetailForm(Document):
         try:
             img_base64 = self.signature.split(",")[-1]
             img_bytes = base64.b64decode(img_base64)
+            print("img_bytes", img_bytes)
 
             file_doc = frappe.get_doc(
                 {
@@ -111,25 +112,31 @@ class LeadDetailForm(Document):
     # ---------------- PDF APPLY ----------------
 
     def apply_pdf_signature(self, signature_image_file):
-        """
-        signature can be: File doc name (Upload / Text) or file_url (Draw)
-        + audit trail to PDF
-        """
+        from frappe.utils.file_manager import get_file_path
 
         if not signature_image_file:
             frappe.throw("Signature file missing")
 
-        if self.signature_method == "Upload" or self.signature_method == "Text":
-            # ---- ALWAYS RESOLVE FILE DOC ----
+        # ---- RESOLVE SIGNATURE IMAGE ----
+        if self.signature_method in ("Upload", "Text"):
             file_doc = frappe.get_doc("File", signature_image_file)
 
             if not file_doc.file_url:
                 frappe.throw("Signature file URL missing")
 
-            signature_image_path = file_doc.file_url
+            signature_image_path = get_file_path(file_doc.file_url)
         else:
-            signature_image_path = signature_image_file
+            # Drawn signature already passed as file_url
+            signature_image_path = get_file_path(signature_image_file)
 
+        if not os.path.exists(signature_image_path):
+            frappe.log_error(
+                title="SIGNATURE_FILE_MISSING",
+                message=f"Resolved path does not exist:\n{signature_image_path}",
+            )
+            frappe.throw("Signature image file not found on server")
+
+        # ---- AGREEMENT ----
         if not self.agreement_link:
             frappe.throw("Agreement link missing")
 
@@ -137,9 +144,6 @@ class LeadDetailForm(Document):
 
         if not agreement.pdf:
             frappe.throw("Agreement PDF missing")
-
-        if not agreement.template:
-            frappe.throw("PDF Agreement Template missing on Agreement")
 
         template = frappe.get_doc("Pdf Agreement Template", agreement.template)
 
@@ -153,19 +157,22 @@ class LeadDetailForm(Document):
 
         audit_text = json.dumps(json.loads(self.audit_trail), indent=2)
 
-        input_pdf_path = resolve_file_path(agreement.pdf)
-        if not input_pdf_path:
-            frappe.throw("Unable to resolve agreement PDF path")
+        input_pdf_path = get_file_path(agreement.pdf)
 
+        if not os.path.exists(input_pdf_path):
+            frappe.throw("Agreement PDF not found on disk")
+
+        # ---- APPLY ----
         apply_signature_and_audit_to_pdf(
             input_pdf_path=input_pdf_path,
             fields=fields,
             signature_image_path=signature_image_path,
             audit_trail_text=audit_text,
             signer_name=f"{self.surname} {self.first_name} {self.father_name}",
-            signer_email=f"{self.email}",
+            signer_email=self.email,
             agreement=agreement,
         )
+
 
 
 from PIL import Image
