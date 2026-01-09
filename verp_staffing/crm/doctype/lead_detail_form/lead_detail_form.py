@@ -230,8 +230,27 @@ def apply_signature_and_audit_to_pdf(
 
         return browser, os_name, device
 
-    pdf = fitz.open(input_pdf_path)
-    print("Total pages:", len(pdf))
+    def log_debug(title, data):
+        frappe.log_error(
+            title=f"SIGNATURE_DEBUG::{title}",
+            message=frappe.as_json(data, indent=2)
+        )
+
+    # ---- EXECUTION CONFIRMATION ----
+    log_debug("FUNCTION_CALLED", {
+        "input_pdf": input_pdf_path,
+        "signature_image": signature_image_path,
+        "fields_count": len(fields),
+    })
+
+    if not os.path.exists(input_pdf_path):
+        frappe.throw("Input PDF not found")
+
+    if not os.path.exists(signature_image_path):
+        frappe.throw("Signature image not found")
+
+    doc = fitz.open(input_pdf_path)
+    print("Total pages:", len(doc))
    
     # ---------- SIGNATURE INSERT (ROTATION SAFE) ----------
     if signature_image_path:
@@ -243,68 +262,63 @@ def apply_signature_and_audit_to_pdf(
         img_bytes = load_signature_clean(img_path)
         print("Signature image loaded")
 
-        for f in fields:
-            if f.get("type") != "Signature":
+        for field in fields:
+            if field.get("type") != "signature":
                 continue
 
-            page_index = int(f["page"]) - 1
-            page = pdf[page_index]
+            page_index = int(field["page"]) - 1
+            page = doc[page_index]
 
-            print("\n--- Processing Signature Field ---")
-            print("Page index:", page_index)
-            print("Page rotation:", page.rotation)
+            page_h = page.rect.height
 
-            page_rect = page.cropbox
-            page_w = page_rect.width
-            page_h = page_rect.height
+            # Template coordinates (TOP-LEFT origin)
+            bx = float(field["x"])
+            by = float(field["y"])
+            bw = float(field["width"])
+            bh = float(field["height"])
 
-            print("Page size:", page_w, page_h)
+            # ---- CRITICAL FIX (TOP-LEFT → PDF BOTTOM-LEFT) ----
+            x1 = bx
+            x2 = bx + bw
+            y1 = page_h - by - bh
+            y2 = page_h - by
 
-            tpl_w = float(f["page_width"])
-            tpl_h = float(f["page_height"])
-
-            sx = page_w / tpl_w
-            sy = page_h / tpl_h
-
-            bx = float(f["x"])
-            by = float(f["y"])
-            bw = float(f["width"])
-            bh = float(f["height"])
-
-            print("Template rect:", bx, by, bw, bh)
-            print("Scale factors:", sx, sy)
-
-            # TEMPLATE (top-left) → PDF (bottom-left)
-            x0 = bx * sx
-            y0 = page_h - ((by + bh) * sy)
-            x1 = (bx + bw) * sx
-            y1 = page_h - (by * sy)
-
-            rect = fitz.Rect(x0, y0, x1, y1) & page_rect
-
-            print("Computed rect:", rect)
-
-            if rect.is_empty:
-                print("❌ Rect is empty, skipping")
-                continue
-
-            # 🔥 FINAL FIX: COUNTER-ROTATE IMAGE
-            rotate_fix = (-page.rotation) % 360
-            print("Applying image rotate:", rotate_fix)
-
-            page.insert_image(
-                rect,
-                stream=img_bytes,
-                keep_proportion=True,
-                rotate=rotate_fix,
+            # Normalize rectangle (never trust input)
+            rect = fitz.Rect(
+                min(x1, x2),
+                min(y1, y2),
+                max(x1, x2),
+                max(y1, y2),
             )
 
-            print("✅ Signature inserted correctly")
+            # ---- LOG RECT MATH ----
+            log_debug("RECT_COMPUTED", {
+                "page_height": page_h,
+                "template": {"x": bx, "y": by, "w": bw, "h": bh},
+                "rect": {
+                    "x0": rect.x0,
+                    "y0": rect.y0,
+                    "x1": rect.x1,
+                    "y1": rect.y1,
+                },
+            })
+
+            # ---- VISUAL DEBUG (REMOVE LATER) ----
+            page.draw_rect(rect, color=(1, 0, 0), width=1)
+
+            # ---- INSERT IMAGE (NO STREAM, NO ROTATION) ----
+            page.insert_image(
+                rect,
+                filename=signature_image_path,
+                keep_proportion=True,
+                rotate=0,
+                overlay=True,
+            )
 
 
     # ---------- AUDIT TRAIL PAGE ----------
     if audit_trail_text:
-        page = pdf.new_page()
+        page = doc.new_page()
         page_width = page.rect.width
         page_height = page.rect.height
 
@@ -461,7 +475,7 @@ def apply_signature_and_audit_to_pdf(
 
         for i, log in enumerate(sorted_logs):
             if y > page_height - margin - 40:
-                page = pdf.new_page()
+                page = doc.new_page()
                 y = margin
                 page.insert_text(
                     (margin, y),
@@ -496,14 +510,24 @@ def apply_signature_and_audit_to_pdf(
 
     # ---------- SAVE ----------
     if not output_path:
-        output_path = input_pdf_path
+        output_path = input_pdf_path.replace(".pdf", "_signed.pdf")
 
-    pdf.save(
-        output_path,
-        incremental=True,
-        encryption=fitz.PDF_ENCRYPT_KEEP,
-    )
-    pdf.close()
+    doc.save(output_path, garbage=4, deflate=True)
+    doc.close()
+
+    log_debug("PDF_SAVED", {
+        "output_path": output_path
+    })
+
+    # if not output_path:
+    #     output_path = input_pdf_path
+
+    # doc.save(
+    #     output_path,
+    #     incremental=True,
+    #     encryption=fitz.PDF_ENCRYPT_KEEP,
+    # )
+    # doc.close()
 
     # 1. Resolve Sales Order linked with Agreement
     if not agreement.sales_order:
