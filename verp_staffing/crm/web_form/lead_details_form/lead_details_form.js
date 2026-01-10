@@ -191,38 +191,49 @@ frappe.ready(function () {
     if (frappe.web_form) {
         frappe.web_form.validate = () => {
 
+            let signature_method = frappe.web_form.get_value("signature_method") || []
+            if (!validate_signature(signature_method)) {
+                return false
+            }
+
+            let email = frappe.web_form.get_value("email");
+            if (!validate_email(email, "Email")) {
+                return false;
+            }
+
+            let personal_phone = frappe.web_form.get_value("personal_phone_number");
+            if (!validate_phone(personal_phone, "Personal Phone Number")) {
+                return false;
+            }
+
             let entry_date = frappe.web_form.get_value("entry_date");
             if (!validate_entry_date(entry_date)) {
                 return false;
             }
 
-            // 2️⃣ SSN DIGIT
             let ssn_digit = frappe.web_form.get_value("ssn_digit");
             if (!validate_ssn_digit(ssn_digit)) {
                 return false;
             }
 
-            // 3️⃣ LEAD COURSE TABLE
             let lead_course = frappe.web_form.get_value("educational_details") || [];
             if (!validate_lead_course_table(lead_course)) {
                 return false;
             }
 
-            // 4️⃣ PAST EXPERIENCE TABLE
             let educational_details = frappe.web_form.get_value("past_experience_table") || [];
             if (!validate_past_experience_table(educational_details)) {
                 return false;
             }
 
-            // 5️⃣ ADDRESS HISTORY TABLE
             let address_history = frappe.web_form.get_value("address_history") || [];
             if (!validate_address_history(address_history)) {
                 return false;
             }
 
-            let signature_method = frappe.web_form.get_value("signature_method") || []
-            if (!validate_signature(signature_method)) {
-                return false
+            let marketing_phone = frappe.web_form.get_value("number_for_marketing");
+            if (!validate_phone(marketing_phone, "Marketing Phone Number")) {
+                return false;
             }
 
             return true;
@@ -259,6 +270,28 @@ window.addEventListener("beforeunload", () => {
     audit["signature update logs"] = [];
     save_audit_trail(audit);
 });
+
+function validate_email(email, label) {
+    const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email_regex.test(email)) {
+        frappe.msgprint(`${label} is not a valid email address`);
+        return false;
+    }
+    return true;
+}
+
+function validate_phone(phone, label) {
+    // allows +, digits, spaces, hyphens
+    const phone_regex = /^[+]?[\d\s-]{6,20}$/;
+    if (!phone_regex.test(phone)) {
+        frappe.msgprint(
+            `${label} must contain only numbers and optional country code (+)`
+        );
+        return false;
+    }
+    return true;
+}
+
 
 function is_valid_mm_yyyy(value) {
     return /^(0[1-9]|1[0-2])-[0-9]{4}$/.test(value);
