@@ -45,6 +45,7 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
             "date": data.date,
             "opportunity": opportunity,
             "payment_terms": data.payment_terms,
+            "services": data.services
         }
     )
 

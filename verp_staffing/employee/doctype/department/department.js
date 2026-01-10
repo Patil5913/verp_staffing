@@ -5,10 +5,23 @@ frappe.ui.form.on("Department", {
 	refresh(frm) {
         render_roles_multiselect(frm);
         init_roles_multiselect(frm);
+        set_service_query(frm);
+    },
+    onload(frm){
+        set_service_query(frm);
     }
 });
 
-
+function set_service_query(frm) {
+    frm.set_query("services", function () {
+        return {
+            query: "verp_staffing.employee.doctype.department.department.get_department_service_query",
+            filters: {
+                department: frm.doc.name
+            }
+        };
+    });
+}
 function render_roles_multiselect(frm) {
     const html = `
         <div class="custom-multiselect">

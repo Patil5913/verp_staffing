@@ -41,7 +41,7 @@ def get_auto_assign_employee(
 
     # 2. Resolve employees eligible for this role
     employees = get_employees_with_role(role, department)
-
+    frappe.errprint(f"Employees: {employees}, with role {role} in department : {department}")
     if not employees:
         frappe.throw("No employees available for auto assignment")
 
@@ -103,6 +103,17 @@ def get_employees_with_role(role, department=None):
     frappe.errprint(f"Assigned employees in dept {department}: {assigned_employees}")
     return assigned_employees
 
+SERVICE_DOCTYPE_MAP = {
+    # Technical
+    "ruc": "RUC",
+    "resume": "Resume",
+
+    # Marketing
+    "marketing": "Marketing",
+
+    # Add more explicit mappings here
+}
+
 @frappe.whitelist()
 def forward_candidate(customer, department):
     from frappe.utils import now_datetime
@@ -111,76 +122,97 @@ def forward_candidate(customer, department):
 
     dept_key = department.strip().lower()
 
-    DEPARTMENT_DOC_MAP = {
-        "resume": "Resume",
-        "technical": "RUC",
-        "marketing": "Marketing",
-    }
-
-    doctype = DEPARTMENT_DOC_MAP.get(dept_key)
-    if not doctype:
-        frappe.throw("Invalid department")
-
     # ---- parse stage safely ----
     try:
         stage = json.loads(doc.stage) if doc.stage else {}
     except Exception:
         stage = {}
 
-    # ---- prevent duplicate forwarding ----
+    # ---- prevent duplicate forwarding (department-level) ----
     if dept_key in stage:
-        frappe.throw(f"Candidate already forwarded to {dept_key.title()} department")
-    # Parse existing stage safely
-    try:
-        stage = json.loads(doc.stage) if doc.stage else {}
-    except Exception:
-        stage = {}
+        frappe.throw(f"Candidate already forwarded to {department}")
 
-    assignee = get_auto_assign_employee(
-        department=department,
-        target_doctype=doctype,
-        owner_field="assign_to"
-    )
-    frappe.errprint(f"Auto-assigned to {assignee}")
-    # ---- create department document ----
-    dept_doc = frappe.get_doc({
-        "doctype": doctype,
-        "customer": customer,
-        "assign_to": assignee,
-        "status": "Pending",
-    })
-    frappe.errprint(f"dept_doc {dept_doc}")
+    # ---- get services under department ----
+    services = get_services_for_department(department)
+    if not services:
+        frappe.throw(f"No services configured for {department}")
 
-    dept_doc.insert(ignore_permissions=True)
+    created_docs = []
 
+    for service in services:
+        service_key = service.strip().lower()
+
+        # ---- resolve doctype ----
+        doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
+
+        # ---- auto assign employee ----
+        assignee = get_auto_assign_employee(
+            department=department,
+            target_doctype=doctype,
+            owner_field="assign_to"
+        )
+
+        # ---- create document ----
+        if doctype == "Other Services":
+            dept_doc = frappe.get_doc({
+                "doctype": "Other Services",
+                "customer": customer,
+                "department": department,
+                "service": service,
+                "assign_to": assignee,
+                "status": "Pending",
+                "forwarded_on": now_datetime(),
+            })
+        else:
+            dept_doc = frappe.get_doc({
+                "doctype": doctype,
+                "customer": customer,
+                "assign_to": assignee,
+                "status": "Pending",
+            })
+
+        dept_doc.insert(ignore_permissions=True)
+        created_docs.append(dept_doc)
+
+    # ---- update stage ----
     stage[dept_key] = {
-        "assign_to": assignee,
+        "services": services,
         "timestamp": str(now_datetime())
     }
 
     doc.stage = json.dumps(stage)
-
     doc.save(ignore_permissions=True)
 
-    # ---- send notification ----
-     # Resolve assignee user email
-    assignee_user = frappe.db.get_value("Employee", assignee, "user")
+    # ---- notify all assignees ----
+    notify_assignees(created_docs, department, doc.name)
 
-    if assignee_user:
-        frappe.errprint(f"Sending notification to {assignee_user}")
+    return created_docs
+
+def notify_assignees(docs, department, customer):
+    assignees = set()
+
+    for d in docs:
+        emp_user = frappe.db.get_value("Employee", d.assign_to, "user")
+        if emp_user:
+            assignees.add(emp_user)
+
+    for user in assignees:
         send_notification(
-            recipients=[assignee_user],
+            recipients=[user],
             subject=f"New Candidate Assigned ({department})",
             message=(
                 f"You have been assigned a new candidate.\n\n"
-                f"Customer: {doc.name}\n"
-                f"Department: {department}\n"
-                f"Status: Pending"
+                f"Customer: {customer}\n"
+                f"Department: {department}"
             ),
-            reference_doctype=doctype,
-            reference_name=dept_doc.name,
             send_email=1,
             send_system=1,
         )
 
-    return dept_doc
+
+def get_services_for_department(department: str) -> list[str]:
+    return frappe.get_all(
+        "Department Service",
+        filters={"parent": department},
+        pluck="service_name"
+    )

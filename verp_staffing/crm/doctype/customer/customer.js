@@ -20,6 +20,18 @@ frappe.ui.form.on("Customer", {
             frm.tour.init({ tour_name })
                 .then(() => frm.tour.start());
         });
+
+        // show forward button only when form is filled
+        frappe.call({
+            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+            callback: (r) => {
+                let dept = r.message
+                apply_tab_visibility(frm, dept)
+                if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
+                    add_forward_button(frm);
+                }
+            }
+        })
     },
 });
 
@@ -533,7 +545,7 @@ function show_sales_order(frm) {
             filters: { opportunity: frm.doc.opportunity },
             fields: ["name", "title", "date", "customer"],
             limit_page_length: 50,
-            order_by:"creation desc"
+            order_by: "creation desc"
         },
         callback(r) {
             let sales_orders = r.message || [];
@@ -600,8 +612,8 @@ function load_payment_terms(so_name, frm) {
             name: so_name,
         },
         callback: function (r) {
-            console.log("r: ",r);
-            
+            console.log("r: ", r);
+
             if (!r.message) return;
 
             let so = r.message;
@@ -694,17 +706,6 @@ function render_lead_details(frm) {
                         return;
                     }
 
-                    // show forward button only when form is filled
-                    frappe.call({
-                        method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-                        callback: (r) => {
-                            let dept = r.message
-                            apply_tab_visibility(frm, dept)
-                            if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
-                                add_forward_button(frm);
-                            }
-                        }
-                    })
                     const lead = lead_res.message;
 
                     let html = `
@@ -807,13 +808,6 @@ const DEPARTMENT_VISIBILITY = {
     marketing: ["lead_details", "resume_tab", "technical_tab", "marketing_tab"]
 };
 
-const ALL_FORWARD_DEPARTMENTS = [
-    { label: "Resume", value: "resume" },
-    { label: "Technical", value: "technical" },
-    { label: "Marketing", value: "marketing" },
-];
-
-
 function apply_tab_visibility(frm, department) {
     const allowed = DEPARTMENT_VISIBILITY[department] || [];
 
@@ -837,16 +831,23 @@ async function add_forward_button(frm) {
         async () => {
             const forwarded = await get_stage_json(frm);
 
-            const available = ALL_FORWARD_DEPARTMENTS.filter(
-                d => !forwarded.includes(d.value)
-            );
+            frappe.call({
+                method: "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments",
+                callback(r) {
+                    const departments = r.message || [];
 
-            if (!available.length) {
-                frappe.msgprint("Candidate has already been forwarded to all departments.");
-                return;
-            }
+                    const available = departments.filter(
+                        dept => !forwarded.includes(dept)
+                    );
 
-            open_forward_prompt(frm, available);
+                    if (!available.length) {
+                        frappe.msgprint("Candidate has already been forwarded to all available departments.");
+                        return;
+                    }
+
+                    open_forward_prompt(frm, available);
+                }
+            });
         }
     );
 }
@@ -859,10 +860,7 @@ function open_forward_prompt(frm, available) {
                 fieldname: "department",
                 fieldtype: "Select",
                 label: "Select Department",
-                options: available.map(d => ({
-                    label: d.label,
-                    value: d.value
-                })),
+                options: available,
                 reqd: 1,
                 onchange() {
                     toggle_ruc_note_field(d);

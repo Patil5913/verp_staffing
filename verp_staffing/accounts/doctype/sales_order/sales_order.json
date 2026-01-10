@@ -7,6 +7,7 @@
  "field_order": [
   "title",
   "customer",
+  "services",
   "column_break_wknv",
   "date",
   "opportunity",
@@ -69,17 +70,35 @@
   {
    "fieldname": "agreement_html",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "services",
+   "fieldtype": "Table MultiSelect",
+   "label": "Services Opted",
+   "options": "SalesOrderServices"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-01 15:13:26.861362",
+ "modified": "2026-01-09 14:41:40.430731",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -90,6 +109,27 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1,
    "write": 1
   }
  ],
