@@ -13,7 +13,17 @@ frappe.ui.form.on("Customer", {
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
-
+        // show forward button only when form is filled
+        frappe.call({
+            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+            callback: (r) => {
+                let dept = r.message
+                apply_tab_visibility(frm, dept)
+                if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
+                    add_forward_button(frm);
+                }
+            }
+        })
         frm.add_custom_button("Show Form Tour", () => {
             const tour_name = 'Customer Form';
 
@@ -533,7 +543,7 @@ function show_sales_order(frm) {
             filters: { opportunity: frm.doc.opportunity },
             fields: ["name", "title", "date", "customer"],
             limit_page_length: 50,
-            order_by:"creation desc"
+            order_by: "creation desc"
         },
         callback(r) {
             let sales_orders = r.message || [];
@@ -600,8 +610,8 @@ function load_payment_terms(so_name, frm) {
             name: so_name,
         },
         callback: function (r) {
-            console.log("r: ",r);
-            
+            console.log("r: ", r);
+
             if (!r.message) return;
 
             let so = r.message;
@@ -694,17 +704,6 @@ function render_lead_details(frm) {
                         return;
                     }
 
-                    // show forward button only when form is filled
-                    frappe.call({
-                        method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-                        callback: (r) => {
-                            let dept = r.message
-                            apply_tab_visibility(frm, dept)
-                            if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
-                                add_forward_button(frm);
-                            }
-                        }
-                    })
                     const lead = lead_res.message;
 
                     let html = `
