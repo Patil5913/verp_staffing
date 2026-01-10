@@ -679,6 +679,7 @@ FORM_TOURS = {
 
 def after_install():
     setup_navbar_settings()
+    seed_website_setting()
     # seed_sales_stages()
     # seed_type_of_interview()
     # create_all_roles()
@@ -692,9 +693,10 @@ def after_install():
 
 
 
+import requests
+from frappe.utils.file_manager import save_file
+
 def setup_navbar_settings():
-    import requests
-    from frappe.utils.file_manager import save_file
     
     navbar = frappe.get_single("Navbar Settings")
     updated = False
@@ -711,27 +713,113 @@ def setup_navbar_settings():
             
     url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
 
-    response = requests.get(url, timeout=20)
-    content_type = response.headers.get("Content-Type", "")
-
-    if not content_type.startswith("image/"):
-        frappe.throw(f"Downloaded file is not an image. Content-Type: {content_type}")
-
-    file_doc = save_file(
-        fname="app_logo.png",
-        content=response.content,
-        dt="Navbar Settings",
-        dn="Navbar Settings",
-        is_private=0
+    existing = frappe.db.get_value(
+        "File",
+        {"attached_to_doctype": "Navbar Settings"},
+        ["name", "file_url"],
+        as_dict=True
     )
+    file_url = ""
+    if existing:
+        file_url = existing.file_url
+    else:
+        response = requests.get(url, timeout=20)
+        content_type = response.headers.get("Content-Type", "")
 
-    navbar.app_logo = file_doc.file_url
+        if not content_type.startswith("image/"):
+            frappe.throw(f"Downloaded file is not an image. Content-Type: {content_type}")
+
+        file_doc = save_file(
+            fname="app_logo.png",
+            content=response.content,
+            dt="Navbar Settings",
+            dn="Navbar Settings",
+            is_private=0
+        )
+        file_url = file_doc.file_url
+
+    navbar.app_logo = file_url
     updated = True
 
     if updated:
         navbar.save(ignore_permissions=True)
         frappe.db.commit()  
 
+def seed_website_setting():
+    website = frappe.get_single("Website Settings")
+    updated = False
+
+    # ---------- LOGIN PAGE ----------
+    if website.app_name != "Vrugle":
+        website.app_name = "Vrugle"
+        updated = True
+
+    if website.disable_signup != 1:
+        website.disable_signup = 1
+        updated = True
+
+    # App logo (reuse if exists, else download)
+    url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
+    existing = frappe.db.get_value(
+        "File",
+        {"attached_to_doctype": "Website Settings"},
+        ["name", "file_url"],
+        as_dict=True
+    )
+
+    file_url = ""
+    if existing:
+        file_url = existing.file_url
+    else:
+        response = requests.get(url, timeout=20)
+        content_type = response.headers.get("Content-Type", "")
+
+        if not content_type.startswith("image/"):
+            frappe.throw(f"Downloaded file is not an image. Content-Type: {content_type}")
+
+        file_doc = save_file(
+            fname="app_logo.png",
+            content=response.content,
+            dt="Website Settings",
+            dn="Website Settings",
+            is_private=0
+        )
+        file_url = file_doc.file_url
+
+    if website.app_logo != file_url:
+        website.app_logo = file_url
+        updated = True
+
+    # ---------- LANDING / HOME ----------
+    if website.home_page != "/app":
+        website.home_page = "/app"
+        updated = True
+
+    if website.title_prefix != "Vrugle":
+        website.title_prefix = "Vrugle"
+        updated = True
+
+    # ---------- FOOTER ----------
+    footer_html = """
+    <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
+        <span>Made with</span>
+        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Blue%20Heart.png"
+             width="18" height="18" />
+        <span>by <b>Vrugle</b></span>
+    </div>
+    """
+
+    if website.footer_powered != footer_html:
+        website.footer_powered = footer_html
+        updated = True
+
+    if website.copyright != "Vrugle LLP":
+        website.copyright = "Vrugle LLP"
+        updated = True
+
+    if updated:
+        website.save(ignore_permissions=True)
+        frappe.db.commit()
 
 def seed_sales_stages():
     doctype = "Sales Stage"

@@ -9,7 +9,6 @@ class CustomUser(User):
         Controls fields shown in User Quick Entry.
         """
         fields = super().get_quick_entry_fields()
-        frappe.errprint("CustomUser.get_quick_entry_fields called")
         # REMOVE role_profile_name from quick entry
         return [
             f for f in fields
@@ -18,7 +17,6 @@ class CustomUser(User):
 
     def on_update(self):
         super().on_update()
-        frappe.errprint(f"on_update called for {self.name}")
         if not getattr(self.flags, "in_insert", False):
             return
         if self.name == "Administrator":
@@ -29,7 +27,7 @@ class CustomUser(User):
             return
 
         frappe.msgprint(
-            msg=_("from onupdate This user does not have an Employee record.\nYou should create an Employee for proper system access."),
+            msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
             title=_("Missing Employee Record"),
             primary_action={
                 "label": _("Create Employee"),

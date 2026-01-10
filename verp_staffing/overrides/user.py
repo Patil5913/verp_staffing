@@ -58,7 +58,6 @@ def warn_if_employee_missing(user_doc):
 
 @frappe.whitelist()
 def check_employee_missing(user):
-    frappe.errprint(f"Checking employee missing for user: {user}")
     if not user:
         return False
 
