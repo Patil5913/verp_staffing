@@ -32,10 +32,13 @@ frappe.ui.form.on("Marketing", {
                         customer: frm.doc.customer,
                         fields: [
                                 "number_for_marketing",
-                        ],
-                        label_map: {
-                                number_for_marketing: "Lead number for marketing",
-                        }
+                                "surname", "first_name", "father_name",
+                                "technologies", "marketing_linkedin", "linkedin_password",
+                                "current_visa_status", "ssn_digit", "date_of_birth",
+                                "ead_card", "past_experience_table", "email",
+                                "personal_phone_number", "current_address", "entry_date", 
+                                "certificate_or_completed_course", "availability_for_interview", "driving_licence", 
+                        ]
                 });
 
                 if (!frm.is_new()) {
@@ -116,52 +119,52 @@ function create_interview(frm, values) {
 
 
 function render_interview_list(frm) {
-    if (!frm.doc.name) return;
+        if (!frm.doc.name) return;
 
-    frappe.call({
-        method: "verp_staffing.marketing.doctype.marketing.marketing.get_interviews_by_marketing",
-        args: {
-            marketing: frm.doc.name
-        },
-        callback(r) {
-            const data = r.message || [];
+        frappe.call({
+                method: "verp_staffing.marketing.doctype.marketing.marketing.get_interviews_by_marketing",
+                args: {
+                        marketing: frm.doc.name
+                },
+                callback(r) {
+                        const data = r.message || [];
 
-            if (!data.length) {
-                frm.fields_dict.interview_list.$wrapper.html(
-                    "<div class='text-muted'>No interviews linked</div>"
-                );
-                return;
-            }
+                        if (!data.length) {
+                                frm.fields_dict.interview_list.$wrapper.html(
+                                        "<div class='text-muted'>No interviews linked</div>"
+                                );
+                                return;
+                        }
 
-            let html = "<ul style='padding-left:15px'>";
+                        let html = "<ul style='padding-left:15px'>";
 
-            data.forEach(d => {
-                html += `
+                        data.forEach(d => {
+                                html += `
                     <li>
                         <a href="#" data-interview="${d.name}">
                             ${d.name}
                         </a>
                     </li>
                 `;
-            });
+                        });
 
-            html += "</ul>";
+                        html += "</ul>";
 
-            frm.fields_dict.interview_list.$wrapper.html(html);
+                        frm.fields_dict.interview_list.$wrapper.html(html);
 
-            // Click handler
-            frm.fields_dict.interview_list.$wrapper
-                .find("a")
-                .on("click", function (e) {
-                    e.preventDefault();
+                        // Click handler
+                        frm.fields_dict.interview_list.$wrapper
+                                .find("a")
+                                .on("click", function (e) {
+                                        e.preventDefault();
 
-                    frappe.set_route(
-                        "List",
-                        "Interview",
-                        "Kanban",
-                        { marketing_link: frm.doc.name }
-                    );
-                });
-        }
-    })
+                                        frappe.set_route(
+                                                "List",
+                                                "Interview",
+                                                "Kanban",
+                                                { marketing_link: frm.doc.name }
+                                        );
+                                });
+                }
+        })
 }

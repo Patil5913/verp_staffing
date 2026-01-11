@@ -2,6 +2,8 @@
 const AUDIT_KEY = "audit_trail_storage";
 // unique key for this webform
 let storage_key = "webform_filled_lead_details_form";
+// max file size
+const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
 
 frappe.ready(function () {
     // Wait until Web Form UI loads
@@ -9,6 +11,15 @@ frappe.ready(function () {
 
     // remove discard button
     document.querySelector('.discard-btn').remove();
+
+    const fields_to_hide = [
+        "agreement_link", "signature_image", "audit_trail", "customer",
+        "visa_copy", "ead_card", "driving_licence", "old_resume",
+    ];
+
+    fields_to_hide.forEach(fieldname => {
+        frappe.web_form.set_df_property(fieldname, "hidden", 1);
+    });
 
     setTimeout(() => {
         const wrapper = document.querySelector(
@@ -700,6 +711,8 @@ function generate_signature_image(text, font, dialog) {
                 frappe.msgprint("Signature uploaded successfully.");
                 dialog.hide();
 
+                frappe.web_form.set_df_property("signature_method", "read_only", 1);
+
                 frappe.web_form.set_value(
                     "signature_image",
                     r.message.file_name
@@ -744,7 +757,12 @@ function open_signature_dialog() {
                 label: "Select Image",
                 fieldname: "file_input",
                 fieldtype: "HTML",
-                options: `<input type="file" accept="image/*" id="signature_file_input">`
+                options: `
+                        <input type="file" accept="image/*" id="signature_file_input">
+                        <div style="margin-top:6px; font-size:12px; color:#cc0000;">
+                            Max file size allowed: <b>1 MB</b>. Larger files will be rejected.
+                        </div>
+                        `
             },
             {
                 label: "Preview",
@@ -783,6 +801,18 @@ function open_signature_dialog() {
     // file input listener
     $(document).on("change", "#signature_file_input", function (e) {
         selected_image = e.target.files[0];
+
+        if (selected_image.size > MAX_PDF_SIZE) {
+            frappe.msgprint({
+                title: "File Too Large",
+                message: "Image size must not exceed 1 MB.",
+                indicator: "red"
+            });
+            selected_image = null;
+            $("#signature_file_input").val("");
+            return;
+        }
+
 
         if (selected_image) {
             let reader = new FileReader();
@@ -829,6 +859,7 @@ function upload_signature_file(file, dialog) {
                     frappe.msgprint("Image Uploaded Successfully!");
                     dialog.hide();
                     frappe.web_form.set_value("signature_image", r.message.file_name);
+                    frappe.web_form.set_df_property("signature_method", "read_only", 1);
 
                     // Set image in HTML field
                     frappe.web_form.set_value(
@@ -891,7 +922,7 @@ function open_file_upload_dialog(target_field) {
     // generate a unique id for the file input so multiple dialogs don't clash
     const input_id = "custom_pdf_input_" + Date.now();
 
-    const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
+
 
     let d = new frappe.ui.Dialog({
         title: "Upload PDF File",
