@@ -31,13 +31,11 @@ frappe.ui.form.on("Marketing", {
                         source_doctype: "Lead Detail Form",
                         customer: frm.doc.customer,
                         fields: [
-                                "number_for_marketing",
-                                "surname", "first_name", "father_name",
-                                "technologies", "marketing_linkedin", "linkedin_password",
-                                "current_visa_status", "ssn_digit", "date_of_birth",
-                                "ead_card", "past_experience_table", "email",
-                                "personal_phone_number", "current_address", "entry_date", 
-                                "certificate_or_completed_course", "availability_for_interview", "driving_licence", 
+                                "surname", "first_name", "father_name","personal_phone_number",
+                                "email", "number_for_marketing", "marketing_linkedin", "linkedin_password",
+                                "technologies", "ssn_digit", "date_of_birth", "current_address",
+                                "current_visa_status", "ead_card", "past_experience_table",
+                                "entry_date", "certificate_or_completed_course", "availability_for_interview", "driving_licence", 
                         ]
                 });
 

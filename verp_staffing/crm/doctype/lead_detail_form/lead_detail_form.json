@@ -49,8 +49,6 @@
   "details_for_marketing_purpose_section",
   "number_for_marketing",
   "google_voice_number",
-  "marketing_email",
-  "marketing_email_password",
   "column_break_uksq",
   "marketing_linkedin",
   "linkedin_password",
@@ -127,11 +125,6 @@
    "label": "Phone Number for marketing (Provide country code with number)",
    "placeholder": "Exp: +1 xxx xxx xxxx",
    "reqd": 1
-  },
-  {
-   "fieldname": "marketing_email",
-   "fieldtype": "Data",
-   "label": "Email ID "
   },
   {
    "fieldname": "marketing_linkedin",
@@ -217,11 +210,6 @@
   {
    "fieldname": "column_break_uksq",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "marketing_email_password",
-   "fieldtype": "Data",
-   "label": "Email Password"
   },
   {
    "fieldname": "column_break_mffv",
@@ -414,7 +402,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-10 15:52:20.174765",
+ "modified": "2026-01-11 12:40:20.884690",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

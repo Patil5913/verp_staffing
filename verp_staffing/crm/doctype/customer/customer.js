@@ -6,13 +6,57 @@ frappe.ui.form.on("Customer", {
         render_notes(frm);
         render_activity_section(frm);
         toggle_tab_view(frm);
-        render_lead_details(frm);
         inject_department_css();
         inject_status_badge_css();
         load_department_panels(frm);
+
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
+
+        window.render_customer_related_html({
+            frm: frm,
+            html_field: "lead_details",
+            source_doctype: "Lead Detail Form",
+            customer: frm.doc.name,
+            fields: [
+                "agreement_link",
+                "signature_method",
+                "signature_image",
+                "my_electronic_signature_has_same_effect_as_handwritten",
+                "i_consent_to_receive_sign_and_store_documents_electronically",
+                "i_confirm_my_identity_and_signing_this_document_intentionally",
+                "surname",
+                "first_name",
+                "father_name",
+                "personal_phone_number",
+                "email",
+                "personal_linkedin",
+                "date_of_birth",
+                "educational_details",
+                "past_experience_table",
+                "technologies",
+                "additional_skills",
+                "entry_date",
+                "current_address",
+                "address_history",
+                "certificate_or_completed_course",
+                "current_visa_status",
+                "experience",
+                "number_for_marketing",
+                "google_voice_number",
+                "marketing_linkedin",
+                "passport_number",
+                "ssn_digit",
+                "availability_for_interview",
+                "remarks",
+                "visa_copy",
+                "ead_card",
+                "driving_licence",
+                "old_resume"
+            ]
+        });
+
         // show forward button only when form is filled
         frappe.call({
             method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
@@ -24,6 +68,7 @@ frappe.ui.form.on("Customer", {
                 }
             }
         })
+
         frm.add_custom_button("Show Form Tour", () => {
             const tour_name = 'Customer Form';
 
@@ -648,156 +693,6 @@ function load_payment_terms(so_name, frm) {
         }
     });
 }
-
-function render_lead_details(frm) {
-    frm.set_df_property(
-        "lead_details",
-        "options",
-        `<p style="color:#888;padding:10px;">Loading Lead Details...</p>`
-    );
-
-    // STEP 1: Check existence
-    frappe.call({
-        method: "frappe.client.get_list",
-        args: {
-            doctype: "Lead Detail Form",
-            filters: {
-                customer: frm.doc.name
-            },
-            fields: ["name"],
-            limit_page_length: 1
-        },
-        callback: function (res) {
-
-            // ✅ CASE 1: No Lead Detail linked
-            if (!res.message || res.message.length === 0) {
-                frm.set_df_property(
-                    "lead_details",
-                    "options",
-                    `
-                    <div style="padding:15px;color:#999;">
-                        <h4>Lead Details</h4>
-                        <p>No Lead Detail form not filled yet by customer.</p>
-                    </div>
-                    `
-                );
-                return;
-            }
-
-            // STEP 2: Fetch full document
-            const c_name = res.message[0].name;
-
-            frappe.call({
-                method: "frappe.client.get",
-                args: {
-                    doctype: "Lead Detail Form",
-                    name: c_name
-                },
-                callback: function (lead_res) {
-
-                    if (!lead_res.message) {
-                        frm.set_df_property(
-                            "lead_details",
-                            "options",
-                            `<p style="color:red;">Failed to load Lead Details.</p>`
-                        );
-                        return;
-                    }
-
-                    const lead = lead_res.message;
-
-                    let html = `
-                        <div style="padding:15px;">
-                            <h4 style="margin-bottom:15px;">Lead Details</h4>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    `;
-
-                    const exclude = [
-                        "doctype", "name", "owner", "modified", "creation", "modified_by",
-                        "docstatus", "_comments", "_assign", "_user_tags", "idx"
-                    ];
-
-                    // Helper for Link fields
-                    const fetchLinkValue = (field, value, key) => {
-                        frappe.call({
-                            method: "frappe.client.get",
-                            args: {
-                                doctype: field.options,
-                                name: value
-                            },
-                            callback: function (data) {
-                                const finalValue = data.message?.name || value;
-                                $(`#field-${key}`).text(finalValue);
-                            }
-                        });
-                    };
-
-                    Object.keys(lead).forEach(key => {
-                        const value = lead[key];
-
-                        if (
-                            exclude.includes(key) ||
-                            value === null ||
-                            value === "" ||
-                            key === "past_experience" ||
-                            key === "education_table"
-                        ) return;
-
-                        const field = frappe.meta.get_docfield("Lead Detail Form", key);
-                        const label = frappe.model.unscrub(key);
-
-                        if (field && field.fieldtype === "Link") {
-                            html += `
-                                <div style="border:1px solid #e5e5e5;padding:10px;border-radius:8px;">
-                                    <strong>${label}</strong><br>
-                                    <span id="field-${key}">Loading...</span>
-                                </div>`;
-                            fetchLinkValue(field, value, key);
-
-                        } else if (typeof value !== "object") {
-                            html += `
-                                <div style="border:1px solid #e5e5e5;padding:10px;border-radius:8px;">
-                                    <strong>${label}</strong><br>
-                                    <span>${value}</span>
-                                </div>`;
-                        }
-                    });
-
-                    html += `</div><br>`;
-
-                    // Child tables
-                    ["past_experience", "education_table"].forEach(tblKey => {
-                        if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
-                            html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
-                            html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
-                                        <tr>`;
-
-                            Object.keys(lead[tblKey][0]).forEach(col => {
-                                html += `<th>${frappe.model.unscrub(col)}</th>`;
-                            });
-
-                            html += `</tr>`;
-
-                            lead[tblKey].forEach(row => {
-                                html += `<tr>`;
-                                Object.keys(row).forEach(col => {
-                                    html += `<td>${row[col] || "-"}</td>`;
-                                });
-                                html += `</tr>`;
-                            });
-
-                            html += `</table>`;
-                        }
-                    });
-
-                    html += `</div>`;
-                    frm.set_df_property("lead_details", "options", html);
-                }
-            });
-        }
-    });
-}
-
 
 const DEPARTMENT_VISIBILITY = {
     sales: ["lead_details", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],

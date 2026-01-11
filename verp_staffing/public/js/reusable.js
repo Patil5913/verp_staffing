@@ -219,8 +219,6 @@ window.render_customer_related_html = function ({
             <div class="customer-data-container">
             `;
 
-            console.log("records", records);
-
             records.forEach((record, index) => {
                 html += `
                     <div class="record-section">
@@ -235,9 +233,6 @@ window.render_customer_related_html = function ({
                         if (f.value === null || f.value === undefined || f.value === "") {
                             return;
                         }
-
-                        // Debug log
-                        console.log('Field:', f.fieldname, 'Type:', f.fieldtype, 'Options:', f.options, 'Value:', f.value);
 
                         let valueHtml = '';
                         
