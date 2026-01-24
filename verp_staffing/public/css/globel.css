@@ -1,3 +1,41 @@
+/* ===== Disable text selection globally ===== */
+body.verp-protected * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow selection in inputs & code if needed */
+body.verp-protected input,
+body.verp-protected textarea,
+body.verp-protected pre,
+body.verp-protected code {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Blur when window loses focus */
+body.verp-blur .main-section,
+body.verp-blur .layout-main-section {
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+body.verp-protected::after {
+  content: "CONFIDENTIAL – VERP STAFFING";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 64px;
+  color: rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+
 /* Frappe-style Custom Multiselect */
 .custom-multiselect {
     border: 1px solid #d1d8dd;
