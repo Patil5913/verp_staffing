@@ -24,14 +24,25 @@ function set_service_query(frm) {
 }
 function render_roles_multiselect(frm) {
     const html = `
+    <div class="custom-multiselect-wrapper">
+        <label class="multiselect-label">
+            Select Department Roles
+        </label>
+
         <div class="custom-multiselect">
             <div class="multiselect-content">
                 <div class="selected-items"></div>
-                <input type="text" class="multiselect-input" placeholder="Choose Roles">
+                <input 
+                    type="text" 
+                    class="multiselect-input" 
+                    placeholder="Choose Roles"
+                >
             </div>
             <div class="multiselect-dropdown hidden"></div>
         </div>
-    `;
+    </div>
+`;
+
 
     const wrapper = frm.get_field("roles_html").$wrapper;
     if (!wrapper.find(".custom-multiselect").length) {
@@ -82,6 +93,7 @@ function init_roles_multiselect(frm) {
             method: "frappe.client.get_list",
             args: {
                 doctype: "Role",
+                label: "Select Department Roles",
                 fields: ["name"],
                 filters: {
                     name: ["like", `%${filter}%`]

@@ -2,6 +2,8 @@
 const AUDIT_KEY = "audit_trail_storage";
 // unique key for this webform
 let storage_key = "webform_filled_lead_details_form";
+// max file size
+const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
 
 frappe.ready(function () {
     // Wait until Web Form UI loads
@@ -9,6 +11,15 @@ frappe.ready(function () {
 
     // remove discard button
     document.querySelector('.discard-btn').remove();
+
+    const fields_to_hide = [
+        "agreement_link", "signature_image", "audit_trail", "customer",
+        "visa_copy", "ead_card", "driving_licence", "old_resume",
+    ];
+
+    fields_to_hide.forEach(fieldname => {
+        frappe.web_form.set_df_property(fieldname, "hidden", 1);
+    });
 
     setTimeout(() => {
         const wrapper = document.querySelector(
@@ -191,38 +202,49 @@ frappe.ready(function () {
     if (frappe.web_form) {
         frappe.web_form.validate = () => {
 
+            let signature_method = frappe.web_form.get_value("signature_method") || []
+            if (!validate_signature(signature_method)) {
+                return false
+            }
+
+            let email = frappe.web_form.get_value("email");
+            if (!validate_email(email, "Email")) {
+                return false;
+            }
+
+            let personal_phone = frappe.web_form.get_value("personal_phone_number");
+            if (!validate_phone(personal_phone, "Personal Phone Number")) {
+                return false;
+            }
+
             let entry_date = frappe.web_form.get_value("entry_date");
             if (!validate_entry_date(entry_date)) {
                 return false;
             }
 
-            // 2️⃣ SSN DIGIT
             let ssn_digit = frappe.web_form.get_value("ssn_digit");
             if (!validate_ssn_digit(ssn_digit)) {
                 return false;
             }
 
-            // 3️⃣ LEAD COURSE TABLE
             let lead_course = frappe.web_form.get_value("educational_details") || [];
             if (!validate_lead_course_table(lead_course)) {
                 return false;
             }
 
-            // 4️⃣ PAST EXPERIENCE TABLE
             let educational_details = frappe.web_form.get_value("past_experience_table") || [];
             if (!validate_past_experience_table(educational_details)) {
                 return false;
             }
 
-            // 5️⃣ ADDRESS HISTORY TABLE
             let address_history = frappe.web_form.get_value("address_history") || [];
             if (!validate_address_history(address_history)) {
                 return false;
             }
 
-            let signature_method = frappe.web_form.get_value("signature_method") || []
-            if (!validate_signature(signature_method)) {
-                return false
+            let marketing_phone = frappe.web_form.get_value("number_for_marketing");
+            if (!validate_phone(marketing_phone, "Marketing Phone Number")) {
+                return false;
             }
 
             return true;
@@ -259,6 +281,28 @@ window.addEventListener("beforeunload", () => {
     audit["signature update logs"] = [];
     save_audit_trail(audit);
 });
+
+function validate_email(email, label) {
+    const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email_regex.test(email)) {
+        frappe.msgprint(`${label} is not a valid email address`);
+        return false;
+    }
+    return true;
+}
+
+function validate_phone(phone, label) {
+    // allows +, digits, spaces, hyphens
+    const phone_regex = /^[+]?[\d\s-]{6,20}$/;
+    if (!phone_regex.test(phone)) {
+        frappe.msgprint(
+            `${label} must contain only numbers and optional country code (+)`
+        );
+        return false;
+    }
+    return true;
+}
+
 
 function is_valid_mm_yyyy(value) {
     return /^(0[1-9]|1[0-2])-[0-9]{4}$/.test(value);
@@ -667,6 +711,8 @@ function generate_signature_image(text, font, dialog) {
                 frappe.msgprint("Signature uploaded successfully.");
                 dialog.hide();
 
+                frappe.web_form.set_df_property("signature_method", "read_only", 1);
+
                 frappe.web_form.set_value(
                     "signature_image",
                     r.message.file_name
@@ -711,7 +757,12 @@ function open_signature_dialog() {
                 label: "Select Image",
                 fieldname: "file_input",
                 fieldtype: "HTML",
-                options: `<input type="file" accept="image/*" id="signature_file_input">`
+                options: `
+                        <input type="file" accept="image/*" id="signature_file_input">
+                        <div style="margin-top:6px; font-size:12px; color:#cc0000;">
+                            Max file size allowed: <b>1 MB</b>. Larger files will be rejected.
+                        </div>
+                        `
             },
             {
                 label: "Preview",
@@ -750,6 +801,18 @@ function open_signature_dialog() {
     // file input listener
     $(document).on("change", "#signature_file_input", function (e) {
         selected_image = e.target.files[0];
+
+        if (selected_image.size > MAX_PDF_SIZE) {
+            frappe.msgprint({
+                title: "File Too Large",
+                message: "Image size must not exceed 1 MB.",
+                indicator: "red"
+            });
+            selected_image = null;
+            $("#signature_file_input").val("");
+            return;
+        }
+
 
         if (selected_image) {
             let reader = new FileReader();
@@ -796,6 +859,7 @@ function upload_signature_file(file, dialog) {
                     frappe.msgprint("Image Uploaded Successfully!");
                     dialog.hide();
                     frappe.web_form.set_value("signature_image", r.message.file_name);
+                    frappe.web_form.set_df_property("signature_method", "read_only", 1);
 
                     // Set image in HTML field
                     frappe.web_form.set_value(
@@ -858,7 +922,7 @@ function open_file_upload_dialog(target_field) {
     // generate a unique id for the file input so multiple dialogs don't clash
     const input_id = "custom_pdf_input_" + Date.now();
 
-    const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
+
 
     let d = new frappe.ui.Dialog({
         title: "Upload PDF File",

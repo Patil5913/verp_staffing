@@ -6,13 +6,68 @@ frappe.ui.form.on("Customer", {
         render_notes(frm);
         render_activity_section(frm);
         toggle_tab_view(frm);
-        render_lead_details(frm);
         inject_department_css();
         inject_status_badge_css();
         load_department_panels(frm);
+
         if (frm.doc.opportunity) {
             show_sales_order(frm);
         }
+
+        window.render_customer_related_html({
+            frm: frm,
+            html_field: "lead_details",
+            source_doctype: "Lead Detail Form",
+            customer: frm.doc.name,
+            fields: [
+                "agreement_link",
+                "signature_method",
+                "signature_image",
+                "my_electronic_signature_has_same_effect_as_handwritten",
+                "i_consent_to_receive_sign_and_store_documents_electronically",
+                "i_confirm_my_identity_and_signing_this_document_intentionally",
+                "surname",
+                "first_name",
+                "father_name",
+                "personal_phone_number",
+                "email",
+                "personal_linkedin",
+                "date_of_birth",
+                "educational_details",
+                "past_experience_table",
+                "technologies",
+                "additional_skills",
+                "entry_date",
+                "current_address",
+                "address_history",
+                "certificate_or_completed_course",
+                "current_visa_status",
+                "experience",
+                "number_for_marketing",
+                "google_voice_number",
+                "marketing_linkedin",
+                "passport_number",
+                "ssn_digit",
+                "availability_for_interview",
+                "remarks",
+                "visa_copy",
+                "ead_card",
+                "driving_licence",
+                "old_resume"
+            ]
+        });
+
+        // show forward button only when form is filled
+        frappe.call({
+            method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
+            callback: (r) => {
+                let dept = r.message
+                apply_tab_visibility(frm, dept)
+                if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
+                    add_forward_button(frm);
+                }
+            }
+        })
 
         frm.add_custom_button("Show Form Tour", () => {
             const tour_name = 'Customer Form';

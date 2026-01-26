@@ -1,10 +1,11 @@
-import frappe, json, fitz
-from frappe.utils.pdf import get_pdf
-from frappe.utils.file_manager import save_file
+import frappe, json
 import os
 from verp_staffing.crm.api.helpers import send_notification
 from frappe.utils import get_url
 from urllib.parse import quote
+
+
+
 
 
 @frappe.whitelist()
@@ -149,57 +150,96 @@ def get_template_path(template):
 
 
 def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=False):
+    import io
+    import os
+    import frappe
+    from pdfrw import PdfReader, PdfWriter, PageMerge
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.utils import ImageReader
+    from PIL import Image
 
-    pdf = fitz.open(input_pdf_path)
+    reader = PdfReader(input_pdf_path)
+    writer = PdfWriter()
 
-    for f in fields:
+    for page_index, page in enumerate(reader.pages):
+        page_width = float(page.MediaBox[2])
+        page_height = float(page.MediaBox[3])
 
-        page_index = int(f.get("page", 1)) - 1
-        if page_index < 0 or page_index >= len(pdf):
-            continue
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet, pagesize=(page_width, page_height))
 
-        page = pdf[page_index]
-        page_rect = page.rect
+        drew_anything = False
 
-        px_w = float(f.get("page_width") or 0)
-        px_h = float(f.get("page_height") or 0)
+        for f in fields:
+            if int(f.get("page", 1)) - 1 != page_index:
+                continue
 
-        if not px_w or not px_h:
-            frappe.throw("Missing page_width/page_height in field JSON")
+            px_w = float(f.get("page_width") or 0)
+            px_h = float(f.get("page_height") or 0)
+            if not px_w or not px_h:
+                frappe.throw("Missing page_width/page_height in field JSON")
 
-        sx = page_rect.width / px_w
-        sy = page_rect.height / px_h
+            sx = page_width / px_w
+            sy = page_height / px_h
 
-        bx = float(f.get("x") or 0)
-        by = float(f.get("y") or 0)
-        bw = float(f.get("width") or 150)
-        bh = float(f.get("height") or 30)
+            bx = float(f.get("x") or 0)
+            by = float(f.get("y") or 0)
+            bw = float(f.get("width") or 150)
+            bh = float(f.get("height") or 30)
 
-        tx = bx * sx
-        ty = by * sy
-        tw = bw * sx
-        th = bh * sy
+            x = bx * sx
+            y = page_height - ((by + bh) * sy)
+            w = bw * sx
+            h = bh * sy
 
-        rect = fitz.Rect(tx, ty, tx + tw, ty + th)
+            name = f.get("name")
+            val = data_dict.get(name, "")
+            fontsize = int(f.get("font_size") or 11)
+            ftype = f.get("type", "Text")
 
-        name = f.get("name")
-        val = data_dict.get(name, "")
-        fontsize = int(f.get("font_size") or 11)
-        line_height = float(f.get("line_height", 1.2))
-        
-        ftype = f.get("type", "Text")
+            if ftype == "Text" and val:
+                c.setFont("Helvetica", fontsize)
+                c.drawString(x, y + (h - fontsize), str(val))
+                drew_anything = True
 
-        # EXISTING FIELD TYPES
-        if ftype == "Checkbox":
-            render_checkbox(page, rect, val)
-        elif ftype == "Payment_Terms":
-            val = data_dict.get(ftype, "")
-            render_payment_terms_table(page, rect, val)
-        elif ftype == "Signature":
-            render_signature(page, rect, val)
+            elif ftype == "Checkbox" and val:
+                c.rect(x, y, h, h, stroke=1, fill=0)
+                c.line(x, y, x + h, y + h)
+                c.line(x, y + h, x + h, y)
+                drew_anything = True
 
-        else:
-            render_text(page, rect, str(val), fontsize=fontsize, line_height=line_height)
+            elif ftype == "Signature" and val:
+                img = Image.open(val)
+                c.drawImage(
+                    ImageReader(img),
+                    x,
+                    y,
+                    width=w,
+                    height=h,
+                    mask="auto",
+                )
+                drew_anything = True
+
+            elif ftype == "Payment_Terms" and payment_terms:
+                c.setFont("Helvetica", fontsize)
+                text = c.beginText(x, y + h - fontsize)
+                for line in payment_terms.split("\n"):
+                    text.textLine(line)
+                c.drawText(text)
+                drew_anything = True
+
+        # 🔴 REQUIRED
+        c.showPage()
+        c.save()
+
+        packet.seek(0)
+        overlay_pdf = PdfReader(packet)
+
+        # ✅ CRITICAL SAFETY CHECK
+        if overlay_pdf.pages:
+            PageMerge(page).add(overlay_pdf.pages[0]).render()
+
+        writer.addpage(page)
 
     filename = f"agreement_{frappe.generate_hash(6)}.pdf"
 
@@ -212,18 +252,11 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
         out_path = os.path.join(tmp_dir, filename)
         url = f"/files/tmp/{filename}"
 
-    pdf.save(out_path)
-    pdf.close()
-
+    writer.write(out_path)
     return out_path, url
 
-def flip_rect_y(rect, page_height):
-    return fitz.Rect(
-        rect.x0,
-        page_height - rect.y1,
-        rect.x1,
-        page_height - rect.y0,
-    )
+
+
 def wrap_text_for_annotation(text, max_chars):
     words = text.split(" ")
     lines, line = [], ""
@@ -301,163 +334,212 @@ def render_signature(page, rect, file_url):
             title="Agreement PDF",
         )
 
+# this fucntion is commented out cause it's using fitz package whcih we are now not using 
 
-def render_payment_terms_table(page, rect, terms):
+# def render_payment_terms_table(page, rect, terms):
+#     """
+#     Render a small table using annotations only.
+#     Includes debug logs via frappe.errprint to help diagnose coordinate / rotation problems.
+
+#     Approach
+#     - For each cell create a rect annotation (page.add_rect_annot)
+#       then create a freetext annotation for the cell text.
+#     - Use annot.set_colors and annot.set_border for visible borders.
+#     - Log page rect, rotation, input rect and actual annotation bbox to trace mismatches.
+#     - If results appear inverted try the 'flipped' fallback that maps top-origin -> bottom-origin.
+#     """
+
+#     # quick guard
+#     if not terms:
+#         render_text(page, rect, "No Payment Terms", fontsize=10, line_height=1.2)
+#         return
+
+#     try:
+#         frappe.errprint("render_payment_terms_table debug start")
+#         frappe.errprint(f"page.rect: {page.rect}")  # points
+#         try:
+#             # PyMuPDF exposes mediabox and rotation properties sometimes
+#             frappe.errprint(f"page.mediabox: {getattr(page, 'mediabox', None)}")
+#         except Exception:
+#             pass
+#         try:
+#             frappe.errprint(f"page_rotation: {getattr(page, 'rotation', None)}")
+#         except Exception:
+#             pass
+
+#         columns = ["Date", "Amount", "Received"]
+#         keys = ["date", "amount", "is_received"]
+
+#         col_count = len(columns)
+#         col_width = rect.width / col_count
+#         row_height = 20  # points; adjust if you want taller rows
+
+#         # Start at top of supplied rect (top-origin)
+#         y = rect.y0
+
+#         frappe.errprint(f"input rect: {rect}")
+#         frappe.errprint(f"col_width: {col_width}, row_height: {row_height}")
+
+#         def draw_cell_with_annots(cell_rect, text, font=9):
+#             """
+#             1) Create a visible rectangle annotation using add_rect_annot
+#             2) Then create a free text annotation inside the same rect for the content
+#             3) Log bbox values for debugging
+#             """
+#             # Create rect annot for border
+#             r_annot = page.add_rect_annot(cell_rect)
+#             # border width
+#             try:
+#                 r_annot.set_border(width=0.6)
+#             except TypeError:
+#                 # older/newer pyMuPDF variations
+#                 try:
+#                     r_annot.set_border({"width": 0.6})
+#                 except Exception:
+#                     pass
+#             # set stroke color
+#             try:
+#                 r_annot.set_colors(stroke=(0, 0, 0))
+#             except Exception:
+#                 # older versions might use set_color; attempt that
+#                 try:
+#                     r_annot.set_color(stroke=(0, 0, 0))
+#                 except Exception:
+#                     pass
+
+#             # ensure annot is written
+#             try:
+#                 r_annot.update()
+#             except Exception:
+#                 pass
+
+#             # Log rect and annot bbox
+#             try:
+#                 frappe.errprint(f"draw_cell - cell_rect: {cell_rect}")
+#                 frappe.errprint(
+#                     f"draw_cell - rect_annot.bbox: {getattr(r_annot, 'bbox', getattr(r_annot, 'rect', None))}"
+#                 )
+#             except Exception:
+#                 pass
+
+#             # Create freetext annot for text inside same rect
+#             # Small inset so text not touch border
+#             inset = 3
+#             text_rect = fitz.Rect(
+#                 cell_rect.x0 + inset,
+#                 cell_rect.y0 + inset,
+#                 cell_rect.x1 - inset,
+#                 cell_rect.y1 - inset,
+#             )
+
+#             t_annot = page.add_freetext_annot(
+#                 text_rect,
+#                 str(text or ""),
+#                 fontsize=font,
+#                 fontname="helv",
+#                 text_color=(0, 0, 0),
+#                 fill_color=None,
+#                 align=0,
+#             )
+#             try:
+#                 t_annot.update()
+#             except Exception:
+#                 pass
+
+#             # Log freetext bbox
+#             try:
+#                 frappe.errprint(
+#                     f"draw_cell - freetext.bbox: {getattr(t_annot, 'bbox', getattr(t_annot, 'rect', None))}"
+#                 )
+#             except Exception:
+#                 pass
+
+#             return r_annot, t_annot
+
+#         # Render header row
+#         for idx, col in enumerate(columns):
+#             cell = fitz.Rect(
+#                 rect.x0 + idx * col_width,
+#                 y,
+#                 rect.x0 + (idx + 1) * col_width,
+#                 y + row_height,
+#             )
+#             draw_cell_with_annots(cell, col, font=10)
+
+#         y += row_height
+
+#         # Render body rows
+#         for row in terms:
+#             for idx, key in enumerate(keys):
+#                 cell = fitz.Rect(
+#                     rect.x0 + idx * col_width,
+#                     y,
+#                     rect.x0 + (idx + 1) * col_width,
+#                     y + row_height,
+#                 )
+
+#                 value = row.get(key, "")
+#                 if key == "is_received":
+#                     value = (
+#                         "Yes" if str(value).lower() in ("1", "true", "yes") else "No"
+#                     )
+
+#                 draw_cell_with_annots(cell, value, font=9)
+
+#             y += row_height
+
+#         frappe.errprint("render_payment_terms_table debug end")
+
+#     except Exception as exc:
+#         # As last resort log exception so you can paste it here
+#         frappe.errprint(f"render_payment_terms_table exception: {exc}")
+#         # fallback: draw simple text to avoid failing the whole PDF
+#         render_text(page, rect, "Payment terms rendering failed", fontsize=10,line_height=1.2)
+
+
+def render_payment_terms_table(canvas, rect, terms):
     """
-    Render a small table using annotations only.
-    Includes debug logs via frappe.errprint to help diagnose coordinate / rotation problems.
-
-    Approach
-    - For each cell create a rect annotation (page.add_rect_annot)
-      then create a freetext annotation for the cell text.
-    - Use annot.set_colors and annot.set_border for visible borders.
-    - Log page rect, rotation, input rect and actual annotation bbox to trace mismatches.
-    - If results appear inverted try the 'flipped' fallback that maps top-origin -> bottom-origin.
+    Render payment terms table using reportlab canvas.
+    Achieves the same result: visible table + text inside cells.
     """
 
-    # quick guard
     if not terms:
-        render_text(page, rect, "No Payment Terms", fontsize=10, line_height=1.2)
+        canvas.setFont("Helvetica", 10)
+        canvas.drawString(rect["x"], rect["y"], "No Payment Terms")
         return
 
-    try:
-        frappe.errprint("render_payment_terms_table debug start")
-        frappe.errprint(f"page.rect: {page.rect}")  # points
-        try:
-            # PyMuPDF exposes mediabox and rotation properties sometimes
-            frappe.errprint(f"page.mediabox: {getattr(page, 'mediabox', None)}")
-        except Exception:
-            pass
-        try:
-            frappe.errprint(f"page_rotation: {getattr(page, 'rotation', None)}")
-        except Exception:
-            pass
+    columns = ["Date", "Amount", "Received"]
+    keys = ["date", "amount", "is_received"]
 
-        columns = ["Date", "Amount", "Received"]
-        keys = ["date", "amount", "is_received"]
+    col_count = len(columns)
+    col_width = rect["width"] / col_count
+    row_height = 20
 
-        col_count = len(columns)
-        col_width = rect.width / col_count
-        row_height = 20  # points; adjust if you want taller rows
+    x0 = rect["x"]
+    y = rect["y"]
 
-        # Start at top of supplied rect (top-origin)
-        y = rect.y0
+    canvas.setStrokeColorRGB(0, 0, 0)
+    canvas.setFont("Helvetica-Bold", 10)
 
-        frappe.errprint(f"input rect: {rect}")
-        frappe.errprint(f"col_width: {col_width}, row_height: {row_height}")
+    # Header
+    for i, col in enumerate(columns):
+        x = x0 + i * col_width
+        canvas.rect(x, y - row_height, col_width, row_height, stroke=1, fill=0)
+        canvas.drawString(x + 4, y - 14, col)
 
-        def draw_cell_with_annots(cell_rect, text, font=9):
-            """
-            1) Create a visible rectangle annotation using add_rect_annot
-            2) Then create a free text annotation inside the same rect for the content
-            3) Log bbox values for debugging
-            """
-            # Create rect annot for border
-            r_annot = page.add_rect_annot(cell_rect)
-            # border width
-            try:
-                r_annot.set_border(width=0.6)
-            except TypeError:
-                # older/newer pyMuPDF variations
-                try:
-                    r_annot.set_border({"width": 0.6})
-                except Exception:
-                    pass
-            # set stroke color
-            try:
-                r_annot.set_colors(stroke=(0, 0, 0))
-            except Exception:
-                # older versions might use set_color; attempt that
-                try:
-                    r_annot.set_color(stroke=(0, 0, 0))
-                except Exception:
-                    pass
+    y -= row_height
+    canvas.setFont("Helvetica", 9)
 
-            # ensure annot is written
-            try:
-                r_annot.update()
-            except Exception:
-                pass
+    # Rows
+    for row in terms:
+        for i, key in enumerate(keys):
+            value = row.get(key, "")
+            if key == "is_received":
+                value = "Yes" if str(value).lower() in ("1", "true", "yes") else "No"
 
-            # Log rect and annot bbox
-            try:
-                frappe.errprint(f"draw_cell - cell_rect: {cell_rect}")
-                frappe.errprint(
-                    f"draw_cell - rect_annot.bbox: {getattr(r_annot, 'bbox', getattr(r_annot, 'rect', None))}"
-                )
-            except Exception:
-                pass
+            x = x0 + i * col_width
+            canvas.rect(x, y - row_height, col_width, row_height, stroke=1, fill=0)
+            canvas.drawString(x + 4, y - 14, str(value))
 
-            # Create freetext annot for text inside same rect
-            # Small inset so text not touch border
-            inset = 3
-            text_rect = fitz.Rect(
-                cell_rect.x0 + inset,
-                cell_rect.y0 + inset,
-                cell_rect.x1 - inset,
-                cell_rect.y1 - inset,
-            )
+        y -= row_height
 
-            t_annot = page.add_freetext_annot(
-                text_rect,
-                str(text or ""),
-                fontsize=font,
-                fontname="helv",
-                text_color=(0, 0, 0),
-                fill_color=None,
-                align=0,
-            )
-            try:
-                t_annot.update()
-            except Exception:
-                pass
-
-            # Log freetext bbox
-            try:
-                frappe.errprint(
-                    f"draw_cell - freetext.bbox: {getattr(t_annot, 'bbox', getattr(t_annot, 'rect', None))}"
-                )
-            except Exception:
-                pass
-
-            return r_annot, t_annot
-
-        # Render header row
-        for idx, col in enumerate(columns):
-            cell = fitz.Rect(
-                rect.x0 + idx * col_width,
-                y,
-                rect.x0 + (idx + 1) * col_width,
-                y + row_height,
-            )
-            draw_cell_with_annots(cell, col, font=10)
-
-        y += row_height
-
-        # Render body rows
-        for row in terms:
-            for idx, key in enumerate(keys):
-                cell = fitz.Rect(
-                    rect.x0 + idx * col_width,
-                    y,
-                    rect.x0 + (idx + 1) * col_width,
-                    y + row_height,
-                )
-
-                value = row.get(key, "")
-                if key == "is_received":
-                    value = (
-                        "Yes" if str(value).lower() in ("1", "true", "yes") else "No"
-                    )
-
-                draw_cell_with_annots(cell, value, font=9)
-
-            y += row_height
-
-        frappe.errprint("render_payment_terms_table debug end")
-
-    except Exception as exc:
-        # As last resort log exception so you can paste it here
-        frappe.errprint(f"render_payment_terms_table exception: {exc}")
-        # fallback: draw simple text to avoid failing the whole PDF
-        render_text(page, rect, "Payment terms rendering failed", fontsize=10,line_height=1.2)

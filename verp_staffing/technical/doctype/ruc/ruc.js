@@ -5,6 +5,21 @@ frappe.ui.form.on("RUC", {
     refresh(frm) {
         render_notes(frm)
         render_activity_section(frm);
+
+        window.render_customer_related_html({
+            frm: frm,
+            html_field: "lead_details",
+            source_doctype: "Lead Detail Form",
+            customer: frm.doc.name,
+            fields: [
+                "surname",
+                "first_name",
+                "father_name",
+                "personal_phone_number",
+                "email",
+            ]
+        });
+
         frappe.call({
             method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
             callback: (r) => {

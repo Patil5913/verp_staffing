@@ -55,6 +55,7 @@
   {
    "fieldname": "roles_json",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Roles JSON"
   },
   {
