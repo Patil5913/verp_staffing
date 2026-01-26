@@ -27,9 +27,7 @@ frappe.ui.form.on("Customer", {
             callback: (r) => {
                 let dept = r.message
                 apply_tab_visibility(frm, dept)
-                if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
-                    add_forward_button(frm);
-                }
+                add_forward_button(frm);
             }
         })
     },
@@ -833,15 +831,17 @@ async function add_forward_button(frm) {
 
             frappe.call({
                 method: "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments",
+                args: {
+                    customer: frm.doc.name
+                },
                 callback(r) {
-                    const departments = r.message || [];
-
-                    const available = departments.filter(
-                        dept => !forwarded.includes(dept)
-                    );
-
+                    const services = r.message || [];
+                    const available = services.filter(
+                        s => !forwarded.includes(s.toLowerCase())
+                    )
+                    console.log("services: ",services)
                     if (!available.length) {
-                        frappe.msgprint("Candidate has already been forwarded to all available departments.");
+                        frappe.msgprint("Candidate has already been forwarded for all services.");
                         return;
                     }
 
@@ -857,9 +857,9 @@ function open_forward_prompt(frm, available) {
         title: "Forward Candidate",
         fields: [
             {
-                fieldname: "department",
+                fieldname: "service",
                 fieldtype: "Select",
-                label: "Select Department",
+                label: "Select Service",
                 options: available,
                 reqd: 1,
                 onchange() {
@@ -870,14 +870,14 @@ function open_forward_prompt(frm, available) {
                 fieldname: "note",
                 fieldtype: "Text Editor",
                 label: "Note (Required for RUC)",
-                depends_on: "eval:doc.department === 'technical'",
+                depends_on: "eval:doc.service === 'RUC'",
                 hidden: 1
             }
         ],
         primary_action_label: "Forward",
         primary_action(values) {
-            if (values.department === "technical" && !values.note) {
-                frappe.msgprint("Note is required when forwarding to RUC.");
+            if (values.service === "RUC" && !values.note) {
+                frappe.msgprint("Note is required when forwarding for RUC.");
                 return;
             }
 
@@ -891,9 +891,9 @@ function open_forward_prompt(frm, available) {
 }
 
 function toggle_ruc_note_field(dialog) {
-    const dept = dialog.get_value("department");
+    const service = dialog.get_value("service");
 
-    if (dept === "technical") {
+    if (service === "RUC") {
         dialog.set_df_property("note", "hidden", 0);
         dialog.set_df_property("note", "reqd", 1);
     } else {
@@ -939,10 +939,10 @@ function forward_candidate(frm, values) {
         method: "verp_staffing.crm.api.auto_assign.forward_candidate",
         args: {
             customer: frm.doc.name,
-            department: values.department
+            service: values.service
         },
         callback(r) {
-            if (values.department === "technical") {
+            if (values.service === "RUC") {
                 frappe.call({
                     method: "verp_staffing.crm.api.notes.add_note",
                     args: {
@@ -957,7 +957,7 @@ function forward_candidate(frm, values) {
                 });
             }
             frappe.msgprint(
-                `Candidate forwarded to ${values.department} and assigned automatically.`
+                `Candidate forwarded for ${values.service} and assigned automatically.`
             );
             frm.reload_doc();
         }

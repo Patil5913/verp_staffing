@@ -34,7 +34,12 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
         )
         customer_doc.insert(ignore_permissions=True)
         customer_name = {"title": customer_doc.title, "name": customer_doc.name}
+    services = []
 
+    for service in data.services or []:
+        services.append({
+            "service": service
+        })
     # -------- CREATE SALES ORDER -------- #
     frappe.errprint(f"data: {data}")
     so = frappe.get_doc(
@@ -45,7 +50,7 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
             "date": data.date,
             "opportunity": opportunity,
             "payment_terms": data.payment_terms,
-            "services": data.services
+            "services": services
         }
     )
 

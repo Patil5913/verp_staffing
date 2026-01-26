@@ -233,6 +233,32 @@ function open_create_sales_order_dialog(frm) {
                 default: frappe.datetime.get_today(),
                 reqd: 1
             },
+
+            {
+                fieldtype: "Section Break",
+                label: "Services"
+            },
+            {
+                fieldname: "services",
+                fieldtype: "MultiSelectList",
+                label: "Services",
+                reqd: 1,
+                get_data: function (txt) {
+                    return frappe.db.get_list("Service", {
+                        fields: ["name"],
+                        filters: {
+                            name: ["like", `%${txt}%`]
+                        },
+                        limit: 20
+                    }).then(r =>
+                        r.map(d => ({
+                            value: d.name,
+                            description: d.name
+                        }))
+                    );
+                }
+            },
+
             {
                 fieldtype: "Section Break",
                 label: "Payment Terms"
@@ -286,11 +312,11 @@ function open_create_sales_order_dialog(frm) {
                 ]
             }
         ],
+
         primary_action_label: "Create Sales Order",
         primary_action(values) {
-            console.log("values", values);
-
             dialog.hide();
+
             frappe.call({
                 method: "verp_staffing.crm.api.sales_order_api.create_sales_order",
                 args: {
@@ -307,6 +333,7 @@ function open_create_sales_order_dialog(frm) {
             });
         }
     });
+
 
     dialog.show();
 }

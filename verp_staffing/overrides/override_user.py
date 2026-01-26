@@ -9,7 +9,6 @@ class CustomUser(User):
         Controls fields shown in User Quick Entry.
         """
         fields = super().get_quick_entry_fields()
-        frappe.errprint("CustomUser.get_quick_entry_fields called")
         # REMOVE role_profile_name from quick entry
         return [
             f for f in fields

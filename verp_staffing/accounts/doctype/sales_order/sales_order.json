@@ -74,14 +74,14 @@
   {
    "fieldname": "services",
    "fieldtype": "Table MultiSelect",
-   "label": "Services Opted",
+   "label": "Services",
    "options": "SalesOrderServices"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-09 14:41:40.430731",
+ "modified": "2026-01-25 17:25:54.625174",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",

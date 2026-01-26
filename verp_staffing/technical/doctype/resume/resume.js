@@ -179,30 +179,32 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
     d.show();
 }
 
-const ALL_FORWARD_DEPARTMENTS = [
-    { label: "Resume", value: "resume" },
-    { label: "Technical", value: "technical" },
-    { label: "Marketing", value: "marketing" },
-];
-
 async function add_forward_button(frm) {
+    console.log("frm.doc.customer: ", frm.doc.customer)
     frm.add_custom_button(
         "Forward Candidate",
         async () => {
             const forwarded = await get_stage_json(frm);
 
-            const available = ALL_FORWARD_DEPARTMENTS.filter(
-                d => !forwarded.includes(d.value)
-            );
+            frappe.call({
+                method: "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments",
+                args: {
+                    customer: frm.doc.customer
+                },
+                callback(r) {
+                    const services = r.message || [];
+                    const available = services.filter(
+                        s => !forwarded.includes(s.toLowerCase())
+                    )
+                    if (!available.length) {
+                        frappe.msgprint("Candidate has already been forwarded for all services.");
+                        return;
+                    }
 
-            if (!available.length) {
-                frappe.msgprint("Candidate has already been forwarded to all departments.");
-                return;
-            }
-
-            open_forward_prompt(frm, available);
-        },
-        "Forward"
+                    open_forward_prompt(frm, available);
+                }
+            });
+        }
     );
 }
 
@@ -211,13 +213,10 @@ function open_forward_prompt(frm, available) {
         title: "Forward Candidate",
         fields: [
             {
-                fieldname: "department",
+                fieldname: "service",
                 fieldtype: "Select",
-                label: "Select Department",
-                options: available.map(d => ({
-                    label: d.label,
-                    value: d.value
-                })),
+                label: "Select Service",
+                options: available,
                 reqd: 1,
                 onchange() {
                     toggle_ruc_note_field(d);
@@ -227,41 +226,20 @@ function open_forward_prompt(frm, available) {
                 fieldname: "note",
                 fieldtype: "Text Editor",
                 label: "Note (Required for RUC)",
-                depends_on: "eval:doc.department === 'RUC'",
+                depends_on: "eval:doc.service === 'RUC'",
                 hidden: 1
             }
         ],
         primary_action_label: "Forward",
         primary_action(values) {
-            if (values.department === "RUC" && !values.note) {
-                frappe.msgprint("Note is required when forwarding to RUC.");
+            if (values.service === "RUC" && !values.note) {
+                frappe.msgprint("Note is required when forwarding for RUC.");
                 return;
             }
 
             d.disable_primary_action();
-
-            if (values.department === "RUC") {
-                // save note first
-                frappe.call({
-                    method: "verp_staffing.crm.api.notes.add_note",
-                    args: {
-                        reference_doctype: "RUC",
-                        reference_name: frm.doc.name,
-                        note: values.note
-                    },
-                    callback() {
-                        forward_candidate(frm, values.department);
-                        d.hide();
-                    },
-                    error() {
-                        frappe.msgprint("Failed to add note");
-                        d.enable_primary_action();
-                    }
-                });
-            } else {
-                forward_candidate(frm, values.department);
-                d.hide();
-            }
+            forward_candidate(frm, values);
+            d.hide();
         }
     });
 
@@ -269,9 +247,9 @@ function open_forward_prompt(frm, available) {
 }
 
 function toggle_ruc_note_field(dialog) {
-    const dept = dialog.get_value("department");
+    const service = dialog.get_value("service");
 
-    if (dept === "RUC") {
+    if (service === "RUC") {
         dialog.set_df_property("note", "hidden", 0);
         dialog.set_df_property("note", "reqd", 1);
     } else {
@@ -282,7 +260,6 @@ function toggle_ruc_note_field(dialog) {
 
     dialog.refresh();
 }
-
 
 function get_stage_json(frm) {
     return new Promise((resolve) => {
@@ -302,7 +279,7 @@ function get_stage_json(frm) {
                     const parsedStage = JSON.parse(r.message.stage);
                     resolve(Object.keys(parsedStage));
                 } catch (e) {
-                    console.warn("Invalid stage JSON");
+                    console.warn("Something went wrong: Invalid stage json in customer");
                     resolve([]);
                 }
             },
@@ -313,21 +290,36 @@ function get_stage_json(frm) {
     });
 }
 
-function forward_candidate(frm, department) {
+function forward_candidate(frm, values) {
     frappe.call({
         method: "verp_staffing.crm.api.auto_assign.forward_candidate",
         args: {
             customer: frm.doc.customer,
-            department: department
+            service: values.service
         },
         callback(r) {
+            if (values.service === "RUC") {
+                frappe.call({
+                    method: "verp_staffing.crm.api.notes.add_note",
+                    args: {
+                        reference_doctype: "RUC",
+                        reference_name: r.message.name,
+                        note: values.note
+                    },
+                    error() {
+                        frappe.msgprint("Failed to add note");
+                        d.enable_primary_action();
+                    }
+                });
+            }
             frappe.msgprint(
-                `Candidate forwarded to ${department} and assigned automatically.`
+                `Candidate forwarded for ${values.service} and assigned automatically.`
             );
             frm.reload_doc();
         }
     });
 }
+
 
 function render_customer_details(frm) {
     const wrapper = frm.fields_dict.customer_details_html.$wrapper;
