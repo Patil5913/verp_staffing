@@ -1,95 +1,81 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-01-09 17:03:13.883790",
+ "creation": "2026-01-27 14:20:31.463104",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "customer",
-  "department",
   "service",
-  "column_break_xbfz",
+  "column_break_cyyx",
   "assign_to",
   "status",
-  "forwarded_on",
-  "completed_on",
-  "section_break_bvrs",
-  "proof_of_work"
+  "section_break_zoqd",
+  "proof_or_work"
  ],
  "fields": [
   {
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1
-  },
-  {
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Department",
-   "options": "Department",
-   "reqd": 1
+   "read_only": 1,
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "service",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Service",
    "options": "Service",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_xbfz",
-   "fieldtype": "Column Break"
+   "read_only": 1,
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "assign_to",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Assign To",
    "options": "Employee",
    "reqd": 1
   },
   {
+   "fieldname": "column_break_cyyx",
+   "fieldtype": "Column Break"
+  },
+  {
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Status",
    "options": "Pending\nCompleted"
   },
   {
-   "fieldname": "forwarded_on",
-   "fieldtype": "Datetime",
-   "label": "Forwarded On",
-   "read_only": 1
-  },
-  {
-   "fieldname": "completed_on",
-   "fieldtype": "Datetime",
-   "label": "Completed On",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_bvrs",
+   "fieldname": "section_break_zoqd",
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "proof_of_work",
+   "fieldname": "proof_or_work",
    "fieldtype": "Table",
-   "label": "Proof Of Work",
+   "label": "Proof Or Work",
    "options": "Proof Of Work"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-27 15:23:22.407304",
+ "modified": "2026-01-27 15:29:14.259536",
  "modified_by": "Administrator",
- "module": "Services",
- "name": "Other Services",
+ "module": "Technical",
+ "name": "Technical Other Services",
  "owner": "Administrator",
  "permissions": [
   {

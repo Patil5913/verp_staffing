@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "autoname": "field:service_name",
  "creation": "2026-01-08 16:47:13.447613",
  "doctype": "DocType",
@@ -16,13 +15,14 @@
    "in_list_view": 1,
    "label": "Service Name",
    "reqd": 1,
+   "set_only_once": 1,
    "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-08 16:53:13.444124",
+ "modified": "2026-01-27 15:20:51.237145",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Service",

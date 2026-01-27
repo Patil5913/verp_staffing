@@ -1,19 +1,16 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-01-09 17:03:13.883790",
+ "creation": "2026-01-27 14:47:53.214617",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "customer",
-  "department",
   "service",
-  "column_break_xbfz",
+  "column_break_ouch",
   "assign_to",
   "status",
-  "forwarded_on",
-  "completed_on",
-  "section_break_bvrs",
+  "section_break_izli",
   "proof_of_work"
  ],
  "fields": [
@@ -23,15 +20,9 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1
-  },
-  {
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Department",
-   "options": "Department",
-   "reqd": 1
+   "read_only": 1,
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "service",
@@ -39,10 +30,12 @@
    "in_list_view": 1,
    "label": "Service",
    "options": "Service",
-   "reqd": 1
+   "read_only": 1,
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
-   "fieldname": "column_break_xbfz",
+   "fieldname": "column_break_ouch",
    "fieldtype": "Column Break"
   },
   {
@@ -57,23 +50,12 @@
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Pending\nCompleted"
   },
   {
-   "fieldname": "forwarded_on",
-   "fieldtype": "Datetime",
-   "label": "Forwarded On",
-   "read_only": 1
-  },
-  {
-   "fieldname": "completed_on",
-   "fieldtype": "Datetime",
-   "label": "Completed On",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_bvrs",
+   "fieldname": "section_break_izli",
    "fieldtype": "Section Break"
   },
   {
@@ -86,10 +68,10 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-27 15:23:22.407304",
+ "modified": "2026-01-27 15:30:22.137465",
  "modified_by": "Administrator",
- "module": "Services",
- "name": "Other Services",
+ "module": "Marketing",
+ "name": "Marketing Other Services",
  "owner": "Administrator",
  "permissions": [
   {

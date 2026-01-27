@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"9QJr2wt8Pg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"3ojxLSPDk6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ruc\",\"col\":3}}]",
+ "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"9QJr2wt8Pg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"3ojxLSPDk6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ruc\",\"col\":3}},{\"id\":\"0Zny-ZsVp2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Jdc\",\"col\":3}},{\"id\":\"KU3YPBZGsZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Training\",\"col\":3}},{\"id\":\"60reacaqp-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Cover Letter\",\"col\":3}},{\"id\":\"g0nCNZjL5j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Technical Other Services\",\"col\":3}}]",
  "creation": "2025-12-24 17:12:02.669811",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2025-12-27 15:22:55.341327",
+ "modified": "2026-01-27 15:06:30.592389",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical",
@@ -32,6 +32,14 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Jdc",
+   "link_to": "JDC",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Resume",
    "link_to": "Resume",
    "stats_filter": "[]",
@@ -40,8 +48,32 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Training",
+   "link_to": "Training",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Ruc",
    "link_to": "RUC",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Cover Letter",
+   "link_to": "Cover Letter",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Technical Other Services",
+   "link_to": "Technical Other Services",
    "stats_filter": "[]",
    "type": "DocType"
   }

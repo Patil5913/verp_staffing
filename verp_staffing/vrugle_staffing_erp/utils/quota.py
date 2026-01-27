@@ -14,9 +14,8 @@ def user_limit(doc=None, method=None):
         frappe.throw("Invalid users_limit. Must be integer.")
 
     # count current users
-    total_users = frappe.db.count("User")
-
-    if total_users > users_limit:
+    total_users = frappe.db.count("User", filters={"enabled": 1})
+    if total_users >= users_limit:
         send_notification(
             recipients=["Administrator"],
             subject="User Limit Exceeded",

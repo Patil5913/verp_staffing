@@ -1,10 +1,10 @@
 // Copyright (c) 2026, Vrugle and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Other Services", {
-	refresh(frm) {
+frappe.ui.form.on("Marketing Other Services", {
+    refresh(frm) {
         add_forward_button(frm);
-	},
+    },
 });
 
 async function add_forward_button(frm) {

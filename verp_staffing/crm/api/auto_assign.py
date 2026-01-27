@@ -113,6 +113,9 @@ SERVICE_DOCTYPE_MAP = {
     # Technical
     "ruc": "RUC",
     "resume": "Resume",
+    "JDC":"JDC",
+    "Training":"Training",
+    "Cover Letter": "Cover Letter",
 
     # Marketing
     "marketing": "Marketing",
@@ -138,13 +141,20 @@ def forward_candidate(customer, service):
     if service_key in stage:
         frappe.throw(f"Candidate already forwarded for {service}")
     
-    doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
 
     parents = frappe.db.sql("""
         SELECT parent FROM `tabDepartment Service`
         WHERE service_name=%s
         """, (service), as_dict=True)
+    
     department = parents[0].parent
+
+    doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
+    if(department == "Technical" and doctype == "Other Services"):
+        doctype = "Technical Other Services"
+    elif(department == "Marketing" and doctype == "Other Services"):
+        doctype = "Marketing Other Services"
+
     frappe.errprint(f"Department fetch result: {parents[0].parent}")
     # fetch department of the
     assignee = get_auto_assign_employee(
@@ -162,6 +172,23 @@ def forward_candidate(customer, service):
             "assign_to": assignee,
             "status": "Pending",
             "forwarded_on": now_datetime(),
+            })
+    elif doctype == "Marketing Other Services":
+        service_doc = frappe.get_doc({
+            "doctype": "Marketing Other Services",
+            "customer": customer,
+            "service": service,
+            "assign_to": assignee,
+            "status": "Pending",
+            })
+    elif doctype == "Training Other Services":
+        frappe.errprint(f"service:{service}, customer: {customer}, assignee: {assignee}")
+        service_doc = frappe.get_doc({
+            "doctype": "Training Other Services",
+            "customer": customer,
+            "service": service,
+            "assign_to": assignee,
+            "status": "Pending",
             })
     else:
         service_doc = frappe.get_doc({

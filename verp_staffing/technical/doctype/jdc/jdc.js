@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Vrugle and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Other Services", {
+frappe.ui.form.on("JDC", {
 	refresh(frm) {
         add_forward_button(frm);
 	},
