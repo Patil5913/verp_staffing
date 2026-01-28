@@ -210,35 +210,35 @@ ROLE_PERMISSIONS = {
     },
     "Marketing Manager": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select","report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Marketing Team Lead": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select","report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Senior Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select","report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Marketing Mentor": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select","report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select"],
+        "Interview": ["read", "write", "create", "select","report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -682,11 +682,11 @@ def after_install():
     seed_website_setting()
     # seed_sales_stages()
     # seed_type_of_interview()
-    # create_all_roles()
-    # seed_employee_departments()
-    # assign_permissions_to_roles(ROLE_PERMISSIONS)
+    create_all_roles()
+    seed_employee_departments()
+    assign_permissions_to_roles(ROLE_PERMISSIONS)
     # seed_hierarchy()
-    # remove_default_workspaces()
+    remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     # seed_form_tours()

@@ -167,6 +167,42 @@ def secure_get(**kwargs):
             [["Marketing","assign_to","in",owners]]
         )
 
+    if doctype == "Training":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Training","assign_to","in",owners]]
+        )
+
+    if doctype == "RUC":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["RUC","assign_to","in",owners]]
+        )
+
+    if doctype == "JDC":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["JDC","assign_to","in",owners]]
+        )
+
+    if doctype == "Cover Letter":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Cover Letter","assign_to","in",owners]]
+        )
+
+    if doctype == "Technical Other Services":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Technical Other Services","assign_to","in",owners]]
+        )
+    
+    if doctype == "Marketing Other Services":
+        owners = get_visible_employee_names(user)
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Marketing Other Services","assign_to","in",owners]]
+        )
+
     return original_get(**frappe.local.form_dict)
 
 import json
