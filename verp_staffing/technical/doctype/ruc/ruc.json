@@ -7,12 +7,12 @@
  "field_order": [
   "customer",
   "assign_to",
+  "resume",
   "column_break_rtjg",
   "status",
   "outsource",
   "session_details_section",
   "session_details",
-  "customer_details_section",
   "lead_details",
   "notes_tab",
   "notes_html",
@@ -86,15 +86,15 @@
    "fieldtype": "HTML"
   },
   {
-   "fieldname": "customer_details_section",
-   "fieldtype": "Section Break",
-   "label": "Customer Details "
+   "fieldname": "resume",
+   "fieldtype": "HTML",
+   "label": "Resume"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-11 14:43:34.681835",
+ "modified": "2026-01-28 18:08:32.417956",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
@@ -102,7 +102,7 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Employee"
+   "role": "Sales Master Manager"
   },
   {
    "create": 1,
@@ -117,15 +117,8 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "RUC_role",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -133,25 +126,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
    "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Technical Coordinator",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "RUC Person",
-   "select": 1,
-   "write": 1
   },
   {
    "create": 1,
@@ -163,7 +138,21 @@
   {
    "create": 1,
    "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
    "role": "Technical Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "RUC Person",
    "select": 1,
    "write": 1
   },

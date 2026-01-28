@@ -5,18 +5,20 @@ frappe.ui.form.on("RUC", {
     refresh(frm) {
         render_notes(frm)
         render_activity_section(frm);
-
+        fetch_and_render_resume(frm);
         window.render_customer_related_html({
             frm: frm,
             html_field: "lead_details",
             source_doctype: "Lead Detail Form",
-            customer: frm.doc.name,
+            customer: frm.doc.customer,
             fields: [
                 "surname",
                 "first_name",
                 "father_name",
                 "personal_phone_number",
                 "email",
+                "personal_linkedin",
+                "old_resume"
             ]
         });
 
@@ -28,6 +30,10 @@ frappe.ui.form.on("RUC", {
                 }
             }
         })
+    },
+
+    customer(frm) {
+        fetch_and_render_resume(frm);
     },
     status(frm) {
         frappe.call({
@@ -41,6 +47,38 @@ frappe.ui.form.on("RUC", {
     }
 });
 
+function fetch_and_render_resume(frm) {
+    frappe.db.get_list("Resume", {
+        filters: {
+            customer: frm.doc.customer
+        },
+        fields: ["name", "resume"],
+        limit: 1
+    }).then(res => {
+        if (!res || !res.length || !res[0].resume) {
+            frm.set_df_property("resume", "options",
+                "<div style='color:#888'>No resume uploaded</div>"
+            );
+            return;
+        }
+
+        const file_url = res[0].resume;
+
+        const html = `
+            <div style="padding:8px">
+                <a href="${file_url}" target="_blank" style="
+                    color:#1a73e8;
+                    font-weight:600;
+                    text-decoration:none;
+                ">
+                    📄 View Resume
+                </a>
+            </div>
+        `;
+
+        frm.set_df_property("resume", "options", html);
+    });
+}
 
 
 function render_notes(frm) {

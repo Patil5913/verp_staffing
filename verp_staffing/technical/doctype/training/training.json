@@ -15,12 +15,14 @@
   {
    "fieldname": "assign_to",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Assign To",
    "options": "Employee"
   },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
    "read_only": 1,
@@ -39,6 +41,7 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Pending\nCompleted"
   }
@@ -46,7 +49,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-27 15:12:04.439755",
+ "modified": "2026-01-28 17:39:06.966583",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",

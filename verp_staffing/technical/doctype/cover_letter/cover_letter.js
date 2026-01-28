@@ -4,6 +4,37 @@
 frappe.ui.form.on("Cover Letter", {
 	refresh(frm) {
         add_forward_button(frm);
+        window.render_customer_related_html({
+            frm: frm,
+            html_field: "lead_details",
+            source_doctype: "Lead Detail Form",
+            customer: frm.doc.customer,
+            fields: [
+                "surname",
+                "first_name",
+                "father_name",
+                "personal_phone_number",
+                "email",
+                "personal_linkedin",
+                "date_of_birth",
+                "educational_details",
+                "past_experience_table",
+                "technologies",
+                "additional_skills",
+                "entry_date",
+                "current_address",
+                "address_history",
+                "certificate_or_completed_course",
+                "current_visa_status",
+                "experience",
+                "passport_number",
+                "ssn_digit",
+                "availability_for_interview",
+                "remarks",
+                "ead_card",
+                "old_resume"
+            ]
+        });
 	},
 });
 

@@ -9,18 +9,21 @@
   "customer",
   "status",
   "section_break_mtyr",
-  "proof_of_work"
+  "proof_of_work",
+  "lead_details"
  ],
  "fields": [
   {
    "fieldname": "employee",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Employee",
    "options": "Employee"
   },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
    "read_only": 1,
@@ -39,14 +42,19 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Pending\nComplered"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-27 15:12:13.293351",
+ "modified": "2026-01-28 18:02:05.398955",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

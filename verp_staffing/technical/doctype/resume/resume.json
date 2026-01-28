@@ -12,7 +12,7 @@
   "status",
   "resume",
   "customer_details_section",
-  "customer_details_html",
+  "lead_details",
   "notes_tab",
   "notes_html"
  ],
@@ -25,6 +25,7 @@
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
    "unique": 1
@@ -32,6 +33,7 @@
   {
    "fieldname": "assign_to",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Assign To",
    "options": "Employee"
   },
@@ -59,10 +61,6 @@
    "label": "Customer Details"
   },
   {
-   "fieldname": "customer_details_html",
-   "fieldtype": "HTML"
-  },
-  {
    "fieldname": "notes_tab",
    "fieldtype": "Tab Break",
    "label": "Notes"
@@ -70,17 +68,25 @@
   {
    "fieldname": "notes_html",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-15 15:42:51.728578",
+ "modified": "2026-01-28 17:59:13.787355",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
   {
    "create": 1,
    "delete": 1,
@@ -91,6 +97,32 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1,
    "write": 1
   }
  ],

@@ -9,18 +9,21 @@
   "customer",
   "status",
   "section_break_itpw",
-  "proof_of_work"
+  "proof_of_work",
+  "lead_details"
  ],
  "fields": [
   {
    "fieldname": "employee",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Employee",
    "options": "Employee"
   },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
    "read_only": 1,
@@ -29,6 +32,7 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Pending\nCompleted"
   },
@@ -41,12 +45,16 @@
    "fieldtype": "Table",
    "label": "Proof Of Work",
    "options": "Proof Of Work"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-27 15:12:24.324119",
+ "modified": "2026-01-28 18:01:52.874021",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Cover Letter",

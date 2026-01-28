@@ -115,6 +115,7 @@ def submit_and_generate(sales_order, template, data):
     form_url = (
         f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}"
     )
+    frappe.errprint(f"Form URL: {form_url}")
 
     frappe.db.commit()
     opportunity = so.get("opportunity")
