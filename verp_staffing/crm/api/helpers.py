@@ -23,8 +23,13 @@ def get_all_subordinates(
         current = stack.pop()
 
         filters = {"assigned_to": current}
+        print("asddddddddd", filters)
         if department:
             filters["department"] = department
+
+        print("department", department)
+        print("fffffffffffffffffffffffffffffff", filters)
+        
 
         children = frappe.db.get_all(
             "Employee Assignment Detail",
@@ -45,20 +50,39 @@ def get_all_subordinates(
 def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filters):
     user = frappe.session.user
 
+    department = filters.get("department") if filters else None
+
     if user == "Administrator":
-        return frappe.db.sql("""
+        if department:
+            return frappe.db.sql(
+                """
+                SELECT DISTINCT e.name
+                FROM `tabEmployee` e
+                INNER JOIN `tabEmployee Assignment Detail` d
+                    ON d.parent = e.name
+                WHERE d.department = %s
+                AND e.name LIKE %s
+                ORDER BY e.name
+                LIMIT %s OFFSET %s
+                """,
+                (department, f"%{txt}%", page_len, start),
+            )
+
+        return frappe.db.sql(
+            """
             SELECT name
             FROM `tabEmployee`
             WHERE name LIKE %s
             ORDER BY name
             LIMIT %s OFFSET %s
-        """, (f"%{txt}%", page_len, start))
+            """,
+            (f"%{txt}%", page_len, start),
+        )
 
     employee = get_employee_name(user)
     if not employee:
         return []
 
-    department = filters.get("department") if filters else None
 
     allowed_set = get_all_subordinates(employee, department)
 

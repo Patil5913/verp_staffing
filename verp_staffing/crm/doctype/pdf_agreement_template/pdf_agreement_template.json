@@ -31,6 +31,7 @@
   {
    "fieldname": "fields_json",
    "fieldtype": "JSON",
+   "hidden": 1,
    "label": "Fields"
   },
   {
@@ -47,7 +48,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-08 16:04:50.555152",
+ "modified": "2026-01-26 10:12:27.078852",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Pdf Agreement Template",

@@ -5,9 +5,6 @@ from frappe.utils import get_url
 from urllib.parse import quote
 
 
-
-
-
 @frappe.whitelist()
 def download_agreement(agreement):
     doc = frappe.get_doc("Agreement", agreement)
@@ -124,11 +121,23 @@ def submit_and_generate(sales_order, template, data):
     lead_name = frappe.db.get_value("Opportunity", opportunity, "party_name")
     Lead = frappe.get_doc("Lead", lead_name)
     recipient = getattr(Lead, "email", None)
+
+    form_url = (
+        f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}&e={quote(recipient)}"
+    )
+    
     send_notification(
         recipients=[recipient],
-        subject=f"Agreement Created.",
+        subject="Agreement for Review and Signature",
         message=(
-            f"Agreement has been created please check the agreement and fill the form :{form_url}"
+            "Dear Customer,\n\n"
+            "Your agreement has been created and is ready for your review and signature.\n\n"
+            "Please review the agreement, complete the signing process, "
+            "and submit the required details using the form link below:\n\n"
+            f"{form_url}\n\n"
+            "If you have any questions or need assistance, please contact us.\n\n"
+            "Best regards,\n"
+            "Team"
         ),
         attachments=[
             {

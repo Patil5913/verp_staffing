@@ -100,6 +100,7 @@ doctype_js = {
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
+    "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
 ]
 
 # Uninstallation
@@ -164,6 +165,11 @@ doc_events = {
         "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
         "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
     },
+    "Interview Status": {
+        "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
+        "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",
+        "on_update": "verp_staffing.marketing.doctype.interview.interview.sync_kanban",
+    }
 }
 
 # Scheduled Tasks
@@ -267,5 +273,8 @@ before_request = [
 # }
 
 fixtures = [
-    {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "interview"]]}
+    {
+        "dt": "Kanban Board",
+        "filters": [["kanban_board_name", "=", "Interview"]]
+    }
 ]

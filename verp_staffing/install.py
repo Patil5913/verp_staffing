@@ -680,6 +680,7 @@ FORM_TOURS = {
 def after_install():
     setup_navbar_settings()
     seed_website_setting()
+    # create_interview_statuses()
     # seed_sales_stages()
     # seed_type_of_interview()
     create_all_roles()
@@ -744,6 +745,7 @@ def setup_navbar_settings():
     if updated:
         navbar.save(ignore_permissions=True)
         frappe.db.commit()  
+
 
 def seed_website_setting():
     website = frappe.get_single("Website Settings")
@@ -821,6 +823,7 @@ def seed_website_setting():
         website.save(ignore_permissions=True)
         frappe.db.commit()
 
+
 def seed_sales_stages():
     doctype = "Sales Stage"
     sales_stages = [
@@ -845,12 +848,31 @@ def seed_sales_stages():
             doc.insert(ignore_permissions=True)
 
 
+def create_interview_statuses():
+    statuses = [
+        "Interview Scheduled",
+        "Ongoing Interview",
+        "Accepted",
+        "Rejected",
+    ]
+
+    for name in statuses:
+        if not frappe.db.exists("Interview Status", name):
+            doc = frappe.get_doc({
+                "doctype": "Interview Status",
+                "status_name": name,
+            })
+            doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+
 def seed_type_of_interview():
     doctype = "Type Of Interview"
     types = [
         "Google Meet",
         "Microsoft Teams",
-        "Joom call",
+        "Zoom call",
         "WebEx",
         "Skype",
         "Phone Call",
