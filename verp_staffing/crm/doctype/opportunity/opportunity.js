@@ -1,5 +1,6 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
+console.log("Opportunity client script LOADED");
 
 frappe.ui.form.on("Opportunity", {
     onload(frm) {
@@ -39,7 +40,6 @@ frappe.ui.form.on("Opportunity", {
                 }
             };
         });
-
 
         frm.add_custom_button(__("Create Customer"), function () {
             open_create_sales_order_dialog(frm);
@@ -157,7 +157,12 @@ frappe.ui.form.on("Opportunity", {
                 if (attempts++ > 12) clearInterval(timer);
             }, 200);
         }
+
+        if (!frm.is_new()) {
+            load_lead_details_after_save(frm);
+        }
     },
+
     setup: function (frm) {
         frm.set_query("opportunity_from", function () {
             return {
@@ -172,6 +177,7 @@ frappe.ui.form.on("Opportunity", {
         // store safe previous value
         frm.doc.__last_sync_status = frm.doc.status;
     },
+
     opportunity_from: function (frm) {
         if (frm.doc.opportunity_from) {
             frm.set_df_property("party_name", "label", frm.doc.opportunity_from);
@@ -180,6 +186,9 @@ frappe.ui.form.on("Opportunity", {
 
     party_name: function (frm) {
         frm.trigger("fetch_source_details");
+        if (!frm.is_new()) {
+            load_lead_details_after_save(frm);
+        }
     },
 
     fetch_source_details: function (frm) {
@@ -211,8 +220,65 @@ frappe.ui.form.on("Opportunity", {
             frappe.msgprint(__("Please select a Customer."));
             frappe.validated = false;
         }
-    }
+    },
+
+    after_save(frm) {
+        load_lead_details_after_save(frm);
+    },
 });
+
+
+function load_lead_details_after_save(frm) {
+    // Hard validation
+    if (
+        frm.is_new() ||
+        frm.doc.opportunity_from !== "Lead" ||
+        !frm.doc.party_name
+    ) {
+        frm.fields_dict.lead_details_html.$wrapper.empty();
+        return;
+    }
+
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Lead",
+            name: frm.doc.party_name
+        },
+        callback(r) {
+            if (!r.message) return;
+
+            const lead = r.message;
+
+            const html = `
+            <div style="padding:10px">
+                <h4>Lead Details</h4>
+                <table class="table table-bordered" style="table-layout: fixed; width: 100%;">
+                <tr>
+                    <th style="width:160px">Phone</th>
+                    <td style="word-wrap: break-word; word-break: break-all; overflow-wrap: break-word;">${lead.phone || "-"}</td>
+                </tr>
+                <tr>
+                    <th>Resume</th>
+                    <td style="word-wrap: break-word; overflow-wrap: break-word;">
+                    ${lead.resume
+                                ? `<a href="${lead.resume}" target="_blank" style="word-break: break-all;">View Resume</a>`
+                                : "-"
+                            }
+                    </td>
+                </tr>
+                <tr>
+                    <th>Social Links</th>
+                    <td style="word-wrap: break-word; word-break: break-all; overflow-wrap: break-word; max-width: 0;">${lead.social_links || "-"}</td>
+                </tr>
+                </table>
+            </div>
+            `;
+
+            frm.fields_dict.lead_details_html.$wrapper.html(html);
+        }
+    });
+}
 
 
 function open_create_sales_order_dialog(frm) {

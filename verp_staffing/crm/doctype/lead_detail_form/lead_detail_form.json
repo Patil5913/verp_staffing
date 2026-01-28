@@ -5,6 +5,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "authentication_section",
+  "authentication_html",
   "agreement_section",
   "agreement_html",
   "agreement_link",
@@ -18,6 +20,7 @@
   "i_consent_to_receive_sign_and_store_documents_electronically",
   "i_confirm_my_identity_and_signing_this_document_intentionally",
   "audit_trail",
+  "certificate_id",
   "personal_information_section",
   "surname",
   "first_name",
@@ -397,12 +400,27 @@
    "label": "Phone Number (Provide country code with number)",
    "placeholder": "Exp: +1 xxx xxx xxxx",
    "reqd": 1
+  },
+  {
+   "fieldname": "authentication_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "authentication_html",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "certificate_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Certificate ID",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-11 12:40:20.884690",
+ "modified": "2026-01-28 16:42:21.635384",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

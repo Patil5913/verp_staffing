@@ -9,6 +9,43 @@ class Interview(Document):
 	pass
 
 
+KANBAN_NAME = "Interview"
+
+def add_to_kanban(doc, method):
+    kb = frappe.get_doc("Kanban Board", KANBAN_NAME)
+
+    if any(c.column_name == doc.status_name for c in kb.columns):
+        return
+
+    kb.append("columns", {
+        "column_name": doc.status_name,
+        "indicator": "Blue",
+        "status": "Active",
+    })
+
+    kb.save(ignore_permissions=True)
+
+
+def remove_from_kanban(doc, method):
+    kb = frappe.get_doc("Kanban Board", KANBAN_NAME)
+
+    kb.columns = [
+        c for c in kb.columns if c.column_name != doc.status_name
+    ]
+
+    kb.save(ignore_permissions=True)
+
+
+def sync_kanban(doc, method):
+    kb = frappe.get_doc("Kanban Board", KANBAN_NAME)
+
+    for col in kb.columns:
+        if col.column_name == doc.get_db_value("status_name"):
+            col.column_name = doc.status_name
+
+    kb.save(ignore_permissions=True)
+
+
 # UTILS
 def get_logged_in_employee():
     """

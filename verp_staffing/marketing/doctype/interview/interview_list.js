@@ -5,6 +5,12 @@ frappe.listview_settings["Interview"] = {
         const page = listview.page;
         if (!page) return;
 
+        setTimeout(() => {
+            page.wrapper
+                .find('.add-new-column')
+                .hide();
+        }, 300);
+
         hide_list_controls(page);
 
         if (!page.customer_filter_btn_added) {
@@ -57,7 +63,18 @@ function auto_apply_marketing_filter(listview) {
         method: "verp_staffing.marketing.doctype.interview.interview.get_marketing_customer_options",
         callback(r) {
             const options = r.message || [];
-            if (!options.length) return;
+            if (!options.length) {
+                const body = listview.page?.body;
+                if (body) {
+                    body.html(`
+                    <div class="text-muted text-center mt-5">
+                        You are not assigned to any customer.
+                    </div>
+                `);
+                }
+                return;
+            }
+
 
             const param = get_marketing_param();
             const value = param || options[0].value;
@@ -109,7 +126,7 @@ function update_customer_label(page, options, selected_value) {
     const pill = ensure_customer_label(page);
     const valueEl = pill.find(".marketing-customer-value");
 
-    const selected = options.find(o => o.value === selected_value);    
+    const selected = options.find(o => o.value === selected_value);
 
     if (!selected) {
         valueEl.text("—");

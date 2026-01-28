@@ -69,7 +69,7 @@
   },
   {
    "fieldname": "column_break_emkf",
-   "fieldtype": "Column Break"  
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "sales_tab",
@@ -130,6 +130,7 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
+   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -149,12 +150,18 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-24 16:32:35.339405",
+ "modified": "2026-01-26 10:11:33.183329",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -170,20 +177,101 @@
   {
    "create": 1,
    "read": 1,
+   "role": "Sales Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
    "role": "Sales Employee",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Team Lead",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Person",
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Support Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "JDC",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",
