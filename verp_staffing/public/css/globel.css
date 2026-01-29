@@ -190,3 +190,7 @@ body.verp-protected::after {
     background: #a8b3bf;
 }
 
+/* Hide Frappe promotional sidebar footer globally */
+.layout-side-section .sidebar-section a[href*="frappe.io"] {
+    display: none !important;
+}

@@ -36,6 +36,7 @@ class CustomUser(User):
                 "hide_on_success": True,
             },
         )
+        
     def validate(self):
         self.__new_password = self.new_password
         self.new_password = ""
@@ -68,6 +69,23 @@ class CustomUser(User):
 
         if (self.name not in ["Administrator", "Guest"]) and (not self.get_social_login_userid("frappe")):
             self.set_social_login_userid("frappe", frappe.generate_hash(length=39))
+
+    def after_insert(self):
+        # adding role Inbox User to all users except Administrator and Guest
+        if self.name in ("Administrator", "Guest"):
+            return
+
+        if frappe.db.exists(
+            "Has Role",
+            {"parent": self.name, "role": "Inbox User"}
+        ):
+            return
+
+        self.append("roles", {"role": "Inbox User"})
+        self.save(ignore_permissions=True)
+
+        super().after_insert()
+
 
 def ask_pass_update():
 	# update the sys defaults as to awaiting users

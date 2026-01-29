@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-    console.log("Event trigger");
 
     // Disable Right-Click (Context Menu)
     // document.addEventListener('contextmenu', event => event.preventDefault());
@@ -20,8 +19,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     //     // Check for the PrintScreen key (standard name or legacy code 44)
     //     if (e.code === 'PrintScreen' || e.keyCode === 44) {
-    //         console.log("e.key: ", e, "e.keyCode: ", e.keyCode);
-    //         console.log("Print Screen detected");
     //         e.preventDefault()
     //         // Immediately clear the clipboard
     //         navigator.clipboard.writeText("").then(() => {
@@ -41,16 +38,13 @@ document.addEventListener('DOMContentLoaded', function () {
     //     ) {
     //         e.preventDefault();
     //     }
-    //     console.log("e.key: ", e.key);
 
     //     if ((e.altKey) && e.key == "printscreen") {
-    //         console.log("ctrl and prt");
     //         e.preventDefault();
     //         frappe.show_alert({ message: __('Screen capture shortcut disabled'), indicator: 'red' });
     //     }
     //     // Disable Win + Shift + S (Snipping Tool) or Cmd + Shift + 4 (Mac)
     //     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'S' || e.key === '4')) {
-    //         console.log("ctrl");
     //         e.preventDefault();
     //         frappe.show_alert({ message: __('Screen capture shortcut disabled'), indicator: 'red' });
     //     }

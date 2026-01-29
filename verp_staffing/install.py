@@ -312,6 +312,10 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
     },
+    "Inbox User": {
+        "Communication": ["read", "create", "email"],
+        "Email Account": ["read"],
+    }
 }
 
 
@@ -343,10 +347,6 @@ DEPARTMENTS_ROLES = {
     ],
     "HR": ["HR Manager", "HR"],
 }
-
-
-import json
-import frappe
 
 HIERARCHY_DATA = [
     {
