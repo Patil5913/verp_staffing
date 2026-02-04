@@ -23,6 +23,10 @@ def sync_user_workspace_roles(doc, method=None):
     frappe.flags.in_employee_sync = True
 
     user = frappe.get_doc("User", doc.user)
+    # ---- Enabled sync (Employee -> User) ----
+    if user.enabled != doc.enabled:
+        user.enabled = doc.enabled
+
 
     # 1. Collect departments & designations
     departments = set()

@@ -1,3 +1,4 @@
+from pydoc import doc
 import frappe
 
 SYSTEM_WORKSPACE_ROLES = {
@@ -96,3 +97,36 @@ def check_employee_missing(user):
     #     wide=True,
     # )
 #     return
+
+
+def sync_employee_enabled_from_user(doc, method=None):
+    if frappe.flags.in_employee_sync:
+        return
+
+    if not doc.get_db_value("name"):
+        return
+
+    old = doc.get_db_value("enabled")
+    if old == doc.enabled:
+        return
+
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user": doc.name},
+        "name"
+    )
+
+    if not employee:
+        return
+
+    frappe.flags.in_employee_sync = True
+    try:
+        frappe.db.set_value(
+            "Employee",
+            employee,
+            "enabled",
+            doc.enabled,
+            update_modified=False
+        )
+    finally:
+        frappe.flags.in_employee_sync = False

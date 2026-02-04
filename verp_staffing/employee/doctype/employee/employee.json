@@ -6,6 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "enabled",
+  "section_break_ubgx",
   "user",
   "column_break_ookt",
   "series",
@@ -48,12 +50,22 @@
    "hidden": 1,
    "label": "Series",
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_break_ubgx",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-31 16:56:45.755870",
+ "modified": "2026-01-31 16:30:48.607392",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -63,6 +75,10 @@
   {
    "read": 1,
    "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Manager"
   },
   {
    "create": 1,
@@ -78,6 +94,10 @@
   },
   {
    "read": 1,
+   "role": "Lead Team Lead"
+  },
+  {
+   "read": 1,
    "role": "Sales Master Manager"
   },
   {
@@ -86,11 +106,13 @@
   },
   {
    "read": 1,
-   "role": "Lead Manager"
+   "role": "marketing Master Manager",
+   "select": 1
   },
   {
    "read": 1,
-   "role": "Lead Team Lead"
+   "role": "marketing Manager",
+   "select": 1
   },
   {
    "read": 1,
@@ -102,22 +124,12 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Marketing Team Lead",
    "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
   },
   {
    "read": 1,
@@ -126,12 +138,27 @@
   },
   {
    "read": 1,
-   "role": "Recruiter",
+   "role": "Technical Coordinator",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Marketing Mentor",
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "JDC",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Support Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
    "select": 1
   },
   {
@@ -146,12 +173,7 @@
   },
   {
    "read": 1,
-   "role": "RUC Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Recruiter",
    "select": 1
   },
   {
@@ -165,10 +187,14 @@
    "select": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "HR Manager",
-   "write": 1
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
   },
   {
    "create": 1,
@@ -179,6 +205,12 @@
   {
    "read": 1,
    "role": "Sales Employee"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
   },
   {
    "read": 1,

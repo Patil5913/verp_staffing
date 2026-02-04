@@ -683,9 +683,9 @@ def after_install():
     # create_interview_statuses()
     # seed_sales_stages()
     # seed_type_of_interview()
-    create_all_roles()
-    seed_employee_departments()
-    assign_permissions_to_roles(ROLE_PERMISSIONS)
+    # create_all_roles()
+    # seed_employee_departments()
+    # assign_permissions_to_roles(ROLE_PERMISSIONS)
     # seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
@@ -1084,30 +1084,30 @@ COMMON_PASSWORD = "Vrugle@2026"
 
 ROLE_USER_COUNTS = {
     "Lead Master Manager": 1,
-    "Lead Manager": 3,
-    "Lead Team Lead": 9,
-    "Lead Person": 27,
+    "Lead Manager": 1,
+    "Lead Team Lead": 1,
+    "Lead Person": 1,
     "Sales Master Manager": 1,
-    "Sales Manager": 2,
-    "Sales Team Lead": 6,
-    "Sales Person": 24,
+    "Sales Manager": 1,
+    "Sales Team Lead": 1,
+    "Sales Person": 1,
     "Marketing Master Manager": 1,
-    "Marketing Manager": 2,
-    "Marketing Team Lead": 4,
-    "Senior Recruiter": 12,
-    "Marketing Mentor": 36,
-    "Recruiter": 180,
+    "Marketing Manager": 1,
+    "Marketing Team Lead": 1,
+    "Senior Recruiter": 1,
+    "Marketing Mentor": 1,
+    "Recruiter": 1,
     "Technical Master Manager": 1,
-    "Technical Manager": 2,
-    "Technical Coordinator": 4,
-    "RUC Person": 8,
-    "Training Person": 8,
-    "JDC": 8,
-    "Support Person": 8,
+    "Technical Manager": 1,
+    "Technical Coordinator": 1,
+    "RUC Person": 1,
+    "Training Person": 1,
+    "JDC": 1,
+    "Support Person": 1,
     "Senior Resume Person": 1,
-    "Resume Person": 5,
+    "Resume Person": 1,
     "HR Manager": 1,
-    "HR": 2,
+    "HR": 1,
 }
 
 
