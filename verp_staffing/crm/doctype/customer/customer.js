@@ -1113,25 +1113,29 @@ function render_resume_panel(frm, data) {
 function render_technical_panel(frm, data) {
     const wrapper = frm.fields_dict.technical_content.$wrapper;
 
-    if (!data) {
+    if (!data || !data.length) {
         wrapper.html(`<div class="text-muted">Not forwarded to Technical yet.</div>`);
         return;
     }
 
-    const status_html = get_status_badge(data.status);
+    let html = "";
 
-    const html = `
-        <div class="department-box">
-            <h4>Technical Department</h4>
-            <p><strong>Status:</strong> ${status_html}</p>
-            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
-        data.assign_to || "-"
-    )}</p>
-            <p class="text-muted">
-                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
-            </p>
-        </div>
-    `;
+    data.forEach(item => {
+        const status_html = get_status_badge(item.status);
+
+        html += `
+            <div class="department-box">
+                <h4> Services : ${item.name}</h4>
+                <p><strong>Status:</strong> ${status_html}</p>
+                <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
+                    item.assign_to || "-"
+                )}</p>
+                <p class="text-muted">
+                    Last Updated: ${frappe.datetime.str_to_user(item.last_updated)}
+                </p>
+            </div>
+        `;
+    });
 
     wrapper.html(html);
 }

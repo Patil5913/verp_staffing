@@ -5,7 +5,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "employee",
+  "assign_to",
   "customer",
   "status",
   "section_break_mtyr",
@@ -13,13 +13,6 @@
   "lead_details"
  ],
  "fields": [
-  {
-   "fieldname": "employee",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Employee",
-   "options": "Employee"
-  },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
@@ -49,12 +42,19 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:02:05.398955",
+ "modified": "2026-02-03 15:57:48.088970",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

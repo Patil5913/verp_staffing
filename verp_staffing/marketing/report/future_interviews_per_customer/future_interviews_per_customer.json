@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-01-27 18:16:57.226872",
+ "modified": "2026-02-02 17:03:59.040999",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Future Interviews Per Customer",
@@ -48,7 +48,7 @@
    "role": "Marketing Mentor"
   },
   {
-   "role": "recruiter"
+   "role": "Recruiter"
   }
  ],
  "timeout": 0

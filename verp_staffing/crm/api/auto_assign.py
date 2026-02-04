@@ -113,9 +113,9 @@ SERVICE_DOCTYPE_MAP = {
     # Technical
     "ruc": "RUC",
     "resume": "Resume",
-    "JDC":"JDC",
-    "Training":"Training",
-    "Cover Letter": "Cover Letter",
+    "jdc":"JDC",
+    "training":"Training",
+    "cover letter": "Cover Letter",
 
     # Marketing
     "marketing": "Marketing",
@@ -149,7 +149,8 @@ def forward_candidate(customer, service):
     
     department = parents[0].parent
 
-    doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
+    doctype = SERVICE_DOCTYPE_MAP.get(service_key.lower(), "Other Services")
+    frappe.errprint(f"{doctype} , {service_key} ")
     if(department == "Technical" and doctype == "Other Services"):
         doctype = "Technical Other Services"
     elif(department == "Marketing" and doctype == "Other Services"):
@@ -181,10 +182,10 @@ def forward_candidate(customer, service):
             "assign_to": assignee,
             "status": "Pending",
             })
-    elif doctype == "Training Other Services":
+    elif doctype == "Technical Other Services":
         frappe.errprint(f"service:{service}, customer: {customer}, assignee: {assignee}")
         service_doc = frappe.get_doc({
-            "doctype": "Training Other Services",
+            "doctype": "Technical Other Services",
             "customer": customer,
             "service": service,
             "assign_to": assignee,
