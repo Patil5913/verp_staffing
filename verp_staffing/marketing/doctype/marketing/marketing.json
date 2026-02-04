@@ -12,6 +12,7 @@
   "column_break_jejh",
   "interview_list",
   "customer_details_section",
+  "job_application_count",
   "customer_details_html"
  ],
  "fields": [
@@ -58,12 +59,18 @@
    "hidden": 1,
    "label": "Title",
    "unique": 1
+  },
+  {
+   "fieldname": "job_application_count",
+   "fieldtype": "Table",
+   "label": "Job Application Count",
+   "options": "Job Application Count"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-29 16:14:22.638542",
+ "modified": "2026-01-30 15:53:02.267058",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -73,6 +80,10 @@
   {
    "read": 1,
    "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -87,16 +98,26 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
   },
   {
    "read": 1,
    "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
   },
   {
    "create": 1,
@@ -114,20 +135,6 @@
    "create": 1,
    "read": 1,
    "role": "marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Senior Recruiter",
    "select": 1,
    "write": 1
   },

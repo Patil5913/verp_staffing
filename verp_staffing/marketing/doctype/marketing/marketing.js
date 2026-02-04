@@ -2,7 +2,42 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Marketing", {
+
         refresh(frm) {
+
+                // console.log("logssss");
+                // console.log("current user:", frappe.session.user);frm.set_df_property("date", "read_only", 1);
+                
+                   frappe.call({
+                method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing_date",
+                args: {
+                assign_to: frm.doc.assign_to
+                },
+            callback(r) {
+                            const grid = frm.fields_dict["job_application_count"].grid;
+                            console.log("grid", grid);
+                            
+                console.log("assigned", r);
+                
+                if (r.message) {
+                    grid.update_docfield_property("date", "read_only", 0);
+
+                    console.log("You can edit Marketing date");
+                } else {
+                        grid.update_docfield_property("date", "read_only", 1);
+                    console.log("You cannot edit Marketing date");
+                }
+            },
+                error(err) {
+                console.error("Error checking Marketing edit permission", err);
+            }
+        });
+
+               
+
+                
+
+
                 frm.add_custom_button("Show Form Tour", () => {
                         const tour_name = 'Marketing Form';
 
@@ -52,6 +87,31 @@ frappe.ui.form.on("Marketing", {
         }
 
 });
+
+frappe.ui.form.on("Job Application Count", {
+
+
+        
+         job_application_count_add(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+
+        if (!row.date) {
+            row.date = frappe.datetime.get_today();
+            frm.refresh_field("job_application_count");
+        }
+    },
+     
+        small_application(frm, cdt, cdn) {
+                update_job_application_totals(frm, cdt, cdn);
+        },
+
+        large_application(frm, cdt, cdn) {
+                update_job_application_totals(frm, cdt, cdn);
+        }
+
+    }
+);
+
 
 function open_create_interview_dialog(frm) {
         const dialog = new frappe.ui.Dialog({
@@ -304,4 +364,19 @@ function forward_candidate(frm, values) {
                         frm.reload_doc();
                 }
         });
+}
+
+
+
+function update_job_application_totals(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+
+        let small = flt(row.small_application);
+        let large = flt(row.large_application);
+
+        // Auto-calc only if at least one value exists
+        if (small || large) {
+                row.total_application = small + large;
+                frm.refresh_field("job_application_count");
+        }
 }

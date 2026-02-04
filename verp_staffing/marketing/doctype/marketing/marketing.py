@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
+from unittest import result
 import frappe
 from frappe.model.document import Document
 
@@ -23,3 +24,60 @@ def get_interviews_by_marketing(marketing):
         filters={"marketing_link": marketing},
         fields=["name"]
     )
+
+@frappe.whitelist()
+def can_edit_marketing_date(assign_to):
+    """
+    Returns True if the current session user is assigned to Marketing for the employee
+    linked to assign_to on the form. Otherwise, returns False.
+    """
+    if not assign_to:
+        return False
+    # print("______________")
+
+    current_user = frappe.session.user
+
+    # Step 1: Get the employee linked to the main assign_to user
+    employee = frappe.db.get_value(
+        "Employee",
+        {"name": assign_to},
+        ["name"],
+        as_dict=True
+    )
+	
+
+    if not employee:
+        return {
+            "current_user": current_user,
+            "assigned_user": None,
+            "can_edit": False,
+            "reason": "No employee for assign_to"
+        }
+
+    employee_name = employee.name
+    # print(f"____________employee_name: {employee_name}")
+
+    # Step 2: Check if Marketing assignment exists and who it's assigned to
+    result = frappe.db.sql("""
+        SELECT e2.user AS assigned_user
+        FROM `tabEmployee Assignment Detail` t
+        JOIN `tabEmployee` e1 ON t.parent = e1.name  -- main employee
+        JOIN `tabEmployee` e2 ON t.assigned_to = e2.name  -- assigned employee
+        WHERE e1.name = %s
+          AND t.department = 'Marketing'
+        LIMIT 1
+    """, employee_name, as_dict=True)
+	
+    assigned_user = result[0].assigned_user
+
+    # frappe.errprint(f"____________assigned_user: {employee_name}")
+    if not result:
+        return False
+
+    assigned_user = result[0].assigned_user
+
+    # Step 3: Compare with current session user
+    return current_user == assigned_user
+    
+
+

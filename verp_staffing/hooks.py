@@ -156,6 +156,7 @@ override_doctype_class = {"User": "verp_staffing.overrides.override_user.CustomU
 doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
+        "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
@@ -163,6 +164,7 @@ doc_events = {
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
     "Employee": {
         "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
+        "before_save": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
         "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
     },
     "Interview Status": {

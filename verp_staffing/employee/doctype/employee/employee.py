@@ -19,7 +19,6 @@ class Employee(Document):
         # Generate incrementing name
         self.series = make_autoname(series)
 
-
 @frappe.whitelist()
 def get_users_not_linked_to_employee(doctype, txt, searchfield, start, page_len, filters):
     # Get users already mapped in Employee
