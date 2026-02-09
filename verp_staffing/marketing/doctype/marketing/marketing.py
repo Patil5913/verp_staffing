@@ -4,7 +4,7 @@
 from unittest import result
 import frappe
 from frappe.model.document import Document
-
+import json
 
 class Marketing(Document):
 	def before_insert(self):
@@ -22,7 +22,7 @@ def get_interviews_by_marketing(marketing):
 	return frappe.get_all(
         "Interview",
         filters={"marketing_link": marketing},
-        fields=["name"]
+        fields=["company"]
     )
 
 @frappe.whitelist()
@@ -68,11 +68,11 @@ def can_edit_marketing_date(assign_to):
         LIMIT 1
     """, employee_name, as_dict=True)
 	
-    assigned_user = result[0].assigned_user
+    frappe.errprint(f"__assigned_user: {result}")
 
-    # frappe.errprint(f"____________assigned_user: {employee_name}")
-    if not result:
+    if not len(result) > 0:
         return False
+    # assigned_user = result[0].assigned_user
 
     assigned_user = result[0].assigned_user
 
@@ -80,4 +80,76 @@ def can_edit_marketing_date(assign_to):
     return current_user == assigned_user
     
 
+
+
+
+@frappe.whitelist()
+def can_edit_marketing_target(assign_to):
+	"""
+	✅ Final permission function (loop based)
+
+	Rule:
+	- Follow Marketing assignment chain upward:
+	  assign_to -> assigned_to -> assigned_to -> ...
+	- If the current logged-in user matches ANY senior user's 'Employee.user' in that chain,
+	  then permission is granted.
+	"""
+
+	if not assign_to:
+		return {
+			"can_edit": False,
+			"current_user": frappe.session.user,
+			"users": [],
+			"chain": [],
+			"reason": "assign_to not provided",
+		}
+
+	current_user = frappe.session.user
+
+	visited = set()
+	chain = []
+	users = []
+
+	current_employee = assign_to
+
+	while current_employee and current_employee not in visited:
+		visited.add(current_employee)
+
+		# ✅ find next assigned employee in Marketing for current_employee
+		nxt = frappe.db.sql(
+			"""
+			SELECT t.assigned_to AS assigned_employee
+			FROM `tabEmployee Assignment Detail` t
+			WHERE t.parent = %s
+			  AND t.department = 'Marketing'
+			LIMIT 1
+			""",
+			(current_employee,),
+			as_dict=True,
+		)
+
+		if not nxt or not nxt[0].assigned_employee:
+			break
+
+		next_employee = nxt[0].assigned_employee
+
+		# ✅ get that employee's user
+		next_user = frappe.db.get_value("Employee", next_employee, "user")
+
+		chain.append({"employee": next_employee, "user": next_user})
+		if next_user:
+			users.append(next_user)
+
+		# ✅ move upward
+		current_employee = next_employee
+
+	can_edit = current_user in users
+
+	return {
+		"can_edit": can_edit,
+		"current_user": current_user,
+		"users": users,     # all senior users
+		"chain": chain,     # full chain for debugging
+		"reason": "ok" if can_edit else "current user not in marketing senior chain",
+	}
 

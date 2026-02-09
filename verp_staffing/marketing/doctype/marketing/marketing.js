@@ -7,35 +7,71 @@ frappe.ui.form.on("Marketing", {
 
                 // console.log("logssss");
                 // console.log("current user:", frappe.session.user);frm.set_df_property("date", "read_only", 1);
-                
-                   frappe.call({
-                method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing_date",
-                args: {
-                assign_to: frm.doc.assign_to
-                },
-            callback(r) {
-                            const grid = frm.fields_dict["job_application_count"].grid;
-                            console.log("grid", grid);
-                            
-                console.log("assigned", r);
-                
-                if (r.message) {
-                    grid.update_docfield_property("date", "read_only", 0);
 
-                    console.log("You can edit Marketing date");
-                } else {
-                        grid.update_docfield_property("date", "read_only", 1);
-                    console.log("You cannot edit Marketing date");
-                }
-            },
-                error(err) {
-                console.error("Error checking Marketing edit permission", err);
-            }
-        });
+                frappe.call({
+                        method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing_date",
+                        args: {
+                                assign_to: frm.doc.assign_to
+                        },
+                        callback(r) {
+                                const grid = frm.fields_dict["job_application_count"].grid;
+                                console.log("grid", grid);
 
-               
+                                console.log("assigned", r);
 
-                
+                                if (r.message) {
+                                        grid.update_docfield_property("date", "read_only", 0);
+
+                                        console.log("You can edit Marketing date");
+                                } else {
+                                        grid.update_docfield_property("date", "read_only", 1);
+                                        console.log("You cannot edit Marketing date");
+                                }
+                        },
+                        error(err) {
+                                console.error("Error checking Marketing edit permission", err);
+                        }
+                });
+
+
+                frappe.call({
+                        method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing_target",
+                        args: {
+                                assign_to: frm.doc.assign_to,
+                        },
+                        callback(r) {
+                                const grid = frm.fields_dict["target"].grid;
+                                console.log("target grid", grid);
+                                console.log("server response", r);
+
+                                // ✅ backend returns:
+                                // { can_edit: true/false, users: [...], chain: [...], current_user: ... }
+                                const canEdit = !!(r.message && r.message.can_edit);
+
+                                if (canEdit) {
+                                        grid.update_docfield_property("target_date", "read_only", 0);
+                                        grid.update_docfield_property("target", "read_only", 0);
+                                        console.log("You can edit Marketing target");
+                                } else {
+                                        grid.update_docfield_property("target_date", "read_only", 1);
+                                        grid.update_docfield_property("target", "read_only", 1);
+                                        console.log("You cannot edit Marketing target");
+                                }
+
+                                // ✅ refresh grid so UI updates immediately
+                                frm.refresh_field("target");
+                        },
+                        error(err) {
+                                console.error("Error checking Marketing edit permission", err);
+                        },
+                });
+
+
+
+
+
+
+
 
 
                 frm.add_custom_button("Show Form Tour", () => {
@@ -66,11 +102,11 @@ frappe.ui.form.on("Marketing", {
                         source_doctype: "Lead Detail Form",
                         customer: frm.doc.customer,
                         fields: [
-                                "surname", "first_name", "father_name","personal_phone_number",
+                                "surname", "first_name", "father_name", "personal_phone_number",
                                 "email", "number_for_marketing", "marketing_linkedin", "linkedin_password",
                                 "technologies", "ssn_digit", "date_of_birth", "current_address",
                                 "current_visa_status", "ead_card", "past_experience_table",
-                                "entry_date", "certificate_or_completed_course", "availability_for_interview", "driving_licence", 
+                                "entry_date", "certificate_or_completed_course", "availability_for_interview", "driving_licence",
                         ]
                 });
 
@@ -88,29 +124,7 @@ frappe.ui.form.on("Marketing", {
 
 });
 
-frappe.ui.form.on("Job Application Count", {
 
-
-        
-         job_application_count_add(frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-
-        if (!row.date) {
-            row.date = frappe.datetime.get_today();
-            frm.refresh_field("job_application_count");
-        }
-    },
-     
-        small_application(frm, cdt, cdn) {
-                update_job_application_totals(frm, cdt, cdn);
-        },
-
-        large_application(frm, cdt, cdn) {
-                update_job_application_totals(frm, cdt, cdn);
-        }
-
-    }
-);
 
 
 function open_create_interview_dialog(frm) {
@@ -182,7 +196,7 @@ function render_interview_list(frm) {
         frappe.call({
                 method: "verp_staffing.marketing.doctype.marketing.marketing.get_interviews_by_marketing",
                 args: {
-                        marketing: frm.doc.name
+                        marketing: frm.doc.name         
                 },
                 callback(r) {
                         const data = r.message || [];
@@ -199,8 +213,8 @@ function render_interview_list(frm) {
                         data.forEach(d => {
                                 html += `
                     <li>
-                        <a href="#" data-interview="${d.name}">
-                            ${d.name}
+                        <a href="#" data-interview="${d.company}">
+                            ${d.company}
                         </a>
                     </li>
                 `;
@@ -366,7 +380,29 @@ function forward_candidate(frm, values) {
         });
 }
 
+frappe.ui.form.on("Job Application Count", {
 
+
+
+        job_application_count_add(frm, cdt, cdn) {
+                const row = locals[cdt][cdn];
+
+                if (!row.date) {
+                        row.date = frappe.datetime.get_today();
+                        frm.refresh_field("job_application_count");
+                }
+        },
+
+        small_application(frm, cdt, cdn) {
+                update_job_application_totals(frm, cdt, cdn);
+        },
+
+        large_application(frm, cdt, cdn) {
+                update_job_application_totals(frm, cdt, cdn);
+        }
+
+}
+);
 
 function update_job_application_totals(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
