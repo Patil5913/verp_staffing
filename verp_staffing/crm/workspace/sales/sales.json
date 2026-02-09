@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"3N48W4UHCN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}},{\"id\":\"5pQcazucd4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunitys\",\"col\":3}}]",
+ "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"5pQcazucd4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunitys\",\"col\":3}},{\"id\":\"3N48W4UHCN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}},{\"id\":\"-A_yeIF1fI\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Count of Opportunity\",\"col\":4}}]",
  "creation": "2026-01-30 14:17:38.394848",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,11 +13,16 @@
  "is_hidden": 0,
  "label": "Sales",
  "links": [],
- "modified": "2026-02-04 13:58:53.982574",
+ "modified": "2026-02-09 14:58:11.206929",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Count of Opportunity",
+   "number_card_name": "Count of Opportunity"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,

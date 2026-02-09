@@ -11,11 +11,13 @@
   "assign_to",
   "status",
   "section_break_zoqd",
-  "proof_or_work"
+  "proof_or_work",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
   {
-   "fieldname": "customer",
+   "fieldname": "customer", 
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
@@ -56,7 +58,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "section_break_zoqd",
@@ -67,12 +69,22 @@
    "fieldtype": "Table",
    "label": "Proof Or Work",
    "options": "Proof Of Work"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-27 15:29:14.259536",
+ "modified": "2026-02-06 14:58:28.275087",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",

@@ -10,7 +10,9 @@
   "status",
   "section_break_mtyr",
   "proof_of_work",
-  "lead_details"
+  "lead_details",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
   {
@@ -37,7 +39,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nComplered"
+   "options": "Pending\nComplered\nRequest for Update"
   },
   {
    "fieldname": "lead_details",
@@ -49,12 +51,22 @@
    "in_list_view": 1,
    "label": "Employee",
    "options": "Employee"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-03 15:57:48.088970",
+ "modified": "2026-02-06 12:24:09.744875",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

@@ -68,11 +68,11 @@ def can_edit_marketing_date(assign_to):
         LIMIT 1
     """, employee_name, as_dict=True)
 	
-    assigned_user = result[0].assigned_user
+    frappe.errprint(f"____________assigned_user: {result}")
 
-    # frappe.errprint(f"____________assigned_user: {employee_name}")
-    if not result:
+    if not len(result) > 0:
         return False
+    # assigned_user = result[0].assigned_user
 
     assigned_user = result[0].assigned_user
 

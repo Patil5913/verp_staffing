@@ -13,7 +13,9 @@
   "interview_list",
   "customer_details_section",
   "job_application_count",
-  "customer_details_html"
+  "customer_details_html",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
   {
@@ -65,12 +67,22 @@
    "fieldtype": "Table",
    "label": "Job Application Count",
    "options": "Job Application Count"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-30 15:53:02.267058",
+ "modified": "2026-02-06 15:31:52.322568",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -134,7 +146,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "marketing Manager",
+   "role": "Marketing Manager",
    "select": 1,
    "write": 1
   },
