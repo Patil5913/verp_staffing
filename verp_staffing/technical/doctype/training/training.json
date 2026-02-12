@@ -9,7 +9,9 @@
   "customer",
   "status",
   "section_break_xjvc",
-  "proof_of_work"
+  "proof_of_work",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
   {
@@ -43,13 +45,23 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 17:39:06.966583",
+ "modified": "2026-02-06 14:40:48.472402",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",

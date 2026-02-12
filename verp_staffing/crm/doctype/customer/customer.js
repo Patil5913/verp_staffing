@@ -890,24 +890,20 @@ async function add_forward_button(frm) {
                     customer: frm.doc.name
                 },
                 callback(r) {
-                    const services = r.message || [];
-                    const available = services.filter(
-                        s => !forwarded.includes(s.toLowerCase())
-                    )
-                    console.log("services: ",services)
-                    if (!available.length) {
-                        frappe.msgprint("Candidate has already been forwarded for all services.");
+                    const services = r.message;
+                    if (services.length === 0) {
+                        frappe.msgprint("No services available for forwarding.");
                         return;
                     }
 
-                    open_forward_prompt(frm, available);
+                    open_forward_prompt(frm, services);
                 }
             });
         }
     );
 }
 
-function open_forward_prompt(frm, available) {
+function open_forward_prompt(frm, services) {
     const d = new frappe.ui.Dialog({
         title: "Forward Candidate",
         fields: [
@@ -915,7 +911,7 @@ function open_forward_prompt(frm, available) {
                 fieldname: "service",
                 fieldtype: "Select",
                 label: "Select Service",
-                options: available,
+                options: services,
                 reqd: 1,
                 onchange() {
                     toggle_ruc_note_field(d);
@@ -924,14 +920,14 @@ function open_forward_prompt(frm, available) {
             {
                 fieldname: "note",
                 fieldtype: "Text Editor",
-                label: "Note (Required for RUC)",
-                depends_on: "eval:doc.service === 'RUC'",
+                label: "Required",
+                // depends_on: "eval:doc.service === 'RUC'",
                 hidden: 1
             }
         ],
         primary_action_label: "Forward",
         primary_action(values) {
-            if (values.service === "RUC" && !values.note) {
+            if (!values.note) {
                 frappe.msgprint("Note is required when forwarding for RUC.");
                 return;
             }
@@ -948,14 +944,10 @@ function open_forward_prompt(frm, available) {
 function toggle_ruc_note_field(dialog) {
     const service = dialog.get_value("service");
 
-    if (service === "RUC") {
+    if (service) {
         dialog.set_df_property("note", "hidden", 0);
         dialog.set_df_property("note", "reqd", 1);
-    } else {
-        dialog.set_df_property("note", "hidden", 1);
-        dialog.set_df_property("note", "reqd", 0);
-        dialog.set_value("note", "");
-    }
+    } 
 
     dialog.refresh();
 }
@@ -976,7 +968,10 @@ function get_stage_json(frm) {
 
                 try {
                     const parsedStage = JSON.parse(r.message.stage);
-                    resolve(Object.keys(parsedStage));
+                    // parsedStage.count = 0
+                    console.log("daata" , parsedStage)
+                    resolve(Object.keys(parsedStage) , parsedStage)
+                    // resolve(parsedStage);
                 } catch (e) {
                     console.warn("Invalid stage JSON");
                     resolve([]);
@@ -997,25 +992,31 @@ function forward_candidate(frm, values) {
             service: values.service
         },
         callback(r) {
-            if (values.service === "RUC") {
-                frappe.call({
-                    method: "verp_staffing.crm.api.notes.add_note",
-                    args: {
-                        reference_doctype: "RUC",
-                        reference_name: r.message.name,
-                        note: values.note
-                    },
-                    error() {
-                        frappe.msgprint("Failed to add note");
-                        d.enable_primary_action();
-                    }
-                });
-            }
-            frappe.msgprint(
-                `Candidate forwarded for ${values.service} and assigned automatically.`
-            );
-            frm.reload_doc();
+    const excludeServices = ["Resume", "RUC", "JDC", "Training", "Cover letter", "Marketing"];
+    
+    const noteDoctype = !excludeServices.includes(values.service) 
+        ? "Technical Other Services" 
+        : values.service;
+    
+    frappe.call({
+        method: "verp_staffing.crm.api.notes.add_note",
+        args: {
+            reference_doctype: noteDoctype,
+            reference_name: r.message.name,
+            note: values.note
+        },
+        error() {
+            frappe.msgprint("Failed to add note");
+            d.enable_primary_action();
         }
+    });
+    
+    frappe.msgprint(
+        `Candidate forwarded for ${values.service} and assigned automatically.`
+    );
+    frm.reload_doc();
+    }
+
     });
 }
 
@@ -1113,25 +1114,29 @@ function render_resume_panel(frm, data) {
 function render_technical_panel(frm, data) {
     const wrapper = frm.fields_dict.technical_content.$wrapper;
 
-    if (!data) {
+    if (!data || !data.length) {
         wrapper.html(`<div class="text-muted">Not forwarded to Technical yet.</div>`);
         return;
     }
 
-    const status_html = get_status_badge(data.status);
+    let html = "";
 
-    const html = `
-        <div class="department-box">
-            <h4>Technical Department</h4>
-            <p><strong>Status:</strong> ${status_html}</p>
-            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
-        data.assign_to || "-"
-    )}</p>
-            <p class="text-muted">
-                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
-            </p>
-        </div>
-    `;
+    data.forEach(item => {
+        const status_html = get_status_badge(item.status);
+
+        html += `
+            <div class="department-box">
+                <h4> Services : ${item.name}</h4>
+                <p><strong>Status:</strong> ${status_html}</p>
+                <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
+                    item.assign_to || "-"
+                )}</p>
+                <p class="text-muted">
+                    Last Updated: ${frappe.datetime.str_to_user(item.last_updated)}
+                </p>
+            </div>
+        `;
+    });
 
     wrapper.html(html);
 }

@@ -43,6 +43,7 @@ def get_forwardable_departments(customer):
         order_by="creation desc",
         limit=1,
     )
+    # rdqgv3r9ip
     frappe.errprint(f"Sales Orders for customer {customer}: {so}")
     # DISTINCT parent departments that have services
     services = frappe.db.sql(
@@ -60,10 +61,12 @@ def get_forwardable_departments(customer):
         return []
 
     service_names = [d.service for d in services]
-
+    
     # Optional: validate department still exists
     valid_services = frappe.get_all(
         "Service", filters={"name": ["in", service_names]}, pluck="name"
     )
+    
+    frappe.errprint(valid_services)
 
     return valid_services

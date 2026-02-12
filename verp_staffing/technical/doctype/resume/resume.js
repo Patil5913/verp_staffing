@@ -173,7 +173,7 @@ function open_add_note_dialog(frm, $wrapper) {
             frappe.call({
                 method: "verp_staffing.crm.api.notes.add_note",
                 args: {
-                    reference_doctype: "Resume",
+                    reference_doctype: frm.doctype,
                     reference_name: frm.doc.name,
                     note: values.note
                 },

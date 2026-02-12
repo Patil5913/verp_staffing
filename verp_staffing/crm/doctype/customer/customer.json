@@ -130,7 +130,6 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
-   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -150,12 +149,18 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-26 10:11:33.183329",
+ "modified": "2026-02-04 13:35:47.339863",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "write": 1
+  },
   {
    "create": 1,
    "read": 1,
@@ -175,9 +180,14 @@
    "write": 1
   },
   {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Person",
    "write": 1
   },
   {
@@ -193,37 +203,6 @@
    "write": 1
   },
   {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Person",
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1
-  },
-  {
    "read": 1,
    "role": "Recruiter",
    "select": 1
@@ -235,7 +214,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -245,17 +224,22 @@
   },
   {
    "read": 1,
-   "role": "RUC Person",
+   "role": "marketing Master Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Marketing Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "JDC",
    "select": 1
   },
   {
@@ -265,12 +249,27 @@
   },
   {
    "read": 1,
+   "role": "RUC Person",
+   "select": 1
+  },
+  {
+   "read": 1,
    "role": "Training Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "JDC",
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
    "select": 1
   }
  ],

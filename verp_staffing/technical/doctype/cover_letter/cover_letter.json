@@ -5,21 +5,16 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "employee",
+  "assign_to",
   "customer",
   "status",
   "section_break_itpw",
   "proof_of_work",
-  "lead_details"
+  "lead_details",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
-  {
-   "fieldname": "employee",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Employee",
-   "options": "Employee"
-  },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
@@ -34,7 +29,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "section_break_itpw",
@@ -49,12 +44,29 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 18:01:52.874021",
+ "modified": "2026-02-06 14:38:30.554309",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Cover Letter",

@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-01-27 18:05:26.936202",
+ "modified": "2026-02-02 17:03:39.484652",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Profiles Per Recuiter",
@@ -48,7 +48,7 @@
    "role": "Marketing Mentor"
   },
   {
-   "role": "recruiter"
+   "role": "Recruiter"
   }
  ],
  "timeout": 0
