@@ -6,11 +6,46 @@ from frappe.model.document import Document
 
 
 class Customer(Document):
-    def before_save(self):
-        if self.opportunity:
-            lead = frappe.db.get_value("Opportunity", self.opportunity, "party_name")
-            if lead:
-                self.title = frappe.db.get_value("Lead", lead, "name1")
+    def autoname(self):
+        import re
+
+        if self.customer_name:
+            base_name = self.customer_name.strip()
+            
+            if not base_name:
+                # fallback to default naming if something is wrong
+                self.name = frappe.generate_hash(length=10)
+                return
+
+            self.title = base_name
+            
+            # Fetch all titles that start with base_name
+            existing_titles = frappe.get_all(
+                "Customer",
+                filters={"title": ["like", f"{base_name}%"]},
+                pluck="title"
+            )
+            
+            max_count = 0
+
+            for title in existing_titles:
+                # Exact match (e.g., "name")
+                if title == base_name:
+                    max_count = max(max_count, 1)
+                    continue
+
+                # Match pattern name_number
+                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", title)
+                if match:
+                    count = int(match.group(1))
+                    max_count = max(max_count, count)
+
+            # Generate next title
+            if max_count == 0:
+                self.name = f"{base_name}-1"
+            else:
+                self.name = f"{base_name}-{max_count + 1}"
+                
 
     def validate(self):
         if self.stage:
