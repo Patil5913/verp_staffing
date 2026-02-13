@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"9QJr2wt8Pg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"3ojxLSPDk6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ruc\",\"col\":3}},{\"id\":\"0Zny-ZsVp2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Jdc\",\"col\":3}},{\"id\":\"KU3YPBZGsZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Training\",\"col\":3}},{\"id\":\"60reacaqp-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Cover Letter\",\"col\":3}},{\"id\":\"g0nCNZjL5j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Technical Other Services\",\"col\":3}}]",
+ "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"9QJr2wt8Pg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"3ojxLSPDk6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ruc\",\"col\":3}},{\"id\":\"0Zny-ZsVp2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Jdc\",\"col\":3}},{\"id\":\"KU3YPBZGsZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Training\",\"col\":3}},{\"id\":\"60reacaqp-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Cover Letter\",\"col\":3}},{\"id\":\"g0nCNZjL5j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Technical Other Services\",\"col\":3}},{\"id\":\"_JYuUFIpj-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Count of Complated Resume\",\"col\":4}}]",
  "creation": "2025-12-24 17:12:02.669811",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,11 +13,16 @@
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2026-01-27 15:06:30.592389",
+ "modified": "2026-02-11 14:32:27.227712",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Count of Complated Resume",
+   "number_card_name": "Count of Complated Resume"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
