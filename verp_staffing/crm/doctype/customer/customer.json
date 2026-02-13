@@ -1,11 +1,12 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2025-11-14 20:59:35.429623",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "opportunity",
+  "customer_name",
+  "from_lead",
+  "from_opportunity",
   "title",
   "column_break_emkf",
   "status",
@@ -29,14 +30,6 @@
   "open_activities_html"
  ],
  "fields": [
-  {
-   "fieldname": "opportunity",
-   "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity",
-   "reqd": 1,
-   "unique": 1
-  },
   {
    "bold": 1,
    "default": "Open",
@@ -111,13 +104,6 @@
    "label": "Lead Details"
   },
   {
-   "fieldname": "title",
-   "fieldtype": "Data",
-   "label": "Title",
-   "read_only": 1,
-   "unique": 1
-  },
-  {
    "fieldname": "section_break_gtmf",
    "fieldtype": "Section Break",
    "label": "Sales Order"
@@ -144,6 +130,31 @@
    "fieldname": "resume_html",
    "fieldtype": "HTML",
    "label": "Resume Details"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "from_lead",
+   "fieldtype": "Link",
+   "label": "From Lead",
+   "options": "Lead"
+  },
+  {
+   "fieldname": "from_opportunity",
+   "fieldtype": "Link",
+   "label": "From Opportunity",
+   "options": "Opportunity"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -153,6 +164,7 @@
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -164,7 +176,13 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
    "write": 1
   },
   {
@@ -193,18 +211,24 @@
   {
    "create": 1,
    "read": 1,
+   "role": "Sales Person",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
    "role": "Sales Employee",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Master Manager",
    "write": 1
   },
   {
    "read": 1,
-   "role": "Recruiter",
+   "role": "Resume Person",
    "select": 1
   },
   {
@@ -214,17 +238,17 @@
   },
   {
    "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "marketing Manager",
    "select": 1
   },
   {
@@ -234,12 +258,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "JDC",
+   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -249,7 +268,32 @@
   },
   {
    "read": 1,
-   "role": "RUC Person",
+   "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Support Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Support Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -264,7 +308,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "RUC Person",
    "select": 1
   },
   {
@@ -276,7 +320,6 @@
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "title",
- "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

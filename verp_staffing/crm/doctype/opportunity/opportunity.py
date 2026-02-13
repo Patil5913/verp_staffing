@@ -10,29 +10,50 @@ class Opportunity(Document):
     def before_save(self):
         pass
 
-    def before_insert(self):
-        # Only apply the logic when Opportunity From = Lead
+
+    def autoname(self):
+        import re
+        base_name = None
+
+        # Decide base_name
         if self.opportunity_from == "Lead" and self.party_name:
-            # Fetch the Lead's title field (name1)
-            lead_title = frappe.db.get_value("Lead", self.party_name, "name1")
-            if lead_title:
-                base_title = lead_title
+            base_name = frappe.db.get_value("Lead", self.party_name, "name1")
 
-                # Check if an opportunity already exists for this Lead
-                existing = frappe.db.exists(
-                    "Opportunity",
-                    {"opportunity_from": "Lead", "party_name": self.party_name},
-                )
+        elif self.opportunity_from == "Customer" and self.party_name:
+            base_name = frappe.db.get_value("Customer", self.party_name, "title")
 
-                if existing:
-                    # Append date suffix _dd-mm-yy
-                    from datetime import datetime
+        if not base_name:
+            # fallback to default naming if something is wrong
+            self.name = frappe.generate_hash(length=10)
+            return
 
-                    date_suffix = datetime.now().strftime("%d-%m-%y")
-                    self.title = f"{base_title}_{date_suffix}"
-                else:
-                    # No existing opportunity → use base title
-                    self.title = base_title
+        base_name = base_name.strip()
+
+        # Set simple title
+        self.title = base_name
+
+        # Find existing Opportunity names with format base_name-count
+        existing_names = frappe.get_all(
+            "Opportunity",
+            filters={"name": ["like", f"{base_name}_%"]},
+            pluck="name"
+        )
+
+        max_count = 0
+
+        for name in existing_names:
+            match = re.match(rf"^{re.escape(base_name)}_(\d+)$", name)
+            if match:
+                count = int(match.group(1))
+                if count > max_count:
+                    max_count = count
+
+        # Generate new name
+        if max_count == 0:
+            self.name = f"{base_name}_1"
+        else:
+            self.name = f"{base_name}_{max_count + 1}"
+
 
     def validate(self):
         # first check manual conversion attempt

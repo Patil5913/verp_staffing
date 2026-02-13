@@ -10,7 +10,7 @@ frappe.ui.form.on("Customer", {
         inject_status_badge_css();
         load_department_panels(frm);
 
-        if (frm.doc.opportunity) {
+        if (!frm.is_new()) {
             show_sales_order(frm);
         }
 
@@ -84,8 +84,36 @@ frappe.ui.form.on("Customer", {
                 apply_tab_visibility(frm, dept)
                 add_forward_button(frm);
             }
-        })
+        });
     },
+
+    from_opportunity: function(frm) {
+        if (!frm.doc.from_opportunity) return;
+
+        frappe.db.get_value(
+            'Opportunity',
+            frm.doc.from_opportunity,
+            'title'
+        ).then(r => {
+            if (r.message && r.message.title) {
+                frm.set_value('customer_name', r.message.title);
+            }
+        });
+    },
+
+    from_lead: function(frm) {
+        if (!frm.doc.from_lead) return;
+
+        frappe.db.get_value(
+            'Lead',
+            frm.doc.from_lead,
+            'name1'
+        ).then(r => {
+            if (r.message && r.message.name1) {
+                frm.set_value('customer_name', r.message.name1);
+            }
+        });
+    }
 });
 
 
@@ -595,7 +623,7 @@ function show_sales_order(frm) {
         method: "frappe.client.get_list",
         args: {
             doctype: "Sales Order",
-            filters: { opportunity: frm.doc.opportunity },
+            filters: { customer: frm.doc.name },
             fields: ["name", "title", "date", "customer"],
             limit_page_length: 50,
             order_by: "creation desc"
