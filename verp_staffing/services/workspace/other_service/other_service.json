@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Other Service",
  "links": [],
- "modified": "2026-01-09 18:16:17.785055",
+ "modified": "2026-02-14 10:53:53.987829",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Service",
@@ -22,7 +22,11 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "show_other_service"
+  }
+ ],
  "sequence_id": 24.0,
  "shortcuts": [
   {

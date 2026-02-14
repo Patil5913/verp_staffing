@@ -1020,12 +1020,10 @@ function forward_candidate(frm, values) {
             service: values.service
         },
         callback(r) {
-    const excludeServices = ["Resume", "RUC", "JDC", "Training", "Cover letter", "Marketing"];
+    const excludeServices = ["resume", "ruc", "jdc", "training", "cover letter", "marketing"];
     
-    const noteDoctype = !excludeServices.includes(values.service) 
-        ? "Technical Other Services" 
-        : values.service;
-    
+    const noteDoctype = r.message.doctype
+    console.log("noteDoctype: ",noteDoctype)
     frappe.call({
         method: "verp_staffing.crm.api.notes.add_note",
         args: {

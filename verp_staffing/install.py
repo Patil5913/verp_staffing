@@ -678,6 +678,7 @@ FORM_TOURS = {
 
 
 def after_install():
+    # seed_services_and_departments()
     setup_navbar_settings()
     seed_website_setting()
     # create_interview_statuses()
@@ -1061,7 +1062,7 @@ def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
     # Names of workspaces to keep visible
-    keep_list = ["CRM", "Users", "Technical", "Marketings", "Settings", "Employees" , "Sales" , "Leads"]
+    keep_list = ["CRM", "Users", "Technical", "Marketings", "Settings", "Employees" , "Sales" , "Leads","Other Service"]
 
     # Hide all others
     frappe.db.sql(
@@ -1359,3 +1360,49 @@ def get_primary_business_role(user_email: str) -> str | None:
         return None
 
     return business_roles[0]
+
+
+SERVICE_DEPARTMENT_MAP = {
+    "Technical": [
+        "ruc",
+        "JDC",
+        "Training",
+        "Cover Letter",
+    ],
+    "Resume":[
+        "resume",
+    ],
+    "Marketing": [
+        "marketing",
+    ],
+}
+
+
+def seed_services_and_departments():
+    for department_name, services in SERVICE_DEPARTMENT_MAP.items():
+
+        if not frappe.db.exists("Department", department_name):
+            department = frappe.get_doc({
+                "doctype": "Department",
+                "department_name": department_name,
+            })
+            department.insert(ignore_permissions=True)
+        else:
+            department = frappe.get_doc("Department", department_name)
+
+        department.services = []
+
+        for service_name in services:
+
+            if not frappe.db.exists("Service", service_name):
+                service = frappe.get_doc({
+                    "doctype": "Service",
+                    "service_name": service_name,
+                })
+                service.insert(ignore_permissions=True)
+
+            department.append("services", {
+                "service_name": service_name
+            })
+
+        department.save(ignore_permissions=True)
