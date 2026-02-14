@@ -13,8 +13,11 @@
   "interview_list",
   "customer_details_section",
   "job_application_count",
+  "section_break_ivbq",
   "target",
-  "customer_details_html"
+  "customer_details_html",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
   {
@@ -68,16 +71,30 @@
    "options": "Job Application Count"
   },
   {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
    "fieldname": "target",
    "fieldtype": "Table",
-   "label": "Target",
+   "label": "Interview Target",
    "options": "Target"
+  },
+  {
+   "fieldname": "section_break_ivbq",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-05 17:03:24.677103",
+ "modified": "2026-02-14 10:53:25.439557",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -122,7 +139,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "marketing Manager",
+   "role": "Marketing Manager",
    "select": 1,
    "write": 1
   },
@@ -133,24 +150,6 @@
   {
    "read": 1,
    "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
   },
   {
    "create": 1,

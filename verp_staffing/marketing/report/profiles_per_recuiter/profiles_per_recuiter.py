@@ -115,7 +115,6 @@ def execute(filters=None):
             "fieldtype": "Int"
         },
     ]
-
     chart = {
         "data": {
             "labels": [d.recruiter for d in data],

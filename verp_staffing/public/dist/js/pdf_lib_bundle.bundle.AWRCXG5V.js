@@ -87,9 +87,9 @@
     }
   });
 
-  // (disabled):../verp_staffing/node_modules/canvas/browser.js
-  var require_browser = __commonJS({
-    "(disabled):../verp_staffing/node_modules/canvas/browser.js"() {
+  // (disabled):canvas
+  var require_canvas = __commonJS({
+    "(disabled):canvas"() {
     }
   });
 
@@ -6529,7 +6529,7 @@
               exports2.NodeFilterFactory = NodeFilterFactory;
               class NodeCanvasFactory extends _base_factory.BaseCanvasFactory {
                 _createCanvas(width, height) {
-                  const Canvas = require_browser();
+                  const Canvas = require_canvas();
                   return Canvas.createCanvas(width, height);
                 }
               }
@@ -18563,4 +18563,4 @@
   pdfjs.GlobalWorkerOptions.workerSrc = "/assets/verp_staffing/js/pdf.worker.js";
   var pdf_lib_bundle_bundle_default = pdfjs;
 })();
-//# sourceMappingURL=pdf_lib_bundle.bundle.DXXN75HS.js.map
+//# sourceMappingURL=pdf_lib_bundle.bundle.AWRCXG5V.js.map

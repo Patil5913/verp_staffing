@@ -47,7 +47,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "description": "upload new resume here",
@@ -77,12 +77,16 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 17:59:13.787355",
+ "modified": "2026-02-04 22:27:30.175985",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
   {
    "read": 1,
    "role": "Sales Master Manager"
@@ -98,10 +102,6 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
   },
   {
    "read": 1,

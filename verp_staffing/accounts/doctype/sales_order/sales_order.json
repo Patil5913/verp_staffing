@@ -10,7 +10,6 @@
   "services",
   "column_break_wknv",
   "date",
-  "opportunity",
   "agreement",
   "payment_terms_section",
   "payment_terms",
@@ -49,12 +48,6 @@
    "options": "Customer Payment Terms"
   },
   {
-   "fieldname": "opportunity",
-   "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity"
-  },
-  {
    "fieldname": "agreement",
    "fieldtype": "Link",
    "hidden": 1,
@@ -81,7 +74,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-25 17:25:54.625174",
+ "modified": "2026-02-12 17:31:55.785229",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
@@ -89,14 +82,9 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Manager",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {
@@ -114,15 +102,20 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Team Lead",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "report": 1,
+   "role": "Sales Master Manager",
    "select": 1,
+   "share": 1,
    "write": 1
   },
   {

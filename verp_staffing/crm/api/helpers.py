@@ -23,12 +23,8 @@ def get_all_subordinates(
         current = stack.pop()
 
         filters = {"assigned_to": current}
-        print("asddddddddd", filters)
         if department:
             filters["department"] = department
-
-        print("department", department)
-        print("fffffffffffffffffffffffffffffff", filters)
         
 
         children = frappe.db.get_all(

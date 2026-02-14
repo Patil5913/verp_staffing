@@ -7,7 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "target_date",
-  "target"
+  "target",
+  "target_based_on"
  ],
  "fields": [
   {
@@ -23,13 +24,20 @@
    "in_list_view": 1,
    "label": "Target",
    "read_only": 1
+  },
+  {
+   "default": "Weekly",
+   "fieldname": "target_based_on",
+   "fieldtype": "Select",
+   "label": "Target Based On",
+   "options": "Daily\nWeekly\nMonthly"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-06 15:24:09.678411",
+ "modified": "2026-02-14 09:33:32.175934",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Target",
