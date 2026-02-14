@@ -10,22 +10,48 @@ frappe.ui.form.on("Employee", {
         });
 
 
+
+        frm.fields_dict.employee_assignment_details_table.grid.wrapper
+            .on('focus', '[data-fieldname="designation"]', function (e) {
+                const $target = $(e.target);
+                const $row = $target.closest('.grid-row');
+                const cdn = $row.attr('data-name');
+                const cdt = 'Employee Assignment Detail'; // Hardcode if lookup fails
+
+                console.log("cdn: ", cdn)
+                if (!cdn) {
+                    console.warn("Row not ready yet");
+                    return;
+                }
+                const row = locals[cdt][cdn];
+                console.log("Focused row:", row);
+
+                fetch_department_hierarchy(frm, row);
+            });
+
         frm.fields_dict.employee_assignment_details_table.grid
             .get_field("assigned_to").get_query = function (doc, cdt, cdn) {
-
+                console.log("cdt: ", cdt)
                 const row = locals[cdt][cdn];
                 if (!row || !row.department || !row.designation) {
                     return {};
                 }
+                console.log("first row", row);
+
 
                 const hierarchy = frm._department_hierarchy?.[row.department];
                 if (!hierarchy) {
                     return {};
                 }
 
+                
                 let parent_role = null;
 
                 hierarchy.forEach(r => {
+                    console.log("child row", r.child_roles);
+                    console.log("parentrow", r.parent_role);
+
+
                     if (
                         Array.isArray(r.child_roles) &&
                         r.child_roles.includes(row.designation)
@@ -47,6 +73,33 @@ frappe.ui.form.on("Employee", {
                 };
             };
     },
+// frappe.ui.form.on("Employee Assignment Detail", {
+//     department(frm, cdt, cdn) {
+//         const row = locals[cdt][cdn];
+//         if (!row.department) return;
+
+//         console.log("row", row);
+
+
+//         fetch_department_hierarchy(frm, row);
+//     },
+
+//     designation(frm, cdt, cdn) {
+//         console.log("from designation");
+//         const row = frappe.get_doc(cdt, cdn);
+//         if (!row.designation) return;
+
+//         console.log("row", row);
+
+
+//         fetch_department_hierarchy(frm, row);
+
+
+
+//         frappe.model.set_value(cdt, cdn, "assigned_to", null);
+//     }
+
+// });
 
     user(frm) {
         if (!frm.doc.user) return;
@@ -56,28 +109,45 @@ frappe.ui.form.on("Employee", {
             frm.set_value("employee_name", name);
         });
     },
+
+
 });
 
 
-frappe.ui.form.on("Employee Assignment Detail", {
-    department(frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-        if (!row.department) return;
+// frappe.ui.form.on("Employee Assignment Detail", {
+//     department(frm, cdt, cdn) {
+//         const row = locals[cdt][cdn];
+//         if (!row.department) return;
 
-        fetch_department_hierarchy(frm, row);
-    },
+//         console.log("row", row);
 
-    designation(frm, cdt, cdn) {
-        frappe.model.set_value(cdt, cdn, "assigned_to", null);
-    }
 
-});
+//         fetch_department_hierarchy(frm, row);
+//     },
+
+//     designation(frm, cdt, cdn) {
+//         console.log("from designation");
+//         const row = frappe.get_doc(cdt, cdn);
+//         if (!row.designation) return;
+
+//         console.log("row", row);
+
+
+//         fetch_department_hierarchy(frm, row);
+
+
+
+//         frappe.model.set_value(cdt, cdn, "assigned_to", null);
+//     }
+
+// });
 
 
 async function fetch_department_hierarchy(frm, row) {
     if (!frm._department_hierarchy) {
         frm._department_hierarchy = {};
     }
+    console.log("hello", frm._department_hierarchy);
 
     // use cache if already loaded
     if (frm._department_hierarchy[row.department]) {
@@ -105,12 +175,16 @@ async function fetch_department_hierarchy(frm, row) {
     }
 
     frm._department_hierarchy[row.department] = hierarchy;
+    console.log("hierarchy", hierarchy);
+
     apply_designation_options(frm, row);
 }
 
 
 function apply_designation_options(frm, row) {
     const hierarchy = frm._department_hierarchy[row.department];
+    console.log("hierarchy 2 ", hierarchy);
+
 
     let roles = new Set();
 
@@ -122,6 +196,10 @@ function apply_designation_options(frm, row) {
     });
 
     const options = Array.from(roles).join("\n");
+    console.log("role", roles);
+    console.log("options", options);
+
+
 
     // THIS is the correct target
     frm.fields_dict.employee_assignment_details_table.grid.update_docfield_property(
@@ -130,7 +208,7 @@ function apply_designation_options(frm, row) {
         options
     );
 
-    row.designation = null;
+    // row.designation = null;
     row.assigned_to = null;
 
     frm.refresh_field("employee_assignment_details_table");
