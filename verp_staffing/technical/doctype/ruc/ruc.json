@@ -94,7 +94,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-04 22:27:13.434070",
+ "modified": "2026-02-14 10:50:24.478777",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
@@ -187,7 +187,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "customer"
 }

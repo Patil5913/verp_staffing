@@ -32,7 +32,7 @@ app_include_js = [
     "/assets/verp_staffing/js/reusable.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/about_override.js",
-    "/assets/verp_staffing/js/protection.js",
+    # "/assets/verp_staffing/js/protection.js",
 ]
 
 # app_include_js = "/assets/verp_staffing/js/verp_staffing.js"

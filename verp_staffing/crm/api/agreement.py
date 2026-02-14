@@ -24,7 +24,6 @@ def preview_agreement(template, data):
     """
     Returns a temporary filled PDF (NOT saved in agreement)
     """
-    frappe.errprint(f"Preview Agreement {template} with data {data}")
     data_dict = json.loads(data) if isinstance(data, str) else (data or {})
     tpl = frappe.get_doc("Pdf Agreement Template", template)
 
@@ -108,11 +107,9 @@ def submit_and_generate(sales_order, template, data):
 
     agreement.db_set("pdf", url)
     base_url = get_url()
-    frappe.errprint(f"Base URL: {url}")
     form_url = (
         f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}"
     )
-    frappe.errprint(f"Form URL: {form_url}")
 
     frappe.db.commit()
     opportunity = so.get("opportunity")
@@ -349,7 +346,6 @@ def render_signature(page, rect, file_url):
 # def render_payment_terms_table(page, rect, terms):
 #     """
 #     Render a small table using annotations only.
-#     Includes debug logs via frappe.errprint to help diagnose coordinate / rotation problems.
 
 #     Approach
 #     - For each cell create a rect annotation (page.add_rect_annot)
@@ -365,15 +361,11 @@ def render_signature(page, rect, file_url):
 #         return
 
 #     try:
-#         frappe.errprint("render_payment_terms_table debug start")
-#         frappe.errprint(f"page.rect: {page.rect}")  # points
 #         try:
 #             # PyMuPDF exposes mediabox and rotation properties sometimes
-#             frappe.errprint(f"page.mediabox: {getattr(page, 'mediabox', None)}")
 #         except Exception:
 #             pass
 #         try:
-#             frappe.errprint(f"page_rotation: {getattr(page, 'rotation', None)}")
 #         except Exception:
 #             pass
 
@@ -387,8 +379,6 @@ def render_signature(page, rect, file_url):
 #         # Start at top of supplied rect (top-origin)
 #         y = rect.y0
 
-#         frappe.errprint(f"input rect: {rect}")
-#         frappe.errprint(f"col_width: {col_width}, row_height: {row_height}")
 
 #         def draw_cell_with_annots(cell_rect, text, font=9):
 #             """
@@ -425,8 +415,6 @@ def render_signature(page, rect, file_url):
 
 #             # Log rect and annot bbox
 #             try:
-#                 frappe.errprint(f"draw_cell - cell_rect: {cell_rect}")
-#                 frappe.errprint(
 #                     f"draw_cell - rect_annot.bbox: {getattr(r_annot, 'bbox', getattr(r_annot, 'rect', None))}"
 #                 )
 #             except Exception:
@@ -458,7 +446,6 @@ def render_signature(page, rect, file_url):
 
 #             # Log freetext bbox
 #             try:
-#                 frappe.errprint(
 #                     f"draw_cell - freetext.bbox: {getattr(t_annot, 'bbox', getattr(t_annot, 'rect', None))}"
 #                 )
 #             except Exception:
@@ -498,11 +485,9 @@ def render_signature(page, rect, file_url):
 
 #             y += row_height
 
-#         frappe.errprint("render_payment_terms_table debug end")
 
 #     except Exception as exc:
 #         # As last resort log exception so you can paste it here
-#         frappe.errprint(f"render_payment_terms_table exception: {exc}")
 #         # fallback: draw simple text to avoid failing the whole PDF
 #         render_text(page, rect, "Payment terms rendering failed", fontsize=10,line_height=1.2)
 

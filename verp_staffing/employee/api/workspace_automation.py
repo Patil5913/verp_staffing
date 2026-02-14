@@ -3,9 +3,9 @@ import frappe
 DEPARTMENT_WORKSPACE_ROLE_MAP = {
     "Sales": ["_show_crm"],
     "Lead": ["_show_crm"],
-    "Resume": ["_show_technical"],
-    "Technical": ["_show_technical"],
-    "Marketing": ["_show_marketing"],
+    "Resume": ["_show_technical","_show_other_service"],
+    "Technical": ["_show_technical","_show_other_service"],
+    "Marketing": ["_show_marketing","_show_other_service"],
     "HR": ["_show_employees"],
 }
 

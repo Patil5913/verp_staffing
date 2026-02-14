@@ -20,13 +20,16 @@
   {
    "fieldname": "title",
    "fieldtype": "Data",
-   "label": "Title"
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_wknv",
    "fieldtype": "Column Break"
   },
   {
+   "default": "Today",
    "fieldname": "date",
    "fieldtype": "Date",
    "label": "Date"
@@ -34,8 +37,11 @@
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Customer",
-   "options": "Customer"
+   "options": "Customer",
+   "set_only_once": 1
   },
   {
    "fieldname": "payment_terms_section",
@@ -74,7 +80,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-12 17:31:55.785229",
+ "modified": "2026-02-14 10:42:32.530103",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
@@ -128,7 +134,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }

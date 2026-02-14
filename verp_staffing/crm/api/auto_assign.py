@@ -40,7 +40,6 @@
 
 #     # 2. Resolve employees eligible for this role
 #     employees = get_employees_with_role(role, department)
-#     frappe.errprint(f"Employees: {employees}, with role {role} in department : {department}")
 #     if not employees:
 #         frappe.throw("No employees available for auto assignment")
 
@@ -78,7 +77,6 @@
 #         },
 #         pluck="name"
 #     )
-#     frappe.errprint(f"Users with role {role}: {users}")
 #     if not users:
 #         return []
 
@@ -88,7 +86,6 @@
 #         filters={"user": ["in", users]},
 #         pluck="name"
 #     )
-#     frappe.errprint(f"Employees with role {role}: {employees}")
 #     if not employees:
 #         return []
 
@@ -106,7 +103,6 @@
 #         pluck="parent",
 #         distinct=True
 #     )
-#     frappe.errprint(f"Assigned employees in dept {department}: {assigned_employees}")
 #     return assigned_employees
 
 # SERVICE_DOCTYPE_MAP = {
@@ -126,13 +122,11 @@
 # @frappe.whitelist()
 # def forward_candidate(customer, service):
 #     from frappe.utils import now_datetime
-#     frappe.errprint(f"Forwarding candidate for customer {customer}, service {service}")
 #     doc = frappe.get_doc("Customer", customer)
 #     count = 1
 
 
 #     service_key = service.strip().lower()
-#     frappe.errprint(f"service_key {service_key}")
 
 
 #     # ---- parse stage safely ----
@@ -451,7 +445,7 @@ def forward_candidate(customer, service):
     if service_key in stage:
 
             doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
-            department = stage[service_key].get("department")
+            department = stage[service_key][0].get("department")
 
             if doctype == "Other Services":
                 if department == "Technical":
@@ -481,7 +475,10 @@ def forward_candidate(customer, service):
                             customer=customer
                         )
                         
-                    stage[service_key]["count"] = stage[service_key].get("count", 0) + 1
+                    stage[service_key].append({
+                        "department": department,
+                        "timestamp": str(now_datetime())
+                    })
 
                     frappe.db.set_value(
                         "Customer",
@@ -518,7 +515,10 @@ def forward_candidate(customer, service):
                         customer=customer
                     )
 
-            stage[service_key]["count"] = stage[service_key].get("count", 0) + 1
+            stage[service_key].append({
+                "department": department,
+                "timestamp": str(now_datetime())
+            })
 
             frappe.db.set_value(
                 "Customer",
@@ -531,7 +531,6 @@ def forward_candidate(customer, service):
                 f"Candidate is reforwarded for {service}. "
                 f"Status updated to 'Request for Update'."
             )
-
             return {
                 "reforward": True,
                 "doctype": doctype,
@@ -558,13 +557,14 @@ def forward_candidate(customer, service):
                 doctype = "Technical Other Services"
             elif department == "Marketing":
                 doctype = "Marketing Other Services"
+            else:
+                doctype = "Other Services"
 
     assignee = get_auto_assign_employee(
             department=department,
             target_doctype=doctype,
             owner_field="assign_to"
         )
-
     service_doc = frappe.get_doc({
             "doctype": doctype,
             "customer": customer,
@@ -577,12 +577,10 @@ def forward_candidate(customer, service):
 
     service_doc.insert(ignore_permissions=True)
 
-    stage[service_key] = {
-            "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
-
+    stage[service_key] = [{
+        "department": department,
+        "timestamp": str(now_datetime())
+    }]
     frappe.db.set_value(
             "Customer",
             customer,
