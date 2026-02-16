@@ -6,4 +6,6 @@ from frappe.model.document import Document
 
 
 class SalesOrder(Document):
-	pass
+	def before_insert(self):
+		title =f"SO-{self.customer}-{self.date}",
+		self.title = title

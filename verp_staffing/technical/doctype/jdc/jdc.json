@@ -66,7 +66,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-06 12:24:09.744875",
+ "modified": "2026-02-14 10:50:02.093935",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
@@ -87,7 +87,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "customer"
 }

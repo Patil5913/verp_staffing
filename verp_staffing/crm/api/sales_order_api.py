@@ -41,7 +41,6 @@ def create_sales_order(opportunity, opportunity_from, party_name, data):
             "service": service
         })
     # -------- CREATE SALES ORDER -------- #
-    frappe.errprint(f"data: {data}")
     so = frappe.get_doc(
         {
             "doctype": "Sales Order",

@@ -52,7 +52,7 @@
    "unique": 1
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "enabled",
    "fieldtype": "Check",
    "label": "Enabled"
@@ -65,7 +65,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-31 16:30:48.607392",
+ "modified": "2026-02-14 11:18:02.299515",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -106,21 +106,25 @@
   },
   {
    "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Sales Manager"
   },
   {
    "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
    "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
   },
   {
    "read": 1,
@@ -129,11 +133,32 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Marketing Master Manager",
+   "select": 1
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
    "select": 1
   },
   {
@@ -148,12 +173,7 @@
   },
   {
    "read": 1,
-   "role": "JDC",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Support Person",
+   "role": "Training Person",
    "select": 1
   },
   {
@@ -163,22 +183,7 @@
   },
   {
    "read": 1,
-   "role": "Senior Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Resume Person",
+   "role": "Support Person",
    "select": 1
   },
   {
@@ -188,13 +193,14 @@
   },
   {
    "read": 1,
-   "role": "Technical Manager",
+   "role": "JDC",
    "select": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1
+   "role": "HR Manager",
+   "write": 1
   },
   {
    "create": 1,
@@ -205,12 +211,6 @@
   {
    "read": 1,
    "role": "Sales Employee"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "HR Manager",
-   "write": 1
   },
   {
    "read": 1,
