@@ -3,7 +3,6 @@
 
 frappe.query_reports["Call Details"] = {
 	"filters": [
-	
 		{
 			fieldname: "employee",
 			label: "Employee",
@@ -16,10 +15,5 @@ frappe.query_reports["Call Details"] = {
 				};
 			}
 		},
-
-
-
-
-
 	]
 };
