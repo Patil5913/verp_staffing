@@ -15,6 +15,7 @@
   "job_application_count",
   "section_break_ivbq",
   "target",
+  "target",
   "customer_details_html",
   "notes_section",
   "notes_html"
@@ -107,7 +108,11 @@
   },
   {
    "create": 1,
+   "create": 1,
    "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
    "role": "Marketing Mentor",
    "select": 1,
    "write": 1
@@ -150,6 +155,21 @@
   {
    "read": 1,
    "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   },
   {
    "create": 1,
