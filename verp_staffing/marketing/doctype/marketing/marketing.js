@@ -4,8 +4,8 @@
 frappe.ui.form.on("Marketing", {
 	refresh(frm) {
 		render_notes(frm);
-		// console.log("logssss");
-		// console.log("current user:", frappe.session.user);frm.set_df_property("date", "read_only", 1);
+		handle_assign_to_permission(frm);
+
 
 		frappe.call({
 			method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing",
@@ -134,6 +134,30 @@ frappe.ui.form.on("Marketing", {
 		frm.trigger("refresh");
 	},
 });
+
+function handle_assign_to_permission(frm) {
+	if (!frm.doc.assign_to) return;
+
+	frappe.db.get_value("Employee", frm.doc.assign_to, "user").then((r) => {
+		if (!r.message) return;
+
+		const employee_user = r.message.user;
+
+		if (frappe.session.user === employee_user) {
+			console.log("Assigned user matched. Locking start_date");
+
+			frm.set_df_property("start_date", "read_only", 1);
+			frm.set_df_property("target", "read_only", 1);
+			frm.set_df_property("target_based_on", "read_only", 1);
+			frm.refresh_field("start_date");
+		} else {
+			frm.set_df_property("start_date", "read_only", 0);
+			frm.set_df_property("target", "read_only", 0);
+			frm.set_df_property("target_based_on", "read_only", 0);
+			frm.refresh_field("start_date");
+		}
+	});
+}
 
 function render_notes(frm) {
 	const $wrapper = frm.get_field("notes_html")?.$wrapper;
@@ -303,7 +327,6 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
 	d.show();
 }
 
-
 frappe.ui.form.on("Job Application Count", {
 	job_application_count_add(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
@@ -432,26 +455,27 @@ function render_interview_list(frm) {
 async function add_forward_button(frm) {
 	frm.add_custom_button("Forward Candidate", async () => {
 		const forwarded = await get_stage_json(frm);
+
 		frappe.call({
 			method: "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments",
 			args: {
 				customer: frm.doc.customer,
 			},
 			callback(r) {
-				const services = r.message || [];
-				const available = services.filter((s) => !forwarded.includes(s.toLowerCase()));
-				if (!available.length) {
-					frappe.msgprint("Candidate has already been forwarded for all services.");
+				let services = r.message;
+				services = services.filter((i) => i !== frm.doctype);
+				if (services.length === 0) {
+					frappe.msgprint("No services available for forwarding.");
 					return;
 				}
 
-				open_forward_prompt(frm, available);
+				open_forward_prompt(frm, services);
 			},
 		});
 	});
 }
 
-function open_forward_prompt(frm, available) {
+function open_forward_prompt(frm, services) {
 	const d = new frappe.ui.Dialog({
 		title: "Forward Candidate",
 		fields: [
@@ -459,7 +483,7 @@ function open_forward_prompt(frm, available) {
 				fieldname: "service",
 				fieldtype: "Select",
 				label: "Select Service",
-				options: available,
+				options: services,
 				reqd: 1,
 				onchange() {
 					toggle_ruc_note_field(d);
@@ -468,14 +492,14 @@ function open_forward_prompt(frm, available) {
 			{
 				fieldname: "note",
 				fieldtype: "Text Editor",
-				label: "Note (Required for RUC)",
-				depends_on: "eval:doc.service === 'RUC'",
+				label: "Required",
+				// depends_on: "eval:doc.service === 'RUC'",
 				hidden: 1,
 			},
 		],
 		primary_action_label: "Forward",
 		primary_action(values) {
-			if (values.service === "RUC" && !values.note) {
+			if (!values.note) {
 				frappe.msgprint("Note is required when forwarding for RUC.");
 				return;
 			}
@@ -492,13 +516,9 @@ function open_forward_prompt(frm, available) {
 function toggle_ruc_note_field(dialog) {
 	const service = dialog.get_value("service");
 
-	if (service === "RUC") {
+	if (service) {
 		dialog.set_df_property("note", "hidden", 0);
 		dialog.set_df_property("note", "reqd", 1);
-	} else {
-		dialog.set_df_property("note", "hidden", 1);
-		dialog.set_df_property("note", "reqd", 0);
-		dialog.set_value("note", "");
 	}
 
 	dialog.refresh();
@@ -541,20 +561,23 @@ function forward_candidate(frm, values) {
 			service: values.service,
 		},
 		callback(r) {
-			if (values.service === "RUC") {
-				frappe.call({
-					method: "verp_staffing.crm.api.notes.add_note",
-					args: {
-						reference_doctype: "RUC",
-						reference_name: r.message.name,
-						note: values.note,
-					},
-					error() {
-						frappe.msgprint("Failed to add note");
-						d.enable_primary_action();
-					},
-				});
-			}
+			// const excludeServices = ["resume", "ruc", "jdc", "training", "cover letter", "marketing"];
+
+			const noteDoctype = r.message.doctype;
+			console.log("noteDoctype: ", noteDoctype);
+			frappe.call({
+				method: "verp_staffing.crm.api.notes.add_note",
+				args: {
+					reference_doctype: noteDoctype,
+					reference_name: r.message.name,
+					note: values.note,
+				},
+				error() {
+					frappe.msgprint("Failed to add note");
+					d.enable_primary_action();
+				},
+			});
+
 			frappe.msgprint(
 				`Candidate forwarded for ${values.service} and assigned automatically.`,
 			);
