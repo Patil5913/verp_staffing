@@ -1,4 +1,4 @@
-frappe.query_reports["Interview Traget Report"] = {
+frappe.query_reports["Interview Target Report"] = {
     filters: [
         {
             fieldname: "from_date",
