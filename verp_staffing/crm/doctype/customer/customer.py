@@ -3,14 +3,14 @@
 
 import frappe, json
 from frappe.model.document import Document
-
+from verp_staffing.crm.api.lead_details import create_lead_details
 
 class Customer(Document):
     def autoname(self):
         import re
 
-        if self.customer_name:
-            base_name = self.customer_name.strip()
+        if self.name1:
+            base_name = self.name1.strip()
             
             if not base_name:
                 # fallback to default naming if something is wrong
@@ -45,7 +45,56 @@ class Customer(Document):
                 self.name = f"{base_name}-1"
             else:
                 self.name = f"{base_name}-{max_count + 1}"
-                
+
+            
+    def after_insert(self):
+        lead_detail_name = None
+
+        # CASE 1: Party selected → attach to existing Lead Details
+        if self.party_name and self.customer_from:
+
+            lead_detail_name = frappe.db.get_value(
+                "Doctype Reference",
+                {
+                    "reference_doctype": self.customer_from,
+                    "reference_person": self.party_name
+                },
+                "parent"
+            )
+
+            if not lead_detail_name:
+                frappe.throw("Lead Details not found for selected party.")
+
+            lead_detail = frappe.get_doc("Lead Details", lead_detail_name)
+
+            # Prevent duplicate link
+            if not any(
+                row.reference_doctype == "Customer" and
+                row.reference_person == self.name
+                for row in lead_detail.reference_table
+            ):
+                lead_detail.append("reference_table", {
+                    "reference_doctype": "Customer",
+                    "reference_person": self.name
+                })
+
+                lead_detail.save(ignore_permissions=True)
+
+        # CASE 2: No party selected → create standalone Lead Details
+        else:
+
+            lead_detail_name = create_lead_details(
+                "Customer",
+                self.name,
+                self.name1
+            )
+
+        # 🔥 Link Customer → Lead Details in BOTH cases
+        if lead_detail_name:
+            self.lead_details = lead_detail_name
+            self.db_update()        
+
+           
 
     def validate(self):
         if self.stage:

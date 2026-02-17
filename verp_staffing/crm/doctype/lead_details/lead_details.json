@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-02-13 14:16:23.565498",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -16,6 +15,7 @@
   "visa_status",
   "linkedin_id",
   "address",
+  "title",
   "column_break_zhgq",
   "country",
   "state",
@@ -54,7 +54,8 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
-   "label": "Email"
+   "label": "Email",
+   "options": "Email"
   },
   {
    "fieldname": "linkedin_id",
@@ -135,15 +136,23 @@
   {
    "fieldname": "column_break_zhgq",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-13 15:36:07.358132",
+ "modified": "2026-02-14 15:16:44.223326",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Details",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -161,7 +170,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "title",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }

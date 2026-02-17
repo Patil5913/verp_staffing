@@ -16,7 +16,6 @@ frappe.ui.form.on("Resume", {
     //     window.render_customer_related_html({
     //         frm: frm,
     //         html_field: "customer_details_html",
-    //         source_doctype: "Lead Detail Form",
     //         customer: frm.doc.name,
     //         fields: [
                 // "surname",
@@ -47,7 +46,6 @@ frappe.ui.form.on("Resume", {
     window.render_customer_related_html({
             frm: frm,
             html_field: "lead_details",
-            source_doctype: "Lead Detail Form",
             customer: frm.doc.customer,
             fields: [
                 "surname",

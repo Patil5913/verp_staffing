@@ -9,7 +9,6 @@ frappe.ui.form.on("RUC", {
         window.render_customer_related_html({
             frm: frm,
             html_field: "lead_details",
-            source_doctype: "Lead Detail Form",
             customer: frm.doc.customer,
             fields: [
                 "surname",

@@ -661,19 +661,19 @@ FORM_TOURS = {
             },
         ],
     },
-    "Customer": {
-        "title": "Customer Form",
-        "steps": [
-            {
-                "title": "Select Opportunity",
-                "fieldname": "opportunity",
-                "description": "Select the opportunity which you want to convert as customer.",
-                "position": "Right Center",
-                "label": "Opportunity",
-                "fieldtype": "Link",
-            }
-        ],
-    },
+    # "Customer": {
+    #     "title": "Customer Form",
+    #     "steps": [
+    #         {
+    #             "title": "Select Opportunity",
+    #             "fieldname": "opportunity",
+    #             "description": "Select the opportunity which you want to convert as customer.",
+    #             "position": "Right Center",
+    #             "label": "Opportunity",
+    #             "fieldtype": "Link",
+    #         }
+    #     ],
+    # },
 }
 
 

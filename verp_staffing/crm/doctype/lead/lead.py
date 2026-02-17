@@ -3,16 +3,22 @@
 
 import frappe
 from frappe.model.document import Document
-
+from verp_staffing.crm.api.lead_details import create_lead_details
 
 class Lead(Document):
-    pass
+    def after_insert(self):
+        if self.lead_details:
+            return
+        
+        lead_detail_name = create_lead_details("Lead", self.name, self.name1)
+        
+        if lead_detail_name:
+            self.lead_details = lead_detail_name
+            self.db_update()
 
 
 @frappe.whitelist()
 def update_status_based_on_opportunity(lead_name, status):
-    print("======================================")
-    print("Updating Lead status based on Opportunity status...")
     new_status = "Lead"
     # Default to "Lead" when no status is provided
     if not status:
