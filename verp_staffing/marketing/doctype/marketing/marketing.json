@@ -129,11 +129,7 @@
   },
   {
    "create": 1,
-   "create": 1,
    "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1,
-   "write": 1
    "role": "Marketing Mentor",
    "select": 1,
    "write": 1
@@ -183,7 +179,6 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
    "role": "Senior Recruiter",
    "select": 1,
    "write": 1
