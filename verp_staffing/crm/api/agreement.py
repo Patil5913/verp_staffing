@@ -56,7 +56,7 @@ def preview_agreement(template, data):
 
 # Final submit
 @frappe.whitelist()
-def submit_and_generate(sales_order, template, data):
+def submit_and_generate(sales_order, template, recipient, data):
     """
     Generates final PDF and saves it permanently to the agreement doctype
     Only run when salesman clicks submit/send.
@@ -107,17 +107,8 @@ def submit_and_generate(sales_order, template, data):
 
     agreement.db_set("pdf", url)
     base_url = get_url()
-    form_url = (
-        f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}"
-    )
 
     frappe.db.commit()
-    opportunity = so.get("opportunity")
-    if not opportunity:
-        return
-    lead_name = frappe.db.get_value("Opportunity", opportunity, "party_name")
-    Lead = frappe.get_doc("Lead", lead_name)
-    recipient = getattr(Lead, "email", None)
 
     form_url = (
         f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}&e={quote(recipient)}"

@@ -117,15 +117,23 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-16 17:59:47.818439",
+ "modified": "2026-02-17 16:48:48.930501",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
  "owner": "Administrator",
  "permissions": [
   {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Master Manager"
+   "report": 1,
+   "role": "marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -147,15 +155,29 @@
    "write": 1
   },
   {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "marketing Master Manager",
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
    "select": 1,
-   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1,
    "write": 1
   },
   {
@@ -179,7 +201,7 @@
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
   },
@@ -190,7 +212,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Recruiter",
+   "role": "Senior Recruiter",
    "select": 1,
    "write": 1
   }

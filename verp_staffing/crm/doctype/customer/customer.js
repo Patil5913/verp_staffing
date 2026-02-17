@@ -16,8 +16,7 @@ frappe.ui.form.on("Customer", {
 
 		window.render_customer_related_html({
 			frm: frm,
-			html_field: "lead_details",
-			source_doctype: "Lead Detail Form",
+			html_field: "lead_details_html",
 			customer: frm.doc.name,
 			fields: [
 				"agreement_link",
@@ -86,24 +85,61 @@ frappe.ui.form.on("Customer", {
 		});
 	},
 
-	from_opportunity: function (frm) {
-		if (!frm.doc.from_opportunity) return;
-
-		frappe.db.get_value("Opportunity", frm.doc.from_opportunity, "title").then((r) => {
-			if (r.message && r.message.title) {
-				frm.set_value("customer_name", r.message.title);
-			}
-		});
+	customer_from: function (frm) {
+		if (frm.doc.customer_from) {
+			frm.set_df_property("party_name", "label", frm.doc.customer_from);
+		}
 	},
 
-	from_lead: function (frm) {
-		if (!frm.doc.from_lead) return;
+	party_name: function (frm) {
+		frm.trigger("fetch_source_details");
+		if (!frm.is_new()) {
+			load_lead_details_after_save(frm);
+		}
+		if (frm.doc.customer_from && frm.doc.party_name) {
+			let source_doctype = frm.doc.customer_from;
+			let source_name = frm.doc.party_name;
 
-		frappe.db.get_value("Lead", frm.doc.from_lead, "name1").then((r) => {
-			if (r.message && r.message.name1) {
-				frm.set_value("customer_name", r.message.name1);
-			}
-		});
+			// Determine which field to fetch based on the source
+			let fetch_field = source_doctype === "Lead" ? "name1" : "title";
+
+			frappe.db.get_value(source_doctype, source_name, fetch_field).then((r) => {
+				if (r && r.message) {
+					let base_name = r.message[fetch_field];
+					frm.set_value("name1", base_name ? base_name.trim() : "");
+				}
+			});
+		}
+	},
+
+	name1: function (frm) {
+		if (frm.fields_dict.title) {
+			frm.set_value("title", frm.doc.name1);
+		}
+	},
+
+	after_save: function(frm) {
+        // Trigger the update after the document is saved and has a name
+        if (frm.doc.lead_details) {
+			frappe.call({
+				method: "verp_staffing.crm.api.lead_details.update_lead_reference",
+				args: {
+					lead_details_id: frm.doc.lead_details,
+					ref_doctype: frm.doc.doctype,
+					ref_name: frm.doc.name,
+				},
+			});
+		}
+    },
+
+	validate: function (frm) {
+		if (frm.doc.customer_from === "Lead" && !frm.doc.party_name) {
+			frappe.msgprint(__("Please select a Lead."));
+			frappe.validated = false;
+		} else if (frm.doc.customer_from === "Opportunity" && !frm.doc.party_name) {
+			frappe.msgprint(__("Please select a Opportunity."));
+			frappe.validated = false;
+		}
 	},
 });
 
@@ -794,7 +830,7 @@ function load_payment_terms(so_name, frm) {
 
 function render_lead_details(frm) {
 	frm.set_df_property(
-		"lead_details",
+		"lead_details_html",
 		"options",
 		`<p style="color:#888;padding:10px;">Loading Lead Details...</p>`,
 	);
@@ -814,7 +850,7 @@ function render_lead_details(frm) {
 			// ✅ CASE 1: No Lead Detail linked
 			if (!res.message || res.message.length === 0) {
 				frm.set_df_property(
-					"lead_details",
+					"lead_details_html",
 					"options",
 					`
                     <div style="padding:15px;color:#999;">
@@ -838,7 +874,7 @@ function render_lead_details(frm) {
 				callback: function (lead_res) {
 					if (!lead_res.message) {
 						frm.set_df_property(
-							"lead_details",
+							"lead_details_html",
 							"options",
 							`<p style="color:red;">Failed to load Lead Details.</p>`,
 						);
@@ -949,10 +985,10 @@ function render_lead_details(frm) {
 }
 
 const DEPARTMENT_VISIBILITY = {
-	sales: ["lead_details", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],
-	resume: ["lead_details", "resume_tab"],
-	technical: ["lead_details", "resume_tab", "technical_tab"],
-	marketing: ["lead_details", "resume_tab", "technical_tab", "marketing_tab"],
+	sales: ["lead_details_html", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],
+	resume: ["lead_details_html", "resume_tab"],
+	technical: ["lead_details_html", "resume_tab", "technical_tab"],
+	marketing: ["lead_details_html", "resume_tab", "technical_tab", "marketing_tab"],
 };
 
 function apply_tab_visibility(frm, department) {
