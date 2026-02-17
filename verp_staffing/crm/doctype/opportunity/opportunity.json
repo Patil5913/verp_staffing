@@ -24,6 +24,8 @@
   "column_break_cxck",
   "agreement",
   "quotation",
+  "section_break_yqzw",
+  "call_details",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -164,6 +166,16 @@
   {
    "fieldname": "column_break_cxck",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_yqzw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "call_details",
+   "fieldtype": "Table",
+   "label": "Call Details",
+   "options": "Call Details"
   }
  ],
  "grid_page_length": 50,
@@ -176,6 +188,13 @@
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "Lead Manager",
+   "write": 1
+  },
   {
    "create": 1,
    "role": "Lead Employee"
@@ -239,6 +258,7 @@
   },
   {
    "create": 1,
+   "if_owner": 1,
    "if_owner": 1,
    "read": 1,
    "role": "Lead Team Lead",
