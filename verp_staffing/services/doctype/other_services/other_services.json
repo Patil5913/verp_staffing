@@ -14,7 +14,9 @@
   "forwarded_on",
   "completed_on",
   "section_break_bvrs",
-  "proof_of_work"
+  "proof_of_work",
+  "notes_tab",
+  "notes_html"
  ],
  "fields": [
   {
@@ -23,8 +25,7 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1,
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "fieldname": "department",
@@ -40,8 +41,7 @@
    "in_list_view": 1,
    "label": "Service",
    "options": "Service",
-   "reqd": 1,
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "fieldname": "column_break_xbfz",
@@ -83,12 +83,22 @@
    "fieldtype": "Table",
    "label": "Proof Of Work",
    "options": "Proof Of Work"
+  },
+  {
+   "fieldname": "notes_tab",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:51:01.526728",
+ "modified": "2026-02-14 14:05:14.232504",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",
@@ -109,9 +119,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "title_field": "customer"
+ "states": []
 }

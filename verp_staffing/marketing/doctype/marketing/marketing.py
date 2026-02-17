@@ -2,48 +2,42 @@
 # For license information, please see license.txt
 
 from unittest import result
-import frappe,json
+import frappe
 from frappe.model.document import Document
+from verp_staffing.marketing.api.utils import get_visible_employee_names
 import json
-
 from frappe.utils import now_datetime
+
 
 class Marketing(Document):
     def after_insert(self):
         self.create_customer()
- 
+
     def create_customer(self):
         service = "marketing"
-        parents = frappe.db.sql("""
+        parents = frappe.db.sql(
+            """
         SELECT parent FROM `tabDepartment Service`
         WHERE service_name=%s
-        """, (service), as_dict=True)
-
-        customer = frappe.get_doc({
-            "doctype":  "Customer",
-            "name": self.customer
-        })
+        """,
+            (service),
+            as_dict=True,
+        )
+        customer = frappe.get_doc({"doctype": "Customer", "name": self.customer})
         stage = json.loads(customer.stage) if customer.stage else {}
-
         department = parents[0].parent
         stage["marketing"] = {
             "department": department,
             "timestamp": str(now_datetime()),
-            "count": 1
+            "count": 1,
         }
-        frappe.db.set_value(
-            "Customer",
-            customer,
-            "stage",
-            json.dumps(stage)
-        )
+        frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
 
     def before_insert(self):
         if self.customer:
             title = frappe.db.get_value("Customer", self.customer, "title")
             if title:
                 self.title = title
-
 
 
 @frappe.whitelist()
@@ -127,6 +121,7 @@ def can_edit_marketing(assign_to):
         "can_add": False,
     }
 
+
 @frappe.whitelist()
 def can_edit_job_application_date(assign_to):
 
@@ -141,11 +136,9 @@ def can_edit_job_application_date(assign_to):
 
     assign_to_user = frappe.db.get_value("Employee", assign_to, "user")
 
-    # ❌ assign_to cannot edit date
     if current_user == assign_to_user:
         return {"can_edit_date": False}
 
-    # 🔁 Marketing Chain
     visited = set()
     users = []
     current_employee = assign_to
@@ -180,3 +173,22 @@ def can_edit_job_application_date(assign_to):
         return {"can_edit_date": True}
 
     return {"can_edit_date": False}
+
+
+@frappe.whitelist()
+def can_edit_by_hierarchy(assign_to):
+    user = frappe.session.user
+
+    if user == "Administrator":
+        return {"can_edit": 1}
+
+    allowed_employees = get_visible_employee_names(user)
+
+    if not allowed_employees:
+        return {"can_edit": 0}
+
+    # assign_to is Employee name
+    if assign_to in allowed_employees:
+        return {"can_edit": 1}
+
+    return {"can_edit": 0}

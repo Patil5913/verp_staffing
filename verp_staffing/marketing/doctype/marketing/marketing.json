@@ -1,6 +1,5 @@
 {
  "actions": [],
- "autoname": "field:title",
  "creation": "2025-12-15 16:01:57.359022",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -14,8 +13,11 @@
   "customer_details_section",
   "job_application_count",
   "section_break_ivbq",
+  "start_date",
+  "target_based_on",
+  "column_break_gkfy",
   "target",
-  "target",
+  "section_break_xurw",
   "customer_details_html",
   "notes_section",
   "notes_html"
@@ -83,23 +85,42 @@
   },
   {
    "fieldname": "target",
-   "fieldtype": "Table",
-   "label": "Interview Target",
-   "options": "Target"
+   "fieldtype": "Int",
+   "label": "Target"
   },
   {
    "fieldname": "section_break_ivbq",
+   "fieldtype": "Section Break",
+   "label": "Target"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "column_break_gkfy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_xurw",
    "fieldtype": "Section Break"
+  },
+  {
+   "default": "Weekly",
+   "fieldname": "target_based_on",
+   "fieldtype": "Select",
+   "label": "Target Based On",
+   "options": "Daily\nWeekly\nMonthly"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:53:25.439557",
+ "modified": "2026-02-16 17:59:47.818439",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
- "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -108,11 +129,7 @@
   },
   {
    "create": 1,
-   "create": 1,
    "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1,
-   "write": 1
    "role": "Marketing Mentor",
    "select": 1,
    "write": 1
@@ -162,7 +179,6 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
    "role": "Senior Recruiter",
    "select": 1,
    "write": 1
