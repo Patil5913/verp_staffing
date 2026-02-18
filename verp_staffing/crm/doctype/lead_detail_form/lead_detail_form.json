@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:customer",
  "creation": "2025-11-25 09:33:40.314531",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -73,8 +74,7 @@
    "fieldname": "email",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Email",
-   "reqd": 1
+   "label": "Email"
   },
   {
    "fieldname": "date_of_birth",
@@ -89,14 +89,12 @@
   {
    "fieldname": "technologies",
    "fieldtype": "Small Text",
-   "label": "Technology In which You are looking make your resume",
-   "reqd": 1
+   "label": "Technology In which You are looking make your resume"
   },
   {
    "fieldname": "entry_date",
    "fieldtype": "Data",
-   "label": "Entry Date Into USA/Canada (Use date format: MM-YYYY)",
-   "reqd": 1
+   "label": "Entry Date Into USA/Canada (Use date format: MM-YYYY)"
   },
   {
    "fieldname": "address_history",
@@ -112,8 +110,7 @@
    "fieldname": "current_visa_status",
    "fieldtype": "Select",
    "label": "Current VISA Status",
-   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR",
-   "reqd": 1
+   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR"
   },
   {
    "default": "0",
@@ -126,26 +123,22 @@
    "fieldname": "number_for_marketing",
    "fieldtype": "Data",
    "label": "Phone Number for marketing (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx",
-   "reqd": 1
+   "placeholder": "Exp: +1 xxx xxx xxxx"
   },
   {
    "fieldname": "marketing_linkedin",
    "fieldtype": "Data",
-   "label": "LinkedIn ID",
-   "reqd": 1
+   "label": "LinkedIn ID"
   },
   {
    "fieldname": "personal_linkedin",
    "fieldtype": "Data",
-   "label": "LinkedIn ID",
-   "reqd": 1
+   "label": "LinkedIn ID"
   },
   {
    "fieldname": "passport_number",
    "fieldtype": "Data",
-   "label": "Passport Number",
-   "reqd": 1
+   "label": "Passport Number"
   },
   {
    "description": " ",
@@ -153,8 +146,7 @@
    "fieldtype": "Int",
    "label": "SSN (Only Last 4-Digits)",
    "length": 4,
-   "non_negative": 1,
-   "reqd": 1
+   "non_negative": 1
   },
   {
    "description": " ",
@@ -230,8 +222,7 @@
    "fieldname": "surname",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Surname",
-   "reqd": 1
+   "label": "Surname"
   },
   {
    "fieldname": "father_name",
@@ -275,27 +266,23 @@
    "fieldname": "additional_skills",
    "fieldtype": "Small Text",
    "label": "Additional Skills (List all skills separated by commas.)",
-   "placeholder": "Exp: React,Public Speaking,Docker",
-   "reqd": 1
+   "placeholder": "Exp: React,Public Speaking,Docker"
   },
   {
    "fieldname": "linkedin_password",
    "fieldtype": "Data",
-   "label": "LinkedIn Password",
-   "reqd": 1
+   "label": "LinkedIn Password"
   },
   {
    "fieldname": "first_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "First Name",
-   "reqd": 1
+   "label": "First Name"
   },
   {
    "fieldname": "current_address",
    "fieldtype": "Data",
-   "label": "Current Address (Street Address, City, State, Country, Zip code).",
-   "reqd": 1
+   "label": "Current Address (Street Address, City, State, Country, Zip code)."
   },
   {
    "fieldname": "google_voice_number",
@@ -345,8 +332,7 @@
    "fieldname": "signature_method",
    "fieldtype": "Select",
    "label": "Signature Method",
-   "options": "Draw\nUpload\nText",
-   "reqd": 1
+   "options": "Draw\nUpload\nText"
   },
   {
    "fieldname": "signature_custom_html",
@@ -398,8 +384,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Phone Number (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx",
-   "reqd": 1
+   "placeholder": "Exp: +1 xxx xxx xxxx"
   },
   {
    "fieldname": "authentication_section",
@@ -420,10 +405,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 16:42:21.635384",
+ "modified": "2026-02-18 14:05:41.562776",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -433,6 +419,10 @@
   {
    "read": 1,
    "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
   },
   {
    "create": 1,
@@ -448,11 +438,27 @@
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Marketing Manager"
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor"
   },
   {
    "read": 1,
    "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Resume Person"
   },
   {
    "read": 1,
@@ -464,39 +470,7 @@
   },
   {
    "read": 1,
-   "role": "marketing Manager"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor"
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator"
-  },
-  {
-   "read": 1,
-   "role": "Resume Person"
-  },
-  {
-   "read": 1,
    "role": "Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person"
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager"
   },
   {
    "read": 1,
@@ -504,7 +478,7 @@
   },
   {
    "read": 1,
-   "role": "RUC Person"
+   "role": "Technical Master Manager"
   },
   {
    "read": 1,
@@ -512,11 +486,23 @@
   },
   {
    "read": 1,
-   "role": "Sales Employee"
+   "role": "Technical Manager"
   },
   {
    "read": 1,
    "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Employee"
   },
   {
    "read": 1,

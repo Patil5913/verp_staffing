@@ -95,7 +95,7 @@ class LeadDetailForm(Document):
                 self.doctype, self.name, "signature_image", file_doc.name
             )
 
-            self.apply_pdf_signature(file_doc.file_url)
+            # self.apply_pdf_signature(file_doc.file_url)
 
         except Exception as e:
             frappe.errprint(f"Error processing drawn signature: {e}")
@@ -125,9 +125,9 @@ class LeadDetailForm(Document):
             signature_image_path = signature_image_file
 
         if not self.agreement_link:
-            frappe.throw("Agreement link missing")
+            pass
 
-        agreement = frappe.get_doc("Agreement", self.agreement_link)
+        agreement = frappe.get_doc("Agreement", self.agreement_link) 
 
         if not agreement.pdf:
             frappe.throw("Agreement PDF missing")
