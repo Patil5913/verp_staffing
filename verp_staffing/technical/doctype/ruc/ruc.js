@@ -2,25 +2,24 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("RUC", {
-	refresh(frm) {
-		render_notes(frm);
-		render_activity_section(frm);
-		fetch_and_render_resume(frm);
-		window.render_customer_related_html({
-			frm: frm,
-			html_field: "lead_details",
-			source_doctype: "Lead Detail Form",
-			customer: frm.doc.customer,
-			fields: [
-				"surname",
-				"first_name",
-				"father_name",
-				"personal_phone_number",
-				"email",
-				"personal_linkedin",
-				"old_resume",
-			],
-		});
+    refresh(frm) {
+        render_notes(frm)
+        render_activity_section(frm);
+        fetch_and_render_resume(frm);
+        window.render_customer_related_html({
+            frm: frm,
+            html_field: "lead_details",
+            customer: frm.doc.customer,
+            fields: [
+                "surname",
+                "first_name",
+                "father_name",
+                "personal_phone_number",
+                "email",
+                "personal_linkedin",
+                "old_resume"
+            ]
+        });
 
 		frappe.call({
 			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",

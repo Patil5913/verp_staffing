@@ -220,7 +220,8 @@ function preview_inline(frm) {
     });
 }
 
-function submit_inline(frm) {
+async function submit_inline(frm) {
+
     const wrap = frm.get_field("agreement_html").$wrapper;
     const template = wrap.find("#ag_template").val();
 
@@ -229,25 +230,74 @@ function submit_inline(frm) {
         return;
     }
 
-    const data = collect_so_agreement_data(frm);
+    if (!frm.doc.customer) {
+        frappe.msgprint("Customer is required.");
+        return;
+    }
 
-    frappe.confirm("Save and send agreement? This will lock the agreement.", function () {
-        frappe.call({
-            method: "verp_staffing.crm.api.agreement.submit_and_generate",
-            args: {
-                sales_order: frm.doc.name,
-                template: template,
-                data: JSON.stringify(data)
+    try {
+
+        // 🔥 Step 1: Find Lead Details linked to Customer
+        let ref = await frappe.db.get_value(
+            "Doctype Reference",
+            {
+                reference_doctype: "Customer",
+                reference_person: frm.doc.customer
             },
-            callback(r) {
-                if (!r.message) {
-                    frappe.throw("Agreement generation failed.");
-                    return;
-                }
+            "parent"
+        );
+
+        if (!ref.message || !ref.message.parent) {
+            frappe.msgprint("No Lead Details found for this Customer.");
+            return;
+        }
+
+        let lead_details_name = ref.message.parent;
+
+        // 🔥 Step 2: Get Email from Lead Details
+        let ld = await frappe.db.get_value(
+            "Lead Details",
+            lead_details_name,
+            "email"
+        );
+
+        let recipient = ld.message?.email;
+
+        if (!recipient) {
+            frappe.msgprint(`Email not found in Lead Details for Customer: ${frm.doc.customer}.`);
+            return;
+        }
+
+        const data = collect_so_agreement_data(frm);
+
+        frappe.confirm(
+            "Save and send agreement? This will lock the agreement.",
+            function () {
+
+                frappe.call({
+                    method: "verp_staffing.crm.api.agreement.submit_and_generate",
+                    args: {
+                        sales_order: frm.doc.name,
+                        template: template,
+                        recipient,
+                        data: JSON.stringify(data)
+                    },
+                    callback(r) {
+                        if (!r.message) {
+                            frappe.throw("Agreement generation failed.");
+                        }
+                    }
+                });
+
             }
-        });
-    });
+        );
+
+    } catch (err) {
+        console.error(err);
+        frappe.msgprint("Error while validating customer email.");
+    }
 }
+
 
 function collect_so_agreement_data(frm) {
     const data = {};

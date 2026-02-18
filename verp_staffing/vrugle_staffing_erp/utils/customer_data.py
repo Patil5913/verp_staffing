@@ -1,12 +1,14 @@
 import frappe
 
 @frappe.whitelist()
-def get_data_by_customer(source_doctype, customer, fields):
-    if not source_doctype or not customer or not fields:
+def get_data_by_customer(customer, fields):
+    if not customer or not fields:
         return []
     
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
+        
+    source_doctype = "Lead Details"
     
     meta = frappe.get_meta(source_doctype)
     normal_fields = []
@@ -27,9 +29,13 @@ def get_data_by_customer(source_doctype, customer, fields):
     
     parent_rows = frappe.get_all(
         source_doctype,
-        filters={"customer": customer},
         fields=normal_fields,
-        order_by="creation desc"
+        filters=[
+            ["Doctype Reference", "reference_doctype", "=", "Customer"],
+            ["Doctype Reference", "reference_person", "=", customer],
+        ],
+        order_by="creation desc",
+        distinct=True
     )
     
     if not parent_rows:

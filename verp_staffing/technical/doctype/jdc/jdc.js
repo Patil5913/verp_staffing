@@ -2,25 +2,24 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("JDC", {
-	refresh(frm) {
-		render_notes(frm);
-		add_forward_button(frm);
-		window.render_customer_related_html({
-			frm: frm,
-			html_field: "lead_details",
-			source_doctype: "Lead Detail Form",
-			customer: frm.doc.customer,
-			fields: [
-				"surname",
-				"first_name",
-				"father_name",
-				"personal_phone_number",
-				"email",
-				"personal_linkedin",
-				"old_resume",
-			],
-		});
-	},
+    refresh(frm) {
+        render_notes(frm);
+        add_forward_button(frm);
+        window.render_customer_related_html({
+            frm: frm,
+            html_field: "lead_details",
+            customer: frm.doc.customer,
+            fields: [
+                "surname",
+                "first_name",
+                "father_name",
+                "personal_phone_number",
+                "email",
+                "personal_linkedin",
+                "old_resume"
+            ]
+        });
+    },
 });
 
 function render_notes(frm) {

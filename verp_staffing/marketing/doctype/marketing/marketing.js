@@ -6,7 +6,6 @@ frappe.ui.form.on("Marketing", {
 		render_notes(frm);
 		handle_assign_to_permission(frm);
 
-
 		frappe.call({
 			method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing",
 			args: {
@@ -97,7 +96,6 @@ frappe.ui.form.on("Marketing", {
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "customer_details_html",
-			source_doctype: "Lead Detail Form",
 			customer: frm.doc.customer,
 			fields: [
 				"surname",
@@ -587,28 +585,23 @@ function forward_candidate(frm, values) {
 }
 
 frappe.ui.form.on("Job Application Count", {
+	job_application_count_add(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
 
+		if (!row.date) {
+			row.date = frappe.datetime.get_today();
+			frm.refresh_field("job_application_count");
+		}
+	},
 
+	small_application(frm, cdt, cdn) {
+		update_job_application_totals(frm, cdt, cdn);
+	},
 
-        job_application_count_add(frm, cdt, cdn) {
-                const row = locals[cdt][cdn];
-
-                if (!row.date) {
-                        row.date = frappe.datetime.get_today();
-                        frm.refresh_field("job_application_count");
-                }
-        },
-
-        small_application(frm, cdt, cdn) {
-                update_job_application_totals(frm, cdt, cdn);
-        },
-
-        large_application(frm, cdt, cdn) {
-                update_job_application_totals(frm, cdt, cdn);
-        }
-
-}
-);
+	large_application(frm, cdt, cdn) {
+		update_job_application_totals(frm, cdt, cdn);
+	},
+});
 
 function update_job_application_totals(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
