@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-02-13 14:16:23.565498",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -8,10 +7,19 @@
   "surname",
   "first_name",
   "fathers_name",
-  "column_break_rpxx",
-  "phone_number",
+  "column_break_oolc",
   "email",
+  "phone_number",
+  "gender",
+  "section_break_pqwy",
+  "visa_status",
   "linkedin_id",
+  "address",
+  "title",
+  "column_break_zhgq",
+  "country",
+  "state",
+  "social_links",
   "section_break_cqoe",
   "reference_table",
   "educational_details",
@@ -46,7 +54,8 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
-   "label": "Email"
+   "label": "Email",
+   "options": "Email"
   },
   {
    "fieldname": "linkedin_id",
@@ -80,21 +89,70 @@
    "options": "Doctype Reference"
   },
   {
-   "fieldname": "column_break_rpxx",
+   "fieldname": "section_break_cqoe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Data",
+   "label": "Address"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "State"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country"
+  },
+  {
+   "fieldname": "column_break_oolc",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_cqoe",
+   "fieldname": "visa_status",
+   "fieldtype": "Select",
+   "label": "Visa Status",
+   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Select",
+   "label": "Gender",
+   "options": "\nMen\nWomen\netc."
+  },
+  {
+   "fieldname": "social_links",
+   "fieldtype": "Small Text",
+   "label": "Social Links"
+  },
+  {
+   "fieldname": "section_break_pqwy",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_zhgq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-13 14:40:18.578110",
+ "modified": "2026-02-14 15:16:44.223326",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Details",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -112,7 +170,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "title",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }

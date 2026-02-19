@@ -8,32 +8,11 @@
  "field_order": [
   "basic_information_section",
   "name1",
-  "gender",
-  "status",
+  "lead_details",
+  "source",
   "column_break_vwnk",
   "lead_owner",
-  "source",
-  "lead_details",
-  "contact_information_section",
-  "phone",
-  "whatsapp_no",
-  "social_links",
-  "column_break_rnjd",
-  "email",
-  "address",
-  "city",
-  "state",
-  "visa_status",
-  "education_details_section",
-  "education_table",
-  "past_experience_section",
-  "past_experience",
-  "past_and_aspirational_job_details_section",
-  "expected_ctc",
-  "column_break_xsed",
-  "aspiring_job_role",
-  "column_break_vkvi",
-  "resume",
+  "status",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -54,12 +33,6 @@
    "unique": 1
   },
   {
-   "fieldname": "gender",
-   "fieldtype": "Select",
-   "label": "Gender",
-   "options": "\nMale\nFemale\nNot Specified"
-  },
-  {
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -76,95 +49,6 @@
    "fieldtype": "Link",
    "label": "Lead Owner",
    "options": "Employee"
-  },
-  {
-   "fieldname": "contact_information_section",
-   "fieldtype": "Section Break",
-   "label": "Contact Information"
-  },
-  {
-   "description": "NOTE: Provide country code with number.",
-   "fieldname": "phone",
-   "fieldtype": "Data",
-   "label": "Phone",
-   "placeholder": "Exp: +1 xxx xxx xxxx"
-  },
-  {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Email"
-  },
-  {
-   "fieldname": "column_break_rnjd",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "address",
-   "fieldtype": "Data",
-   "label": "Address"
-  },
-  {
-   "fieldname": "city",
-   "fieldtype": "Data",
-   "label": "City"
-  },
-  {
-   "fieldname": "state",
-   "fieldtype": "Data",
-   "label": "State"
-  },
-  {
-   "fieldname": "visa_status",
-   "fieldtype": "Select",
-   "label": "Visa Status",
-   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR"
-  },
-  {
-   "fieldname": "past_and_aspirational_job_details_section",
-   "fieldtype": "Section Break",
-   "label": "Aspirational Job Details"
-  },
-  {
-   "fieldname": "column_break_xsed",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "expected_ctc",
-   "fieldtype": "Int",
-   "label": "Expected CTC",
-   "non_negative": 1
-  },
-  {
-   "fieldname": "past_experience",
-   "fieldtype": "Table",
-   "options": "Lead Past Experience"
-  },
-  {
-   "fieldname": "aspiring_job_role",
-   "fieldtype": "Link",
-   "label": "Aspiring Job Role",
-   "options": "Lead Job Role"
-  },
-  {
-   "fieldname": "social_links",
-   "fieldtype": "Small Text",
-   "label": "Social Links"
-  },
-  {
-   "fieldname": "education_details_section",
-   "fieldtype": "Section Break",
-   "label": "Education Details"
-  },
-  {
-   "fieldname": "education_table",
-   "fieldtype": "Table",
-   "options": "Lead Course"
-  },
-  {
-   "fieldname": "past_experience_section",
-   "fieldtype": "Section Break",
-   "label": "Past Experience"
   },
   {
    "fieldname": "source",
@@ -193,32 +77,17 @@
    "label": "Activities"
   },
   {
-   "description": "NOTE: Provide country code with number.",
-   "fieldname": "whatsapp_no",
-   "fieldtype": "Data",
-   "label": "Whatsapp No.",
-   "placeholder": "Exp: +1 xxx xxx xxxx"
-  },
-  {
-   "fieldname": "column_break_vkvi",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "resume",
-   "fieldtype": "Attach",
-   "label": "Resume"
-  },
-  {
    "fieldname": "lead_details",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Lead Details",
-   "options": "\nHot\nCold"
+   "options": "Lead Details",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-27 09:44:10.216872",
+ "modified": "2026-02-17 16:02:24.723593",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -258,13 +127,13 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Lead Person",
+   "role": "Lead Manager",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Lead Manager",
+   "role": "Lead Person",
    "write": 1
   },
   {
@@ -310,6 +179,7 @@
    "write": 1
   }
  ],
+ "quick_entry": 1,
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "name1",

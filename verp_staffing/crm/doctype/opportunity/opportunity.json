@@ -4,14 +4,16 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "status",
+  "name1",
+  "lead_details",
   "opportunity_from",
   "party_name",
   "column_break_nesv",
-  "source",
+  "status",
   "opportunity_owner",
   "title",
   "column_break_lbgc",
+  "source",
   "sales_stage",
   "expected_closing_date",
   "probability_",
@@ -20,7 +22,7 @@
   "column_break_yvzt",
   "opportunity_amount",
   "section_break_spxs",
-  "lead_details_html",
+  "lead_data_html",
   "column_break_cxck",
   "agreement",
   "quotation",
@@ -39,8 +41,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nQuotation\nReplied\nConverted\nLost",
-   "reqd": 1
+   "options": "Open\nQuotation\nReplied\nConverted\nLost"
   },
   {
    "fieldname": "column_break_nesv",
@@ -51,8 +52,9 @@
    "fieldname": "opportunity_from",
    "fieldtype": "Link",
    "label": "Opportunity From",
+   "link_filters": "[[\"DocType\", \"name\", \"in\", [\"Lead\", \"Customer\"]]]",
    "options": "DocType",
-   "reqd": 1
+   "set_only_once": 1
   },
   {
    "fieldname": "source",
@@ -116,7 +118,7 @@
    "fieldtype": "Dynamic Link",
    "label": "Party",
    "options": "opportunity_from",
-   "reqd": 1
+   "set_only_once": 1
   },
   {
    "fieldname": "note_tab",
@@ -150,6 +152,7 @@
   {
    "fieldname": "title",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Title",
    "read_only": 1
   },
@@ -159,13 +162,26 @@
    "label": "Quotation"
   },
   {
-   "fieldname": "lead_details_html",
-   "fieldtype": "HTML",
-   "label": "Lead Details"
-  },
-  {
    "fieldname": "column_break_cxck",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "name1",
+   "fieldtype": "Data",
+   "label": "Opportunity Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lead_data_html",
+   "fieldtype": "HTML",
+   "label": "Lead Data"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "Link",
+   "label": "Lead Details",
+   "options": "Lead Details",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_yqzw",
@@ -181,7 +197,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-12 18:08:18.582376",
+ "modified": "2026-02-17 16:00:51.965007",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -203,7 +219,14 @@
    "create": 1,
    "if_owner": 1,
    "read": 1,
-   "role": "Lead Manager",
+   "role": "Lead Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "Lead Master Manager",
    "write": 1
   },
   {
@@ -222,13 +245,7 @@
    "create": 1,
    "if_owner": 1,
    "read": 1,
-   "role": "Lead Master Manager",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Employee",
+   "role": "Lead Manager",
    "write": 1
   },
   {
@@ -239,9 +256,8 @@
   },
   {
    "create": 1,
-   "if_owner": 1,
    "read": 1,
-   "role": "Lead Person",
+   "role": "Sales Employee",
    "write": 1
   },
   {
@@ -259,21 +275,21 @@
   {
    "create": 1,
    "if_owner": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "write": 1
+  },
+  {
+   "create": 1,
    "if_owner": 1,
    "read": 1,
-   "role": "Lead Team Lead",
+   "role": "Lead Person",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "role": "Sales Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Person",
    "write": 1
   }
  ],

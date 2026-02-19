@@ -41,7 +41,6 @@ window.LeadCourse = {
 window.render_customer_related_html = function ({
     frm,
     html_field,
-    source_doctype,
     customer,
     fields
 }) {
@@ -52,7 +51,7 @@ window.render_customer_related_html = function ({
 
     frappe.call({
         method: "verp_staffing.vrugle_staffing_erp.utils.customer_data.get_data_by_customer",
-        args: { source_doctype, customer, fields },
+        args: { customer, fields },
         callback(r) {
             const records = r.message || [];
 

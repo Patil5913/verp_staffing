@@ -882,7 +882,7 @@ def resolve_file_path(file_url):
     return None
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_ip_and_device():
     return {
         "ip": frappe.get_request_header("X-Forwarded-For")
