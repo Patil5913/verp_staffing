@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:customer",
  "creation": "2025-11-25 09:33:40.314531",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -67,7 +66,9 @@
   "visa_copy",
   "ead_card",
   "driving_licence",
-  "old_resume"
+  "old_resume",
+  "section_break_odpr",
+  "reference_table"
  ],
  "fields": [
   {
@@ -400,16 +401,26 @@
    "in_list_view": 1,
    "label": "Certificate ID",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_break_odpr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "reference_table",
+   "fieldtype": "Table",
+   "label": "Reference Table",
+   "options": "Doctype Reference"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-18 14:05:41.562776",
+ "modified": "2026-02-19 17:04:06.750608",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
- "naming_rule": "By fieldname",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {

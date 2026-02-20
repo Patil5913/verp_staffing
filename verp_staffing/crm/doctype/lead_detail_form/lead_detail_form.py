@@ -9,27 +9,72 @@ from verp_staffing.crm.api.helpers import send_notification
 
 
 class LeadDetailForm(Document):
-    def before_insert(self):
+    # def before_insert(self):
 
+    #     if not self.customer:
+    #         return
+
+    #     existing_name = frappe.db.get_value(
+    #         self.doctype, {"customer": self.customer}, "name"
+    #     )
+
+    #     if existing_name:
+
+    #         existing_doc = frappe.get_doc(self.doctype, existing_name)
+
+    #         # Copy only NON-table fields
+    #         for field in self.meta.fields:
+
+    #             if field.fieldtype == "Table":
+    #                 continue  # skip child tables
+
+    #             fieldname = field.fieldname
+
+    #             if fieldname and fieldname not in (
+    #                 "name",
+    #                 "owner",
+    #                 "creation",
+    #                 "modified",
+    #                 "modified_by",
+    #                 "docstatus",
+    #             ):
+    #                 existing_doc.set(fieldname, self.get(fieldname))
+
+    #         # Save updated document
+    #         existing_doc.save(ignore_permissions=True)
+
+    #         frappe.db.commit()
+
+    #         # STOP INSERT with a clean user-facing message
+    #         frappe.throw(
+    #             "Your details have been updated successfully.", frappe.ValidationError
+    #         )
+
+    def before_insert(self):
         if not self.customer:
             return
 
-        existing_name = frappe.db.get_value(
-            self.doctype, {"customer": self.customer}, "name"
+        # Search for parent doc where child table "Doctype Reference" has this customer
+        existing_name = frappe.db.sql(
+            """
+            SELECT parent
+            FROM `tabDoctype Reference`
+            WHERE reference_doctype = 'Customer' AND reference_person = %s
+            LIMIT 1
+            """,
+            (self.customer,),
+            as_dict=True,
         )
 
         if existing_name:
+            existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
 
-            existing_doc = frappe.get_doc(self.doctype, existing_name)
-
-            # Copy only NON-table fields
+            # Copy only NON-table fields from self to existing_doc
             for field in self.meta.fields:
-
                 if field.fieldtype == "Table":
                     continue  # skip child tables
 
                 fieldname = field.fieldname
-
                 if fieldname and fieldname not in (
                     "name",
                     "owner",
@@ -42,29 +87,67 @@ class LeadDetailForm(Document):
 
             # Save updated document
             existing_doc.save(ignore_permissions=True)
-
             frappe.db.commit()
 
-            # STOP INSERT with a clean user-facing message
+            # STOP INSERT with clean message
             frappe.throw(
                 "Your details have been updated successfully.", frappe.ValidationError
             )
+        
+    def autoname(self):
+        import re
 
-    def after_insert(self):
-        if self.signature_method == "Upload":
-            if not self.signature_image:
-                frappe.throw("Signature image missing for Upload method")
+        if self.first_name:
+            names = [self.surname, self.first_name, self.father_name]
+            base_name = " ".join([name.strip() for name in names if name])
 
-            self.apply_pdf_signature(self.signature_image)
+            if not base_name:
+                # fallback to default naming if something is wrong
+                self.name = frappe.generate_hash(length=10)
+                return
 
-        elif self.signature_method == "Text":
-            if not self.signature_image:
-                frappe.throw("Text Signature image missing for Text method")
+            self.title = base_name
 
-            self.apply_pdf_signature(self.signature_image)
+            # Fetch all titles that start with base_name
+            existing_titles = frappe.get_all(
+                "Customer", filters={"title": ["like", f"{base_name}%"]}, pluck="title"
+            )
 
-        elif self.signature_method == "Draw":
-            self._process_drawn_signature_and_apply()
+            max_count = 0
+
+            for title in existing_titles:
+                # Exact match (e.g., "name")
+                if title == base_name:
+                    max_count = max(max_count, 1)
+                    continue
+
+                # Match pattern name_number
+                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", title)
+                if match:
+                    count = int(match.group(1))
+                    max_count = max(max_count, count)
+
+            # Generate next title
+            if max_count == 0:
+                self.name = f"{base_name}-1"
+            else:
+                self.name = f"{base_name}-{max_count + 1}"
+
+    # def after_insert(self):
+    #     if self.signature_method == "Upload":
+    #         if not self.signature_image:
+    #             frappe.throw("Signature image missing for Upload method")
+
+    #         self.apply_pdf_signature(self.signature_image)
+
+    #     elif self.signature_method == "Text":
+    #         if not self.signature_image:
+    #             frappe.throw("Text Signature image missing for Text method")
+
+    #         self.apply_pdf_signature(self.signature_image)
+
+    #     elif self.signature_method == "Draw":
+    #         self._process_drawn_signature_and_apply()
 
     def _process_drawn_signature_and_apply(self):
         import base64
@@ -127,7 +210,7 @@ class LeadDetailForm(Document):
         if not self.agreement_link:
             pass
 
-        agreement = frappe.get_doc("Agreement", self.agreement_link) 
+        agreement = frappe.get_doc("Agreement", self.agreement_link)
 
         if not agreement.pdf:
             frappe.throw("Agreement PDF missing")

@@ -13,7 +13,7 @@ def create_lead_details(doctype, docname, first_name, custom_values=None):
     }):
         return
     
-    lead_detail = frappe.new_doc("Lead Details")
+    lead_detail = frappe.new_doc("Lead Detail Form")
     
     lead_detail.first_name = first_name
     

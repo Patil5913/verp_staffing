@@ -13,6 +13,7 @@
   "column_break_vwnk",
   "lead_owner",
   "status",
+  "email",
   "note_tab",
   "notes_html",
   "activities_tab",
@@ -80,14 +81,19 @@
    "fieldname": "lead_details",
    "fieldtype": "Link",
    "label": "Lead Details",
-   "options": "Lead Details",
+   "options": "Lead Detail Form",
    "read_only": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-17 16:02:24.723593",
+ "modified": "2026-02-20 12:01:46.567889",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
