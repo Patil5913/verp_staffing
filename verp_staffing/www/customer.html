@@ -1,0 +1,247 @@
+<h1 style="margin-bottom: 30px; font-weight: 600;">Customer Dashboard</h1>
+
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: #f8fafc;
+        color: #333;
+    }
+
+    .section {
+        margin-bottom: 55px;
+    }
+
+    .section h2 {
+        margin-bottom: 22px;
+        font-size: 20px;
+        font-weight: 600;
+        padding-left: 12px;
+    }
+
+    /* Section Accent Colors */
+    .current-section h2 {
+        border-left: 4px solid #16a34a;
+    }
+
+    .past-section h2 {
+        border-left: 4px solid #eab308;
+    }
+
+    .upcoming-section h2 {
+        border-left: 4px solid #2563eb;
+    }
+
+    .card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-left: 6px solid transparent;
+    }
+
+    /* Card Border Colors */
+    .current-section .card {
+        border-left-color: #16a34a;
+    }
+
+    .past-section .card {
+        border-left-color: #eab308;
+    }
+
+    .upcoming-section .card {
+        border-left-color: #2563eb;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .card h3 {
+        margin-bottom: 8px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .status {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 15px;
+    }
+
+    ul {
+        list-style: none;
+        padding-left: 0;
+    }
+
+    li {
+        background: #f1f5f9;
+        padding: 16px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+
+    .round-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    textarea {
+        width: 50%;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        resize: vertical;
+        font-size: 14px;
+        margin-top: 8px;
+    }
+
+    textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    button:hover {
+        background: #1e40af;
+    }
+
+    .feedback-box {
+        padding: 12px;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        margin-top: 8px;
+    }
+</style>
+
+<!-- ================= CURRENT ================= -->
+<div class="section current-section">
+    <h2>Current Interviews</h2>
+
+    {% for interview in current %}
+    <div class="card">
+        <h3>{{ interview.marketing_link }}</h3>
+        <div class="status">Status: {{ interview.status }}</div>
+
+        {% if interview.rounds %}
+        <ul>
+            {% for round in interview.rounds %}
+            <li>
+                <div class="round-title">Round: {{ round.round }}</div>
+                Interview Date: {{ round.date_of_interview }} <br>
+                Type of Interview: {{ round.type_of_interview }} <br>
+                Time of Interview: {{ round.time_of_interview }}
+
+                {% if round.feedback and round.feedback.strip() %}
+                <p><strong>Feedback:</strong></p>
+                <div class="feedback-box">
+                    {{ round.feedback }}
+                </div>
+                {% else %}
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+                    <input type="hidden" name="round_name" value="{{ round.name }}">
+                    <textarea name="feedback" rows="3"></textarea>
+                    <br><br>
+                    <button type="submit">Save</button>
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No Rounds Available</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No ongoing interviews.</p>
+    {% endfor %}
+</div>
+
+<!-- ================= PAST ================= -->
+<div class="section past-section">
+    <h2>Past Interviews</h2>
+
+    {% for interview in past %}
+    <div class="card">
+        <h3>{{ interview.marketing_link }}</h3>
+        <div class="status">Status: {{ interview.status }}</div>
+
+        {% if interview.rounds %}
+        <ul>
+            {% for round in interview.rounds %}
+            <li>
+                <div class="round-title">Round: {{ round.round }}</div>
+                Interview Date: {{ round.date_of_interview }} <br>
+                Type of Interview: {{ round.type_of_interview }} <br>
+                Time of Interview: {{ round.time_of_interview }}
+
+                {% if round.feedback and round.feedback.strip() %}
+                <p><strong>Feedback:</strong></p>
+                <div class="feedback-box">
+                    {{ round.feedback }}
+                </div>
+                {% else %}
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+                    <input type="hidden" name="round_name" value="{{ round.name }}">
+                    <textarea name="feedback" rows="3"></textarea>
+                    <br><br>
+                    <button type="submit">Save</button>
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No Rounds Available</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No past interviews.</p>
+    {% endfor %}
+</div>
+
+<!-- ================= UPCOMING ================= -->
+<div class="section upcoming-section">
+    <h2>Upcoming Interviews</h2>
+
+    {% for interview in upcoming %}
+    <div class="card">
+        <h3>{{ interview.marketing_link }}</h3>
+        <div class="status">Status: {{ interview.status }}</div>
+
+        {% if interview.rounds %}
+        <ul>
+            {% for round in interview.rounds %}
+            <li>
+                <div class="round-title">Round: {{ round.round }}</div>
+                Interview Date: {{ round.date_of_interview }} <br>
+                Type of Interview: {{ round.type_of_interview }} <br>
+                Time of Interview: {{ round.time_of_interview }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No Rounds Available</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No scheduled interviews.</p>
+    {% endfor %}
+</div>

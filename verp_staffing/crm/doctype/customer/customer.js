@@ -85,6 +85,16 @@ frappe.ui.form.on("Customer", {
 		});
 	},
 
+	sales_order: function(frm) {
+
+	frappe.new_doc("Sales Order", {
+		customer: frm.doc.name
+	});
+
+},
+
+
+
 	customer_from: function (frm) {
 		if (frm.doc.customer_from) {
 			frm.set_df_property("party_name", "label", frm.doc.customer_from);
@@ -733,7 +743,7 @@ function show_sales_order(frm) {
 			let sales_orders = r.message || [];
 
 			if (sales_orders.length === 0) {
-				frm.fields_dict.sales_content.$wrapper.html("<p>No Sales Orders found.</p>");
+				frm.fields_dict.sales_content.$wrapper.html("<p>No Sales Orders found, Create one.</p>");
 				return;
 			}
 

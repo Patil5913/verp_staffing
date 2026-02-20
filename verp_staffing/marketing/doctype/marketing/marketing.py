@@ -25,7 +25,13 @@ class Marketing(Document):
         )
         customer = frappe.get_doc({"doctype": "Customer", "name": self.customer})
         stage = json.loads(customer.stage) if customer.stage else {}
+        # department = parents[0].parent
+        if not parents:
+            # frappe.throw("No Department Service found for 'marketing'")
+            return
+
         department = parents[0].parent
+
         stage["marketing"] = {
             "department": department,
             "timestamp": str(now_datetime()),
@@ -51,8 +57,7 @@ def get_interviews_by_marketing(marketing):
 
 
 @frappe.whitelist()
-def can_edit_marketing(assign_to):
-
+def can_edit_marketing(assign_to=None):
     current_user = frappe.session.user
 
     if current_user == "Administrator":
@@ -123,8 +128,7 @@ def can_edit_marketing(assign_to):
 
 
 @frappe.whitelist()
-def can_edit_job_application_date(assign_to):
-
+def can_edit_job_application_date(assign_to=None):
     current_user = frappe.session.user
 
     # Administrator can edit date

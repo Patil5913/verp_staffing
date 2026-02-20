@@ -17,6 +17,7 @@
   "sales_tab",
   "section_break_gtmf",
   "sales_content",
+  "sales_order",
   "resume_tab",
   "resume_html",
   "technical_tab",
@@ -167,12 +168,17 @@
    "fieldname": "lead_details_html",
    "fieldtype": "HTML",
    "label": "Lead Details"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Button",
+   "label": "Sales Order"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-19 15:17:33.181413",
+ "modified": "2026-02-19 17:44:07.119821",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -233,7 +239,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Manager",
+   "role": "marketing Manager",
    "select": 1
   },
   {
