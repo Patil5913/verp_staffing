@@ -4,11 +4,29 @@
 frappe.ui.form.on("Lead Detail Form", {
     refresh(frm) {
         update_parent_skills(frm);
+        frm.toggle_enable('reference_table', false);
     },
 
     additional_skills(frm) {
         // Ensure clean merge when user manually edits
         update_parent_skills(frm);
+    },
+
+    surname: function(frm) { frm.trigger('update_title'); },
+    first_name: function(frm) { frm.trigger('update_title'); },
+    father_name: function(frm) { frm.trigger('update_title'); },
+
+    update_title: function(frm) {
+        let full_name = [
+            frm.doc.surname, 
+            frm.doc.first_name, 
+            frm.doc.father_name
+        ].filter(Boolean).join(" ");
+        
+        // Update a 'title' field if it exists
+        if (frm.fields_dict.title) {
+            frm.set_value('title', full_name);
+        }
     }
 });
 

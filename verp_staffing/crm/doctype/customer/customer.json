@@ -103,7 +103,7 @@
    "fieldname": "lead_details",
    "fieldtype": "Link",
    "label": "Lead Details",
-   "options": "Lead Details",
+   "options": "Lead Detail Form",
    "read_only": 1
   },
   {
