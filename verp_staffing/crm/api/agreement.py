@@ -114,6 +114,7 @@ def submit_and_generate(sales_order, template, recipient, data):
         f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}&e={quote(recipient)}"
     )
     
+    frappe.errprint(f"kishana bahua ahahahah{form_url}")
     send_notification(
         recipients=[recipient],
         subject="Agreement for Review and Signature",
@@ -529,3 +530,22 @@ def render_payment_terms_table(canvas, rect, terms):
 
         y -= row_height
 
+@frappe.whitelist()
+def get_customer_email(customer):
+    """
+    Fetch email for a Customer from Lead Detail Form using raw SQL.
+    """
+    email = frappe.db.sql("""
+        SELECT ldf.email
+        FROM `tabLead Detail Form` ldf
+        INNER JOIN `tabDoctype Reference` dr
+            ON dr.parent = ldf.name
+        WHERE dr.reference_doctype = 'Customer'
+          AND dr.reference_person = %s
+        LIMIT 1
+    """, (customer,), as_dict=True)
+
+    if not email:
+        frappe.throw(f"No email found in Lead Details for Customer {customer}")
+
+    return email[0].email

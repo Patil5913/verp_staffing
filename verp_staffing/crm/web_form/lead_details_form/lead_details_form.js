@@ -624,16 +624,26 @@ function validate_email(email, label) {
 }
 
 function validate_phone(phone, label) {
-    // allows +, digits, spaces, hyphens
-    const phone_regex = /^[+]?[\d\s-]{6,20}$/;
+
+    if (!phone) {
+        frappe.msgprint(`${label} is required`);
+        return false;
+    }
+
+    phone = phone.trim();
+
+    const phone_regex = /^[+]\d{10,15}$/;
+
     if (!phone_regex.test(phone)) {
         frappe.msgprint(
-            `${label} must contain only numbers and optional country code (+)`
+            `${label} must be in format +countrycode followed by numbers`
         );
         return false;
     }
+
     return true;
 }
+
 
 
 function is_valid_mm_yyyy(value) {

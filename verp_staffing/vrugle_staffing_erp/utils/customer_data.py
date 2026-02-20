@@ -34,7 +34,7 @@ def get_data_by_customer(customer, fields):
             ["Doctype Reference", "reference_doctype", "=", "Customer"],
             ["Doctype Reference", "reference_person", "=", customer],
         ],
-        order_by="creation desc",
+        order_by="`tabLead Details`.creation desc",
         distinct=True
     )
     
