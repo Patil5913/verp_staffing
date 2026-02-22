@@ -9,56 +9,14 @@ from verp_staffing.crm.api.helpers import send_notification
 
 
 class LeadDetailForm(Document):
-    # def before_insert(self):
-
-    #     if not self.customer:
-    #         return
-
-    #     existing_name = frappe.db.get_value(
-    #         self.doctype, {"customer": self.customer}, "name"
-    #     )
-
-    #     if existing_name:
-
-    #         existing_doc = frappe.get_doc(self.doctype, existing_name)
-
-    #         # Copy only NON-table fields
-    #         for field in self.meta.fields:
-
-    #             if field.fieldtype == "Table":
-    #                 continue  # skip child tables
-
-    #             fieldname = field.fieldname
-
-    #             if fieldname and fieldname not in (
-    #                 "name",
-    #                 "owner",
-    #                 "creation",
-    #                 "modified",
-    #                 "modified_by",
-    #                 "docstatus",
-    #             ):
-    #                 existing_doc.set(fieldname, self.get(fieldname))
-
-    #         # Save updated document
-    #         existing_doc.save(ignore_permissions=True)
-
-    #         frappe.db.commit()
-
-    #         # STOP INSERT with a clean user-facing message
-    #         frappe.throw(
-    #             "Your details have been updated successfully.", frappe.ValidationError
-    #         )
 
     def before_insert(self):
         if not self.customer:
             return
 
-        # Search for parent doc where child table "Doctype Reference" has this customer
         existing_name = frappe.db.sql(
             """
-            SELECT parent
-            FROM `tabDoctype Reference`
+            SELECT parent FROM `tabDoctype Reference`
             WHERE reference_doctype = 'Customer' AND reference_person = %s
             LIMIT 1
             """,
@@ -66,98 +24,120 @@ class LeadDetailForm(Document):
             as_dict=True,
         )
 
-        if existing_name:
-            existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
+        if not existing_name:
+            return
 
-            # Copy only NON-table fields from self to existing_doc
-            for field in self.meta.fields:
-                if field.fieldtype == "Table":
-                    continue  # skip child tables
+        existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
 
-                fieldname = field.fieldname
-                if fieldname and fieldname not in (
-                    "name",
-                    "owner",
-                    "creation",
-                    "modified",
-                    "modified_by",
-                    "docstatus",
-                ):
-                    existing_doc.set(fieldname, self.get(fieldname))
+        for field in self.meta.fields:
+            if field.fieldtype == "Table":
+                continue
+            fieldname = field.fieldname
+            if fieldname and fieldname not in (
+                "name",
+                "owner",
+                "creation",
+                "modified",
+                "modified_by",
+                "docstatus",
+            ):
+                existing_doc.set(fieldname, self.get(fieldname))
 
-            # Save updated document
-            existing_doc.save(ignore_permissions=True)
-            frappe.db.commit()
+        existing_doc.save(ignore_permissions=True)
+        frappe.db.commit()
 
-            # STOP INSERT with clean message
-            frappe.throw(
-                "Your details have been updated successfully.", frappe.ValidationError
-            )
-        
+        # ✅ Run PDF signature on existing_doc BEFORE throwing
+        try:
+            if self.signature_method == "Upload":
+                existing_doc.apply_pdf_signature(self.signature_image)
+
+            elif self.signature_method == "Text":
+                existing_doc.apply_pdf_signature(self.signature_image)
+
+            elif self.signature_method == "Draw":
+                existing_doc._process_drawn_signature_and_apply()
+
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed on Update")
+            frappe.errprint(f"PDF processing error on update: {e}")
+
+        # ✅ Signal JS AFTER pdf processing done
+        frappe.throw("LEAD_UPDATED_SUCCESS", frappe.exceptions.ValidationError)
+
     def autoname(self):
         import re
 
-        if self.first_name:
-            names = [self.surname, self.first_name, self.father_name]
-            base_name = " ".join([name.strip() for name in names if name])
+        if not self.first_name:
+            self.name = frappe.generate_hash(length=10)
+            return
 
-            if not base_name:
-                # fallback to default naming if something is wrong
-                self.name = frappe.generate_hash(length=10)
-                return
+        base_name = self.first_name.strip()
+        if not base_name:
+            self.name = frappe.generate_hash(length=10)
+            return
 
-            self.title = base_name
+        self.title = base_name
 
-            # Fetch all titles that start with base_name
-            existing_titles = frappe.get_all(
-                "Customer", filters={"title": ["like", f"{base_name}%"]}, pluck="title"
-            )
+        # ✅ Query THIS doctype only, not "Customer"
+        existing_names = frappe.get_all(
+            self.doctype,  # was hardcoded "Customer" — that was the bug
+            filters={"name": ["like", f"{base_name}%"]},
+            pluck="name",
+        )
 
-            max_count = 0
+        # Build a set of used number slots
+        used_numbers = set()
 
-            for title in existing_titles:
-                # Exact match (e.g., "name")
-                if title == base_name:
-                    max_count = max(max_count, 1)
-                    continue
-
-                # Match pattern name_number
-                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", title)
-                if match:
-                    count = int(match.group(1))
-                    max_count = max(max_count, count)
-
-            # Generate next title
-            if max_count == 0:
-                self.name = f"{base_name}-1"
+        for name in existing_names:
+            if name == base_name:
+                used_numbers.add(0)
             else:
-                self.name = f"{base_name}-{max_count + 1}"
+                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", name)
+                if match:
+                    used_numbers.add(int(match.group(1)))
 
-    # def after_insert(self):
-    #     if self.signature_method == "Upload":
-    #         if not self.signature_image:
-    #             frappe.throw("Signature image missing for Upload method")
+        # Find the first unused number
+        next_number = 0
+        while next_number in used_numbers:
+            next_number += 1
 
-    #         self.apply_pdf_signature(self.signature_image)
+        # Assign name
+        if next_number == 0:
+            self.name = base_name
+        else:
+            self.name = f"{base_name}-{next_number}"
 
-    #     elif self.signature_method == "Text":
-    #         if not self.signature_image:
-    #             frappe.throw("Text Signature image missing for Text method")
+    def after_insert(self):
+        try:
+            if self.signature_method == "Upload":
+                if not self.signature_image:
+                    frappe.throw("Signature image missing for Upload method")
+                self.apply_pdf_signature(self.signature_image)
 
-    #         self.apply_pdf_signature(self.signature_image)
+            elif self.signature_method == "Text":
+                if not self.signature_image:
+                    frappe.throw("Text Signature image missing for Text method")
+                self.apply_pdf_signature(self.signature_image)
 
-    #     elif self.signature_method == "Draw":
-    #         self._process_drawn_signature_and_apply()
+            elif self.signature_method == "Draw":
+                self._process_drawn_signature_and_apply()
+
+        except Exception as e:
+            # ✅ Log error but don't throw — so webform sees success
+            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
+            frappe.errprint(f"PDF processing error: {e}")
+            # Don't re-raise — webform must get success response
 
     def _process_drawn_signature_and_apply(self):
         import base64
 
-        if not self.signature:
-            frappe.throw("Drawn signature data missing")
-
+        # ✅ Correct use — if signature_image already uploaded via JS, just apply it
         if self.signature_image:
             self.apply_pdf_signature(self.signature_image)
             return
+
+        if not self.signature:
+            return  # No signature data to process
 
         try:
             img_base64 = self.signature.split(",")[-1]
@@ -178,37 +158,28 @@ class LeadDetailForm(Document):
                 self.doctype, self.name, "signature_image", file_doc.name
             )
 
-            # self.apply_pdf_signature(file_doc.file_url)
+            self.apply_pdf_signature(file_doc.name)
 
         except Exception as e:
             frappe.errprint(f"Error processing drawn signature: {e}")
             frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
             frappe.throw("Failed to process drawn signature")
 
-    # ---------------- PDF APPLY ----------------
-
     def apply_pdf_signature(self, signature_image_file):
-        """
-        signature can be: File doc name (Upload / Text) or file_url (Draw)
-        + audit trail to PDF
-        """
-
         if not signature_image_file:
             frappe.throw("Signature file missing")
 
-        if self.signature_method == "Upload" or self.signature_method == "Text":
-            # ---- ALWAYS RESOLVE FILE DOC ----
+        # Resolve file URL based on method
+        if self.signature_method in ("Upload", "Text", "Draw"):
             file_doc = frappe.get_doc("File", signature_image_file)
-
             if not file_doc.file_url:
                 frappe.throw("Signature file URL missing")
-
             signature_image_path = file_doc.file_url
         else:
             signature_image_path = signature_image_file
 
         if not self.agreement_link:
-            pass
+            frappe.throw("Agreement link missing")
 
         agreement = frappe.get_doc("Agreement", self.agreement_link)
 
@@ -236,7 +207,6 @@ class LeadDetailForm(Document):
 
         if not self.certificate_id:
             self.db_set("certificate_id", generate_certificate_id(self.name))
-            certificate_id = self.certificate_id
 
         apply_signature_and_audit_to_pdf(
             input_pdf_path=input_pdf_path,
@@ -246,7 +216,7 @@ class LeadDetailForm(Document):
             signer_name=f"{self.surname} {self.first_name} {self.father_name}",
             signer_email=f"{self.email}",
             agreement=agreement,
-            certificate_id=certificate_id,
+            certificate_id=self.certificate_id,  # ✅ use self.certificate_id directly
         )
 
 
@@ -304,7 +274,7 @@ def apply_signature_and_audit_to_pdf(
             audit_trail_text = json.loads(audit_trail_text)
         except Exception:
             audit_trail_text = {}
-
+    frappe.errprint(f"Normalized audit trail:")
     # ---------------------------------------------------------
     # STEP 1: APPLY SIGNATURES
     # ---------------------------------------------------------
@@ -596,7 +566,7 @@ def apply_signature_and_audit_to_pdf(
 
     with open(output_path, "rb") as f:
         content = f.read()
-
+    frappe.errprint(f"Final PDF generated at {output_path} with hash {document_hash}")
     send_notification(
         recipients=[signer_email],
         subject="Agreement signed successfully",
