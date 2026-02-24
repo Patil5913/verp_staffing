@@ -82,7 +82,7 @@ def get_data(filters):
         SELECT
             m.name,
             m.assign_to,
-            IFNULL(c.customer_name, m.customer) AS customer_name,
+            IFNULL(c.name, m.customer) AS customer_name,
             m.start_date,
             m.target_based_on,
             m.target

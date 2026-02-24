@@ -128,14 +128,14 @@ frappe.ui.form.on("Lead", {
 	after_save: function (frm) {
 		// Trigger the update after the document is saved and has a name
 		if (frm.doc.lead_details) {
-			frappe.call({
-				method: "verp_staffing.crm.api.lead_details.update_lead_reference",
-				args: {
-					lead_details_id: frm.doc.lead_details,
-					ref_doctype: frm.doc.doctype,
-					ref_name: frm.doc.name,
-				},
-			});
+			// frappe.call({
+			// 	method: "verp_staffing.crm.api.lead_details.update_lead_reference",
+			// 	args: {
+			// 		lead_details_id: frm.doc.lead_details,
+			// 		ref_doctype: frm.doc.doctype,
+			// 		ref_name: frm.doc.name,
+			// 	},
+			// });
 		}
 	},
 });
