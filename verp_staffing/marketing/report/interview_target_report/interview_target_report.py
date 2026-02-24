@@ -23,7 +23,7 @@ def get_columns():
         },
         {
             "label": "Customer Name",
-            "fieldname": "customer_name",
+            "fieldname": "name1",
             "fieldtype": "Data",
             "width": 200,
         },
@@ -82,7 +82,7 @@ def get_data(filters):
         SELECT
             m.name,
             m.assign_to,
-            IFNULL(c.name, m.customer) AS customer_name,
+            IFNULL(c.name, m.customer) AS name1,
             m.start_date,
             m.target_based_on,
             m.target
@@ -157,7 +157,7 @@ def get_data(filters):
         final_data.append(
             {
                 "employee": m.assign_to,
-                "customer_name": m.customer_name,
+                "name1": m.name1,
                 "start_date": m.start_date,
                 "target_based_on": m.target_based_on,
                 "target": m.target,
@@ -176,7 +176,7 @@ def get_chart(data):
     values = []
 
     for row in data:
-        customer = row.get("customer_name", "")
+        customer = row.get("name1", "")
         start_date = row.get("start_date")
         completed = row.get("completed_target", 0)
         target = row.get("target", 0)
