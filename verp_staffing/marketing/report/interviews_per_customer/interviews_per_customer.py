@@ -87,23 +87,23 @@ def execute(filters=None):
         values = list(values.values())
 
     data = frappe.db.sql(f"""
-        SELECT
-            c.name AS customer,
-            c.title AS customer_name,
-            COUNT(ir.name) AS interview_count
-        FROM `tabInterview` i
-        INNER JOIN `tabInterview Round` ir
-            ON ir.parent = i.name
-        INNER JOIN `tabMarketing` m
-            ON m.name = i.marketing_link
-        INNER JOIN `tabCustomer` c
-            ON c.name = m.customer
-        WHERE 1=1
-        {conditions}
-        GROUP BY c.name, c.title
-        ORDER BY interview_count DESC
-    """, values, as_dict=True)
-
+    SELECT
+        c.name AS customer,
+        c.title AS customer_name,
+        COUNT(DISTINCT i.name) AS interview_count
+    FROM `tabInterview` i
+    INNER JOIN `tabInterview Round` ir
+        ON ir.parent = i.name
+    INNER JOIN `tabMarketing` m
+        ON m.name = i.marketing_link
+    INNER JOIN `tabCustomer` c
+        ON c.name = m.customer
+    WHERE 1=1
+    {conditions}
+    GROUP BY c.name, c.title
+    ORDER BY interview_count DESC
+""", values, as_dict=True)
+    
     columns = [
         {
             "label": "Customer",

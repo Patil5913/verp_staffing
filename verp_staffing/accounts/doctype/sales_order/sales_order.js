@@ -497,7 +497,7 @@ function preview_inline(frm) {
 	const data = collect_so_agreement_data(frm);
 
 	frappe.call({
-		method: "verp_staffing.crm.api.agreement.render_preview",
+		method: "verp_staffing.crm.api.agreement.preview_agreement",
 		args: { template, data: JSON.stringify(data) },
 		callback(r) {
 			if (!r.message) return frappe.msgprint("Preview error");
