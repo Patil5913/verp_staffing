@@ -389,6 +389,7 @@ def get_columns():
         {
             "label": "Customer Name",
             "fieldname": "name1",
+            "fieldname": "name1",
             "fieldtype": "Data",
             "width": 200,
         },
@@ -532,18 +533,18 @@ def get_data(filters):
 
     marketing_records = frappe.db.sql(
         f"""
-    SELECT
-        m.name,
-        m.assign_to,
-        IFNULL(c.name, m.customer) AS customer_name,
-        m.start_date,
-        m.target_based_on,
-        m.target
-    FROM `tabMarketing` m
-    LEFT JOIN `tabCustomer` c ON c.name = m.customer
-    WHERE {where_clause}
-    ORDER BY m.assign_to, m.start_date DESC
-    """,
+        SELECT
+            m.name,
+            m.assign_to,
+            IFNULL(c.name, m.customer) AS name1,
+            m.start_date,
+            m.target_based_on,
+            m.target
+        FROM `tabMarketing` m
+        LEFT JOIN `tabCustomer` c ON c.name = m.customer
+        WHERE {where_clause}
+        ORDER BY m.start_date DESC
+        """,
         values,
         as_dict=True,
     )
@@ -592,20 +593,16 @@ def get_data(filters):
             or 0
         )
 
-        row_data = {
-            "employee": m.assign_to,
-            "customer_name": m.customer_name,
-            "start_date": m.start_date,
-            "target_based_on": m.target_based_on,
-            "target": m.target,
-            "completed_target": completed_target,
-            "to_highlight": None,
-        }
-
-        if completed_target < (m.target or 0):
-            row_data["to_highlight"] = True
-
-        final_data.append(row_data)
+        final_data.append(
+            {
+                "employee": m.assign_to,
+                "name1": m.name1,
+                "start_date": m.start_date,
+                "target_based_on": m.target_based_on,
+                "target": m.target,
+                "completed_target": completed_target,
+            }
+        )
 
     return final_data
 
