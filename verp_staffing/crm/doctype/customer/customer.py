@@ -4,9 +4,12 @@
 import frappe, json
 from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details
-
+from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 
 class Customer(Document):
+    
+    def on_trash(self):
+        unlink_and_clean_lead_detail("Customer" , self.name)
 
     def autoname(self):
         if not self.name1:

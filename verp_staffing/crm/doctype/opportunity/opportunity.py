@@ -5,11 +5,16 @@ import frappe
 from frappe.model.document import Document
 from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
 from verp_staffing.crm.api.lead_details import create_lead_details
+from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
+
 
 class Opportunity(Document):
     def before_save(self):
         pass
 
+    def on_trash(self):
+        unlink_and_clean_lead_detail("Opportunity" , self.name)
+        
 
     def after_insert(self):
         lead_detail_name = None
@@ -56,7 +61,7 @@ class Opportunity(Document):
         # 🔥 Link Opportunity → Lead Details in BOTH cases
         if lead_detail_name:
             # self.lead_details = lead_detail_name
-            self.lead_detail_form = lead_detail_name
+            self.lead_details = lead_detail_name
             self.db_update()
 
     def autoname(self):

@@ -41,7 +41,7 @@ def get_data(filters):
         values["to_date"] = filters["to_date"]
 
     if filters.get("visa_status"):
-        conditions.append("l.visa_status = %(visa_status)s")
+        conditions.append("ldf.current_visa_status = %(visa_status)s")
         values["visa_status"] = filters["visa_status"]
 
     user = frappe.session.user
@@ -52,7 +52,9 @@ def get_data(filters):
         if not allowed_employees:
             return []
 
-        placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(allowed_employees))])
+        placeholders = ", ".join(
+            [f"%(emp_{i})s" for i in range(len(allowed_employees))]
+        )
         hierarchy_conditions.append(f"l.lead_owner IN ({placeholders})")
 
         for i, emp in enumerate(allowed_employees):
@@ -64,28 +66,32 @@ def get_data(filters):
     query = f"""
         SELECT
             l.lead_owner AS employee,
-            COUNT(l.name) AS lead_count,
+            COUNT(DISTINCT l.name) AS lead_count,
             GROUP_CONCAT(
-                DISTINCT CONCAT(l.visa_status, ': ', v.cnt)
-                ORDER BY l.visa_status
+                DISTINCT CONCAT(ldf.current_visa_status, ': ', v.cnt)
+                ORDER BY ldf.current_visa_status
                 SEPARATOR ' | '
             ) AS visa_summary
         FROM `tabLead` l
+        LEFT JOIN `tabLead Detail Form` ldf
+            ON ldf.name = l.lead_details
         LEFT JOIN (
             SELECT
-                lead_owner,
-                visa_status,
+                l2.lead_owner,
+                ldf2.current_visa_status,
                 COUNT(*) AS cnt
-            FROM `tabLead`
-            WHERE lead_owner IS NOT NULL
-            GROUP BY lead_owner, visa_status
+            FROM `tabLead` l2
+            LEFT JOIN `tabLead Detail Form` ldf2
+                ON ldf2.name = l2.lead_details
+            WHERE l2.lead_owner IS NOT NULL
+            GROUP BY l2.lead_owner, ldf2.current_visa_status
         ) v
             ON v.lead_owner = l.lead_owner
-           AND v.visa_status = l.visa_status
+        AND v.current_visa_status = ldf.current_visa_status
         WHERE {where_clause}
         GROUP BY l.lead_owner
         ORDER BY lead_count DESC
-    """
+        """
 
     return frappe.db.sql(query, values, as_dict=True)
 
@@ -94,10 +100,7 @@ def get_chart(data):
     if not data:
         return {}
 
-    labels = [
-        f"{row['employee']}\n{row['visa_summary'] or ''}"
-        for row in data
-    ]
+    labels = [f"{row['employee']}\n{row['visa_summary'] or ''}" for row in data]
 
     return {
         "data": {
