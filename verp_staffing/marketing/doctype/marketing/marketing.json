@@ -117,7 +117,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-17 16:48:48.930501",
+ "modified": "2026-02-23 14:52:42.428849",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -169,13 +169,6 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
@@ -190,24 +183,6 @@
   {
    "read": 1,
    "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
   },
   {
    "create": 1,

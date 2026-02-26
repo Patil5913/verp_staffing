@@ -230,6 +230,7 @@ function create_opportunity(frm, owner) {
 		opportunity_from: "Lead",
 		party_name: frm.doc.name,
 		opportunity_owner: owner,
+		name1 : frm.doc.name
 	};
 
 	frappe.call({

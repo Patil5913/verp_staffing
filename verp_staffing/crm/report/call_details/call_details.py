@@ -2,6 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from verp_staffing.marketing.api.utils import get_visible_employee_names
 
 
 def execute(filters=None):
@@ -13,6 +16,13 @@ def execute(filters=None):
 
 def get_columns():
     return [
+        {
+            "label": "Opportunity Owner",
+            "fieldname": "opportunity_owner",
+            "fieldtype": "Link",
+            "options": "Employee",
+            "width": 180,
+        },
         {"label": "Title", "fieldname": "title", "fieldtype": "Data", "width": 210},
         {"label": "Status", "fieldname": "status", "fieldtype": "Data"},
         {"label": "Date", "fieldname": "date", "fieldtype": "Date"},
@@ -30,6 +40,60 @@ def get_columns():
     ]
 
 
+def get_all_subordinates_by_assignment(root_employee, department=None):
+    """
+    Recursively get all subordinates using Employee Assignment Detail.
+    assigned_to field mein parent employee hota hai.
+    """
+    collected = set()
+    stack = [root_employee]
+
+    while stack:
+        current = stack.pop()
+
+        filters = {"assigned_to": current}
+        if department:
+            filters["department"] = department
+
+        children = frappe.db.get_all(
+            "Employee Assignment Detail",
+            filters=filters,
+            pluck="parent",
+        )
+
+        for emp in children:
+            if emp and emp not in collected:
+                collected.add(emp)
+                stack.append(emp)
+
+    return collected
+
+
+def filter_sales_employees(employee_list):
+    """Filter employees who belong to Sales department."""
+    if not employee_list:
+        return []
+
+    data = frappe.db.sql(
+        """
+        SELECT DISTINCT e.name
+        FROM `tabEmployee` e
+        INNER JOIN `tabEmployee Assignment Detail` d
+            ON d.parent = e.name
+        WHERE e.name IN %(emp_list)s
+          AND d.department = 'Sales'
+        """,
+        {"emp_list": tuple(employee_list)},
+        as_dict=True,
+    )
+
+    return [row.name for row in data]
+
+
+def get_employee_from_user(user):
+    return frappe.db.get_value("Employee", {"user": user}, "name")
+
+
 def get_data(filters):
     user = frappe.session.user
     employee_filter = filters.get("employee") if filters else None
@@ -37,34 +101,89 @@ def get_data(filters):
     values = {}
     conditions = []
 
-    # -------------------------------
-    # If Administrator → show all data
-    # -------------------------------
-    if user == "Administrator":
-        if employee_filter:
-            conditions.append("o.opportunity_owner = %(employee)s")
-            values["employee"] = employee_filter
+    start_date = filters.get("start_date")
+    end_date = filters.get("end_date")
+    timeline = filters.get("timeline")
 
-    # -------------------------------
-    # Non-admin users
-    # -------------------------------
+    if timeline and not start_date:
+        today = frappe.utils.getdate()
+
+        if timeline == "Monthly":
+            start_date = today - relativedelta(months=1)
+        elif timeline == "3 Months":
+            start_date = today - relativedelta(months=3)
+        elif timeline == "6 Months":
+            start_date = today - relativedelta(months=6)
+        elif timeline == "Yearly":
+            start_date = today - relativedelta(years=1)
+
+        end_date = today
+
+    if start_date:
+        conditions.append("cd.date >= %(start_date)s")
+        values["start_date"] = start_date
+
+    if end_date:
+        conditions.append("cd.date <= %(end_date)s")
+        values["end_date"] = end_date
+
+
+    if employee_filter:
+        # Selected employee + all subordinates recursively
+        subordinates = get_all_subordinates_by_assignment(employee_filter, department="Sales")
+        subordinates.add(employee_filter)
+
+        # Filter only Sales dept employees
+        valid_employees = filter_sales_employees(list(subordinates))
+
+        if not valid_employees:
+            return []
+
+        placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(valid_employees))])
+        conditions.append(f"o.opportunity_owner IN ({placeholders})")
+
+        for i, emp in enumerate(valid_employees):
+            values[f"emp_{i}"] = emp
+
     else:
-        if employee_filter:
-            conditions.append("o.opportunity_owner = %(employee)s")
-            values["employee"] = employee_filter
-        else:
-            allowed_employees = get_visible_employee_names(user)
+        if user == "Administrator":
+            # Admin with no filter — show all Sales employees data
+            data = frappe.db.sql(
+                """
+                SELECT DISTINCT e.name
+                FROM `tabEmployee` e
+                INNER JOIN `tabEmployee Assignment Detail` d
+                    ON d.parent = e.name
+                WHERE d.department = 'Sales'
+                """,
+                as_dict=True,
+            )
+            valid_employees = [row.name for row in data]
 
-            if not allowed_employees:
+            if valid_employees:
+                placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(valid_employees))])
+                conditions.append(f"o.opportunity_owner IN ({placeholders})")
+                for i, emp in enumerate(valid_employees):
+                    values[f"emp_{i}"] = emp
+
+        else:
+            # Non-admin — show own hierarchy
+            current_employee = get_employee_from_user(user)
+
+            if current_employee:
+                subordinates = get_all_subordinates_by_assignment(current_employee, department="Sales")
+                subordinates.add(current_employee)
+                valid_employees = filter_sales_employees(list(subordinates))
+            else:
+                valid_employees = []
+
+            if not valid_employees:
                 return []
 
-            placeholders = ", ".join(
-                [f"%(emp_{i})s" for i in range(len(allowed_employees))]
-            )
-
+            placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(valid_employees))])
             conditions.append(f"o.opportunity_owner IN ({placeholders})")
 
-            for i, emp in enumerate(allowed_employees):
+            for i, emp in enumerate(valid_employees):
                 values[f"emp_{i}"] = emp
 
     where_clause = ""
@@ -74,6 +193,7 @@ def get_data(filters):
     data = frappe.db.sql(
         f"""
         SELECT
+            o.opportunity_owner,
             o.name,
             o.title,
             o.status,
@@ -94,13 +214,14 @@ def get_data(filters):
         LEFT JOIN `tabCall Details` cd
             ON cd.parent = o.name
         {where_clause}
-        GROUP BY o.name, cd.date
+        GROUP BY o.opportunity_owner, o.name, cd.date
         ORDER BY cd.date DESC
-    """,
+        """,
         values,
         as_dict=True,
     )
 
+    # Convert seconds to readable format
     for row in data:
         seconds = row.get("total_seconds") or 0
         hours = seconds // 3600
@@ -111,55 +232,61 @@ def get_data(filters):
     return data
 
 
-import frappe
-from verp_staffing.marketing.api.utils import get_visible_employee_names
-
-
 @frappe.whitelist()
 def get_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Link field search — shows Sales dept employees only.
+    Non-admin sees only self + subordinates via Employee Assignment Detail.
+    """
     user = frappe.session.user
 
-    values = {"txt": f"%{txt}%", "start": start, "page_len": page_len}
+    values = {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": page_len,
+        "dept": "Sales",
+    }
 
-    conditions = []
-
-    # Always allow search
-    conditions.append(f"{searchfield} LIKE %(txt)s")
-
-    # Administrator → no restriction
-    if user == "Administrator":
-        return frappe.db.sql(
-            f"""
-            SELECT name
-            FROM `tabEmployee`
-            WHERE {" AND ".join(conditions)}
-            ORDER BY name
-            LIMIT %(start)s, %(page_len)s
-        """,
-            values,
+    conditions = [
+        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        """
+        EXISTS (
+            SELECT 1
+            FROM `tabEmployee Assignment Detail` d
+            WHERE d.parent = tabEmployee.name
+              AND d.department = %(dept)s
         )
+        """,
+    ]
 
-    # Non-admin → apply hierarchy restriction
-    allowed_employees = get_visible_employee_names(user)
+    if user != "Administrator":
+        current_employee = get_employee_from_user(user)
 
-    if not allowed_employees:
-        return []
+        if not current_employee:
+            return []
 
-    placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(allowed_employees))])
+        # Get full hierarchy
+        subordinates = get_all_subordinates_by_assignment(current_employee, department="Sales")
+        subordinates.add(current_employee)
+        all_emps = list(subordinates)
 
-    for i, emp in enumerate(allowed_employees):
-        values[f"emp_{i}"] = emp
+        if not all_emps:
+            return []
 
-    conditions.append(f"name IN ({placeholders})")
+        placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(all_emps))])
+        conditions.append(f"tabEmployee.name IN ({placeholders})")
+
+        for i, emp in enumerate(all_emps):
+            values[f"emp_{i}"] = emp
 
     return frappe.db.sql(
         f"""
-        SELECT name
+        SELECT tabEmployee.name, tabEmployee.employee_name
         FROM `tabEmployee`
         WHERE {" AND ".join(conditions)}
-        ORDER BY name
+        ORDER BY tabEmployee.name
         LIMIT %(start)s, %(page_len)s
-    """,
+        """,
         values,
     )
 
@@ -190,10 +317,10 @@ def get_chart(data):
     labels = []
     avg_values = []
 
-    for title, values in title_map.items():
+    for title, vals in title_map.items():
         avg_seconds = 0
-        if values["total_calls"] > 0:
-            avg_seconds = values["total_seconds"] / values["total_calls"]
+        if vals["total_calls"] > 0:
+            avg_seconds = vals["total_seconds"] / vals["total_calls"]
 
         labels.append(title)
         avg_values.append(round(avg_seconds / 60, 2))  # convert to minutes

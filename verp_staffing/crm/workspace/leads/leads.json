@@ -1,15 +1,11 @@
 {
  "charts": [
   {
-   "chart_name": "Lead Conversion Funnel",
-   "label": "Lead Conversion Funnel"
-  },
-  {
    "chart_name": "Lead Per Employee",
    "label": "Lead Per Employee"
   }
  ],
- "content": "[{\"id\":\"VDpv-a6XJ8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads</span>\",\"col\":12}},{\"id\":\"lMFVKYnXfs\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Per Employee\",\"col\":12}},{\"id\":\"NWFmNGGG6L\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"TnyeDG5WCl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}}]",
+ "content": "[{\"id\":\"VDpv-a6XJ8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads</span>\",\"col\":12}},{\"id\":\"lMFVKYnXfs\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Per Employee\",\"col\":12}},{\"id\":\"TnyeDG5WCl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}}]",
  "creation": "2026-01-30 14:22:02.632836",
  "custom_blocks": [],
  "docstatus": 0,
@@ -22,7 +18,7 @@
  "is_hidden": 0,
  "label": "Leads",
  "links": [],
- "modified": "2026-02-10 16:38:44.219819",
+ "modified": "2026-02-25 15:57:44.966477",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Leads",

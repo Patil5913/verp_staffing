@@ -1,13 +1,6 @@
 import frappe
+from verp_staffing.install import DEPARTMENT_WORKSPACE_ROLE_MAP
 
-DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Sales": ["_show_crm"],
-    "Lead": ["_show_crm"],
-    "Resume": ["_show_technical","_show_other_service"],
-    "Technical": ["_show_technical","_show_other_service"],
-    "Marketing": ["_show_marketing","_show_other_service"],
-    "HR": ["_show_employees"],
-}
 
 def sync_user_workspace_roles(doc, method=None):
     """

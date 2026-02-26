@@ -1,6 +1,11 @@
 {
- "charts": [],
- "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"5pQcazucd4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunitys\",\"col\":3}},{\"id\":\"3N48W4UHCN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
+ "charts": [
+  {
+   "chart_name": "Lead Conversion Funnel",
+   "label": "Lead Conversion Funnel"
+  }
+ ],
+ "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"7pU0p-amop\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"5pQcazucd4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunitys\",\"col\":3}},{\"id\":\"3N48W4UHCN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
  "creation": "2026-01-30 14:17:38.394848",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +18,7 @@
  "is_hidden": 0,
  "label": "Sales",
  "links": [],
- "modified": "2026-02-13 15:15:56.586050",
+ "modified": "2026-02-25 16:22:54.178773",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales",
