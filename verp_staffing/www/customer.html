@@ -1,3 +1,52 @@
+{% if not is_verified %}
+<script>
+    console.log("not verified yet");
+    
+</script>
+<div
+    style="max-width:400px;margin:100px auto;background:white;padding:30px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+
+    <h2>Email Verification</h2>
+
+    {% if auth_error %}
+    <p style="color:red;">{{ auth_error }}</p>
+    {% endif %}
+
+    {% if not otp_sent %}
+    <!-- STEP 1: EMAIL FORM -->
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+        <input type="hidden" name="action" value="send_otp">
+
+        <input type="email" name="email" placeholder="Enter your email" required
+            style="width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;">
+
+        <button type="submit" style="width:100%;">Send OTP</button>
+    </form>
+
+    {% else %}
+    <!-- STEP 2: OTP FORM -->
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+        <input type="hidden" name="action" value="verify_otp">
+        <input type="hidden" name="email" value="{{ email }}">
+
+        <input type="text" name="otp" placeholder="Enter OTP" required
+            style="width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;">
+
+        <button type="submit" style="width:100%;">Verify OTP</button>
+    </form>
+    {% endif %}
+
+</div>
+
+{% else %}
+
+<!-- PUT YOUR FULL DASHBOARD HTML HERE -->
+<script>
+    console.log("verified");
+    
+</script>
 <h1 style="margin-bottom: 30px; font-weight: 600;">Customer Dashboard</h1>
 
 <style>
@@ -245,3 +294,4 @@
     <p>No scheduled interviews.</p>
     {% endfor %}
 </div>
+{% endif %}

@@ -9,6 +9,9 @@ frappe.ui.form.on("Employee", {
             }
         });
 
+        toggle_linkedin_section(frm);
+
+
 
 
         frm.fields_dict.employee_assignment_details_table.grid.wrapper
@@ -17,6 +20,7 @@ frappe.ui.form.on("Employee", {
                 const $row = $target.closest('.grid-row');
                 const cdn = $row.attr('data-name');
                 const cdt = 'Employee Assignment Detail'; // Hardcode if lookup fails
+                // toggle_linkedin_section(frm);
 
                 console.log("cdn: ", cdn)
                 if (!cdn) {
@@ -44,7 +48,7 @@ frappe.ui.form.on("Employee", {
                     return {};
                 }
 
-                
+
                 let parent_role = null;
 
                 hierarchy.forEach(r => {
@@ -73,33 +77,7 @@ frappe.ui.form.on("Employee", {
                 };
             };
     },
-// frappe.ui.form.on("Employee Assignment Detail", {
-//     department(frm, cdt, cdn) {
-//         const row = locals[cdt][cdn];
-//         if (!row.department) return;
-
-//         console.log("row", row);
-
-
-//         fetch_department_hierarchy(frm, row);
-//     },
-
-//     designation(frm, cdt, cdn) {
-//         console.log("from designation");
-//         const row = frappe.get_doc(cdt, cdn);
-//         if (!row.designation) return;
-
-//         console.log("row", row);
-
-
-//         fetch_department_hierarchy(frm, row);
-
-
-
-//         frappe.model.set_value(cdt, cdn, "assigned_to", null);
-//     }
-
-// });
+   
 
     user(frm) {
         if (!frm.doc.user) return;
@@ -113,34 +91,6 @@ frappe.ui.form.on("Employee", {
 
 });
 
-
-// frappe.ui.form.on("Employee Assignment Detail", {
-//     department(frm, cdt, cdn) {
-//         const row = locals[cdt][cdn];
-//         if (!row.department) return;
-
-//         console.log("row", row);
-
-
-//         fetch_department_hierarchy(frm, row);
-//     },
-
-//     designation(frm, cdt, cdn) {
-//         console.log("from designation");
-//         const row = frappe.get_doc(cdt, cdn);
-//         if (!row.designation) return;
-
-//         console.log("row", row);
-
-
-//         fetch_department_hierarchy(frm, row);
-
-
-
-//         frappe.model.set_value(cdt, cdn, "assigned_to", null);
-//     }
-
-// });
 
 
 async function fetch_department_hierarchy(frm, row) {
@@ -270,4 +220,24 @@ function apply_assigned_to_filter(frm, cdt, cdn) {
 }
 
 
+function toggle_linkedin_section(frm) {
+    let show = false;
 
+    (frm.doc.employee_assignment_details_table || []).forEach(row => {
+        if (row.department === "Lead") {
+            show = true;
+        }
+    });
+
+    frm.toggle_display("linkedin_credentials", show);
+}
+
+frappe.ui.form.on("Employee Assignment Detail", {
+    department(frm) {
+        toggle_linkedin_section(frm);
+    },
+
+    // employee_assignment_details_table_remove(frm) {
+    //     toggle_linkedin_section(frm);
+    // }
+}); 

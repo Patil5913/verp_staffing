@@ -13,7 +13,9 @@
   "series",
   "employee_name",
   "employee_assignment_details_table_section",
-  "employee_assignment_details_table"
+  "employee_assignment_details_table",
+  "section_break_dwei",
+  "linkedin_credentials"
  ],
  "fields": [
   {
@@ -60,12 +62,22 @@
   {
    "fieldname": "section_break_ubgx",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_dwei",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "linkedin_credentials",
+   "fieldtype": "Table",
+   "label": "LinkedIn Credentials",
+   "options": "Employee work"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 11:18:02.299515",
+ "modified": "2026-02-20 15:22:24.417504",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -133,12 +145,12 @@
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager",
+   "role": "marketing Master Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Marketing Manager",
+   "role": "marketing Manager",
    "select": 1
   },
   {
