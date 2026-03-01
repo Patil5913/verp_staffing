@@ -271,12 +271,7 @@ def get_chart(data):
                     "values": [row["count"] for row in data],
                 }
             ],
-            "colors": [
-                "#4F46E5",  # Total Leads
-                "#0284C7",  # Leads with Opportunity
-                "#16A34A",  # Converted
-                "#DC2626",  # Lost
-            ],
         },
         "type": "bar",
+        "colors": ["#8494FF"]
     }

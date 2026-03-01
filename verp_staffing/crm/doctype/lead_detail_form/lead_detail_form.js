@@ -2,7 +2,7 @@ frappe.ui.form.on("Lead Detail Form", {
 
     refresh(frm) {
         update_parent_skills(frm);
-        // frm.toggle_enable('reference_table', false);
+        frm.toggle_enable('reference_table', false);
     },
 
     additional_skills(frm) {
