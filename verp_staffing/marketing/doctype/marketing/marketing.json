@@ -59,7 +59,8 @@
   },
   {
    "fieldname": "customer_details_html",
-   "fieldtype": "HTML"
+   "fieldtype": "HTML",
+   "label": "Customer Data"
   },
   {
    "fieldname": "title",
@@ -118,7 +119,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-23 14:52:42.428849",
+ "modified": "2026-02-28 16:12:42.243234",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -126,15 +127,18 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "marketing Master Manager",
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {
@@ -150,16 +154,11 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -171,9 +170,20 @@
   {
    "create": 1,
    "read": 1,
-   "role": "marketing Manager",
+   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -181,9 +191,14 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Senior Recruiter",
+   "report": 1,
+   "role": "marketing Master Manager",
    "select": 1,
+   "share": 1,
    "write": 1
   }
  ],

@@ -30,10 +30,13 @@ class LeadDetailForm(Document):
         existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
 
         for field in self.meta.fields:
-            if field.fieldtype == "Table":
-                continue
             fieldname = field.fieldname
-            if fieldname and fieldname not in (
+
+            if not fieldname:
+                continue
+
+            # Skip system fields
+            if fieldname in (
                 "name",
                 "owner",
                 "creation",
@@ -41,6 +44,26 @@ class LeadDetailForm(Document):
                 "modified_by",
                 "docstatus",
             ):
+                continue
+
+            if fieldname == "reference_table":
+                continue
+
+            if field.fieldtype == "Table":
+                existing_doc.set(fieldname, [])  # clear old rows
+
+                for row in self.get(fieldname) or []:
+                    row_data = row.as_dict()
+
+                    row_data.pop("name", None)
+                    row_data.pop("parent", None)
+                    row_data.pop("parenttype", None)
+                    row_data.pop("parentfield", None)
+                    row_data.pop("idx", None)
+
+                    existing_doc.append(fieldname, row_data)
+
+            else:
                 existing_doc.set(fieldname, self.get(fieldname))
 
         existing_doc.save(ignore_permissions=True)

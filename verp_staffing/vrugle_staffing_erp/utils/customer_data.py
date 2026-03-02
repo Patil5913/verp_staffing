@@ -8,7 +8,7 @@ def get_data_by_customer(customer, fields):
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
         
-    source_doctype = "Lead Details"
+    source_doctype = "Lead Detail Form"
     
     meta = frappe.get_meta(source_doctype)
     normal_fields = []
@@ -34,7 +34,7 @@ def get_data_by_customer(customer, fields):
             ["Doctype Reference", "reference_doctype", "=", "Customer"],
             ["Doctype Reference", "reference_person", "=", customer],
         ],
-        order_by="`tabLead Details`.creation desc",
+        order_by="`tabLead Detail Form`.creation desc",
         distinct=True
     )
     

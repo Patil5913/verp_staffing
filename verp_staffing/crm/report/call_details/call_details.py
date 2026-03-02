@@ -336,4 +336,5 @@ def get_chart(data):
             ],
         },
         "type": "bar",
+        "colors": ["#8494FF"]
     }

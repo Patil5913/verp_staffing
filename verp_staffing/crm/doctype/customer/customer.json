@@ -119,6 +119,7 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
+   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -178,7 +179,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-19 17:44:07.119821",
+ "modified": "2026-02-28 16:07:43.906787",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -188,14 +189,19 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Person",
+   "role": "Sales Master Manager",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Manager",
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
   },
   {
    "create": 1,
@@ -210,10 +216,14 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Sales Manager",
-   "write": 1
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
   },
   {
    "create": 1,
@@ -222,13 +232,14 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
+   "role": "Sales Person",
+   "write": 1
   },
   {
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Resume Person",
    "select": 1
   },
   {
@@ -239,32 +250,12 @@
   },
   {
    "read": 1,
-   "role": "marketing Manager",
+   "role": "Marketing Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person",
+   "role": "marketing Master Manager",
    "select": 1
   },
   {
@@ -274,22 +265,12 @@
   },
   {
    "read": 1,
-   "role": "Recruiter",
+   "role": "Senior Resume Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "RUC Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager",
+   "role": "JDC",
    "select": 1
   },
   {
@@ -299,7 +280,32 @@
   },
   {
    "read": 1,
-   "role": "JDC",
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_marketing"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
    "select": 1
   }
  ],
