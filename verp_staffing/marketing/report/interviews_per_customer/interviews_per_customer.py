@@ -134,6 +134,7 @@ def execute(filters=None):
             ],
         },
         "type": "bar",
+        "colors": ["#8494FF"]
     }
 
     return columns, data, None, chart

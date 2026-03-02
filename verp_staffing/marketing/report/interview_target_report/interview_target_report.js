@@ -1,3 +1,6 @@
+let bar_observer = null;
+let bar_interval = null;
+
 frappe.query_reports["Interview Target Report"] = {
 	filters: [
 		{
@@ -23,7 +26,12 @@ frappe.query_reports["Interview Target Report"] = {
 		},
 	],
 
+	onload: function (report) {
+		start_bar_coloring();
+	},
+
 	after_datatable_render: function (table_instance) {
+		// this code for colour a row in table
 		table_instance.datamanager.data.forEach((rowData, rowIndex) => {
 			if (rowData.to_highlight) {
 				table_instance.style.setStyle(`.dt-row-${rowIndex} .dt-cell`, {
@@ -31,5 +39,81 @@ frappe.query_reports["Interview Target Report"] = {
 				});
 			}
 		});
+
+		// Restart coloring every time datatable re-renders
+		start_bar_coloring();
 	},
 };
+
+function apply_bar_colors() {
+	const report_data = frappe.query_report.data || [];
+	const bars = document.querySelectorAll(".dataset-units rect.bar.mini");
+	if (!bars.length || !report_data.length) return false;
+
+	bars.forEach((bar, index) => {
+		const row = report_data[index];
+		if (!row) return;
+		const completed = row.completed_target || 0;
+		const target = row.target || 0;
+		const color = completed <
+		target ? "#f50004ff" : "#28a745";
+		bar.style.setProperty("fill", color, "important");
+	});
+
+	return true;
+}
+
+function start_bar_coloring() {
+	// Clear any existing interval
+	if (bar_interval) {
+		clearInterval(bar_interval);
+		bar_interval = null;
+	}
+
+	// Disconnect existing observer
+	if (bar_observer) {
+		bar_observer.disconnect();
+		bar_observer = null;
+	}
+
+	let attempts = 0;
+
+	// Keep trying every 100ms until bars are colored
+	bar_interval = setInterval(() => {
+		const success = apply_bar_colors();
+		attempts++;
+
+		// Stop after success or 5 seconds
+		if (attempts > 50) {
+			clearInterval(bar_interval);
+			bar_interval = null;
+			return;
+		}
+
+		if (success) {
+			clearInterval(bar_interval);
+			bar_interval = null;
+
+			// After success, watch for any re-render that resets colors
+			const chart_area = document.querySelector(".frappe-chart") || document.body;
+			bar_observer = new MutationObserver(() => {
+				const bars = document.querySelectorAll(".dataset-units rect.bar.mini");
+				if (bars.length > 0) {
+					// Check if colors got reset
+					const first_bar = bars[0];
+					const current_fill = first_bar.style.getPropertyValue("fill");
+					if (!current_fill || current_fill === "rgb(40, 167, 69)") {
+						apply_bar_colors();
+					}
+				}
+			});
+
+			bar_observer.observe(chart_area, {
+				childList: true,
+				subtree: true,
+				attributes: true,
+				attributeFilter: ["style"],
+			});
+		}
+	}, 10);
+}
