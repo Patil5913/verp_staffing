@@ -125,19 +125,6 @@ frappe.ui.form.on("Lead", {
 		}
 	},
 
-	after_save: function (frm) {
-		// Trigger the update after the document is saved and has a name
-		if (frm.doc.lead_details) {
-			frappe.call({
-				method: "verp_staffing.crm.api.lead_details.update_lead_reference",
-				args: {
-					lead_details_id: frm.doc.lead_details,
-					ref_doctype: frm.doc.doctype,
-					ref_name: frm.doc.name,
-				},
-			});
-		}
-	},
 });
 
 frappe.ui.form.on("Lead Course", {
@@ -243,6 +230,7 @@ function create_opportunity(frm, owner) {
 		opportunity_from: "Lead",
 		party_name: frm.doc.name,
 		opportunity_owner: owner,
+		name1 : frm.doc.name
 	};
 
 	frappe.call({

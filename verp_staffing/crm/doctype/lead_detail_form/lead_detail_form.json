@@ -376,8 +376,7 @@
    "fieldname": "customer",
    "fieldtype": "Link",
    "label": "Customer",
-   "options": "Customer",
-   "unique": 1
+   "options": "Customer"
   },
   {
    "description": "NOTE: Provide country code with number.",
@@ -416,7 +415,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-19 17:04:06.750608",
+ "modified": "2026-02-21 15:24:01.479903",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

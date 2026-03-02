@@ -29,7 +29,8 @@ ROLES = [
     "HR Manager",
     "HR",
     "Extra Menu Item Not Show",
-    "_show_crm",
+    "_show_sales",
+    "_show_lead",
     "_show_technical",
     "_show_marketing",
     "_show_employees",
@@ -210,35 +211,35 @@ ROLE_PERMISSIONS = {
     },
     "Marketing Manager": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select","report"],
+        "Interview": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Marketing Team Lead": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select","report"],
+        "Interview": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Senior Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select","report"],
+        "Interview": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Marketing Mentor": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select","report"],
+        "Interview": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
     },
     "Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
-        "Interview": ["read", "write", "create", "select","report"],
+        "Interview": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -315,7 +316,10 @@ ROLE_PERMISSIONS = {
     "Inbox User": {
         "Communication": ["read", "create", "email"],
         "Email Account": ["read"],
-    }
+    },
+    "_show_marketing": {"Customer": ["read", "report"]},
+    "_show_lead": {"Lead": ["read", "report"]},
+    "_show_sales": {"Lead": ["read", "report"]},
 }
 
 
@@ -678,28 +682,28 @@ FORM_TOURS = {
 
 
 def after_install():
-    # seed_services_and_departments()
+    seed_services_and_departments()
     setup_navbar_settings()
     seed_website_setting()
-    # create_interview_statuses()
-    # seed_sales_stages()
-    # seed_type_of_interview()
-    # create_all_roles()
-    # seed_employee_departments()
-    # assign_permissions_to_roles(ROLE_PERMISSIONS)
-    # seed_hierarchy()
+    create_interview_statuses()
+    seed_sales_stages()
+    seed_type_of_interview()
+    create_all_roles()
+    seed_employee_departments()
+    assign_permissions_to_roles(ROLE_PERMISSIONS)
+    seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
-    # seed_employees_with_hierarchy(HIERARCHY_DATA)
-    # seed_form_tours()
-
+    seed_employees_with_hierarchy(HIERARCHY_DATA)
+    seed_form_tours()
 
 
 import requests
 from frappe.utils.file_manager import save_file
 
+
 def setup_navbar_settings():
-    
+
     navbar = frappe.get_single("Navbar Settings")
     updated = False
 
@@ -712,14 +716,14 @@ def setup_navbar_settings():
         if row.item_label == "Frappe Support":
             row.hidden = 1
             updated = True
-            
+
     url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
 
     existing = frappe.db.get_value(
         "File",
         {"attached_to_doctype": "Navbar Settings"},
         ["name", "file_url"],
-        as_dict=True
+        as_dict=True,
     )
     file_url = ""
     if existing:
@@ -729,14 +733,16 @@ def setup_navbar_settings():
         content_type = response.headers.get("Content-Type", "")
 
         if not content_type.startswith("image/"):
-            frappe.throw(f"Downloaded file is not an image. Content-Type: {content_type}")
+            frappe.throw(
+                f"Downloaded file is not an image. Content-Type: {content_type}"
+            )
 
         file_doc = save_file(
             fname="app_logo.png",
             content=response.content,
             dt="Navbar Settings",
             dn="Navbar Settings",
-            is_private=0
+            is_private=0,
         )
         file_url = file_doc.file_url
 
@@ -745,7 +751,7 @@ def setup_navbar_settings():
 
     if updated:
         navbar.save(ignore_permissions=True)
-        frappe.db.commit()  
+        frappe.db.commit()
 
 
 def seed_website_setting():
@@ -767,7 +773,7 @@ def seed_website_setting():
         "File",
         {"attached_to_doctype": "Website Settings"},
         ["name", "file_url"],
-        as_dict=True
+        as_dict=True,
     )
 
     file_url = ""
@@ -778,14 +784,16 @@ def seed_website_setting():
         content_type = response.headers.get("Content-Type", "")
 
         if not content_type.startswith("image/"):
-            frappe.throw(f"Downloaded file is not an image. Content-Type: {content_type}")
+            frappe.throw(
+                f"Downloaded file is not an image. Content-Type: {content_type}"
+            )
 
         file_doc = save_file(
             fname="app_logo.png",
             content=response.content,
             dt="Website Settings",
             dn="Website Settings",
-            is_private=0
+            is_private=0,
         )
         file_url = file_doc.file_url
 
@@ -859,10 +867,12 @@ def create_interview_statuses():
 
     for name in statuses:
         if not frappe.db.exists("Interview Status", name):
-            doc = frappe.get_doc({
-                "doctype": "Interview Status",
-                "status_name": name,
-            })
+            doc = frappe.get_doc(
+                {
+                    "doctype": "Interview Status",
+                    "status_name": name,
+                }
+            )
             doc.insert(ignore_permissions=True)
 
     frappe.db.commit()
@@ -1062,7 +1072,16 @@ def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
     # Names of workspaces to keep visible
-    keep_list = ["CRM", "Users", "Technical", "Marketings", "Settings", "Employees" , "Sales" , "Leads","Other Service"]
+    keep_list = [
+        "Users",
+        "Technical",
+        "Marketings",
+        "Settings",
+        "Employees",
+        "Sales",
+        "Leads",
+        "Other Service",
+    ]
 
     # Hide all others
     frappe.db.sql(
@@ -1190,8 +1209,8 @@ from collections import defaultdict
 TECH_PLACEHOLDER = "General"
 
 DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Sales": ["_show_crm"],
-    "Lead": ["_show_crm"],
+    "Sales": ["_show_sales"],
+    "Lead": ["_show_lead"],
     "Resume": ["_show_technical"],
     "Technical": ["_show_technical"],
     "Marketing": ["_show_marketing"],
@@ -1307,6 +1326,7 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
                     ensure_user_has_workspace_roles(child.user, workspace_roles)
     frappe.db.commit()
 
+
 def ensure_user_has_workspace_roles(user_email: str, roles: list[str]):
     if not roles:
         return
@@ -1324,19 +1344,18 @@ def ensure_user_has_workspace_roles(user_email: str, roles: list[str]):
             continue
 
         if not frappe.db.exists("Role", role):
-            frappe.log_error(
-                "Missing Workspace Role",
-                f"Role '{role}' does not exist"
-            )
+            frappe.log_error("Missing Workspace Role", f"Role '{role}' does not exist")
             continue
 
-        frappe.get_doc({
-            "doctype": "Has Role",
-            "parent": user_email,
-            "parenttype": "User",
-            "parentfield": "roles",
-            "role": role,
-        }).insert(ignore_permissions=True)
+        frappe.get_doc(
+            {
+                "doctype": "Has Role",
+                "parent": user_email,
+                "parenttype": "User",
+                "parentfield": "roles",
+                "role": role,
+            }
+        ).insert(ignore_permissions=True)
 
 
 def get_primary_business_role(user_email: str) -> str | None:
@@ -1369,7 +1388,7 @@ SERVICE_DEPARTMENT_MAP = {
         "Training",
         "Cover Letter",
     ],
-    "Resume":[
+    "Resume": [
         "resume",
     ],
     "Marketing": [
@@ -1382,10 +1401,12 @@ def seed_services_and_departments():
     for department_name, services in SERVICE_DEPARTMENT_MAP.items():
 
         if not frappe.db.exists("Department", department_name):
-            department = frappe.get_doc({
-                "doctype": "Department",
-                "department_name": department_name,
-            })
+            department = frappe.get_doc(
+                {
+                    "doctype": "Department",
+                    "department_name": department_name,
+                }
+            )
             department.insert(ignore_permissions=True)
         else:
             department = frappe.get_doc("Department", department_name)
@@ -1395,14 +1416,14 @@ def seed_services_and_departments():
         for service_name in services:
 
             if not frappe.db.exists("Service", service_name):
-                service = frappe.get_doc({
-                    "doctype": "Service",
-                    "service_name": service_name,
-                })
+                service = frappe.get_doc(
+                    {
+                        "doctype": "Service",
+                        "service_name": service_name,
+                    }
+                )
                 service.insert(ignore_permissions=True)
 
-            department.append("services", {
-                "service_name": service_name
-            })
+            department.append("services", {"service_name": service_name})
 
         department.save(ignore_permissions=True)

@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-17 14:17:06.807496",
+ "modified": "2026-02-23 14:56:54.728257",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Target Report",
@@ -55,6 +55,15 @@
   },
   {
    "role": "Sales Person"
+  },
+  {
+   "role": "Marketing Mentor"
+  },
+  {
+   "role": "Marketing Manager"
+  },
+  {
+   "role": "marketing Master Manager"
   }
  ],
  "timeout": 0

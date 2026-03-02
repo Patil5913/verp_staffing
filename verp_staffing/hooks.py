@@ -33,9 +33,8 @@ app_include_js = [
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/about_override.js",
     # "/assets/verp_staffing/js/protection.js",
+    "/assets/verp_staffing/js/quick_entry_override.js",
 ]
-
-app_include_js = "/assets/verp_staffing/js/quick_entry_override.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/verp_staffing/css/verp_staffing.css"

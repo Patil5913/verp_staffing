@@ -1,15 +1,11 @@
 {
  "charts": [
   {
-   "chart_name": "Lead Conversion Funnel",
-   "label": "Lead Conversion Funnel"
-  },
-  {
    "chart_name": "Lead Per Employee",
    "label": "Lead Per Employee"
   }
  ],
- "content": "[{\"id\":\"VDpv-a6XJ8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads</span>\",\"col\":12}},{\"id\":\"lMFVKYnXfs\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Per Employee\",\"col\":12}},{\"id\":\"NWFmNGGG6L\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"TnyeDG5WCl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"FBXClvfOGO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"xphG6CPK-D\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lead Conversion Funnel\",\"col\":3}},{\"id\":\"4IhcKabiw0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lead Per Employee\",\"col\":3}},{\"id\":\"CNZOZ-f_-W\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lead Details\",\"col\":3}}]",
+ "content": "[{\"id\":\"VDpv-a6XJ8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads</span>\",\"col\":12}},{\"id\":\"lMFVKYnXfs\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Per Employee\",\"col\":12}},{\"id\":\"TnyeDG5WCl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}}]",
  "creation": "2026-01-30 14:22:02.632836",
  "custom_blocks": [],
  "docstatus": 0,
@@ -22,7 +18,7 @@
  "is_hidden": 0,
  "label": "Leads",
  "links": [],
- "modified": "2026-02-20 15:54:56.958141",
+ "modified": "2026-02-25 15:57:44.966477",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Leads",
