@@ -1,0 +1,178 @@
+{
+ "actions": [],
+ "creation": "2026-02-13 14:16:23.565498",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "surname",
+  "first_name",
+  "fathers_name",
+  "column_break_oolc",
+  "email",
+  "phone_number",
+  "gender",
+  "section_break_pqwy",
+  "visa_status",
+  "linkedin_id",
+  "address",
+  "title",
+  "column_break_zhgq",
+  "country",
+  "state",
+  "social_links",
+  "section_break_cqoe",
+  "reference_table",
+  "educational_details",
+  "past_experience_details",
+  "address_history"
+ ],
+ "fields": [
+  {
+   "fieldname": "surname",
+   "fieldtype": "Data",
+   "label": "Surname"
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "First Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fathers_name",
+   "fieldtype": "Data",
+   "label": "Father's Name"
+  },
+  {
+   "description": "NOTE: Provide country code with number.",
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "label": "Phone Number",
+   "placeholder": "Exp: +1 xxx xxx xxxx"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "linkedin_id",
+   "fieldtype": "Data",
+   "label": "LinkedIn ID"
+  },
+  {
+   "fieldname": "educational_details",
+   "fieldtype": "Table",
+   "label": "Educational Details",
+   "options": "Lead Course"
+  },
+  {
+   "bold": 1,
+   "fieldname": "past_experience_details",
+   "fieldtype": "Table",
+   "label": "Past Experience Details",
+   "options": "Lead Past Experience"
+  },
+  {
+   "bold": 1,
+   "fieldname": "address_history",
+   "fieldtype": "Table",
+   "label": "Address History",
+   "options": "Lead Address History"
+  },
+  {
+   "fieldname": "reference_table",
+   "fieldtype": "Table",
+   "label": "Reference Table",
+   "options": "Doctype Reference"
+  },
+  {
+   "fieldname": "section_break_cqoe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Data",
+   "label": "Address"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "State"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country"
+  },
+  {
+   "fieldname": "column_break_oolc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "visa_status",
+   "fieldtype": "Select",
+   "label": "Visa Status",
+   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Select",
+   "label": "Gender",
+   "options": "\nMen\nWomen\netc."
+  },
+  {
+   "fieldname": "social_links",
+   "fieldtype": "Small Text",
+   "label": "Social Links"
+  },
+  {
+   "fieldname": "section_break_pqwy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_zhgq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-14 15:16:44.223326",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "Lead Details",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "title",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

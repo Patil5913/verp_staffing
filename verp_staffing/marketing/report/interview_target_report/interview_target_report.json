@@ -1,0 +1,70 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-02-17 14:14:29.416704",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-02-23 14:56:54.728257",
+ "modified_by": "Administrator",
+ "module": "Marketing",
+ "name": "Interview Target Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Marketing",
+ "report_name": "Interview Target Report",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Lead Manager"
+  },
+  {
+   "role": "Lead Employee"
+  },
+  {
+   "role": "Lead Manager"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Lead Master Manager"
+  },
+  {
+   "role": "Sales Employee"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Lead Person"
+  },
+  {
+   "role": "Sales Master Manager"
+  },
+  {
+   "role": "Lead Team Lead"
+  },
+  {
+   "role": "Sales Team Lead"
+  },
+  {
+   "role": "Sales Person"
+  },
+  {
+   "role": "Marketing Mentor"
+  },
+  {
+   "role": "Marketing Manager"
+  },
+  {
+   "role": "marketing Master Manager"
+  }
+ ],
+ "timeout": 0
+}

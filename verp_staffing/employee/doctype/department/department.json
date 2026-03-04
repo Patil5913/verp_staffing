@@ -13,7 +13,8 @@
   "roles_html",
   "roles_json",
   "column_break_zerj",
-  "head_of_department"
+  "head_of_department",
+  "services"
  ],
  "fields": [
   {
@@ -54,13 +55,20 @@
   {
    "fieldname": "roles_json",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Roles JSON"
+  },
+  {
+   "fieldname": "services",
+   "fieldtype": "Table MultiSelect",
+   "label": "Services",
+   "options": "Department Service"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-24 10:34:33.677103",
+ "modified": "2026-01-08 16:51:06.525294",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Department",

@@ -1,6 +1,5 @@
 {
  "actions": [],
- "autoname": "field:title",
  "creation": "2025-12-15 16:01:57.359022",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,7 +11,16 @@
   "column_break_jejh",
   "interview_list",
   "customer_details_section",
-  "customer_details_html"
+  "job_application_count",
+  "section_break_ivbq",
+  "start_date",
+  "target_based_on",
+  "column_break_gkfy",
+  "target",
+  "section_break_xurw",
+  "customer_details_html",
+  "notes_section",
+  "notes_html"
  ],
  "fields": [
   {
@@ -50,7 +58,8 @@
   },
   {
    "fieldname": "customer_details_html",
-   "fieldtype": "HTML"
+   "fieldtype": "HTML",
+   "label": "Customer Data"
   },
   {
    "fieldname": "title",
@@ -58,21 +67,77 @@
    "hidden": 1,
    "label": "Title",
    "unique": 1
+  },
+  {
+   "fieldname": "job_application_count",
+   "fieldtype": "Table",
+   "label": "Job Application Count",
+   "options": "Job Application Count"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "target",
+   "fieldtype": "Int",
+   "label": "Target"
+  },
+  {
+   "fieldname": "section_break_ivbq",
+   "fieldtype": "Section Break",
+   "label": "Target"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "column_break_gkfy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_xurw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Weekly",
+   "fieldname": "target_based_on",
+   "fieldtype": "Select",
+   "label": "Target Based On",
+   "options": "Daily\nWeekly\nMonthly"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-29 16:14:22.638542",
+ "modified": "2026-02-28 16:12:42.243234",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
- "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
    "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -87,33 +152,9 @@
    "write": 1
   },
   {
-   "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "marketing Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
    "create": 1,
    "read": 1,
-   "role": "marketing Manager",
+   "role": "Marketing Manager",
    "select": 1,
    "write": 1
   },
@@ -127,13 +168,6 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Marketing Mentor",
    "select": 1,
    "write": 1
@@ -141,8 +175,28 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Recruiter",
+   "role": "Senior Recruiter",
    "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "marketing Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   }
  ],

@@ -7,11 +7,13 @@
  "field_order": [
   "customer",
   "assign_to",
+  "resume",
   "column_break_rtjg",
   "status",
   "outsource",
   "session_details_section",
   "session_details",
+  "lead_details",
   "notes_tab",
   "notes_html",
   "activites_tab",
@@ -42,7 +44,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "session_details_section",
@@ -78,17 +80,34 @@
    "fieldtype": "Link",
    "label": "Outsource Person",
    "options": "Outsource"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML",
+   "label": "Resume"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-22 16:16:14.035078",
+ "modified": "2026-02-14 10:50:24.478777",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
   {
    "create": 1,
    "delete": 1,
@@ -100,11 +119,77 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Training Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "RUC Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "JDC",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Support Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "JD",
+   "select": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "customer"
 }

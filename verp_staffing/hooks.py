@@ -26,7 +26,15 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = ["/assets/verp_staffing/css/globel.css"]
-# app_include_js = "/assets/verp_staffing/js/verp_staffing.js"
+# pdflibjs Imports
+app_include_js = [
+    "pdf_lib_bundle.bundle.js",
+    "/assets/verp_staffing/js/reusable.js",
+    "/assets/verp_staffing/js/user_custom.js",
+    "/assets/verp_staffing/js/about_override.js",
+    # "/assets/verp_staffing/js/protection.js",
+    "/assets/verp_staffing/js/quick_entry_override.js",
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/verp_staffing/css/verp_staffing.css"
@@ -43,8 +51,10 @@ app_include_css = ["/assets/verp_staffing/css/globel.css"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course","Resume","RUC", "Marketing"]
-doctype_js = {doc: "public/js/reusable.js" for doc in validation_docs}
+validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Marketing", "Customer","JDC","Cover Letter","Technical Other Services"]
+doctype_js = {
+    **{doc: "public/js/reusable.js" for doc in validation_docs},
+}
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -89,6 +99,7 @@ doctype_js = {doc: "public/js/reusable.js" for doc in validation_docs}
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
+    "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
 ]
 
 # Uninstallation
@@ -135,9 +146,7 @@ after_migrate = [
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {"User": "verp_staffing.overrides.override_user.CustomUser"}
 
 # Document Events
 # ---------------
@@ -146,17 +155,22 @@ after_migrate = [
 doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
-        "before_save": "verp_staffing.overrides.user.prevent_manual_workspace_roles",
-        "after_insert": "verp_staffing.overrides.user.after_insert"
+        "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
     },
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
-   "Employee": {
+    "Employee": {
         "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
+        "before_save": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
         "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
     },
+    "Interview Status": {
+        "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
+        "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",
+        "on_update": "verp_staffing.marketing.doctype.interview.interview.sync_kanban",
+    }
 }
 
 # Scheduled Tasks
@@ -260,11 +274,8 @@ before_request = [
 # }
 
 fixtures = [
-    {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "interview"]]}
-]
-
-# pdflibjs Imports
-app_include_js = [
-    "/assets/verp_staffing/js/pdf.js",
-    "/assets/verp_staffing/js/reusable.js",
+    {
+        "dt": "Kanban Board",
+        "filters": [["kanban_board_name", "=", "Interview"]]
+    }
 ]

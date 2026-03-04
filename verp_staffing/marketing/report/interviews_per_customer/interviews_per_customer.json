@@ -1,0 +1,59 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-01-27 17:01:50.909366",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-01-28 17:13:17.317667",
+ "modified_by": "Administrator",
+ "module": "Marketing",
+ "name": "Interviews Per Customer",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Interview",
+ "report_name": "Interviews Per Customer",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Sales Master Manager"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Sales Team Lead"
+  },
+  {
+   "role": "Sales Person"
+  },
+  {
+   "role": "Marketing Manager"
+  },
+  {
+   "role": "Marketing Team Lead"
+  },
+  {
+   "role": "Senior Recruiter"
+  },
+  {
+   "role": "Marketing Mentor"
+  },
+  {
+   "role": "recruiter"
+  },
+  {
+   "role": "_show_marketing"
+  },
+  {}
+ ],
+ "timeout": 0
+}

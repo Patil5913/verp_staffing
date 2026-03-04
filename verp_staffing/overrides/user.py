@@ -1,5 +1,5 @@
+from pydoc import doc
 import frappe
-from frappe import _
 
 SYSTEM_WORKSPACE_ROLES = {
     "_show_crm",
@@ -59,7 +59,6 @@ def warn_if_employee_missing(user_doc):
 
 @frappe.whitelist()
 def check_employee_missing(user):
-    frappe.errprint(f"Checking employee missing for user: {user}")
     if not user:
         return False
 
@@ -100,27 +99,34 @@ def check_employee_missing(user):
 #     return
 
 
-def after_insert(doc, method):
-    frappe.errprint(f"User after_insert hook triggered for user: {doc.name}")
-    # # creator is doc.owner
-    # primary_action = {
-    #     'label': 'Click Me',
-    #     "client_action": "redirect_to_employee_form", # Dotted path to global JS function
-    #     'is_primary': True, # optional, makes the button blue
-    #     "hide_on_success": True
-    # }
-    frappe.msgprint(
-        msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
-        title=_("Missing Employee Record"),
-        primary_action={
-            'label': _("Create Employee"),
-            'server_action': 'verp_staffing.overrides.user.redirect_to_employee_form',
-            'hide_on_success': True 
-        }
+def sync_employee_enabled_from_user(doc, method=None):
+    if frappe.flags.in_employee_sync:
+        return
+
+    if not doc.get_db_value("name"):
+        return
+
+    old = doc.get_db_value("enabled")
+    if old == doc.enabled:
+        return
+
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user": doc.name},
+        "name"
     )
 
+    if not employee:
+        return
 
-@frappe.whitelist()
-def redirect_to_employee_form():
-    frappe.errprint("Redirecting to Employee form")
-    frappe.set_route("Form", "Employee", "new-employee-1")
+    frappe.flags.in_employee_sync = True
+    try:
+        frappe.db.set_value(
+            "Employee",
+            employee,
+            "enabled",
+            doc.enabled,
+            update_modified=False
+        )
+    finally:
+        frappe.flags.in_employee_sync = False

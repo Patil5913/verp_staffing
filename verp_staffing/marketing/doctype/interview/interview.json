@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:company",
  "creation": "2025-12-17 12:10:25.512845",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -27,8 +26,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Company",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
   },
   {
    "fieldname": "column_break_iehb",
@@ -47,10 +45,10 @@
   },
   {
    "fieldname": "status",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Interview Scheduled\nOngoing Interview\nAccepted\nRejected",
+   "options": "Interview Status",
    "reqd": 1
   },
   {
@@ -66,16 +64,19 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-28 16:52:06.724640",
+ "modified": "2026-01-28 17:55:32.438272",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
- "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
    "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -91,34 +92,11 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
    "role": "Sales Team Lead"
   },
   {
    "read": 1,
    "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
   },
   {
    "create": 1,
@@ -129,8 +107,20 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Senior Recruiter",
+   "report": 1,
+   "role": "marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "marketing Manager",
    "select": 1,
    "write": 1
   },
@@ -144,7 +134,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "recruiter",
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
    "select": 1,
    "write": 1
   }

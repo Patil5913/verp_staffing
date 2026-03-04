@@ -1,20 +1,23 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2025-11-14 20:59:35.429623",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "opportunity",
+  "name1",
+  "lead_details",
+  "customer_from",
+  "party_name",
   "title",
   "column_break_emkf",
   "status",
   "stage",
   "section_break_roxl",
-  "lead_details",
+  "lead_details_html",
   "sales_tab",
   "section_break_gtmf",
   "sales_content",
+  "sales_order",
   "resume_tab",
   "resume_html",
   "technical_tab",
@@ -30,22 +33,13 @@
  ],
  "fields": [
   {
-   "fieldname": "opportunity",
-   "fieldtype": "Link",
-   "label": "Opportunity",
-   "options": "Opportunity",
-   "reqd": 1,
-   "unique": 1
-  },
-  {
    "bold": 1,
    "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nCandidate Placed\nCandidate Withdrawn",
-   "reqd": 1
+   "options": "Open\nCandidate Placed\nCandidate Withdrawn"
   },
   {
    "fieldname": "note_tab",
@@ -69,7 +63,7 @@
   },
   {
    "fieldname": "column_break_emkf",
-   "fieldtype": "Column Break"  
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "sales_tab",
@@ -107,15 +101,10 @@
   },
   {
    "fieldname": "lead_details",
-   "fieldtype": "HTML",
-   "label": "Lead Details"
-  },
-  {
-   "fieldname": "title",
-   "fieldtype": "Data",
-   "label": "Title",
-   "read_only": 1,
-   "unique": 1
+   "fieldtype": "Link",
+   "label": "Lead Details",
+   "options": "Lead Detail Form",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_gtmf",
@@ -130,6 +119,7 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
+   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -144,17 +134,75 @@
    "fieldname": "resume_html",
    "fieldtype": "HTML",
    "label": "Resume Details"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
+  },
+  {
+   "fieldname": "name1",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "reqd": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "customer_from",
+   "fieldtype": "Link",
+   "label": "Customer From",
+   "link_filters": "[[\"DocType\", \"name\", \"in\", [\"Lead\", \"Opportunity\"]]]",
+   "options": "DocType",
+   "set_only_once": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "party_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "options": "customer_from",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "lead_details_html",
+   "fieldtype": "HTML",
+   "label": "Lead Details"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Button",
+   "label": "Sales Order"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-24 16:32:35.339405",
+ "modified": "2026-02-28 16:07:43.906787",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -168,28 +216,102 @@
    "write": 1
   },
   {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
    "create": 1,
    "read": 1,
    "role": "Sales Employee",
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Sales Master Manager",
-   "write": 1
+   "role": "Marketing Manager",
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Sales Manager",
-   "write": 1
+   "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "JDC",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Support Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_marketing"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "title",
- "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

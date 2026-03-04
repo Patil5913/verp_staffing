@@ -1,13 +1,6 @@
 import frappe
+from verp_staffing.install import DEPARTMENT_WORKSPACE_ROLE_MAP
 
-DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Sales": ["_show_crm"],
-    "Lead": ["_show_crm"],
-    "Resume": ["_show_technical"],
-    "Technical": ["_show_technical"],
-    "Marketing": ["_show_marketing"],
-    "HR": ["_show_employees"],
-}
 
 def sync_user_workspace_roles(doc, method=None):
     """
@@ -23,6 +16,10 @@ def sync_user_workspace_roles(doc, method=None):
     frappe.flags.in_employee_sync = True
 
     user = frappe.get_doc("User", doc.user)
+    # ---- Enabled sync (Employee -> User) ----
+    if user.enabled != doc.enabled:
+        user.enabled = doc.enabled
+
 
     # 1. Collect departments & designations
     departments = set()

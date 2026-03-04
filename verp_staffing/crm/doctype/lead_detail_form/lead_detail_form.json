@@ -5,6 +5,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "authentication_section",
+  "authentication_html",
   "agreement_section",
   "agreement_html",
   "agreement_link",
@@ -18,11 +20,12 @@
   "i_consent_to_receive_sign_and_store_documents_electronically",
   "i_confirm_my_identity_and_signing_this_document_intentionally",
   "audit_trail",
+  "certificate_id",
   "personal_information_section",
   "surname",
   "first_name",
   "father_name",
-  "personl_phone_number",
+  "personal_phone_number",
   "column_break_lgnl",
   "email",
   "personal_linkedin",
@@ -49,8 +52,6 @@
   "details_for_marketing_purpose_section",
   "number_for_marketing",
   "google_voice_number",
-  "marketing_email",
-  "marketing_email_password",
   "column_break_uksq",
   "marketing_linkedin",
   "linkedin_password",
@@ -61,28 +62,20 @@
   "section_break_xllz",
   "remarks",
   "column_break_vext",
+  "files_custom_html",
   "visa_copy",
   "ead_card",
   "driving_licence",
   "old_resume",
-  "files_custom_html"
+  "section_break_odpr",
+  "reference_table"
  ],
  "fields": [
   {
    "fieldname": "email",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Email",
-   "reqd": 1
-  },
-  {
-   "description": "NOTE: Provide country code with number.",
-   "fieldname": "personl_phone_number",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Phone Number (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx",
-   "reqd": 1
+   "label": "Email"
   },
   {
    "fieldname": "date_of_birth",
@@ -97,14 +90,12 @@
   {
    "fieldname": "technologies",
    "fieldtype": "Small Text",
-   "label": "Technology In which You are looking make your resume",
-   "reqd": 1
+   "label": "Technology In which You are looking make your resume"
   },
   {
    "fieldname": "entry_date",
    "fieldtype": "Data",
-   "label": "Entry Date Into USA/Canada (Use date format: MM-YYYY)",
-   "reqd": 1
+   "label": "Entry Date Into USA/Canada (Use date format: MM-YYYY)"
   },
   {
    "fieldname": "address_history",
@@ -120,8 +111,7 @@
    "fieldname": "current_visa_status",
    "fieldtype": "Select",
    "label": "Current VISA Status",
-   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR",
-   "reqd": 1
+   "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR"
   },
   {
    "default": "0",
@@ -134,31 +124,22 @@
    "fieldname": "number_for_marketing",
    "fieldtype": "Data",
    "label": "Phone Number for marketing (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx",
-   "reqd": 1
-  },
-  {
-   "fieldname": "marketing_email",
-   "fieldtype": "Data",
-   "label": "Email ID "
+   "placeholder": "Exp: +1 xxx xxx xxxx"
   },
   {
    "fieldname": "marketing_linkedin",
    "fieldtype": "Data",
-   "label": "LinkedIn ID",
-   "reqd": 1
+   "label": "LinkedIn ID"
   },
   {
    "fieldname": "personal_linkedin",
    "fieldtype": "Data",
-   "label": "LinkedIn ID",
-   "reqd": 1
+   "label": "LinkedIn ID"
   },
   {
    "fieldname": "passport_number",
    "fieldtype": "Data",
-   "label": "Passport Number",
-   "reqd": 1
+   "label": "Passport Number"
   },
   {
    "description": " ",
@@ -166,8 +147,7 @@
    "fieldtype": "Int",
    "label": "SSN (Only Last 4-Digits)",
    "length": 4,
-   "non_negative": 1,
-   "reqd": 1
+   "non_negative": 1
   },
   {
    "description": " ",
@@ -228,11 +208,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "marketing_email_password",
-   "fieldtype": "Data",
-   "label": "Email Password"
-  },
-  {
    "fieldname": "column_break_mffv",
    "fieldtype": "Column Break"
   },
@@ -248,8 +223,7 @@
    "fieldname": "surname",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Surname",
-   "reqd": 1
+   "label": "Surname"
   },
   {
    "fieldname": "father_name",
@@ -293,27 +267,23 @@
    "fieldname": "additional_skills",
    "fieldtype": "Small Text",
    "label": "Additional Skills (List all skills separated by commas.)",
-   "placeholder": "Exp: React,Public Speaking,Docker",
-   "reqd": 1
+   "placeholder": "Exp: React,Public Speaking,Docker"
   },
   {
    "fieldname": "linkedin_password",
    "fieldtype": "Data",
-   "label": "LinkedIn Password",
-   "reqd": 1
+   "label": "LinkedIn Password"
   },
   {
    "fieldname": "first_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "First Name",
-   "reqd": 1
+   "label": "First Name"
   },
   {
    "fieldname": "current_address",
    "fieldtype": "Data",
-   "label": "Current Address (Street Address, City, State, Country, Zip code).",
-   "reqd": 1
+   "label": "Current Address (Street Address, City, State, Country, Zip code)."
   },
   {
    "fieldname": "google_voice_number",
@@ -321,7 +291,7 @@
    "label": "Google Voice Number"
   },
   {
-   "depends_on": "eval:doc.signature_method != \"Upload\"",
+   "depends_on": "eval:![\"Upload\", \"Text\"].includes(doc.signature_method)",
    "fieldname": "signature",
    "fieldtype": "Signature",
    "label": "Signature"
@@ -363,8 +333,7 @@
    "fieldname": "signature_method",
    "fieldtype": "Select",
    "label": "Signature Method",
-   "options": "Draw\nUpload",
-   "reqd": 1
+   "options": "Draw\nUpload\nText"
   },
   {
    "fieldname": "signature_custom_html",
@@ -407,22 +376,63 @@
    "fieldname": "customer",
    "fieldtype": "Link",
    "label": "Customer",
-   "options": "Customer",
-   "unique": 1
+   "options": "Customer"
+  },
+  {
+   "description": "NOTE: Provide country code with number.",
+   "fieldname": "personal_phone_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Phone Number (Provide country code with number)",
+   "placeholder": "Exp: +1 xxx xxx xxxx"
+  },
+  {
+   "fieldname": "authentication_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "authentication_html",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "certificate_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Certificate ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_odpr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "reference_table",
+   "fieldtype": "Table",
+   "label": "Reference Table",
+   "options": "Doctype Reference"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-27 09:48:53.754410",
+ "modified": "2026-02-21 15:24:01.479903",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
    "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
   },
   {
    "create": 1,
@@ -438,31 +448,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "marketing Manager"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead"
+   "role": "Marketing Manager"
   },
   {
    "read": 1,
@@ -470,15 +456,15 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator"
+   "role": "Marketing Mentor"
   },
   {
    "read": 1,
-   "role": "Senior Resume Person"
+   "role": "Sales Person"
   },
   {
    "read": 1,
-   "role": "Recruiter"
+   "role": "Sales Team Lead"
   },
   {
    "read": 1,
@@ -486,7 +472,39 @@
   },
   {
    "read": 1,
+   "role": "marketing Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
    "role": "Training Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
   },
   {
    "read": 1,
@@ -494,11 +512,11 @@
   },
   {
    "read": 1,
-   "role": "JD"
+   "role": "Sales Employee"
   },
   {
    "read": 1,
-   "role": "Sales Employee"
+   "role": "JD"
   }
  ],
  "row_format": "Dynamic",

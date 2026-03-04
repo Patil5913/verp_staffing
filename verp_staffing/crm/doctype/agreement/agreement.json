@@ -26,6 +26,7 @@
   {
    "fieldname": "data",
    "fieldtype": "JSON",
+   "hidden": 1,
    "label": "Data"
   },
   {
@@ -37,12 +38,19 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-02 10:37:27.229283",
+ "modified": "2026-01-26 10:10:52.076807",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Employee",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -53,6 +61,34 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1,
    "write": 1
   }
  ],

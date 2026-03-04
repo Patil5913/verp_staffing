@@ -4,47 +4,115 @@
 import frappe
 from frappe.model.document import Document
 from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
+from verp_staffing.crm.api.lead_details import create_lead_details
+from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 
 
 class Opportunity(Document):
     def before_save(self):
         pass
 
-    def before_insert(self):
-        # Only apply the logic when Opportunity From = Lead
-        if self.opportunity_from == "Lead" and self.party_name:
-            # Fetch the Lead's title field (name1)
-            lead_title = frappe.db.get_value("Lead", self.party_name, "name1")
-            if lead_title:
-                base_title = lead_title
+    def on_trash(self):
+        unlink_and_clean_lead_detail("Opportunity" , self.name)
+        
 
-                # Check if an opportunity already exists for this Lead
-                existing = frappe.db.exists(
-                    "Opportunity",
-                    {"opportunity_from": "Lead", "party_name": self.party_name},
-                )
+    def after_insert(self):
+        lead_detail_name = None
 
-                if existing:
-                    # Append date suffix _dd-mm-yy
-                    from datetime import datetime
+        # CASE 1: Party selected → attach to existing Lead Details
+        if self.party_name and self.opportunity_from:
 
-                    date_suffix = datetime.now().strftime("%d-%m-%y")
-                    self.title = f"{base_title}_{date_suffix}"
-                else:
-                    # No existing opportunity → use base title
-                    self.title = base_title
+            lead_detail_name = frappe.db.get_value(
+                "Doctype Reference",
+                {
+                    "reference_doctype": self.opportunity_from,
+                    "reference_person": self.party_name
+                },
+                "parent"
+            )
 
-    def validate(self):
-        # first check manual conversion attempt
-        self.block_manual_conversion()
-        # Auto update status when quotation is uploaded
-        # Run validation only when converting status
-        if self.status == "Converted":
-            # Check agreement and quotation attachments
-            if not self.quotation:
-                frappe.throw(
-                    "Quotation is mandatory before converting status to Converted."
-                )
+            if not lead_detail_name:
+                frappe.throw("Lead Details not found for selected party.")
+
+            lead_detail = frappe.get_doc("Lead Detail Form", lead_detail_name)
+
+            # Prevent duplicate link
+            if not any(
+                row.reference_doctype == "Opportunity" and
+                row.reference_person == self.name
+                for row in lead_detail.reference_table
+            ):
+                lead_detail.append("reference_table", {
+                    "reference_doctype": "Opportunity",
+                    "reference_person": self.name
+                })
+
+                lead_detail.save(ignore_permissions=True)
+
+        # CASE 2: No party selected → create standalone Lead Details
+        else:
+
+            lead_detail_name = create_lead_details(
+                "Opportunity",
+                self.name,
+                self.name1
+            )
+
+        # 🔥 Link Opportunity → Lead Details in BOTH cases
+        if lead_detail_name:
+            # self.lead_details = lead_detail_name
+            self.lead_details = lead_detail_name
+            self.db_update()
+
+    def autoname(self):
+        import re
+
+        if not self.name1:
+            self.name = frappe.generate_hash(length=10)
+            return
+
+        base_name = self.name1.strip()
+
+        if not base_name:
+            self.name = frappe.generate_hash(length=10)
+            return
+
+        self.title = base_name
+
+        # Get all titles starting with base_name
+        existing_titles = frappe.get_all(
+            "Opportunity",
+            filters={"title": ["like", f"{base_name}%"]},
+            pluck="name"
+        )
+
+        if not existing_titles:
+            # First record → just base name
+            self.name = base_name
+            return
+
+        max_count = 0
+
+        for existing_name in existing_titles:
+
+            # Exact match → rahi
+            if existing_name == base_name:
+                max_count = max(max_count, 0)
+                continue
+
+            # Match rahi-1, rahi-2 etc
+            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", existing_name)
+            if match:
+                count = int(match.group(1))
+                max_count = max(max_count, count)
+
+        # Generate next number
+        self.name = f"{base_name}-{max_count + 1}"
+
+    # def validate(self):
+    #     if self.opportunity_from == "Customer":
+    #         if not frappe.db.exists("Customer", self.party_name):
+    #             frappe.msgprint(f"Customer {self.party_name} does not exist.")
 
     def on_update(self):
         if self.party_name:

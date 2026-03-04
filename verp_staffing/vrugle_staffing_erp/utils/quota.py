@@ -4,6 +4,23 @@ from datetime import datetime
 from verp_staffing.crm.api.helpers import send_notification
 
 
+@frappe.whitelist(allow_guest=True)
+def validate_required_lead_documents_config():
+    quota = frappe.get_site_config().get("quota", {})
+    if not isinstance(quota, dict):
+        frappe.throw(
+            'Missing "quota" object in site_config.json'
+        )
+
+    required_docs = quota.get("Required_Lead_Details_Documents")
+    if not isinstance(required_docs, dict) or not required_docs:
+        frappe.throw(
+            'Missing or empty "Required_Lead_Details_Documents" under "quota" in site_config.json'
+        )
+
+    return required_docs
+
+
 # user limit validate 
 def user_limit(doc=None, method=None):
     quota = frappe.get_site_config().get("quota", {})
@@ -14,9 +31,8 @@ def user_limit(doc=None, method=None):
         frappe.throw("Invalid users_limit. Must be integer.")
 
     # count current users
-    total_users = frappe.db.count("User")
-
-    if total_users > users_limit:
+    total_users = frappe.db.count("User", filters={"enabled": 1})
+    if total_users >= users_limit:
         send_notification(
             recipients=["Administrator"],
             subject="User Limit Exceeded",

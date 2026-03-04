@@ -1,125 +1,205 @@
-# Copyright (c) 2025, Vrugle and contributors
-# For license information, please see license.txt
-
-import frappe
 import os
+import io
 import json
-from datetime import datetime
-import os
+import frappe
+from PIL import Image
+from datetime import datetime, timezone
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
 
 
 class LeadDetailForm(Document):
 
-    def before_save(self):
-        from frappe.utils import now_datetime
-        from frappe.utils import format_datetime
-        # Load audit logs sent from JS
-        audit_from_js = {}
+    def before_insert(self):
+        if not self.customer:
+            return
+
+        existing_name = frappe.db.sql(
+            """
+            SELECT parent FROM `tabDoctype Reference`
+            WHERE reference_doctype = 'Customer' AND reference_person = %s
+            LIMIT 1
+            """,
+            (self.customer,),
+            as_dict=True,
+        )
+
+        if not existing_name:
+            return
+
+        existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
+
+        for field in self.meta.fields:
+            fieldname = field.fieldname
+
+            if not fieldname:
+                continue
+
+            # Skip system fields
+            if fieldname in (
+                "name",
+                "owner",
+                "creation",
+                "modified",
+                "modified_by",
+                "docstatus",
+            ):
+                continue
+
+            if fieldname == "reference_table":
+                continue
+
+            if field.fieldtype == "Table":
+                existing_doc.set(fieldname, [])  # clear old rows
+
+                for row in self.get(fieldname) or []:
+                    row_data = row.as_dict()
+
+                    row_data.pop("name", None)
+                    row_data.pop("parent", None)
+                    row_data.pop("parenttype", None)
+                    row_data.pop("parentfield", None)
+                    row_data.pop("idx", None)
+
+                    existing_doc.append(fieldname, row_data)
+
+            else:
+                existing_doc.set(fieldname, self.get(fieldname))
+
+        existing_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        # ✅ Run PDF signature on existing_doc BEFORE throwing
         try:
-            audit_from_js = json.loads(self.audit_trail) if self.audit_trail else {}
-        except:
-            audit_from_js = {}
+            if self.signature_method == "Upload":
+                existing_doc.apply_pdf_signature(self.signature_image)
 
-        signature_logs = audit_from_js.get("signature update logs", [])
-        form_logs = audit_from_js.get("form visit logs", [])
+            elif self.signature_method == "Text":
+                existing_doc.apply_pdf_signature(self.signature_image)
 
-        # Add form submit event
-        try:
-            form_logs.append({
-                "event": "form_submitted",
-                "timestamp": format_datetime(now_datetime(), "dd-MM-yyyy, HH:mm:ss")
-            })
-        except:
-            pass
+            elif self.signature_method == "Draw":
+                existing_doc._process_drawn_signature_and_apply()
 
-        # Build final cleaned audit structure
-        final_audit = {}
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed on Update")
+            frappe.errprint(f"PDF processing error on update: {e}")
 
-        final_audit["signer location"] = {
-            "ip": frappe.get_request_header("X-Forwarded-For") or frappe.local.request.remote_addr,
-            "user_agent": frappe.get_request_header("User-Agent")
-        }
+        # ✅ Signal JS AFTER pdf processing done
+        frappe.throw("LEAD_UPDATED_SUCCESS", frappe.exceptions.ValidationError)
 
-        # Add signature logs ONLY IF not empty
-        if signature_logs:
-            final_audit["signature update logs"] = signature_logs
+    def autoname(self):
+        import re
 
-        final_audit["form visit logs"] = form_logs
+        if not self.first_name:
+            self.name = frappe.generate_hash(length=10)
+            return
 
-        self.audit_trail = json.dumps(final_audit, indent=2)
+        base_name = self.first_name.strip()
+        if not base_name:
+            self.name = frappe.generate_hash(length=10)
+            return
 
+        self.title = base_name
+
+        # ✅ Query THIS doctype only, not "Customer"
+        existing_names = frappe.get_all(
+            self.doctype,  # was hardcoded "Customer" — that was the bug
+            filters={"name": ["like", f"{base_name}%"]},
+            pluck="name",
+        )
+
+        # Build a set of used number slots
+        used_numbers = set()
+
+        for name in existing_names:
+            if name == base_name:
+                used_numbers.add(0)
+            else:
+                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", name)
+                if match:
+                    used_numbers.add(int(match.group(1)))
+
+        # Find the first unused number
+        next_number = 0
+        while next_number in used_numbers:
+            next_number += 1
+
+        # Assign name
+        if next_number == 0:
+            self.name = base_name
+        else:
+            self.name = f"{base_name}-{next_number}"
 
     def after_insert(self):
-        if self.signature_method == "Upload":
-            if not self.signature_image:
-                frappe.throw("Signature image missing for Upload method")
+        try:
+            if self.signature_method == "Upload":
+                if not self.signature_image:
+                    frappe.throw("Signature image missing for Upload method")
+                self.apply_pdf_signature(self.signature_image)
 
-            self.apply_pdf_signature(self.signature_image)
+            elif self.signature_method == "Text":
+                if not self.signature_image:
+                    frappe.throw("Text Signature image missing for Text method")
+                self.apply_pdf_signature(self.signature_image)
 
-        elif self.signature_method == "Draw":
-            self._process_drawn_signature_and_apply()
+            elif self.signature_method == "Draw":
+                self._process_drawn_signature_and_apply()
 
+        except Exception as e:
+            # ✅ Log error but don't throw — so webform sees success
+            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
+            frappe.errprint(f"PDF processing error: {e}")
+            # Don't re-raise — webform must get success response
 
     def _process_drawn_signature_and_apply(self):
         import base64
 
-        if not self.signature:
-            frappe.throw("Drawn signature data missing")
-
+        # ✅ Correct use — if signature_image already uploaded via JS, just apply it
         if self.signature_image:
             self.apply_pdf_signature(self.signature_image)
             return
+
+        if not self.signature:
+            return  # No signature data to process
 
         try:
             img_base64 = self.signature.split(",")[-1]
             img_bytes = base64.b64decode(img_base64)
 
-            file_doc = frappe.get_doc({
-                "doctype": "File",
-                "file_name": "Signature.png",
-                "is_private": 0,
-                "content": img_bytes,
-                "attached_to_doctype": self.doctype,
-                "attached_to_name": self.name
-            }).insert(ignore_permissions=True)
+            file_doc = frappe.get_doc(
+                {
+                    "doctype": "File",
+                    "file_name": "Signature.png",
+                    "is_private": 0,
+                    "content": img_bytes,
+                    "attached_to_doctype": self.doctype,
+                    "attached_to_name": self.name,
+                }
+            ).insert(ignore_permissions=True)
 
             frappe.db.set_value(
-                self.doctype,
-                self.name,
-                "signature_image",
-                file_doc.name
+                self.doctype, self.name, "signature_image", file_doc.name
             )
 
-            self.apply_pdf_signature(file_doc.file_url)
+            self.apply_pdf_signature(file_doc.name)
 
         except Exception as e:
+            frappe.errprint(f"Error processing drawn signature: {e}")
             frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
             frappe.throw("Failed to process drawn signature")
 
-    # ---------------- PDF APPLY ----------------
-
     def apply_pdf_signature(self, signature_image_file):
-        """
-        signature can be: File doc name (Upload) or file_url (Draw)
-        + audit trail to PDF
-        """
-
         if not signature_image_file:
             frappe.throw("Signature file missing")
 
-        if self.signature_method == "Upload":
-            # ---- ALWAYS RESOLVE FILE DOC ----
+        # Resolve file URL based on method
+        if self.signature_method in ("Upload", "Text", "Draw"):
             file_doc = frappe.get_doc("File", signature_image_file)
-
             if not file_doc.file_url:
                 frappe.throw("Signature file URL missing")
-
             signature_image_path = file_doc.file_url
         else:
             signature_image_path = signature_image_file
-
 
         if not self.agreement_link:
             frappe.throw("Agreement link missing")
@@ -142,14 +222,14 @@ class LeadDetailForm(Document):
         except Exception:
             frappe.throw("Invalid fields_json in template")
 
-        audit_text = json.dumps(
-            json.loads(self.audit_trail),
-            indent=2
-        )
+        audit_text = json.dumps(json.loads(self.audit_trail), indent=2)
 
         input_pdf_path = resolve_file_path(agreement.pdf)
         if not input_pdf_path:
             frappe.throw("Unable to resolve agreement PDF path")
+
+        if not self.certificate_id:
+            self.db_set("certificate_id", generate_certificate_id(self.name))
 
         apply_signature_and_audit_to_pdf(
             input_pdf_path=input_pdf_path,
@@ -158,9 +238,36 @@ class LeadDetailForm(Document):
             audit_trail_text=audit_text,
             signer_name=f"{self.surname} {self.first_name} {self.father_name}",
             signer_email=f"{self.email}",
-            agreement=agreement
+            agreement=agreement,
+            certificate_id=self.certificate_id,  # ✅ use self.certificate_id directly
         )
 
+
+def load_signature_clean(img_path):
+    img = Image.open(img_path)
+    img = img.convert("RGBA")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def generate_certificate_id(agreement_name):
+    import secrets
+
+    date_part = datetime.utcnow().strftime("%Y%m%d")
+    random_part = secrets.token_hex(3).upper()  # 6 chars
+    return f"CERT-{date_part}-{agreement_name}-{random_part}"
+
+
+def calculate_file_hash(file_path):
+    import hashlib
+
+    sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            sha256.update(chunk)
+    return sha256.hexdigest()
 
 
 def apply_signature_and_audit_to_pdf(
@@ -171,17 +278,91 @@ def apply_signature_and_audit_to_pdf(
     signer_name,
     signer_email,
     output_path=None,
-    agreement=None
+    agreement=None,
+    certificate_id=None,
 ):
-    import fitz
+    from pdfrw import PdfReader, PdfWriter, PageMerge
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.utils import ImageReader
+    from reportlab.lib.pagesizes import A4
 
-    # ---------- NORMALIZE AUDIT TRAIL ----------
+    if not output_path:
+        output_path = input_pdf_path
+
+    # ---------------------------------------------------------
+    # NORMALIZE AUDIT JSON
+    # ---------------------------------------------------------
     if isinstance(audit_trail_text, str):
         try:
             audit_trail_text = json.loads(audit_trail_text)
         except Exception:
             audit_trail_text = {}
+    frappe.errprint(f"Normalized audit trail:")
+    # ---------------------------------------------------------
+    # STEP 1: APPLY SIGNATURES
+    # ---------------------------------------------------------
+    reader = PdfReader(input_pdf_path)
+    writer = PdfWriter()
 
+    sig_reader = None
+    if signature_image_path:
+        img_path = resolve_file_path(signature_image_path)
+        if not img_path or not os.path.exists(img_path):
+            raise FileNotFoundError("Signature image not found")
+
+        sig_img = Image.open(img_path).convert("RGBA")
+        img_buf = io.BytesIO()
+        sig_img.save(img_buf, format="PNG")
+        img_buf.seek(0)
+        sig_reader = ImageReader(img_buf)
+
+    for page_index, page in enumerate(reader.pages):
+        packet = io.BytesIO()
+        page_w = float(page.MediaBox[2])
+        page_h = float(page.MediaBox[3])
+
+        c = canvas.Canvas(packet, pagesize=(page_w, page_h))
+        drew = False
+
+        if sig_reader:
+            for f in fields:
+                if f.get("type") != "Signature":
+                    continue
+                if int(f["page"]) - 1 != page_index:
+                    continue
+
+                sx = page_w / float(f["page_width"])
+                sy = page_h / float(f["page_height"])
+
+                x = float(f["x"]) * sx
+                y = page_h - ((float(f["y"]) + float(f["height"])) * sy)
+                w = float(f["width"]) * sx
+                h = float(f["height"]) * sy
+
+                c.drawImage(
+                    sig_reader,
+                    x,
+                    y,
+                    width=w,
+                    height=h,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                )
+                drew = True
+
+        c.showPage()
+        c.save()
+        packet.seek(0)
+
+        if drew:
+            overlay = PdfReader(packet).pages[0]
+            PageMerge(page).add(overlay).render()
+
+        writer.addpage(page)
+
+    # ---------------------------------------------------------
+    # STEP 2: BUILD AUDIT PAGES (REPORTLAB ONLY)
+    # ---------------------------------------------------------
     def parse_user_agent(ua):
         browser = "Unknown"
         os_name = "Unknown"
@@ -211,482 +392,232 @@ def apply_signature_and_audit_to_pdf(
 
         return browser, os_name, device
 
-    pdf = fitz.open(input_pdf_path)
-
-    # ---------- SIGNATURE INSERT ----------
-    if signature_image_path:
-        img_path = resolve_file_path(signature_image_path)
-        if img_path and os.path.exists(img_path):
-            img_bytes = open(img_path, "rb").read()
-
-            for f in fields:
-                if f.get("type") != "Signature":
-                    continue
-
-                page_index = int(f.get("page", 1)) - 1
-                if page_index < 0 or page_index >= len(pdf):
-                    continue
-
-                page = pdf[page_index]
-                page_rect = page.rect
-
-                px_w = float(f.get("page_width") or 0)
-                px_h = float(f.get("page_height") or 0)
-                if not px_w or not px_h:
-                    continue
-
-                sx = page_rect.width / px_w
-                sy = page_rect.height / px_h
-
-                bx = float(f.get("x") or 0)
-                by = float(f.get("y") or 0)
-                bw = float(f.get("width") or 150)
-                bh = float(f.get("height") or 40)
-
-                rect = fitz.Rect(
-                    bx * sx,
-                    by * sy,
-                    (bx + bw) * sx,
-                    (by + bh) * sy,
-                )
-
-                page.insert_image(rect, stream=img_bytes)
-
-    # ---------- AUDIT TRAIL PAGE ----------
     if audit_trail_text:
-        page = pdf.new_page()
-        page_width = page.rect.width
-        page_height = page.rect.height
+        packet = io.BytesIO()
+        c = canvas.Canvas(packet, pagesize=A4)
+        width, height = A4
+        margin = 50
+        y = height - margin
 
-        margin = 45
-        y = margin
-        
-        # Professional color scheme
-        header_color = (0.2, 0.3, 0.45)  # Dark blue-gray
-        text_color = (0.2, 0.2, 0.2)  # Dark gray
-        label_color = (0.4, 0.4, 0.4)  # Medium gray
-        line_color = (0.85, 0.85, 0.85)  # Light gray for lines
+        def new_page():
+            nonlocal y
+            c.showPage()
+            y = height - margin
 
-        font = "helv"
-        title_size = 18
-        section_size = 11
-        label_size = 9
-        value_size = 10
-        line_height = 16
+        def draw_section_line(y_pos):
+            """Draw a line under section headers"""
+            c.setStrokeColorRGB(0.85, 0.85, 0.85)
+            c.setLineWidth(1)
+            c.line(margin, y_pos - 5, width - margin, y_pos - 5)
 
-        def draw_horizontal_line(y_pos, color=line_color, thickness=0.5):
-            line = fitz.Rect(margin, y_pos, page_width - margin, y_pos + thickness)
-            page.draw_rect(line, color=color, fill=color)
+        def row(label, value, is_bold=False):
+            nonlocal y
+            if y < margin + 50:
+                new_page()
 
-        def draw_label_value_row(label, value, y_pos, label_x=None, value_x=None):
-            if label_x is None:
-                label_x = margin + 10
-            if value_x is None:
-                value_x = margin + 200
-            
-            page.insert_text((label_x, y_pos), label, fontsize=label_size, fontname=font, color=label_color)
-            
-            # Handle long values with wrapping
-            value_str = str(value)
-            if len(value_str) > 60:
-                value_str = value_str[:57] + "..."
-            
-            page.insert_text((value_x, y_pos), value_str, fontsize=value_size, fontname=font, color=text_color)
+            # Label
+            c.setFillColorRGB(0.3, 0.3, 0.3)
+            c.setFont("Helvetica-Bold" if is_bold else "Helvetica", 9)
+            c.drawString(margin + 10, y, label + ":")
 
-        # ---- Header ----
-        page.insert_text((margin, y), "CERTIFICATE", fontsize=title_size, fontname="hebo", color=header_color)
-        y += 8
-        draw_horizontal_line(y, color=header_color, thickness=2)
-        y += 25
+            # Value
+            c.setFillColorRGB(0.1, 0.1, 0.1)
+            c.setFont("Helvetica-Bold" if is_bold else "Helvetica", 9)
+            c.drawString(margin + 220, y, str(value)[:100])
+            y -= 16
 
-        # ---- Signer Information Section ----
-        page.insert_text((margin, y), "SIGNER INFORMATION", fontsize=section_size, fontname="hebo", color=header_color)
-        y += 20
+        # PAGE HEADER
+        c.setFillColorRGB(0.2, 0.4, 0.6)
+        c.setFont("Helvetica-Bold", 22)
+        c.drawString(margin, y, "CERTIFICATE")
+        y -= 30
 
-        draw_label_value_row("Name", signer_name, y)
-        y += line_height
-        draw_label_value_row("Email", signer_email, y)
-        y += line_height + 10
-        
-        draw_horizontal_line(y)
-        y += 20
+        # SIGNER INFORMATION SECTION
+        c.setFillColorRGB(0.2, 0.4, 0.6)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(margin, y, "SIGNER INFORMATION")
+        y -= 8
+        draw_section_line(y)
+        y -= 15
 
-        # ---- Device & Location Section ----
-        signer_location = audit_trail_text.get("signer location", {})
-        ua = signer_location.get("user_agent", "")
-        browser, os_name, device = parse_user_agent(ua)
+        row("Full Name", signer_name, is_bold=True)
+        row("Email Address", signer_email)
+        y -= 5
 
-        page.insert_text((margin, y), "DEVICE & LOCATION", fontsize=section_size, fontname="hebo", color=header_color)
-        y += 20
+        # DEVICE & LOCATION SECTION
+        c.setFillColorRGB(0.2, 0.4, 0.6)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(margin, y, "DEVICE & LOCATION INFORMATION")
+        y -= 8
+        draw_section_line(y)
+        y -= 15
 
-        draw_label_value_row("IP Address", signer_location.get("ip", "N/A"), y)
-        y += line_height
-        draw_label_value_row("Browser", browser, y)
-        y += line_height
-        draw_label_value_row("Operating System", os_name, y)
-        y += line_height
-        draw_label_value_row("Device Type", device, y)
-        y += line_height + 10
+        loc = audit_trail_text.get("signer location", {})
+        browser, os_name, device = parse_user_agent(loc.get("user_agent", ""))
 
-        draw_horizontal_line(y)
-        y += 20
+        row("IP Address", loc.get("ip", "N/A"))
+        row("Browser", browser)
+        row("Operating System", os_name)
+        row("Device Type", device)
+        row("Certificate ID", certificate_id, is_bold=True)
+        row("Agreement ID", agreement.name if agreement else "N/A")
+        y -= 5
 
-        # ---- Signature Activity Section (ONLY IF EXISTS) ----
-        signature_logs = audit_trail_text.get("signature update logs", [])
-
-        if signature_logs:
-            page.insert_text((margin, y), "SIGNATURE ACTIVITY", fontsize=section_size, fontname="hebo", color=header_color)
-            y += 20
+        # SIGNATURE ACTIVITY SECTION
+        logs = audit_trail_text.get("signature update logs", [])
+        if logs:
+            c.setFillColorRGB(0.2, 0.4, 0.6)
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(margin, y, "SIGNATURE ACTIVITY LOG")
+            y -= 8
+            draw_section_line(y)
+            y -= 15
 
             for log in sorted(
-                signature_logs,
-                key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
+                logs,
+                key=lambda x: datetime.strptime(
+                    x["timestamp"], "%d-%m-%Y, %H:%M:%S UTC"
+                ),
                 reverse=True,
             ):
-                draw_label_value_row("Signature Updated", log["timestamp"], y)
-                y += line_height
+                row("Signature Applied", log["timestamp"])
+            y -= 5
 
-            y += 10
-            draw_horizontal_line(y)
-            y += 20
+        # DOCUMENT ACTIVITY SECTION
+        visits = audit_trail_text.get("form visit logs", [])
+        if visits:
+            c.setFillColorRGB(0.2, 0.4, 0.6)
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(margin, y, "DOCUMENT ACCESS LOG")
+            y -= 8
+            draw_section_line(y)
+            y -= 15
 
-        # ---- Document Activity Section ----
-        page.insert_text((margin, y), "DOCUMENT ACTIVITY", fontsize=section_size, fontname="hebo", color=header_color)
-        y += 20
+            for log in visits:
+                event_name = log["event"].replace("_", " ").title()
+                row(event_name, log["timestamp"])
+            y -= 10
 
-        form_logs = audit_trail_text.get("form visit logs", [])
+        # FOOTER
+        if y > margin + 100:
+            y = margin + 80
+        else:
+            new_page()
+            y = margin + 80
 
-        # Add table-like structure for activity log
-        EVENT_PRIORITY = {
-            "form_submitted": 2,
-            "form_opened": 1
-        }
+        c.setStrokeColorRGB(0.85, 0.85, 0.85)
+        c.setLineWidth(1)
+        c.line(margin, y, width - margin, y)
+        y -= 18
 
-        sorted_logs = sorted(
-            form_logs,
-            key=lambda x: (
-                EVENT_PRIORITY.get(x["event"], 0),
-                datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
-            ),
+        c.setFillColorRGB(0.5, 0.5, 0.5)
+        c.setFont("Helvetica-Oblique", 8)
+        disclaimer = "This audit trail certificate is an electronically generated record of all activities related to this document."
+        c.drawString(margin, y, disclaimer)
+        y -= 12
+        c.drawString(
+            margin,
+            y,
+            "It serves as proof of the signing process and should be retained with the signed document.",
         )
 
+        c.showPage()
+        c.save()
+        packet.seek(0)
+        audit_pdf = PdfReader(packet)
 
-        for i, log in enumerate(sorted_logs):
-            if y > page_height - margin - 40:
-                page = pdf.new_page()
-                y = margin
-                page.insert_text(
-                    (margin, y),
-                    "DOCUMENT ACTIVITY (continued)",
-                    fontsize=section_size,
-                    fontname="hebo",
-                    color=header_color,
-                )
-                y += 20
+        for p in audit_pdf.pages:
+            writer.addpage(p)
 
-            # Alternate row background
-            if i % 2 == 0:
-                row_rect = fitz.Rect(
-                    margin - 5,
-                    y - 12,
-                    page_width - margin + 5,
-                    y + 6,
-                )
-                page.draw_rect(
-                    row_rect,
-                    color=(0.98, 0.98, 0.98),
-                    fill=(0.98, 0.98, 0.98),
-                )
+    # ---------------------------------------------------------
+    # STEP 3: WRITE ONCE (CRITICAL)
+    # ---------------------------------------------------------
+    writer.write(output_path)
 
-            event_text = log["event"].replace("_", " ").title()
-            draw_label_value_row(event_text, log["timestamp"], y)
-            y += line_height
+    # ---------------------------------------------------------
+    # STEP 4: HASH FINAL DOCUMENT
+    # ---------------------------------------------------------
+    document_hash = calculate_file_hash(output_path)
 
-        y += 15
-        draw_horizontal_line(y)
-        y += 20        
+    # ---------------------------------------------------------
+    # STEP 5: STAMP HASH INTO CERTIFICATE PAGE (SECOND PASS)
+    # ---------------------------------------------------------
+    reader = PdfReader(output_path)
+    writer = PdfWriter()
 
-    # ---------- SAVE ----------
-    if not output_path:
-        output_path = input_pdf_path
+    last_page_index = len(reader.pages) - 1
 
-    pdf.save(
-        output_path,
-        incremental=True,
-        encryption=fitz.PDF_ENCRYPT_KEEP,
-    )
-    pdf.close()
+    for i, page in enumerate(reader.pages):
+        if i == last_page_index:
+            packet = io.BytesIO()
+            page_w = float(page.MediaBox[2])
+            page_h = float(page.MediaBox[3])
 
-    # 1. Resolve Sales Order linked with Agreement
-    if not agreement.sales_order:
-        return  # fail silently, signing already succeeded
+            c = canvas.Canvas(packet, pagesize=(page_w, page_h))
+            c.setFont("Helvetica", 9)
+            c.drawString(50, 140, f"Document Hash (SHA-256): {document_hash}")
+            c.showPage()
+            c.save()
+            packet.seek(0)
+
+            overlay = PdfReader(packet).pages[0]
+            PageMerge(page).add(overlay).render()
+
+        writer.addpage(page)
+
+    writer.write(output_path)
+
+    # ---------------------------------------------------------
+    # STEP 6: NOTIFICATIONS
+    # ---------------------------------------------------------
+    if not agreement or not agreement.sales_order:
+        return output_path
 
     sales_order = frappe.get_doc("Sales Order", agreement.sales_order)
-
     if not sales_order.opportunity:
-        return
+        return output_path
 
-    # 2. Resolve Opportunity
     opportunity = frappe.get_doc("Opportunity", sales_order.opportunity)
-
     if not opportunity.opportunity_owner:
-        return
+        return output_path
 
-    # 3. Resolve user from Employee
     opp_owner_user = frappe.db.get_value(
-        "Employee",
-        opportunity.opportunity_owner,
-        "user"
+        "Employee", opportunity.opportunity_owner, "user"
     )
-
     if not opp_owner_user:
-        return
-    # Send email to signer
+        return output_path
+
+    with open(output_path, "rb") as f:
+        content = f.read()
+    frappe.errprint(f"Final PDF generated at {output_path} with hash {document_hash}")
     send_notification(
         recipients=[signer_email],
         subject="Agreement signed successfully",
         message=(
-            f"Thankyou for signing the agreement.\n\n Please find the signed agreement attached."
+            "Dear Customer,\n\n"
+            "Thank you for signing the agreement. We have successfully received your signed document.\n\n"
+            "Please find the signed agreement attached along with the signing certificate for your records.\n\n"
+            "Best regards,\n"
+            "Team"
         ),
         reference_doctype="Agreement",
         reference_name=agreement.name,
-        attachments=[output_path],
+        attachments=[{"fname": os.path.basename(output_path), "fcontent": content}],
         send_email=1,
         send_system=0,
     )
-    # 4. Send internal notification + email to assignee
+
     send_notification(
         recipients=[opp_owner_user],
         subject="Agreement Signed by Customer",
-        message=(
-            f"The customer has signed the agreement.\n\n"
-            f"Customer: {agreement.customer or 'N/A'}\n"
-            f"Sales Order: {sales_order.name}\n\n"
-            f"Please proceed with the next required action."
-        ),
+        message=f"The customer has signed the agreement.\n\nSales Order: {sales_order.name}",
         reference_doctype="Agreement",
         reference_name=agreement.name,
         send_email=0,
         send_system=1,
     )
+
     return output_path
-
-
-
-
-# def apply_signature_and_audit_to_pdf(
-#     input_pdf_path,
-#     fields,
-#     signature_image_path,
-#     audit_trail_text,
-#     signer_name,
-#     signer_email,
-#     output_path=None,
-# ):
-#     import fitz
-
-#     # ---------- NORMALIZE AUDIT TRAIL ----------
-#     if isinstance(audit_trail_text, str):
-#         try:
-#             audit_trail_text = json.loads(audit_trail_text)
-#         except Exception:
-#             audit_trail_text = {}
-
-#     def parse_user_agent(ua):
-#         browser = "Unknown"
-#         os_name = "Unknown"
-#         device = "Desktop"
-
-#         if "Firefox/" in ua:
-#             browser = "Firefox"
-#         elif "Chrome/" in ua and "Safari/" in ua:
-#             browser = "Chrome"
-#         elif "Safari/" in ua and "Chrome/" not in ua:
-#             browser = "Safari"
-#         elif "Edg/" in ua:
-#             browser = "Edge"
-
-#         if "Windows" in ua:
-#             os_name = "Windows"
-#         elif "Ubuntu" in ua:
-#             os_name = "Ubuntu Linux"
-#         elif "Linux" in ua:
-#             os_name = "Linux"
-#         elif "Android" in ua:
-#             os_name = "Android"
-#             device = "Mobile"
-#         elif "iPhone" in ua or "iPad" in ua:
-#             os_name = "iOS"
-#             device = "Mobile"
-
-#         return browser, os_name, device
-
-#     pdf = fitz.open(input_pdf_path)
-
-#     # ---------- SIGNATURE INSERT ----------
-#     if signature_image_path:
-#         img_path = resolve_file_path(signature_image_path)
-#         if img_path and os.path.exists(img_path):
-#             img_bytes = open(img_path, "rb").read()
-
-#             for f in fields:
-#                 if f.get("type") != "Signature":
-#                     continue
-
-#                 page_index = int(f.get("page", 1)) - 1
-#                 if page_index < 0 or page_index >= len(pdf):
-#                     continue
-
-#                 page = pdf[page_index]
-#                 page_rect = page.rect
-
-#                 px_w = float(f.get("page_width") or 0)
-#                 px_h = float(f.get("page_height") or 0)
-#                 if not px_w or not px_h:
-#                     continue
-
-#                 sx = page_rect.width / px_w
-#                 sy = page_rect.height / px_h
-
-#                 bx = float(f.get("x") or 0)
-#                 by = float(f.get("y") or 0)
-#                 bw = float(f.get("width") or 150)
-#                 bh = float(f.get("height") or 40)
-
-#                 rect = fitz.Rect(
-#                     bx * sx,
-#                     by * sy,
-#                     (bx + bw) * sx,
-#                     (by + bh) * sy,
-#                 )
-
-#                 page.insert_image(rect, stream=img_bytes)
-
-#     # ---------- AUDIT TRAIL PAGE ----------
-#     if audit_trail_text:
-#         page = pdf.new_page()
-
-#         margin = 50
-#         y = margin
-#         label_x = margin
-#         value_x = margin + 180
-
-#         font = "helv"
-#         title = 14
-#         section = 12
-#         normal = 10
-#         small = 9
-#         line_gap = 14
-
-#         def draw_label_value(label, value):
-#             nonlocal y
-#             page.insert_text((label_x, y), label, fontsize=small, fontname=font)
-#             page.insert_text((value_x, y), value, fontsize=normal, fontname=font)
-#             y += line_gap
-
-#         # ---- Header ----
-#         page.insert_text((margin, y), "Audit Trail", fontsize=title, fontname=font)
-#         y += 2 * line_gap
-
-#         # ---- Signer Details ----
-#         page.insert_text((margin, y), "Signer Details", fontsize=section, fontname=font)
-#         y += line_gap
-
-#         draw_label_value("Name", signer_name)
-#         draw_label_value("Email", signer_email)
-
-#         # ---- Device & Location ----
-#         signer_location = audit_trail_text.get("signer location", {})
-#         ua = signer_location.get("user_agent", "")
-#         browser, os_name, device = parse_user_agent(ua)
-
-#         y += line_gap
-#         page.insert_text((margin, y), "Device & Location", fontsize=section, fontname=font)
-#         y += line_gap
-
-#         draw_label_value("IP Address", signer_location.get("ip", ""))
-#         draw_label_value("Browser", browser)
-#         draw_label_value("Operating System", os_name)
-#         draw_label_value("Device Type", device)
-
-#         # ---- Signature Activity (ONLY IF EXISTS) ----
-#         signature_logs = audit_trail_text.get("signature update logs", [])
-
-#         if signature_logs:
-#             y += line_gap
-#             page.insert_text((margin, y), "Signature Activity", fontsize=section, fontname=font)
-#             y += line_gap
-
-#             for log in sorted(
-#                 signature_logs,
-#                 key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
-#                 reverse=True,
-#             ):
-#                 page.insert_text(
-#                     (label_x, y),
-#                     "Signature Updated",
-#                     fontsize=normal,
-#                     fontname=font,
-#                 )
-#                 page.insert_text(
-#                     (value_x, y),
-#                     log["timestamp"],
-#                     fontsize=normal,
-#                     fontname=font,
-#                 )
-#                 y += line_gap
-
-#         # ---- Form Activity (DESCENDING) ----
-#         y += line_gap
-#         page.insert_text((margin, y), "Form Activity", fontsize=section, fontname=font)
-#         y += line_gap
-
-#         form_logs = audit_trail_text.get("form visit logs", [])
-
-#         for log in sorted(
-#             form_logs,
-#             key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S"),
-#             reverse=True,
-#         ):
-#             if y > page.rect.height - margin:
-#                 page = pdf.new_page()
-#                 y = margin
-
-#             page.insert_text(
-#                 (label_x, y),
-#                 log["event"].replace("_", " ").title(),
-#                 fontsize=normal,
-#                 fontname=font,
-#             )
-#             page.insert_text(
-#                 (value_x, y),
-#                 log["timestamp"],
-#                 fontsize=normal,
-#                 fontname=font,
-#             )
-#             y += line_gap
-
-#         # ---- Completion ----
-#         y += line_gap
-#         page.insert_text(
-#             (margin, y),
-#             "Document completed successfully.",
-#             fontsize=small,
-#             fontname=font,
-#         )
-
-#     # ---------- SAVE ----------
-#     if not output_path:
-#         output_path = input_pdf_path
-
-#     pdf.save(
-#         output_path,
-#         incremental=True,
-#         encryption=fitz.PDF_ENCRYPT_KEEP,
-#     )
-#     pdf.close()
-
-#     return output_path
 
 
 def resolve_file_path(file_url):
@@ -704,3 +635,87 @@ def resolve_file_path(file_url):
         return public_path
 
     return None
+
+
+@frappe.whitelist(allow_guest=True)
+def get_ip_and_device():
+    return {
+        "ip": frappe.get_request_header("X-Forwarded-For")
+        or frappe.local.request.remote_addr,
+        "user_agent": frappe.get_request_header("User-Agent"),
+    }
+
+
+import random
+
+OTP_TTL = 300  # 5 minutes
+
+
+@frappe.whitelist(allow_guest=True)
+def send_otp(customer, email):
+    frappe.logger().info(f"OTP for customer: {customer}")
+    print(f"OTP for customer: {customer}")
+
+    if not customer or not email:
+        frappe.throw("Missing customer or email")
+
+    otp = random.randint(100000, 999999)
+    cache_key = f"otp:{customer}"
+
+    if frappe.cache().get_value(cache_key):
+        frappe.msgprint("OTP already sent. Please wait.")
+        return
+
+    frappe.cache().set_value(
+        cache_key, {"otp": otp, "email": email}, expires_in_sec=OTP_TTL
+    )
+
+    send_notification(
+        recipients=[email],
+        subject="Your verification OTP",
+        message=f"""
+            Dear Customer,
+
+
+            Your OTP is: {otp}
+
+
+            This OTP is valid for 5 minutes.
+            """,
+        send_email=1,
+        send_system=0,
+    )
+
+    return {"status": "sent", "expires_in": OTP_TTL}
+
+
+@frappe.whitelist(allow_guest=True)
+def verify_otp(customer, otp):
+    if not customer or not otp:
+        frappe.throw("Missing parameters")
+
+    cache_key = f"otp:{customer}"
+    data = frappe.cache().get_value(cache_key)
+
+    if not data:
+        frappe.throw("OTP expired or not requested")
+
+    if str(data.get("otp")) != str(otp):
+        frappe.throw("Invalid OTP")
+
+    # single-use OTP
+    frappe.cache().delete_value(cache_key)
+
+    # NETWORK CONTEXT (SERVER TRUSTED)
+    ip = (
+        frappe.get_request_header("X-Forwarded-For") or frappe.local.request.remote_addr
+    )
+
+    user_agent = frappe.get_request_header("User-Agent")
+
+    return {
+        "status": "verified",
+        "verified_at": frappe.utils.now(),
+        "ip": ip,
+        "user_agent": user_agent,
+    }
