@@ -533,7 +533,7 @@ function forward_candidate(frm, values) {
 	});
 }
 
-// --------------------- Notes and Updtae --------------------------
+// --------------------- Notes and Updtea --------------------------
 
 window.render_notes = function (frm) {
 	const notes_field = frm.get_field("notes_html");
@@ -555,8 +555,12 @@ window.render_notes = function (frm) {
 
 function load_notes(frm, $notes_wrapper, $updates_wrapper) {
 	$notes_wrapper.html(`<div class="p-3 text-muted">Loading...</div>`);
-	$updates_wrapper.html(`<div class="p-3 text-muted">Loading...</div>`);
-
+	if (frm.doctype === "Customer") {
+		$updates_wrapper.closest(".form-group, .section-body, .frappe-control").hide();
+	} else {
+		$updates_wrapper.closest(".form-group, .section-body, .frappe-control").show();
+		$updates_wrapper.html(`<div class="p-3 text-muted">Loading...</div>`);
+	}
 	frappe.call({
 		method: "verp_staffing.crm.api.notes.get_notes",
 		args: {
@@ -1062,4 +1066,3 @@ function open_edit_event_dialog(event_name, frm) {
 		d.show();
 	});
 }
-
