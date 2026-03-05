@@ -14,7 +14,11 @@
   "customer_details_section",
   "lead_details",
   "notes_tab",
-  "notes_html"
+  "notes_html",
+  "updates_section",
+  "updates_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -72,12 +76,31 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:48:45.968365",
+ "modified": "2026-03-03 18:06:15.063363",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",
@@ -104,14 +127,6 @@
    "write": 1
   },
   {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
    "create": 1,
    "read": 1,
    "role": "Resume Person",
@@ -119,11 +134,19 @@
    "write": 1
   },
   {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
    "create": 1,
    "read": 1,
    "role": "Senior Resume Person",
    "select": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
   }
  ],
  "row_format": "Dynamic",
