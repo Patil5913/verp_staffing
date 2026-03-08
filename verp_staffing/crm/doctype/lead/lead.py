@@ -54,6 +54,7 @@ def update_status_based_on_opportunity(lead_name, status):
         "converted": "Won",
         "lost": "Lost",
         "replied": "Interested",
+        "open" : "Opportunity"
     }
 
     new_status = STATUS_MAP.get(status.strip().lower(), "Lead") if status else "Lead"

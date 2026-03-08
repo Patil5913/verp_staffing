@@ -8,11 +8,16 @@
   "assign_to",
   "customer",
   "status",
+  "interview",
   "section_break_mtyr",
   "proof_of_work",
   "lead_details",
   "notes_section",
-  "notes_html"
+  "notes_html",
+  "updates_section",
+  "updates_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -61,12 +66,38 @@
    "fieldname": "notes_section",
    "fieldtype": "Tab Break",
    "label": "Notes"
+  },
+  {
+   "fieldname": "interview",
+   "fieldtype": "Link",
+   "label": "Interview",
+   "options": "Interview"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML",
+   "label": "Activite"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:50:02.093935",
+ "modified": "2026-03-05 14:12:09.541665",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
