@@ -21,7 +21,11 @@
   "section_break_xurw",
   "customer_details_html",
   "notes_section",
-  "notes_html"
+  "notes_html",
+  "updates_section",
+  "updates_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -114,12 +118,31 @@
    "fieldtype": "Select",
    "label": "Target Based On",
    "options": "Daily\nWeekly\nMonthly"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-28 16:12:42.243234",
+ "modified": "2026-03-05 14:18:48.267435",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",

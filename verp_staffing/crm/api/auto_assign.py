@@ -10,7 +10,7 @@ def get_auto_assign_employee(
     department: str,
     target_doctype: str,
     owner_field: str,
-    extra_filters: dict | None = None
+    extra_filters: dict | None = None,
 ):
     """
     Generic auto-assign resolver.
@@ -25,7 +25,7 @@ def get_auto_assign_employee(
         "Hierarchy",
         filters={"department": department},
         fields=["auto_assign_config"],
-        limit=1
+        limit=1,
     )
 
     if not hierarchy:
@@ -39,7 +39,6 @@ def get_auto_assign_employee(
     role = config.get("role")
     if not role:
         frappe.throw("Auto assign role missing in hierarchy")
-
 
     employees = get_employees_with_role(role, department)
     if not employees:
@@ -63,22 +62,19 @@ def get_employees_with_role(role, department=None):
         "User",
         filters={
             "enabled": 1,
-            "name": ["in", frappe.get_all(
-                "Has Role",
-                filters={"role": role},
-                pluck="parent"
-            )]
+            "name": [
+                "in",
+                frappe.get_all("Has Role", filters={"role": role}, pluck="parent"),
+            ],
         },
-        pluck="name"
+        pluck="name",
     )
 
     if not users:
         return []
 
     employees = frappe.get_all(
-        "Employee",
-        filters={"user": ["in", users]},
-        pluck="name"
+        "Employee", filters={"user": ["in", users]}, pluck="name"
     )
 
     if not department:
@@ -86,12 +82,9 @@ def get_employees_with_role(role, department=None):
 
     return frappe.get_all(
         "Employee Assignment Detail",
-        filters={
-            "parent": ["in", employees],
-            "department": department
-        },
+        filters={"parent": ["in", employees], "department": department},
         pluck="parent",
-        distinct=True
+        distinct=True,
     )
 
 
@@ -106,7 +99,7 @@ SERVICE_DOCTYPE_MAP = {
 
 
 @frappe.whitelist()
-def forward_candidate(customer, service):
+def forward_candidate(customer, service, interview=None):
 
     customer_doc = frappe.get_doc("Customer", customer)
     service_key = service.strip().lower()
@@ -118,67 +111,54 @@ def forward_candidate(customer, service):
 
     if service_key in stage:
 
-            doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
-            department = stage[service_key][0].get("department")
+        doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
+        department = stage[service_key][0].get("department")
 
-            if doctype == "Other Services":
-                if department == "Technical":
-                    doctype = "Technical Other Services"
-                elif department == "Marketing":
-                    doctype = "Marketing Other Services"
+        if doctype == "Other Services":
+            if department == "Technical":
+                doctype = "Technical Other Services"
+            elif department == "Marketing":
+                doctype = "Marketing Other Services"
 
-            docs = frappe.get_all(
-                doctype,
-                filters={"customer": customer},
-                fields=["name", "assign_to"]
-            )
+        docs = frappe.get_all(
+            doctype, filters={"customer": customer}, fields=["name", "assign_to"]
+        )
 
-            if not docs:
-                return None
-            
-            if department == "Marketing" :
+        if not docs:
+            return None
+
+        if service_key == "jdc" and interview:
+            frappe.db.set_value(doctype, docs[0].name, "interview", interview)
+
+        if department == "Marketing":
+            if doctype == "Marketing Other Services":
                 for d in docs:
                     if d.assign_to:
                         fake_doc = frappe._dict({"assign_to": d.assign_to})
-                        # notify_assignees(fake_doc, service, customer)
                         frappe.enqueue(
                             "verp_staffing.crm.api.auto_assign.notify_assignees",
                             queue="short",
                             doc=fake_doc,
                             service=service,
-                            customer=customer
+                            customer=customer,
                         )
-                        
-                    stage[service_key].append({
-                        "department": department,
-                        "timestamp": str(now_datetime())
-                    })
+
+                    stage[service_key].append(
+                        {"department": department, "timestamp": str(now_datetime())}
+                    )
 
                     frappe.db.set_value(
-                        "Customer",
-                        customer,
-                        "stage",
-                        json.dumps(stage)
+                        "Customer", customer, "stage", json.dumps(stage)
                     )
 
-                    frappe.msgprint(
-                        f"Candidate is reforwarded for {service}. "
-                    )
-                return {
-                    "reforward": True,
-                    "doctype": doctype,
-                    "name": docs[0].name
-                    }
-                
+                    frappe.msgprint(f"Candidate is reforwarded for {service}. ")
+                    
+                    for d in docs:
+                        frappe.db.set_value(doctype, d.name, "status", "Request for Update")
+
+                return {"reforward": True, "doctype": doctype, "name": docs[0].name}
 
             for d in docs:
-                frappe.db.set_value(
-                    doctype,
-                    d.name,
-                    "status",
-                    "Request for Update"
-                )
-
                 if d.assign_to:
                     fake_doc = frappe._dict({"assign_to": d.assign_to})
                     frappe.enqueue(
@@ -186,60 +166,63 @@ def forward_candidate(customer, service):
                         queue="short",
                         doc=fake_doc,
                         service=service,
-                        customer=customer
+                        customer=customer,
                     )
 
-            stage[service_key].append({
-                "department": department,
-                "timestamp": str(now_datetime())
-            })
+                stage[service_key].append(
+                    {"department": department, "timestamp": str(now_datetime())}
+                )
 
-            frappe.db.set_value(
-                "Customer",
-                customer,
-                "stage",
-                json.dumps(stage)
-            )
+                frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
 
-            frappe.msgprint(
-                f"Candidate is reforwarded for {service}. "
-                f"Status updated to 'Request for Update'."
-            )
-            return {
-                "reforward": True,
-                "doctype": doctype,
-                "name": docs[0].name
-            }
+                frappe.msgprint(f"Candidate is reforwarded for {service}. ")
 
-    parents = frappe.db.sql(
-            """
-            SELECT parent FROM `tabDepartment Service`
-            WHERE service_name = %s
-            """,
-            (service,),
-            as_dict=True
+            return {"reforward": True, "doctype": doctype, "name": docs[0].name}
+
+        for d in docs:
+            frappe.db.set_value(doctype, d.name, "status", "Request for Update")
+
+        stage[service_key].append(
+            {"department": department, "timestamp": str(now_datetime())}
         )
 
+        frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
+
+        frappe.msgprint(
+            f"Candidate is reforwarded for {service}. "
+            f"Status updated to 'Request for Update'."
+        )
+
+        return {"reforward": True, "doctype": doctype, "name": docs[0].name}
+
+    parents = frappe.db.sql(
+        """
+        SELECT parent FROM `tabDepartment Service`
+        WHERE service_name = %s
+        """,
+        (service,),
+        as_dict=True,
+    )
+
     if not parents:
-            frappe.throw(f"No department found for service {service}")
+        frappe.throw(f"No department found for service {service}")
 
     department = parents[0].parent
 
     doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
+
     if doctype == "Other Services":
-            if department == "Technical":
-                doctype = "Technical Other Services"
-            elif department == "Marketing":
-                doctype = "Marketing Other Services"
-            else:
-                doctype = "Other Services"
+        if department == "Technical":
+            doctype = "Technical Other Services"
+        elif department == "Marketing":
+            doctype = "Marketing Other Services"
 
     assignee = get_auto_assign_employee(
-            department=department,
-            target_doctype=doctype,
-            owner_field="assign_to"
-        )
-    service_doc = frappe.get_doc({
+        department=department, target_doctype=doctype, owner_field="assign_to"
+    )
+
+    service_doc = frappe.get_doc(
+        {
             "doctype": doctype,
             "customer": customer,
             "service": service if "Other Services" in doctype else None,
@@ -247,35 +230,27 @@ def forward_candidate(customer, service):
             "assign_to": assignee,
             "status": "Pending",
             "forwarded_on": now_datetime() if "Other Services" in doctype else None,
-        })
+        }
+    )
+
+    if service_key == "jdc" and interview:
+        service_doc.interview = interview
 
     service_doc.insert(ignore_permissions=True)
 
-    stage[service_key] = [{
-        "department": department,
-        "timestamp": str(now_datetime())
-    }]
-    frappe.db.set_value(
-            "Customer",
-            customer,
-            "stage",
-            json.dumps(stage)
-        )
+    stage[service_key] = [{"department": department, "timestamp": str(now_datetime())}]
 
-    # notify_assignees(service_doc, service, customer)
+    frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
+
     frappe.enqueue(
         "verp_staffing.crm.api.auto_assign.notify_assignees",
         queue="short",
         doc=service_doc,
         service=service,
-        customer=customer
+        customer=customer,
     )
 
-    return {
-        "reforward": False,
-        "doctype": doctype,
-        "name": service_doc.name
-    }
+    return {"reforward": False, "doctype": doctype, "name": service_doc.name}
 
 
 def notify_assignees(doc, service, customer):
@@ -295,3 +270,38 @@ def notify_assignees(doc, service, customer):
         send_email=1,
         send_system=1,
     )
+
+
+@frappe.whitelist()
+def get_customer_interviews(customer):
+
+    if not customer:
+        return []
+
+    marketing_list = frappe.get_all(
+        "Marketing", filters={"customer": customer}, pluck="name"
+    )
+
+    if not marketing_list:
+        return []
+
+    interviews = frappe.get_all(
+        "Interview",
+        filters={"marketing_link": ["in", marketing_list]},
+        fields=["name", "company"],
+    )
+
+    formatted = []
+
+    for d in interviews:
+        if d.company:
+            formatted.append(
+                {
+                    "label": d.company,
+                    "value": d.name,
+                }
+            )
+        else:
+            formatted.append({"label": d.name, "value": d.name})
+
+    return formatted

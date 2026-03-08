@@ -13,7 +13,11 @@
   "section_break_zoqd",
   "proof_or_work",
   "notes_section",
-  "notes_html"
+  "notes_html",
+  "updates_section",
+  "updates_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -77,12 +81,31 @@
    "fieldname": "notes_html",
    "fieldtype": "HTML",
    "label": "Notes"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:48:09.265744",
+ "modified": "2026-03-03 15:39:14.405927",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",

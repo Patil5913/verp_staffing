@@ -13,7 +13,11 @@
   "section_break_izli",
   "proof_of_work",
   "tab_2_tab",
-  "notes_html"
+  "notes_html",
+  "updates_section",
+  "updates_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -54,7 +58,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "section_break_izli",
@@ -75,12 +79,31 @@
    "fieldname": "notes_html",
    "fieldtype": "HTML",
    "label": "Notes"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 14:09:12.562759",
+ "modified": "2026-03-05 14:22:14.098343",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing Other Services",

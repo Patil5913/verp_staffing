@@ -16,6 +16,8 @@
   "lead_details",
   "notes_tab",
   "notes_html",
+  "updates_section",
+  "updates_html",
   "activites_tab",
   "open_activities_html"
  ],
@@ -67,7 +69,8 @@
   },
   {
    "fieldname": "open_activities_html",
-   "fieldtype": "HTML"
+   "fieldtype": "HTML",
+   "label": "Updates"
   },
   {
    "fieldname": "session_details",
@@ -89,12 +92,21 @@
    "fieldname": "resume",
    "fieldtype": "HTML",
    "label": "Resume"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Update"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:50:24.478777",
+ "modified": "2026-03-03 18:04:44.583391",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
@@ -106,7 +118,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Person"
   },
   {
    "create": 1,
@@ -121,6 +133,10 @@
    "write": 1
   },
   {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
    "create": 1,
    "read": 1,
    "role": "Technical Coordinator",
@@ -129,18 +145,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
    "role": "Sales Team Lead"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1,
-   "write": 1
   },
   {
    "create": 1,
@@ -159,7 +164,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "JDC",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   },
@@ -173,7 +178,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Technical Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "JDC",
    "select": 1,
    "write": 1
   },
