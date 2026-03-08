@@ -15,7 +15,12 @@
   "employee_assignment_details_table_section",
   "employee_assignment_details_table",
   "section_break_dwei",
-  "linkedin_credentials"
+  "linkedin_credentials",
+  "section_break_qppd",
+  "revenue_target",
+  "start_date",
+  "target",
+  "target_based_on"
  ],
  "fields": [
   {
@@ -72,12 +77,37 @@
    "fieldtype": "Table",
    "label": "LinkedIn Credentials",
    "options": "Employee work"
+  },
+  {
+   "fieldname": "section_break_qppd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "target",
+   "fieldtype": "Currency",
+   "label": "Target"
+  },
+  {
+   "fieldname": "target_based_on",
+   "fieldtype": "Select",
+   "label": "Target Based On",
+   "options": "Daily\nWeekly\nMonthly"
+  },
+  {
+   "fieldname": "revenue_target",
+   "fieldtype": "Column Break",
+   "label": "Revenue Target"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 15:22:24.417504",
+ "modified": "2026-03-06 17:35:13.533119",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -86,7 +116,7 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Lead Master Manager"
+   "role": "Lead Person"
   },
   {
    "read": 1,
@@ -110,19 +140,11 @@
   },
   {
    "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
   },
   {
    "read": 1,
@@ -130,12 +152,25 @@
   },
   {
    "read": 1,
-   "role": "Marketing Mentor",
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -145,27 +180,7 @@
   },
   {
    "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person",
    "select": 1
   },
   {
@@ -180,12 +195,12 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Senior Resume Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Training Person",
+   "role": "Senior Recruiter",
    "select": 1
   },
   {
@@ -195,12 +210,17 @@
   },
   {
    "read": 1,
-   "role": "Support Person",
+   "role": "Technical Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "JD",
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Training Person",
    "select": 1
   },
   {
@@ -213,6 +233,16 @@
    "read": 1,
    "role": "HR Manager",
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "JD",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Support Person",
+   "select": 1
   },
   {
    "create": 1,

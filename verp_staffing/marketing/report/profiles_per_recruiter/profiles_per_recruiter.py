@@ -1,116 +1,89 @@
+# Copyright (c) 2026, Vrugle and contributors
+# For license information, please see license.txt
+
 import frappe
 from verp_staffing.marketing.api.utils import get_visible_employee_names
 
 
 def execute(filters=None):
     filters = filters or {}
-    columns = get_columns()
-    data = get_data(filters)
-    chart = get_chart(data)
-    return columns, data, None, chart
 
-
-def get_columns():
-    return [
-        {
-            "label": "Employee",
-            "fieldname": "employee",
-            "fieldtype": "Link",
-            "options": "Employee",
-            "width": 250,
-        },
-        {
-            "label": "Lead Count",
-            "fieldname": "lead_count",
-            "fieldtype": "Int",
-            "width": 120,
-        },
-    ]
-
-
-def get_data(filters):
-    conditions = []
+    conditions = ""
     values = {}
 
+    # Date filters
     if filters.get("from_date"):
-        conditions.append("l.creation >= %(from_date)s")
+        conditions += " AND ir.date_of_interview >= %(from_date)s"
         values["from_date"] = filters["from_date"]
 
     if filters.get("to_date"):
-        conditions.append("l.creation <= %(to_date)s")
+        conditions += " AND ir.date_of_interview <= %(to_date)s"
         values["to_date"] = filters["to_date"]
 
-    if filters.get("visa_status"):
-        conditions.append("ldf.current_visa_status = %(visa_status)s")
-        values["visa_status"] = filters["visa_status"]
+    if filters.get("recruiter"):
+        conditions += " AND m.assign_to = %(recruiter)s"
+        values["recruiter"] = filters["recruiter"]
 
+    # Hierarchy filter
     user = frappe.session.user
-    hierarchy_conditions = []
+    hierarchy_clause = ""
 
     if user != "Administrator":
         allowed_employees = get_visible_employee_names(user)
 
         if not allowed_employees:
-            return []
+            return [], [], None, {}
 
         placeholders = ", ".join(
             [f"%(emp_{i})s" for i in range(len(allowed_employees))]
         )
 
-        hierarchy_conditions.append(f"l.lead_owner IN ({placeholders})")
+        hierarchy_clause = f" AND m.assign_to IN ({placeholders})"
 
         for i, emp in enumerate(allowed_employees):
             values[f"emp_{i}"] = emp
 
-    where_conditions = ["l.lead_owner IS NOT NULL"] + conditions + hierarchy_conditions
-    where_clause = " AND ".join(where_conditions)
-
-    query = f"""
+    data = frappe.db.sql(
+        f"""
         SELECT
-            l.lead_owner AS employee,
-            COUNT(DISTINCT l.name) AS lead_count,
-            GROUP_CONCAT(
-                DISTINCT CONCAT(ldf.current_visa_status, ': ', v.cnt)
-                ORDER BY ldf.current_visa_status
-                SEPARATOR ' | '
-            ) AS visa_summary
-        FROM `tabLead` l
-        LEFT JOIN `tabLead Detail Form` ldf
-            ON ldf.name = l.lead_details
-        LEFT JOIN (
-            SELECT
-                l2.lead_owner,
-                ldf2.current_visa_status,
-                COUNT(*) AS cnt
-            FROM `tabLead` l2
-            LEFT JOIN `tabLead Detail Form` ldf2
-                ON ldf2.name = l2.lead_details
-            WHERE l2.lead_owner IS NOT NULL
-            GROUP BY l2.lead_owner, ldf2.current_visa_status
-        ) v
-            ON v.lead_owner = l.lead_owner
-           AND v.current_visa_status = ldf.current_visa_status
-        WHERE {where_clause}
-        GROUP BY l.lead_owner
-        ORDER BY lead_count DESC
-    """
+            m.assign_to AS recruiter,
+            COUNT(DISTINCT m.customer) AS profile_count
+        FROM `tabInterview` i
+        INNER JOIN `tabInterview Round` ir
+            ON ir.parent = i.name
+        INNER JOIN `tabMarketing` m
+            ON m.name = i.marketing_link
+        WHERE m.assign_to IS NOT NULL
+        {conditions}
+        {hierarchy_clause}
+        GROUP BY m.assign_to
+        ORDER BY profile_count DESC
+        """,
+        values,
+        as_dict=True,
+    )
 
-    return frappe.db.sql(query, values, as_dict=True)
+    columns = [
+        {
+            "label": "Recruiter",
+            "fieldname": "recruiter",
+            "fieldtype": "Link",
+            "options": "Employee",
+        },
+        {
+            "label": "Profiles",
+            "fieldname": "profile_count",
+            "fieldtype": "Int",
+        },
+    ]
 
-
-def get_chart(data):
-    if not data:
-        return {}
-
-    labels = [f"{row['employee']}\n{row['visa_summary'] or ''}" for row in data]
-
-    return {
+    chart = {
         "data": {
-            "labels": labels,
+            "labels": [d.recruiter for d in data],
             "datasets": [
                 {
-                    "name": "Leads per Employee",
-                    "values": [row["lead_count"] for row in data],
+                    "name": "Profiles",
+                    "values": [d.profile_count for d in data],
                 }
             ],
         },
@@ -118,10 +91,7 @@ def get_chart(data):
         "colors": ["#8494FF"],
     }
 
-
-def get_employee_from_user(user):
-    """Get Employee name linked to a user."""
-    return frappe.db.get_value("Employee", {"user": user}, "name")
+    return columns, data, None, chart
 
 
 def get_all_subordinates_by_assignment(root_employee, department=None):
@@ -155,21 +125,22 @@ def get_all_subordinates_by_assignment(root_employee, department=None):
 
 
 @frappe.whitelist()
-def get_lead_hierarchy_employees(
+def get_marketing_hierarchy_employees(
     doctype, txt, searchfield, start, page_len, filters
 ):
     """
-    Link field search for Lead report.
-    Shows only employees from Lead department.
+    Link field search for Recruiter filter in Profile per Recruiter report.
+    Shows only employees from Marketing department.
     Non-admin users see only themselves + their hierarchy.
     """
+
     user = frappe.session.user
 
     values = {
         "txt": f"%{txt}%",
         "start": start,
         "page_len": page_len,
-        "dept": "Lead",
+        "dept": "Marketing",
     }
 
     conditions = [
@@ -184,23 +155,19 @@ def get_lead_hierarchy_employees(
         """,
     ]
 
-    # Apply hierarchy restriction for non-admin users
     if user != "Administrator":
-        current_employee = get_employee_from_user(user)
+        current_employee = frappe.db.get_value("Employee", {"user": user}, "name")
 
         if not current_employee:
             return []
 
         subordinates = get_all_subordinates_by_assignment(
             current_employee,
-            department="Lead",
+            department="Marketing",
         )
 
         subordinates.add(current_employee)
         allowed_employees = list(subordinates)
-
-        if not allowed_employees:
-            return []
 
         placeholders = ", ".join(
             [f"%(emp_{i})s" for i in range(len(allowed_employees))]
@@ -222,4 +189,4 @@ def get_lead_hierarchy_employees(
         LIMIT %(start)s, %(page_len)s
         """,
         values,
-    )
+    )	

@@ -25,6 +25,24 @@ def get_columns():
             "fieldtype": "Currency",
             "width": 150,
         },
+        {
+            "label": "Target Based On",
+            "fieldname": "target_based_on",
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        {
+            "label": "Target Start Date",
+            "fieldname": "start_date",
+            "fieldtype": "Date",
+            "width": 150,
+        },
+        {
+            "label": "Target",
+            "fieldname": "target",
+            "fieldtype": "Currency",
+            "width": 150,
+        },
     ]
 
 
@@ -185,16 +203,21 @@ def get_data(filters):
     where_clause = " AND ".join(["so.owner IS NOT NULL"] + conditions)
 
     query = f"""
-        SELECT
-            so.owner AS employee,
-            SUM(cpt.amount) AS total_revenue
-        FROM `tabCustomer Payment Terms` cpt
-        JOIN `tabSales Order` so
-            ON cpt.parent = so.name
-        WHERE {where_clause}
-        GROUP BY so.owner
-        ORDER BY total_revenue DESC
-    """
+    SELECT
+        so.owner AS employee,
+        SUM(cpt.amount) AS total_revenue,
+        e.target AS target,
+        e.target_based_on,
+        e.start_date
+    FROM `tabCustomer Payment Terms` cpt
+    JOIN `tabSales Order` so
+        ON cpt.parent = so.name
+    LEFT JOIN `tabEmployee` e
+        ON e.user = so.owner
+    WHERE {where_clause}
+    GROUP BY so.owner
+    ORDER BY total_revenue DESC
+"""
 
     return frappe.db.sql(query, values, as_dict=True)
 

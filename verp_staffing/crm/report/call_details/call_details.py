@@ -32,11 +32,11 @@ def get_columns():
             "fieldname": "total_duration",
             "fieldtype": "Data",
         },
-        {
-            "label": "Unique Leads Contacted",
-            "fieldname": "unique_leads",
-            "fieldtype": "Int",
-        },
+        # {
+        #     "label": "Unique Leads Contacted",
+        #     "fieldname": "unique_leads",
+        #     "fieldtype": "Int",
+        # },
     ]
 
 

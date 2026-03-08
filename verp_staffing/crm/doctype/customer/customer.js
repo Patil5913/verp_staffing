@@ -1088,6 +1088,8 @@ function get_stage_json(frm) {
 					resolve([]); // no stage yet
 					return;
 				}
+				console.log("json data:", r);
+				
 
 				try {
 					const parsedStage = JSON.parse(r.message.stage);

@@ -10,6 +10,7 @@ frappe.ui.form.on("Employee", {
         });
 
         toggle_linkedin_section(frm);
+        toggle_revenue_target_section(frm);
 
 
 
@@ -235,9 +236,22 @@ function toggle_linkedin_section(frm) {
 frappe.ui.form.on("Employee Assignment Detail", {
     department(frm) {
         toggle_linkedin_section(frm);
+        toggle_revenue_target_section(frm);
     },
 
     // employee_assignment_details_table_remove(frm) {
     //     toggle_linkedin_section(frm);
     // }
 }); 
+
+function toggle_revenue_target_section(frm) {
+    let show = false;
+
+    (frm.doc.employee_assignment_details_table || []).forEach(row => {
+        if (row.department === "Sales") {
+            show = true;
+        }
+    });
+
+    frm.toggle_display("section_break_qppd", show);
+}

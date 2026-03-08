@@ -1,18 +1,28 @@
 import frappe
 from frappe.utils import nowdate, getdate
 import random
+import json
+from frappe.utils import nowdate, getdate, get_datetime
+
 
 def get_context(context):
 
-    # context.is_verified = frappe.session.get("lead_verified")
+    print("Session ID:", frappe.session.sid)
+    print("\n================= PAGE LOAD =================")
 
-    # HANDLE POST
+    # =====================================================
+    # HANDLE POST REQUEST
+    # =====================================================
     if frappe.request.method == "POST":
 
         action = frappe.form_dict.get("action")
+        print("Action Received:", action)
 
-        # ---------------- SEND OTP ----------------
+        # -------------------------------------------------
+        # SEND OTP
+        # -------------------------------------------------
         if action == "send_otp":
+
             email = frappe.form_dict.get("email")
 
             lead = frappe.get_all(
@@ -44,8 +54,11 @@ def get_context(context):
             context.email = email
             return
 
-        # ---------------- VERIFY OTP ----------------
-        if action == "verify_otp":
+        # -------------------------------------------------
+        # VERIFY OTP
+        # -------------------------------------------------
+        elif action == "verify_otp":
+
             email = frappe.form_dict.get("email")
             entered_otp = frappe.form_dict.get("otp")
 
@@ -57,52 +70,144 @@ def get_context(context):
                 context.email = email
                 return
 
-            print("............................................................................")
-            print("entered otp:", entered_otp)
-            print("cached otp:", cached_otp)
-            print("email used:", email)
-
             frappe.session["lead_verified"] = True
             frappe.session["lead_email"] = email
-            verified = frappe.session["lead_email"] = email
-            print("verified email:", verified)
+            frappe.session.modified = True
 
-            frappe.local.flags.redirect_location = frappe.request.path
-            # raise frappe.Redirect
-            
+        # -------------------------------------------------
+        # SAVE FEEDBACK
+        # -------------------------------------------------
+        elif action == "save_feedback":
+
+            round_name = frappe.form_dict.get("round_name")
+            feedback = frappe.form_dict.get("feedback")
+
+            if round_name and feedback is not None:
+
+                child_row = frappe.get_doc("Interview Round", round_name)
+                parent_doc = frappe.get_doc("Interview", child_row.parent)
+
+                for row in parent_doc.interview_rounds_table:
+                    if row.name == round_name:
+                        row.feedback = feedback
+                        break
+
+                parent_doc.save(ignore_permissions=True)
+                frappe.db.commit()
+
+    # =====================================================
+    # SESSION CHECK
+    # =====================================================
     context.is_verified = frappe.session.get("lead_verified")
-
-    # print("context.is_verified:", context.is_verified)
-
-
-
-    # ---------------- IF NOT VERIFIED STOP ----------------
+    
+    # If session expired reset verification state
     if not context.is_verified:
+        context.otp_sent = False
+        context.email = None
         return
 
-    # ---------------- LOAD DASHBOARD DATA ----------------
-    # ---------------- LOAD DASHBOARD DATA ----------------
-
+    # =====================================================
+    # LOAD DASHBOARD DATA
+    # =====================================================
     lead_email = frappe.session.get("lead_email")
 
-# Get the Lead Detail Form of logged-in user
     lead_doc = frappe.get_all(
-    "Lead Detail Form",
-    filters={"email": lead_email},
-    fields=["name"]
-)
+        "Lead Detail Form",
+        filters={"email": lead_email},
+        fields=["name"]
+    )
 
     if not lead_doc:
         return
 
-    lead_name = lead_doc[0].name   # example: kishan-2
+    lead_name = lead_doc[0].name
 
-# NOW filter interviews properly
+    # =====================================================
+    # LOAD CUSTOMER HISTORY
+    # =====================================================
+    customer = frappe.get_all(
+        "Customer",
+        filters={"name": lead_name},
+        fields=["name", "stage"]
+    )
+
+    context.customer_history = []
+
+    SERVICE_MAP = {
+        "ruc": "RUC",
+        "training": "Training",
+        "resume": "Resume",
+        "cover letter": "Cover Letter",
+        "jdc": "JDC",
+
+    }
+
+    if customer:
+
+        customer_doc = customer[0]
+        stage_data = customer_doc["stage"]
+
+        print("Customer Data:", customer)
+        print("Stage Data:", stage_data)
+
+        if isinstance(stage_data, str):
+            stage_data = json.loads(stage_data)
+
+        for stage, value in stage_data.items():
+
+            doctype = SERVICE_MAP.get(stage)
+
+            # handle unknown services
+            if not doctype:
+
+                department = None
+
+                if isinstance(value, list) and value:
+                    department = value[0].get("department")
+
+                if department == "Technical":
+                    doctype = "Technical Other Services"
+                elif department == "Marketing":
+                    doctype = "Marketing Other Services"
+                elif department == "Resume":
+                    doctype = "Other Services"
+                else:
+                    continue
+
+            service_docs = frappe.get_all(
+                doctype,
+                filters={"customer": customer_doc["name"]},
+                fields=[ "status"]
+            )
+
+            timestamp = None
+            if isinstance(value, list) and value:
+                ts = value[0].get("timestamp")
+                if ts:
+                    timestamp = get_datetime(ts)
+
+            context.customer_history.append({
+                "stage": stage,
+                "records": service_docs,
+                "timestamp": timestamp
+            })
+
+            print("timestamp", timestamp)
+
+        context.customer_history.sort(
+            key=lambda x: x.get("timestamp") or get_datetime("1900-01-01"),
+            reverse=True
+        )
+        print("Sorted Customer History:", context.customer_history)
+
+    # =====================================================
+    # LOAD INTERVIEWS
+    # =====================================================
     interviews = frappe.get_all(
-    "Interview",
-    filters={"marketing_link": lead_name},
-    fields=["name", "marketing_link", "status"]
-)
+        "Interview",
+        filters={"marketing_link": lead_name},
+        fields=["name", "marketing_link", "status", "role", "company"]
+    )
 
     today = getdate(nowdate())
 
@@ -111,6 +216,7 @@ def get_context(context):
     context.upcoming = []
 
     for interview in interviews:
+
         doc = frappe.get_doc("Interview", interview.name)
 
         past_rounds = []
@@ -118,13 +224,17 @@ def get_context(context):
         upcoming_rounds = []
 
         for round in doc.interview_rounds_table:
+
             if round.date_of_interview:
+
                 interview_date = getdate(round.date_of_interview)
 
                 if interview_date < today:
                     past_rounds.append(round)
+
                 elif interview_date == today:
                     current_rounds.append(round)
+
                 else:
                     upcoming_rounds.append(round)
 
