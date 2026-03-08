@@ -28,6 +28,8 @@
   "marketing_content",
   "note_tab",
   "notes_html",
+  "updates_html",
+  "section_break_kfrm",
   "activities_tab",
   "open_activities_html"
  ],
@@ -174,12 +176,21 @@
    "fieldname": "sales_order",
    "fieldtype": "Button",
    "label": "Sales Order"
+  },
+  {
+   "fieldname": "section_break_kfrm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-28 16:07:43.906787",
+ "modified": "2026-03-05 16:01:51.823787",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

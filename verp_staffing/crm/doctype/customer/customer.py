@@ -6,10 +6,11 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 
+
 class Customer(Document):
-    
+
     def on_trash(self):
-        unlink_and_clean_lead_detail("Customer" , self.name)
+        unlink_and_clean_lead_detail("Customer", self.name)
 
     def autoname(self):
         if not self.name1:
@@ -22,9 +23,9 @@ class Customer(Document):
             return
 
         # Safely check for cleaner name fields in case name1 has suffix like "try-1"
-        if hasattr(self, 'customer_name') and self.customer_name:
+        if hasattr(self, "customer_name") and self.customer_name:
             base_name = self.customer_name.strip()
-        elif hasattr(self, 'full_name') and self.full_name:
+        elif hasattr(self, "full_name") and self.full_name:
             base_name = self.full_name.strip()
 
         self.title = base_name
@@ -145,5 +146,55 @@ def get_forwardable_departments(customer):
     )
 
     frappe.errprint(valid_services)
+
+    return valid_services
+
+
+@frappe.whitelist()
+def get_forwardable_departments_from_service(doctype, docname):
+    """
+    Fetch forwardable services using the customer
+    linked inside any service doctype.
+    """
+
+    # Step 1: Get the service document
+    doc = frappe.get_doc(doctype, docname)
+
+    if not doc.customer:
+        frappe.throw("No Customer linked with this document.")
+
+    customer = doc.customer
+
+    # Step 2: Get latest Sales Order of that customer
+    so = frappe.get_all(
+        "Sales Order",
+        filters={"customer": customer},
+        pluck="name",
+        order_by="creation desc",
+        limit=1,
+    )
+
+    if not so:
+        return []
+
+    # Step 3: Get services from Sales Order
+    services = frappe.get_all(
+        "SalesOrderServices",
+        filters={
+            "parenttype": "Sales Order",
+            "parent": ["in", so]
+        },
+        pluck="service"
+    )
+
+    if not services:
+        return []
+
+    # Step 4: Validate services exist
+    valid_services = frappe.get_all(
+        "Service",
+        filters={"name": ["in", services]},
+        pluck="name"
+    )
 
     return valid_services
