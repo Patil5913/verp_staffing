@@ -16,7 +16,11 @@
   "section_break_bvrs",
   "proof_of_work",
   "notes_tab",
-  "notes_html"
+  "notes_html",
+  "updates_section",
+  "updates_html",
+  "activites_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
@@ -60,7 +64,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Pending\nCompleted"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "forwarded_on",
@@ -93,12 +97,31 @@
    "fieldname": "notes_html",
    "fieldtype": "HTML",
    "label": "Notes"
+  },
+  {
+   "fieldname": "activites_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activites"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "updates_section",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 14:05:14.232504",
+ "modified": "2026-03-05 16:23:06.096286",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",

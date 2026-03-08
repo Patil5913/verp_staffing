@@ -124,7 +124,6 @@ frappe.ui.form.on("Lead", {
 			}, 200);
 		}
 	},
-
 });
 
 frappe.ui.form.on("Lead Course", {
@@ -145,10 +144,8 @@ frappe.ui.form.on("Lead Course", {
 function open_create_opportunity_dialog(frm) {
 	// If lead isn't saved yet, ask to save first
 	if (frm.is_dirty()) {
-		frappe.msgprint({
-			title: __("Error"),
-			message: __("Please save the Lead before creating an Opportunity."),
-			indicator: "red",
+		frm.save().then(() => {
+			open_create_opportunity_dialog(frm);
 		});
 		return;
 	}
@@ -230,7 +227,7 @@ function create_opportunity(frm, owner) {
 		opportunity_from: "Lead",
 		party_name: frm.doc.name,
 		opportunity_owner: owner,
-		name1 : frm.doc.name
+		name1: frm.doc.name,
 	};
 
 	frappe.call({

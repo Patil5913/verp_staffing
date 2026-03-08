@@ -222,13 +222,14 @@ frappe.ui.form.on("Opportunity", {
 
 	after_save(frm) {
 		load_lead_details_after_save(frm);
-	},	
+	},
 });
-
 
 function open_create_sales_order_dialog(frm) {
 	if (frm.is_dirty()) {
-		frappe.msgprint("Please save the Opportunity first.");
+		frm.save().then(() => {
+			open_create_sales_order_dialog(frm);
+		});
 		return;
 	}
 

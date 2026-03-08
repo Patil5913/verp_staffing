@@ -39,7 +39,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nLead\nInterested\nWon\nLost"
+   "options": "Open\nLead\nInterested\nWon\nLost\nOpportunity"
   },
   {
    "fieldname": "column_break_vwnk",
@@ -93,7 +93,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 12:01:46.567889",
+ "modified": "2026-03-05 17:44:02.667525",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -102,14 +102,14 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "Lead Master Manager",
-   "select": 1,
-   "share": 1,
+   "role": "Lead Person",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Team Lead",
    "write": 1
   },
   {
@@ -127,19 +127,25 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Lead Team Lead",
+   "role": "Sales Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lead Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "role": "Lead Manager",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Lead Person",
    "write": 1
   },
   {
@@ -157,12 +163,6 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Sales Team Lead",
    "write": 1
   },
@@ -171,6 +171,16 @@
    "read": 1,
    "role": "Sales Person",
    "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_sales"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_lead"
   },
   {
    "create": 1,
