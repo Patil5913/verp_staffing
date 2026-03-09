@@ -18,7 +18,7 @@
  "is_hidden": 0,
  "label": "Leads",
  "links": [],
- "modified": "2026-02-25 15:57:44.966477",
+ "modified": "2026-03-09 13:47:14.302639",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Leads",
@@ -33,34 +33,10 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Lead Conversion Funnel",
-   "link_to": "Lead Conversion Funnel",
-   "report_ref_doctype": "Lead",
-   "type": "Report"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
    "label": "Leads",
    "link_to": "Lead",
-   "stats_filter": "[]",
+   "stats_filter": "[[\"Lead\",\"lead_owner\",\"=\",\"administrator-2026-01-30-0001\",false]]",
    "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Lead Per Employee",
-   "link_to": "Lead Per Employee",
-   "report_ref_doctype": "Lead",
-   "type": "Report"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Lead Details",
-   "link_to": "Lead Details",
-   "report_ref_doctype": "Lead",
-   "type": "Report"
   }
  ],
  "title": "Leads"

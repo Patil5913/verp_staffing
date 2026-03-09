@@ -94,34 +94,6 @@ def execute(filters=None):
     return columns, data, None, chart
 
 
-def get_all_subordinates_by_assignment(root_employee, department=None):
-    """
-    Recursively get all subordinates using Employee Assignment Detail.
-    assigned_to field mein parent employee hota hai.
-    """
-    collected = set()
-    stack = [root_employee]
-
-    while stack:
-        current = stack.pop()
-
-        filters = {"assigned_to": current}
-
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
-
-    return collected
 
 
 @frappe.whitelist()
@@ -156,18 +128,10 @@ def get_marketing_hierarchy_employees(
     ]
 
     if user != "Administrator":
-        current_employee = frappe.db.get_value("Employee", {"user": user}, "name")
+        allowed_employees = get_visible_employee_names(user)
 
-        if not current_employee:
+        if not allowed_employees:
             return []
-
-        subordinates = get_all_subordinates_by_assignment(
-            current_employee,
-            department="Marketing",
-        )
-
-        subordinates.add(current_employee)
-        allowed_employees = list(subordinates)
 
         placeholders = ", ".join(
             [f"%(emp_{i})s" for i in range(len(allowed_employees))]

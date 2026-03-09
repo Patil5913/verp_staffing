@@ -47,7 +47,14 @@ def get_data(filters):
     user = frappe.session.user
     hierarchy_conditions = []
 
-    if user != "Administrator":
+    # If employee filter is selected → show only that employee
+    if filters.get("employee"):
+        hierarchy_conditions.append("l.lead_owner = %(employee)s")
+        values["employee"] = filters["employee"]
+
+    # Otherwise apply hierarchy
+    elif user != "Administrator":
+
         allowed_employees = get_visible_employee_names(user)
 
         if not allowed_employees:
@@ -119,41 +126,6 @@ def get_chart(data):
     }
 
 
-def get_employee_from_user(user):
-    """Get Employee name linked to a user."""
-    return frappe.db.get_value("Employee", {"user": user}, "name")
-
-
-def get_all_subordinates_by_assignment(root_employee, department=None):
-    """
-    Recursively get all subordinates using Employee Assignment Detail.
-    assigned_to field mein parent employee hota hai.
-    """
-    collected = set()
-    stack = [root_employee]
-
-    while stack:
-        current = stack.pop()
-
-        filters = {"assigned_to": current}
-
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
-
-    return collected
-
-
 @frappe.whitelist()
 def get_lead_hierarchy_employees(
     doctype, txt, searchfield, start, page_len, filters
@@ -186,18 +158,7 @@ def get_lead_hierarchy_employees(
 
     # Apply hierarchy restriction for non-admin users
     if user != "Administrator":
-        current_employee = get_employee_from_user(user)
-
-        if not current_employee:
-            return []
-
-        subordinates = get_all_subordinates_by_assignment(
-            current_employee,
-            department="Lead",
-        )
-
-        subordinates.add(current_employee)
-        allowed_employees = list(subordinates)
+        allowed_employees = get_visible_employee_names(user)
 
         if not allowed_employees:
             return []
