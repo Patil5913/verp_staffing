@@ -1,0 +1,1103 @@
+{% if error %}
+<h2 style="color:red;">{{ error }}</h2>
+
+{% else %}
+
+{% if not is_verified %}
+
+<!-- 🔐 Verification Section -->
+<div id="verification-section" style="
+    max-width:450px;
+    margin:80px auto;
+    background:#fff;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+    text-align:center;
+  ">
+
+  <h3>Email Verification</h3>
+  <p>We’ll send a verification code to {{ fields[0].signer_email }} email address.</p>
+
+
+  <button id="sendotp-btn" onclick="sendOTP()" class="otp-btn">
+    <span id="otp-btn-text">Send OTP</span>
+    <span id="otp-loader" class="loader" style="display:none;"></span>
+  </button>
+
+  <div id="otp-section" style="margin-top:20px; display:none;">
+    <input type="text" id="otp-input" placeholder="Enter OTP"
+      style="padding:8px; width:70%; border:1px solid #ccc; border-radius:6px;">
+    <button id="verify-btn" onclick="verifyOTP()" style="
+        padding:8px 12px;
+        background:#28a745;
+        color:white;
+        border:none;
+        border-radius:6px;">
+      Verify
+    </button>
+    <div id="otp-timer" style="margin-top:10px; font-size:14px; color:#555;"></div>
+  </div>
+
+</div>
+
+{% else %}
+
+<!-- ✅ PDF SECTION (ONLY AFTER VERIFIED) -->
+
+<h2>Sign Document</h2>
+
+<div id="modal-overlay" style="
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.5);
+display:none;
+z-index:999;
+"></div>
+
+<div style="height:85vh; overflow:auto; padding:20px; background:#f3f4f6;">
+
+  {% for page in pages %}
+  <div style="position:relative; max-width:900px; margin:0 auto 20px;">
+
+    <img src="{{ page.url }}" style="width:100%; display:block;" />
+
+    <div style="position:absolute; inset:0;">
+
+      {% for field in fields %}
+      {% if field.page_number == page.page_number and not field.signed %}
+      <div class="field-box" data-field="{{ field.name }}" data-type="{{ field.field_type }}"
+        data-left="{{ field.x_percent }}" data-top="{{ field.y_percent }}" data-width="{{ field.width_percent }}"
+        data-height="{{ field.height_percent }}">
+      </div>
+      {% endif %}
+      {% endfor %}
+
+      {% for field in signed_fields %}
+      {% if field.page_number == page.page_number and field.signature_image %}
+      <img src="{{ field.signature_image }}" class="signed-image" data-left="{{ field.x_percent }}"
+        data-top="{{ field.y_percent }}" data-width="{{ field.width_percent }}"
+        data-height="{{ field.height_percent }}">
+      {% endif %}
+      {% endfor %}
+
+    </div>
+
+  </div>
+  {% endfor %}
+
+</div>
+
+<div style="text-align:center;margin:30px;">
+  <button id="finish-btn" onclick="submitFields()" class="finish-btn">
+    Finish Signing
+  </button>
+</div>
+
+<div id="signature-modal" style="
+  display:none;
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:white;
+  padding:20px;
+  border:1px solid #ccc;
+  z-index:1000;
+  width:95%;
+  max-width:500px;
+  border-radius:10px;
+">
+
+  <h3>Create Signature</h3>
+
+  <!-- Tabs -->
+  <div style="display:flex; gap:10px; margin-bottom:15px;">
+    <button onclick="switchMode('draw')">Draw</button>
+    <button onclick="switchMode('upload')">Upload</button>
+    <button onclick="switchMode('type')">Type</button>
+  </div>
+
+  <!-- DRAW SECTION -->
+  <div id="draw-section">
+    <canvas id="signature-canvas" width="350" height="120" style="border:1px solid #ccc; width:100%;"></canvas>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div id="upload-section" style="display:none;">
+    <input type="file" id="upload-input" accept="image/*">
+    <p style="color: red;  margin-top: 5px;">
+      ⚠️ Warning: Maximum allowed file size is 5 MB.
+    </p>
+    <div id="upload-preview" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- TYPE SECTION -->
+  <div id="type-section" style="display:none;">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pacifico&family=Great+Vibes&family=Dancing+Script&family=Alex+Brush&family=Playfair+Display&family=Roboto&family=Libre+Baskerville&family=Satisfy&display=swap"
+      rel="stylesheet">
+    <input type="text" id="typed-name" placeholder="Your Name" style="width:100%; padding:8px; margin-bottom:10px;">
+
+    <div id="font-options" class="font-grid">
+
+      <div class="font-box active" data-font="'Pacifico', cursive">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Great Vibes', cursive">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Dancing Script', cursive">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Alex Brush', cursive">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Satisfy', cursive">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Playfair Display', serif">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Libre Baskerville', serif">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+      <div class="font-box" data-font="'Roboto', sans-serif">
+        <span class="font-preview">John Smith</span>
+      </div>
+
+    </div>
+
+    <canvas id="typed-preview" width="400" height="150"
+      style="border:1px solid #ccc; width:100%; margin-top:10px;"></canvas>
+
+  </div>
+
+  <br>
+
+  <button onclick="saveSignature()">Upload Signature</button>
+  <button onclick="closeModal()">Cancel</button>
+
+</div>
+{% endif %}
+
+<!-- SIGNATURE MODAL -->
+
+
+<!-- ✅ ONLY CSS ADDED BELOW -->
+<style>
+  /* ===== Header ===== */
+  h2 {
+    text-align: center;
+    font-size: 20px;
+    margin: 15px 0;
+  }
+
+  /* ===== Main Container ===== */
+  div[style*="height:85vh"] {
+    height: auto !important;
+    min-height: 100vh;
+  }
+
+  /* ===== PDF Page Wrapper Responsive ===== */
+  div[style*="width:60%"] {
+    width: 95% !important;
+    max-width: 900px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* OTP Button */
+  .otp-btn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    border: none;
+    background: #1677ff;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+    transition: 0.2s ease;
+  }
+
+  .otp-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  /* Spinner */
+  .loader {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .finish-btn {
+    background: #1677ff;
+    color: white;
+    border: none;
+    padding: 12px 26px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .finish-btn:hover {
+    background: #0f5ed7;
+  }
+
+  .font-box {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .font-box.active {
+    border: 2px solid #1677ff;
+    background: #eef4ff;
+  }
+
+  .font-preview {
+    font-size: 26px;
+    line-height: 1.4;
+    display: block;
+  }
+
+  .field-box {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .field-box.text-field {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    border-radius: 6px;
+  }
+
+  .field-box.checkbox-field,
+  .field-box.radio-field {
+    background: transparent;
+    border: none;
+  }
+
+  .field-box input[type="text"],
+  .field-box input[type="email"],
+  .field-box input[type="number"],
+  .field-box input[type="date"] {
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    padding: 6px;
+  }
+
+  .field-box input[type="checkbox"],
+
+  .signed-image {
+    position: absolute;
+    z-index: 15;
+  }
+
+  img {
+    pointer-events: none;
+  }
+
+  .font-box:hover {
+    border-color: #1677ff;
+    background: #f0f6ff;
+    transform: translateY(-2px);
+  }
+
+  .font-box.active {
+    border: 2px solid #1677ff;
+    background: #eaf3ff;
+  }
+
+  .font-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+
+
+  /* ===== Signature Box ===== */
+  .sign-box {
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .sign-box:hover {
+    background: rgba(37, 99, 235, 0.25) !important;
+  }
+
+  /* ===== Modal ===== */
+  #signature-modal {
+    width: 95% !important;
+    max-width: 500px;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  /* ===== Canvas Responsive ===== */
+  #signature-canvas {
+    width: 100% !important;
+    height: auto !important;
+    touch-action: none;
+  }
+
+  /* ===== Buttons ===== */
+  #signature-modal button {
+    padding: 8px 14px;
+    margin: 5px 4px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* ===== Mobile Optimization ===== */
+  @media (max-width: 768px) {
+
+    div[style*="padding:20px"] {
+      padding: 10px !important;
+    }
+
+    h2 {
+      font-size: 18px;
+    }
+
+    #signature-modal {
+      padding: 15px !important;
+    }
+
+  }
+</style>
+
+
+<script src="/assets/frappe/js/frappe-web.min.js"></script>
+
+<script>
+
+  let currentField = null;
+  window.csrf_token = "{{ frappe.session.csrf_token }}";
+  let currentMode = "draw";
+  let selectedFont = "Pacifico";
+  let uploadedImageData = null;
+  let drawing = false;
+  let otpInterval = null;
+  let otpTimeRemaining = 300; // 5 minutes
+  let canvas = null;
+  let ctx = null;
+  let fieldImages = {};
+
+  function switchMode(mode) {
+    currentMode = mode;
+
+    document.getElementById("draw-section").style.display =
+      mode === "draw" ? "block" : "none";
+
+    document.getElementById("upload-section").style.display =
+      mode === "upload" ? "block" : "none";
+
+    document.getElementById("type-section").style.display =
+      mode === "type" ? "block" : "none";
+  }
+
+
+  document.addEventListener("DOMContentLoaded", function () {
+
+    initFields();
+    // initFonts();
+    // initSignedImages();
+
+    const typedInput = document.getElementById("typed-name");
+    if (typedInput) {
+      typedInput.addEventListener("input", renderTypedSignature);
+    }
+
+  });
+
+  function initCanvas() {
+
+    canvas = document.getElementById("signature-canvas");
+
+    if (!canvas) return;
+
+    ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawing = false;
+
+    canvas.onmousedown = e => {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+    }
+
+    canvas.onmouseup = () => {
+      drawing = false;
+    }
+
+    canvas.onmousemove = e => {
+      if (!drawing) return;
+
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#000";
+
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+    }
+
+  }
+  function clearCanvas() {
+
+    const canvas = document.getElementById("signature-canvas");
+
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  }
+
+  function openSignatureModal() {
+
+    document.getElementById("modal-overlay").style.display = "block";
+    document.getElementById("signature-modal").style.display = "block";
+
+    initCanvas();
+
+  }
+
+  // Position unsigned boxes
+  function initFields() {
+    console.log("initFields running");
+    console.log("boxes:", document.querySelectorAll(".field-box").length);
+
+
+
+    document.querySelectorAll(".field-box").forEach(box => {
+
+      const type = box.dataset.type;
+
+      box.style.position = "absolute";
+      box.style.left = box.dataset.left + "%";
+      box.style.top = box.dataset.top + "%";
+      box.style.width = box.dataset.width + "%";
+      box.style.height = box.dataset.height + "%";
+
+      box.style.border = "2px solid #2563eb";
+      box.style.background = "rgba(37,99,235,0.12)";
+      box.style.borderRadius = "6px";
+
+      box.addEventListener("click", () => {
+        console.log("field clicked", type);
+      });
+
+      if (type === "signature") {
+
+        box.innerHTML = "✍ Sign";
+        box.style.fontWeight = "500";
+        box.style.color = "#1d4ed8";
+        box.style.display = "flex";
+        box.style.alignItems = "center";
+        box.style.justifyContent = "center";
+        box.style.cursor = "pointer";
+
+        box.onclick = () => {
+          currentField = box.dataset.field;
+          openSignatureModal();
+        }
+
+        return;
+      }
+
+      // let input;
+
+      // if (type === "text" || type === "name") {
+      //   input = document.createElement("input");
+      //   input.type = "text";
+      // }
+
+      // if (type === "email") {
+      //   input = document.createElement("input");
+      //   input.type = "email";
+      // }
+
+      // if (type === "date") {
+      //   input = document.createElement("input");
+      //   input.type = "date";
+      // }
+
+      // if (type === "number") {
+      //   input = document.createElement("input");
+      //   input.type = "number";
+      // }
+
+      // if (type === "checkbox") {
+      //   input = document.createElement("input");
+      //   input.type = "checkbox";
+      // }
+
+      let input;
+      let placeholder = type.toUpperCase();
+
+      if (type === "name") {
+        input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Enter name";
+        box.classList.add("text-field");
+      }
+      if (type === "text") {
+        input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Enter text";
+        box.classList.add("text-field");
+      }
+
+      if (type === "email") {
+        input = document.createElement("input");
+        input.type = "email";
+        input.placeholder = "Enter email";
+        box.classList.add("text-field");
+      }
+
+      if (type === "number") {
+        input = document.createElement("input");
+        input.type = "number";
+        input.placeholder = "Enter number";
+        box.classList.add("text-field");
+      }
+
+      if (type === "date") {
+        input = document.createElement("input");
+        input.type = "date";
+        box.classList.add("text-field");
+      }
+
+      if (type === "checkbox") {
+        input = document.createElement("input");
+        input.type = "checkbox";
+        box.classList.add("checkbox-field");
+      }
+
+      if (input) {
+
+        if (type !== "checkbox") {
+          input.style.width = "100%";
+          input.style.height = "100%";
+        }
+
+        input.style.background = "#fff";
+        input.style.border = "1px solid #cbd5e1";
+        input.style.borderRadius = "4px";
+        input.style.padding = "4px";
+        input.style.padding = "4px";
+        input.style.fontSize = "14px";
+        input.style.pointerEvents = "auto";
+        input.style.outline = "none";
+
+        box.appendChild(input);
+      }
+
+      const label = document.createElement("div");
+      label.innerText = type.toUpperCase();
+      label.style.position = "absolute";
+      label.style.top = "-18px";
+      label.style.fontSize = "11px";
+      label.style.color = "#475569";
+      box.appendChild(label);
+
+    });
+
+  }
+  const fontBoxes = document.querySelectorAll(".font-box");
+
+  if (fontBoxes.length) {
+
+    fontBoxes.forEach(box => {
+
+      const font = box.dataset.font;
+      const preview = box.querySelector(".font-preview");
+
+      preview.style.fontFamily = font;
+
+      box.addEventListener("click", function () {
+
+        document.querySelectorAll(".font-box")
+          .forEach(b => b.classList.remove("active"));
+
+        this.classList.add("active");
+
+        selectedFont = font;
+        renderTypedSignature();
+
+      });
+
+    });
+
+  }
+
+
+
+
+  // Position signed images
+  document.querySelectorAll(".signed-image").forEach(img => {
+
+    img.style.position = "absolute";
+    img.style.left = img.dataset.left + "%";
+    img.style.top = img.dataset.top + "%";
+    img.style.width = img.dataset.width + "%";
+    img.style.height = img.dataset.height + "%";
+    img.style.objectFit = "contain";
+    img.style.pointerEvents = "none";
+  });
+
+  document.getElementById("upload-input").addEventListener("change", function (e) {
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image too large. Max 5MB allowed.");
+      e.target.value = ""
+      return;
+    }
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+      img.src = event.target.result;
+    };
+
+    img.onload = function () {
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const maxWidth = 600;
+      const scale = maxWidth / img.width;
+
+      canvas.width = maxWidth;
+      canvas.height = img.height * scale;
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
+
+      document.getElementById("upload-preview").innerHTML =
+        `<img src="${uploadedImageData}" style="max-width:100%;">`;
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+  function collectFieldValues() {
+
+    const data = [];
+
+    document.querySelectorAll(".field-box").forEach(box => {
+
+      const type = box.dataset.type;
+
+      if (type === "signature") return;
+
+      const input = box.querySelector("input");
+
+      if (!input) return;
+
+      data.push({
+        field: box.dataset.field,
+        value: input.type === "checkbox" ? input.checked : input.value
+      });
+
+    });
+
+    return data;
+  }
+
+  function renderTypedSignature() {
+
+    const name = document.getElementById("typed-name").value || "John Smith";
+    const canvas = document.getElementById("typed-preview");
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = "40px " + selectedFont;
+    ctx.fillStyle = "#111";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+
+    // 🔥 Update font boxes preview text
+    document.querySelectorAll(".font-preview").forEach(el => {
+      el.innerText = name;
+    });
+  }
+
+  function startOTPTimer() {
+
+    otpTimeRemaining = 300; // reset to 5 min
+    const timerDisplay = document.getElementById("otp-timer");
+    const verifyBtn = document.getElementById("verify-btn");
+
+    verifyBtn.disabled = false;
+
+    clearInterval(otpInterval);
+
+    otpInterval = setInterval(() => {
+
+      let minutes = Math.floor(otpTimeRemaining / 60);
+      let seconds = otpTimeRemaining % 60;
+
+      minutes = minutes < 10 ? "0" + minutes : minutes;
+      seconds = seconds < 10 ? "0" + seconds : seconds;
+
+      timerDisplay.innerHTML =
+        `OTP is valid for <b>${minutes}:${seconds}</b>`;
+
+      otpTimeRemaining--;
+
+      if (otpTimeRemaining < 0) {
+        clearInterval(otpInterval);
+
+        timerDisplay.innerHTML =
+          `<span style="color:red;">OTP expired. Please resend.</span>`;
+
+        verifyBtn.disabled = true;
+      }
+
+    }, 1000);
+  }
+
+  function closeModal() {
+
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    uploadedImageData = null;
+
+    const preview = document.getElementById("upload-preview");
+    if (preview) preview.innerHTML = "";
+
+    const typedName = document.getElementById("typed-name");
+    if (typedName) typedName.value = "";
+
+    const typedCanvas = document.getElementById("typed-preview");
+    if (typedCanvas) {
+      typedCanvas.getContext("2d")
+        .clearRect(0, 0, typedCanvas.width, typedCanvas.height);
+    }
+
+    document.getElementById("signature-modal").style.display = "none";
+    document.getElementById("modal-overlay").style.display = "none";
+
+  }
+  if ("{{ is_verified }}" === "True") {
+    document.addEventListener('DOMContentLoaded', (event) => {
+
+      fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.track_ip_and_device", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Frappe-CSRF-Token": window.csrf_token
+        },
+        body: JSON.stringify({
+          browser: "{{ browser }}",
+          os: "{{ os }}",
+          device: "{{ device }}",
+          token: "{{ token }}"
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Error saving signature");
+        });
+
+    })
+  }
+
+
+  function saveSignature() {
+
+    if (!currentField) {
+      alert("Invalid signature field");
+      return;
+    }
+
+    let imageData;
+
+    if (currentMode === "draw") {
+      const signCanvas = document.getElementById("signature-canvas");
+      imageData = signCanvas.toDataURL("image/png");
+    }
+
+    if (currentMode === "upload") {
+      if (!uploadedImageData) {
+        alert("Please upload signature image");
+        return;
+      }
+      imageData = uploadedImageData;
+    }
+
+    if (currentMode === "type") {
+      const typedCanvas = document.getElementById("typed-preview");
+      imageData = typedCanvas.toDataURL("image/png");
+    }
+
+    if (!imageData) {
+      alert("Please create a signature");
+      return;
+    }
+
+
+    const box = document.querySelector(`.field-box[data-field="${currentField}"]`);
+
+    if (box) {
+
+      box.dataset.signed = "1";
+
+      box.innerHTML = "";
+
+      const img = document.createElement("img");
+      img.src = imageData;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "contain";
+
+      box.appendChild(img);
+    }
+
+    storeFieldImage(currentField, "signature", imageData);
+
+    closeModal();
+
+  }
+
+  function storeFieldImage(field, type, image) {
+
+    fieldImages[field] = {
+      field: field,
+      type: type,
+      image: image
+    };
+
+  }
+
+  function sendOTP() {
+
+    const btn = document.getElementById("sendotp-btn");
+    const btnText = document.getElementById("otp-btn-text");
+    const loader = document.getElementById("otp-loader");
+
+    // Disable button + show loader
+    btn.disabled = true;
+    loader.style.display = "inline-block";
+    btnText.innerText = "Sending...";
+
+    fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.send_otp", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": window.csrf_token
+      },
+      body: JSON.stringify({ token: "{{ token }}" })
+    })
+      .then(res => res.json())
+      .then(data => {
+
+        if (data.message?.status === "sent") {
+
+          document.getElementById("otp-section").style.display = "block";
+          startOTPTimer()
+
+          // Restore button to normal state
+          btn.disabled = false;
+          loader.style.display = "none";
+          btnText.innerText = "Resend OTP";
+
+        } else {
+
+          throw new Error("Failed");
+
+        }
+
+      })
+      .catch(err => {
+
+        console.error(err);
+        alert("Failed to send OTP. Try again.");
+
+        // Reset button if failed
+        btn.disabled = false;
+        loader.style.display = "none";
+        btnText.innerText = "Send OTP";
+
+      });
+
+  }
+
+  function textToImage(text) {
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 80;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#000";
+    ctx.font = "20px Arial";
+    ctx.textBaseline = "middle";
+
+    ctx.fillText(text, 20, 40);
+
+    return canvas.toDataURL("image/png");
+
+  }
+
+  function submitFields() {
+
+    const boxes = document.querySelectorAll(".field-box");
+
+    let valid = true;
+
+    boxes.forEach(box => {
+
+      const field = box.dataset.field;
+      const type = box.dataset.type;
+
+      if (type === "signature") {
+
+        if (!fieldImages[field] || !fieldImages[field].image) {
+          valid = false;
+          box.style.border = "2px solid red";
+        }
+
+        return;
+      }
+
+      const input = box.querySelector("input");
+
+      if (!input) return;
+
+      let value = input.type === "checkbox" ? input.checked : input.value;
+
+      if (!value) {
+        valid = false;
+        box.style.border = "2px solid red";
+        return;
+      }
+
+      // convert to image
+      const image = textToImage(value);
+
+      storeFieldImage(field, type, image);
+
+    });
+
+    if (!valid) {
+      alert("Please complete all required fields");
+      return;
+    }
+
+    const payloadFields = Object.values(fieldImages || {});
+
+    fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.complete_signing", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": window.csrf_token
+      },
+      body: JSON.stringify({
+        token: "{{ token }}",
+        fields: payloadFields
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        alert("Document signed successfully");
+        location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error completing document");
+      });
+
+  }
+
+  function verifyOTP() {
+
+    const otp = document.getElementById("otp-input").value;
+
+    if (!/^\d{6}$/.test(otp)) {
+      alert("Enter valid 6 digit OTP");
+      return;
+    }
+
+
+    fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.verify_otp", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": window.csrf_token
+      },
+      body: JSON.stringify({
+        token: "{{ token }}",
+        otp: otp
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.message.status === "verified") {
+          location.reload();
+        } else {
+          alert("Invalid OTP");
+        }
+      });
+  }
+
+</script>
+
+<!-- {% endif %} -->
