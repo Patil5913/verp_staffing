@@ -1,187 +1,158 @@
-frappe.listview_settings['Opportunity'] = {
-    onload(listview) {
-        const roles = frappe.user_roles;
-        const user = frappe.session.user;
-        if (user != "Administrator") {
-            // Only apply to Lead Employee
-            if (
-                roles.includes("Lead Employee") ||
-                roles.includes("Lead Manager") ||
-                roles.includes("Lead Master Manager")
-            ) {
-                frappe.msgprint("You are not allowed to access Opportunity list.");
-                frappe.set_route("desk");
-            }
-        }        
-    },
+frappe.listview_settings["Opportunity"] = {
+	onload(listview) {
+		const roles = frappe.user_roles;
+		const user = frappe.session.user;
+		if (user != "Administrator") {
+			// Only apply to Lead Employee
+			if (
+				roles.includes("Lead Employee") ||
+				roles.includes("Lead Manager") ||
+				roles.includes("Lead Master Manager")
+			) {
+				frappe.msgprint("You are not allowed to access Opportunity list.");
+				frappe.set_route("desk");
+			}
+		}
+	},
 
-    refresh: function (listview) {
-        let sidebar = $("body .layout-side-section");
-        if (!sidebar.length) {
-            console.log("Sidebar not found");
-            return;
-        }
+	refresh: function (listview) {
+		let sidebar = $("body .layout-side-section");
+		if (!sidebar.length) {
+			console.log("Sidebar not found");
+			return;
+		}
 
-        // HIDE ALL ITEMS FIRST
-        sidebar.find(".group-by-field").hide();
-        sidebar.find(".add-group-by").hide();
-        sidebar.find(".save-filter-section").hide();
+		// HIDE ALL ITEMS FIRST
+		sidebar.find(".group-by-field").hide();
+		sidebar.find(".add-group-by").hide();
+		sidebar.find(".save-filter-section").hide();
 
-        setTimeout(() => {
+		setTimeout(() => {
+			let primary_btn = listview.page.wrapper.find(".page-actions .btn-primary");
 
-            let primary_btn = listview.page.wrapper
-                .find('.page-actions .btn-primary');
+			if (primary_btn.length) {
+				primary_btn.text("+ Add Opportunity");
 
-            if (primary_btn.length) {
+				primary_btn.off("click").on("click", function (e) {
+					e.preventDefault();
+					e.stopPropagation();
 
-                primary_btn.text("+ Add Opportunity");
+					open_custom_dialog();
+				});
+			}
+		}, 50);
+	},
 
-                primary_btn.off("click").on("click", function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+	get_indicator: function (doc) {
+		if (doc.status === "Converted") {
+			return [__("Converted"), "green", "status,=,Converted"];
+		}
+		if (doc.status === "Lost") {
+			return [__("Lost"), "red", "status,=,Lost"];
+		}
+		if (doc.status === "Replied") {
+			return [__("Replied"), "blue", "status,=,Replied"];
+		}
+		if (doc.status === "Open") {
+			return [__("Open"), "orange", "status,=,Open"];
+		}
 
-                    open_custom_dialog();
-                });
-            }
-
-        }, 50);
-    },
-
-    get_indicator: function (doc) {
-        if (doc.status === "Converted") {
-            return [__("Converted"), "green", "status,=,Converted"];
-        }
-        if (doc.status === "Lost") {
-            return [__("Lost"), "red", "status,=,Lost"];
-        }
-        if (doc.status === "Replied") {
-            return [__("Replied"), "blue", "status,=,Replied"];
-        }
-        if (doc.status === "Open") {
-            return [__("Open"), "orange", "status,=,Open"];
-        }
-
-        // default
-        return [__(doc.status), "gray", `status,=,${doc.status}`];
-    }
+		// default
+		return [__(doc.status), "gray", `status,=,${doc.status}`];
+	},
 };
 
 function open_custom_dialog() {
+	let dialog = new frappe.ui.Dialog({
+		title: "Create Opportunity",
 
-    let dialog = new frappe.ui.Dialog({
-        title: "Create Opportunity",
+		fields: [
+			{
+				fieldname: "name1",
+				fieldtype: "Data",
+				label: "Opportunity Name",
+				reqd: 1,
+			},
+			{
+				fieldname: "lead",
+				fieldtype: "Link",
+				label: "Lead From",
+				options: "Lead",
 
-        fields: [
-            {
-                fieldname: "name1",
-                fieldtype: "Data",
-                label: "Opportunity Name",
-                reqd: 1
-            },
-            {
-                fieldname: "opportunity_from",
-                fieldtype: "Link",
-                label: "Opportunity From",
-                options: "DocType",
-                get_query: function () {
-                    return {
-                        filters: {
-                            name: ["in", ["Lead", "Customer"]]
-                        }
-                    };
-                },
-                onchange: function () {
+				onchange: function () {
+					let lead = dialog.get_value("lead");
 
-                    let source = dialog.get_value("opportunity_from");
+					if (lead) {
+						frappe.db.get_value("Lead", lead, "name1").then((r) => {
+							if (r && r.message) {
+								let lead_name = r.message.name1;
 
-                    if (source) {
-                        // 🔥 Update Party label dynamically
-                        dialog.set_df_property("party_name", "label", source);
+								dialog.set_value("name1", lead_name ? lead_name.trim() : "");
+							}
+						});
+					}
+				},
+			},
+			{
+				fieldname: "referral_customer",
+				fieldtype: "Link",
+				label: "Referral From Customer",
+				options: "Customer",
+			},
+		],
 
-                        // Refresh field UI
-                        dialog.refresh_field("party_name");
+		primary_action_label: "Save",
 
-                        // Clear party_name when source changes
-                        dialog.set_value("party_name", "");
-                    }
-                }
-            },
-            {
-                fieldname: "party_name",
-                fieldtype: "Dynamic Link",
-                label: "Party",
-                options: "opportunity_from",
-                onchange: function () {
+		primary_action(values) {
+			let doc = {
+				doctype: "Opportunity",
+				name1: values.name1,
+			};
 
-                    let source_doctype = dialog.get_value("opportunity_from");
-                    let source_name = dialog.get_value("party_name");
+			// If Lead selected
+			if (values.lead) {
+				doc.opportunity_from = "Lead";
+				doc.party_name = values.lead;
+			}
 
-                    if (source_doctype && source_name) {
+			// If Referral Customer selected
+			if (values.referral_customer) {
+				doc.referral_customer = values.referral_customer;
+			}
 
-                        let fetch_field =
-                            source_doctype === "Lead" ? "name1" : "title";
+			frappe.call({
+				method: "frappe.client.insert",
+				args: {
+					doc: doc,
+				},
+				callback: function (r) {
+					if (!r.exc) {
+						dialog.hide();
+						frappe.set_route("Form", "Opportunity", r.message.name);
+					}
+				},
+			});
+		},
 
-                        frappe.db.get_value(
-                            source_doctype,
-                            source_name,
-                            fetch_field
-                        ).then((r) => {
+		secondary_action_label: "Edit Full Form",
+		secondary_action: function () {
+			dialog.hide();
+			frappe.new_doc("Opportunity");
+		},
+	});
 
-                            if (r && r.message) {
-                                let base_name = r.message[fetch_field];
-                                dialog.set_value(
-                                    "name1",
-                                    base_name ? base_name.trim() : ""
-                                );
-                            }
-                        });
-                    }
-                }
-            }
-        ],
+	dialog.show();
 
-        primary_action_label: "Save",
+	// 🔥 Move "Edit Full Form" to left side
+	setTimeout(() => {
+		let footer = dialog.$wrapper.find(".modal-footer");
 
-        primary_action(values) {
-            frappe.call({
-                method: "frappe.client.insert",
-                args: {
-                    doc: {
-                        doctype: "Opportunity",
-                        name1: values.name1,
-                        opportunity_from: values.opportunity_from,
-                        party_name: values.party_name
-                    }
-                },
-                callback: function (r) {
-                    if (!r.exc) {
-                        dialog.hide();
-                        frappe.set_route("Form", "Opportunity", r.message.name);
-                    }
-                }
-            });
-        },
+		let secondary_btn = footer.find(".btn-secondary");
+		secondary_btn.prependTo(footer); // move to beginning
 
-        secondary_action_label: "Edit Full Form",
-        secondary_action: function () {
-            dialog.hide();
-            frappe.new_doc("Opportunity");
-        }
-    });
-
-    dialog.show();
-
-    // 🔥 Move "Edit Full Form" to left side
-    setTimeout(() => {
-        let footer = dialog.$wrapper.find('.modal-footer');
-
-        let secondary_btn = footer.find('.btn-secondary');
-        secondary_btn.prependTo(footer);   // move to beginning
-
-        footer.css({
-            display: "flex",
-            justifyContent: "space-between"
-        });
-
-    }, 10);
+		footer.css({
+			display: "flex",
+			justifyContent: "space-between",
+		});
+	}, 10);
 }

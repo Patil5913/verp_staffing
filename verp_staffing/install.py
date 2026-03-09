@@ -682,20 +682,20 @@ FORM_TOURS = {
 
 
 def after_install():
-    seed_services_and_departments()
-    setup_navbar_settings()
-    seed_website_setting()
-    create_interview_statuses()
-    seed_sales_stages()
-    seed_type_of_interview()
-    create_all_roles()
-    seed_employee_departments()
-    assign_permissions_to_roles(ROLE_PERMISSIONS)
-    seed_hierarchy()
+    # seed_services_and_departments()
+    # setup_navbar_settings()
+    # seed_website_setting()
+    # create_interview_statuses()
+    # seed_sales_stages()
+    # seed_type_of_interview()
+    # create_all_roles()
+    # seed_employee_departments()
+    # assign_permissions_to_roles(ROLE_PERMISSIONS)
+    # seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
-    seed_employees_with_hierarchy(HIERARCHY_DATA)
-    seed_form_tours()
+    # seed_employees_with_hierarchy(HIERARCHY_DATA)
+    # seed_form_tours()
 
 
 import requests

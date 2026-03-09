@@ -34,10 +34,7 @@ def create_sales_order(**kwargs):
 
     if existing_customer:
         customer_doc = frappe.get_doc("Customer", existing_customer["name"])
-        customer_name = {
-            "name": customer_doc.name,
-            "title": customer_doc.title
-        }
+        customer_name = {"name": customer_doc.name, "title": customer_doc.title}
 
     else:
         opportunity_doc = frappe.get_doc("Opportunity", opportunity)
@@ -52,7 +49,8 @@ def create_sales_order(**kwargs):
         customer_data = {
             "doctype": "Customer",
             "opportunity": opportunity,
-            "customer_from": opportunity_doc.opportunity_from or "Opportunity",
+            "customer_from": "Opportunity",
+            "party_name": opportunity,
             "name1": base_name,
         }
 
@@ -64,27 +62,27 @@ def create_sales_order(**kwargs):
 
         customer_name = {
             "name": customer_doc.name,
-            "title": customer_doc.name1 or customer_doc.name
+            "title": customer_doc.name1 or customer_doc.name,
         }
 
     services = []
 
     for service in data.get("services", []):
-        services.append({
-            "service": service
-        })
+        services.append({"service": service})
 
     so_title = f"SO-{customer_name['title']}-{data.get('date')}"
 
-    so = frappe.get_doc({
-        "doctype": "Sales Order",
-        "title": so_title,
-        "customer": customer_name["name"],
-        "date": data.get("date"),
-        "opportunity": opportunity,
-        "payment_terms": data.get("payment_terms", []),
-        "services": services,
-    })
+    so = frappe.get_doc(
+        {
+            "doctype": "Sales Order",
+            "title": so_title,
+            "customer": customer_name["name"],
+            "date": data.get("date"),
+            "opportunity": opportunity,
+            "payment_terms": data.get("payment_terms", []),
+            "services": services,
+        }
+    )
 
     so.insert(ignore_permissions=True)
 
@@ -95,7 +93,4 @@ def create_sales_order(**kwargs):
 
     frappe.db.commit()
 
-    return {
-        "sales_order": so.name,
-        "customer": customer_name["name"]
-    }
+    return {"sales_order": so.name, "customer": customer_name["name"]}

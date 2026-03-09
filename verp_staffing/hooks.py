@@ -98,7 +98,7 @@ doctype_list_js = {
 
 # before_install = "verp_staffing.install.before_install"
 # after_install = "verp_staffing.install.after_install"
-after_migrate = [
+after_install = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
