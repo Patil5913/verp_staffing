@@ -1,9 +1,9 @@
-# Copyright (c) 2025, Vrugle and contributors
+# Copyright (c) 2026, Vrugle and contributors
 # For license information, please see license.txt
 
 # import frappe
 from frappe.model.document import Document
 
 
-class Hierarchy(Document):
+class Employeework(Document):
 	pass

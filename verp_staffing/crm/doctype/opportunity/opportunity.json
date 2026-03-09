@@ -12,6 +12,7 @@
   "status",
   "opportunity_owner",
   "title",
+  "referral_customer",
   "column_break_lbgc",
   "source",
   "sales_stage",
@@ -192,12 +193,18 @@
    "label": "Lead Details",
    "options": "Lead Detail Form",
    "read_only": 1
+  },
+  {
+   "fieldname": "referral_customer",
+   "fieldtype": "Link",
+   "label": "Referral Customer",
+   "options": "Customer"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-26 17:54:38.802536",
+ "modified": "2026-03-08 17:36:28.741560",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",

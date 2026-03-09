@@ -30,18 +30,8 @@
    "unique": 1
   },
   {
-   "fieldname": "head_of_department",
-   "fieldtype": "Link",
-   "label": "Head Of Department",
-   "options": "Employee"
-  },
-  {
    "fieldname": "section_break_cbtl",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_zerj",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "column_break_xwuo",
@@ -59,6 +49,16 @@
    "label": "Roles JSON"
   },
   {
+   "fieldname": "column_break_zerj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "head_of_department",
+   "fieldtype": "Link",
+   "label": "Head Of Department",
+   "options": "Employee"
+  },
+  {
    "fieldname": "services",
    "fieldtype": "Table MultiSelect",
    "label": "Services",
@@ -68,9 +68,9 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-08 16:51:06.525294",
+ "modified": "2026-03-09 16:12:29.932249",
  "modified_by": "Administrator",
- "module": "Employee",
+ "module": "Settings",
  "name": "Department",
  "naming_rule": "By fieldname",
  "owner": "Administrator",

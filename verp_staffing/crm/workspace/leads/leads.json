@@ -5,7 +5,7 @@
    "label": "Lead Per Employee"
   }
  ],
- "content": "[{\"id\":\"VDpv-a6XJ8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads</span>\",\"col\":12}},{\"id\":\"lMFVKYnXfs\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Per Employee\",\"col\":12}},{\"id\":\"TnyeDG5WCl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}}]",
+ "content": "[{\"id\":\"VDpv-a6XJ8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Leads</span>\",\"col\":12}},{\"id\":\"lMFVKYnXfs\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Per Employee\",\"col\":12}},{\"id\":\"xB9I79blR4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Leads\",\"col\":4}},{\"id\":\"TnyeDG5WCl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}}]",
  "creation": "2026-01-30 14:22:02.632836",
  "custom_blocks": [],
  "docstatus": 0,
@@ -18,11 +18,16 @@
  "is_hidden": 0,
  "label": "Leads",
  "links": [],
- "modified": "2026-02-25 15:57:44.966477",
+ "modified": "2026-03-09 15:51:20.363807",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Leads",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Total Leads",
+   "number_card_name": "Total Leads"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -35,7 +40,7 @@
    "doc_view": "List",
    "label": "Leads",
    "link_to": "Lead",
-   "stats_filter": "[]",
+   "stats_filter": "[[\"Lead\",\"lead_owner\",\"=\",\"administrator-2026-01-30-0001\",false]]",
    "type": "DocType"
   }
  ],

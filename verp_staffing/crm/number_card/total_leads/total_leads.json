@@ -1,5 +1,6 @@
 {
  "aggregate_function_based_on": "",
+ "background_color": "#ffffff",
  "creation": "2025-12-31 16:07:17.083051",
  "currency": "INR",
  "docstatus": 0,
@@ -12,7 +13,7 @@
  "is_public": 1,
  "is_standard": 1,
  "label": "Total Leads",
- "modified": "2026-01-02 22:31:47.312723",
+ "modified": "2026-03-09 15:51:53.521516",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Total Leads",

@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-03 15:43:06.615625",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "column_break_ygal",
+  "signed_pdf",
+  "status",
+  "section_break_mqgi",
+  "original_pdf",
+  "section_break_crjn",
+  "signature_fields",
+  "section_break_mrwv",
+  "signers_panel",
+  "section_break_ixwc",
+  "activity"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "fieldname": "original_pdf",
+   "fieldtype": "Attach",
+   "label": "Original PDF"
+  },
+  {
+   "fieldname": "column_break_ygal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "signed_pdf",
+   "fieldtype": "Attach",
+   "label": "Signed PDF",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nSent\nFully Signed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "signature_fields",
+   "fieldtype": "Table",
+   "label": "Signature Fields",
+   "options": "Signature Fields"
+  },
+  {
+   "fieldname": "section_break_crjn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "signers_panel",
+   "fieldtype": "HTML",
+   "label": "Signers Panel"
+  },
+  {
+   "fieldname": "section_break_mrwv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_ixwc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "activity",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Activity",
+   "options": "activity"
+  },
+  {
+   "fieldname": "section_break_mqgi",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-06 17:20:33.620611",
+ "modified_by": "Administrator",
+ "module": "E-Sign",
+ "name": "e_sign",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

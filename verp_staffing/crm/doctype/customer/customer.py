@@ -59,14 +59,6 @@ class Customer(Document):
                 frappe.throw("Lead Details not found for selected party.")
 
             lead_detail = frappe.get_doc("Lead Detail Form", lead_detail_name)
-            frappe.errprint(
-                f"reference table {lead_detail_name} {lead_detail.reference_table}"
-            )
-            frappe.errprint(f"reference table {lead_detail}")
-            referenceTable = frappe.get_doc(
-                "Doctype Reference", lead_detail.reference_table
-            )
-            frappe.errprint(f"reference table {referenceTable}")
             # Prevent duplicate link
             if not any(
                 row.reference_doctype == "Customer"
@@ -180,11 +172,8 @@ def get_forwardable_departments_from_service(doctype, docname):
     # Step 3: Get services from Sales Order
     services = frappe.get_all(
         "SalesOrderServices",
-        filters={
-            "parenttype": "Sales Order",
-            "parent": ["in", so]
-        },
-        pluck="service"
+        filters={"parenttype": "Sales Order", "parent": ["in", so]},
+        pluck="service",
     )
 
     if not services:
@@ -192,9 +181,7 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     # Step 4: Validate services exist
     valid_services = frappe.get_all(
-        "Service",
-        filters={"name": ["in", services]},
-        pluck="name"
+        "Service", filters={"name": ["in", services]}, pluck="name"
     )
 
     return valid_services

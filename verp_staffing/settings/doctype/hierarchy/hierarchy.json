@@ -13,15 +13,16 @@
  ],
  "fields": [
   {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "department",
+   "options": "Department",
+   "unique": 1
+  },
+  {
    "fieldname": "role_table_html",
    "fieldtype": "HTML",
    "label": "role table html"
-  },
-  {
-   "fieldname": "role_hierarchy_json",
-   "fieldtype": "Small Text",
-   "hidden": 1,
-   "label": "role hierarchy json"
   },
   {
    "fieldname": "hierarchy_diagram",
@@ -29,11 +30,10 @@
    "label": "hierarchy diagram"
   },
   {
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "label": "department",
-   "options": "Department",
-   "unique": 1
+   "fieldname": "role_hierarchy_json",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "role hierarchy json"
   },
   {
    "fieldname": "auto_assign_config",
@@ -45,9 +45,9 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-10 15:28:36.078542",
+ "modified": "2026-03-09 16:09:55.729237",
  "modified_by": "Administrator",
- "module": "Vrugle Staffing ERP",
+ "module": "Settings",
  "name": "Hierarchy",
  "naming_rule": "By fieldname",
  "owner": "Administrator",

@@ -1,7 +1,7 @@
 import frappe
 from datetime import date
 from dateutil.relativedelta import relativedelta
-
+from verp_staffing.marketing.api.utils import get_visible_employee_names
 
 def execute(filters=None):
     filters = filters or {}
@@ -25,36 +25,25 @@ def get_columns():
             "fieldtype": "Currency",
             "width": 150,
         },
+        {
+            "label": "Target Based On",
+            "fieldname": "target_based_on",
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        {
+            "label": "Target Start Date",
+            "fieldname": "start_date",
+            "fieldtype": "Date",
+            "width": 150,
+        },
+        {
+            "label": "Target",
+            "fieldname": "target",
+            "fieldtype": "Currency",
+            "width": 150,
+        },
     ]
-
-
-def get_all_subordinates_by_assignment(root_employee, department=None):
-    """
-    Recursively get all subordinates using Employee Assignment Detail.
-    assigned_to field mein parent employee hota hai.
-    """
-    collected = set()
-    stack = [root_employee]
-
-    while stack:
-        current = stack.pop()
-
-        filters = {"assigned_to": current}
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
-
-    return collected
 
 
 def filter_sales_employees(employee_list):
@@ -77,9 +66,6 @@ def filter_sales_employees(employee_list):
 
     return [row.name for row in data]
 
-
-def get_employee_from_user(user):
-    return frappe.db.get_value("Employee", {"user": user}, "name")
 
 
 def employees_to_users(employee_list):
@@ -137,13 +123,13 @@ def get_data(filters):
     employee_filter = filters.get("employee")
 
 
-    if employee_filter:
-        # Selected employee + all subordinates recursively
-        subordinates = get_all_subordinates_by_assignment(employee_filter, department="Sales")
-        subordinates.add(employee_filter)
+    allowed_employees = get_visible_employee_names(user)
 
-        # Filter only Sales dept employees
-        valid_employees = filter_sales_employees(list(subordinates))
+    if employee_filter:
+        if employee_filter not in allowed_employees and user != "Administrator":
+            return []
+
+        valid_employees = filter_sales_employees([employee_filter])
         users = employees_to_users(valid_employees)
 
     else:
@@ -163,16 +149,9 @@ def get_data(filters):
 
         else:
             # Non-admin — own hierarchy only
-            current_employee = get_employee_from_user(user)
-
-            if not current_employee:
-                return []
-
-            subordinates = get_all_subordinates_by_assignment(current_employee, department="Sales")
-            subordinates.add(current_employee)
-            valid_employees = filter_sales_employees(list(subordinates))
+            allowed_employees = get_visible_employee_names(user)
+            valid_employees = filter_sales_employees(allowed_employees)
             users = employees_to_users(valid_employees)
-
     if not users:
         return []
 
@@ -185,16 +164,21 @@ def get_data(filters):
     where_clause = " AND ".join(["so.owner IS NOT NULL"] + conditions)
 
     query = f"""
-        SELECT
-            so.owner AS employee,
-            SUM(cpt.amount) AS total_revenue
-        FROM `tabCustomer Payment Terms` cpt
-        JOIN `tabSales Order` so
-            ON cpt.parent = so.name
-        WHERE {where_clause}
-        GROUP BY so.owner
-        ORDER BY total_revenue DESC
-    """
+    SELECT
+        so.owner AS employee,
+        SUM(cpt.amount) AS total_revenue,
+        e.target AS target,
+        e.target_based_on,
+        e.start_date
+    FROM `tabCustomer Payment Terms` cpt
+    JOIN `tabSales Order` so
+        ON cpt.parent = so.name
+    LEFT JOIN `tabEmployee` e
+        ON e.user = so.owner
+    WHERE {where_clause}
+    GROUP BY so.owner
+    ORDER BY total_revenue DESC
+"""
 
     return frappe.db.sql(query, values, as_dict=True)
 
@@ -245,15 +229,7 @@ def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, fi
     ]
 
     if user != "Administrator":
-        current_employee = get_employee_from_user(user)
-
-        if not current_employee:
-            return []
-
-        # Get full hierarchy
-        subordinates = get_all_subordinates_by_assignment(current_employee, department="Sales")
-        subordinates.add(current_employee)
-        all_emps = list(subordinates)
+        all_emps = get_visible_employee_names(user)
 
         if not all_emps:
             return []
