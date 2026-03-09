@@ -32,41 +32,12 @@ def get_columns():
             "fieldname": "total_duration",
             "fieldtype": "Data",
         },
-        {
-            "label": "Unique Leads Contacted",
-            "fieldname": "unique_leads",
-            "fieldtype": "Int",
-        },
+        # {
+        #     "label": "Unique Leads Contacted",
+        #     "fieldname": "unique_leads",
+        #     "fieldtype": "Int",
+        # },
     ]
-
-
-def get_all_subordinates_by_assignment(root_employee, department=None):
-    """
-    Recursively get all subordinates using Employee Assignment Detail.
-    assigned_to field mein parent employee hota hai.
-    """
-    collected = set()
-    stack = [root_employee]
-
-    while stack:
-        current = stack.pop()
-
-        filters = {"assigned_to": current}
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
-
-    return collected
 
 
 def filter_sales_employees(employee_list):
@@ -88,11 +59,6 @@ def filter_sales_employees(employee_list):
     )
 
     return [row.name for row in data]
-
-
-def get_employee_from_user(user):
-    return frappe.db.get_value("Employee", {"user": user}, "name")
-
 
 def get_data(filters):
     user = frappe.session.user
@@ -128,13 +94,13 @@ def get_data(filters):
         values["end_date"] = end_date
 
 
-    if employee_filter:
-        # Selected employee + all subordinates recursively
-        subordinates = get_all_subordinates_by_assignment(employee_filter, department="Sales")
-        subordinates.add(employee_filter)
+    allowed_employees = get_visible_employee_names(user)
 
-        # Filter only Sales dept employees
-        valid_employees = filter_sales_employees(list(subordinates))
+    if employee_filter:
+        if employee_filter not in allowed_employees and user != "Administrator":
+            return []
+
+        valid_employees = filter_sales_employees([employee_filter])
 
         if not valid_employees:
             return []
@@ -168,14 +134,8 @@ def get_data(filters):
 
         else:
             # Non-admin — show own hierarchy
-            current_employee = get_employee_from_user(user)
-
-            if current_employee:
-                subordinates = get_all_subordinates_by_assignment(current_employee, department="Sales")
-                subordinates.add(current_employee)
-                valid_employees = filter_sales_employees(list(subordinates))
-            else:
-                valid_employees = []
+            allowed_employees = get_visible_employee_names(user)
+            valid_employees = filter_sales_employees(allowed_employees)
 
             if not valid_employees:
                 return []
@@ -260,15 +220,7 @@ def get_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters)
     ]
 
     if user != "Administrator":
-        current_employee = get_employee_from_user(user)
-
-        if not current_employee:
-            return []
-
-        # Get full hierarchy
-        subordinates = get_all_subordinates_by_assignment(current_employee, department="Sales")
-        subordinates.add(current_employee)
-        all_emps = list(subordinates)
+        all_emps = get_visible_employee_names(user)
 
         if not all_emps:
             return []

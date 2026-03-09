@@ -17,7 +17,7 @@
    "label": "Future Interviews Per Customer"
   }
  ],
- "content": "[{\"id\":\"CvguilvdJU\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Marketings</span>\",\"col\":12}},{\"id\":\"bZaJ9m3J-8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing\",\"col\":3}},{\"id\":\"3ezmH3bM_F\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interview\",\"col\":3}},{\"id\":\"maX97_x0sK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing Other Services\",\"col\":3}},{\"id\":\"Sq7r10gkhX\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"IQS5TAvGbE\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Interviews Per Customer\",\"col\":6}},{\"id\":\"t6zen8so9N\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Profiles Per Recruiter\",\"col\":6}},{\"id\":\"f8iBLkJy4y\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Future Interviews Per Customer\",\"col\":12}},{\"id\":\"K5E9CV9f9w\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Marketing KPI\",\"col\":12}}]",
+ "content": "[{\"id\":\"CvguilvdJU\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Marketings</span>\",\"col\":12}},{\"id\":\"bZaJ9m3J-8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing\",\"col\":3}},{\"id\":\"3ezmH3bM_F\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interview\",\"col\":3}},{\"id\":\"maX97_x0sK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Marketing Other Services\",\"col\":3}},{\"id\":\"Sq7r10gkhX\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"IQS5TAvGbE\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Interviews Per Customer\",\"col\":6}},{\"id\":\"t6zen8so9N\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Profiles Per Recruiter\",\"col\":6}},{\"id\":\"f8iBLkJy4y\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Future Interviews Per Customer\",\"col\":12}},{\"id\":\"K5E9CV9f9w\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Marketing KPI\",\"col\":12}},{\"id\":\"ah3sDDoaUC\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"fUdsdx_SGz\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interview Target Report\",\"col\":3}},{\"id\":\"LdxON_5qI5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Future Interviews Per Customer\",\"col\":3}},{\"id\":\"EsSYTxaoo7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interviews Per Customer\",\"col\":3}},{\"id\":\"i3uQbQ8vAA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Profiles Per Recuiter\",\"col\":3}}]",
  "creation": "2025-12-27 17:40:55.102905",
  "custom_blocks": [],
  "docstatus": 0,
@@ -30,7 +30,7 @@
  "is_hidden": 0,
  "label": "Marketings",
  "links": [],
- "modified": "2026-02-16 16:27:23.930627",
+ "modified": "2026-02-20 15:59:31.798987",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketings",
@@ -49,6 +49,22 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Interview Target Report",
+   "link_to": "Interview Target Report",
+   "report_ref_doctype": "Marketing",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Future Interviews Per Customer",
+   "link_to": "Future Interviews Per Customer",
+   "report_ref_doctype": "Interview",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Marketing Other Services",
    "link_to": "Marketing Other Services",
    "stats_filter": "[]",
@@ -57,10 +73,26 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Interviews Per Customer",
+   "link_to": "Interviews Per Customer",
+   "report_ref_doctype": "Interview",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Marketing",
    "link_to": "Marketing",
    "stats_filter": "[]",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Profiles Per Recuiter",
+   "link_to": "Profiles Per Recuiter",
+   "report_ref_doctype": "Interview",
+   "type": "Report"
   },
   {
    "color": "Grey",

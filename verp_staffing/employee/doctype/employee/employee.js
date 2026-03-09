@@ -2,21 +2,26 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Employee", {
-	refresh(frm) {
-		frm.set_query("user", function () {
-			return {
-				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
-			};
-		});
+    refresh(frm) {
+        frm.set_query("user", function () {
+            return {
+                query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee"
+            }
+        });
 
-		frm.fields_dict.employee_assignment_details_table.grid.wrapper.on(
-			"focus",
-			'[data-fieldname="designation"]',
-			function (e) {
-				const $target = $(e.target);
-				const $row = $target.closest(".grid-row");
-				const cdn = $row.attr("data-name");
-				const cdt = "Employee Assignment Detail"; // Hardcode if lookup fails
+        toggle_linkedin_section(frm);
+        toggle_revenue_target_section(frm);
+
+
+
+
+        frm.fields_dict.employee_assignment_details_table.grid.wrapper
+            .on('focus', '[data-fieldname="designation"]', function (e) {
+                const $target = $(e.target);
+                const $row = $target.closest('.grid-row');
+                const cdn = $row.attr('data-name');
+                const cdt = 'Employee Assignment Detail'; // Hardcode if lookup fails
+                // toggle_linkedin_section(frm);
 
 				console.log("cdn: ", cdn);
 				if (!cdn) {
@@ -107,6 +112,8 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 });
+
+
 
 // frappe.ui.form.on("Employee Assignment Detail", {
 //     department(frm, cdt, cdn) {
@@ -268,4 +275,40 @@ function apply_assigned_to_filter(frm, cdt, cdn) {
 		};
 
 	frappe.model.set_value(cdt, cdn, "assigned_to", null);
+}
+
+
+function toggle_linkedin_section(frm) {
+    let show = false;
+
+    (frm.doc.employee_assignment_details_table || []).forEach(row => {
+        if (row.department === "Lead") {
+            show = true;
+        }
+    });
+
+    frm.toggle_display("linkedin_credentials", show);
+}
+
+frappe.ui.form.on("Employee Assignment Detail", {
+    department(frm) {
+        toggle_linkedin_section(frm);
+        toggle_revenue_target_section(frm);
+    },
+
+    // employee_assignment_details_table_remove(frm) {
+    //     toggle_linkedin_section(frm);
+    // }
+}); 
+
+function toggle_revenue_target_section(frm) {
+    let show = false;
+
+    (frm.doc.employee_assignment_details_table || []).forEach(row => {
+        if (row.department === "Sales") {
+            show = true;
+        }
+    });
+
+    frm.toggle_display("section_break_qppd", show);
 }

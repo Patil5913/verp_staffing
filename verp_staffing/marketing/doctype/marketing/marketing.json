@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "autoname": "field:customer",
  "creation": "2025-12-15 16:01:57.359022",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -145,6 +146,7 @@
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

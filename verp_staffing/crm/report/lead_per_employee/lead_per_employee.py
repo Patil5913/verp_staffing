@@ -47,14 +47,23 @@ def get_data(filters):
     user = frappe.session.user
     hierarchy_conditions = []
 
-    if user != "Administrator":
+    # If employee filter is selected → show only that employee
+    if filters.get("employee"):
+        hierarchy_conditions.append("l.lead_owner = %(employee)s")
+        values["employee"] = filters["employee"]
+
+    # Otherwise apply hierarchy
+    elif user != "Administrator":
+
         allowed_employees = get_visible_employee_names(user)
+
         if not allowed_employees:
             return []
 
         placeholders = ", ".join(
             [f"%(emp_{i})s" for i in range(len(allowed_employees))]
         )
+
         hierarchy_conditions.append(f"l.lead_owner IN ({placeholders})")
 
         for i, emp in enumerate(allowed_employees):
@@ -87,11 +96,11 @@ def get_data(filters):
             GROUP BY l2.lead_owner, ldf2.current_visa_status
         ) v
             ON v.lead_owner = l.lead_owner
-        AND v.current_visa_status = ldf.current_visa_status
+           AND v.current_visa_status = ldf.current_visa_status
         WHERE {where_clause}
         GROUP BY l.lead_owner
         ORDER BY lead_count DESC
-        """
+    """
 
     return frappe.db.sql(query, values, as_dict=True)
 
@@ -113,5 +122,65 @@ def get_chart(data):
             ],
         },
         "type": "bar",
-        "colors": ["#8494FF"]
+        "colors": ["#8494FF"],
     }
+
+
+@frappe.whitelist()
+def get_lead_hierarchy_employees(
+    doctype, txt, searchfield, start, page_len, filters
+):
+    """
+    Link field search for Lead report.
+    Shows only employees from Lead department.
+    Non-admin users see only themselves + their hierarchy.
+    """
+    user = frappe.session.user
+
+    values = {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": page_len,
+        "dept": "Lead",
+    }
+
+    conditions = [
+        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        """
+        EXISTS (
+            SELECT 1
+            FROM `tabEmployee Assignment Detail` d
+            WHERE d.parent = tabEmployee.name
+              AND d.department = %(dept)s
+        )
+        """,
+    ]
+
+    # Apply hierarchy restriction for non-admin users
+    if user != "Administrator":
+        allowed_employees = get_visible_employee_names(user)
+
+        if not allowed_employees:
+            return []
+
+        placeholders = ", ".join(
+            [f"%(emp_{i})s" for i in range(len(allowed_employees))]
+        )
+
+        conditions.append(f"tabEmployee.name IN ({placeholders})")
+
+        for i, emp in enumerate(allowed_employees):
+            values[f"emp_{i}"] = emp
+
+    return frappe.db.sql(
+        f"""
+        SELECT
+            tabEmployee.name,
+            tabEmployee.employee_name
+        FROM `tabEmployee`
+        WHERE {" AND ".join(conditions)}
+        ORDER BY tabEmployee.employee_name
+        LIMIT %(start)s, %(page_len)s
+        """,
+        values,
+    )

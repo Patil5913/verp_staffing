@@ -20,7 +20,7 @@ frappe.query_reports["Lead Per Employee"] = {
 			options: [
 				"",
 				"F1 CPT",
-				"F1 OPT",
+				"F1 OPT",	
 				"STEM OPT",
 				"H1 B",
 				"H4",
@@ -36,6 +36,17 @@ frappe.query_reports["Lead Per Employee"] = {
 				"WORK PERMIT",
 				"PR"
 			]
-		}
+		},
+		{
+			fieldname: "employee",
+			label: "Employee",
+			fieldtype: "Link",
+			options: "Employee",
+			get_query: function () {
+				return {
+					query: "verp_staffing.crm.report.lead_per_employee.lead_per_employee.get_lead_hierarchy_employees",
+				};
+			},
+		},
 	]
 };

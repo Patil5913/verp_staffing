@@ -162,7 +162,7 @@ from verp_staffing.marketing.api.utils import get_visible_employee_names
 
 def execute(filters=None):
     columns = get_columns()
-    data = get_data()
+    data = get_data(filters)
     chart = get_chart(data)
 
     return columns, data, None, chart
@@ -185,10 +185,18 @@ def get_columns():
     ]
 
 
-def get_data():
+def get_data(filters=None):
     user = frappe.session.user
     conditions = []
-    values = []
+    values = {}
+
+    if filters.get("from_date"):
+        conditions.append("l.creation >= %(from_date)s")
+        values["from_date"] = filters["from_date"]
+
+    if filters.get("to_date"):
+        conditions.append("l.creation <= %(to_date)s")
+        values["to_date"] = filters["to_date"]
 
     if user != "Administrator":
         allowed_employees = get_visible_employee_names(user)
@@ -196,14 +204,17 @@ def get_data():
         if not allowed_employees:
             return []
 
-        placeholders = ", ".join(["%s"] * len(allowed_employees))
-        conditions.append(f"l.lead_owner IN ({placeholders})")
-        values.extend(allowed_employees)
+        conditions.append("l.lead_owner IN %(employees)s")
+        values["employees"] = tuple(allowed_employees)
 
-    where_clause = " AND ".join(conditions)
-    if where_clause:
-        where_clause = " AND " + where_clause
+    if filters and filters.get("employee"):
+        conditions.append("l.lead_owner = %(employee)s")
+        values["employee"] = filters.get("employee")
 
+    where_clause = ""
+    if conditions:
+        where_clause = " AND " + " AND ".join(conditions)
+        
     total_leads = frappe.db.sql(
         f"""
         SELECT COUNT(l.name)
@@ -275,3 +286,19 @@ def get_chart(data):
         "type": "bar",
         "colors": ["#8494FF"]
     }
+
+@frappe.whitelist()
+def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
+    return frappe.db.sql(
+        """
+        SELECT name, employee_name
+        FROM `tabEmployee`
+        WHERE (name LIKE %(txt)s OR employee_name LIKE %(txt)s)
+        LIMIT %(start)s, %(page_len)s
+        """,
+        {
+            "txt": f"%{txt}%",
+            "start": start,
+            "page_len": page_len,
+        },
+    )
