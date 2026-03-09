@@ -25,37 +25,40 @@ def create_sales_order(**kwargs):
     customer_doc = None
     customer_name = None
 
+    # NEW CUSTOMER LOOKUP LOGIC
     existing_customer = frappe.db.get_value(
         "Customer",
-        {"opportunity": opportunity},
-        ["name", "title"],
+        {
+            "customer_from": "Opportunity",
+            "party_name": opportunity,
+        },
+        ["name", "name1"],
         as_dict=True,
     )
 
     if existing_customer:
         customer_doc = frappe.get_doc("Customer", existing_customer["name"])
-        customer_name = {"name": customer_doc.name, "title": customer_doc.title}
+        customer_name = {
+            "name": customer_doc.name,
+            "title": customer_doc.name1 or customer_doc.name,
+        }
 
     else:
         opportunity_doc = frappe.get_doc("Opportunity", opportunity)
 
         base_name = (
             opportunity_doc.title
-            or opportunity_doc.name1
+            or getattr(opportunity_doc, "name1", None)
             or party_name
             or f"Customer-{frappe.utils.now()}"
         )
 
         customer_data = {
             "doctype": "Customer",
-            "opportunity": opportunity,
             "customer_from": "Opportunity",
             "party_name": opportunity,
             "name1": base_name,
         }
-
-        if opportunity_doc.opportunity_from and opportunity_doc.party_name:
-            customer_data["party_name"] = opportunity_doc.party_name
 
         customer_doc = frappe.get_doc(customer_data)
         customer_doc.insert(ignore_permissions=True)
@@ -93,4 +96,7 @@ def create_sales_order(**kwargs):
 
     frappe.db.commit()
 
-    return {"sales_order": so.name, "customer": customer_name["name"]}
+    return {
+        "sales_order": so.name,
+        "customer": customer_name["name"],
+    }
