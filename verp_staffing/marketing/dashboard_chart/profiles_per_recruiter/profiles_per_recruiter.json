@@ -12,13 +12,13 @@
  "idx": 0,
  "is_public": 0,
  "is_standard": 1,
- "modified": "2026-02-28 13:40:20.262807",
+ "modified": "2026-03-07 17:20:32.048785",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Profiles Per Recruiter",
  "number_of_groups": 0,
  "owner": "Administrator",
- "report_name": "Profiles Per Recuiter",
+ "report_name": "Profiles Per Recruiter",
  "roles": [],
  "show_values_over_chart": 0,
  "time_interval": "Yearly",
@@ -26,6 +26,11 @@
  "timespan": "Last Year",
  "type": "Bar",
  "use_report_chart": 1,
- "x_field": "",
- "y_axis": []
+ "x_field": "recruiter",
+ "y_axis": [
+  {
+   "color": "#ED6396",
+   "y_field": "profile_count"
+  }
+ ]
 }

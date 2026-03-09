@@ -17,6 +17,10 @@ def execute(filters=None):
         conditions += " AND ir.date_of_interview <= %(to_date)s"
         values["to_date"] = filters["to_date"]
 
+    if filters.get("customer"):
+        conditions += " AND c.name = %(customer)s"
+        values["customer"] = filters["customer"]
+
     # Hierarchy filter
     user = frappe.session.user
     hierarchy_clause = ""
@@ -88,3 +92,21 @@ def execute(filters=None):
     }
 
     return columns, data, None, chart
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_customers_with_interviews(doctype, txt, searchfield, start, page_len, filters):
+
+    return frappe.db.sql("""
+        SELECT DISTINCT c.name, c.title
+        FROM `tabCustomer` c
+        INNER JOIN `tabMarketing` m ON m.customer = c.name
+        INNER JOIN `tabInterview` i ON i.marketing_link = m.name
+        WHERE c.name LIKE %(txt)s
+        ORDER BY c.name
+        LIMIT %(start)s, %(page_len)s
+    """, {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": page_len
+    })

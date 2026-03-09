@@ -33,6 +33,22 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Revenue Of Employee",
+   "link_to": "Revenue Of Employee",
+   "report_ref_doctype": "Sales Order",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Call Details",
+   "link_to": "Call Details",
+   "report_ref_doctype": "Opportunity",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Customers",
    "link_to": "Customer",
    "stats_filter": "[]",
