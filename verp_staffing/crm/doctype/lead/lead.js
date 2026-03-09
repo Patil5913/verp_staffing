@@ -123,6 +123,12 @@ frappe.ui.form.on("Lead", {
 				if (attempts++ > 12) clearInterval(timer);
 			}, 200);
 		}
+
+		frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Lead Form";
+
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
 	},
 });
 
