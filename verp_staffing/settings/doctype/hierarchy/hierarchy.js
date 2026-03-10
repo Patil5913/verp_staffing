@@ -107,7 +107,6 @@ async function load_department_roles(frm) {
             ? JSON.parse(res.message.roles_json)
             : [];
     } catch (e) {
-        console.log("Invalid roles_json in Department:", e);
         roles = [];
     }
 

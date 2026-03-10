@@ -36,8 +36,6 @@ frappe.ui.form.on("Marketing", {
 				targetGrid.df.cannot_delete_rows = !canDelete;
 
 				frm.refresh_field("target");
-
-				console.log("Target Table Permission:", r.message);
 			},
 			error(err) {
 				console.error("Permission check failed", err);
@@ -144,8 +142,6 @@ function handle_assign_to_permission(frm) {
 		const employee_user = r.message.user;
 
 		if (frappe.session.user === employee_user) {
-			console.log("Assigned user matched. Locking start_date");
-
 			frm.set_df_property("start_date", "read_only", 1);
 			frm.set_df_property("target", "read_only", 1);
 			frm.set_df_property("target_based_on", "read_only", 1);
