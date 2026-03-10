@@ -18,7 +18,6 @@ frappe.listview_settings["Opportunity"] = {
 	refresh: function (listview) {
 		let sidebar = $("body .layout-side-section");
 		if (!sidebar.length) {
-			console.log("Sidebar not found");
 			return;
 		}
 

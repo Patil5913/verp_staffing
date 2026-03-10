@@ -488,7 +488,6 @@ function get_stage_json(frm) {
 				try {
 					const parsedStage = JSON.parse(r.message.stage);
 					// parsedStage.count = 0
-					console.log("daata", parsedStage);
 					resolve(Object.keys(parsedStage), parsedStage);
 					// resolve(parsedStage);
 				} catch (e) {

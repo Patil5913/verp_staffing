@@ -31,7 +31,6 @@ frappe.ui.form.on("Interview", {
 
 frappe.ui.form.on("Interview Round", {
     interview_rounds_table_add(frm, cdt, cdn) {
-        console.log("interview_rounds_table_add");
 
         set_round_numbers(frm);
 
@@ -47,8 +46,6 @@ frappe.ui.form.on("Interview Round", {
     },
 
     interview_rounds_table_remove(frm) {
-        console.log("interview_rounds_table_remove");
-
         set_round_numbers(frm);
     },
 

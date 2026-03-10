@@ -2,7 +2,6 @@ frappe.listview_settings["Customer"] = {
 	refresh: function (listview) {
 		let sidebar = $("body .layout-side-section");
 		if (!sidebar.length) {
-			console.log("Sidebar not found");
 			return;
 		}
 
