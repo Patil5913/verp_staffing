@@ -76,7 +76,7 @@ function open_custom_dialog() {
 			{
 				fieldname: "lead",
 				fieldtype: "Link",
-				label: "Lead From",
+				label: "Lead From Opportunity",
 				options: "Lead",
 
 				onchange: function () {

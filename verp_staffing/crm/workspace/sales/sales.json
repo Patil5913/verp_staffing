@@ -5,7 +5,7 @@
    "label": "Lead Conversion Funnel"
   }
  ],
- "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"7pU0p-amop\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"5pQcazucd4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunitys\",\"col\":3}},{\"id\":\"3N48W4UHCN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}}]",
+ "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"7pU0p-amop\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"5pQcazucd4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Opportunitys\",\"col\":3}},{\"id\":\"3N48W4UHCN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customers\",\"col\":3}},{\"id\":\"9PcpsqopZr\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Opportunitys\",\"col\":4}}]",
  "creation": "2026-01-30 14:17:38.394848",
  "custom_blocks": [],
  "docstatus": 0,
@@ -18,11 +18,16 @@
  "is_hidden": 0,
  "label": "Sales",
  "links": [],
- "modified": "2026-02-25 16:22:54.178773",
+ "modified": "2026-03-10 16:32:10.294772",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Opportunitys",
+   "number_card_name": "Opportunity Count"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -30,22 +35,6 @@
  "roles": [],
  "sequence_id": 25.0,
  "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Revenue Of Employee",
-   "link_to": "Revenue Of Employee",
-   "report_ref_doctype": "Sales Order",
-   "type": "Report"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Call Details",
-   "link_to": "Call Details",
-   "report_ref_doctype": "Opportunity",
-   "type": "Report"
-  },
   {
    "color": "Grey",
    "doc_view": "List",

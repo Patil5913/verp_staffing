@@ -26,7 +26,6 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "read_only": 1,
    "reqd": 1,
    "set_only_once": 1
   },
@@ -36,7 +35,6 @@
    "in_list_view": 1,
    "label": "Service",
    "options": "Service",
-   "read_only": 1,
    "reqd": 1,
    "set_only_once": 1
   },
@@ -103,7 +101,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 14:22:14.098343",
+ "modified": "2026-03-09 16:00:10.193728",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing Other Services",

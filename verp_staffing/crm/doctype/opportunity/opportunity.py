@@ -20,13 +20,13 @@ class Opportunity(Document):
         lead_detail_name = None
 
         # CASE 1: Party selected → attach to existing Lead Details
-        if self.party_name and self.opportunity_from:
+        if self.opportunity_from_lead:
 
             lead_detail_name = frappe.db.get_value(
                 "Doctype Reference",
                 {
-                    "reference_doctype": self.opportunity_from,
-                    "reference_person": self.party_name
+                    "reference_doctype": "Lead",
+                    "reference_person": self.opportunity_from_lead
                 },
                 "parent"
             )
@@ -115,8 +115,8 @@ class Opportunity(Document):
     #             frappe.msgprint(f"Customer {self.party_name} does not exist.")
 
     def on_update(self):
-        if self.party_name:
-            update_status_based_on_opportunity(self.party_name, self.status)
+        if self.opportunity_from_lead:
+            update_status_based_on_opportunity(self.opportunity_from_lead, self.status)
 
     def block_manual_conversion(self):
         """Prevent users from manually changing status to Converted."""
