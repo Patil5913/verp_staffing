@@ -92,8 +92,6 @@ frappe.ui.form.on("Pdf Agreement Template", {
 
 
 async function load_pdf_into_builder(frm) {
-    console.log("pdfjsLib:", window.pdfjsLib);
-
     if (!window.pdfjsLib) {
         frappe.throw("PDF.js not loaded. Check app_include_js.");
     }

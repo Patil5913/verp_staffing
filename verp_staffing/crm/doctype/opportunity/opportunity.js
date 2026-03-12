@@ -26,8 +26,6 @@ frappe.ui.form.on("Opportunity", {
 		render_notes(frm);
 		render_activity_section(frm);
 		if (frm.doc.status == "Converted") {
-			console.log("Converted");
-
 			frm.set_df_property("status", "read_only", 1);
 		}
 

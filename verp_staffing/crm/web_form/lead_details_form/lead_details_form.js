@@ -90,7 +90,6 @@ frappe.ready(async function () {
 
 	// 1. Get PDF path from URL (?file=path/to.pdf)
 	const urlParams = new URLSearchParams(window.location.search);
-	console.log("URL Parameters:", urlParams);
 
 	// Supported key names
 	const salesOrder = urlParams.get("so");
@@ -98,8 +97,6 @@ frappe.ready(async function () {
 	const agreementValue = urlParams.get("agr");
 	const pdfValue = urlParams.get("p");
 	customerEmail = urlParams.get("e");
-
-	console.log("customerEmail2", customerEmail);
 
 	// 2. If lead exists → store in webform field "lead"
 	if (customerValue) {
@@ -1307,7 +1304,6 @@ async function initRequiredLeadDocsConfig() {
 	const r = await frappe.call({
 		method: "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
 	});
-	console.log(r.message);
 
 	REQUIRED_LEAD_DOCS_CONFIG = r.message || {};
 }
