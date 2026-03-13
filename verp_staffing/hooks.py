@@ -98,7 +98,7 @@ doctype_list_js = {
 
 # before_install = "verp_staffing.install.before_install"
 # after_install = "verp_staffing.install.after_install"
-after_install = [
+after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
@@ -155,6 +155,37 @@ override_doctype_class = {"User": "verp_staffing.overrides.override_user.CustomU
 # Hook on document methods and events
 
 doc_events = {
+    "Resume": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "RUC": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "JDC": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Training": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Cover Letter": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Marketing": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Technical Other Services": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Marketing Other Services": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Other Services": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    # --- Payment Terms ---
+    "Sales Order": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_sales_order_update_hook"
+    },
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
