@@ -16,14 +16,14 @@ const CONCERN_FIELDS = [
 		fieldname: "my_electronic_signature_has_same_effect_as_handwritten",
 		label: "My electronic signature has same effect as handwritten.",
 	},
-	{
-		fieldname: "i_consent_to_receive_sign_and_store_documents_electronically",
-		label: "I consent to receive, sign, and store documents electronically.",
-	},
-	{
-		fieldname: "i_confirm_my_identity_and_signing_this_document_intentionally",
-		label: "I confirm my identity and signing this document intentionally.",
-	},
+	// {
+	// 	fieldname: "i_consent_to_receive_sign_and_store_documents_electronically",
+	// 	label: "I consent to receive, sign, and store documents electronically.",
+	// },
+	// {
+	// 	fieldname: "i_confirm_my_identity_and_signing_this_document_intentionally",
+	// 	label: "I confirm my identity and signing this document intentionally.",
+	// },
 ];
 
 frappe.ready(async function () {
@@ -111,6 +111,89 @@ frappe.ready(async function () {
 	if (!salesOrder) {
 		console.error("Sales Order missing in URL");
 		return;
+	}
+
+	const candidateFields = await getCandidateFieldsFromSalesOrder(salesOrder);
+
+	// wait until web form fully renders
+	function waitForWebFormRender(callback) {
+		const interval = setInterval(() => {
+			if (
+				frappe.web_form &&
+				frappe.web_form.fields_dict &&
+				Object.keys(frappe.web_form.fields_dict).length > 0
+			) {
+				clearInterval(interval);
+				callback();
+			}
+		}, 100);
+	}
+
+	waitForWebFormRender(() => {
+		applyCandidateFieldVisibility(candidateFields);
+	});
+
+	console.log("Candidate Fields:", candidateFields);
+
+	function applyCandidateFieldVisibility(candidateFields) {
+		const allowed = new Set(candidateFields);
+
+		// const always_visible = [
+		// 	"agreement_html",
+		// 	"consent_and_electronic_signature_confirmation_section",
+		// 	"files_custom_html",
+		// ];
+
+		let sectionMap = {};
+		let currentSection = null;
+
+		// build section → fields map dynamically
+		frappe.web_form.fields.forEach((field) => {
+			if (!field) return;
+
+			if (field.fieldtype === "Section Break") {
+				currentSection = field.fieldname;
+				sectionMap[currentSection] = [];
+			} else if (currentSection && field.fieldname) {
+				sectionMap[currentSection].push(field.fieldname);
+			}
+		});
+
+		// hide everything first
+		frappe.web_form.fields.forEach((field) => {
+			if (!field || !field.fieldname) return;
+
+			const control = frappe.web_form.fields_dict[field.fieldname];
+			if (!control) return;
+
+			frappe.web_form.set_df_property(field.fieldname, "hidden", 1);
+		});
+
+		// show allowed fields
+		const visibleFields = new Set();
+
+		frappe.web_form.fields.forEach((field) => {
+			if (!field || !field.fieldname) return;
+
+			if (allowed.has(field.fieldname)) {
+				const control = frappe.web_form.fields_dict[field.fieldname];
+				if (!control) return;
+
+				frappe.web_form.set_df_property(field.fieldname, "hidden", 0);
+				visibleFields.add(field.fieldname);
+			}
+		});
+
+		// determine which sections must be visible
+		Object.keys(sectionMap).forEach((section) => {
+			const fields = sectionMap[section];
+
+			const hasVisibleField = fields.some((f) => visibleFields.has(f));
+
+			if (hasVisibleField) {
+				frappe.web_form.set_df_property(section, "hidden", 0);
+			}
+		});
 	}
 
 	if (pdfValue) {
@@ -242,6 +325,10 @@ frappe.ready(async function () {
 		return;
 	}
 
+	function shouldValidate(fieldname, candidateFields) {
+		return candidateFields.includes(fieldname);
+	}
+
 	// when submit button is clicked
 	if (frappe.web_form) {
 		frappe.web_form.validate = () => {
@@ -249,31 +336,47 @@ frappe.ready(async function () {
 			if (!validateRequiredLeadDocuments()) return false;
 
 			let signature_method = frappe.web_form.get_value("signature_method") || [];
-			if (!validate_signature(signature_method)) return false;
+			// if (!validate_signature(signature_method)) return false;
 
-			let email = frappe.web_form.get_value("email");
-			if (!validate_email(email, "Email")) return false;
+			if (shouldValidate("email", candidateFields)) {
+				let email = frappe.web_form.get_value("email");
+				if (!validate_email(email, "Email")) return false;
+			}
 
-			let personal_phone = frappe.web_form.get_value("personal_phone_number");
-			if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
+			if (shouldValidate("personal_phone_number", candidateFields)) {
+				let personal_phone = frappe.web_form.get_value("personal_phone_number");
+				if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
+			}
 
-			let entry_date = frappe.web_form.get_value("entry_date");
-			if (!validate_entry_date(entry_date)) return false;
+			if (shouldValidate("entry_date", candidateFields)) {
+				let entry_date = frappe.web_form.get_value("entry_date");
+				if (!validate_entry_date(entry_date)) return false;
+			}
 
-			let ssn_digit = frappe.web_form.get_value("ssn_digit");
-			if (!validate_ssn_digit(ssn_digit)) return false;
+			if (shouldValidate("ssn_digit", candidateFields)) {
+				let ssn_digit = frappe.web_form.get_value("ssn_digit");
+				if (!validate_ssn_digit(ssn_digit)) return false;
+			}
 
-			let lead_course = frappe.web_form.get_value("educational_details") || [];
-			if (!validate_lead_course_table(lead_course)) return false;
+			if (shouldValidate("educational_details", candidateFields)) {
+				let lead_course = frappe.web_form.get_value("educational_details") || [];
+				if (!validate_lead_course_table(lead_course)) return false;
+			}
 
-			let educational_details = frappe.web_form.get_value("past_experience_table") || [];
-			if (!validate_past_experience_table(educational_details)) return false;
+			if (shouldValidate("past_experience_table", candidateFields)) {
+				let exp = frappe.web_form.get_value("past_experience_table") || [];
+				if (!validate_past_experience_table(exp)) return false;
+			}
 
-			let address_history = frappe.web_form.get_value("address_history") || [];
-			if (!validate_address_history(address_history)) return false;
+			if (shouldValidate("address_history", candidateFields)) {
+				let address_history = frappe.web_form.get_value("address_history") || [];
+				if (!validate_address_history(address_history)) return false;
+			}
 
-			let marketing_phone = frappe.web_form.get_value("number_for_marketing");
-			if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
+			if (shouldValidate("number_for_marketing", candidateFields)) {
+				let marketing_phone = frappe.web_form.get_value("number_for_marketing");
+				if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
+			}
 
 			return true;
 		};
@@ -328,6 +431,55 @@ frappe.ready(async function () {
 		});
 	});
 });
+
+async function getCandidateFieldsFromSalesOrder(salesOrderName) {
+	const r = await frappe.call({
+		method: "frappe.client.get",
+		args: {
+			doctype: "Sales Order",
+			name: salesOrderName,
+		},
+	});
+
+	const so = r.message;
+
+	if (!so || !so.services) {
+		return [];
+	}
+
+	// collect service names
+	const serviceNames = so.services.map((row) => row.service).filter(Boolean);
+
+	if (!serviceNames.length) {
+		return [];
+	}
+
+	// fetch all services in one call
+	const services = await frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Service",
+			fields: ["name", "candidate_details_form_fields"],
+			filters: {
+				name: ["in", serviceNames],
+			},
+			limit_page_length: 100,
+		},
+	});
+
+	let fields = [];
+
+	services.message.forEach((service) => {
+		if (service.candidate_details_form_fields) {
+			fields.push(...service.candidate_details_form_fields.split(",").map((f) => f.trim()));
+		}
+	});
+
+	// remove duplicates
+	fields = [...new Set(fields)];
+
+	return fields;
+}
 
 function handle_form_success() {
 	if (localStorage.getItem(storage_key) === "1") return;
@@ -1305,8 +1457,8 @@ async function initRequiredLeadDocsConfig() {
 		method: "frappe.client.get",
 		args: {
 			doctype: "ERP Configuration",
-			name: "ERP Configuration"
-		}
+			name: "ERP Configuration",
+		},
 	});
 
 	const doc = r.message || {};
@@ -1315,7 +1467,7 @@ async function initRequiredLeadDocsConfig() {
 		driving_licence: doc.driving_licence || 0,
 		ead_card: doc.ead_card || 0,
 		old_resume: doc.old_resume || 0,
-		visa_copy: doc.visa_copy || 0
+		visa_copy: doc.visa_copy || 0,
 	};
 }
 
@@ -1340,7 +1492,7 @@ function validateRequiredLeadDocuments() {
 		frappe.msgprint({
 			title: "Configuration Error",
 			message: "ERP Configuration is not loaded. Please contact support.",
-			indicator: "red"
+			indicator: "red",
 		});
 		return false; // nothing to validate
 	}
@@ -1360,7 +1512,7 @@ function validateRequiredLeadDocuments() {
 		frappe.msgprint({
 			title: "Missing Required Documents",
 			message: "Please upload required documents:<br><b>" + missing.join("<br>") + "</b>",
-			indicator: "red"
+			indicator: "red",
 		});
 		return false;
 	}

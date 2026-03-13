@@ -1,0 +1,101 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-11 15:37:32.755850",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "immediate_triggerer_configuration_section",
+  "send_agreement_immediatly_after_sales_order_creation",
+  "column_break_zgmd",
+  "send_candidate_form_immediatly_after_sales_order_creation",
+  "cadidate_form_configuration_section",
+  "driving_licence",
+  "ead_card",
+  "column_break_aivw",
+  "old_resume",
+  "visa_copy"
+ ],
+ "fields": [
+  {
+   "fieldname": "cadidate_form_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Cadidate Form Configuration"
+  },
+  {
+   "fieldname": "column_break_aivw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_agreement_immediatly_after_sales_order_creation",
+   "fieldtype": "Check",
+   "label": "Send agreement immediatly after sales order creation"
+  },
+  {
+   "fieldname": "column_break_zgmd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_candidate_form_immediatly_after_sales_order_creation",
+   "fieldtype": "Check",
+   "label": "Send candidate form immediatly after sales order creation"
+  },
+  {
+   "fieldname": "immediate_triggerer_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Immediate Triggerer Configuration"
+  },
+  {
+   "default": "0",
+   "fieldname": "driving_licence",
+   "fieldtype": "Check",
+   "label": "Is Driving Licence Mandatory"
+  },
+  {
+   "default": "0",
+   "fieldname": "ead_card",
+   "fieldtype": "Check",
+   "label": "Is EAD Card Mandatory"
+  },
+  {
+   "default": "0",
+   "fieldname": "old_resume",
+   "fieldtype": "Check",
+   "label": "Is Old Resume Mandatory"
+  },
+  {
+   "default": "0",
+   "fieldname": "visa_copy",
+   "fieldtype": "Check",
+   "label": "Is Visa Copy Mandatory"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-03-11 16:02:34.642665",
+ "modified_by": "Administrator",
+ "module": "Settings",
+ "name": "ERP Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

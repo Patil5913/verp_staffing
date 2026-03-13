@@ -18,7 +18,7 @@
  "is_hidden": 0,
  "label": "Leads",
  "links": [],
- "modified": "2026-03-09 15:51:20.363807",
+ "modified": "2026-03-12 15:41:18.604774",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Leads",
@@ -32,7 +32,11 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "_show_lead"
+  }
+ ],
  "sequence_id": 26.0,
  "shortcuts": [
   {
