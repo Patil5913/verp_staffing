@@ -9,6 +9,7 @@
   "customer",
   "status",
   "interview",
+  "resume",
   "section_break_mtyr",
   "proof_of_work",
   "lead_details",
@@ -92,12 +93,16 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 14:12:09.541665",
+ "modified": "2026-03-13 17:16:59.837320",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
