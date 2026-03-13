@@ -18,7 +18,7 @@
  "is_hidden": 0,
  "label": "Sales",
  "links": [],
- "modified": "2026-02-25 16:22:54.178773",
+ "modified": "2026-03-12 15:40:29.495465",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales",
@@ -27,25 +27,13 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "_show_sales"
+  }
+ ],
  "sequence_id": 25.0,
  "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Revenue Of Employee",
-   "link_to": "Revenue Of Employee",
-   "report_ref_doctype": "Sales Order",
-   "type": "Report"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Call Details",
-   "link_to": "Call Details",
-   "report_ref_doctype": "Opportunity",
-   "type": "Report"
-  },
   {
    "color": "Grey",
    "doc_view": "List",

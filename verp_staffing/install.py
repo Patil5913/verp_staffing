@@ -212,6 +212,8 @@ ROLE_PERMISSIONS = {
     "Marketing Manager": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -219,6 +221,8 @@ ROLE_PERMISSIONS = {
     "Marketing Team Lead": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -226,6 +230,8 @@ ROLE_PERMISSIONS = {
     "Senior Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -233,6 +239,8 @@ ROLE_PERMISSIONS = {
     "Marketing Mentor": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -240,6 +248,8 @@ ROLE_PERMISSIONS = {
     "Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -258,6 +268,10 @@ ROLE_PERMISSIONS = {
     },
     "Technical Coordinator": {
         "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -265,6 +279,10 @@ ROLE_PERMISSIONS = {
     },
     "Technical Manager": {
         "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -272,6 +290,10 @@ ROLE_PERMISSIONS = {
     },
     "Technical Master Manager": {
         "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -285,7 +307,7 @@ ROLE_PERMISSIONS = {
         "Lead Detail Form": ["read"],
     },
     "Training Person": {
-        "RUC": ["read", "write", "create", "select"],
+        "Training": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -299,7 +321,7 @@ ROLE_PERMISSIONS = {
         "Lead Detail Form": ["read"],
     },
     "JDC": {
-        "RUC": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],

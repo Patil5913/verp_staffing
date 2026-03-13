@@ -14,6 +14,8 @@
   "stage",
   "section_break_roxl",
   "lead_details_html",
+  "history_tab",
+  "customer_details",
   "sales_tab",
   "section_break_gtmf",
   "sales_content",
@@ -29,7 +31,6 @@
   "note_tab",
   "notes_html",
   "updates_html",
-  "section_break_kfrm",
   "activities_tab",
   "open_activities_html"
  ],
@@ -177,19 +178,25 @@
    "label": "Sales Order"
   },
   {
-   "fieldname": "section_break_kfrm",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "history_tab",
+   "fieldtype": "Tab Break",
+   "label": "History"
+  },
+  {
+   "fieldname": "customer_details",
+   "fieldtype": "HTML",
+   "label": "Customer Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 16:01:51.823787",
+ "modified": "2026-03-12 16:59:52.542658",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -210,7 +217,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager",
+   "role": "marketing Master Manager",
    "select": 1
   },
   {
