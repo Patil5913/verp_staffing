@@ -6,7 +6,13 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "service_name"
+  "service_name",
+  "is_immediate_agreement_required",
+  "column_break_pumi",
+  "is_candidate_form_required",
+  "section_break_wpvo",
+  "select_candidate_details_form_fields_html",
+  "candidate_details_form_fields"
  ],
  "fields": [
   {
@@ -17,12 +23,42 @@
    "reqd": 1,
    "set_only_once": 1,
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_immediate_agreement_required",
+   "fieldtype": "Check",
+   "label": "Is Agreement Required"
+  },
+  {
+   "fieldname": "column_break_pumi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_wpvo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "select_candidate_details_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "candidate_details_form_fields",
+   "fieldtype": "Small Text",
+   "label": "Candidate Details Form Fields"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_candidate_form_required",
+   "fieldtype": "Check",
+   "label": "Is Candidate Form Required"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-06 17:07:47.477331",
+ "modified": "2026-03-12 14:02:25.453480",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Service",
