@@ -8,6 +8,7 @@
   "assign_to",
   "customer",
   "status",
+  "resume",
   "section_break_xjvc",
   "proof_of_work",
   "notes_section",
@@ -79,12 +80,16 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-03 18:08:51.715408",
+ "modified": "2026-03-13 17:17:39.884912",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",

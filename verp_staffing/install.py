@@ -136,6 +136,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Sales Manager": {
         "Lead": ["read", "write", "create"],
@@ -151,6 +153,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Sales Team Lead": {
         "Lead": ["read", "write", "create"],
@@ -166,6 +170,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Sales Person": {
         "Lead": ["read", "write", "create"],
@@ -181,6 +187,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Marketing Master Manager": {
         "Marketing": [
@@ -711,8 +719,8 @@ def after_install():
     # seed_sales_stages()
     # seed_type_of_interview()
     # create_all_roles()
-    # seed_employee_departments()
-    # assign_permissions_to_roles(ROLE_PERMISSIONS)
+    seed_employee_departments()
+    assign_permissions_to_roles(ROLE_PERMISSIONS)
     # seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
@@ -988,18 +996,23 @@ def create_all_roles():
 
 def seed_employee_departments():
     for department_name, roles in DEPARTMENTS_ROLES.items():
-        if frappe.db.exists("Department", department_name):
-            continue
 
-        doc = frappe.get_doc(
-            {
+        if frappe.db.exists("Department", department_name):
+            # Fetch existing doc to get latest 'modified' timestamp
+            doc = frappe.get_doc("Department", department_name)
+            doc.roles_json = json.dumps(roles)
+            doc.save(ignore_permissions=True)
+            print(f"Updated Department: {department_name}")
+        else:
+            # Create new
+            doc = frappe.get_doc({
                 "doctype": "Department",
                 "department_name": department_name,
                 "roles_json": json.dumps(roles),
-            }
-        )
+            })
+            doc.insert(ignore_permissions=True)
+            print(f"Created Department: {department_name}")
 
-        doc.insert(ignore_permissions=True)
 
 
 def assign_permissions_to_roles(role_permissions: dict):

@@ -114,7 +114,6 @@ def submit_and_generate(sales_order, template, recipient, data):
         f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&c={quote(so.customer)}&agr={so.agreement}&e={quote(recipient)}"
     )
     
-    frappe.errprint(f"kishana bahua ahahahah{form_url}")
     send_notification(
         recipients=[recipient],
         subject="Agreement for Review and Signature",

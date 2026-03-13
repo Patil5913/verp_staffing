@@ -8,6 +8,7 @@
   "assign_to",
   "customer",
   "status",
+  "resume",
   "section_break_itpw",
   "proof_of_work",
   "lead_details",
@@ -85,12 +86,16 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 14:14:04.190098",
+ "modified": "2026-03-13 17:18:29.538555",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Cover Letter",

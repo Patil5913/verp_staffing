@@ -5,6 +5,7 @@ frappe.ui.form.on("Marketing", {
 	refresh(frm) {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
+		window.fetch_and_render_resume(frm);
 
 		handle_assign_to_permission(frm);
 
