@@ -146,7 +146,7 @@ def secure_get(**kwargs):
     user = frappe.session.user
     doctype = frappe.local.form_dict.get("doctype")
 
-    if user == "Asecure_getdministrator":
+    if user == "Administrator":
         return original_get(**frappe.local.form_dict)
 
     if doctype == "Lead":
