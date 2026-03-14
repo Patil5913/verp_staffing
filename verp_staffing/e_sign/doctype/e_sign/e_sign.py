@@ -743,16 +743,6 @@ def verify_otp(token=None, otp=None):
 
     frappe.db.commit()
     
-    print("Verification successful for token:", token)
-    
-    frappe.cache().set_value(
-        f"verify_{token}",
-        verification_key,
-        expires_in_sec=60 * 60 * 24 * 7
-    )
-    
-    print("CACHE SET:", f"verify_{token}", verification_key)
-    
 
     frappe.cache().delete_value(f"otp_{token}")
     return {"status": "verified"}
