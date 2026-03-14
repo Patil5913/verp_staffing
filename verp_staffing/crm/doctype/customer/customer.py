@@ -248,7 +248,8 @@ def get_customer_history(customer):
         "RUC",
         "JDC",
         "Cover Letter",
-        "Training"
+        "Training",
+        "Marketing",
     ]
 
     for dept in departments:
@@ -256,8 +257,11 @@ def get_customer_history(customer):
         docs = frappe.get_all(
             dept,
             filters={"customer": customer},
-            fields=["name", "creation", "assign_to", "status"]
+            fields=["name", "creation", "assign_to"]
         )
+        
+        if not docs:
+            continue
 
         for d in docs:
 
@@ -266,7 +270,7 @@ def get_customer_history(customer):
                 "docname": d.name,
                 "created_on": d.creation,
                 "assign_to": d.assign_to,
-                "status": d.status,
+                # "status": d.status,
                 "assign_history": []
             }
 
@@ -299,5 +303,6 @@ def get_customer_history(customer):
                             })
 
             history["departments"].append(dept_entry)
+            print("DEPARTMENT HISTORY:-------------------------------------", history["departments"])
 
     return history

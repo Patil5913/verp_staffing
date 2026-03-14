@@ -14,6 +14,13 @@ frappe.ui.form.on("Customer", {
 			show_sales_order(frm);
 		}
 
+		// clear previous content immediately
+		if (frm.fields_dict.customer_details) {
+			frm.fields_dict.customer_details.$wrapper.html(
+				"<p style='color:#888'>Loading history...</p>"
+			);
+		}
+
 		if (!frm.doc.name) return;
 
 		frappe.call({
@@ -27,16 +34,7 @@ frappe.ui.form.on("Customer", {
 					return;
 				}
 
-				const departments = r.message.departments || [];
-
-				if (!departments.length) {
-					console.warn("No department history found");
-					return;
-				}
-
-				departments.forEach((row) => {
-					console.log(row.department);
-				});
+				console.log(r.message)
 
 				render_customer_history(frm, r.message);
 			},
@@ -1201,17 +1199,21 @@ function get_status_badge(status) {
 function inject_status_badge_css() {}
 
 function render_customer_history(frm, data) {
+
 	let html = "";
 
+	// SOURCE (Lead / Opportunity)
+
 	if (data.source) {
+
 		html += `
-        <div style="padding:15px;border-left:4px solid #5e64ff;margin-bottom:15px;">
-            <h4>${data.source.type} Created</h4>
-            <p><b>Name:</b> ${data.source.name}</p>
-            <p><b>Owner:</b> ${data.source.owner}</p>
-            <p><b>Source:</b> ${data.source.source || "-"}</p>
-            <p><b>Created On:</b> ${frappe.datetime.str_to_user(data.source.created_on)}</p>
-        `;
+		<div style="padding:15px;border-left:4px solid #5e64ff;margin-bottom:15px;">
+			<h4>${data.source.type} Created</h4>
+			<p><b>Name:</b> ${data.source.name}</p>
+			<p><b>Owner:</b> ${data.source.owner}</p>
+			<p><b>Source:</b> ${data.source.source || "-"}</p>
+			<p><b>Created On:</b> ${frappe.datetime.str_to_user(data.source.created_on)}</p>
+		`;
 
 		if (data.source.sales_stage) {
 			html += `<p><b>Sales Stage:</b> ${data.source.sales_stage}</p>`;
@@ -1220,14 +1222,55 @@ function render_customer_history(frm, data) {
 		html += `</div>`;
 	}
 
+	// CUSTOMER CREATION
+
 	html += `
-    <div style="padding:15px;border-left:4px solid #28a745;">
-        <h4>Customer Created</h4>
-        <p><b>Customer:</b> ${data.customer.customer_name}</p>
-        <p><b>Owner:</b> ${data.customer.owner}</p>
-        <p><b>Created On:</b> ${frappe.datetime.str_to_user(data.customer.created_on)}</p>
-    </div>
-    `;
+	<div style="padding:15px;border-left:4px solid #28a745;margin-bottom:15px;">
+		<h4>Customer Created</h4>
+		<p><b>Customer:</b> ${data.customer.customer_name}</p>
+		<p><b>Owner:</b> ${data.customer.owner}</p>
+		<p><b>Created On:</b> ${frappe.datetime.str_to_user(data.customer.created_on)}</p>
+	</div>
+	`;
+
+	// DEPARTMENT HISTORY
+
+	if (data.departments && data.departments.length) {
+
+		data.departments.forEach((dept) => {
+
+			html += `
+			<div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
+				<h4>${dept.department} Department</h4>
+				<p><b>Status:</b> ${dept.status}</p>
+				<p><b>Assigned To:</b> ${dept.assign_to || "-"}</p>
+				<p><b>Created On:</b> ${frappe.datetime.str_to_user(dept.created_on)}</p>
+			`;
+
+			if (dept.assign_history && dept.assign_history.length) {
+
+				html += `<div style="margin-top:10px;"><b>Employee Assignment Flow</b></div>`;
+
+				dept.assign_history.forEach((flow) => {
+
+					html += `
+					<p style="margin-left:10px;">
+						${flow.from} → ${flow.to}
+						(${frappe.datetime.str_to_user(flow.timestamp)})
+					</p>
+					`;
+
+				});
+
+			}
+
+			html += `</div>`;
+		});
+
+	}
+
+
 
 	frm.fields_dict.customer_details.$wrapper.html(html);
+
 }
