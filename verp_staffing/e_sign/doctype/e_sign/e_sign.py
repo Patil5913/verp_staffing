@@ -734,15 +734,18 @@ def verify_otp(token=None, otp=None):
         filters={"sign_token": token},
         fields=["name"]
     )
-
+    
     for row in rows:
-        doc = frappe.get_doc("Signature Fields", row.name)
-        doc.verification_key = verification_key
-        doc.verified_on = format_timestamp_utc()
-        doc.save(ignore_permissions=True)
+        frappe.db.set_value(
+            "Signature Fields",
+            row.name,
+            {
+                "verification_key": verification_key,
+                "verified_on": format_timestamp_utc()
+            }
+        )
 
     frappe.db.commit()
     
-
     frappe.cache().delete_value(f"otp_{token}")
     return {"status": "verified"}
