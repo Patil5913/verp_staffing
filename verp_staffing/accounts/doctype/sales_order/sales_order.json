@@ -11,6 +11,7 @@
   "column_break_wknv",
   "date",
   "agreement",
+  "status",
   "payment_terms_section",
   "payment_terms",
   "agreement_tab",
@@ -75,12 +76,20 @@
    "fieldtype": "Table MultiSelect",
    "label": "Services",
    "options": "SalesOrderServices"
+  },
+  {
+   "default": "Open",
+   "description": "This field tells wheather all services mentioned here are completed as well as all payment activities are completed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nClosed"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-14 10:42:32.530103",
+ "modified": "2026-03-12 15:28:37.324273",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",

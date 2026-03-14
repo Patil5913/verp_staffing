@@ -9,7 +9,7 @@
   "amount",
   "payment_condition",
   "counter",
-  "is_received"
+  "payment_status"
  ],
  "fields": [
   {
@@ -28,13 +28,6 @@
    "reqd": 1
   },
   {
-   "default": "0",
-   "fieldname": "is_received",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Is Received"
-  },
-  {
    "default": "Number of Days",
    "fieldname": "payment_condition",
    "fieldtype": "Select",
@@ -49,13 +42,21 @@
    "in_list_view": 1,
    "label": "Counter",
    "non_negative": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Status",
+   "options": "Pending\nCompleted"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-29 17:51:35.286479",
+ "modified": "2026-03-12 14:08:06.258869",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

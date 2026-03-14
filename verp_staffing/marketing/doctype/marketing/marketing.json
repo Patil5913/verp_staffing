@@ -5,12 +5,14 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "customer",
   "title",
+  "customer",
   "column_break_ktta",
   "assign_to",
+  "status",
   "column_break_jejh",
   "interview_list",
+  "resume",
   "customer_details_section",
   "job_application_count",
   "section_break_ivbq",
@@ -137,12 +139,24 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nStarted\nCompleted"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 14:18:48.267435",
+ "modified": "2026-03-13 17:01:42.131397",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -160,7 +174,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Recruiter",
+   "role": "Marketing Manager",
    "select": 1,
    "write": 1
   },
@@ -179,21 +193,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
   },
@@ -205,8 +205,11 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Recruiter",
+   "select": 1,
+   "write": 1
   },
   {
    "read": 1,
@@ -223,6 +226,17 @@
    "select": 1,
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   }
  ],
  "row_format": "Dynamic",

@@ -336,6 +336,7 @@
 
 frappe.ui.form.on("Sales Order", {
 	refresh(frm) {
+		frm.add_custom_button(__("Send Details Form"), () => send_details_form(frm), __("Send"));
 		if (frm.doc.agreement) {
 			frm.add_custom_button("Download Agreement", function () {
 				frappe.call({
@@ -350,6 +351,7 @@ frappe.ui.form.on("Sales Order", {
 					},
 				});
 			});
+			frm.add_custom_button(__("Send Agreement"), () => send_agreement(frm), __("Send"));
 		} else {
 			frm.add_custom_button("Show Agreement Form Tour", () => {
 				const tour_name = "Sales Order Agreement Form";
@@ -563,4 +565,55 @@ function collect_so_agreement_data(frm) {
 	}));
 
 	return data;
+}
+
+async function send_agreement(frm) {
+	let recipient = await frappe.call({
+		method: "verp_staffing.crm.api.agreement.get_customer_email",
+		args: { customer: frm.doc.customer },
+	});
+	recipient = recipient.message;
+
+	if (!recipient) {
+		frappe.msgprint(`Email not found for Customer: ${frm.doc.customer}`);
+		return;
+	}
+	frappe.call({
+		method: "verp_staffing.accounts.doctype.sales_order.sales_order.send_agreement_notification",
+		args: {
+			recipient,
+			agreement_url: frm.doc.agreement,
+		},
+		callback(r) {
+			if (!r.message) frappe.throw("Failed to send email, retry again.");
+			frappe.msgprint("Agreement created and sent successfully.");
+			frm.reload_doc();
+		},
+	});
+}
+
+async function send_details_form(frm) {
+	let recipient = await frappe.call({
+		method: "verp_staffing.crm.api.agreement.get_customer_email",
+		args: { customer: frm.doc.customer },
+	});
+	recipient = recipient.message;
+
+	if (!recipient) {
+		frappe.msgprint(`Email not found for Customer: ${frm.doc.customer}`);
+		return;
+	}
+	frappe.call({
+		method: "verp_staffing.accounts.doctype.sales_order.sales_order.send_details_form_notification",
+		args: {
+			recipient,
+			agreement: frm.doc.agreement,
+			sales_order: frm.doc.name,
+		},
+		callback(r) {
+			if (!r.message) frappe.throw("Failed to send email, retry again.");
+			frappe.msgprint("Agreement created and sent successfully.");
+			frm.reload_doc();
+		},
+	});
 }

@@ -108,13 +108,13 @@ def get_forwardable_departments(customer):
     """
     so = frappe.get_all(
         "Sales Order",
-        filters={"customer": customer},
+        filters={"customer": customer,"status":"Open"},
         pluck="name",
         order_by="creation desc",
         limit=1,
     )
-    # rdqgv3r9ip
-    frappe.errprint(f"Sales Orders for customer {customer}: {so}")
+    if not so:
+        frappe.throw("Open Sales Order Not Found, please create one")
     # DISTINCT parent departments that have services
     services = frappe.db.sql(
         """
