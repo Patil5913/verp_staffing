@@ -103,15 +103,18 @@ def get_context(context):
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
     
     print("---------------------token------------------------------------",token)
-    verification_key = frappe.db.get_value(
+    verification_key = frappe.db.exists(
         "Signature Fields",
-        {"sign_token": token},
-        "verification_key"
-        )
+        {
+            "sign_token": token,
+            "verification_key": ["is", "set"]
+        }
+    )
+
     print("---------------------verification_key------------------------------------",verification_key)
 
-
     context.is_verified = bool(verification_key)
+
             
     context.pages = pages
     context.fields = fields
