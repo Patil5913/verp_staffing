@@ -749,7 +749,8 @@ def verify_otp(token=None, otp=None):
         max_age=60 * 60 * 24 * 7, # 7 days
         secure=True,              # Set to True in production (requires HTTPS)
         httponly=True,
-        samesite="Lax"            # Required for modern browsers
+        samesite="Lax",
+        path="/" 
         )
 
     frappe.cache().delete_value(f"otp_{token}")
