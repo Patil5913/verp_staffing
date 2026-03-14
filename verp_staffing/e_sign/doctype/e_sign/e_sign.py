@@ -743,7 +743,7 @@ def verify_otp(token=None, otp=None):
 
     frappe.db.commit()
     
-    frappe.local.cookie_manager.set_cookie(
+    frappe.local.response.set_cookie(
         key=f"verify_{token}",
         value=verification_key,
         max_age=60 * 60 * 24 * 7, # 7 days
