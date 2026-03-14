@@ -743,16 +743,15 @@ def verify_otp(token=None, otp=None):
 
     frappe.db.commit()
     
-    frappe.response.setdefault("cookies", {})
-
-    frappe.response["cookies"][f"verify_{token}"] = {
-        "value": verification_key,
-        "max_age": 60 * 60 * 24 * 7,
-        "secure": True,
-        "httponly": True,
-        "samesite": "Lax",
-        "path": "/"
-    }
+    frappe.local.response.set_cookie(
+        key=f"verify_{token}",
+        value=verification_key,
+        max_age=60 * 60 * 24 * 7, # 7 days
+        secure=True,              # Set to True in production (requires HTTPS)
+        httponly=True,
+        )
+    
+    
 
     frappe.cache().delete_value(f"otp_{token}")
     return {"status": "verified"}
