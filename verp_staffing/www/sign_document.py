@@ -102,22 +102,25 @@ def get_context(context):
     elif "Edg" in ua: browser = "Edge"
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
     
-    
     verification_cookie = frappe.request.cookies.get(f"verify_{token}")
+    
+    print("---------------------verification_cookie------------------------------------",verification_cookie)
+    print("---------------------token------------------------------------",token)
 
-    context.is_verified = False
 
-    if verification_cookie:
-        match = frappe.db.exists(
+    context.is_verified = bool(
+        token
+        and verification_cookie
+        and frappe.db.get_value(
             "Signature Fields",
             {
                 "sign_token": token,
                 "verification_key": verification_cookie
-            }
+            },
+            "name"
         )
-        if match:
-            context.is_verified = True
-    
+    )
+            
     context.pages = pages
     context.fields = fields
     context.signed_fields = signed_fields

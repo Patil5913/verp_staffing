@@ -286,7 +286,6 @@ def save_signature(field_name=None, image=None, token=None):
 @frappe.whitelist()
 def send_all_signers(agreement):
     
-    print("------------------------------------------------------hi from server -------------------------------------------------")
 
     doc = frappe.get_doc("e_sign", agreement)
 
