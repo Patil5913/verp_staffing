@@ -102,10 +102,10 @@ def get_context(context):
     elif "Edg" in ua: browser = "Edge"
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
     
+    print("---------------------token------------------------------------",token)
     verification_key = frappe.cache().get_value(f"verify_{token}")
     
     print("---------------------verification_key------------------------------------",verification_key)
-    print("---------------------token------------------------------------",token)
 
 
     context.is_verified = bool(
