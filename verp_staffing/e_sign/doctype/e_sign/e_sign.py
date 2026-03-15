@@ -712,6 +712,48 @@ def send_otp(token=None):
 
 
 @frappe.whitelist(allow_guest=True)
+def send_otp(token=None):
+
+    if not token:
+        return {"status": "invalid_token"}
+
+    fields = frappe.get_all(
+        "Signature Fields",
+        filters={"sign_token": token},
+        fields=["parent", "signer_email"]
+    )
+
+    if not fields:
+        return {"status": "token_not_found"}
+
+    email = fields[0]["signer_email"]
+
+    # prevent spam
+    cooldown = frappe.cache().get_value(f"otp_cooldown_{token}")
+    if cooldown:
+        return {"status": "wait"}
+
+    frappe.cache().set_value(f"otp_cooldown_{token}", True, expires_in_sec=60)
+
+    otp = f"{random.randint(100000,999999)}"
+
+    frappe.cache().set_value(
+        f"otp_{token}",
+        otp,
+        expires_in_sec=300
+    )
+
+    frappe.sendmail(
+        recipients=[email],
+        subject="Your Verification Code",
+        message=f"<p>Your OTP is: <b>{otp}</b></p>",
+        delayed=False
+    )
+
+    return {"status": "sent"}
+
+
+@frappe.whitelist(allow_guest=True)
 def verify_otp(token=None, otp=None):
 
     if not token or not otp:
@@ -722,19 +764,19 @@ def verify_otp(token=None, otp=None):
     if not cached_otp:
         return {"status": "expired"}
 
+    cached_otp = str(cached_otp)
+
     if otp != cached_otp:
         return {"status": "invalid_otp"}
 
-    # ✅ Generate persistent verification key
     verification_key = str(uuid.uuid4())
 
-    # Save verification key to ALL fields of this signer
     rows = frappe.get_all(
         "Signature Fields",
         filters={"sign_token": token},
         fields=["name"]
     )
-    
+
     for row in rows:
         frappe.db.set_value(
             "Signature Fields",
@@ -746,6 +788,15 @@ def verify_otp(token=None, otp=None):
         )
 
     frappe.db.commit()
-    
+
+    # remove OTP after success
     frappe.cache().delete_value(f"otp_{token}")
+
+    # create verification session cookie
+    frappe.local.response.set_cookie(
+        key=f"verify_{token}",
+        value=verification_key,
+        max_age=3600
+    )
+
     return {"status": "verified"}
