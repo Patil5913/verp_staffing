@@ -112,9 +112,6 @@ def get_context(context):
     print("---------------------verification_key------------------------------------",verification_key)
 
     context.is_verified = bool(verification_key)
-
-
-
             
     context.pages = pages
     context.fields = fields
