@@ -50,7 +50,6 @@ frappe.ready(async function () {
 		"agreement_link",
 		"signature_image",
 		"audit_trail",
-		"customer",
 		"visa_copy",
 		"ead_card",
 		"driving_licence",
@@ -67,14 +66,12 @@ frappe.ready(async function () {
 
 	// Supported key names
 	const salesOrder = urlParams.get("so");
-	const customerValue = urlParams.get("c");
 	const agreementValue = urlParams.get("agr");
 	const pdfValue = urlParams.get("p");
 	customerEmail = urlParams.get("e");
 
-	// 2. If lead exists → store in webform field "lead"
-	if (customerValue) {
-		frappe.web_form.set_value("customer", customerValue);
+	if (salesOrder) {
+		frappe.web_form.set_value("sales_order", salesOrder);
 	}
 
 	if (agreementValue) {
@@ -629,7 +626,7 @@ function send_otp() {
 	if (otpRequestInFlight) return; // HARD LOCK
 
 	const sendBtn = document.getElementById("send-otp-btn");
-	const customer = frappe.web_form.get_value("customer");
+	const sales_order = frappe.web_form.get_value("sales_order");
 	const email = customerEmail;
 
 	if (!email) {
@@ -644,7 +641,7 @@ function send_otp() {
 
 	frappe.call({
 		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.send_otp",
-		args: { customer, email },
+		args: { sales_order, email },
 		callback(r) {
 			set_auth_state("otp_sent", {
 				expires_at: Date.now() + 300000,
@@ -674,7 +671,7 @@ function send_otp() {
 
 function verify_otp() {
 	const otp = document.getElementById("otp-input").value;
-	const customer = frappe.web_form.get_value("customer");
+	const sales_order = frappe.web_form.get_value("sales_order");
 
 	if (!otp || otp.length !== 6) {
 		frappe.msgprint("Enter valid 6 digit OTP");
@@ -683,7 +680,7 @@ function verify_otp() {
 
 	frappe.call({
 		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.verify_otp",
-		args: { customer, otp },
+		args: { sales_order, otp },
 		callback(r) {
 			clearInterval(otpTimer);
 			set_auth_state("verified");

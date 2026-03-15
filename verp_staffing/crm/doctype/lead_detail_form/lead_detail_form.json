@@ -30,7 +30,7 @@
   "email",
   "personal_linkedin",
   "date_of_birth",
-  "customer",
+  "sales_order",
   "educational_details_section",
   "educational_details",
   "past_experience_details_section",
@@ -373,12 +373,6 @@
    "options": "Agreement"
   },
   {
-   "fieldname": "customer",
-   "fieldtype": "Link",
-   "label": "Customer",
-   "options": "Customer"
-  },
-  {
    "description": "NOTE: Provide country code with number.",
    "fieldname": "personal_phone_number",
    "fieldtype": "Data",
@@ -410,12 +404,19 @@
    "fieldtype": "Table",
    "label": "Reference Table",
    "options": "Doctype Reference"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-21 15:24:01.479903",
+ "modified": "2026-03-14 16:14:00.726652",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -424,15 +425,15 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
    "role": "Sales Manager"
   },
   {
    "read": 1,
-   "role": "Senior Resume Person"
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
   },
   {
    "create": 1,
@@ -448,27 +449,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Manager"
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor"
-  },
-  {
-   "read": 1,
    "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Resume Person"
   },
   {
    "read": 1,
@@ -476,11 +457,43 @@
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead"
+   "role": "Marketing Mentor"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager"
   },
   {
    "read": 1,
    "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
   },
   {
    "read": 1,
@@ -496,19 +509,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Manager"
-  },
-  {
-   "read": 1,
    "role": "Support Person"
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator"
-  },
-  {
-   "read": 1,
-   "role": "RUC Person"
   },
   {
    "read": 1,

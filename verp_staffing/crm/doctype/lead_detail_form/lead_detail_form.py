@@ -11,16 +11,16 @@ from verp_staffing.crm.api.helpers import send_notification
 class LeadDetailForm(Document):
 
     def before_insert(self):
-        if not self.customer:
+        if not self.sales_order:
             return
 
         existing_name = frappe.db.sql(
             """
             SELECT parent FROM `tabDoctype Reference`
-            WHERE reference_doctype = 'Customer' AND reference_person = %s
+            WHERE sales_order = %s
             LIMIT 1
             """,
-            (self.customer,),
+            (self.sales_order,),
             as_dict=True,
         )
 
@@ -652,15 +652,12 @@ OTP_TTL = 300  # 5 minutes
 
 
 @frappe.whitelist(allow_guest=True)
-def send_otp(customer, email):
-    frappe.logger().info(f"OTP for customer: {customer}")
-    print(f"OTP for customer: {customer}")
-
-    if not customer or not email:
-        frappe.throw("Missing customer or email")
+def send_otp(sales_order, email):
+    if not sales_order or not email:
+        frappe.throw("Missing sales_order or email")
 
     otp = random.randint(100000, 999999)
-    cache_key = f"otp:{customer}"
+    cache_key = f"otp:{sales_order}"
 
     if frappe.cache().get_value(cache_key):
         frappe.msgprint("OTP already sent. Please wait.")
@@ -690,11 +687,11 @@ def send_otp(customer, email):
 
 
 @frappe.whitelist(allow_guest=True)
-def verify_otp(customer, otp):
-    if not customer or not otp:
+def verify_otp(sales_order, otp):
+    if not sales_order or not otp:
         frappe.throw("Missing parameters")
 
-    cache_key = f"otp:{customer}"
+    cache_key = f"otp:{sales_order}"
     data = frappe.cache().get_value(cache_key)
 
     if not data:

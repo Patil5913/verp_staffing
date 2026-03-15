@@ -20,7 +20,7 @@
  "list_columns": [],
  "login_required": 0,
  "max_attachment_size": 0,
- "modified": "2026-01-28 16:42:38.441709",
+ "modified": "2026-03-14 17:11:00.414188",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "lead-details-form",
@@ -37,7 +37,6 @@
    "fieldname": "authentication_section",
    "fieldtype": "Section Break",
    "hidden": 0,
-   "label": "",
    "max_length": 0,
    "max_value": 0,
    "precision": "",
@@ -50,7 +49,6 @@
    "fieldname": "authentication_html",
    "fieldtype": "HTML",
    "hidden": 0,
-   "label": "",
    "max_length": 0,
    "max_value": 0,
    "precision": "",
@@ -136,7 +134,7 @@
    "options": "Draw\nUpload\nText",
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -297,7 +295,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -310,7 +308,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -336,7 +334,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -361,7 +359,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -374,7 +372,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -392,13 +390,13 @@
   },
   {
    "allow_read_on_all_link_options": 0,
-   "fieldname": "customer",
+   "fieldname": "sales_order",
    "fieldtype": "Link",
    "hidden": 0,
-   "label": "Customer",
+   "label": "Sales Order",
    "max_length": 0,
    "max_value": 0,
-   "options": "Customer",
+   "options": "Sales Order",
    "precision": "",
    "read_only": 0,
    "reqd": 0,
@@ -479,7 +477,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -492,7 +490,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -518,7 +516,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -543,7 +541,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -620,7 +618,7 @@
    "options": "\nF1 CPT\nF1 OPT\nSTEM OPT\nH1 B\nH4\nGREEN CARD\nUSC\nEB - 1\nEB - 2\nEB - 3\nL - 1\nL - 2\nTN\nO - 1\nWORK PERMIT\nPR",
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -660,7 +658,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -698,7 +696,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -711,7 +709,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -724,7 +722,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -749,7 +747,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
@@ -866,6 +864,32 @@
    "max_length": 0,
    "max_value": 0,
    "options": "File",
+   "precision": "",
+   "read_only": 0,
+   "reqd": 0,
+   "show_in_filter": 0
+  },
+  {
+   "allow_read_on_all_link_options": 0,
+   "fieldname": "section_break_odpr",
+   "fieldtype": "Section Break",
+   "hidden": 0,
+   "max_length": 0,
+   "max_value": 0,
+   "precision": "",
+   "read_only": 0,
+   "reqd": 0,
+   "show_in_filter": 0
+  },
+  {
+   "allow_read_on_all_link_options": 0,
+   "fieldname": "reference_table",
+   "fieldtype": "Table",
+   "hidden": 0,
+   "label": "Reference Table",
+   "max_length": 0,
+   "max_value": 0,
+   "options": "Doctype Reference",
    "precision": "",
    "read_only": 0,
    "reqd": 0,

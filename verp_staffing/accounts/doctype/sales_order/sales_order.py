@@ -54,7 +54,7 @@ def send_details_form_notification(recipient,sales_order,agreement=None):
 	so = frappe.get_doc("Sales Order", sales_order)
 	
 	form_url = (
-        f"{base_url}/details-form/new?so={quote(so.name)}&p={url}&c={quote(so.customer)}&e={quote(recipient)}"
+        f"{base_url}/details-form/new?so={quote(so.name)}&p={url}&e={quote(recipient)}"
     )
     
 	send_notification(
