@@ -38,15 +38,6 @@
   }
  ],
  "sequence_id": 26.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Leads",
-   "link_to": "Lead",
-   "stats_filter": "[[\"Lead\",\"lead_owner\",\"=\",\"administrator-2026-01-30-0001\",false]]",
-   "type": "DocType"
-  }
- ],
+ "shortcuts": [],
  "title": "Leads"
 }

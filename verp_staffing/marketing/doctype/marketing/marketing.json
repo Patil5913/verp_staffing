@@ -156,7 +156,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-13 17:01:42.131397",
+ "modified": "2026-03-15 14:15:25.777107",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -169,14 +169,11 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Manager"
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
+   "role": "Sales Team Lead"
   },
   {
    "create": 1,
@@ -189,31 +186,6 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
   },
   {
    "create": 1,
@@ -230,13 +202,41 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Mentor",
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Manager",
    "select": 1,
    "write": 1
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
@@ -245,5 +245,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "title"
+ "title_field": "title",
+ "track_changes": 1
 }

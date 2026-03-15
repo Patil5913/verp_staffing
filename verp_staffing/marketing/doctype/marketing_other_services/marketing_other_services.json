@@ -27,7 +27,6 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "read_only": 1,
    "reqd": 1,
    "set_only_once": 1
   },
@@ -37,7 +36,6 @@
    "in_list_view": 1,
    "label": "Service",
    "options": "Service",
-   "read_only": 1,
    "reqd": 1,
    "set_only_once": 1
   },

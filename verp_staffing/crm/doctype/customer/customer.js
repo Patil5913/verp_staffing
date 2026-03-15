@@ -3,6 +3,7 @@
 
 frappe.ui.form.on("Customer", {
 	refresh(frm) {
+		set_customer_owner(frm);
 		window.render_notes(frm);
 		window.render_activity_section(frm);
 		toggle_tab_view(frm);
@@ -109,6 +110,7 @@ frappe.ui.form.on("Customer", {
 		if (frm.doc.customer_from) {
 			frm.set_df_property("party_name", "label", frm.doc.customer_from);
 		}
+			set_customer_owner(frm);
 	},
 
 	party_name: function (frm) {
@@ -130,6 +132,7 @@ frappe.ui.form.on("Customer", {
 				}
 			});
 		}
+		set_customer_owner(frm);
 	},
 
 	name1: function (frm) {
@@ -148,7 +151,88 @@ frappe.ui.form.on("Customer", {
 		}
 	},
 });
+function set_customer_owner(frm) {
 
+	if (frm.doc.customer_owner) return;
+
+	// Case 1: Opportunity selected
+	if (frm.doc.customer_from === "Opportunity" && frm.doc.party_name) {
+
+		frappe.db.get_value(
+			"Opportunity",
+			frm.doc.party_name,
+			"opportunity_owner"
+		).then(r => {
+			console.log("entered opp");
+			console.log(frm.doc.party_name);
+			
+			
+
+			if (!r.message || !r.message.opportunity_owner) return;
+			
+			console.log("exists");
+			console.log(r.message.opportunity_owner);
+			
+			
+
+			frm.set_value("customer_owner", r.message.opportunity_owner);
+			console.log("customer_owner", frm.doc.customer_owner);
+			
+
+		});
+	}
+
+	// Case 2: Lead selected
+	else if (frm.doc.customer_from === "Lead" && frm.doc.party_name) {
+
+		console.log("customer from lead ");
+		
+
+
+			frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Employee",
+				filters: [
+					["Employee", "user", "=", frappe.session.user],
+					// ["Employee Assignment Detail", "department", "=", "Sales"]
+				],
+				fields: ["name"],
+				limit: 1,
+			},
+			callback: function (r) {
+				if (r.message && r.message.length > 0) {
+					frm.set_value("customer_owner", r.message[0].name);
+				}
+			},
+		});
+
+	;
+	}
+
+	// Case 3: Nothing selected → logged-in Sales employee
+	else {
+
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Employee",
+				filters: [
+					["Employee", "user", "=", frappe.session.user],
+					// ["Employee Assignment Detail", "department", "=", "Sales"]
+				],
+				fields: ["name"],
+				limit: 1,
+			},
+			callback: function (r) {
+				if (r.message && r.message.length > 0) {
+					frm.set_value("customer_owner", r.message[0].name);
+				}
+			},
+		});
+
+	}
+}
 // function render_notes(frm) {
 // 	const $wrapper = frm.get_field("notes_html")?.$wrapper;
 // 	if (!$wrapper) return;

@@ -286,7 +286,6 @@ def save_signature(field_name=None, image=None, token=None):
 @frappe.whitelist()
 def send_all_signers(agreement):
     
-    print("------------------------------------------------------hi from server -------------------------------------------------")
 
     doc = frappe.get_doc("e_sign", agreement)
 
@@ -735,23 +734,18 @@ def verify_otp(token=None, otp=None):
         filters={"sign_token": token},
         fields=["name"]
     )
-
+    
     for row in rows:
-        doc = frappe.get_doc("Signature Fields", row.name)
-        doc.verification_key = verification_key
-        doc.verified_on = format_timestamp_utc()
-        doc.save(ignore_permissions=True)
+        frappe.db.set_value(
+            "Signature Fields",
+            row.name,
+            {
+                "verification_key": verification_key,
+                "verified_on": format_timestamp_utc()
+            }
+        )
 
     frappe.db.commit()
     
-    frappe.local.cookie_manager.set_cookie(
-        key=f"verify_{token}",
-        value=verification_key,
-        max_age=60 * 60 * 24 * 7, # 7 days
-        secure=True,              # Set to True in production (requires HTTPS)
-        httponly=True,
-        samesite="Lax"            # Required for modern browsers
-        )
-
     frappe.cache().delete_value(f"otp_{token}")
     return {"status": "verified"}
