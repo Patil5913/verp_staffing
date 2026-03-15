@@ -35,9 +35,7 @@ frappe.query_reports["Revenue Of Employee"] = {
 
 	onload: function () {
 		start_bar_coloring();
-
 	},
-
 
 	after_datatable_render: function (table_instance) {
 
@@ -51,7 +49,7 @@ frappe.query_reports["Revenue Of Employee"] = {
 			let color = "";
 
 			if (revenue < target) {
-				color = "#ffe5e5"; // red
+				color = "#ffe5e5";
 			}
 
 			table_instance.style.setStyle(`.dt-row-${rowIndex} .dt-cell`, {
@@ -82,7 +80,6 @@ function apply_bar_colors() {
 		const color = revenue < target ? "#f50004ff" : "#28a745";
 
 		bar.style.setProperty("fill", color, "important");
-
 	});
 
 	return true;
@@ -91,11 +88,13 @@ function apply_bar_colors() {
 
 function start_bar_coloring() {
 
+	// stop previous interval
 	if (bar_interval) {
 		clearInterval(bar_interval);
 		bar_interval = null;
 	}
 
+	// disconnect previous observer
 	if (bar_observer) {
 		bar_observer.disconnect();
 		bar_observer = null;
@@ -108,12 +107,14 @@ function start_bar_coloring() {
 		const success = apply_bar_colors();
 		attempts++;
 
+		// stop after 5 seconds
 		if (attempts > 50) {
 			clearInterval(bar_interval);
 			bar_interval = null;
 			return;
 		}
 
+		// once bars colored, attach observer
 		if (success) {
 
 			clearInterval(bar_interval);
@@ -122,20 +123,14 @@ function start_bar_coloring() {
 			const chart_area = document.querySelector(".frappe-chart") || document.body;
 
 			bar_observer = new MutationObserver(() => {
-				const bars = document.querySelectorAll(".dataset-units rect.bar.mini");
-
-				if (bars.length > 0) {
-					apply_bar_colors();
-				}
+				apply_bar_colors();
 			});
 
 			bar_observer.observe(chart_area, {
 				childList: true,
-				subtree: true,
-				attributes: true,
-				attributeFilter: ["style"],
+				subtree: true
 			});
 		}
 
-	}, 10);
+	}, 100);
 }

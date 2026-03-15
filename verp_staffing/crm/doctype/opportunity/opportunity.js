@@ -23,7 +23,6 @@ frappe.ui.form.on("Opportunity", {
 	},
 
 	refresh(frm) {
-		frm.trigger("opportunity_from");
 		render_notes(frm);
 		render_activity_section(frm);
 		if (frm.doc.status == "Converted") {
@@ -163,27 +162,19 @@ frappe.ui.form.on("Opportunity", {
 		frm.doc.__last_sync_status = frm.doc.status;
 	},
 
-	opportunity_from: function (frm) {
-		if (frm.doc.opportunity_from) {
-			frm.set_df_property("party_name", "label", frm.doc.opportunity_from);
-		}
-	},
 
-	party_name: function (frm) {
+	opportunity_from_lead: function (frm) {
 		frm.trigger("fetch_source_details");
 		if (!frm.is_new()) {
 			load_lead_details_after_save(frm);
 		}
-		if (frm.doc.opportunity_from && frm.doc.party_name) {
-			let source_doctype = frm.doc.opportunity_from;
-			let source_name = frm.doc.party_name;
+		if (frm.doc.opportunity_from_lead) {
 
-			// Determine which field to fetch based on the source
-			let fetch_field = source_doctype === "Lead" ? "name1" : "title";
+			let source_name = frm.doc.opportunity_from_lead;
 
-			frappe.db.get_value(source_doctype, source_name, fetch_field).then((r) => {
+			frappe.db.get_value("Lead", source_name, "name1").then((r) => {
 				if (r && r.message) {
-					let base_name = r.message[fetch_field];
+					let base_name = r.message.name1;
 					frm.set_value("name1", base_name ? base_name.trim() : "");
 				}
 			});
@@ -197,8 +188,8 @@ frappe.ui.form.on("Opportunity", {
 	},
 
 	fetch_source_details: function (frm) {
-		if (frm.doc.party_name && frm.doc.opportunity_from === "Lead") {
-			frappe.db.get_value("Lead", frm.doc.party_name, "source", function (r) {
+		if (frm.doc.opportunity_from_lead) {
+			frappe.db.get_value("Lead", frm.doc.opportunity_from_lead, "source", function (r) {
 				if (r) {
 					if (r.source) {
 						frm.set_value("source", r.source);
@@ -208,15 +199,12 @@ frappe.ui.form.on("Opportunity", {
 		}
 	},
 
-	validate: function (frm) {
-		if (frm.doc.opportunity_from === "Lead" && !frm.doc.party_name) {
-			frappe.msgprint(__("Please select a Lead."));
-			frappe.validated = false;
-		} else if (frm.doc.opportunity_from === "Customer" && !frm.doc.party_name) {
-			frappe.msgprint(__("Please select a Customer."));
-			frappe.validated = false;
-		}
-	},
+// 	validate: function (frm) {
+// 		if (!frm.doc.opportunity_from_lead) {
+// 			frappe.msgprint(__("Please select a Lead."));
+// 			frappe.validated = false;
+// }
+// 			},
 
 	after_save(frm) {
 		load_lead_details_after_save(frm);
@@ -332,8 +320,7 @@ function open_create_sales_order_dialog(frm) {
 				method: "verp_staffing.crm.api.sales_order_api.create_sales_order",
 				args: {
 					opportunity: frm.doc.name,
-					opportunity_from: frm.doc.opportunity_from,
-					party_name: frm.doc.party_name,
+					opportunity_from_lead: frm.doc.opportunity_from_lead,
 					data: values,
 				},
 				callback: function (r) {
