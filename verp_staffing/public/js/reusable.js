@@ -689,7 +689,7 @@ window.render_notes = function (frm) {
 
 function load_notes(frm, $notes_wrapper, $updates_wrapper) {
 	$notes_wrapper.html(`<div class="p-3 text-muted">Loading...</div>`);
-	if (frm.doctype === "Customer") {
+	if (frm.doctype === "Customer" || frm.doctype === "Opportunity" || frm.doctype === "Lead") {
 		$updates_wrapper.closest(".form-group, .section-body, .frappe-control").hide();
 	} else {
 		$updates_wrapper.closest(".form-group, .section-body, .frappe-control").show();
@@ -783,6 +783,15 @@ function load_notes(frm, $notes_wrapper, $updates_wrapper) {
 	});
 }
 
+function refresh_notes(frm) {
+	const notes_field = frm.get_field("notes_html");
+	const updates_field = frm.get_field("updates_html");
+
+	if (!notes_field || !updates_field) return;
+
+	load_notes(frm, notes_field.$wrapper, updates_field.$wrapper);
+}
+
 function open_add_note_dialog(frm, $wrapper) {
 	const d = new frappe.ui.Dialog({
 		title: __("Add Note"),
@@ -802,7 +811,7 @@ function open_add_note_dialog(frm, $wrapper) {
 				callback(r) {
 					frappe.show_alert({ message: __("Note added"), indicator: "green" });
 					d.hide();
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 				error() {
 					frappe.msgprint(__("Failed to add note"));
@@ -832,7 +841,7 @@ function attach_edit_delete_events(frm, $wrapper) {
 				args: { note_id },
 				callback: () => {
 					frappe.show_alert("Note deleted");
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 			});
 		});
@@ -949,7 +958,7 @@ function open_new_task_dialog(frm) {
 			frappe.call({
 				method: "verp_staffing.crm.api.activities.create_task",
 				args: {
-					reference_doctype: "RUC",
+					reference_doctype: frm.doc.doctype,
 					reference_name: frm.doc.name,
 					description: values.description,
 					date: values.date,
@@ -1106,7 +1115,7 @@ function open_new_event_dialog(frm) {
 			frappe.call({
 				method: "verp_staffing.crm.api.activities.create_event",
 				args: {
-					reference_doctype: "RUC",
+					reference_doctype: frm.doc.doctype,
 					reference_name: frm.doc.name,
 					summary: values.summary,
 					date: values.date,

@@ -48,10 +48,8 @@ def _get_service_doctype(service_name: str) -> str:
     # 2. Department-based fallback
     # Find departments whose services table contains this service
     matches = frappe.get_all(
-        "Department",          # parent DocType
-        filters={
-            "services.service_name": service_name   # child table filter
-        },
+        "Department",  # parent DocType
+        filters={"service_name": service_name},  # child table filter
         fields=["name"],
         limit=1,
     )

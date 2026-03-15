@@ -100,9 +100,10 @@
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-16 10:46:10.670599",
+ "modified": "2026-03-15 12:17:27.432608",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
@@ -130,13 +131,6 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Technical Manager",
    "select": 1,
    "write": 1
@@ -145,6 +139,13 @@
    "create": 1,
    "read": 1,
    "role": "JDC",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   }

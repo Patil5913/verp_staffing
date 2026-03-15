@@ -93,9 +93,10 @@
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-16 10:45:45.191221",
+ "modified": "2026-03-15 12:18:36.952774",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Cover Letter",

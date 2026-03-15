@@ -16,6 +16,7 @@
   "email",
   "note_tab",
   "notes_html",
+  "updates_html",
   "activities_tab",
   "open_activities_html"
  ],
@@ -88,12 +89,17 @@
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-16 10:43:48.809836",
+ "modified": "2026-03-14 12:12:14.004573",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -102,8 +108,14 @@
  "permissions": [
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Lead Person",
+   "report": 1,
+   "role": "Lead Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   },
   {
@@ -138,9 +150,6 @@
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
    "role": "Sales Master Manager",
@@ -163,7 +172,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Manager",
    "write": 1
   },
   {
@@ -171,6 +180,12 @@
    "read": 1,
    "role": "Sales Manager",
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "_show_sales"
   },
   {
    "read": 1,

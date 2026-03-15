@@ -29,6 +29,7 @@
   "call_details",
   "note_tab",
   "notes_html",
+  "updates_html",
   "activities_tab",
   "open_activities_html"
  ],
@@ -178,14 +179,19 @@
   {
    "fieldname": "opportunity_from_lead",
    "fieldtype": "Link",
-   "label": "Opportunity From Lead",
-   "options": "Lead"
+   "label": "Referral Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Update"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-16 10:43:37.010972",
+ "modified": "2026-03-14 12:09:00.436623",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -194,9 +200,29 @@
  "permissions": [
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
    "if_owner": 1,
    "read": 1,
    "role": "Lead Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "role": "Lead Employee"
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "Lead Person",
    "write": 1
   },
   {
@@ -213,20 +239,8 @@
   },
   {
    "create": 1,
-   "if_owner": 1,
    "read": 1,
-   "role": "Lead Person",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "role": "Lead Employee"
-  },
-  {
-   "create": 1,
-   "if_owner": 1,
-   "read": 1,
-   "role": "Lead Team Lead",
+   "role": "Sales Manager",
    "write": 1
   },
   {
@@ -239,19 +253,21 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Sales Person",
    "write": 1
   },
   {
    "create": 1,
+   "if_owner": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Lead Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "Sales Person",
    "write": 1
   },
   {
