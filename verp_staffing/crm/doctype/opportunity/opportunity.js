@@ -199,12 +199,12 @@ frappe.ui.form.on("Opportunity", {
 		}
 	},
 
-	validate: function (frm) {
-		if (!frm.doc.opportunity_from_lead) {
-			frappe.msgprint(__("Please select a Lead."));
-			frappe.validated = false;
-}
-			},
+// 	validate: function (frm) {
+// 		if (!frm.doc.opportunity_from_lead) {
+// 			frappe.msgprint(__("Please select a Lead."));
+// 			frappe.validated = false;
+// }
+// 			},
 
 	after_save(frm) {
 		load_lead_details_after_save(frm);
