@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"9QJr2wt8Pg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Resume\",\"col\":3}},{\"id\":\"3ojxLSPDk6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ruc\",\"col\":3}},{\"id\":\"0Zny-ZsVp2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Jdc\",\"col\":3}},{\"id\":\"KU3YPBZGsZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Training\",\"col\":3}},{\"id\":\"60reacaqp-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Cover Letter\",\"col\":3}},{\"id\":\"g0nCNZjL5j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Technical Other Services\",\"col\":3}},{\"id\":\"_JYuUFIpj-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Count of Complated Resume\",\"col\":4}}]",
+ "content": "[{\"id\":\"KQe_SrS__j\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Technical</span>\",\"col\":12}},{\"id\":\"wqd5XDjCPc\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Resume\",\"col\":4}},{\"id\":\"vF37Sa91Sn\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"RUC\",\"col\":4}},{\"id\":\"mwZoSzkyDI\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"JDC\",\"col\":4}},{\"id\":\"58C4EmWUIc\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Training\",\"col\":4}},{\"id\":\"ynvuP7mG_e\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Cover Letter\",\"col\":4}},{\"id\":\"cUgsu5u-ff\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Technical Other Services\",\"col\":4}}]",
  "creation": "2025-12-24 17:12:02.669811",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,14 +13,34 @@
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2026-02-11 14:32:27.227712",
+ "modified": "2026-03-15 13:31:53.972701",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical",
  "number_cards": [
   {
-   "label": "Count of Complated Resume",
-   "number_card_name": "Count of Complated Resume"
+   "label": "Cover Letter",
+   "number_card_name": "Cover Letter"
+  },
+  {
+   "label": "Resume",
+   "number_card_name": "Resume"
+  },
+  {
+   "label": "RUC",
+   "number_card_name": "RUC"
+  },
+  {
+   "label": "Technical Other Services",
+   "number_card_name": "Technical Other Services"
+  },
+  {
+   "label": "JDC",
+   "number_card_name": "JDC"
+  },
+  {
+   "label": "Training",
+   "number_card_name": "Training"
   }
  ],
  "owner": "Administrator",
@@ -33,55 +53,6 @@
   }
  ],
  "sequence_id": 7.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Jdc",
-   "link_to": "JDC",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Resume",
-   "link_to": "Resume",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Training",
-   "link_to": "Training",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Ruc",
-   "link_to": "RUC",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Cover Letter",
-   "link_to": "Cover Letter",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Technical Other Services",
-   "link_to": "Technical Other Services",
-   "stats_filter": "[]",
-   "type": "DocType"
-  }
- ],
+ "shortcuts": [],
  "title": "Technical"
 }

@@ -9,6 +9,7 @@
   "customer_from",
   "party_name",
   "title",
+  "customer_owner",
   "column_break_emkf",
   "status",
   "stage",
@@ -206,16 +207,17 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Manager",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Team Lead",
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
    "role": "marketing Master Manager",
    "select": 1
@@ -233,14 +235,13 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
-   "write": 1
+   "role": "Senior Recruiter",
+   "select": 1
   },
   {
    "read": 1,
-   "role": "Marketing Manager",
+   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -251,17 +252,22 @@
   },
   {
    "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
    "role": "Marketing Team Lead",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Recruiter",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Resume Person",
+   "role": "Senior Resume Person",
    "select": 1
   },
   {
@@ -272,32 +278,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager",
+   "role": "Marketing Master Manager",
    "select": 1
   },
   {
@@ -307,17 +288,37 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "JDC",
    "select": 1
   },
   {
    "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
    "role": "Support Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
    "select": 1
   },
   {
