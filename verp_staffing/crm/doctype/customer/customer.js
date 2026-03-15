@@ -15,6 +15,34 @@ frappe.ui.form.on("Customer", {
 			show_sales_order(frm);
 		}
 
+		if (!frm.doc.name) return;
+
+		frappe.call({
+			method: "verp_staffing.crm.doctype.customer.customer.get_customer_history",
+			args: {
+				customer: frm.doc.name,
+			},
+			callback(r) {
+				if (!r.message) {
+					console.error("Empty response");
+					return;
+				}
+
+				const departments = r.message.departments || [];
+
+				if (!departments.length) {
+					console.warn("No department history found");
+					return;
+				}
+
+				departments.forEach((row) => {
+					console.log(row.department);
+				});
+
+				render_customer_history(frm, r.message);
+			},
+		});
+
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details_html",
@@ -55,18 +83,6 @@ frappe.ui.form.on("Customer", {
 				"driving_licence",
 				"old_resume",
 			],
-		});
-
-		// show forward button only when form is filled
-		frappe.call({
-			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-			callback: (r) => {
-				let dept = r.message;
-				apply_tab_visibility(frm, dept);
-				if (dept.includes("Sales") || frappe.user.has_role("System Manager")) {
-					window.add_forward_button(frm);
-				}
-			},
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
@@ -286,7 +302,7 @@ function set_customer_owner(frm) {
 
 // 			html += `
 //                 </div>
-                
+
 //             `;
 
 // 			$wrapper.html(html);
@@ -447,9 +463,9 @@ function set_customer_owner(frm) {
 // 			let events = r.message.events;
 // 			let html = `
 //             <div style="display:flex; gap:20px;">
-                
+
 //                 <div style="width:50%">
-//                     <h4>Tasks 
+//                     <h4>Tasks
 //                         <button class="btn btn-sm btn-secondary add-task-btn" style="margin-left: 10px;">+ Add Task</button>
 //                     </h4>
 //                     <div class="task-list">
@@ -461,7 +477,7 @@ function set_customer_owner(frm) {
 //                     </div>
 //                 </div>
 //                 <div style="width:50%">
-//                     <h4>Events 
+//                     <h4>Events
 //                         <button class="btn btn-sm btn-secondary add-event-btn" style="margin-left: 10px;">+ Add Event</button>
 //                     </h4>
 //                     <div class="event-list">
@@ -1267,3 +1283,35 @@ function get_status_badge(status) {
 }
 
 function inject_status_badge_css() {}
+
+function render_customer_history(frm, data) {
+	let html = "";
+
+	if (data.source) {
+		html += `
+        <div style="padding:15px;border-left:4px solid #5e64ff;margin-bottom:15px;">
+            <h4>${data.source.type} Created</h4>
+            <p><b>Name:</b> ${data.source.name}</p>
+            <p><b>Owner:</b> ${data.source.owner}</p>
+            <p><b>Source:</b> ${data.source.source || "-"}</p>
+            <p><b>Created On:</b> ${frappe.datetime.str_to_user(data.source.created_on)}</p>
+        `;
+
+		if (data.source.sales_stage) {
+			html += `<p><b>Sales Stage:</b> ${data.source.sales_stage}</p>`;
+		}
+
+		html += `</div>`;
+	}
+
+	html += `
+    <div style="padding:15px;border-left:4px solid #28a745;">
+        <h4>Customer Created</h4>
+        <p><b>Customer:</b> ${data.customer.customer_name}</p>
+        <p><b>Owner:</b> ${data.customer.owner}</p>
+        <p><b>Created On:</b> ${frappe.datetime.str_to_user(data.customer.created_on)}</p>
+    </div>
+    `;
+
+	frm.fields_dict.customer_details.$wrapper.html(html);
+}

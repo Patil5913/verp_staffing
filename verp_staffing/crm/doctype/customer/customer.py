@@ -108,13 +108,13 @@ def get_forwardable_departments(customer):
     """
     so = frappe.get_all(
         "Sales Order",
-        filters={"customer": customer},
+        filters={"customer": customer,"status":"Open"},
         pluck="name",
         order_by="creation desc",
         limit=1,
     )
-    # rdqgv3r9ip
-    frappe.errprint(f"Sales Orders for customer {customer}: {so}")
+    if not so:
+        frappe.throw("Open Sales Order Not Found, please create one")
     # DISTINCT parent departments that have services
     services = frappe.db.sql(
         """
@@ -185,3 +185,119 @@ def get_forwardable_departments_from_service(doctype, docname):
     )
 
     return valid_services
+
+
+import frappe
+import json
+
+
+@frappe.whitelist()
+def get_customer_history(customer):
+    doc = frappe.get_doc("Customer", customer)
+
+    history = {
+        "customer": {
+            "created_on": doc.creation,
+            "owner": doc.owner,
+            "name": doc.name,
+            "customer_name": doc.name1
+        },
+        "source": None,
+        "departments": []
+    }
+
+    # --------------------------------------------------
+    # Lead Source
+    # --------------------------------------------------
+
+    if doc.customer_from == "Lead":
+        lead = frappe.get_doc("Lead", doc.party_name)
+
+        history["source"] = {
+            "type": "Lead",
+            "name": lead.name,
+            "created_on": lead.creation,
+            "owner": lead.lead_owner,
+            "source": lead.source,
+            "name1": lead.name1
+        }
+
+    # --------------------------------------------------
+    # Opportunity Source
+    # --------------------------------------------------
+
+    elif doc.customer_from == "Opportunity":
+        opp = frappe.get_doc("Opportunity", doc.party_name)
+
+        history["source"] = {
+            "type": "Opportunity",
+            "name": opp.name,
+            "created_on": opp.creation,
+            "owner": opp.opportunity_owner,
+            "source": opp.source,
+            "name1": opp.name1,
+            "sales_stage": opp.sales_stage
+        }
+
+    # --------------------------------------------------
+    # Department Workflow History
+    # --------------------------------------------------
+
+    departments = [
+        "Resume",
+        "RUC",
+        "JDC",
+        "Cover Letter",
+        "Training"
+    ]
+
+    for dept in departments:
+
+        docs = frappe.get_all(
+            dept,
+            filters={"customer": customer},
+            fields=["name", "creation", "assign_to", "status"]
+        )
+
+        for d in docs:
+
+            dept_entry = {
+                "department": dept,
+                "docname": d.name,
+                "created_on": d.creation,
+                "assign_to": d.assign_to,
+                "status": d.status,
+                "assign_history": []
+            }
+
+            # ----------------------------------------
+            # Fetch assignment transitions
+            # ----------------------------------------
+
+            versions = frappe.get_all(
+                "Version",
+                filters={
+                    "ref_doctype": dept,
+                    "docname": d.name
+                },
+                fields=["data", "creation"],
+                order_by="creation asc"
+            )
+
+            for v in versions:
+                data = json.loads(v.data)
+
+                if "changed" in data:
+                    for change in data["changed"]:
+
+                        if change[0] == "assign_to":
+
+                            dept_entry["assign_history"].append({
+                                "from": change[1],
+                                "to": change[2],
+                                "timestamp": v.creation
+                            })
+
+            history["departments"].append(dept_entry)
+
+    return history

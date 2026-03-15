@@ -254,7 +254,26 @@ def send_system_notification(
 
 
 def send_email(recipients, subject, message, attachments=None, now=None):
+    sender = None
+
+    # Check if the logged-in user has a sendable email account
+    logged_in_user = frappe.session.user
+    if logged_in_user and logged_in_user != "Guest":
+        user_email_accounts = frappe.get_all(
+            "Email Account",
+                filters={
+                    "email_id": logged_in_user,
+                    "enable_outgoing": 1,
+                },
+                fields=["email_id"],
+                limit=1,
+            )
+        if user_email_accounts:
+            sender = user_email_accounts[0].email_id
+
+    # sender=None will fall back to Frappe's default outgoing email account
     frappe.sendmail(
+        sender=sender,
         recipients=recipients,
         subject=subject,
         message=message,

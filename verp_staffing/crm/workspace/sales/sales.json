@@ -18,7 +18,7 @@
  "is_hidden": 0,
  "label": "Sales",
  "links": [],
- "modified": "2026-03-12 16:59:43.778537",
+ "modified": "2026-03-12 15:40:29.495465",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales",
@@ -36,8 +36,29 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "_show_sales"
+  }
+ ],
  "sequence_id": 25.0,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Customers",
+   "link_to": "Customer",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Opportunitys",
+   "link_to": "Opportunity",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
  "title": "Sales"
 }

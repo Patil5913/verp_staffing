@@ -15,6 +15,8 @@
   "stage",
   "section_break_roxl",
   "lead_details_html",
+  "history_tab",
+  "customer_details",
   "sales_tab",
   "section_break_gtmf",
   "sales_content",
@@ -182,16 +184,20 @@
    "label": "Update"
   },
   {
-   "fieldname": "customer_owner",
-   "fieldtype": "Link",
-   "label": "Customer Owner",
-   "options": "Employee"
+   "fieldname": "history_tab",
+   "fieldtype": "Tab Break",
+   "label": "History"
+  },
+  {
+   "fieldname": "customer_details",
+   "fieldtype": "HTML",
+   "label": "Customer Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 14:45:06.998270",
+ "modified": "2026-03-12 16:59:52.542658",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -213,8 +219,8 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Master Manager",
-   "write": 1
+   "role": "marketing Master Manager",
+   "select": 1
   },
   {
    "create": 1,

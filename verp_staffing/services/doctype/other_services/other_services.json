@@ -8,6 +8,7 @@
   "customer",
   "department",
   "service",
+  "resume",
   "column_break_xbfz",
   "assign_to",
   "status",
@@ -116,12 +117,16 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 16:23:06.096286",
+ "modified": "2026-03-13 17:20:47.434304",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",

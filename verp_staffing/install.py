@@ -136,6 +136,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Sales Manager": {
         "Lead": ["read", "write", "create"],
@@ -151,6 +153,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Sales Team Lead": {
         "Lead": ["read", "write", "create"],
@@ -166,6 +170,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Sales Person": {
         "Lead": ["read", "write", "create"],
@@ -181,6 +187,8 @@ ROLE_PERMISSIONS = {
         "RUC": ["read"],
         "Marketing": ["read"],
         "Interview": ["read"],
+        "Service":["read","select"],
+        "Sales Stage": ["read", "create","select"]
     },
     "Marketing Master Manager": {
         "Marketing": [
@@ -212,6 +220,8 @@ ROLE_PERMISSIONS = {
     "Marketing Manager": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -219,6 +229,8 @@ ROLE_PERMISSIONS = {
     "Marketing Team Lead": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -226,6 +238,8 @@ ROLE_PERMISSIONS = {
     "Senior Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -233,6 +247,8 @@ ROLE_PERMISSIONS = {
     "Marketing Mentor": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -240,6 +256,8 @@ ROLE_PERMISSIONS = {
     "Recruiter": {
         "Marketing": ["read", "write", "create", "select"],
         "Interview": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
@@ -258,6 +276,10 @@ ROLE_PERMISSIONS = {
     },
     "Technical Coordinator": {
         "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -265,6 +287,10 @@ ROLE_PERMISSIONS = {
     },
     "Technical Manager": {
         "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -272,6 +298,10 @@ ROLE_PERMISSIONS = {
     },
     "Technical Master Manager": {
         "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -285,7 +315,7 @@ ROLE_PERMISSIONS = {
         "Lead Detail Form": ["read"],
     },
     "Training Person": {
-        "RUC": ["read", "write", "create", "select"],
+        "Training": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -299,7 +329,7 @@ ROLE_PERMISSIONS = {
         "Lead Detail Form": ["read"],
     },
     "JDC": {
-        "RUC": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
@@ -689,8 +719,8 @@ def after_install():
     # seed_sales_stages()
     # seed_type_of_interview()
     # create_all_roles()
-    # seed_employee_departments()
-    # assign_permissions_to_roles(ROLE_PERMISSIONS)
+    seed_employee_departments()
+    assign_permissions_to_roles(ROLE_PERMISSIONS)
     # seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
@@ -966,18 +996,23 @@ def create_all_roles():
 
 def seed_employee_departments():
     for department_name, roles in DEPARTMENTS_ROLES.items():
-        if frappe.db.exists("Department", department_name):
-            continue
 
-        doc = frappe.get_doc(
-            {
+        if frappe.db.exists("Department", department_name):
+            # Fetch existing doc to get latest 'modified' timestamp
+            doc = frappe.get_doc("Department", department_name)
+            doc.roles_json = json.dumps(roles)
+            doc.save(ignore_permissions=True)
+            print(f"Updated Department: {department_name}")
+        else:
+            # Create new
+            doc = frappe.get_doc({
                 "doctype": "Department",
                 "department_name": department_name,
                 "roles_json": json.dumps(roles),
-            }
-        )
+            })
+            doc.insert(ignore_permissions=True)
+            print(f"Created Department: {department_name}")
 
-        doc.insert(ignore_permissions=True)
 
 
 def assign_permissions_to_roles(role_permissions: dict):

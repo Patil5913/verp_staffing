@@ -1065,3 +1065,42 @@ function open_edit_event_dialog(event_name, frm) {
 		d.show();
 	});
 }
+
+// Show lates uploaded resume 
+
+window.fetch_and_render_resume =function fetch_and_render_resume(frm) {
+	frappe.db
+		.get_list("Resume", {
+			filters: {
+				customer: frm.doc.customer,
+			},
+			fields: ["name", "resume"],
+			limit: 1,
+		})
+		.then((res) => {
+			if (!res || !res.length || !res[0].resume) {
+				frm.set_df_property(
+					"resume",
+					"options",
+					"<div style='color:#888'>No resume uploaded</div>",
+				);
+				return;
+			}
+
+			const file_url = res[0].resume;
+
+			const html = `
+            <div style="padding:8px">
+                <a href="${file_url}" target="_blank" style="
+                    color:#1a73e8;
+                    font-weight:600;
+                    text-decoration:none;
+                ">
+                    📄 View Resume
+                </a>
+            </div>
+        `;
+
+			frm.set_df_property("resume", "options", html);
+		});
+}
