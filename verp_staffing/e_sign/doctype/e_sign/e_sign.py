@@ -774,9 +774,11 @@ def verify_otp(token=None, otp=None):
     frappe.local.cookie_manager.set_cookie(
         f"verify_{safe_token}",   # ✅ underscores
         verification_key,
-        max_age=3600,
-        samesite="Lax"
-    )
+        max_age=604800,
+        samesite="Lax",
+        httponly=True,
+        secure=True 
+        )
 
     return {"status": "verified"}
 
