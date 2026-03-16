@@ -777,7 +777,6 @@ def verify_otp(token=None, otp=None):
         max_age=3600,
         samesite="Lax"
     )
-    frappe.local.cookie_manager.flush_cookies(frappe.local.response)  # ✅ force flush
 
     return {"status": "verified"}
 
