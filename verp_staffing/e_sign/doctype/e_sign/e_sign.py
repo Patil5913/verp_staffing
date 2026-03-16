@@ -726,59 +726,48 @@ def verify_otp(token=None, otp=None):
 
     if not token or not otp:
         return {"status": "invalid_request"}
+    
+    print(f"Verifying OTP for token: {token} with OTP: {otp}")
 
     cached_otp = frappe.cache().get_value(f"otp_{token}")
-    
-    print(f"Verifying OTP: provided={otp}, cached={cached_otp}")
 
     if not cached_otp:
         return {"status": "expired"}
 
-    print("OTP:", repr(otp))
-    print("CACHE:", repr(cached_otp))
-
-    if int(otp) != int(cached_otp):
+    if otp != cached_otp:
         return {"status": "invalid_otp"}
 
+    # ✅ Generate persistent verification key
     verification_key = str(uuid.uuid4())
 
-    safe_token = token.replace("-", "_")
-
+    # Save verification key to ALL fields of this signer
     rows = frappe.get_all(
         "Signature Fields",
         filters={"sign_token": token},
         fields=["name"]
     )
+    
+    print(f"Updating {len(rows)} fields with verification key: {verification_key}")
 
     for row in rows:
-        frappe.db.set_value(
-            "Signature Fields",
-            row.name,
-            {
-                "verification_key": verification_key,
-                "verified_on": format_timestamp_utc()
-            },
-            update_modified=False
-        )
+        doc = frappe.get_doc("Signature Fields", row.name)
+        doc.verification_key = verification_key
+        doc.verified_on = format_timestamp_utc()
+        doc.save(ignore_permissions=True)
 
     frappe.db.commit()
-
-    # ✅ Verify it actually saved
-    saved = frappe.db.get_value("Signature Fields", rows[0].name, "verification_key")
-    print("SAVED VERIFICATION KEY:", saved)  # confirm it's not None
-
-    frappe.cache().delete_value(f"otp_{token}")
     
-    print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
-
+    print(f"db values updated, setting cookie for token: {token}"
+          )    
     frappe.local.cookie_manager.set_cookie(
-        f"verify_{safe_token}",   # ✅ underscores
-        verification_key,
-        max_age=604800,
-        samesite="Lax",
+        key=f"verify_{token}",
+        value=verification_key,
+        max_age=60 * 60 * 24 * 7, # 7 days
+        secure=True,              # Set to True in production (requires HTTPS)
         httponly=True,
-        secure=True 
+        samesite="Lax"            # Required for modern browsers
         )
 
+    print(f"Verification successful for token: {token}, cookie set, deleting OTP cache")
+    frappe.cache().delete_value(f"otp_{token}")
     return {"status": "verified"}
-
