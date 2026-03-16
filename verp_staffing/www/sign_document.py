@@ -112,6 +112,8 @@ def get_context(context):
     fields=["verification_key"],
     limit=1
     )
+    
+    print("---------------------verification_row------------------------------------",verification_row) 
 
     verification_key = verification_row[0].verification_key if verification_row else None
     print("---------------------token------------------------------------",token)
