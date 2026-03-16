@@ -9,7 +9,7 @@ def get_context(context):
     token = frappe.form_dict.get("token")
 
     if not token:
-        context.error = "Invalid or missing token"
+        context.error = "Missing token"
         return
 
     # 1️⃣ Get signature fields linked to this token
@@ -51,7 +51,7 @@ def get_context(context):
         "height_percent",
         "signature_image"
     ]
-)
+   )
 
 
     # 2️⃣ Convert PDF into images
@@ -103,13 +103,18 @@ def get_context(context):
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
     
     
-    verification_key = frappe.db.get_value(
+    verification_row = frappe.get_all(
     "Signature Fields",
-    {"sign_token": token},
-    "verification_key"
+    filters={
+        "sign_token": token,
+        "verification_key": ["is", "set"]
+    },
+    fields=["verification_key"],
+    limit=1
     )
+
+    verification_key = verification_row[0].verification_key if verification_row else None
     print("---------------------token------------------------------------",token)
-    context.is_verified = False
 
     verification_cookie = frappe.request.cookies.get(f"verify_{token}")
 
