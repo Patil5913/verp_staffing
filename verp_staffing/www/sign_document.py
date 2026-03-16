@@ -105,20 +105,21 @@ def get_context(context):
     
     verification_row = frappe.get_all(
     "Signature Fields",
-    filters={
-        "sign_token": token,
-        "verification_key": ["is", "set"]
-    },
+    filters={"sign_token": token},
     fields=["verification_key"],
     limit=1
     )
     
     print("---------------------verification_row------------------------------------",verification_row) 
+    print("ALL COOKIES:", dict(frappe.request.cookies))
+    print("LOOKING FOR KEY:", f"verify_{token}")
+    
+    safe_token = token.replace("-", "_")
 
     verification_key = verification_row[0].verification_key if verification_row else None
     print("---------------------token------------------------------------",token)
 
-    verification_cookie = frappe.request.cookies.get(f"verify_{token}")
+    verification_cookie = frappe.request.cookies.get(f"verify_{safe_token}")
 
     context.is_verified = (
         verification_key

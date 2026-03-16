@@ -764,12 +764,16 @@ def verify_otp(token=None, otp=None):
     # remove OTP after success
     frappe.cache().delete_value(f"otp_{token}")
     print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
+    
+    safe_token = token.replace("-", "_")
 
     # create verification session cookie
     frappe.local.cookie_manager.set_cookie(
-        f"verify_{token}",
+        f"verify_{safe_token}",
         verification_key,
         max_age=3600
     )
+    
+    
 
     return {"status": "verified"}
