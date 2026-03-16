@@ -679,38 +679,6 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
 
     return {"status": "success"}
 
-
-@frappe.whitelist(allow_guest=True)
-def send_otp(token=None):
-
-    if not token:
-        return {"status": "invalid_token"}
-
-    fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["parent", "signer_email"]
-    )
-
-    if not fields:
-        return {"status": "token_not_found"}
-
-    email = fields[0]["signer_email"]
-
-    otp = str(random.randint(100000, 999999))
-
-    frappe.cache().set_value(f"otp_{token}", otp, expires_in_sec=300)
-
-    frappe.sendmail(
-        recipients=[email],
-        subject="Your Verification Code",
-        message=f"<p>Your OTP is: <b>{otp}</b></p>",
-        delayed = False
-    )
-
-    return {"status": "sent"}
-
-
 @frappe.whitelist(allow_guest=True)
 def send_otp(token=None):
 
@@ -760,13 +728,16 @@ def verify_otp(token=None, otp=None):
         return {"status": "invalid_request"}
 
     cached_otp = frappe.cache().get_value(f"otp_{token}")
+    
+    print(f"Verifying OTP: provided={otp}, cached={cached_otp}")
 
     if not cached_otp:
         return {"status": "expired"}
 
-    cached_otp = str(cached_otp)
+    print("OTP:", repr(otp))
+    print("CACHE:", repr(cached_otp))
 
-    if otp != cached_otp:
+    if int(otp) != int(cached_otp):
         return {"status": "invalid_otp"}
 
     verification_key = str(uuid.uuid4())
@@ -788,14 +759,16 @@ def verify_otp(token=None, otp=None):
         )
 
     frappe.db.commit()
+    
 
     # remove OTP after success
     frappe.cache().delete_value(f"otp_{token}")
+    print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
 
     # create verification session cookie
-    frappe.local.response.set_cookie(
-        key=f"verify_{token}",
-        value=verification_key,
+    frappe.local.cookie_manager.set_cookie(
+        f"verify_{token}",
+        verification_key,
         max_age=3600
     )
 
