@@ -742,6 +742,8 @@ def verify_otp(token=None, otp=None):
 
     verification_key = str(uuid.uuid4())
 
+    safe_token = token.replace("-", "_")
+
     rows = frappe.get_all(
         "Signature Fields",
         filters={"sign_token": token},
@@ -755,25 +757,27 @@ def verify_otp(token=None, otp=None):
             {
                 "verification_key": verification_key,
                 "verified_on": format_timestamp_utc()
-            }
+            },
+            update_modified=False
         )
 
     frappe.db.commit()
-    
 
-    # remove OTP after success
+    # ✅ Verify it actually saved
+    saved = frappe.db.get_value("Signature Fields", rows[0].name, "verification_key")
+    print("SAVED VERIFICATION KEY:", saved)  # confirm it's not None
+
     frappe.cache().delete_value(f"otp_{token}")
-    print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
     
-    safe_token = token.replace("-", "_")
+    print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
 
-    # create verification session cookie
     frappe.local.cookie_manager.set_cookie(
-        f"verify_{safe_token}",
+        f"verify_{safe_token}",   # ✅ underscores
         verification_key,
-        max_age=3600
+        max_age=3600,
+        samesite="Lax"
     )
-    
-    
+    frappe.local.cookie_manager.flush_cookies(frappe.local.response)  # ✅ force flush
 
     return {"status": "verified"}
+

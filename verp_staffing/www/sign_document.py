@@ -101,35 +101,32 @@ def get_context(context):
     elif "Chrome" in ua and "Edg" not in ua: browser = "Chrome"
     elif "Edg" in ua: browser = "Edge"
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
-    
-    
-    verification_row = frappe.get_all(
-    "Signature Fields",
-    filters={"sign_token": token},
-    fields=["verification_key"],
-    limit=1
-    )
-    
-    print("---------------------verification_row------------------------------------",verification_row) 
-    print("ALL COOKIES:", dict(frappe.request.cookies))
-    print("LOOKING FOR KEY:", f"verify_{token}")
-    
+
     safe_token = token.replace("-", "_")
+    print("ALL COOKIES:", dict(frappe.request.cookies))
+    print("LOOKING FOR KEY:", f"verify_{safe_token}")
 
-    verification_key = verification_row[0].verification_key if verification_row else None
-    print("---------------------token------------------------------------",token)
+    verification_row = frappe.get_all(
+        "Signature Fields",
+        filters={"sign_token": token},
+        fields=["verification_key"],
+        limit=1
+    )
+    print("---------------------verification_row------------------------------------",verification_row) 
 
+    verification_key = verification_row[0].get("verification_key") if verification_row else None
+
+    print("---------------------verification_key------------------------------------",verification_key)
+    # ✅ use safe_token here
     verification_cookie = frappe.request.cookies.get(f"verify_{safe_token}")
 
+    print("---------------------token------------------------------------",token)
+    print("---------------------verification_cookie------------------------------------",verification_cookie)
     context.is_verified = (
-        verification_key
-        and verification_cookie
+        bool(verification_key)
+        and bool(verification_cookie)
         and verification_cookie == verification_key
     )
-    print("---------------------verification_key------------------------------------",verification_key)
-    print("---------------------verification_cookie------------------------------------",verification_cookie)
-
-            
     context.pages = pages
     context.fields = fields
     context.signed_fields = signed_fields
