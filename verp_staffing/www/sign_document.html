@@ -2,7 +2,7 @@
 <h2 style="color:red;">{{ error }}</h2>
 
 {% else %}
- 
+
 <h1>{{ is_verified }}</h1>
 
 {% if not is_verified %}
@@ -1093,7 +1093,9 @@ z-index:999;
       .then(res => res.json())
       .then(data => {
         if (data.message.status === "verified") {
-          location.reload();
+          setTimeout(() => {
+            location.reload();
+          }, 500);
         } else {
           alert("Invalid OTP");
         }
