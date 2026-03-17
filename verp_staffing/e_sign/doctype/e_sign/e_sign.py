@@ -131,13 +131,21 @@ def complete_signing(token=None, fields=None):
     if not verification_cookie:
         frappe.throw("Verification required")
 
-    verified = frappe.db.exists(
-        "Signature Fields",
-        {
-            "sign_token": token,
-            "verification_key": verification_cookie
-        }
-    )
+    # verified = frappe.db.exists(
+    #     "Signature Fields",
+    #     {
+    #         "sign_token": token,
+    #         "verification_key": verification_cookie
+    #     }
+    # )
+
+    verified = frappe.db.sql("""
+    SELECT name FROM `tabSignature Fields`
+    WHERE sign_token = %s AND verification_key = %s
+    LIMIT 1
+    """, (token, verification_cookie))
+
+
 
     if not verified:
         frappe.throw("Unauthorized access")
@@ -173,8 +181,18 @@ def complete_signing(token=None, fields=None):
 
     frappe.db.commit()
 
+    parent = frappe.db.sql("""
+    SELECT parent FROM `tabSignature Fields`
+    WHERE sign_token = %s
+    LIMIT 1
+    """, (token,), as_dict=True)
+
+    if not parent:
+        frappe.throw("Invalid token")
+
     # 3️⃣ Check if agreement complete
-    agreement = frappe.get_doc("e_sign", field.parent)
+    # agreement = frappe.get_doc("e_sign", field.parent)
+    agreement = frappe.get_doc("e_sign", parent[0].parent)
 
     all_signed = all(row.signed for row in agreement.signature_fields)
 
@@ -215,13 +233,19 @@ def save_signature(field_name=None, image=None, token=None):
     if not verification_cookie:
         frappe.throw("Verification required")
 
-    verified = frappe.db.exists(
-        "Signature Fields",
-        {
-            "sign_token": token,
-            "verification_key": verification_cookie
-        }
-    )
+    # verified = frappe.db.exists(
+    #     "Signature Fields",
+    #     {
+    #         "sign_token": token,
+    #         "verification_key": verification_cookie
+    #     }
+    # )
+
+    verified = frappe.db.sql("""
+    SELECT name FROM `tabSignature Fields`
+    WHERE sign_token = %s AND verification_key = %s
+    LIMIT 1
+    """, (token, verification_cookie))
 
     if not verified:
         frappe.throw("Unauthorized access")
@@ -243,11 +267,16 @@ def save_signature(field_name=None, image=None, token=None):
     )
 
     # 5️⃣ 🔥 IMPORTANT: Update ALL fields of this signer
-    all_fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["name"]
-    )
+    # all_fields = frappe.get_all(
+    #     "Signature Fields",
+    #     filters={"sign_token": token},
+    #     fields=["name"]
+    # )
+
+    all_fields = frappe.db.sql("""
+    SELECT name FROM `tabSignature Fields`
+    WHERE sign_token = %s
+    """, (token,), as_dict=True)
 
     for row in all_fields:
         doc = frappe.get_doc("Signature Fields", row.name)
@@ -255,6 +284,7 @@ def save_signature(field_name=None, image=None, token=None):
         doc.signed = 1
         doc.signed_on = format_timestamp_utc()  
         doc.save(ignore_permissions=True)
+        
 
     frappe.db.commit()
 
@@ -648,11 +678,17 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
     if not token:
         return {"status": "invalid_token"}
 
-    fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["parent", "signer_email"]
-    )
+    # fields = frappe.get_all(
+    #     "Signature Fields",
+    #     filters={"sign_token": token},
+    #     fields=["parent", "signer_email"]
+    # )
+
+    fields = frappe.db.sql("""
+    SELECT parent, signer_email
+    FROM `tabSignature Fields`
+    WHERE sign_token = %s
+    """, (token,), as_dict=True)
 
     if not fields:
         return {"status": "token_not_found"}
@@ -685,11 +721,17 @@ def send_otp(token=None):
     if not token:
         return {"status": "invalid_token"}
 
-    fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["parent", "signer_email"]
-    )
+    # fields = frappe.get_all(
+    #     "Signature Fields",
+    #     filters={"sign_token": token},
+    #     fields=["parent", "signer_email"]
+    # )
+
+    fields = frappe.db.sql("""
+    SELECT parent, signer_email
+    FROM `tabSignature Fields`
+    WHERE sign_token = %s
+    """, (token,), as_dict=True)
 
     if not fields:
         return {"status": "token_not_found"}
@@ -738,22 +780,47 @@ def verify_otp(token=None, otp=None):
         return {"status": "invalid_otp"}
 
     # ✅ Generate persistent verification key
-    verification_key = str(uuid.uuid4())
 
     # Save verification key to ALL fields of this signer
-    rows = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["name"]
-    )
-    
-    print(f"Updating {len(rows)} fields with verification key: {verification_key}")
+    # rows = frappe.get_all(
+    #     "Signature Fields",
+    #     filters={"sign_token": token},
+    #     fields=["name"]
+    # )
 
-    for row in rows:
-        doc = frappe.get_doc("Signature Fields", row.name)
-        doc.verification_key = verification_key
-        doc.verified_on = format_timestamp_utc()
-        doc.save(ignore_permissions=True)
+
+    # print(f"Updating {len(rows)} fields with verification key: {verification_key}")
+
+    # for row in rows:
+    #     doc = frappe.get_doc("Signature Fields", row.name)
+    #     doc.verification_key = verification_key
+    #     doc.verified_on = format_timestamp_utc()
+    #     doc.save(ignore_permissions=True)
+
+    # frappe.db.commit()
+
+    row = frappe.db.sql("""
+    SELECT signer_email FROM `tabSignature Fields`
+    WHERE sign_token = %s
+    LIMIT 1
+    """, (token,), as_dict=True)
+
+    if not row:
+        return {"status": "invalid_token"}
+
+    email = row[0]["signer_email"]
+
+    verification_key = str(uuid.uuid4())
+
+    # ✅ Update ONLY this signer (IMPORTANT)
+    frappe.db.sql("""
+        UPDATE `tabSignature Fields`
+        SET 
+            verification_key = %s,
+            verified_on = %s
+        WHERE sign_token = %s
+        AND signer_email = %s
+    """, (verification_key, format_timestamp_utc(), token, email))
 
     frappe.db.commit()
     
