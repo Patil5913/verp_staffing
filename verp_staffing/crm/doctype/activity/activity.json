@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-03 15:55:23.252517",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "email",
+  "ip_address",
+  "browser",
+  "os",
+  "device",
+  "visited_at",
+  "agreement"
+ ],
+ "fields": [
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "email"
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "Ip Address"
+  },
+  {
+   "fieldname": "browser",
+   "fieldtype": "Data",
+   "label": "Browser"
+  },
+  {
+   "fieldname": "os",
+   "fieldtype": "Data",
+   "label": "Os"
+  },
+  {
+   "fieldname": "device",
+   "fieldtype": "Data",
+   "label": "Device"
+  },
+  {
+   "fieldname": "visited_at",
+   "fieldtype": "Data",
+   "label": "Visited At"
+  },
+  {
+   "fieldname": "agreement",
+   "fieldtype": "Data",
+   "label": "Agreement"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-17 11:02:15.732545",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "activity",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
