@@ -10,16 +10,31 @@ frappe.listview_settings["Lead"] = {
         sidebar.find(".add-group-by").hide();
         sidebar.find(".save-filter-section").hide();
     },
-    get_indicator(doc) {
-        const map = {
-            "Won": "green",
+    // get_indicator(doc) {
+    //     const map = {
+    //         "Won": "green",
+    //         "Interested": "blue",
+    //         "Lead": "gray",
+    //         "Lost": "red"
+    //     };
+
+    //     let color = map[doc.status] || "gray";
+
+    //     return [__(doc.status), color, `status,=,${doc.status}`];
+    // },
+	get_indicator: function (doc) {
+
+		const status_colors = {
+			"Won": "green",
+			"Lost": "red",
             "Interested": "blue",
-            "Lead": "gray",
-            "Lost": "red"
-        };
+			"Opportunity": "orange"
+		};
 
-        let color = map[doc.status] || "gray";
-
-        return [__(doc.status), color, `status,=,${doc.status}`];
-    }
+		return [
+			__(doc.status),
+			status_colors[doc.status] || "black",
+			"status,=," + doc.status
+		];
+	}
 };

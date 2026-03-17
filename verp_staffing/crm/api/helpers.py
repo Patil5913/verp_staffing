@@ -1,6 +1,7 @@
 import frappe
 from frappe.desk.reportview import get as original_get
 
+
 # get employee name from user
 def get_employee_name(user):
     return frappe.db.get_value(
@@ -10,12 +11,14 @@ def get_employee_name(user):
     )
 
 
+# get user from employee
+def get_user(employee):
+    return frappe.db.get_value("Employee", employee, "user")
+
+
 # function to get all subordinate Employee names under root_employee
-def get_all_subordinates(
-    root_employee: str,
-    department: str | None = None
-) -> set[str]:
-    
+def get_all_subordinates(root_employee: str, department: str | None = None) -> set[str]:
+
     collected = set()
     stack = [root_employee]
 
@@ -25,7 +28,6 @@ def get_all_subordinates(
         filters = {"assigned_to": current}
         if department:
             filters["department"] = department
-        
 
         children = frappe.db.get_all(
             "Employee Assignment Detail",
@@ -79,12 +81,11 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
     if not employee:
         return []
 
-
     allowed_set = get_all_subordinates(employee, department)
 
     if not allowed_set:
         return []
-    
+
     allowed = list(allowed_set)  # THIS is the missing piece
 
     placeholders = ", ".join(["%s"] * len(allowed))
@@ -98,7 +99,7 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
         ORDER BY name
         LIMIT %s OFFSET %s
         """,
-        allowed + [f"%{txt}%", page_len, start]
+        allowed + [f"%{txt}%", page_len, start],
     )
 
 
@@ -211,9 +212,10 @@ def get_allowed_leads(user):
 #             [["Marketing Other Services","assign_to","in",owners]]
 #         )
 
-#     return original_get(**frappe.local.form_dict)
+    # return original_get(**frappe.local.form_dict)
 
 import json
+
 
 def send_system_notification(
     *,
@@ -223,15 +225,17 @@ def send_system_notification(
     reference_doctype=None,
     reference_name=None,
 ):
-    frappe.get_doc({
-        "doctype": "Notification Log",
-        "subject": subject,
-        "email_content": message,
-        "for_user": user,
-        "document_type": reference_doctype,
-        "document_name": reference_name,
-        "type": "Alert",
-    }).insert(ignore_permissions=True)
+    frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "subject": subject,
+            "email_content": message,
+            "for_user": user,
+            "document_type": reference_doctype,
+            "document_name": reference_name,
+            "type": "Alert",
+        }
+    ).insert(ignore_permissions=True)
 
 
 def send_email(recipients, subject, message, attachments=None, now=None):
@@ -242,13 +246,13 @@ def send_email(recipients, subject, message, attachments=None, now=None):
     if logged_in_user and logged_in_user != "Guest":
         user_email_accounts = frappe.get_all(
             "Email Account",
-                filters={
-                    "email_id": logged_in_user,
-                    "enable_outgoing": 1,
-                },
-                fields=["email_id"],
-                limit=1,
-            )
+            filters={
+                "email_id": logged_in_user,
+                "enable_outgoing": 1,
+            },
+            fields=["email_id"],
+            limit=1,
+        )
         if user_email_accounts:
             sender = user_email_accounts[0].email_id
 
@@ -260,7 +264,7 @@ def send_email(recipients, subject, message, attachments=None, now=None):
         message=message,
         attachments=attachments,
         delayed=(not now) if now is not None else self.flags.delay_emails,
-		retry=3,
+        retry=3,
     )
 
 
@@ -273,7 +277,7 @@ def notify(
     reference_name=None,
     send_email_flag=True,
     send_system_flag=True,
-    attachments=None
+    attachments=None,
 ):
     """
     Internal dispatcher
@@ -300,6 +304,7 @@ def notify(
             attachments=attachments,
             now=True,
         )
+
 
 @frappe.whitelist()
 def send_notification(**kwargs):

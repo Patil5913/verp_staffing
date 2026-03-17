@@ -1,13 +1,14 @@
 import frappe
 import json
-
+# opportunity_from_lead
 
 @frappe.whitelist()
 def create_sales_order(**kwargs):
 
     opportunity = kwargs.get("opportunity")
-    opportunity_from = kwargs.get("opportunity_from")
-    party_name = kwargs.get("party_name")
+    # opportunity_from = kwargs.get("opportunity_from")
+    # party_name = kwargs.get("party_name")
+    opportunity_from_lead = kwargs.get("opportunity_from_lead")
     data = kwargs.get("data")
 
     if not opportunity:
@@ -49,7 +50,7 @@ def create_sales_order(**kwargs):
         base_name = (
             opportunity_doc.title
             or getattr(opportunity_doc, "name1", None)
-            or party_name
+            or opportunity_from_lead
             or f"Customer-{frappe.utils.now()}"
         )
 
@@ -91,10 +92,12 @@ def create_sales_order(**kwargs):
 
     frappe.db.set_value("Opportunity", opportunity, "status", "Converted")
 
-    if opportunity_from == "Lead" and party_name:
-        frappe.db.set_value("Lead", party_name, "status", "Won")
+    if opportunity_from_lead:
+        frappe.db.set_value("Lead", opportunity_from_lead, "status", "Won")
+        
+    # frappe.errprint(f"hello from sales order{opportunity_from_lead}")
 
-    frappe.db.commit()
+    # frappe.db.commit()
 
     return {
         "sales_order": so.name,

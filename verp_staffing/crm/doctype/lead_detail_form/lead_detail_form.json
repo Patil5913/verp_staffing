@@ -218,8 +218,7 @@
    "fieldname": "surname",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Surname",
-   "permlevel": 1
+   "label": "Surname"
   },
   {
    "fieldname": "father_name",
@@ -446,7 +445,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Marketing Team Lead"
   },
   {
    "read": 1,
@@ -498,15 +497,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator"
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Resume Person"
+   "role": "Senior Resume Person"
   },
   {
    "read": 1,
@@ -514,7 +505,27 @@
   },
   {
    "read": 1,
+   "role": "Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
+  },
+  {
+   "read": 1,
    "role": "Training Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
   },
   {
    "read": 1,
@@ -549,14 +560,16 @@
    "role": "JD"
   },
   {
+   "create": 1,
+   "delete": 1,
    "email": 1,
    "export": 1,
-   "permlevel": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Manager",
-   "share": 1
+   "role": "Lead Person",
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

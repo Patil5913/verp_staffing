@@ -8,6 +8,61 @@ from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 
 
 class Lead(Document):
+
+    def autoname(self):
+        import re
+
+        if not self.name1:
+            self.name = frappe.generate_hash(length=10)
+            return
+
+        base_name = self.name1.strip()
+
+        if not base_name:
+            self.name = frappe.generate_hash(length=10)
+            return
+
+        self.title = base_name
+
+        # Get all titles starting with base_name
+        existing_titles = frappe.get_all(
+            "Opportunity", filters={"title": ["like", f"{base_name}%"]}, pluck="name"
+        )
+
+        if not existing_titles:
+            # First record → just base name
+            self.name = base_name
+            return
+
+        max_count = 0
+
+        for existing_name in existing_titles:
+
+            # Exact match → rahi
+            if existing_name == base_name:
+                max_count = max(max_count, 0)
+                continue
+
+            # Match rahi-1, rahi-2 etc
+            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", existing_name)
+            if match:
+                count = int(match.group(1))
+                max_count = max(max_count, count)
+
+        # Generate next number
+        self.name = f"{base_name}-{max_count + 1}"
+
+    def before_insert(self):
+        # Auto assign lead_owner to logged-in user's Employee if not set
+        if not self.lead_owner:
+            employee = frappe.db.get_value(
+                "Employee",
+                {"user": frappe.session.user},
+                "name",
+            )
+            if employee:
+                self.lead_owner = employee
+
     def after_insert(self):
         if self.lead_details:
             return
@@ -18,35 +73,30 @@ class Lead(Document):
             self.lead_details = lead_detail_name
             self.db_update()
 
-    # def on_trash(self):
-    #     frappe.errprint("hello for delete ")
-    #     if not self.lead_details:
-    #         return
+            # If email is filled in Lead, copy it to Lead Detail Form
+            if self.email:
+                frappe.db.set_value(
+                    "Lead Detail Form", lead_detail_name, "email", self.email
+                )
 
-    #     lead_details_name = self.lead_details 
+    def on_update(self):
+        # Sync email to Lead Detail Form whenever Lead email is updated
+        if not self.lead_details or not self.email:
+            return
 
-    #     # Clear the link first so Frappe's validator doesn't block deletion
-    #     frappe.db.set_value("Lead", self.name, "lead_details", None)
-    #     self.lead_details = None
+        current_email = frappe.db.get_value(
+            "Lead Detail Form", self.lead_details, "email"
+        )
 
-    #     try:
-    #         lead_detail_doc = frappe.get_doc("Lead Detail Form", lead_details_name)
-    #         frappe.errprint(f"{lead_detail_doc.reference_table}")
-    #         if hasattr(lead_detail_doc, "reference_table"):
-    #             rows_to_delete = [
-    #                 row for row in lead_detail_doc.reference_table
-    #                 if row.reference_doctype == "Lead" and row.reference_person == self.name
-    #             ]
-    #             for row in rows_to_delete:
-    #                 lead_detail_doc.remove(row)
+        # Only update if email is different to avoid unnecessary writes
+        if current_email != self.email:
+            frappe.db.set_value(
+                "Lead Detail Form", self.lead_details, "email", self.email
+            )
 
-    #             lead_detail_doc.save(ignore_permissions=True)
-
-    #     except frappe.DoesNotExistError:
-    #         pass
-    
     def on_trash(self):
-        unlink_and_clean_lead_detail("Lead" , self.name)
+        unlink_and_clean_lead_detail("Lead", self.name)
+
 
 @frappe.whitelist()
 def update_status_based_on_opportunity(lead_name, status):
@@ -54,9 +104,10 @@ def update_status_based_on_opportunity(lead_name, status):
         "converted": "Won",
         "lost": "Lost",
         "replied": "Interested",
-        "open" : "Opportunity"
+        "open": "Opportunity",
     }
 
     new_status = STATUS_MAP.get(status.strip().lower(), "Lead") if status else "Lead"
+    frappe.errprint(f"lead status {new_status}")
 
     frappe.db.set_value("Lead", lead_name, "status", new_status)

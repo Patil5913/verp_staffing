@@ -109,13 +109,12 @@ class Opportunity(Document):
         # Generate next number
         self.name = f"{base_name}-{max_count + 1}"
 
-    # def validate(self):
-    #     if self.opportunity_from == "Customer":
-    #         if not frappe.db.exists("Customer", self.party_name):
-    #             frappe.msgprint(f"Customer {self.party_name} does not exist.")
+    def validate(self):
+        self.block_manual_conversion()
 
     def on_update(self):
         if self.opportunity_from_lead:
+            frappe.errprint(f"opportunity status {self.status}")
             update_status_based_on_opportunity(self.opportunity_from_lead, self.status)
 
     def block_manual_conversion(self):

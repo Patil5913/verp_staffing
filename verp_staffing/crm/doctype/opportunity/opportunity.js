@@ -38,6 +38,7 @@ frappe.ui.form.on("Opportunity", {
 
 		frm.add_custom_button(__("Create Customer"), function () {
 			open_create_sales_order_dialog(frm);
+			console.log(`hello ${frm.doc.opportunity_from_lead}`)
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
@@ -316,6 +317,7 @@ function open_create_sales_order_dialog(frm) {
 		primary_action_label: "Create Sales Order",
 		primary_action(values) {
 			dialog.hide();
+			console.log(`hello ${frm.doc.opportunity_from_lead}`)
 
 			frappe.call({
 				method: "verp_staffing.crm.api.sales_order_api.create_sales_order",
@@ -325,6 +327,7 @@ function open_create_sales_order_dialog(frm) {
 					data: values,
 				},
 				callback: function (r) {
+					console.log(`responce ${r}`)
 					if (r.message?.customer) {
 						frappe.set_route("Form", "Customer", r.message.customer);
 					}
