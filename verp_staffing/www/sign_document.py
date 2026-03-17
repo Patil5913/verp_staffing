@@ -145,22 +145,16 @@ def get_context(context):
         return
 
     # 1️⃣ Get signature fields linked to this token
-    fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=[
-            "name",
-            "parent",
-            "page_number",
-            "x_percent",
-            "y_percent",
-            "width_percent",
-            "height_percent",
-            "signed",
-            "signer_email"
-        ],
-        ignore_permissions=True
-    )
+    
+    fields = frappe.db.sql("""
+    SELECT 
+        name, parent, page_number, x_percent, y_percent, 
+        width_percent, height_percent, signed, signer_email
+    FROM 
+        `tabSignature Fields`
+    WHERE 
+        sign_token = %s
+    """, (token), as_dict=True)
 
     print("DB tokens:",frappe.db.get_all("Signature Fields", fields=["sign_token"], ignore_permissions=True))  # Debugging line to check tokens in DB
 
