@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:name1",
  "creation": "2025-11-14 15:24:45.052361",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -10,6 +9,7 @@
   "name1",
   "lead_details",
   "source",
+  "personal_phone_number",
   "column_break_vwnk",
   "lead_owner",
   "status",
@@ -31,8 +31,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Name",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
   },
   {
    "default": "Open",
@@ -88,22 +87,30 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Email"
   },
   {
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "personal_phone_number",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Phone Number (Provide country code with number)",
+   "placeholder": "Exp: +1 xxx xxx xxxx"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-14 12:12:14.004573",
+ "modified": "2026-03-17 15:19:24.362837",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
- "naming_rule": "By fieldname",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -128,6 +135,12 @@
    "role": "Lead Master Manager",
    "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Manager",
    "write": 1
   },
   {
@@ -190,12 +203,12 @@
   {
    "read": 1,
    "report": 1,
-   "role": "_show_lead"
+   "role": "_show_sales"
   },
   {
    "read": 1,
    "report": 1,
-   "role": "_show_sales"
+   "role": "_show_lead"
   },
   {
    "create": 1,

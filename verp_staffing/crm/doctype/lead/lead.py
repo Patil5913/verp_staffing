@@ -12,44 +12,39 @@ class Lead(Document):
     def autoname(self):
         import re
 
-        if not self.name1:
-            self.name = frappe.generate_hash(length=10)
-            return
+        base_name = (self.name1 or "").strip()
 
-        base_name = self.name1.strip()
-
+        # Safety fallback
         if not base_name:
             self.name = frappe.generate_hash(length=10)
             return
 
+        # 🔥 DO NOT MODIFY name1
+        # Only set title (for display if needed)
         self.title = base_name
 
-        # Get all titles starting with base_name
-        existing_titles = frappe.get_all(
-            "Opportunity", filters={"title": ["like", f"{base_name}%"]}, pluck="name"
+        # -------- FIND EXISTING IDS -------- #
+        existing_names = frappe.get_all(
+            "Lead", filters={"name": ["like", f"{base_name}%"]}, pluck="name"
         )
 
-        if not existing_titles:
-            # First record → just base name
+        if not existing_names:
             self.name = base_name
             return
 
         max_count = 0
 
-        for existing_name in existing_titles:
+        for name in existing_names:
 
-            # Exact match → rahi
-            if existing_name == base_name:
+            if name == base_name:
                 max_count = max(max_count, 0)
                 continue
 
-            # Match rahi-1, rahi-2 etc
-            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", existing_name)
+            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", name)
             if match:
-                count = int(match.group(1))
-                max_count = max(max_count, count)
+                max_count = max(max_count, int(match.group(1)))
 
-        # Generate next number
+        # 🔥 ONLY ID CHANGES
         self.name = f"{base_name}-{max_count + 1}"
 
     def before_insert(self):
@@ -77,6 +72,13 @@ class Lead(Document):
             if self.email:
                 frappe.db.set_value(
                     "Lead Detail Form", lead_detail_name, "email", self.email
+                )
+            if self.personal_phone_number:
+                frappe.db.set_value(
+                    "Lead Detail Form",
+                    lead_detail_name,
+                    "personal_phone_number",
+                    self.personal_phone_number,
                 )
 
     def on_update(self):
