@@ -767,6 +767,7 @@ def verify_otp(token=None, otp=None):
             samesite="Lax"            # Required for modern browsers
             )
 
+        frappe.request.cookies[f"verify_{token}"] = verification_key
         frappe.cache().delete_value(f"otp_{token}")
         return {"status": "verified"} 
     except Exception:
