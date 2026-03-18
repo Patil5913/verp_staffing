@@ -30,8 +30,8 @@ const colorPalette = [
   "#9d174d", // Maroon/Rose (Deeper than Red)
   "#78350f", // Dark Brown
   "#d946ef"  // Fuchsia/Magenta (Vibrant Purple-Pink)
-];
 
+];
 frappe.ui.form.on("e_sign", {
   refresh(frm) {
 
@@ -39,9 +39,12 @@ frappe.ui.form.on("e_sign", {
 
     rebuild_recipients(frm);
 
+    
     if (!frm._pdf_loaded) {
-      load_pdf_pages(frm);
       frm._pdf_loaded = true;
+      load_pdf_pages(frm).then(() => {
+        render_existing_boxes(frm);  // only AFTER pages are ready
+      });
     }
 
     render_signers_panel(frm);
@@ -269,12 +272,21 @@ async function load_pdf_pages(frm) {
 
   enable_toolbar_drag();
   render_recipient_list();
+  console.log("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
+  
   const response = await frappe.call({
     method: "verp_staffing.e_sign.doctype.e_sign.e_sign.generate_pdf_pages",
     args: { docname: frm.doc.name }
   });
 
+  if (!response.message) {
+    console.error("PDF API failed", response);
+    frappe.msgprint("Failed to load PDF pages");
+    return;
+  }
+
   const pages = response.message;
+
   const container = document.getElementById("pdf-container");
 
   pages.forEach(page => {
@@ -687,7 +699,7 @@ function create_box(frm, type = "signature") {
 
   box.style.cursor = "move";
 
-  if (type === "checkbox" ) {
+  if (type === "checkbox") {
     box.style.width = "22px";
     box.style.height = "22px";
     box.style.display = "flex";
@@ -714,7 +726,7 @@ function create_box(frm, type = "signature") {
 
 
 
-  if (type !== "checkbox" ) {
+  if (type !== "checkbox") {
 
     const label = document.createElement("div");
 
@@ -786,7 +798,7 @@ function create_box(frm, type = "signature") {
 
   box.appendChild(deleteBtn);
 
-  if (type !== "checkbox" ) {
+  if (type !== "checkbox") {
 
     const resize = document.createElement("div");
 
@@ -804,7 +816,7 @@ function create_box(frm, type = "signature") {
   deleteBtn.style.opacity = "0";
 
   box.addEventListener("mouseenter", () => {
-    if (box.dataset.field_type == "checkbox" ) {
+    if (box.dataset.field_type == "checkbox") {
       box.style.outline = "2px solid " + color;
     }
     deleteBtn.style.opacity = "1";
@@ -907,55 +919,53 @@ function render_existing_boxes(frm) {
 
   // Prevent duplicate rendering
   document.querySelectorAll(".page-overlay").forEach(o => o.innerHTML = "");
-  setTimeout(() => {
 
-    frm.doc.signature_fields.forEach(field => {
+  frm.doc.signature_fields.forEach(field => {
 
-      const overlay = document.querySelector(
-        `.page-overlay[data-page="${field.page_number}"]`
-      );
+    const overlay = document.querySelector(
+      `.page-overlay[data-page="${field.page_number}"]`
+    );
 
-      if (!overlay) return;
+    if (!overlay) return;
 
-      // 🔥 IF SIGNED → SHOW SIGNATURE IMAGE
-      if (field.signed && field.signature_image) {
+    // 🔥 IF SIGNED → SHOW SIGNATURE IMAGE
+    if (field.signed && field.signature_image) {
 
-        const img = document.createElement("img");
-        img.src = field.signature_image;
+      const img = document.createElement("img");
+      img.src = field.signature_image;
 
-        img.style.position = "absolute";
-        img.style.left = field.x_percent + "%";
-        img.style.top = field.y_percent + "%";
-        img.style.width = field.width_percent + "%";
-        img.style.height = field.height_percent + "%";
-        img.style.objectFit = "contain";
+      img.style.position = "absolute";
+      img.style.left = field.x_percent + "%";
+      img.style.top = field.y_percent + "%";
+      img.style.width = field.width_percent + "%";
+      img.style.height = field.height_percent + "%";
+      img.style.objectFit = "contain";
 
-        overlay.appendChild(img);
-        return;
-      }
+      overlay.appendChild(img);
+      return;
+    }
 
-      // 🔹 ELSE render editable box
-      const previousRecipient = activeRecipient;
-      activeRecipient = field.signer_email;
+    // 🔹 ELSE render editable box
+    const previousRecipient = activeRecipient;
+    activeRecipient = field.signer_email;
 
-      const box = create_box(frm, field.field_type);
+    const box = create_box(frm, field.field_type);
 
-      activeRecipient = previousRecipient;
+    activeRecipient = previousRecipient;
 
-      box.style.left = field.x_percent + "%";
-      box.style.top = field.y_percent + "%";
-      box.style.width = field.width_percent + "%";
-      box.style.height = field.height_percent + "%";
+    box.style.left = field.x_percent + "%";
+    box.style.top = field.y_percent + "%";
+    box.style.width = field.width_percent + "%";
+    box.style.height = field.height_percent + "%";
 
-      box.dataset.rowname = field.name;
-      box.dataset.signer_email = field.signer_email;
+    box.dataset.rowname = field.name;
+    box.dataset.signer_email = field.signer_email;
 
-      overlay.appendChild(box);
-      attach_box_events(frm, box, overlay);
+    overlay.appendChild(box);
+    attach_box_events(frm, box, overlay);
 
-    });
+  });
 
-  }, 400);
 }
 
 async function send_for_signature(frm) {
@@ -992,7 +1002,7 @@ async function send_for_signature(frm) {
     freeze: true,
     freeze_message: "Sending emails..."
   }).then(() => {
-
+    frm._pdf_loaded = false;
     frappe.msgprint("Emails sent successfully");
 
 

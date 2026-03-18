@@ -54,6 +54,7 @@ class e_sign(Document):
 def generate_pdf_pages(docname):
 
     doc = frappe.get_doc("e_sign", docname)
+    print(f"Generating PDF pages for {docname} with original PDF: {doc.original_pdf}")
 
     if not doc.original_pdf:
         return []
