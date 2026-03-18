@@ -1094,7 +1094,7 @@ z-index:999;
       .then(data => {
         console.log("verify otp data", data);
         if (data.message.status === "verified") {
-          // location.reload();
+          location.reload();
           console.log("Otp Veified:",data.message.status)
         } else {
           alert("Invalid OTP");
