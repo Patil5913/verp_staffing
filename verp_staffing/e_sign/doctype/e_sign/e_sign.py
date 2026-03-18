@@ -766,7 +766,7 @@ def verify_otp(token=None, otp=None):
             value=verification_key,
             max_age=60 * 60 * 24 * 7, # 7 days
             secure=True,              # Set to True in production (requires HTTPS)
-            httponly=False,
+            httponly=True,
             samesite="Lax"            # Required for modern browsers
             )
 

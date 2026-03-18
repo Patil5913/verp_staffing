@@ -835,7 +835,7 @@ z-index:999;
 
       fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.track_ip_and_device", {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           "X-Frappe-CSRF-Token": window.csrf_token
@@ -938,7 +938,7 @@ z-index:999;
 
     fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.send_otp", {
       method: "POST",
-      credentials: "same-origin",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Frappe-CSRF-Token": window.csrf_token
@@ -1046,7 +1046,7 @@ z-index:999;
 
     fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.complete_signing", {
       method: "POST",
-      credentials: "same-origin",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Frappe-CSRF-Token": window.csrf_token
@@ -1080,7 +1080,7 @@ z-index:999;
 
     fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.verify_otp", {
       method: "POST",
-      credentials: "same-origin",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Frappe-CSRF-Token": window.csrf_token

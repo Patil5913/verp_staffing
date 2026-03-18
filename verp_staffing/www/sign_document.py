@@ -7,7 +7,7 @@ from frappe.utils.file_manager import save_file
 def get_context(context):
 
     token = frappe.form_dict.get("token")
-
+    print(f"_____token: {token}")
     if not token:
         context.error = "Invalid or missing token"
         return
@@ -51,8 +51,8 @@ def get_context(context):
         "height_percent",
         "signature_image"
     ]
-)
-
+    )
+    print("Stage 2: Retrieved signature fields and agreement details")
 
     # 2️⃣ Convert PDF into images
     file_doc = frappe.get_doc("File", {"file_url": agreement.original_pdf})
@@ -94,7 +94,7 @@ def get_context(context):
         device = "Mobile"
     elif "Macintosh" in ua: platform = "macOS"
     elif "Linux" in ua: platform = "Linux"
-
+    print(f"Stage 3: Parsed IP ({ip_address}), Platform ({platform}), Device ({device}), Browser ({ua})")
     # 4. Manual Parsing for Browser
     browser = "Unknown Browser"
     if "Firefox" in ua: browser = "Firefox"
@@ -106,7 +106,7 @@ def get_context(context):
     print("ALL COOKIES:", frappe.request.cookies)
     print("---------------------verification_cookie------------------------------------",verification_cookie)
     print("---------------------token------------------------------------",token)
-
+    print(f"Stage 4: Parsed Browser ({browser}), Retrieved Verification Cookie ({verification_cookie})")
 
     is_verified = False
 
@@ -118,9 +118,9 @@ def get_context(context):
                 "verification_key": verification_cookie
             }
         )
-        frappe.errprint(f"______________Verification check for token {token} with cookie {verification_cookie}: {'Found matching record' if exists else 'No matching record found'}")
+        print(f"______________Verification check for token {token} with cookie {verification_cookie}: {'Found matching record' if exists else 'No matching record found'}")
         is_verified = bool(exists)
-        frappe.errprint(f"______________Final verification status for token {token}: {is_verified}")
+        print(f"______________Final verification status for token {token}: {is_verified}")
 
     context.is_verified = is_verified
             
