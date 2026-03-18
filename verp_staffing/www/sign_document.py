@@ -118,7 +118,9 @@ def get_context(context):
                 "verification_key": verification_cookie
             }
         )
+        frappe.errprint(f"______________Verification check for token {token} with cookie {verification_cookie}: {'Found matching record' if exists else 'No matching record found'}")
         is_verified = bool(exists)
+        frappe.errprint(f"______________Final verification status for token {token}: {is_verified}")
 
     context.is_verified = is_verified
             

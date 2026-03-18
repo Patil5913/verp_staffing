@@ -2,7 +2,7 @@
 <h2 style="color:red;">{{ error }}</h2>
 
 {% else %}
- 
+
 <h1>{{ is_verified }}</h1>
 
 {% if not is_verified %}
@@ -1092,8 +1092,10 @@ z-index:999;
     })
       .then(res => res.json())
       .then(data => {
+        console.log("verify otp data", data);
         if (data.message.status === "verified") {
-          location.reload();
+          // location.reload();
+          console.log("Otp Veified:",data.message.status)
         } else {
           alert("Invalid OTP");
         }

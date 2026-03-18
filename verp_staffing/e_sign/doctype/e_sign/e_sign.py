@@ -722,11 +722,14 @@ def verify_otp(token=None, otp=None):
             return {"status": "invalid_request"}
 
         cached_otp = frappe.cache().get_value(f"otp_{token}")
-
+        print(f"____________________Verifying OTP for token {token}. Provided OTP: {otp}, Cached OTP: {cached_otp}")
         if not cached_otp:
+            print(f"____________________OTP expired for token {token}.")
             return {"status": "expired"}
 
         if otp != cached_otp:
+            frappe.errprint(f"______________OTP mismatch: provided {otp}, expected {cached_otp}")
+            print(f"____________________OTP mismatch: provided {otp}, expected {cached_otp}.")
             return {"status": "invalid_otp"}
 
         # ✅ Generate persistent verification key
@@ -763,13 +766,14 @@ def verify_otp(token=None, otp=None):
             key=f"verify_{token}",
             value=verification_key,
             max_age=60 * 60 * 24 * 7, # 7 days
-            secure=True,              # Set to True in production (requires HTTPS)
-            httponly=True,
+            secure=true,              # Set to True in production (requires HTTPS)
+            httponly=false,
             samesite="Lax"            # Required for modern browsers
             )
 
         frappe.request.cookies[f"verify_{token}"] = verification_key
         frappe.cache().delete_value(f"otp_{token}")
+        print("____________________OTP verified successfully, verification cookie set.")
         return {"status": "verified"} 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "OTP Verify Failed")
