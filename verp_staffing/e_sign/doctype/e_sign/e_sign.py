@@ -728,7 +728,6 @@ def verify_otp(token=None, otp=None):
             return {"status": "expired"}
 
         if otp != cached_otp:
-            frappe.errprint(f"______________OTP mismatch: provided {otp}, expected {cached_otp}")
             print(f"____________________OTP mismatch: provided {otp}, expected {cached_otp}.")
             return {"status": "invalid_otp"}
 
@@ -776,5 +775,5 @@ def verify_otp(token=None, otp=None):
         print("____________________OTP verified successfully, verification cookie set.")
         return {"status": "verified"} 
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "OTP Verify Failed")
+        print(f"____________________Error during OTP verification: {frappe.get_traceback()}")
         return {"status": "error"}
