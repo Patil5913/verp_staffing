@@ -679,95 +679,96 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
 
     return {"status": "success"}
 
+
 @frappe.whitelist(allow_guest=True)
 def send_otp(token=None):
+    try:
+        if not token:
+            return {"status": "invalid_token"}
 
-    if not token:
-        return {"status": "invalid_token"}
+        fields = frappe.get_all(
+            "Signature Fields",
+            filters={"sign_token": token},
+            fields=["parent", "signer_email"]
+        )
 
-    fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["parent", "signer_email"]
-    )
+        if not fields:
+            return {"status": "token_not_found"}
 
-    if not fields:
-        return {"status": "token_not_found"}
+        email = fields[0]["signer_email"]
 
-    email = fields[0]["signer_email"]
+        otp = str(random.randint(100000, 999999))
 
-    # prevent spam
-    cooldown = frappe.cache().get_value(f"otp_cooldown_{token}")
-    if cooldown:
-        return {"status": "wait"}
+        frappe.cache().set_value(f"otp_{token}", otp, expires_in_sec=300)
 
-    frappe.cache().set_value(f"otp_cooldown_{token}", True, expires_in_sec=60)
+        frappe.sendmail(
+            recipients=[email],
+            subject="Your Verification Code",
+            message=f"<p>Your OTP is: <b>{otp}</b></p>",
+            delayed = False
+        )
 
-    otp = f"{random.randint(100000,999999)}"
-
-    frappe.cache().set_value(
-        f"otp_{token}",
-        otp,
-        expires_in_sec=300
-    )
-
-    frappe.sendmail(
-        recipients=[email],
-        subject="Your Verification Code",
-        message=f"<p>Your OTP is: <b>{otp}</b></p>",
-        delayed=False
-    )
-
-    return {"status": "sent"}
+        return {"status": "sent"}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "OTP Send Failed")
+        return {"status": "error"}
 
 
 @frappe.whitelist(allow_guest=True)
 def verify_otp(token=None, otp=None):
+    try: 
+        if not token or not otp:
+            return {"status": "invalid_request"}
 
-    if not token or not otp:
-        return {"status": "invalid_request"}
-    
-    print(f"Verifying OTP for token: {token} with OTP: {otp}")
+        cached_otp = frappe.cache().get_value(f"otp_{token}")
 
-    cached_otp = frappe.cache().get_value(f"otp_{token}")
+        if not cached_otp:
+            return {"status": "expired"}
 
-    if not cached_otp:
-        return {"status": "expired"}
+        if otp != cached_otp:
+            return {"status": "invalid_otp"}
 
-    if otp != cached_otp:
-        return {"status": "invalid_otp"}
+        # ✅ Generate persistent verification key
+        verification_key = str(uuid.uuid4())
 
-    # ✅ Generate persistent verification key
-    verification_key = str(uuid.uuid4())
-
-    # Save verification key to ALL fields of this signer
-    rows = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["name"]
-    )
-    
-    print(f"Updating {len(rows)} fields with verification key: {verification_key}")
-
-    for row in rows:
-        doc = frappe.get_doc("Signature Fields", row.name)
-        doc.verification_key = verification_key
-        doc.verified_on = format_timestamp_utc()
-        doc.save(ignore_permissions=True)
-
-    frappe.db.commit()
-    
-    print(f"db values updated, setting cookie for token: {token}"
-          )    
-    frappe.local.cookie_manager.set_cookie(
-        key=f"verify_{token}",
-        value=verification_key,
-        max_age=60 * 60 * 24 * 7, # 7 days
-        secure=True,              # Set to True in production (requires HTTPS)
-        httponly=True,
-        samesite="Lax"            # Required for modern browsers
+        # Save verification key to ALL fields of this signer
+        rows = frappe.get_all(
+            "Signature Fields",
+            filters={"sign_token": token},
+            fields=["name"]
         )
 
-    print(f"Verification successful for token: {token}, cookie set, deleting OTP cache")
-    frappe.cache().delete_value(f"otp_{token}")
-    return {"status": "verified"}
+        # for row in rows:
+        #     doc = frappe.get_doc("Signature Fields", row.name)
+        #     doc.verification_key = verification_key
+        #     doc.verified_on = format_timestamp_utc()
+        #     doc.save(ignore_permissions=True)
+
+        # frappe.db.commit()
+
+        frappe.db.set_value(
+        "Signature Fields",
+        {"sign_token": token},
+        {
+            "verification_key": verification_key,
+            "verified_on": format_timestamp_utc()
+        },
+        update_modified=False
+        )
+
+        frappe.db.commit()
+        
+        frappe.local.cookie_manager.set_cookie(
+            key=f"verify_{token}",
+            value=verification_key,
+            max_age=60 * 60 * 24 * 7, # 7 days
+            secure=True,              # Set to True in production (requires HTTPS)
+            httponly=True,
+            samesite="Lax"            # Required for modern browsers
+            )
+
+        frappe.cache().delete_value(f"otp_{token}")
+        return {"status": "verified"} 
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "OTP Verify Failed")
+        return {"status": "error"}
