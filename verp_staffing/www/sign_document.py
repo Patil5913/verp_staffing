@@ -6,6 +6,8 @@ from frappe.utils.file_manager import save_file
 
 def get_context(context):
 
+    context.no_cache = 1
+
     token = frappe.form_dict.get("token")
     print(f"_____token: {token}")
     if not token:
