@@ -87,16 +87,7 @@ def get_employees_with_role(role, department=None):
         distinct=True,
     )
 
-
-SERVICE_DOCTYPE_MAP = {
-    "ruc": "RUC",
-    "resume": "Resume",
-    "jdc": "JDC",
-    "training": "Training",
-    "cover letter": "Cover Letter",
-    "marketing": "Marketing",
-}
-
+from verp_staffing.install import SERVICE_DOCTYPE_MAP
 
 @frappe.whitelist()
 def forward_candidate(customer, service, interview=None):
@@ -108,6 +99,16 @@ def forward_candidate(customer, service, interview=None):
         stage = json.loads(customer_doc.stage) if customer_doc.stage else {}
     except Exception:
         stage = {}
+
+    if service_key in ["cr", "onboarding"]:
+        department = "CR" if service_key == "cr" else "Onboarding"
+
+        return handle_CR_Onboarding_forward(
+            customer=customer,
+            department=department,
+            manual_assign=frappe.form_dict.get("manual_assign"),
+            assign_employee=frappe.form_dict.get("assign_employee")
+        )
 
     if service_key in stage:
 
@@ -305,3 +306,101 @@ def get_customer_interviews(customer):
             formatted.append({"label": d.name, "value": d.name})
 
     return formatted
+
+# CR/Onboarding Load analyzer
+def get_department_load_employee(department):
+    hierarchy = frappe.get_all(
+        "Hierarchy",
+        filters={"department": department},
+        fields=["auto_assign_config"],
+        limit=1,
+    )
+
+    if not hierarchy:
+        frappe.throw(f"Hierarchy not configured for {department}")
+
+    config = json.loads(hierarchy[0].auto_assign_config or "{}")
+    role = config.get("role")
+
+    if not role:
+        frappe.throw("Auto assign role missing")
+
+    employees = get_employees_with_role(role, department)
+
+    if not employees:
+        frappe.throw("No employees found")
+
+    load = []
+
+    for emp in employees:
+        count = frappe.db.count(
+            "Customer Department Route",
+            filters={
+                "assigned_to": emp,
+                "department": department,
+                "status": "Active",
+            },
+        )
+
+        load.append({"employee": emp, "count": count})
+
+    load.sort(key=lambda x: x["count"])
+
+    return load[0]["employee"]
+
+def handle_CR_Onboarding_forward(customer, department, manual_assign=0, assign_employee=None):
+    
+    existing = frappe.db.exists(
+        "Customer Department Route",
+        {
+            "customer": customer,
+            "department": department,
+            "status": "Active",
+        },
+    )
+
+    if existing:
+        frappe.throw(f"Customer already forwarded to {department}")
+
+    # 2. determine assignee
+    if manual_assign:
+        if not assign_employee:
+            frappe.throw("Employee required for manual assignment")
+        assignee = assign_employee
+    else:
+        assignee = get_department_load_employee(department)
+
+    # Get current employee
+    employee = frappe.get_all(
+        "Employee",
+        filters={"user": ["=", frappe.session.user]},
+        pluck="name",
+        distinct=True,
+    )
+
+    # 3. create new route
+    route = frappe.get_doc({
+        "doctype": "Customer Department Route",
+        "customer": customer,
+        "department": department,
+        "status": "Active",
+        "assigned_to": assignee,
+        "forwarded_by": employee[0],
+        "forwarded_on": now_datetime(),
+    })
+
+    route.insert(ignore_permissions=True)
+
+    frappe.enqueue(
+        "verp_staffing.crm.api.auto_assign.notify_assignees",
+        queue="short",
+        doc=customer,
+        service=department,
+        customer=customer,
+    )
+
+    return {
+        "reforward": False,
+        "doctype": "Customer",
+        "name": customer
+    }

@@ -67,3 +67,26 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
             start,
         ),
     )
+
+@frappe.whitelist()
+def user_belongs_to_department(user, department):
+
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user": user},
+        "name"
+    )
+
+    if not employee:
+        return False
+
+    return frappe.db.exists(
+        "Employee Assignment Detail",
+        {
+            "parent": employee,
+            "department": department
+        }
+    )
+
+def get_employee_from_user(user):
+    return frappe.db.get_value("Employee", {"user": user}, "name")

@@ -2,6 +2,16 @@ import frappe
 import json
 import re
 
+SERVICE_DOCTYPE_MAP = {
+    "ruc": "RUC",
+    "resume": "Resume",
+    "jdc": "JDC",
+    "training": "Training",
+    "cover letter": "Cover Letter",
+    "marketing": "Marketing",
+}
+
+
 ROLES = [
     "Lead Master Manager",
     "Lead Manager",
@@ -29,6 +39,8 @@ ROLES = [
     "HR Manager",
     "HR",
     "Extra Menu Item Not Show",
+    "OnBoarding Person",
+    "CR",
     "_show_sales",
     "_show_lead",
     "_show_technical",
@@ -346,6 +358,13 @@ ROLE_PERMISSIONS = {
     "Inbox User": {
         "Communication": ["read", "create", "email"],
         "Email Account": ["read"],
+    },
+    "OnBoarding Person":{
+        "RUC": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+        "Employee": ["read", "select"],
+        "Outsource": ["read", "write", "create", "select"],
+        "Lead Detail Form": ["read"],
     },
     "_show_marketing": {"Customer": ["read", "report"]},
     "_show_lead": {"Lead": ["read", "report"]},

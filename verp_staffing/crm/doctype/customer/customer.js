@@ -1,5 +1,6 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
+let CURRENT_EMPLOYEE = null;
 
 frappe.ui.form.on("Customer", {
 	refresh(frm) {
@@ -10,6 +11,19 @@ frappe.ui.form.on("Customer", {
 		inject_department_css();
 		inject_status_badge_css();
 		load_department_panels(frm);
+		let userDepartments = [];
+		frappe.call({
+			method: "frappe.client.get_value",
+			args: {
+				doctype: "Employee",
+				filters: { user: frappe.session.user },
+				fieldname: "name",
+			},
+			callback(r) {
+				CURRENT_EMPLOYEE = r.message?.name;
+				load_routes(frm, userDepartments);
+			},
+		});
 
 		if (!frm.is_new()) {
 			show_sales_order(frm);
@@ -18,7 +32,7 @@ frappe.ui.form.on("Customer", {
 		// clear previous content immediately
 		if (frm.fields_dict.customer_details) {
 			frm.fields_dict.customer_details.$wrapper.html(
-				"<p style='color:#888'>Loading history...</p>"
+				"<p style='color:#888'>Loading history...</p>",
 			);
 		}
 
@@ -34,8 +48,6 @@ frappe.ui.form.on("Customer", {
 					console.error("Empty response");
 					return;
 				}
-
-				console.log(r.message)
 
 				render_customer_history(frm, r.message);
 			},
@@ -110,7 +122,7 @@ frappe.ui.form.on("Customer", {
 		if (frm.doc.customer_from) {
 			frm.set_df_property("party_name", "label", frm.doc.customer_from);
 		}
-			set_customer_owner(frm);
+		set_customer_owner(frm);
 	},
 
 	party_name: function (frm) {
@@ -152,67 +164,19 @@ frappe.ui.form.on("Customer", {
 	},
 });
 function set_customer_owner(frm) {
-
 	if (frm.doc.customer_owner) return;
 
 	// Case 1: Opportunity selected
 	if (frm.doc.customer_from === "Opportunity" && frm.doc.party_name) {
-
-		frappe.db.get_value(
-			"Opportunity",
-			frm.doc.party_name,
-			"opportunity_owner"
-		).then(r => {
-			console.log("entered opp");
-			console.log(frm.doc.party_name);
-			
-			
-
+		frappe.db.get_value("Opportunity", frm.doc.party_name, "opportunity_owner").then((r) => {
 			if (!r.message || !r.message.opportunity_owner) return;
-			
-			console.log("exists");
-			console.log(r.message.opportunity_owner);
-			
-			
 
 			frm.set_value("customer_owner", r.message.opportunity_owner);
-			console.log("customer_owner", frm.doc.customer_owner);
-			
-
 		});
 	}
 
 	// Case 2: Lead selected
 	else if (frm.doc.customer_from === "Lead" && frm.doc.party_name) {
-
-		console.log("customer from lead ");
-		
-
-
-			frappe.call({
-			method: "frappe.client.get_list",
-			args: {
-				doctype: "Employee",
-				filters: [
-					["Employee", "user", "=", frappe.session.user],
-					// ["Employee Assignment Detail", "department", "=", "Sales"]
-				],
-				fields: ["name"],
-				limit: 1,
-			},
-			callback: function (r) {
-				if (r.message && r.message.length > 0) {
-					frm.set_value("customer_owner", r.message[0].name);
-				}
-			},
-		});
-
-	;
-	}
-
-	// Case 3: Nothing selected → logged-in Sales employee
-	else {
-
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
@@ -230,8 +194,127 @@ function set_customer_owner(frm) {
 				}
 			},
 		});
-
 	}
+
+	// Case 3: Nothing selected → logged-in Sales employee
+	else {
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Employee",
+				filters: [
+					["Employee", "user", "=", frappe.session.user],
+					// ["Employee Assignment Detail", "department", "=", "Sales"]
+				],
+				fields: ["name"],
+				limit: 1,
+			},
+			callback: function (r) {
+				if (r.message && r.message.length > 0) {
+					frm.set_value("customer_owner", r.message[0].name);
+				}
+			},
+		});
+	}
+}
+
+function load_routes(frm) {
+	frappe.call({
+		method: "verp_staffing.crm.doctype.customer.customer.get_customer_routes",
+		args: {
+			customer: frm.doc.name,
+		},
+		callback(r) {
+			const data = r.message || [];
+
+			let html = "<p>No routing history</p>";
+
+			if (data.length) {
+				html = `
+					<table class="table table-bordered">
+						<tr>
+							<th>Department</th>
+							<th>Status</th>
+							<th>Assigned To</th>
+							<th>Forwarded On</th>
+							<th>Completed On</th>
+						</tr>
+				`;
+
+				data.forEach((row) => {
+					html += `
+						<tr>
+							<td>${row.department}</td>
+							<td>${get_status_html(row)}</td>
+							<td>${row.assigned_to || "-"}</td>
+							<td>${row.forwarded_on || "-"}</td>
+							<td>${row.completed_on || "-"}</td>
+						</tr>
+					`;
+				});
+
+				html += "</table>";
+			}
+
+			const wrapper = frm.fields_dict.department_route_html.$wrapper;
+
+			wrapper.html(html);
+
+			// remove old listeners before adding new
+			wrapper.off("change", ".route-status");
+
+			// attach event
+			wrapper.on("change", ".route-status", function () {
+				const route = $(this).data("route");
+				const value = $(this).val();
+
+				console.log("route: ", route);
+				if (value !== "Completed") return;
+				frappe.confirm(
+					"This action cannot be reverted. Continue?",
+					() => {
+						frappe.call({
+							method: "verp_staffing.crm.doctype.customer.customer.update_route_status",
+							args: {
+								route_name: route,
+								status: "Completed",
+							},
+							callback() {
+								frappe.msgprint("Status updated to Completed");
+								frm.refresh();
+							},
+						});
+					},
+					() => {
+						frm.refresh();
+					},
+				);
+			});
+		},
+	});
+}
+
+function get_status_html(row) {
+	console.log("row.assigned_to, CURRENT_EMPLOYEE:", row.assigned_to, CURRENT_EMPLOYEE);
+	const isAssignedUser = row.assigned_to === CURRENT_EMPLOYEE;
+	const isCompleted = row.status === "Completed";
+
+	// not assigned → read only
+	if (!isAssignedUser) {
+		return `<span>${row.status}</span>`;
+	}
+
+	if (isCompleted) {
+		return `<span style="color:green;">Completed</span>`;
+	}
+
+	// editable dropdown
+	return `
+		<select data-route="${row.name}" class="route-status">
+			<option value="Active" ${row.status === "Active" ? "selected" : ""}>Active</option>
+			<option value="Completed">Completed</option>
+		</select>
+	`;
 }
 // function render_notes(frm) {
 // 	const $wrapper = frm.get_field("notes_html")?.$wrapper;
@@ -1283,13 +1366,11 @@ function get_status_badge(status) {
 function inject_status_badge_css() {}
 
 function render_customer_history(frm, data) {
-
 	let html = "";
 
 	// SOURCE (Lead / Opportunity)
 
 	if (data.source) {
-
 		html += `
 		<div style="padding:15px;border-left:4px solid #5e64ff;margin-bottom:15px;">
 			<h4>${data.source.type} Created</h4>
@@ -1320,9 +1401,7 @@ function render_customer_history(frm, data) {
 	// DEPARTMENT HISTORY
 
 	if (data.departments && data.departments.length) {
-
 		data.departments.forEach((dept) => {
-
 			html += `
 			<div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
 				<h4>${dept.department} Department</h4>
@@ -1332,29 +1411,21 @@ function render_customer_history(frm, data) {
 			`;
 
 			if (dept.assign_history && dept.assign_history.length) {
-
 				html += `<div style="margin-top:10px;"><b>Employee Assignment Flow</b></div>`;
 
 				dept.assign_history.forEach((flow) => {
-
 					html += `
 					<p style="margin-left:10px;">
 						${flow.from} → ${flow.to}
 						(${frappe.datetime.str_to_user(flow.timestamp)})
 					</p>
 					`;
-
 				});
-
 			}
 
 			html += `</div>`;
 		});
-
 	}
 
-
-
 	frm.fields_dict.customer_details.$wrapper.html(html);
-
 }

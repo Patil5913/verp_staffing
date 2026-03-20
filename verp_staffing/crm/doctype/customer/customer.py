@@ -6,7 +6,6 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 
-
 class Customer(Document):
 
     def on_trash(self):
@@ -100,6 +99,8 @@ def get_employee_department():
     emp = frappe.get_doc("Employee", employee_name)
     return emp.employee_assignment_details_table
 
+from verp_staffing.install import SERVICE_DOCTYPE_MAP
+from verp_staffing.employee.doctype.employee.employee import user_belongs_to_department
 
 @frappe.whitelist()
 def get_forwardable_departments(customer):
@@ -128,18 +129,69 @@ def get_forwardable_departments(customer):
     )
 
     if not services:
-        return []
+        return ["CR"]
 
+    options = []
+    all_completed = True
     service_names = [d.service for d in services]
 
-    # Optional: validate department still exists
-    valid_services = frappe.get_all(
-        "Service", filters={"name": ["in", service_names]}, pluck="name"
-    )
 
-    frappe.errprint(valid_services)
+    for service in service_names:
 
-    return valid_services
+        service_key = service.lower()
+
+        # resolve doctype
+        doctype = SERVICE_DOCTYPE_MAP.get(service_key)
+
+        if not doctype:
+
+            parents = frappe.db.sql(
+                """
+                SELECT parent FROM `tabDepartment Service`
+                WHERE service_name = %s
+                """,
+                (service,),
+                as_dict=True,
+            )
+
+            if not parents:
+                frappe.throw(f"No department found for service {service}")
+
+            department = parents[0].parent
+
+            if department == "Technical":
+                doctype = "Technical Other Services"
+            elif department == "Marketing":
+                doctype = "Marketing Other Services"
+            else:
+                doctype = "Other Services"
+
+        # check if record exists
+        doc = frappe.db.sql(
+            f"""
+            SELECT status
+            FROM `tab{doctype}`
+            WHERE customer = %s
+            ORDER BY creation DESC
+            LIMIT 1
+            """,
+            customer,
+            as_dict=True
+        )
+
+        if not doc or doc[0].status != "Completed":
+            all_completed = False
+
+        options.append(service)
+
+    # CR always available
+    options.append("CR")
+    user = frappe.session.user
+    is_marketing = user_belongs_to_department(user, "Marketing")
+    if all_completed and is_marketing:
+        options.append("Onboarding")
+
+    return options
 
 
 @frappe.whitelist()
@@ -306,3 +358,57 @@ def get_customer_history(customer):
             print("DEPARTMENT HISTORY:-------------------------------------", history["departments"])
 
     return history
+
+@frappe.whitelist()
+def get_customer_routes(customer):
+
+    return frappe.get_all(
+        "Customer Department Route",
+        filters={"customer": customer},
+        fields=[
+            "name",
+            "department",
+            "status",
+            "assigned_to",
+            "forwarded_by",
+            "forwarded_on",
+            "completed_on"
+        ],
+        order_by="forwarded_on desc"
+    )
+
+from frappe.utils import now_datetime
+from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
+
+@frappe.whitelist()
+def update_route_status(route_name, status):
+    if status != "Completed":
+        frappe.throw("Only 'Completed' status update is allowed")
+    frappe.errprint(f"route_name: {route_name}, status {status}")
+    route = frappe.get_doc("Customer Department Route", route_name)
+
+    # Already completed
+    # 1. Block if already completed
+    if route.status == "Completed":
+        frappe.throw("Status already completed. Cannot revert.")
+    
+    # 2. Get employee of current user
+    employee = get_employee_from_user(frappe.session.user)
+
+    if not employee:
+        frappe.throw("Employee not linked to user")
+
+    # 3. Only assignee can update
+    if route.assigned_to != employee:
+        frappe.throw("Only assigned employee can update this status")
+
+    # 3. Update status
+    route.status = "Completed"
+    route.completed_on = now_datetime()
+
+    route.save(ignore_permissions=True)
+
+    return {
+        "status": "success",
+        "message": f"{route.department} marked as Completed"
+    }

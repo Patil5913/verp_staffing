@@ -163,17 +163,17 @@ def secure_get(**kwargs):
         )
         return original_get(**frappe.local.form_dict)
 
-    # if doctype == "Customer":
-    #     owners = get_visible_employee_names(user)
-    #     opportunities = frappe.db.get_all(
-    #         "Opportunity",
-    #         filters={"opportunity_owner": ["in", owners]},
-    #         pluck="name",
-    #     )
-    #     frappe.local.form_dict["filters"] = frappe.as_json(
-    #         [["Customer", "opportunity", "in", opportunities]]
-    #     )
-    #     return original_get(**frappe.local.form_dict)
+    if doctype == "Customer":
+        owners = get_visible_employee_names(user)
+        opportunities = frappe.db.get_all(
+            "Opportunity",
+            filters={"opportunity_owner": ["in", owners]},
+            pluck="name",
+        )
+        frappe.local.form_dict["filters"] = frappe.as_json(
+            [["Customer", "opportunity", "in", opportunities]]
+        )
+        return original_get(**frappe.local.form_dict)
 
     if doctype == "Customer":
         owners = get_visible_employee_names(user)
