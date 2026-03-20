@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "service_name",
-  "is_immediate_agreement_required",
+  "is_agreement_required",
   "column_break_pumi",
   "is_candidate_form_required",
   "section_break_wpvo",
@@ -23,12 +23,6 @@
    "reqd": 1,
    "set_only_once": 1,
    "unique": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "is_immediate_agreement_required",
-   "fieldtype": "Check",
-   "label": "Is Agreement Required"
   },
   {
    "fieldname": "column_break_pumi",
@@ -53,12 +47,18 @@
    "fieldname": "is_candidate_form_required",
    "fieldtype": "Check",
    "label": "Is Candidate Form Required"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_agreement_required",
+   "fieldtype": "Check",
+   "label": "Is Agreement Required"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 14:02:25.453480",
+ "modified": "2026-03-16 11:16:13.947232",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Service",
@@ -76,6 +76,26 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
   }
  ],
  "quick_entry": 1,

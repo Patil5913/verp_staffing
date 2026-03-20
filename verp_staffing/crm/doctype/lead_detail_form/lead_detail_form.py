@@ -3,89 +3,15 @@ import io
 import json
 import frappe
 from PIL import Image
-from datetime import datetime, timezone
+from datetime import datetime
+import hmac
+import hashlib
+import base64
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
 
 
 class LeadDetailForm(Document):
-
-    def before_insert(self):
-        if not self.sales_order:
-            return
-
-        existing_name = frappe.db.sql(
-            """
-            SELECT parent FROM `tabDoctype Reference`
-            WHERE sales_order = %s
-            LIMIT 1
-            """,
-            (self.sales_order,),
-            as_dict=True,
-        )
-
-        if not existing_name:
-            return
-
-        existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
-
-        for field in self.meta.fields:
-            fieldname = field.fieldname
-
-            if not fieldname:
-                continue
-
-            # Skip system fields
-            if fieldname in (
-                "name",
-                "owner",
-                "creation",
-                "modified",
-                "modified_by",
-                "docstatus",
-            ):
-                continue
-
-            if fieldname == "reference_table":
-                continue
-
-            if field.fieldtype == "Table":
-                existing_doc.set(fieldname, [])  # clear old rows
-
-                for row in self.get(fieldname) or []:
-                    row_data = row.as_dict()
-
-                    row_data.pop("name", None)
-                    row_data.pop("parent", None)
-                    row_data.pop("parenttype", None)
-                    row_data.pop("parentfield", None)
-                    row_data.pop("idx", None)
-
-                    existing_doc.append(fieldname, row_data)
-
-            else:
-                existing_doc.set(fieldname, self.get(fieldname))
-
-        existing_doc.save(ignore_permissions=True)
-        frappe.db.commit()
-
-        # ✅ Run PDF signature on existing_doc BEFORE throwing
-        try:
-            if self.signature_method == "Upload":
-                existing_doc.apply_pdf_signature(self.signature_image)
-
-            elif self.signature_method == "Text":
-                existing_doc.apply_pdf_signature(self.signature_image)
-
-            elif self.signature_method == "Draw":
-                existing_doc._process_drawn_signature_and_apply()
-
-        except Exception as e:
-            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed on Update")
-            frappe.errprint(f"PDF processing error on update: {e}")
-
-        # ✅ Signal JS AFTER pdf processing done
-        frappe.throw("LEAD_UPDATED_SUCCESS", frappe.exceptions.ValidationError)
 
     def autoname(self):
         import re
@@ -129,37 +55,44 @@ class LeadDetailForm(Document):
             self.name = base_name
         else:
             self.name = f"{base_name}-{next_number}"
+            
 
     def after_insert(self):
-        try:
-            if self.signature_method == "Upload":
-                if not self.signature_image:
-                    frappe.throw("Signature image missing for Upload method")
-                self.apply_pdf_signature(self.signature_image)
+        data = verify_token(self.form_token)
 
-            elif self.signature_method == "Text":
-                if not self.signature_image:
-                    frappe.throw("Text Signature image missing for Text method")
-                self.apply_pdf_signature(self.signature_image)
+        if not data:
+            frappe.throw("Invalid or tampered token")
 
-            elif self.signature_method == "Draw":
-                self._process_drawn_signature_and_apply()
+        if(data.get("ia")):
+            try:
+                if self.signature_method == "Upload":
+                    if not self.signature_image:
+                        frappe.throw("Signature image missing for Upload method")
+                    self.apply_pdf_signature(self.signature_image)
 
-        except Exception as e:
-            # ✅ Log error but don't throw — so webform sees success
-            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
-            frappe.errprint(f"PDF processing error: {e}")
-            # Don't re-raise — webform must get success response
+                elif self.signature_method == "Text":
+                    if not self.signature_image:
+                        frappe.throw("Text Signature image missing for Text method")
+                    self.apply_pdf_signature(self.signature_image)
+
+                elif self.signature_method == "Draw":
+                    self._process_drawn_signature_and_apply()
+
+            except Exception as e:
+                # ✅ Log error but don't throw — so webform sees success
+                frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
+                frappe.errprint(f"PDF processing error: {e}")
+                # Don't re-raise — webform must get success response
+                
 
     def _process_drawn_signature_and_apply(self):
-        import base64
-
         # ✅ Correct use — if signature_image already uploaded via JS, just apply it
         if self.signature_image:
             self.apply_pdf_signature(self.signature_image)
             return
 
         if not self.signature:
+            frappe.throw("Drawn signature data missing")
             return  # No signature data to process
 
         try:
@@ -188,6 +121,7 @@ class LeadDetailForm(Document):
             frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
             frappe.throw("Failed to process drawn signature")
 
+
     def apply_pdf_signature(self, signature_image_file):
         if not signature_image_file:
             frappe.throw("Signature file missing")
@@ -200,11 +134,18 @@ class LeadDetailForm(Document):
             signature_image_path = file_doc.file_url
         else:
             signature_image_path = signature_image_file
+            
+        data = verify_token(self.form_token)
 
-        if not self.agreement_link:
+        if not data:
+            frappe.throw("Invalid or tampered token")
+
+        agr = data.get("agr")
+            
+        if not agr:
             frappe.throw("Agreement link missing")
 
-        agreement = frappe.get_doc("Agreement", self.agreement_link)
+        agreement = frappe.get_doc("Agreement", agr)
 
         if not agreement.pdf:
             frappe.throw("Agreement PDF missing")
@@ -221,15 +162,25 @@ class LeadDetailForm(Document):
             fields = json.loads(template.fields_json)
         except Exception:
             frappe.throw("Invalid fields_json in template")
+            
+        if agreement.audit_trail:
+            try:
+                audit_json = json.loads(agreement.audit_trail)
+            except Exception:
+                audit_json = {}
+        else:
+            audit_json = {}
 
-        audit_text = json.dumps(json.loads(self.audit_trail), indent=2)
+        audit_text = json.dumps(audit_json, indent=2)
+        
 
         input_pdf_path = resolve_file_path(agreement.pdf)
         if not input_pdf_path:
             frappe.throw("Unable to resolve agreement PDF path")
-
-        if not self.certificate_id:
-            self.db_set("certificate_id", generate_certificate_id(self.name))
+            
+        if not agreement.certificate_id:
+            agreement.certificate_id = generate_certificate_id(agreement.name)
+            agreement.save(ignore_permissions=True)
 
         apply_signature_and_audit_to_pdf(
             input_pdf_path=input_pdf_path,
@@ -239,9 +190,29 @@ class LeadDetailForm(Document):
             signer_name=f"{self.surname} {self.first_name} {self.father_name}",
             signer_email=f"{self.email}",
             agreement=agreement,
-            certificate_id=self.certificate_id,  # ✅ use self.certificate_id directly
+            certificate_id=agreement.certificate_id, 
         )
+        
 
+def verify_token(token):
+    try:
+        decoded = base64.urlsafe_b64decode(token).decode()
+        payload, signature = decoded.rsplit("|", 1)
+
+        expected_signature = hmac.new(
+            frappe.conf.get("encryption_key").encode(),
+            payload.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            return None
+
+        return json.loads(payload)
+
+    except Exception:
+            return None
+    
 
 def load_signature_clean(img_path):
     img = Image.open(img_path)
@@ -261,8 +232,6 @@ def generate_certificate_id(agreement_name):
 
 
 def calculate_file_hash(file_path):
-    import hashlib
-
     sha256 = hashlib.sha256()
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
@@ -574,15 +543,15 @@ def apply_signature_and_audit_to_pdf(
         return output_path
 
     sales_order = frappe.get_doc("Sales Order", agreement.sales_order)
-    if not sales_order.opportunity:
+    if not sales_order.customer:
         return output_path
 
-    opportunity = frappe.get_doc("Opportunity", sales_order.opportunity)
-    if not opportunity.opportunity_owner:
+    customer = frappe.get_doc("Customer", sales_order.customer)
+    if not customer.customer_owner:
         return output_path
 
     opp_owner_user = frappe.db.get_value(
-        "Employee", opportunity.opportunity_owner, "user"
+        "Employee", customer.customer_owner, "user"
     )
     if not opp_owner_user:
         return output_path
@@ -644,75 +613,376 @@ def get_ip_and_device():
         or frappe.local.request.remote_addr,
         "user_agent": frappe.get_request_header("User-Agent"),
     }
+    
+    
+@frappe.whitelist(allow_guest=True)
+def add_audit_log(token, audit):
+    import json
 
+    # ─── Validate token ─────────────────────────────
+    data = verify_token(token)
+    if not data:
+        return {"status": "error", "message": "Invalid token"}
 
+    agr = data.get("agr")
+    if not agr:
+        return {"status": "error", "message": "Agreement not found"}
+
+    agreement = frappe.get_doc("Agreement", agr)
+
+    # ─── Ensure audit is dict ───────────────────────
+    if isinstance(audit, str):
+        try:
+            audit = json.loads(audit)
+        except Exception:
+            return {"status": "error", "message": "Invalid audit JSON"}
+
+    if not isinstance(audit, dict):
+        return {"status": "error", "message": "Audit must be object"}
+
+    # ─── Load existing ─────────────────────────────
+    existing_audit = {}
+    if agreement.audit_trail:
+        try:
+            existing_audit = json.loads(agreement.audit_trail)
+        except Exception:
+            existing_audit = {}
+
+    # ─── Normalize ─────────────────────────────
+    keys = [
+        "form visit logs",
+        "signature update logs",
+        "authentication logs",
+        "concern accepted",
+    ]
+
+    for k in keys:
+        existing_audit.setdefault(k, [])
+
+    # ─── Merge ─────────────────────────────
+    for k in keys:
+        incoming = audit.get(k, [])
+        if isinstance(incoming, list):
+            existing_audit[k].extend(incoming)
+
+    # ─── Save ─────────────────────────────
+    agreement.audit_trail = json.dumps(existing_audit, indent=2)
+    agreement.save(ignore_permissions=True)
+
+    return {"status": "success"}
+    
 import random
 
-OTP_TTL = 300  # 5 minutes
+OTP_TTL      = 300    # seconds — OTP validity window (5 minutes)
+VERIFIED_TTL = 86400  # seconds — how long "verified" state persists (1 day)
+
+
+def _get_ttl(cache_key):
+    """
+    frappe.cache() wraps Redis but does NOT expose .ttl() directly.
+    We work around this by storing the expiry timestamp alongside the value,
+    then computing the remaining TTL ourselves. This is the only reliable way.
+    """
+    data = frappe.cache().get_value(cache_key)
+    if not data:
+        return 0
+    expires_at = data.get("_expires_at") if isinstance(data, dict) else None
+    if not expires_at:
+        return 0
+    remaining = int(expires_at - frappe.utils.now_datetime().timestamp())
+    return max(remaining, 0)
 
 
 @frappe.whitelist(allow_guest=True)
-def send_otp(sales_order, email):
-    if not sales_order or not email:
-        frappe.throw("Missing sales_order or email")
+def get_otp_status(token):
+    """
+    Returns the current authentication state for a session token.
+    Called on every page load to restore UI state without re-sending OTP.
 
-    otp = random.randint(100000, 999999)
-    cache_key = f"otp:{sales_order}"
+    Returns:
+        { state: "verified" }
+        { state: "otp_sent", expires_in: <seconds> }
+        { state: "idle" }
+    """
+    if not token:
+        return {"state": "idle"}
 
-    if frappe.cache().get_value(cache_key):
-        frappe.msgprint("OTP already sent. Please wait.")
-        return
+    # Sanitise token — alphanumeric + _ only
+    token = str(token)[:128]
+
+    verified_key = f"otp_verified:{token}"
+    cache_key    = f"otp:{token}"
+
+    # 1. Verified state has highest priority
+    if frappe.cache().get_value(verified_key):
+        return {"state": "verified"}
+
+    # 2. OTP exists — compute remaining TTL from our stored timestamp
+    data = frappe.cache().get_value(cache_key)
+    if data and isinstance(data, dict):
+        ttl = _get_ttl(cache_key)
+        if ttl > 0:
+            return {"state": "otp_sent", "expires_in": ttl}
+        else:
+            # OTP key exists but has expired — clean it up
+            frappe.cache().delete_value(cache_key)
+
+    return {"state": "idle"}
+
+
+@frappe.whitelist(allow_guest=True)
+def send_otp(token, email):
+    """
+    Sends an OTP to the given email and stores it in cache keyed by token.
+    If an OTP already exists for this token, returns the remaining TTL instead
+    of sending a new one (prevents OTP spam).
+
+    Returns:
+        { status: "sent",         expires_in: 300 }
+        { status: "already_sent", expires_in: <remaining> }
+    """
+    if not token:
+        frappe.throw("Missing token")
+    if not email:
+        frappe.throw("Missing email")
+
+    # Basic email format check
+    if "@" not in str(email):
+        frappe.throw("Invalid email address")
+
+    token     = str(token)[:128]
+    cache_key = f"otp:{token}"
+
+    # Check if an OTP already exists and is still valid
+    existing = frappe.cache().get_value(cache_key)
+    if existing and isinstance(existing, dict):
+        ttl = _get_ttl(cache_key)
+        if ttl > 0:
+            return {"status": "already_sent", "expires_in": ttl}
+        else:
+            # Stale entry — remove it and send fresh
+            frappe.cache().delete_value(cache_key)
+
+    # Generate a new 6-digit OTP
+    otp        = random.randint(100000, 999999)
+    expires_at = frappe.utils.now_datetime().timestamp() + OTP_TTL
 
     frappe.cache().set_value(
-        cache_key, {"otp": otp, "email": email}, expires_in_sec=OTP_TTL
+        cache_key,
+        {"otp": str(otp), "email": str(email), "_expires_at": expires_at},
+        expires_in_sec=OTP_TTL,
     )
 
-    send_notification(
-        recipients=[email],
-        subject="Your verification OTP",
-        message=f"""
-            Dear Customer,
-
-
-            Your OTP is: {otp}
-
-
-            This OTP is valid for 5 minutes.
+    # ─── Send the email ──────────────────────────────────────────────────────────
+    try:
+        frappe.sendmail(
+            recipients=[email],
+            subject="Your Verification Code",
+            message=f"""
+                <p>Dear Customer,</p>
+                <p>Your verification code is: <strong style="font-size:24px">{otp}</strong></p>
+                <p>This code is valid for 5 minutes. Do not share it with anyone.</p>
             """,
-        send_email=1,
-        send_system=0,
-    )
+            now=True,  # bypass Email Queue — send synchronously in this request
+        )
+    except frappe.OutgoingEmailError as e:
+        # SMTP connection failed — email was never sent. Clean up and report.
+        frappe.cache().delete_value(cache_key)
+        frappe.log_error(title="OTP OutgoingEmailError", message=str(e))
+        frappe.throw("Failed to send OTP email. Please check your email settings.")
+    except Exception as e:
+        # Post-send or internal Frappe exception — email very likely already sent.
+        # Log for visibility but DO NOT delete cache or throw.
+        # Returning success here is intentional and correct.
+        frappe.log_error(title="OTP sendmail non-fatal exception", message=str(e))
 
     return {"status": "sent", "expires_in": OTP_TTL}
 
 
+# ─── verify_otp ───────────────────────────────────────────────────────────────
 @frappe.whitelist(allow_guest=True)
-def verify_otp(sales_order, otp):
-    if not sales_order or not otp:
-        frappe.throw("Missing parameters")
+def verify_otp(token, otp):
+    """
+    Verifies the submitted OTP against the cached value.
+    On success: deletes the OTP, stores a verified flag, returns details.
+    On failure: raises with a user-facing message (caught by safe_frappe_call).
 
-    cache_key = f"otp:{sales_order}"
+    Returns:
+        { status: "verified", verified_at: "...", ip: "...", user_agent: "..." }
+    Throws:
+        "OTP expired."   — if cache entry is missing or TTL elapsed
+        "Invalid OTP"    — if the code doesn't match
+    """
+    if not token:
+        frappe.throw("Missing token")
+    if not otp:
+        frappe.throw("Missing OTP")
+
+    token        = str(token)[:128]
+    otp          = str(otp).strip()
+    cache_key    = f"otp:{token}"
+    verified_key = f"otp_verified:{token}"
+
+    # Already verified? Accept immediately (idempotent)
+    if frappe.cache().get_value(verified_key):
+        return {
+            "status":      "verified",
+            "verified_at": frappe.utils.now(),
+        }
+
     data = frappe.cache().get_value(cache_key)
 
-    if not data:
-        frappe.throw("OTP expired or not requested")
+    if not data or not isinstance(data, dict):
+        frappe.throw("OTP expired.")
 
-    if str(data.get("otp")) != str(otp):
+    # Check TTL ourselves (belt-and-suspenders alongside Redis TTL)
+    if _get_ttl(cache_key) <= 0:
+        frappe.cache().delete_value(cache_key)
+        frappe.throw("OTP expired.")
+
+    if data.get("otp") != otp:
         frappe.throw("Invalid OTP")
 
-    # single-use OTP
+    # ✅ OTP is correct — single-use: delete immediately
     frappe.cache().delete_value(cache_key)
 
-    # NETWORK CONTEXT (SERVER TRUSTED)
-    ip = (
-        frappe.get_request_header("X-Forwarded-For") or frappe.local.request.remote_addr
+    # Store verified flag for VERIFIED_TTL seconds (1 day by default)
+    frappe.cache().set_value(
+        verified_key,
+        True,
+        expires_in_sec=VERIFIED_TTL,
     )
 
-    user_agent = frappe.get_request_header("User-Agent")
+    ip = (
+        frappe.get_request_header("X-Forwarded-For")
+        or frappe.local.request.remote_addr
+        or "unknown"
+    )
+    user_agent = frappe.get_request_header("User-Agent") or "unknown"
 
     return {
-        "status": "verified",
+        "status":      "verified",
         "verified_at": frappe.utils.now(),
-        "ip": ip,
-        "user_agent": user_agent,
+        "ip":          ip,
+        "user_agent":  user_agent,
+    }
+    
+
+@frappe.whitelist(allow_guest=True)
+def get_candidate_fields_from_sales_order(name):
+    if not name:
+        return []
+
+    # 🔥 Single query with join
+    rows = frappe.db.sql("""
+        SELECT s.candidate_details_form_fields
+        FROM `tabSalesOrderServices` soi
+        JOIN `tabService` s ON s.name = soi.service
+        WHERE soi.parent = %s
+    """, (name,), as_dict=True)
+
+    fields = set()
+
+    for row in rows:
+        raw = row.get("candidate_details_form_fields")
+        if raw:
+            for f in raw.split(","):
+                f = f.strip()
+                if f:
+                    fields.add(f)
+
+    return list(fields)
+    
+    
+@frappe.whitelist(allow_guest=True)
+def get_erp_config_safe():
+    return {
+        "driving_licence": frappe.db.get_single_value("ERP Configuration", "driving_licence"),
+        "ead_card": frappe.db.get_single_value("ERP Configuration", "ead_card"),
+        "old_resume": frappe.db.get_single_value("ERP Configuration", "old_resume"),
+        "visa_copy": frappe.db.get_single_value("ERP Configuration", "visa_copy"),
+    }
+    
+    
+@frappe.whitelist(allow_guest=True)
+def upsert_lead_detail_form(data, token):
+    import json
+
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    token_data = verify_token(token)
+
+    if not token_data:
+        frappe.throw("Invalid or tampered token")
+
+    customer = token_data.get("customer")
+    ia = token_data.get("ia")
+
+    # 🔍 Check existing
+    existing_name = frappe.db.sql(
+        """
+        SELECT parent FROM `tabDoctype Reference`
+        WHERE reference_doctype = 'Customer' AND reference_person = %s
+        LIMIT 1
+        """,
+        (customer,),
+        as_dict=True,
+    )
+
+    if existing_name:
+        doc = frappe.get_doc("Lead Detail Form", existing_name[0].parent)
+        is_update = True
+    else:
+        doc = frappe.new_doc("Lead Detail Form")
+        is_update = False
+
+    # 🔹 Apply incoming data safely
+    meta = frappe.get_meta("Lead Detail Form")
+
+    for field in meta.fields:
+        fieldname = field.fieldname
+        if not fieldname:
+            continue
+
+        if fieldname in (
+            "name", "owner", "creation", "modified",
+            "modified_by", "docstatus"
+        ):
+            continue
+
+        if fieldname == "reference_table":
+            continue
+
+        value = data.get(fieldname)
+
+        # TABLE
+        if field.fieldtype == "Table":
+            if value:
+                for row in value:
+                    doc.append(fieldname, row)
+
+        # NORMAL
+        else:
+            if value not in (None, "", []):
+                doc.set(fieldname, value)
+
+    # 🔹 Save
+    doc.save(ignore_permissions=True)
+
+    # 🔹 Apply signature AFTER save
+    if ia:
+        try:
+            if data.get("signature_method") in ("Upload", "Text"):
+                doc.apply_pdf_signature(data.get("signature_image"))
+
+            elif data.get("signature_method") == "Draw":
+                doc._process_drawn_signature_and_apply()
+
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
+
+    return {
+        "status": "updated" if is_update else "created",
+        "name": doc.name
     }

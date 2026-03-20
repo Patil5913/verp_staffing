@@ -56,7 +56,7 @@ def preview_agreement(template, data):
 
 # Final submit
 @frappe.whitelist()
-def submit_and_generate(sales_order, template, recipient, data):
+def submit_and_generate(sales_order, template, data):
     """
     Generates final PDF and saves it permanently to the agreement doctype
     Only run when salesman clicks submit/send.
@@ -106,38 +106,9 @@ def submit_and_generate(sales_order, template, recipient, data):
     so.save(ignore_permissions=True)
 
     agreement.db_set("pdf", url)
-    base_url = get_url()
 
     frappe.db.commit()
 
-    form_url = (
-        f"{base_url}/details-form/new?so={quote(sales_order)}&p={url}&agr={so.agreement}&e={quote(recipient)}"
-    )
-    
-    send_notification(
-        recipients=[recipient],
-        subject="Agreement for Review and Signature",
-        message=(
-            "Dear Customer,\n\n"
-            "Your agreement has been created and is ready for your review and signature.\n\n"
-            "Please review the agreement, complete the signing process, "
-            "and submit the required details using the form link below:\n\n"
-            f"{form_url}\n\n"
-            "If you have any questions or need assistance, please contact us.\n\n"
-            "Best regards,\n"
-            "Team"
-        ),
-        attachments=[
-            {
-                "fname": os.path.basename(url),
-                "fcontent": open(
-                    frappe.get_site_path("public", url.lstrip("/")), "rb"
-                ).read(),
-            }
-        ],
-        send_email=1,
-        send_system=0,
-    )
     return {"agreement": agreement.name, "file_url": url}
 
 

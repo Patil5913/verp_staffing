@@ -6,9 +6,13 @@
  "engine": "InnoDB",
  "field_order": [
   "sales_order",
+  "pdf",
+  "column_break_whbw",
   "template",
+  "certificate_id",
+  "section_break_fnhs",
   "data",
-  "pdf"
+  "audit_trail"
  ],
  "fields": [
   {
@@ -33,12 +37,30 @@
    "fieldname": "pdf",
    "fieldtype": "Attach",
    "label": "PDF"
+  },
+  {
+   "fieldname": "column_break_whbw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "certificate_id",
+   "fieldtype": "Data",
+   "label": "Certificate ID"
+  },
+  {
+   "fieldname": "section_break_fnhs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "audit_trail",
+   "fieldtype": "Small Text",
+   "label": "Audit Trail"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-26 10:10:52.076807",
+ "modified": "2026-03-17 10:10:39.220332",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
@@ -53,6 +75,13 @@
   },
   {
    "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
@@ -61,13 +90,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Master Manager",
-   "select": 1,
    "write": 1
   },
   {

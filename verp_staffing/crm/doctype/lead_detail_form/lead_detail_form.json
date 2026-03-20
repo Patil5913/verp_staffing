@@ -7,20 +7,18 @@
  "field_order": [
   "authentication_section",
   "authentication_html",
+  "form_token",
   "agreement_section",
   "agreement_html",
-  "agreement_link",
   "consent_and_electronic_signature_confirmation_section",
   "signature_method",
   "signature",
   "signature_custom_html",
-  "signature_image",
   "column_break_reui",
   "my_electronic_signature_has_same_effect_as_handwritten",
   "i_consent_to_receive_sign_and_store_documents_electronically",
   "i_confirm_my_identity_and_signing_this_document_intentionally",
-  "audit_trail",
-  "certificate_id",
+  "signature_image",
   "personal_information_section",
   "surname",
   "first_name",
@@ -30,7 +28,6 @@
   "email",
   "personal_linkedin",
   "date_of_birth",
-  "sales_order",
   "educational_details_section",
   "educational_details",
   "past_experience_details_section",
@@ -331,11 +328,6 @@
    "label": "Consent and Electronic Signature Confirmation"
   },
   {
-   "fieldname": "audit_trail",
-   "fieldtype": "Small Text",
-   "label": "Audit Trail"
-  },
-  {
    "default": "Draw",
    "fieldname": "signature_method",
    "fieldtype": "Select",
@@ -346,12 +338,6 @@
    "fieldname": "signature_custom_html",
    "fieldtype": "Data",
    "label": "Signature Upload HTML"
-  },
-  {
-   "fieldname": "signature_image",
-   "fieldtype": "Link",
-   "label": "Signature Image",
-   "options": "File"
   },
   {
    "fieldname": "files_custom_html",
@@ -374,12 +360,6 @@
    "fieldtype": "Data"
   },
   {
-   "fieldname": "agreement_link",
-   "fieldtype": "Link",
-   "label": "Agreement Link",
-   "options": "Agreement"
-  },
-  {
    "description": "NOTE: Provide country code with number.",
    "fieldname": "personal_phone_number",
    "fieldtype": "Data",
@@ -396,13 +376,6 @@
    "fieldtype": "Data"
   },
   {
-   "fieldname": "certificate_id",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Certificate ID",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_odpr",
    "fieldtype": "Section Break"
   },
@@ -413,11 +386,15 @@
    "options": "Doctype Reference"
   },
   {
-   "fieldname": "sales_order",
+   "fieldname": "form_token",
+   "fieldtype": "Small Text",
+   "label": "Form Token"
+  },
+  {
+   "fieldname": "signature_image",
    "fieldtype": "Link",
-   "label": "Sales Order",
-   "options": "Sales Order",
-   "unique": 1
+   "label": "Signature Image",
+   "options": "File"
   },
   {
    "fieldname": "after_placement_data_section",
@@ -470,10 +447,6 @@
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
    "role": "Sales Manager"
   },
   {
@@ -510,7 +483,11 @@
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead"
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor"
   },
   {
    "read": 1,
@@ -542,6 +519,22 @@
   },
   {
    "read": 1,
+   "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
    "role": "Technical Coordinator"
   },
   {
@@ -551,10 +544,6 @@
   {
    "read": 1,
    "role": "Support Person"
-  },
-  {
-   "read": 1,
-   "role": "Onboarding Person"
   },
   {
    "read": 1,
