@@ -71,7 +71,6 @@
   {
    "fieldname": "title",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Title",
    "unique": 1
   },
@@ -157,7 +156,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-15 12:19:20.856217",
+ "modified": "2026-03-20 11:50:24.570778",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -170,11 +169,11 @@
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Master Manager"
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Sales Person"
   },
   {
    "create": 1,
@@ -189,10 +188,25 @@
    "write": 1
   },
   {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
    "read": 1,
    "role": "Recruiter",
    "select": 1,
@@ -200,8 +214,12 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Marketing Mentor",
+   "report": 1,
+   "role": "marketing Master Manager",
    "select": 1,
    "share": 1,
    "write": 1
@@ -209,8 +227,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Team Lead",
-   "role": "Marketing Team Lead",
+   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
   },
@@ -218,25 +235,6 @@
    "create": 1,
    "read": 1,
    "role": "Marketing Manager",
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Senior Recruiter",
    "select": 1,
    "write": 1
   }

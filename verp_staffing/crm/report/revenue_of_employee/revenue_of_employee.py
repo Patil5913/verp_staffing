@@ -1,7 +1,7 @@
 import frappe
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from verp_staffing.marketing.api.utils import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names
 
 
 def execute(filters=None):

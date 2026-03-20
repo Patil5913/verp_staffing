@@ -23,7 +23,6 @@ frappe.ui.form.on("Opportunity", {
 	},
 
 	refresh(frm) {
-		frm.trigger("opportunity_from");
 		window.render_notes(frm);
 		window.render_activity_section(frm);
 		if (frm.doc.status == "Converted") {

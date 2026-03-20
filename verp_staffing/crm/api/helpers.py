@@ -4,16 +4,30 @@ from frappe.desk.reportview import get as original_get
 
 # get employee name from user
 def get_employee_name(user):
-    return frappe.db.get_value(
-        "Employee",
-        {"user": user},
-        "name",
-    )
+    try:
+        return frappe.db.get_value("Employee", {"user": user}, "name")
+    except Exception:
+        return None
 
 
 # get user from employee
-def get_user(employee):
-    return frappe.db.get_value("Employee", employee, "user")
+def get_user(employee_name):
+    if not employee_name:
+        return None
+
+    # Try common field names for User link on Employee doctype
+    # Check which field actually exists on your Employee doctype
+    for field in ["user", "user_id", "employee_user_id"]:
+        try:
+            user = frappe.db.get_value("Employee", employee_name, field)
+            if user:
+                # Verify this user exists in User doctype
+                if frappe.db.exists("User", user):
+                    return user
+        except Exception:
+            continue
+
+    return None
 
 
 # function to get all subordinate Employee names under root_employee
@@ -135,7 +149,7 @@ def get_allowed_leads(user):
     opp_leads = frappe.db.get_all(
         "Opportunity",
         filters={"opportunity_owner": ["in", users]},
-        pluck="party_name",
+        pluck="opportunity_from_lead",
     )
 
     return list(set(own_leads + opp_leads))
@@ -217,25 +231,52 @@ def get_allowed_leads(user):
 import json
 
 
+# def send_system_notification(
+#     *,
+#     user,
+#     subject,
+#     message,
+#     reference_doctype=None,
+#     reference_name=None,
+# ):
+#     frappe.get_doc(
+#         {
+#             "doctype": "Notification Log",
+#             "subject": subject,
+#             "email_content": message,
+#             "for_user": user,
+#             "document_type": reference_doctype,
+#             "document_name": reference_name,
+#             "type": "Alert",
+#         }
+#     ).insert(ignore_permissions=True)
+
+
 def send_system_notification(
-    *,
-    user,
-    subject,
-    message,
-    reference_doctype=None,
-    reference_name=None,
+    user, subject, message, reference_doctype=None, reference_name=None
 ):
-    frappe.get_doc(
+    # user here must be the User 'name' field (login id), not email
+    # Verify the user actually exists before inserting
+    if not frappe.db.exists("User", user):
+        frappe.log_error(
+            f"send_system_notification: User '{user}' not found, skipping notification.",
+            "Notification Error",
+        )
+        return
+
+    doc = frappe.get_doc(
         {
             "doctype": "Notification Log",
+            "for_user": user,
+            "from_user": frappe.session.user,
             "subject": subject,
             "email_content": message,
-            "for_user": user,
+            "type": "Alert",
             "document_type": reference_doctype,
             "document_name": reference_name,
-            "type": "Alert",
         }
-    ).insert(ignore_permissions=True)
+    )
+    doc.insert(ignore_permissions=True)
 
 
 def send_email(recipients, subject, message, attachments=None, now=None):

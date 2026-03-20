@@ -25,18 +25,6 @@ frappe.listview_settings["Lead"] = {
 			}
 		}, 50);
 	},
-	// get_indicator(doc) {
-	//     const map = {
-	//         "Won": "green",
-	//         "Interested": "blue",
-	//         "Lead": "gray",
-	//         "Lost": "red"
-	//     };
-
-	//     let color = map[doc.status] || "gray";
-
-	//     return [__(doc.status), color, `status,=,${doc.status}`];
-	// },
 	get_indicator: function (doc) {
 		const status_colors = {
 			Won: "green",
@@ -76,10 +64,11 @@ function open_custom_dialog() {
 		primary_action_label: "Save",
 
 		primary_action(values) {
-			// 🔥 THIS WILL STOP EXECUTION IF INVALID
-			validate_phone(values.personal_phone_number, "Phone Number");
+            
+            if (values.personal_phone_number){
+                validate_phone(values.personal_phone_number, "Phone Number");
+            }
 
-			// ✅ Only runs if validation passes
 			let doc = {
 				doctype: "Lead",
 				name1: values.name1,

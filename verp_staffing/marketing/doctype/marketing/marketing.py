@@ -4,7 +4,7 @@
 from unittest import result
 import frappe
 from frappe.model.document import Document
-from verp_staffing.marketing.api.utils import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names
 import json
 from frappe.utils import now_datetime
 

@@ -7,5 +7,6 @@ frappe.ui.form.on("Technical Other Services", {
 		window.fetch_and_render_resume(frm);
 		window.add_forward_button(frm);
 		window.render_activity_section(frm);
+		window.setup_service_permission_button(frm);
 	},
 });

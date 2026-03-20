@@ -7,6 +7,7 @@ frappe.ui.form.on("Marketing Other Services", {
 		window.fetch_and_render_resume(frm);
 		window.render_notes(frm);
 		window.render_activity_section(frm);
+		window.setup_service_permission_button(frm);
 	},
 });
 

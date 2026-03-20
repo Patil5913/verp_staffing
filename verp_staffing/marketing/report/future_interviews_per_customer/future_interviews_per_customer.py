@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.utils import getdate
-from verp_staffing.marketing.api.utils import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names
 
 def execute(filters=None):
     filters = filters or {}

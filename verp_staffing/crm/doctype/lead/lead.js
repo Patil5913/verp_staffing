@@ -38,36 +38,50 @@ frappe.ui.form.on("Lead", {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
 		apply_field_readonly_for_lead_owner(frm);
-		
-		if (frm.doc.status === "Opportunity" && !frm.is_new()) {
-			// Get current user's employee to decide which buttons to show
-			frappe.call({
-				method: "frappe.client.get_value",
-				args: {
-					doctype: "Employee",
-					filters: { user: frappe.session.user },
-					fieldname: "name",
-				},
-				callback: function (r) {
-					const current_employee = r.message && r.message.name;
-					const is_lead_owner = current_employee === frm.doc.lead_owner;	
 
-					if (is_lead_owner) {
-						// Lead Owner sees "Request for Update"
-						frm.add_custom_button(__("Request for Update"), () => {
-							open_request_for_update_dialog(frm);
-						});
-					} else {
-						// Manager / higher person sees "Give Permission" if pending
-						check_and_show_give_permission_button(frm);
-					}
-				},
-			});
-		} else if (frm.doc.status !== "Opportunity") {
-			frm.add_custom_button(("Create Opportunity"), () => {
-				open_create_opportunity_dialog(frm);
-			});
-		}
+		if (frm.is_new()) return;
+
+		// Fetch status and lead_owner from DB directly
+		frappe.call({
+			method: "frappe.client.get_value",
+			args: {
+				doctype: "Lead",
+				filters: { name: frm.doc.name },
+				fieldname: ["status", "lead_owner"],
+			},
+			callback: function (lead_res) {
+				if (!lead_res.message) return;
+
+				const { status, lead_owner } = lead_res.message;
+
+				if (status === "Opportunity") {
+					frappe.call({
+						method: "frappe.client.get_value",
+						args: {
+							doctype: "Employee",
+							filters: { user: frappe.session.user },
+							fieldname: "name",
+						},
+						callback: function (r) {
+							const current_employee = r.message && r.message.name;
+							const is_lead_owner = current_employee === lead_owner;
+
+							if (is_lead_owner) {
+								frm.add_custom_button(__("Request for Update"), () => {
+									open_request_for_update_dialog(frm);
+								});
+							} else {
+								check_and_show_give_permission_button(frm);
+							}
+						},
+					});
+				} else {
+					frm.add_custom_button("Create Opportunity", () => {
+						open_create_opportunity_dialog(frm);
+					});
+				}
+			},
+		});
 
 		if (frm.is_new()) {
 			frm.add_custom_button("Show Form Tour", () => {
@@ -146,7 +160,7 @@ frappe.ui.form.on("Lead", {
 	},
 });
 
-// this code is unnessary if allthing working right so remove it 
+// this code is unnessary if allthing working right so remove it
 
 // frappe.ui.form.on("Lead Course", {
 // 	start_date(frm, cdt, cdn) {
@@ -163,11 +177,10 @@ frappe.ui.form.on("Lead", {
 // 	},
 // });
 
-	
 function open_request_for_update_dialog(frm) {
 	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.check_permission_status",
-		args: { lead_name: frm.doc.name },
+		method: "verp_staffing.crm.api.permission_request._check_permission_status",
+		args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
 		callback(r) {
 			const status = r.message && r.message.status;
 
@@ -218,9 +231,10 @@ function open_request_for_update_dialog(frm) {
 				primary_action(values) {
 					dialog.hide();
 					frappe.call({
-						method: "verp_staffing.crm.api.permission_request.request_update_permission",
+						method: "verp_staffing.crm.api.permission_request._request_permission",
 						args: {
-							lead_name: frm.doc.name,
+							ref_doctype: frm.doctype,
+							ref_name: frm.doc.name,
 							reason: values.reason,
 						},
 						// freeze: true,
@@ -247,69 +261,87 @@ function open_request_for_update_dialog(frm) {
 	});
 }
 
-
 function check_and_show_give_permission_button(frm) {
 	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.check_pending_requests_for_manager",
-		args: { lead_name: frm.doc.name },
+		method: "verp_staffing.crm.api.permission_request._check_pending_for_manager",
+		args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
 		callback(r) {
-			if (!r.message) return;
+			if (!r.message || !r.message.has_pending) return;
 
+			const { requested_by, reason } = r.message;
 
+			$(`button:contains("Give Permission")`).closest(".btn-group").remove();
 
-			if (r.message.has_pending) {
-				const { requested_by, reason } = r.message;
-
-				$(`button:contains("Give Permission")`).closest(".btn-group").remove();
-
-				frm.add_custom_button(("Give Permission"), () => {
-					frappe.confirm(
-						`
-						<p>
-							<b>${requested_by}</b> has requested permission
-							to update the email field on this Lead.
-						</p>
-						<p><b>Reason:</b> ${reason}</p>
-						<p>
-							Permission will be valid for <b>${r.message.expires_in_minutes} minutes</b> only.
-							Do you want to grant it?
-						</p>
-						
-						`,
-						() => {
-							frappe.call({
-								method: "verp_staffing.crm.api.permission_request.give_permission",
-								args: { lead_name: frm.doc.name },
-								callback(res) {
-									if (res.message && res.message.status === "approved") {
-										frappe.show_alert(
-											{
-												message: __(
-													`Permission granted for ${res.message.expires_in_minutes} minutes. <b>${requested_by}</b> has been notified.`,
-												),
-												indicator: "green",
-											},
-											6,
-										);
-										frm.reload_doc();
-										$(`button:contains("Give Permission")`)
-											.closest(".btn-group")
-											.remove();
-									}
-								},
-							});
+			frm.add_custom_button(__("Give Permission"), () => {
+				// Dialog with Approve AND Decline
+				const perm_dialog = new frappe.ui.Dialog({
+					title: __("Permission Request"),
+					fields: [
+						{
+							fieldtype: "HTML",
+							fieldname: "request_info",
+							options: `
+                                <div style="padding: 10px 0;">
+                                    <p>
+                                        <b>${requested_by}</b> has requested permission
+                                        to update the email field on this Lead.
+                                    </p>
+                                    <p><b>Reason:</b> ${reason}</p>
+                                    <p>
+                                        If approved, permission will be valid for
+                                        <b>${r.message.expires_in_minutes} minutes</b> only.
+                                    </p>
+                                </div>
+                            `,
 						},
-					);
+					],
+					primary_action_label: __("Approve"),
+					primary_action() {
+						perm_dialog.hide();
+						frappe.call({
+							method: "verp_staffing.crm.api.permission_request._give_permission",
+							args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
+							callback(res) {
+								if (res.message && res.message.status === "approved") {
+									frappe.show_alert(
+										{
+											message: __(
+												`Permission granted for ${res.message.expires_in_minutes} minutes. <b>${requested_by}</b> has been notified.`,
+											),
+											indicator: "green",
+										},
+										6,
+									);
+									frm.reload_doc();
+								}
+							},
+						});
+					},
+					secondary_action_label: __("Decline"),
+					secondary_action() {
+						perm_dialog.hide();
+						frappe.call({
+							method: "verp_staffing.crm.api.permission_request._decline_permission",
+							args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
+							callback(res) {
+								if (res.message && res.message.status === "declined") {
+									frappe.show_alert(
+										{
+											message: __(
+												`Request declined. <b>${requested_by}</b> has been notified.`,
+											),
+											indicator: "red",
+										},
+										6,
+									);
+									frm.reload_doc();
+								}
+							},
+						});
+					},
 				});
-				// frm.reload_doc();
-				
-
-				// $btn.css({
-				// 	"background-color": "#ff9800",
-				// 	color: "white",
-				// 	"border-color": "#ff9800",
-				// });
-			}
+				perm_dialog.show();
+			});
 		},
 	});
 }
@@ -317,22 +349,102 @@ function check_and_show_give_permission_button(frm) {
 // make field read only after lead become opportunity
 
 function apply_field_readonly_for_lead_owner(frm) {
-	if (frm.doc.status !== "Opportunity") return;
+	if (frm.is_new()) return;
 
+	// Fetch lead_owner and status directly from DB
+	// because frm.doc may not have them loaded yet
 	frappe.call({
 		method: "frappe.client.get_value",
 		args: {
-			doctype: "Employee",
-			filters: { user: frappe.session.user },
-			fieldname: "name",
+			doctype: "Lead",
+			filters: { name: frm.doc.name },
+			fieldname: ["status", "lead_owner"],
 		},
-		callback: function (r) {
-			if (r.message && r.message.name === frm.doc.lead_owner) {
-				frm.set_df_property("email", "read_only", 1);
-				frm.refresh_field("email");
-				frm.set_df_property("source", "read_only", 1);
-				frm.refresh_field("source");
-			}
+		callback: function (lead_res) {
+			if (!lead_res.message) return;
+
+			const { status, lead_owner } = lead_res.message;
+
+			if (status !== "Opportunity") return;
+
+			// Check if logged-in user is the lead owner
+			frappe.call({
+				method: "frappe.client.get_value",
+				args: {
+					doctype: "Employee",
+					filters: { user: frappe.session.user },
+					fieldname: "name",
+				},
+				callback: function (emp_res) {
+					if (!emp_res.message) return;
+					if (emp_res.message.name !== lead_owner) return;
+
+					// Lead owner — always lock source
+					frm.set_df_property("source", "read_only", 1);
+					frm.refresh_field("source");
+
+					// Check permission status for email
+					frappe.call({
+						method: "verp_staffing.crm.api.permission_request._check_permission_status",
+						args: {
+							ref_doctype: "Lead",
+							ref_name: frm.doc.name,
+						},
+						callback: function (perm_res) {
+							const perm = perm_res.message && perm_res.message.status;
+
+							if (perm === "approved") {
+								frm.set_df_property("email", "read_only", 0);
+								frm.refresh_field("email");
+								frappe.show_alert(
+									{
+										message: __(
+											"Permission granted. You can now update the email field.",
+										),
+										indicator: "green",
+									},
+									5,
+								);
+							} else {
+								frm.set_df_property("email", "read_only", 1);
+								frm.refresh_field("email");
+
+								if (perm === "pending") {
+									frappe.show_alert(
+										{
+											message: __(
+												"Email is locked. Your permission request is pending manager approval.",
+											),
+											indicator: "orange",
+										},
+										5,
+									);
+								} else if (perm === "declined") {
+									frappe.show_alert(
+										{
+											message: __(
+												"Email is locked. Your permission request was declined. Please request again.",
+											),
+											indicator: "red",
+										},
+										5,
+									);
+								} else if (perm === "expired") {
+									frappe.show_alert(
+										{
+											message: __(
+												"Email is locked. Your permission has expired. Please request again.",
+											),
+											indicator: "orange",
+										},
+										5,
+									);
+								}
+							}
+						},
+					});
+				},
+			});
 		},
 	});
 }
@@ -349,7 +461,7 @@ function open_create_opportunity_dialog(frm) {
 		method: "frappe.client.get_list",
 		args: {
 			doctype: "Opportunity",
-			filters: {opportunity_from_lead : frm.doc.name },
+			filters: { opportunity_from_lead: frm.doc.name },
 			limit_page_length: 1,
 		},
 		callback: function (r) {
@@ -414,17 +526,17 @@ function create_opportunity(frm, owner) {
 		args: {
 			doc: {
 				doctype: "Opportunity",
-				opportunity_from_lead : frm.doc.name,
+				opportunity_from_lead: frm.doc.name,
 				opportunity_owner: owner,
-				name1: frm.doc.name,
+				name1: frm.doc.name1,
 			},
 		},
 		callback: function (response) {
 			frm.reload_doc();
 			if (!response.exc && response.message) {
 				frappe.msgprint({
-					title: ("Success"),
-					message: ("Opportunity Created"),
+					title: "Success",
+					message: "Opportunity Created",
 					indicator: "green",
 				});
 				frm.reload_doc();

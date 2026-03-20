@@ -1257,3 +1257,219 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 			frm.set_df_property("resume", "options", html);
 		});
 };
+
+// ------------------- request for update button ------------------------
+
+window.setup_service_permission_button = function (frm) {
+	if (!frm.doc.customer || !frm.doc.name) return;
+
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request.get_service_form_permission_status",
+		args: {
+			customer_name: frm.doc.customer,
+			service_doctype: frm.doctype,
+			service_name: frm.doc.name,
+		},
+		callback: function (r) {
+			if (!r.message) return;
+
+			const { is_owner, permission } = r.message;
+
+			if (!is_owner) {
+				window._service_show_give_permission(frm);
+				return;
+			}
+
+			if (permission === "pending") {
+				frappe.show_alert(
+					{
+						message: __("Your update request is pending manager approval."),
+						indicator: "orange",
+					},
+					5,
+				);
+				return;
+			}
+
+			if (permission === "approved") return;
+
+			frm.add_custom_button(__("Request for Update"), () => {
+				window._service_open_request_dialog(frm);
+			});
+		},
+	});
+};
+
+window._service_open_request_dialog = function (frm) {
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request._check_permission_status",
+		args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
+		callback(r) {
+			const status = r.message && r.message.status;
+
+			if (status === "pending") {
+				frappe.show_alert(
+					{ message: __("Your request is already pending."), indicator: "orange" },
+					5,
+				);
+				return;
+			}
+			if (status === "approved") {
+				frappe.show_alert(
+					{ message: __("You already have an active permission."), indicator: "green" },
+					5,
+				);
+				return;
+			}
+			if (status === "expired") {
+				frappe.show_alert(
+					{
+						message: __(
+							"Your previous permission has expired. You can request again.",
+						),
+						indicator: "orange",
+					},
+					5,
+				);
+			}
+			if (status === "declined") {
+				frappe.show_alert(
+					{
+						message: __(
+							"Your previous request was declined. You can submit a new request.",
+						),
+						indicator: "red",
+					},
+					5,
+				);
+			}
+
+			const dialog = new frappe.ui.Dialog({
+				title: __("Request Permission to Update"),
+				fields: [
+					{
+						fieldname: "reason",
+						fieldtype: "Small Text",
+						label: __("Reason for Update"),
+						reqd: 1,
+						description: __(
+							"Explain why you need to update this candidate's details.",
+						),
+					},
+				],
+				primary_action_label: __("Send Request"),
+				primary_action(values) {
+					dialog.hide();
+					frappe.call({
+						method: "verp_staffing.crm.api.permission_request._request_permission",
+						args: {
+							ref_doctype: "Customer",
+							ref_name: frm.doc.customer,
+							reason: values.reason,
+						},
+						callback(res) {
+							if (res.message && res.message.status === "success") {
+								frappe.show_alert(
+									{
+										message: __(
+											`Request sent to manager <b>${res.message.manager_employee}</b>. You will be notified when permission is granted.`,
+										),
+										indicator: "blue",
+									},
+									7,
+								);
+								frm.reload_doc();
+							}
+						},
+					});
+				},
+			});
+			dialog.show();
+		},
+	});
+};
+
+window._service_show_give_permission = function (frm) {
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request.check_pending_requests_for_customer_manager",
+		args: { customer_name: frm.doc.customer },
+		callback(r) {
+			$(`button:contains("Give Permission")`).closest(".btn-group").remove();
+			if (!r.message || !r.message.has_pending) return;
+
+			const { requested_by, reason } = r.message;
+
+			frappe.call({
+				method: "verp_staffing.crm.api.permission_request._check_permission_status",
+				args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
+				callback(perm_res) {
+					if (perm_res.message && perm_res.message.status === "approved") return;
+
+					frm.add_custom_button(__("Give Permission"), () => {
+						const perm_dialog = new frappe.ui.Dialog({
+							title: __("Permission Request"),
+							fields: [
+								{
+									fieldtype: "HTML",
+									fieldname: "request_info",
+									options: `
+                                    <div style="padding:10px 0;">
+                                        <p><b>${requested_by}</b> has requested permission to update this candidate's details.</p>
+                                        <p><b>Reason:</b> ${reason}</p>
+                                        <p>Permission valid for <b>${r.message.expires_in_minutes} minutes</b>.</p>
+                                    </div>
+                                `,
+								},
+							],
+							primary_action_label: __("Approve"),
+							primary_action() {
+								perm_dialog.hide();
+								frappe.call({
+									method: "verp_staffing.crm.api.permission_request._give_permission",
+									args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
+									callback(res) {
+										if (res.message && res.message.status === "approved") {
+											frappe.show_alert(
+												{
+													message: __(
+														`Permission granted. <b>${requested_by}</b> has been notified.`,
+													),
+													indicator: "green",
+												},
+												6,
+											);
+											frm.reload_doc();
+										}
+									},
+								});
+							},
+							secondary_action_label: __("Decline"),
+							secondary_action() {
+								perm_dialog.hide();
+								frappe.call({
+									method: "verp_staffing.crm.api.permission_request._decline_permission",
+									args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
+									callback(res) {
+										if (res.message && res.message.status === "declined") {
+											frappe.show_alert(
+												{
+													message: __(
+														`Request declined. <b>${requested_by}</b> has been notified.`,
+													),
+													indicator: "red",
+												},
+												6,
+											);
+											frm.reload_doc();
+										}
+									},
+								});
+							},
+						});
+						perm_dialog.show();
+					});
+				},
+			});
+		},
+	});
+};

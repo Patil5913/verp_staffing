@@ -437,6 +437,7 @@
  "permissions": [
   {
    "read": 1,
+   "role": "marketing Master Manager"
    "role": "Sales Master Manager"
   },
   {
@@ -445,11 +446,18 @@
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead"
+   "role": "Sales Master Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "write": 1
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Marketing Manager"
   },
   {
    "create": 1,
@@ -465,7 +473,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Mentor"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -505,15 +513,11 @@
   },
   {
    "read": 1,
-   "role": "Resume Person"
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager"
-  },
-  {
-   "read": 1,
    "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
   },
   {
    "read": 1,

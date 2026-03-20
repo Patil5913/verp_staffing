@@ -37,11 +37,53 @@ frappe.ui.form.on("Customer", {
 
 		if (!frm.is_new()) {
 			show_sales_order(frm);
+
+			// Single call to check ownership + candidate form + permission
+			frappe.call({
+				method: "verp_staffing.crm.api.permission_request.get_lead_detail_form_lock_status",
+				args: { customer_name: frm.doc.name },
+				callback: function (r) {
+					if (!r.message) return;
+
+					const { is_owner, candidate_form_required, permission } = r.message;
+
+					if (!candidate_form_required) {
+						// No service requires candidate form — no buttons needed
+						return;
+					}
+
+					if (is_owner) {
+						// Hide button when pending or approved
+						if (permission === "pending") {
+							frappe.show_alert(
+								{
+									message: __(
+										"Your update request is pending manager approval.",
+									),
+									indicator: "orange",
+								},
+								5,
+							);
+							return;
+						}
+						if (permission === "approved") return;
+
+						// Show button for: none, expired, declined
+						frm.add_custom_button(__("Request for Update"), () => {
+							open_customer_request_for_update_dialog(frm);
+						});
+					} else {
+						// Not owner — check if manager has pending request to approve
+						check_and_show_give_permission_button_customer(frm);
+					}
+				},
+			});
 		}
 
 		// clear previous content immediately
 		if (frm.fields_dict.customer_details) {
 			frm.fields_dict.customer_details.$wrapper.html(
+				"<p style='color:#888'>Loading history...</p>",
 				"<p style='color:#888'>Loading history...</p>",
 			);
 		}
@@ -60,6 +102,8 @@ frappe.ui.form.on("Customer", {
 					console.error("Empty response");
 					return;
 				}
+
+				console.log(r.message);
 
 				render_customer_history(frm, r.message);
 			},
@@ -135,6 +179,7 @@ frappe.ui.form.on("Customer", {
 			frm.set_df_property("party_name", "label", frm.doc.customer_from);
 		}
 		set_customer_owner(frm);
+		set_customer_owner(frm);
 	},
 
 	party_name: function (frm) {
@@ -181,14 +226,23 @@ function set_customer_owner(frm) {
 	// Case 1: Opportunity selected
 	if (frm.doc.customer_from === "Opportunity" && frm.doc.party_name) {
 		frappe.db.get_value("Opportunity", frm.doc.party_name, "opportunity_owner").then((r) => {
+			console.log("entered opp");
+			console.log(frm.doc.party_name);
+
 			if (!r.message || !r.message.opportunity_owner) return;
 
+			console.log("exists");
+			console.log(r.message.opportunity_owner);
+
 			frm.set_value("customer_owner", r.message.opportunity_owner);
+			console.log("customer_owner", frm.doc.customer_owner);
 		});
 	}
 
 	// Case 2: Lead selected
 	else if (frm.doc.customer_from === "Lead" && frm.doc.party_name) {
+		console.log("customer from lead ");
+
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {

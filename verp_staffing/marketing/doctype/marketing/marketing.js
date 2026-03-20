@@ -7,8 +7,6 @@ frappe.ui.form.on("Marketing", {
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 
-		handle_assign_to_permission(frm);
-
 		frappe.call({
 			method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing",
 			args: {
@@ -124,6 +122,7 @@ frappe.ui.form.on("Marketing", {
 		if (!frm.is_new()) {
 			frm.set_df_property("customer", "read_only", 1);
 		}
+		window.setup_service_permission_button(frm);
 
 		// to display the interview list
 		render_interview_list(frm);
@@ -280,7 +279,6 @@ function render_interview_list(frm) {
 		},
 	});
 }
-
 
 frappe.ui.form.on("Job Application Count", {
 	job_application_count_add(frm, cdt, cdn) {

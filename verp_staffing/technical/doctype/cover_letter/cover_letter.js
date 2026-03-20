@@ -37,5 +37,6 @@ frappe.ui.form.on("Cover Letter", {
 				"old_resume",
 			],
 		});
+		window.setup_service_permission_button(frm);
 	},
 });
