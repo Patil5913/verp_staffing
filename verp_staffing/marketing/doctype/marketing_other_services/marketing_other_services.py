@@ -24,11 +24,13 @@ class MarketingOtherServices(Document):
 
         department = parents[0].parent
         serice_key = service.strip().lower()
-        stage[serice_key] = {
+        if serice_key not in stage:
+            stage[serice_key] = []
+        stage[serice_key].append({
             "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
+            "timestamp": str(now_datetime())
+        })
+        
         frappe.db.set_value(
             "Customer",
             customer,

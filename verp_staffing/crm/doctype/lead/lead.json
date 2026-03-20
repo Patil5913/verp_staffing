@@ -93,7 +93,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 17:44:02.667525",
+ "modified": "2026-03-16 10:43:48.809836",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -108,8 +108,14 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Lead Team Lead",
+   "report": 1,
+   "role": "Lead Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   },
   {
@@ -127,25 +133,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Lead Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Lead Manager",
+   "role": "Lead Team Lead",
    "write": 1
   },
   {
@@ -163,7 +151,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Lead Manager",
    "write": 1
   },
   {
@@ -173,14 +161,26 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "report": 1,
-   "role": "_show_sales"
+   "role": "Sales Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "write": 1
   },
   {
    "read": 1,
    "report": 1,
    "role": "_show_lead"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_sales"
   },
   {
    "create": 1,
@@ -203,5 +203,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "name1"
+ "title_field": "name1",
+ "track_changes": 1
 }

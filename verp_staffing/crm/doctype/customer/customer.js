@@ -42,7 +42,7 @@ frappe.ui.form.on("Customer", {
 		if (!frm.doc.name) return;
 
 		frappe.call({
-			method: "verp_staffing.crm.doctype.customer.customer.get_customer_history",
+			method: "verp_staffing.www.customer.get_customer_history",
 			args: {
 				customer: frm.doc.name,
 			},
@@ -1285,8 +1285,8 @@ function render_technical_panel(frm, data) {
                 <h4> Services : ${item.name}</h4>
                 <p><strong>Status:</strong> ${status_html}</p>
                 <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
-					item.assign_to || "-",
-				)}</p>
+			item.assign_to || "-",
+		)}</p>
                 <p class="text-muted">
                     Last Updated: ${frappe.datetime.str_to_user(item.last_updated)}
                 </p>
@@ -1361,67 +1361,533 @@ function get_status_badge(status) {
 	return `<span class="status-badge status-neutral">${frappe.utils.escape_html(status || "-")}</span>`;
 }
 
-function inject_status_badge_css() {}
+function inject_status_badge_css() { }
 
 function render_customer_history(frm, data) {
 	let html = "";
 
-	// SOURCE (Lead / Opportunity)
 
-	if (data.source) {
-		html += `
-		<div style="padding:15px;border-left:4px solid #5e64ff;margin-bottom:15px;">
-			<h4>${data.source.type} Created</h4>
-			<p><b>Name:</b> ${data.source.name}</p>
-			<p><b>Owner:</b> ${data.source.owner}</p>
-			<p><b>Source:</b> ${data.source.source || "-"}</p>
-			<p><b>Created On:</b> ${frappe.datetime.str_to_user(data.source.created_on)}</p>
-		`;
+	// ============================
+	// COMMON STYLES
+	// ============================
 
-		if (data.source.sales_stage) {
-			html += `<p><b>Sales Stage:</b> ${data.source.sales_stage}</p>`;
-		}
+	const card = `
+		border:1px solid #e5e7eb;
+		border-radius:10px;
+		padding:16px;
+		margin-bottom:18px;
+		background:#fff;
+		box-shadow:0 1px 2px rgba(0,0,0,0.05);
+	`;
 
-		html += `</div>`;
-	}
+	const table = `
+		width:100%;
+		border-collapse:collapse;
+		font-size:13px;
+	`;
 
+	const th = `
+		padding:8px;
+		text-align:left;
+		background:#f8fafc;
+		color:#475569;
+		font-weight:500;
+	`;
+
+	const td = `
+		padding:8px;
+		border-top:1px solid #f1f5f9;
+		color:#334155;
+	`;
+
+
+
+	// ============================
 	// CUSTOMER CREATION
+	// ============================
 
 	html += `
-	<div style="padding:15px;border-left:4px solid #28a745;margin-bottom:15px;">
-		<h4>Customer Created</h4>
+	<div style="${card}">
+
 		<p><b>Customer:</b> ${data.customer.customer_name}</p>
+
 		<p><b>Owner:</b> ${data.customer.owner}</p>
-		<p><b>Created On:</b> ${frappe.datetime.str_to_user(data.customer.created_on)}</p>
+
 	</div>
 	`;
 
-	// DEPARTMENT HISTORY
 
-	if (data.departments && data.departments.length) {
-		data.departments.forEach((dept) => {
-			html += `
-			<div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
-				<h4>${dept.department} Department</h4>
-				<p><b>Status:</b> ${dept.status}</p>
-				<p><b>Assigned To:</b> ${dept.assign_to || "-"}</p>
-				<p><b>Created On:</b> ${frappe.datetime.str_to_user(dept.created_on)}</p>
-			`;
 
-			if (dept.assign_history && dept.assign_history.length) {
-				html += `<div style="margin-top:10px;"><b>Employee Assignment Flow</b></div>`;
+	// ============================
+	// SALES ORDER
+	// ============================
 
-				dept.assign_history.forEach((flow) => {
+	if (data.departments?.["Sales Order"]) {
+
+		let records = data.departments["Sales Order"];
+
+		html += `
+		<div style="${card}">
+
+			<h4 style="margin-bottom:10px;">Sales Order</h4>
+
+			<table style="${table}">
+
+				<thead>
+
+					<tr>
+						<th style="${th}">#</th>
+						<th style="${th}">ID</th>
+						<th style="${th}">Agreement</th>
+					</tr>
+
+				</thead>
+
+				<tbody>
+
+					${records.map((so, i) => `
+
+						<tr>
+
+							<td style="${td}">
+								${i + 1}
+							</td>
+
+							<td style="${td}">
+								<a
+									href="/app/sales-order/${so.id}"
+									target="_blank"
+									style="color:#0ea5e9;font-weight:500;text-decoration:none;"
+								>
+									${so.id}
+								</a>
+							</td>
+
+							<td style="${td}">
+								${so.agreement || "-"}
+							</td>
+
+						</tr>
+
+					`).join("")}
+
+				</tbody>
+
+			</table>
+
+		</div>
+		`;
+
+	}
+
+
+
+	// ============================
+	// OTHER DEPARTMENTS
+	// ============================
+
+	if (data.departments) {
+
+		Object.keys(data.departments).forEach((dept_name) => {
+
+			if (dept_name === "Sales Order") return;
+
+			let records = data.departments[dept_name];
+
+			html += `<div style="${card}">`;
+
+			html += `<h4 style="margin-bottom:10px;">${dept_name}</h4>`;
+
+
+			records.forEach((dept) => {
+
+
+
+				// ============================
+				// NORMAL INFO
+				// ============================
+
+				if (dept.department !== "Interview") {
+
 					html += `
-					<p style="margin-left:10px;">
-						${flow.from} → ${flow.to}
-						(${frappe.datetime.str_to_user(flow.timestamp)})
-					</p>
+
+					<div style="margin-bottom:12px;">
+
+						<p>
+
+							<a
+								href="/app/${dept.department
+									.toLowerCase()
+									.replace(/\s+/g, "-")}/${dept.id}"
+
+								target="_blank"
+
+								style="color:#0ea5e9;font-weight:500;text-decoration:none;"
+							>
+
+								${dept.id}
+
+							</a>
+
+						</p>
+
+
+						<p style="color:#64748b;">
+							Status: ${dept.status || "-"}
+						</p>
+
+						<p style="color:#64748b;">
+							Assigned: ${dept.assign_to || "-"}
+						</p>
+
+
+						${
+							dept.resume
+								? `
+									<p>
+										<a
+											href="${dept.resume}"
+											target="_blank"
+											style="color:#0ea5e9;"
+										>
+											View Resume
+										</a>
+									</p>
+								  `
+								: ""
+						}
+
+					</div>
+
 					`;
-				});
-			}
+
+				}
+
+
+
+				// ============================
+				// SESSION TABLE
+				// ============================
+
+				if (dept.session_details?.length) {
+
+					html += `
+
+					<table style="${table}">
+
+						<thead>
+
+							<tr>
+								<th style="${th}">#</th>
+								<th style="${th}">Duration</th>
+								<th style="${th}">Date</th>
+								<th style="${th}">Projects</th>
+								<th style="${th}">Quality</th>
+							</tr>
+
+						</thead>
+
+						<tbody>
+
+							${dept.session_details.map((row, i) => `
+
+								<tr>
+
+									<td style="${td}">${i + 1}</td>
+
+									<td style="${td}">
+										${row.session_duration_in_hour || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.date || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.projects || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.quality || "-"}
+									</td>
+
+								</tr>
+
+							`).join("")}
+
+						</tbody>
+
+					</table>
+
+					`;
+
+				}
+
+
+
+				// ============================
+				// JOB APPLICATION
+				// ============================
+
+				if (dept.job_application_count?.length) {
+
+					html += `
+
+					<table style="${table}">
+
+						<thead>
+
+							<tr>
+								<th style="${th}">#</th>
+								<th style="${th}">Small</th>
+								<th style="${th}">Large</th>
+								<th style="${th}">Total</th>
+								<th style="${th}">Date</th>
+							</tr>
+
+						</thead>
+
+						<tbody>
+
+							${dept.job_application_count.map((row, i) => `
+
+								<tr>
+
+									<td style="${td}">${i + 1}</td>
+
+									<td style="${td}">
+										${row.small_application || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.large_application || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.total_application || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.date || "-"}
+									</td>
+
+								</tr>
+
+							`).join("")}
+
+						</tbody>
+
+					</table>
+
+					`;
+
+				}
+
+
+
+				// ============================
+				// PROOF OF WORK
+				// ============================
+
+				if (dept.proof_of_work?.length) {
+
+					html += `
+
+					<table style="${table}">
+
+						<thead>
+
+							<tr>
+								<th style="${th}">#</th>
+								<th style="${th}">Date</th>
+								<th style="${th}">Description</th>
+								<th style="${th}">Attachment</th>
+							</tr>
+
+						</thead>
+
+						<tbody>
+
+							${dept.proof_of_work.map((row, i) => `
+
+								<tr>
+
+									<td style="${td}">${i + 1}</td>
+
+									<td style="${td}">
+										${row.date || "-"}
+									</td>
+
+									<td style="${td}">
+										${row.description || "-"}
+									</td>
+
+									<td style="${td}">
+
+										${
+											row.attachments
+												? `<a href="${row.attachments}" target="_blank" style="color:#0ea5e9;">View</a>`
+												: "-"
+										}
+
+									</td>
+
+								</tr>
+
+							`).join("")}
+
+						</tbody>
+
+					</table>
+
+					`;
+
+				}
+
+
+
+				// ============================
+				// INTERVIEW
+				// ============================
+
+				if (dept_name === "Interview") {
+
+					html += `
+
+					<div style="margin-top:10px;">
+
+						<div
+							style="
+								border:1px solid #e5e7eb;
+								border-radius:10px;
+								padding:14px;
+								background:#f9fafb;
+							"
+						>
+
+							<div
+								style="
+									display:flex;
+									justify-content:space-between;
+									margin-bottom:10px;
+								"
+							>
+
+								<a
+									href="/app/interview/${dept.id}"
+									target="_blank"
+									style="font-weight:600;color:#0ea5e9;"
+								>
+									${dept.id}
+								</a>
+
+
+								<span
+									style="
+										background:#e0f2fe;
+										padding:4px 10px;
+										border-radius:20px;
+										font-size:12px;
+									"
+								>
+									${dept.status || "-"}
+								</span>
+
+							</div>
+
+
+							<div style="color:#64748b;margin-bottom:8px;">
+								Company: ${dept.company || "-"} • Role: ${dept.role || "-"}
+							</div>
+
+
+							<table style="${table}">
+
+								<thead>
+
+									<tr>
+										<th style="${th}">#</th>
+										<th style="${th}">Round</th>
+										<th style="${th}">Date</th>
+										<th style="${th}">Type</th>
+										<th style="${th}">Interview</th>
+										<th style="${th}">Time</th>
+										<th style="${th}">Feedback</th>
+									</tr>
+
+								</thead>
+
+								<tbody>
+
+									${
+										dept.interview_rounds_table?.length
+
+										? dept.interview_rounds_table.map((r, i) => `
+
+											<tr>
+
+												<td style="${td}">${i + 1}</td>
+
+												<td style="${td}">
+													${r.round || "-"}
+												</td>
+
+												<td style="${td}">
+													${r.date || "-"}
+												</td>
+
+												<td style="${td}">
+													${r.type_of_interview || "-"}
+												</td>
+
+												<td style="${td}">
+													${r.date_of_interview || "-"}
+												</td>
+
+												<td style="${td}">
+													${r.time_of_interview || "-"}
+												</td>
+
+												<td style="${td}">
+													${r.feedback || "-"}
+												</td>
+
+											</tr>
+
+										`).join("")
+
+										: `
+											<tr>
+												<td colspan="7"
+													style="
+														text-align:center;
+														padding:10px;
+														color:#9ca3af;
+													"
+												>
+													No rounds
+												</td>
+											</tr>
+										`
+									}
+
+								</tbody>
+
+							</table>
+
+						</div>
+
+					</div>
+
+					`;
+
+				}
+
+
+			});
 
 			html += `</div>`;
+
 		});
 	}
 

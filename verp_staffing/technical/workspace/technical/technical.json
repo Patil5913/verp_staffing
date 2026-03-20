@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2026-03-15 13:31:53.972701",
+ "modified": "2026-03-16 10:39:37.279883",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical",
@@ -50,6 +50,9 @@
  "roles": [
   {
    "role": "_show_technical"
+  },
+  {
+   "role": "System Manager"
   }
  ],
  "sequence_id": 7.0,

@@ -30,7 +30,7 @@
  "is_hidden": 0,
  "label": "Marketings",
  "links": [],
- "modified": "2026-03-12 17:44:49.468384",
+ "modified": "2026-03-16 10:39:09.865553",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketings",
@@ -55,6 +55,9 @@
  "roles": [
   {
    "role": "_show_marketing"
+  },
+  {
+   "role": "System Manager"
   }
  ],
  "sequence_id": 23.0,

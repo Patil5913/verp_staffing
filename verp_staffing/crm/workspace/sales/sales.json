@@ -18,7 +18,7 @@
  "is_hidden": 0,
  "label": "Sales",
  "links": [],
- "modified": "2026-03-14 10:03:50.013615",
+ "modified": "2026-03-16 10:37:47.275182",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Sales",
@@ -39,6 +39,9 @@
  "roles": [
   {
    "role": "_show_sales"
+  },
+  {
+   "role": "System Manager"
   }
  ],
  "sequence_id": 25.0,

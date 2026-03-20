@@ -3,13 +3,13 @@
 <div
     style="max-width:400px;margin:100px auto;background:white;padding:30px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
 
-<h2>
-{% if otp_sent %}
-Verify OTP
-{% else %}
-Email Verification
-{% endif %}
-</h2>
+    <h2>
+        {% if otp_sent %}
+        Verify OTP
+        {% else %}
+        Email Verification
+        {% endif %}
+    </h2>
     {% if auth_error %}
     <p style="color:red;">{{ auth_error }}</p>
     {% endif %}
@@ -43,330 +43,6 @@ Email Verification
 
 {% else %}
 
-<!-- ================= TOGGLE BUTTONS ================= -->
-<div style="margin-bottom:25px;">
-
-    {% if current or past or upcoming %}
-    <button onclick="showSection('interviews')" id="btn-interviews">Interviews</button>
-    <button onclick="showSection('stage')" id="btn-stage" style="margin-left:10px;background:#6b7280;">History</button>
-    {% else %}
-    <!-- <button onclick="showSection('stage')" id="btn-stage">History</button> -->
-    {% endif %}
-
-</div>
-
-<script>
-    function showSection(section) {
-        document.getElementById("interviews-section").style.display = "none";
-        document.getElementById("stage-section").style.display = "none";
-
-        document.getElementById("btn-interviews").style.background = "#6b7280";
-        document.getElementById("btn-stage").style.background = "#6b7280";
-
-        if (section === "interviews") {
-            document.getElementById("interviews-section").style.display = "block";
-            document.getElementById("btn-interviews").style.background = "#2563eb";
-        } else {
-            document.getElementById("stage-section").style.display = "block";
-            document.getElementById("btn-stage").style.background = "#2563eb";
-        }
-    }
-</script>
-{% if current or past or upcoming %}
-<div id="interviews-section">
-
-    <h1 style="margin-bottom: 30px; font-weight: 600;">Customer Dashboard</h1>
-
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f8fafc;
-            color: #333;
-        }
-
-        .section {
-            margin-bottom: 55px;
-        }
-
-        .section h2 {
-            margin-bottom: 22px;
-            font-size: 20px;
-            font-weight: 600;
-            padding-left: 12px;
-        }
-
-        .current-section h2 {
-            border-left: 4px solid #16a34a;
-        }
-
-        .past-section h2 {
-            border-left: 4px solid #eab308;
-        }
-
-        .upcoming-section h2 {
-            border-left: 4px solid #2563eb;
-        }
-
-        .card {
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 22px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            border-left: 6px solid transparent;
-        }
-
-        .current-section .card {
-            border-left-color: #16a34a;
-        }
-
-        .past-section .card {
-            border-left-color: #eab308;
-        }
-
-        .upcoming-section .card {
-            border-left-color: #2563eb;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-        }
-
-        .card h3 {
-            margin-bottom: 8px;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .status {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 15px;
-        }
-
-        ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        li {
-            background: #f1f5f9;
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
-
-        .round-title {
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        textarea {
-            width: 50%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-            resize: vertical;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-        }
-
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            background: #2563eb;
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        button:hover {
-            background: #1e40af;
-        }
-
-        .feedback-box {
-            padding: 12px;
-            background: #ffffff;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            margin-top: 8px;
-        }
-
-        .service-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .service-pill {
-            background-color: #e0f2fe;
-            color: #0369a1;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            border: 1px solid #bae6fd;
-            transition: all 0.2s ease;
-        }
-
-        .service-pill:hover {
-            background-color: #2563eb;
-            color: white;
-            border-color: #2563eb;
-            cursor: default;
-        }
-    </style>
-
-    <!-- ================= CURRENT ================= -->
-    <div class="section current-section">
-        <h2>Current Interviews</h2>
-
-        {% for interview in current %}
-        <div class="card">
-            <h3>{{ interview.marketing_link }}</h3>
-            <div class="status">Status: {{ interview.status }}</div>
-
-            {% if interview.rounds %}
-            <ul>
-                {% for round in interview.rounds %}
-                <li>
-                    <div class="round-title">Round: {{ round.round }}</div>
-                    Interview Date: {{ round.date_of_interview }} <br>
-                    Type of Interview: {{ round.type_of_interview }} <br>
-                    Time of Interview: {{ round.time_of_interview }}
-
-                    {% if round.feedback and round.feedback.strip() %}
-                    <p><strong>Feedback:</strong></p>
-                    <div class="feedback-box">
-                        {{ round.feedback }}
-                    </div>
-                    {% else %}
-                    <form method="post" class="feedback-form">
-                        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
-                        <input type="hidden" name="action" value="save_feedback">
-                        <input type="hidden" name="round_name" value="{{ round.name }}">
-
-                        <label><strong>Feedback:</strong></label><br><br>
-
-                        <textarea name="feedback" rows="3"
-                            style="width:50%; padding:8px; border-radius:8px; border:1px solid #ccc;">
-        {{ round.feedback or '' }}
-    </textarea>
-
-                        <br><br>
-
-                        <button type="button" onclick="hideAfterSave(this)"
-                            style="padding:6px 12px; border:none; border-radius:6px; background:#007bff; color:white;">
-                            Save
-                        </button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No Rounds Available</p>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No ongoing interviews.</p>
-        {% endfor %}
-    </div>
-
-    <!-- ================= PAST ================= -->
-    <div class="section past-section">
-        <h2>Past Interviews</h2>
-        {% for interview in past %}
-        <div class="card">
-            <h3>{{ interview.marketing_link }}</h3>
-            <div class="status">Status: {{ interview.status }}</div>
-            {% if interview.rounds %}
-            <ul>
-                {% for round in interview.rounds %}
-                <li>
-                    <div class="round-title">Round: {{ round.round }}</div>
-                    Interview Date: {{ round.date_of_interview }} <br>
-                    Type of Interview: {{ round.type_of_interview }} <br>
-                    Time of Interview: {{ round.time_of_interview }} <br>
-                    {% if round.feedback and round.feedback.strip() %}
-                    <p><strong>Feedback:</strong></p>
-                    <div class="feedback-box">
-                        {{ round.feedback }}
-                    </div>
-                    {% else %}
-                    <form method="post" class="feedback-form">
-                        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
-                        <input type="hidden" name="action" value="save_feedback">
-                        <input type="hidden" name="round_name" value="{{ round.name }}">
-
-                        <label><strong>Feedback:</strong></label><br><br>
-
-                        <textarea name="feedback" rows="3"
-                            style="width:50%; padding:8px; border-radius:8px; border:1px solid #ccc;">
-        {{ round.feedback or '' }}
-    </textarea>
-
-                        <br><br>
-
-                        <button type="button" onclick="hideAfterSave(this)"
-                            style="padding:6px 12px; border:none; border-radius:6px; background:#007bff; color:white;">
-                            Save
-                        </button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No Rounds Available</p>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No past interviews.</p>
-        {% endfor %}
-    </div>
-
-    <!-- ================= UPCOMING ================= -->
-    <div class="section upcoming-section">
-        <h2>Upcoming Interviews</h2>
-        {% for interview in upcoming %}
-        <div class="card">
-            <h3>{{ interview.marketing_link }}</h3>
-            <div class="status">Status: {{ interview.status }}</div>
-            {% if interview.rounds %}
-            <ul>
-                {% for round in interview.rounds %}
-                <li>
-                    <div class="round-title">Round: {{ round.round }}</div>
-                    Interview Date: {{ round.date_of_interview }} <br>
-                    Type of Interview: {{ round.type_of_interview }} <br>
-                    Time of Interview: {{ round.time_of_interview }}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No Rounds Available</p>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No scheduled interviews.</p>
-        {% endfor %}
-    </div>
-
-</div>
-{% endif %}
 <script>
     function hideAfterSave(button) {
 
@@ -388,7 +64,7 @@ Email Verification
                 feedbackDiv.innerText = feedbackText;
 
                 const label = document.createElement("p");
-                label.innerHTML = "<strong>Feedback:</strong>";
+                // label.innerHTML = "<strong>Feedback:</strong>";
 
                 const parent = form.parentNode;
                 parent.innerHTML = "";
@@ -401,48 +77,458 @@ Email Verification
                 console.error(error);
             });
     }
+
+    let currentButton = null;
+
+    function openFeedbackDialog(roundName, button) {
+
+        currentButton = button;
+
+        document.getElementById("feedbackDialog").style.display = "flex";
+
+        document.getElementById("roundNameInput").value = roundName;
+
+    }
+
+    function closeFeedbackDialog() {
+
+        document.getElementById("feedbackDialog").style.display = "none";
+
+    }
+
+    function saveDialogFeedback() {
+
+        const form = document.getElementById("feedbackForm");
+
+        const formData = new FormData(form);
+
+        fetch(window.location.href, {
+            method: "POST",
+            body: formData
+        })
+            .then(res => res.text())
+            .then(() => {
+
+                const textarea =
+                    form.querySelector("textarea");
+
+                const text = textarea.value;
+
+                const td =
+                    currentButton.parentNode;
+
+                td.innerHTML =
+                    "<div style='background:#f8fafc;padding:6px;border-radius:6px;'>"
+                    + text +
+                    "</div>";
+
+                closeFeedbackDialog();
+
+            });
+
+    }
 </script>
+<div id="feedbackDialog" style="display:none;
+            position:fixed;
+            top:0;
+            left:0;
+            right:0;
+            bottom:0;
+            background:rgba(0,0,0,0.4);
+            justify-content:center;
+            align-items:center;">
 
-<!-- ================= CUSTOMER STAGE SECTION ================= -->
-<div id="stage-section" {% if current or past or upcoming %}style="display:none;"{% endif %}>
+    <div style="
+        background:white;
+        padding:20px;
+        border-radius:10px;
+        width:350px;
+    ">
 
-<h1 style="margin-bottom: 30px; font-weight: 600;">History</h1>
+        <h3>Add Feedback</h3>
 
-{% if customer_history %}
-<h2>Service History</h2>
+        <p style="color:red;font-size:12px;">
+            ⚠ You can submit feedback only once
+        </p>
 
-{% for stage in customer_history %}
+        <form id="feedbackForm">
 
-<div class="card" style="margin-bottom:20px;">
+            <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
 
-    <h4 style="margin-bottom:10px;">{{ stage.stage }}</h4>
+            <input type="hidden" name="action" value="save_feedback">
 
-    <span class="resume-status">
-        start date: {{ stage.timestamp.strftime("%Y-%m-%d") if stage.timestamp }}
-    </span>
+            <input type="hidden" name="round_name" id="roundNameInput">
 
-    <div class="resume-list" style="margin-top:10px;">
+            <textarea name="feedback" rows="3" style="width:100%;"></textarea>
 
-        {% for rec in stage.records %}
-        <div class="resume-item">
+            <br><br>
 
-            <span class="resume-status">
-                status : {{ rec.status }}
-            </span>
+            <button type="button" onclick="saveDialogFeedback()">
+                Save
+            </button>
 
-        </div>
-        {% endfor %}
+            <button type="button" onclick="closeFeedbackDialog()">
+                Cancel
+            </button>
+
+        </form>
 
     </div>
 
 </div>
 
-{% endfor %}
+<!-- ================= CUSTOMER STAGE SECTION ================= -->
+<div id="stage-section">
+    <h1 style="margin-bottom: 25px; font-weight: 600;">History</h1>
 
-{% else %}
-<p>No customer history found.</p>
-{% endif %}
+    {% if full_history %}
+
+    <!-- ================= CUSTOMER CREATED ================= -->
+    <div style="padding:15px;border-left:4px solid #28a745;margin-bottom:15px;">
+        <h4>Customer Created</h4>
+        <p><b>Customer:</b> {{ full_history.customer.customer_name }}</p>
+        <p><b>Owner:</b> {{ full_history.customer.owner }}</p>
+    </div>
+
+
+    <!-- ================= SALES ORDER ================= -->
+    {% if full_history.departments.get("Sales Order") %}
+
+    <div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
+
+        <h4>Sales Order</h4>
+
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+
+            <thead>
+                <tr style="background:#f5f5f5;">
+                    <th style="border:1px solid #ddd; padding:6px;">No.</th>
+                    <!-- <th style="border:1px solid #ddd; padding:6px;">ID</th> -->
+                    <th style="border:1px solid #ddd; padding:6px;">Agreement</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for so in full_history.departments["Sales Order"] %}
+                <tr>
+                    <td style="border:1px solid #ddd; padding:6px;">{{ loop.index }}</td>
+
+                    <!-- <td style="border:1px solid #ddd; padding:6px;">
+                        <a href="/app/sales-order/{{ so.id }}" target="_blank">
+                            <span style="color:#007bff;">{{ so.id }}</span>
+                        </a>
+                    </td> -->
+
+                    <td style="border:1px solid #ddd; padding:6px;">
+                        {{ so.agreement or "-" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- ================= OTHER DEPARTMENTS ================= -->
+
+    {% for dept, records in full_history.departments.items() %}
+
+    {% if dept != "Sales Order" %}
+
+    <div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
+
+        <h4>{{ dept }}</h4>
+
+
+        {% for rec in records %}
+
+        <div style="margin-left:10px;margin-top:10px;">
+
+
+            <!-- ID -->
+            <!-- <p>
+                <b>ID:</b>
+                <a href="/app/{{ rec.department | lower | replace(' ','-') }}/{{ rec.id }}" target="_blank">
+                    <span style="color:#007bff;">{{ rec.id }}</span>
+                </a>
+            </p> -->
+
+
+            <p><b>Status:</b> {{ rec.status }}</p>
+
+            {% if rec.department != "Interview" %}
+            <p><b>Assigned To:</b> {{ rec.assign_to or "-" }}</p>
+            {% endif %}
+
+
+            {% if rec.resume %}
+            <p>
+                <b>Resume:</b>
+                <a href="{{ rec.resume }}" target="_blank">View Resume</a>
+            </p>
+            {% endif %}
+
+
+            {% if rec.department == "Interview" and rec.company %}
+            <p><b>Company:</b> {{ rec.company }}</p>
+            {% endif %}
+
+            {% if rec.department == "Interview" and rec.role %}
+            <p><b>Role:</b> {{ rec.role }}</p>
+            {% endif %}
+
+
+
+            <!-- ================= SESSION ================= -->
+
+            {% if rec.session_details %}
+
+            <div style="margin-top:10px;">
+
+                <b>Session Details:</b>
+
+                <table style="width:100%; border-collapse:collapse; margin-top:5px;">
+
+                    <thead>
+                        <tr style="background:#f5f5f5;">
+                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Duration</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Projects</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Quality</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for s in rec.session_details %}
+
+                        <tr>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ loop.index }}</td>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ s.session_duration_in_hour or "-" }}</td>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ s.date or "-" }}</td>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ s.projects or "-" }}</td>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ s.quality or "-" }}</td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+
+            </div>
+
+            {% endif %}
+
+            <!-- ================= JOB APPLICATIONS ================= -->
+
+            <!-- ================= MARKETING APPLICATION COUNT ================= -->
+
+            {% if rec.job_application_count %}
+
+            <div style="margin-top:10px;">
+
+                <b>Job Application Count:</b>
+
+                <table style="width:100%; border-collapse:collapse; margin-top:5px;">
+
+                    <thead>
+                        <tr style="background:#f5f5f5;">
+                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Small</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Large</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Total</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for m in rec.job_application_count %}
+
+                        <tr>
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ loop.index }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ m.small_application or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ m.large_application or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ m.total_application or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ m.date or "-" }}
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% endif %}
+
+
+
+            <!-- ================= PROOF ================= -->
+
+            {% if rec.proof_of_work %}
+
+            <div style="margin-top:10px;">
+
+                <b>Proof of Work:</b>
+
+                <table style="width:100%; border-collapse:collapse; margin-top:5px;">
+
+                    <thead>
+                        <tr style="background:#f5f5f5;">
+                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Description</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Attachments</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for p in rec.proof_of_work %}
+
+                        <tr>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ loop.index }}</td>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ p.date or "-" }}</td>
+                            <td style="border:1px solid #ddd; padding:6px;">{{ p.description or "-" }}</td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {% if p.attachments %}
+                                <a href="{{ p.attachments }}" target="_blank">View</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% endif %}
+
+
+
+            <!-- ================= INTERVIEW ROUNDS ================= -->
+
+            {% if rec.department == "Interview" and rec.interview_rounds_table %}
+
+            <div style="margin-top:10px;">
+
+                <table style="width:100%; border-collapse:collapse;">
+
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Round</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Type</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Interview Date</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Time</th>
+                            <th style="border:1px solid #ddd; padding:6px;">Feedback</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for r in rec.interview_rounds_table %}
+
+                        <tr>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ loop.index }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ r.round or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ r.date or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ r.type_of_interview or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ r.date_of_interview or "-" }}
+                            </td>
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+                                {{ r.time_of_interview or "-" }}
+                            </td>
+
+
+                            <td style="border:1px solid #ddd; padding:6px;">
+
+                                {% if r.feedback and r.feedback.strip() %}
+
+                                <div style="background:#f8fafc;padding:6px;border-radius:6px;">
+                                    {{ r.feedback }}
+                                </div>
+
+                                {% else %}
+
+                                <button type="button" onclick="openFeedbackDialog('{{ r.name }}', this)">
+                                    Add Feedback
+                                </button>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% endif %}
+
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+    {% endfor %}
+
+    {% else %}
+    <p>No history found</p>
+    {% endif %}
 
 </div>
-
 {% endif %}

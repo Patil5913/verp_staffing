@@ -272,121 +272,155 @@ import frappe
 import json
 
 
-@frappe.whitelist()
-def get_customer_history(customer):
-    doc = frappe.get_doc("Customer", customer)
+# @frappe.whitelist()
+# def get_customer_history(customer):
+#     doc = frappe.get_doc("Customer", customer)
 
-    history = {
-        "customer": {
-            "created_on": doc.creation,
-            "owner": doc.owner,
-            "name": doc.name,
-            "customer_name": doc.name1
-        },
-        "source": None,
-        "departments": []
-    }
+#     history = {
+#         "customer": {
+#             "created_on": doc.creation,
+#             "owner": doc.owner,
+#             "name": doc.name,
+#             "customer_name": doc.name1,
+#         },
+#         "source": None,
+#         "departments": {},
+#     }
 
-    # --------------------------------------------------
-    # Lead Source
-    # --------------------------------------------------
+#     # --------------------------------------------------
+#     # Lead Source
+#     # --------------------------------------------------
 
-    if doc.customer_from == "Lead":
-        lead = frappe.get_doc("Lead", doc.party_name)
+#     if doc.customer_from == "Lead":
+#         lead = frappe.get_doc("Lead", doc.party_name)
 
-        history["source"] = {
-            "type": "Lead",
-            "name": lead.name,
-            "created_on": lead.creation,
-            "owner": lead.lead_owner,
-            "source": lead.source,
-            "name1": lead.name1
-        }
+#         history["source"] = {
+#             "type": "Lead",
+#             "name": lead.name,
+#             "created_on": lead.creation,
+#             "owner": lead.lead_owner,
+#             "source": lead.source,
+#             "name1": lead.name1,
+#         }
 
-    # --------------------------------------------------
-    # Opportunity Source
-    # --------------------------------------------------
+#     # --------------------------------------------------
+#     # Opportunity Source
+#     # --------------------------------------------------
 
-    elif doc.customer_from == "Opportunity":
-        opp = frappe.get_doc("Opportunity", doc.party_name)
+#     elif doc.customer_from == "Opportunity":
+#         opp = frappe.get_doc("Opportunity", doc.party_name)
 
-        history["source"] = {
-            "type": "Opportunity",
-            "name": opp.name,
-            "created_on": opp.creation,
-            "owner": opp.opportunity_owner,
-            "source": opp.source,
-            "name1": opp.name1,
-            "sales_stage": opp.sales_stage
-        }
+#         history["source"] = {
+#             "type": "Opportunity",
+#             "name": opp.name,
+#             "created_on": opp.creation,
+#             "owner": opp.opportunity_owner,
+#             "source": opp.source,
+#             "name1": opp.name1,
+#             "sales_stage": opp.sales_stage,
+#         }
 
-    # --------------------------------------------------
-    # Department Workflow History
-    # --------------------------------------------------
+#     # --------------------------------------------------
+#     # Department Workflow History
+#     # --------------------------------------------------
 
-    departments = [
-        "Resume",
-        "RUC",
-        "JDC",
-        "Cover Letter",
-        "Training",
-        "Marketing",
-    ]
+#     departments = [
+#         "Resume",
+#         "RUC",
+#         "JDC",
+#         "Cover Letter",
+#         "Training",
+#         "Marketing",
+#     ]
 
-    for dept in departments:
+#     interview_name = frappe.get_all(
+#         "Interview", filters={"marketing_link": customer}, pluck="name"
+#     )
+#     print("........................")
+#     print("INTERVIEW NAME: ", interview_name)
 
-        docs = frappe.get_all(
-            dept,
-            filters={"customer": customer},
-            fields=["name", "creation", "assign_to"]
-        )
-        
-        if not docs:
-            continue
+#     for dept in departments:
+#         if dept != "JDC":
 
-        for d in docs:
+#             fields=["name", "creation", "assign_to", "status", "name"]
 
-            dept_entry = {
-                "department": dept,
-                "docname": d.name,
-                "created_on": d.creation,
-                "assign_to": d.assign_to,
-                # "status": d.status,
-                "assign_history": []
-            }
+#             if dept == "Resume":
+#                 fields.append("resume")
 
-            # ----------------------------------------
-            # Fetch assignment transitions
-            # ----------------------------------------
+#             docs = frappe.get_all(
+#                 dept,
+#                 filters={"customer": customer},
+#                 fields=fields,
+#             )
 
-            versions = frappe.get_all(
-                "Version",
-                filters={
-                    "ref_doctype": dept,
-                    "docname": d.name
-                },
-                fields=["data", "creation"],
-                order_by="creation asc"
-            )
+#         else:
+#             docs = frappe.get_all(
+#                 "JDC",
+#                 filters={"interview": ["in", interview_name]},
+#                 fields=["name", "creation", "assign_to", "interview", "status"],
+#             )
 
-            for v in versions:
-                data = json.loads(v.data)
+#         if not docs:
+#             continue
 
-                if "changed" in data:
-                    for change in data["changed"]:
+#         for d in docs:
 
-                        if change[0] == "assign_to":
+#             dept_entry = {
+#                 "department": dept,
+#                 "docname": d.name,
+#                 "created_on": d.creation,
+#                 "assign_to": d.assign_to,
+#                 "status": d.status,
+#                 "assign_history": [],
+#                 "id": d.name,
+#             }
+           
 
-                            dept_entry["assign_history"].append({
-                                "from": change[1],
-                                "to": change[2],
-                                "timestamp": v.creation
-                            })
+#             if dept == "JDC":
+#                 dept_entry["marketing_customer"] = customer
+#                 dept_entry["interview"] = d.interview
 
-            history["departments"].append(dept_entry)
-            print("DEPARTMENT HISTORY:-------------------------------------", history["departments"])
+#             if dept == "Resume" and d.get("resume"):
+#                 dept_entry["resume"] = d.get("resume")
 
-    return history
+#             # ----------------------------------------
+#             # Fetch assignment transitions
+#             # ----------------------------------------
+
+#             versions = frappe.get_all(
+#                 "Version",
+#                 filters={"ref_doctype": dept, "docname": d.name},
+#                 fields=["data", "creation"],
+#                 order_by="creation asc",
+#             )
+
+#             for v in versions:
+#                 data = json.loads(v.data)
+
+#                 if "changed" in data:
+#                     for change in data["changed"]:
+
+#                         if change[0] == "assign_to":
+
+#                             dept_entry["assign_history"].append(
+#                                 {
+#                                     "from": change[1],
+#                                     "to": change[2],
+#                                     "timestamp": v.creation,
+#                                 }
+#                             )
+
+#             if dept not in history["departments"]:
+#                 history["departments"][dept] = []
+
+#             history["departments"][dept].append(dept_entry)
+#             print(
+#                 "DEPARTMENT HISTORY:-------------------------------------",
+#                 history["departments"],
+#             )
+
+#     return history
+
 
 @frappe.whitelist()
 def get_customer_routes(customer):
