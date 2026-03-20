@@ -376,6 +376,15 @@ window.add_forward_button = async function add_forward_button(frm) {
 	});
 };
 
+function toggle_manual_assign(dialog) {
+	const manual = dialog.get_value("manual_assign");
+
+	dialog.set_df_property("assign_employee", "hidden", !manual);
+	dialog.set_df_property("assign_employee", "reqd", manual);
+
+	dialog.refresh();
+}
+
 function open_forward_prompt(frm, services) {
 	const d = new frappe.ui.Dialog({
 		title: "Forward Candidate",
@@ -402,6 +411,23 @@ function open_forward_prompt(frm, services) {
 				label: "Select Interview",
 				hidden: 1,
 				options: [],
+			},
+			{
+				fieldname: "manual_assign",
+				fieldtype: "Check",
+				label: "Assign Manually",
+				default: 0,
+				hidden: 1,
+				onchange() {
+					toggle_manual_assign(d);
+				},
+			},
+			{
+				fieldname: "assign_employee",
+				label: "Assign To",
+				fieldtype: "Link",
+				options: "Employee",
+				hidden: 1,
 			},
 		],
 		primary_action_label: "Forward",
@@ -432,13 +458,43 @@ function toggle_fields(dialog, frm) {
 	dialog.set_df_property("note", "reqd", 0);
 	dialog.set_df_property("interview", "hidden", 1);
 	dialog.set_df_property("interview", "reqd", 0);
-
-	if (service) {
-		dialog.set_df_property("note", "hidden", 0);
-		dialog.set_df_property("note", "reqd", 1);
+	dialog.set_df_property("manual_assign", "hidden", 1);
+	dialog.set_df_property("assign_employee", "hidden", 1);
+	dialog.set_df_property("assign_employee", "reqd", 0);
+	if (!service) {
+		dialog.refresh();
+		return;
 	}
 
-	if (service && service.toLowerCase() === "jdc") {
+	const serviceLower = service.toLowerCase();
+
+	// ------------------------------
+	// CR / Onboarding logic
+	// ------------------------------
+
+	if (serviceLower === "cr" || serviceLower === "onboarding") {
+		dialog.set_df_property("manual_assign", "hidden", 0);
+
+		// update employee filter dynamically
+		dialog.fields_dict.assign_employee.get_query = function () {
+			return {
+				filters: {
+					department: service,
+				},
+			};
+		};
+
+		dialog.refresh();
+		return;
+	}
+
+	// ------------------------------
+	// Default services logic
+	// ------------------------------
+
+	dialog.set_df_property("note", "hidden", 0);
+
+	if (serviceLower === "jdc") {
 		frappe.call({
 			method: "verp_staffing.crm.api.auto_assign.get_customer_interviews",
 			args: {
@@ -1066,9 +1122,9 @@ function open_edit_event_dialog(event_name, frm) {
 	});
 }
 
-// Show lates uploaded resume 
+// Show lates uploaded resume
 
-window.fetch_and_render_resume =function fetch_and_render_resume(frm) {
+window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 	frappe.db
 		.get_list("Resume", {
 			filters: {
@@ -1103,4 +1159,4 @@ window.fetch_and_render_resume =function fetch_and_render_resume(frm) {
 
 			frm.set_df_property("resume", "options", html);
 		});
-}
+};
