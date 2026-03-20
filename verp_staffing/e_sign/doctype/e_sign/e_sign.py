@@ -194,96 +194,6 @@ def complete_signing(token=None, fields=None):
         "status": "success"
     }
 
-@frappe.whitelist(allow_guest=True)
-def save_signature(field_name=None, image=None, token=None):
-
-    if not field_name or not image or not token:
-        frappe.throw("Missing data")
-
-    import base64
-    from frappe.utils.file_manager import save_file
-    from frappe.utils import now
-
-    # 1️⃣ Get clicked field
-    field = frappe.get_doc("Signature Fields", field_name)
-
-    # 2️⃣ Security check
-    if field.sign_token != token:
-        frappe.throw("Invalid token")
-        
-    verification_cookie = frappe.request.cookies.get(f"verify_{token}")
-
-    if not verification_cookie:
-        frappe.throw("Verification required")
-
-    verified = frappe.db.exists(
-        "Signature Fields",
-        {
-            "sign_token": token,
-            "verification_key": verification_cookie
-        }
-    )
-
-    if not verified:
-        frappe.throw("Unauthorized access")
-
-    # 3️⃣ If already signed, stop
-    if field.signed:
-        return {"status": "already_signed"}
-
-    # 4️⃣ Decode signature image
-    header, encoded = image.split(",", 1)
-    filedata = base64.b64decode(encoded)
-
-    file_doc = save_file(
-        f"signature_{token}.png",
-        filedata,
-        field.doctype,
-        field.name,
-        is_private=0
-    )
-
-    # 5️⃣ 🔥 IMPORTANT: Update ALL fields of this signer
-    all_fields = frappe.get_all(
-        "Signature Fields",
-        filters={"sign_token": token},
-        fields=["name"]
-    )
-
-    for row in all_fields:
-        doc = frappe.get_doc("Signature Fields", row.name)
-        doc.signature_image = file_doc.file_url
-        doc.signed = 1
-        doc.signed_on = format_timestamp_utc()  
-        doc.save(ignore_permissions=True)
-
-    frappe.db.commit()
-
-        # 6️⃣ Check if ALL fields of agreement are signed
-    agreement = frappe.get_doc("e_sign", field.parent)
-
-    all_signed = all(row.signed for row in agreement.signature_fields)
-
-    if all_signed:
-      
-        final_pdf_path = generate_final_signed_pdf(agreement.name)
-    
-        if final_pdf_path:
-            try:
-                generate_certificate_page(agreement.name)
-                
-                send_final_signed_email(agreement.name)
-            except Exception as e:
-                print(f"Error generating certificate: {e}")
-        else:
-            print("Failed to generate the final signed PDF.")
-            
-    
-    return {
-        "status": "success",
-        "file_url": file_doc.file_url
-    }
-
 @frappe.whitelist()
 def send_all_signers(agreement):
     
@@ -380,44 +290,6 @@ def send_final_signed_email(agreement_name):
 
     frappe.logger().info(f"Final signed emails sent for {agreement.name}")
     
-@frappe.whitelist()
-def send_signer_email(agreement, email):
-
-    doc = frappe.get_doc("e_sign", agreement)
-
-    # 1️⃣ Generate unique token
-    token = str(uuid.uuid4())
-
-    # 2️⃣ Save token in all boxes of this signer
-    for row in doc.signature_fields:
-        if row.signer_email == email:
-            if row.sign_token is None: 
-                row.sign_token = token
-            else:
-                token = row.sign_token
-            if row.email_sent_on is None: 
-                row.email_sent_on = format_timestamp_utc()
-                
-            
-
-    doc.save(ignore_permissions=True)
-
-    # 3️⃣ Create signing link
-    link = f"{frappe.utils.get_url()}/sign_document?token={token}"
-
-    # 4️⃣ Send email
-    frappe.sendmail(
-        recipients=[email],
-        subject="Please Sign Document",
-        message=f"""
-            <p>You have a document to sign.</p>
-            <p><a href="{link}">Click here to Sign</a></p>
-        """,
-        delayed=False
-    )
-
-    return "Email Sent Successfully"
-
 def calculate_file_hash(file_path):
     import hashlib
 
@@ -680,7 +552,6 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
 
     return {"status": "success"}
 
-
 @frappe.whitelist(allow_guest=True)
 def send_otp(token=None):
     try:
@@ -714,7 +585,6 @@ def send_otp(token=None):
         frappe.log_error(frappe.get_traceback(), "OTP Send Failed")
         return {"status": "error"}
 
-
 @frappe.whitelist(allow_guest=True)
 def verify_otp(token=None, otp=None):
     try: 
@@ -722,13 +592,10 @@ def verify_otp(token=None, otp=None):
             return {"status": "invalid_request"}
 
         cached_otp = frappe.cache().get_value(f"otp_{token}")
-        print(f"____________________Verifying OTP for token {token}. Provided OTP: {otp}, Cached OTP: {cached_otp}")
         if not cached_otp:
-            print(f"____________________OTP expired for token {token}.")
             return {"status": "expired"}
 
         if otp != cached_otp:
-            print(f"____________________OTP mismatch: provided {otp}, expected {cached_otp}.")
             return {"status": "invalid_otp"}
 
         # ✅ Generate persistent verification key
@@ -771,8 +638,7 @@ def verify_otp(token=None, otp=None):
             )
 
         frappe.cache().delete_value(f"otp_{token}")
-        print("____________________OTP verified successfully, verification cookie set.")
         return {"status": "verified"} 
     except Exception:
-        print(f"____________________Error during OTP verification: {frappe.get_traceback()}")
+        frappe.log_error(frappe.get_traceback(), "OTP Verification Failed")
         return {"status": "error"}

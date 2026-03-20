@@ -9,7 +9,6 @@ def get_context(context):
     context.no_cache = 1
 
     token = frappe.form_dict.get("token")
-    print(f"_____token: {token}")
     if not token:
         context.error = "Invalid or missing token"
         return
@@ -54,7 +53,6 @@ def get_context(context):
         "signature_image"
     ]
     )
-    print("Stage 2: Retrieved signature fields and agreement details")
 
     # 2️⃣ Convert PDF into images
     file_doc = frappe.get_doc("File", {"file_url": agreement.original_pdf})
@@ -96,7 +94,6 @@ def get_context(context):
         device = "Mobile"
     elif "Macintosh" in ua: platform = "macOS"
     elif "Linux" in ua: platform = "Linux"
-    print(f"Stage 3: Parsed IP ({ip_address}), Platform ({platform}), Device ({device}), Browser ({ua})")
     # 4. Manual Parsing for Browser
     browser = "Unknown Browser"
     if "Firefox" in ua: browser = "Firefox"
@@ -105,10 +102,6 @@ def get_context(context):
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
     
     verification_cookie = frappe.request.cookies.get(f"verify_{token}")
-    print("ALL COOKIES:", frappe.request.cookies)
-    print("---------------------verification_cookie------------------------------------",verification_cookie)
-    print("---------------------token------------------------------------",token)
-    print(f"Stage 4: Parsed Browser ({browser}), Retrieved Verification Cookie ({verification_cookie})")
 
     is_verified = False
 
@@ -120,9 +113,7 @@ def get_context(context):
                 "verification_key": verification_cookie
             }
         )
-        print(f"______________Verification check for token {token} with cookie {verification_cookie}: {'Found matching record' if exists else 'No matching record found'}")
         is_verified = bool(exists)
-        print(f"______________Final verification status for token {token}: {is_verified}")
 
     context.is_verified = is_verified
             

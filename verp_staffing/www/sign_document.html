@@ -3,8 +3,6 @@
 
 {% else %}
 
-<h1>{{ is_verified }}</h1>
-
 {% if not is_verified %}
 
 <!-- 🔐 Verification Section -->
@@ -504,11 +502,6 @@ z-index:999;
 
   // Position unsigned boxes
   function initFields() {
-    console.log("initFields running");
-    console.log("boxes:", document.querySelectorAll(".field-box").length);
-
-
-
     document.querySelectorAll(".field-box").forEach(box => {
 
       const type = box.dataset.type;
@@ -523,9 +516,6 @@ z-index:999;
       box.style.background = "rgba(37,99,235,0.12)";
       box.style.borderRadius = "6px";
 
-      box.addEventListener("click", () => {
-        console.log("field clicked", type);
-      });
 
       if (type === "signature") {
 
@@ -544,33 +534,6 @@ z-index:999;
 
         return;
       }
-
-      // let input;
-
-      // if (type === "text" || type === "name") {
-      //   input = document.createElement("input");
-      //   input.type = "text";
-      // }
-
-      // if (type === "email") {
-      //   input = document.createElement("input");
-      //   input.type = "email";
-      // }
-
-      // if (type === "date") {
-      //   input = document.createElement("input");
-      //   input.type = "date";
-      // }
-
-      // if (type === "number") {
-      //   input = document.createElement("input");
-      //   input.type = "number";
-      // }
-
-      // if (type === "checkbox") {
-      //   input = document.createElement("input");
-      //   input.type = "checkbox";
-      // }
 
       let input;
       let placeholder = type.toUpperCase();
@@ -1092,10 +1055,8 @@ z-index:999;
     })
       .then(res => res.json())
       .then(data => {
-        console.log("verify otp data", data);
         if (data.message.status === "verified") {
           location.reload();
-          console.log("Otp Veified:",data.message.status)
         } else {
           alert("Invalid OTP");
         }

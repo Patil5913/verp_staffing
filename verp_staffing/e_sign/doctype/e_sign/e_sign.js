@@ -47,8 +47,6 @@ frappe.ui.form.on("e_sign", {
       });
     }
 
-    render_signers_panel(frm);
-
     // PRODUCTION SEND BUTTON
     frm.clear_custom_buttons();
 
@@ -60,12 +58,10 @@ frappe.ui.form.on("e_sign", {
           "Send document to all recipients and lock editing?",
 
           function () {  // YES
-            console.log("Confirmed");
             send_for_signature(frm);
           },
 
           function () {  // NO
-            console.log("Cancelled");
           }
 
         );
@@ -81,110 +77,6 @@ frappe.ui.form.on("e_sign", {
   }
 });
 
-function render_signers_panel(frm) {
-
-  if (!frm.doc.signature_fields || !frm.doc.signature_fields.length) {
-    frm.fields_dict.signers_panel.$wrapper.html(
-      `<div style="padding:10px;">No signers yet.</div>`
-    );
-    return;
-  }
-
-  // 🔹 Group fields by signer email
-  const grouped = {};
-
-  frm.doc.signature_fields.forEach(row => {
-    if (!grouped[row.signer_email]) {
-      grouped[row.signer_email] = [];
-    }
-    grouped[row.signer_email].push(row);
-  });
-
-  let html = `
-    <div style="padding:15px;">
-      <h4>Signers</h4>
-  `;
-
-  Object.keys(grouped).forEach(email => {
-
-    const rows = grouped[email];
-
-    const allSigned = rows.every(r => r.signed);
-    const firstSignedRow = rows.find(r => r.signed);
-
-    html += `
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        padding:10px 0;
-        border-bottom:1px solid #eee;
-      ">
-        <div>
-          <div style="font-weight:500;">${email}</div>
-    `;
-
-    // ✅ IF SIGNED → show signature image + datetime
-
-
-
-    if (allSigned && firstSignedRow?.signature_image) {
-      html += `
-          <div style="margin-top:6px;">
-            <img src="${firstSignedRow.signature_image}"
-                 style="height:40px; object-fit:contain; border:black; display:block;">
-            <div style="font-size:12px; color:#666; margin-top:4px;">
-              Signed on: ${firstSignedRow.signed_on || ""}
-            </div>
-          </div>
-      `;
-    }
-
-    html += `</div>`;
-
-    // ❌ IF NOT SIGNED → show Send button
-    if (!allSigned) {
-      html += `
-        <button class="btn btn-sm btn-primary send-btn"
-                data-email="${email}">
-          Send
-        </button>
-      `;
-    } else {
-      html += `
-        <span style="color:green; font-weight:500;">
-          ✔ Signed
-        </span>
-      `;
-    }
-
-    html += `</div>`;
-  });
-
-  html += `</div>`;
-
-  frm.fields_dict.signers_panel.$wrapper.html(html);
-
-  // 🔹 Attach send button click
-  frm.fields_dict.signers_panel.$wrapper
-    .find(".send-btn")
-    .on("click", function () {
-
-      const email = $(this).data("email");
-
-      frappe.call({
-        method: "verp_staffing.e_sign.doctype.e_sign.e_sign.send_signer_email",
-        args: {
-          agreement: frm.doc.name,
-          email: email
-        },
-        callback: function (r) {
-          frappe.msgprint(r.message);
-        }
-      });
-
-    });
-}
 
 function rebuild_recipients(frm) {
 
@@ -272,7 +164,6 @@ async function load_pdf_pages(frm) {
 
   enable_toolbar_drag();
   render_recipient_list();
-  console.log("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
   
   const response = await frappe.call({
     method: "verp_staffing.e_sign.doctype.e_sign.e_sign.generate_pdf_pages",
@@ -574,107 +465,6 @@ function field_button(type, label, icon) {
   `;
 }
 
-// function create_box(frm, type = "signature") {
-
-//   const box = document.createElement("div");
-//   box.classList.add("esign-box");
-//   box.dataset.field_type = type;
-//   box.style.position = "absolute";
-//   const color = recipientColors[activeRecipient] || "#2563eb";
-//   box.style.border = "2px solid " + color;
-//   box.style.background = color + "22";
-//   box.style.minWidth = "80px";
-//   box.style.minHeight = "30px";
-//   box.style.cursor = "move";
-
-//   if (type === "checkbox") {
-
-//   const checkbox = document.createElement("div");
-
-//   checkbox.innerHTML = `
-//     <input type="checkbox" disabled />
-//   `;
-
-//   checkbox.style.display = "flex";
-//   checkbox.style.alignItems = "center";
-//   checkbox.style.justifyContent = "center";
-//   checkbox.style.width = "20px";
-//   checkbox.style.height = "20px";
-
-//   box.appendChild(checkbox);
-
-// }
-
-//   const label = document.createElement("div");
-
-//   label.innerText = type.replace("_", " ");
-
-//   label.style.fontSize = "10px";
-//   label.style.background = recipientColors[activeRecipient] || "#2563eb"; label.style.color = "white";
-//   label.style.padding = "2px 6px";
-//   label.style.borderRadius = "3px";
-//   label.style.position = "absolute";
-//   label.style.top = "-16px";
-//   label.style.left = "0";
-
-//   box.appendChild(label);
-
-//   // 🔥 DELETE BUTTON
-//   const deleteBtn = document.createElement("div");
-//   deleteBtn.innerHTML = "✕";
-//   deleteBtn.style.position = "absolute";
-//   deleteBtn.style.top = "-10px";
-//   deleteBtn.style.right = "-10px";
-//   deleteBtn.style.width = "18px";
-//   deleteBtn.style.height = "18px";
-//   deleteBtn.style.borderRadius = "50%";
-//   deleteBtn.style.background = "#ef4444";
-//   deleteBtn.style.color = "white";
-//   deleteBtn.style.display = "flex";
-//   deleteBtn.style.alignItems = "center";
-//   deleteBtn.style.justifyContent = "center";
-//   deleteBtn.style.fontSize = "12px";
-//   deleteBtn.style.cursor = "pointer";
-//   deleteBtn.style.zIndex = "10";
-
-//   deleteBtn.addEventListener("click", function (e) {
-//     e.stopPropagation();
-
-//     if (!confirm("Delete this signature box?")) return;
-
-//     const rowname = box.dataset.rowname;
-
-//     if (rowname) {
-//       frm.doc.signature_fields = frm.doc.signature_fields.filter(
-//         row => row.name !== rowname
-//       );
-
-//       frm.dirty();
-//       frm.refresh_field("signature_fields");
-//     }
-
-//     box.remove();
-
-//     frm.save()
-//     render_existing_boxes(frm);
-//   });
-
-//   box.appendChild(deleteBtn);
-
-//   // Resize Handle
-//   const resize = document.createElement("div");
-//   resize.style.position = "absolute";
-//   resize.style.right = "0";
-//   resize.style.bottom = "0";
-//   resize.style.width = "10px";
-//   resize.style.height = "10px";
-//   resize.style.background = color;
-//   resize.style.cursor = "se-resize";
-
-//   box.appendChild(resize);
-
-//   return box;
-// }
 
 const fieldIcons = {
   signature: "fa-pencil",
@@ -970,7 +760,6 @@ function render_existing_boxes(frm) {
 
 async function send_for_signature(frm) {
 
-  console.log("hii from function ");
   const uniqueRecipients = [
     ...new Set(frm.doc.signature_fields.map(f => f.signer_email).filter(Boolean))
   ];
@@ -979,8 +768,6 @@ async function send_for_signature(frm) {
     frappe.msgprint("Add at least one recipient field");
     return;
   }
-
-  console.log("fields:", frm.doc.signature_fields);
 
   if (!frm.doc.signature_fields.length) {
     frappe.msgprint("Add at least one field");
@@ -991,7 +778,6 @@ async function send_for_signature(frm) {
     await frm.save();
   }
 
-  console.log("the mail is sending");
 
 
   frappe.call({
