@@ -6,8 +6,9 @@ from frappe.utils.file_manager import save_file
 
 def get_context(context):
 
-    token = frappe.form_dict.get("token")
+    context.no_cache = 1
 
+    token = frappe.form_dict.get("token")
     if not token:
         context.error = "Invalid or missing token"
         return
@@ -51,8 +52,7 @@ def get_context(context):
         "height_percent",
         "signature_image"
     ]
-)
-
+    )
 
     # 2️⃣ Convert PDF into images
     file_doc = frappe.get_doc("File", {"file_url": agreement.original_pdf})
@@ -94,7 +94,6 @@ def get_context(context):
         device = "Mobile"
     elif "Macintosh" in ua: platform = "macOS"
     elif "Linux" in ua: platform = "Linux"
-
     # 4. Manual Parsing for Browser
     browser = "Unknown Browser"
     if "Firefox" in ua: browser = "Firefox"
@@ -103,10 +102,6 @@ def get_context(context):
     elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
     
     verification_cookie = frappe.request.cookies.get(f"verify_{token}")
-    print("ALL COOKIES:", frappe.request.cookies)
-    print("---------------------verification_cookie------------------------------------",verification_cookie)
-    print("---------------------token------------------------------------",token)
-
 
     is_verified = False
 
