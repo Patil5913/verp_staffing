@@ -67,6 +67,13 @@
   "ead_card",
   "driving_licence",
   "old_resume",
+  "after_placement_data_section",
+  "position",
+  "placement_company",
+  "job_duration",
+  "column_break_deos",
+  "salary",
+  "company_percentage",
   "section_break_odpr",
   "reference_table"
  ],
@@ -411,12 +418,46 @@
    "label": "Sales Order",
    "options": "Sales Order",
    "unique": 1
+  },
+  {
+   "fieldname": "after_placement_data_section",
+   "fieldtype": "Section Break",
+   "label": "After Placement Data"
+  },
+  {
+   "fieldname": "position",
+   "fieldtype": "Data",
+   "label": "Position"
+  },
+  {
+   "fieldname": "placement_company",
+   "fieldtype": "Data",
+   "label": "Placement Company"
+  },
+  {
+   "fieldname": "job_duration",
+   "fieldtype": "Data",
+   "label": "Job Duration"
+  },
+  {
+   "fieldname": "column_break_deos",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salary",
+   "fieldtype": "Data",
+   "label": "Salary"
+  },
+  {
+   "fieldname": "company_percentage",
+   "fieldtype": "Data",
+   "label": "Company Percentage"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-14 16:14:00.726652",
+ "modified": "2026-03-21 09:55:20.384619",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -425,7 +466,7 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Person"
   },
   {
    "read": 1,
@@ -433,7 +474,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -449,19 +490,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager"
+   "role": "Sales Team Lead"
   },
   {
    "read": 1,
@@ -469,15 +498,11 @@
   },
   {
    "read": 1,
-   "role": "Senior Recruiter"
+   "role": "marketing Master Manager"
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator"
+   "role": "Marketing Manager"
   },
   {
    "read": 1,
@@ -485,15 +510,19 @@
   },
   {
    "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor"
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
    "role": "Senior Resume Person"
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager"
-  },
-  {
-   "read": 1,
-   "role": "RUC Person"
   },
   {
    "read": 1,
@@ -501,7 +530,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager"
+   "role": "Technical Manager"
   },
   {
    "read": 1,
@@ -509,7 +538,23 @@
   },
   {
    "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
    "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "Onboarding Person"
   },
   {
    "read": 1,

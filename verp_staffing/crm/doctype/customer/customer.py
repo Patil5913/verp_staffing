@@ -104,20 +104,47 @@ from verp_staffing.employee.doctype.employee.employee import user_belongs_to_dep
 
 @frappe.whitelist()
 def get_forwardable_departments(customer):
-    """
-    Return only departments that have at least one service.
-    """
+
+    user = frappe.session.user
+
+    services = get_services_for_customer(customer)
+
+    if not services:
+        return ["CR"]
+
+    active_departments = get_active_departments(customer)
+
+    all_completed = is_all_services_completed(customer, services)
+
+    options = list(services)
+
+    # CR
+    if "CR" not in active_departments:
+        options.append("CR")
+
+    # Onboarding
+    if (
+        "Onboarding" not in active_departments
+        and all_completed
+        and can_user_forward_to_department(user, "Onboarding")
+    ):
+        options.append("Onboarding")
+
+    return options
+def get_services_for_customer(customer):
+
     so = frappe.get_all(
         "Sales Order",
-        filters={"customer": customer,"status":"Open"},
+        filters={"customer": customer, "status": "Open"},
         pluck="name",
         order_by="creation desc",
         limit=1,
     )
+
     if not so:
-        frappe.throw("Open Sales Order Not Found, please create one")
-    # DISTINCT parent departments that have services
-    services = frappe.db.sql(
+        return []
+
+    return frappe.db.sql(
         """
         SELECT service
         FROM `tabSalesOrderServices`
@@ -125,49 +152,48 @@ def get_forwardable_departments(customer):
         AND parent IN %s
         """,
         (tuple(so),),
-        as_dict=True,
+        pluck="service",
     )
 
-    if not services:
-        return ["CR"]
+def is_all_services_completed(customer, services):
 
-    options = []
-    all_completed = True
-    service_names = [d.service for d in services]
+    for service in services:
+        if not is_service_completed(service, customer):
+            return False
 
+    return True
 
-    for service in service_names:
+def is_service_completed(service,customer):
+    service_key = service.lower()
 
-        service_key = service.lower()
+    # resolve doctype
+    doctype = SERVICE_DOCTYPE_MAP.get(service_key)
 
-        # resolve doctype
-        doctype = SERVICE_DOCTYPE_MAP.get(service_key)
+    if not doctype:
 
-        if not doctype:
-
-            parents = frappe.db.sql(
-                """
-                SELECT parent FROM `tabDepartment Service`
-                WHERE service_name = %s
-                """,
+        parents = frappe.db.sql(
+        """
+        SELECT parent FROM `tabDepartment Service`
+        WHERE service_name = %s
+        """,
                 (service,),
                 as_dict=True,
             )
 
-            if not parents:
-                frappe.throw(f"No department found for service {service}")
+        if not parents:
+            frappe.throw(f"No department found for service {service}")
 
-            department = parents[0].parent
+        department = parents[0].parent
 
-            if department == "Technical":
-                doctype = "Technical Other Services"
-            elif department == "Marketing":
-                doctype = "Marketing Other Services"
-            else:
-                doctype = "Other Services"
+        if department == "Technical":
+            doctype = "Technical Other Services"
+        elif department == "Marketing":
+            doctype = "Marketing Other Services"
+        else:
+            doctype = "Other Services"
 
         # check if record exists
-        doc = frappe.db.sql(
+    doc = frappe.db.sql(
             f"""
             SELECT status
             FROM `tab{doctype}`
@@ -179,20 +205,28 @@ def get_forwardable_departments(customer):
             as_dict=True
         )
 
-        if not doc or doc[0].status != "Completed":
-            all_completed = False
+    if not doc or doc[0].status == "Completed":
+        return True
+    else: 
+        return False
+    
 
-        options.append(service)
+def get_active_departments(customer):
 
-    # CR always available
-    options.append("CR")
-    user = frappe.session.user
-    is_marketing = user_belongs_to_department(user, "Marketing")
-    if all_completed and is_marketing:
-        options.append("Onboarding")
+    return frappe.get_all(
+        "Customer Department Route",
+        filters={
+            "customer": customer,
+        },
+        pluck="department",
+    )
 
-    return options
-
+def can_user_forward_to_department(user, department):
+    frappe.errprint(f"user: {user}")
+    if user == "Administrator":
+        return True
+    return user_belongs_to_department(user, "Marketing") \
+        if department == "Onboarding" else True
 
 @frappe.whitelist()
 def get_forwardable_departments_from_service(doctype, docname):
@@ -209,34 +243,29 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     customer = doc.customer
 
-    # Step 2: Get latest Sales Order of that customer
-    so = frappe.get_all(
-        "Sales Order",
-        filters={"customer": customer},
-        pluck="name",
-        order_by="creation desc",
-        limit=1,
-    )
-
-    if not so:
-        return []
-
-    # Step 3: Get services from Sales Order
-    services = frappe.get_all(
-        "SalesOrderServices",
-        filters={"parenttype": "Sales Order", "parent": ["in", so]},
-        pluck="service",
-    )
-
+    services = get_services_for_customer(customer)
     if not services:
-        return []
+        return ["CR"]
 
-    # Step 4: Validate services exist
-    valid_services = frappe.get_all(
-        "Service", filters={"name": ["in", services]}, pluck="name"
-    )
+    active_departments = get_active_departments(customer)
 
-    return valid_services
+    all_completed = is_all_services_completed(customer, services)
+
+    options = list(services)
+
+    # CR
+    if "CR" not in active_departments:
+        options.append("CR")
+
+    # Onboarding
+    if (
+        "Onboarding" not in active_departments
+        and all_completed
+        and can_user_forward_to_department(frappe.session.user, "Onboarding")
+    ):
+        options.append("Onboarding")
+
+    return options
 
 
 import frappe
@@ -412,3 +441,33 @@ def update_route_status(route_name, status):
         "status": "success",
         "message": f"{route.department} marked as Completed"
     }
+
+@frappe.whitelist()
+def get_after_placement_details(customer):
+
+    customer_doc = frappe.get_doc("Customer", customer)
+
+    if not customer_doc.lead_details:
+        return {}
+
+    data = frappe.get_doc("Lead Detail Form", customer_doc.lead_details)
+
+    return {
+        "position": data.position,
+        "placement_company": data.placement_company,
+        "job_duration": data.job_duration,
+        "salary": data.salary,
+        "company_percentage": data.company_percentage,
+        "lead_name": data.name
+    }
+
+@frappe.whitelist()
+def update_company_percentage(lead_name, company_percentage):
+
+    lead = frappe.get_doc("Lead Detail Form", lead_name)
+
+    lead.company_percentage = company_percentage
+
+    lead.save(ignore_permissions=True)
+
+    return "updated"

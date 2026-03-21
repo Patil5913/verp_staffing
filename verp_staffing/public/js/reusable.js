@@ -423,6 +423,40 @@ function open_forward_prompt(frm, services) {
 				},
 			},
 			{
+				fieldname: "position",
+				label: "Position",
+				fieldtype: "Data",
+				hidden: 1,
+			},
+
+			{
+				fieldname: "placement_company",
+				label: "Placement Company",
+				fieldtype: "Data",
+				hidden: 1,
+			},
+
+			{
+				fieldname: "job_duration",
+				label: "Job Type/Duration",
+				fieldtype: "Data",
+				hidden: 1,
+			},
+
+			{
+				fieldname: "salary",
+				label: "Salary",
+				fieldtype: "Currency",
+				hidden: 1,
+			},
+
+			{
+				fieldname: "company_percentage",
+				label: "Company Percentage",
+				fieldtype: "Float",
+				hidden: 1,
+			},
+			{
 				fieldname: "assign_employee",
 				label: "Assign To",
 				fieldtype: "Link",
@@ -441,7 +475,22 @@ function open_forward_prompt(frm, services) {
 				frappe.msgprint("Please select Interview for JDC.");
 				return;
 			}
+			if (values.service?.toLowerCase() === "onboarding") {
+				const required_fields = [
+					"position",
+					"placement_company",
+					"job_duration",
+					"salary",
+					"company_percentage",
+				];
 
+				for (let field of required_fields) {
+					if (!values[field]) {
+						frappe.msgprint(`${field.replace("_", " ")} is required`);
+						return;
+					}
+				}
+			}
 			d.disable_primary_action();
 			forward_candidate(frm, values);
 			d.hide();
@@ -453,36 +502,54 @@ function open_forward_prompt(frm, services) {
 
 function toggle_fields(dialog, frm) {
 	const service = dialog.get_value("service");
+	const serviceLower = service?.toLowerCase();
 
-	dialog.set_df_property("note", "hidden", 1);
-	dialog.set_df_property("note", "reqd", 0);
-	dialog.set_df_property("interview", "hidden", 1);
-	dialog.set_df_property("interview", "reqd", 0);
-	dialog.set_df_property("manual_assign", "hidden", 1);
-	dialog.set_df_property("assign_employee", "hidden", 1);
-	dialog.set_df_property("assign_employee", "reqd", 0);
+	// reset everything first
+	const fields_to_hide = [
+		"note",
+		"interview",
+		"manual_assign",
+		"assign_employee",
+		"position",
+		"placement_company",
+		"job_duration",
+		"salary",
+		"company_percentage",
+	];
+
+	fields_to_hide.forEach((f) => {
+		dialog.set_df_property(f, "hidden", 1);
+		dialog.set_df_property(f, "reqd", 0);
+	});
+
 	if (!service) {
 		dialog.refresh();
 		return;
 	}
 
-	const serviceLower = service.toLowerCase();
-
-	// ------------------------------
-	// CR / Onboarding logic
-	// ------------------------------
-
-	if (serviceLower === "cr" || serviceLower === "onboarding") {
+	// Onboarding logic
+	if (serviceLower === "onboarding") {
 		dialog.set_df_property("manual_assign", "hidden", 0);
 
-		// update employee filter dynamically
-		dialog.fields_dict.assign_employee.get_query = function () {
-			return {
-				filters: {
-					department: service,
-				},
-			};
-		};
+		const onboarding_fields = [
+			"position",
+			"placement_company",
+			"job_duration",
+			"salary",
+			"company_percentage",
+		];
+
+		onboarding_fields.forEach((f) => {
+			dialog.set_df_property(f, "hidden", 0);
+			dialog.set_df_property(f, "reqd", 1);
+		});
+
+		dialog.refresh();
+		return;
+	}
+	//  CR
+	if (serviceLower === "cr") {
+		dialog.set_df_property("manual_assign", "hidden", 0);
 
 		dialog.refresh();
 		return;
@@ -565,20 +632,27 @@ function forward_candidate(frm, values) {
 			customer: frm.doc.customer || frm.doc.name,
 			service: values.service,
 			interview: values.interview || null,
+			assign_employee: values.assign_employee || null,
+			// Onboarding Fields
+			position: values.position || null,
+			placement_company: values.placement_company || null,
+			job_duration: values.job_duration || null,
+			salary: values.salary || null,
+			company_percentage: values.company_percentage || null,
 		},
 		callback(r) {
 			const noteDoctype = r.message.doctype;
-
-			frappe.call({
-				method: "verp_staffing.crm.api.notes.add_note",
-				args: {
-					reference_doctype: noteDoctype,
-					reference_name: r.message.name,
-					current_doctype: frm.doctype,
-					note: values.note,
-				},
-			});
-
+			if (values.notes) {
+				frappe.call({
+					method: "verp_staffing.crm.api.notes.add_note",
+					args: {
+						reference_doctype: noteDoctype,
+						reference_name: r.message.name,
+						current_doctype: frm.doctype,
+						note: values.note,
+					},
+				});
+			}
 			frappe.msgprint(
 				`Candidate forwarded for ${values.service} and assigned automatically.`,
 			);
@@ -1125,12 +1199,21 @@ function open_edit_event_dialog(event_name, frm) {
 // Show lates uploaded resume
 
 window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
+	if (!frm.doc.customer) {
+		frm.set_df_property(
+			"resume",
+			"options",
+			"<div style='color:#888'>No customer selected</div>",
+		);
+		return;
+	}
 	frappe.db
 		.get_list("Resume", {
 			filters: {
 				customer: frm.doc.customer,
 			},
 			fields: ["name", "resume"],
+			order_by: "creation desc",
 			limit: 1,
 		})
 		.then((res) => {

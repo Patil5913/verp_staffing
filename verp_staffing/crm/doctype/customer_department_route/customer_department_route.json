@@ -79,7 +79,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 11:32:02.128868",
+ "modified": "2026-03-21 15:48:01.630357",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Department Route",
@@ -104,5 +104,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "customer"
+ "title_field": "customer",
+ "track_changes": 1
 }

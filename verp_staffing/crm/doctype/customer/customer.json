@@ -33,7 +33,9 @@
   "notes_html",
   "updates_html",
   "activities_tab",
-  "open_activities_html"
+  "open_activities_html",
+  "onboarding_tab",
+  "after_placement_details"
  ],
  "fields": [
   {
@@ -197,12 +199,22 @@
    "fieldname": "department_route_html",
    "fieldtype": "HTML",
    "label": "Onboarding/CR department"
+  },
+  {
+   "fieldname": "onboarding_tab",
+   "fieldtype": "Tab Break",
+   "label": "Onboarding"
+  },
+  {
+   "fieldname": "after_placement_details",
+   "fieldtype": "HTML",
+   "label": "After Placement Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 11:27:39.679682",
+ "modified": "2026-03-21 12:03:47.695627",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -222,9 +234,10 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
+   "role": "Sales Team Lead",
+   "write": 1
   },
   {
    "create": 1,
@@ -241,19 +254,8 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Sales Person",
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager",
-   "select": 1
   },
   {
    "read": 1,
@@ -262,7 +264,7 @@
   },
   {
    "read": 1,
-   "role": "Recruiter",
+   "role": "Technical Coordinator",
    "select": 1
   },
   {
@@ -272,7 +274,12 @@
   },
   {
    "read": 1,
-   "role": "Marketing Mentor",
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
    "select": 1
   },
   {
@@ -282,7 +289,17 @@
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
    "select": 1
   },
   {
@@ -290,26 +307,6 @@
    "read": 1,
    "role": "Sales Employee",
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Training Person",
-   "select": 1
   },
   {
    "read": 1,
@@ -323,13 +320,33 @@
   },
   {
    "read": 1,
-   "report": 1,
-   "role": "_show_marketing"
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
   },
   {
    "read": 1,
    "role": "Support Person",
    "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Onboarding Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_marketing"
   }
  ],
  "row_format": "Dynamic",

@@ -162,25 +162,6 @@ def secure_get(**kwargs):
             [["Opportunity", "opportunity_owner", "in", owners]]
         )
         return original_get(**frappe.local.form_dict)
-
-    if doctype == "Customer":
-        owners = get_visible_employee_names(user)
-        opportunities = frappe.db.get_all(
-            "Opportunity",
-            filters={"opportunity_owner": ["in", owners]},
-            pluck="name",
-        )
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Customer", "opportunity", "in", opportunities]]
-        )
-        return original_get(**frappe.local.form_dict)
-
-    if doctype == "Customer":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Customer", "customer_owner", "in", owners]]
-        )
-        return original_get(**frappe.local.form_dict)
     
     if doctype == "Resume" or doctype == "RUC":
         owners = get_visible_employee_names(user)
@@ -368,3 +349,77 @@ def send_notification(**kwargs):
         "status": "success",
         "recipients": recipients,
     }
+
+def customer_query(user):
+
+    if user == "Administrator":
+        return ""
+
+    # 1. get employee
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user": user},
+        "name"
+    )
+
+    if not employee:
+        return "1=0"
+
+    # 2. get departments
+    departments = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"parent": employee},
+        pluck="department"
+    )
+
+    # 3. get team
+    team = get_visible_employee_names(user)
+
+    if not team:
+        return "1=0"
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+
+    conditions = []
+
+    # -------------------------
+    # SALES LOGIC
+    # -------------------------
+    if "Sales" in departments:
+        conditions.append(f"""
+            `tabCustomer`.customer_owner IN ({team_sql})
+        """)
+
+    # -------------------------
+    # CR / ONBOARDING LOGIC
+    # -------------------------
+    routing_departments = []
+
+    if "CR" in departments:
+        routing_departments.append("CR")
+
+    if "Onboarding" in departments:
+        routing_departments.append("Onboarding")
+
+    if routing_departments:
+
+        dept_sql = ",".join([frappe.db.escape(d) for d in routing_departments])
+
+        conditions.append(f"""
+            EXISTS (
+                SELECT 1
+                FROM `tabCustomer Department Route`
+                WHERE
+                    `tabCustomer Department Route`.customer = `tabCustomer`.name
+                    AND `tabCustomer Department Route`.department IN ({dept_sql})
+                    AND `tabCustomer Department Route`.assigned_to IN ({team_sql})
+            )
+        """)
+
+    # -------------------------
+    # FINAL CONDITION
+    # -------------------------
+    if not conditions:
+        return "1=0"
+
+    return "(" + " OR ".join(conditions) + ")"

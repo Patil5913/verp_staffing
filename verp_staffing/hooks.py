@@ -237,7 +237,10 @@ scheduler_events = {
 override_whitelisted_methods = {
     "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
 }
-#
+# set query permisson for doctype
+permission_query_conditions = {
+    "Customer": "verp_staffing.crm.api.helpers.customer_query"
+}
 
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

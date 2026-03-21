@@ -15,7 +15,7 @@ frappe.ui.form.on("Department", {
 function set_service_query(frm) {
     frm.set_query("services", function () {
         return {
-            query: "verp_staffing.employee.doctype.department.department.get_department_service_query",
+            query: "verp_staffing.settings.doctype.department.department.get_department_service_query",
             filters: {
                 department: frm.doc.name
             }

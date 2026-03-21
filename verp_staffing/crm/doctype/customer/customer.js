@@ -7,7 +7,10 @@ frappe.ui.form.on("Customer", {
 		set_customer_owner(frm);
 		window.render_notes(frm);
 		window.render_activity_section(frm);
-		toggle_tab_view(frm);
+		if (frappe.session.user != "Administrator") {
+			toggle_tab_view(frm);
+		}
+		showOnboarding_tab(frm);
 		inject_department_css();
 		inject_status_badge_css();
 		load_department_panels(frm);
@@ -107,9 +110,9 @@ frappe.ui.form.on("Customer", {
 			callback: (r) => {
 				let dept = r.message;
 				apply_tab_visibility(frm, dept);
-				window.add_forward_button(frm);
 			},
 		});
+		window.add_forward_button(frm);
 	},
 
 	sales_order: function (frm) {
@@ -863,31 +866,26 @@ function get_status_html(row) {
 
 function toggle_tab_view(frm) {
 	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Employee",
-			filters: { user: frappe.session.user },
-			fieldname: ["employee_assignment_details_table"],
-		},
+		method: "verp_staffing.employee.doctype.employee.employee.get_user_departments",
 		callback: function (r) {
-			if (!r.message) return;
+			const departments = r.message || [];
 
-			const department = r.message.employee_assignment_details_table.map(
-				(d) => d.department,
-			);
-			// Hide other tabs based on department
-			if (department.includes("Technical")) {
-				frm.toggle_display("sales_tab", false);
-				frm.toggle_display("sales_content", false);
-				frm.toggle_display("marketing_tab", false);
-				frm.toggle_display("marketing_content", false);
-			}
+			console.log("Departments:", departments);
 
-			if (department.includes("Marketing")) {
-				frm.toggle_display("sales_tab", false);
-				frm.toggle_display("sales_content", false);
-				frm.toggle_display("technical_tab", false);
-				frm.toggle_display("technical_content", false);
+			// reset all first (important)
+			frm.toggle_display("sales_tab", true);
+			frm.toggle_display("sales_content", true);
+			frm.toggle_display("technical_tab", true);
+			frm.toggle_display("technical_content", true);
+			frm.toggle_display("marketing_tab", true);
+			frm.toggle_display("marketing_content", true);
+
+			// Onboarding (NEW)
+			if (!departments.includes("Onboarding")) {
+				// hide onboarding section if not onboarding user
+				frm.toggle_display("after_placement_details", false);
+			} else {
+				frm.toggle_display("after_placement_details", true);
 			}
 		},
 	});
@@ -1428,4 +1426,80 @@ function render_customer_history(frm, data) {
 	}
 
 	frm.fields_dict.customer_details.$wrapper.html(html);
+}
+
+function showOnboarding_tab(frm) {
+	if (!frm.doc.name) return;
+
+	frappe.call({
+		method: "verp_staffing.crm.doctype.customer.customer.get_after_placement_details",
+		args: {
+			customer: frm.doc.name,
+		},
+		callback(r) {
+			const data = r.message;
+
+			if (!data || !data.position) {
+				frm.fields_dict.after_placement_details.$wrapper.html(
+					"<div style='color:#888'>No placement details available</div>",
+				);
+				return;
+			}
+
+			const html = `
+				<div style="padding:10px">
+					<p><b>Position:</b> ${data.position}</p>
+					<p><b>Placement Company:</b> ${data.placement_company}</p>
+					<p><b>Job Duration:</b> ${data.job_duration}</p>
+					<p><b>Salary:</b> ${data.salary}</p>
+
+					<div style="margin-top:10px">
+						<label><b>Company Percentage</b></label>
+						<input 
+							type="number" 
+							id="company_percentage_input"
+							value="${data.company_percentage || 0}"
+							style="width:100%; padding:6px; margin-top:4px"
+						/>
+					</div>
+
+					<button 
+						class="btn btn-primary"
+						style="margin-top:10px"
+						id="save_company_percentage"
+					>
+						Save
+					</button>
+				</div>
+			`;
+
+			const wrapper = frm.fields_dict.after_placement_details.$wrapper;
+
+			wrapper.html(html);
+
+			// bind click
+			wrapper.off("click", "#save_company_percentage");
+
+			wrapper.on("click", "#save_company_percentage", function () {
+				const value = wrapper.find("#company_percentage_input").val();
+
+				if (!value) {
+					frappe.msgprint("Company Percentage is required");
+					return;
+				}
+
+				frappe.call({
+					method: "verp_staffing.crm.doctype.customer.customer.update_company_percentage",
+					args: {
+						lead_name: data.lead_name,
+						company_percentage: value,
+					},
+					callback() {
+						frappe.msgprint("Updated successfully");
+						frm.refresh();
+					},
+				});
+			});
+		},
+	});
 }

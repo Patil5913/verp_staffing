@@ -13,7 +13,7 @@
  "is_standard": 1,
  "label": "Total Customer",
  "method": "verp_staffing.crm.api.workspace.get_visible_customer_count",
- "modified": "2026-03-12 17:05:43.660184",
+ "modified": "2026-03-21 14:35:10.235801",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Total Customer",
@@ -23,5 +23,5 @@
  "show_full_number": 0,
  "show_percentage_stats": 1,
  "stats_time_interval": "Daily",
- "type": "Custom"
+ "type": "Document Type"
 }
