@@ -10,6 +10,8 @@
   "type_of_interview",
   "date_of_interview",
   "time_of_interview",
+  "from",
+  "to",
   "support",
   "feedback",
   "follow_up"
@@ -76,13 +78,23 @@
    "label": "Follow Up",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "from",
+   "fieldtype": "Time",
+   "label": "From"
+  },
+  {
+   "fieldname": "to",
+   "fieldtype": "Time",
+   "label": "To"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-18 15:39:58.298250",
+ "modified": "2026-03-21 11:54:24.505625",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Round",

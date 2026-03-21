@@ -1,3 +1,145 @@
+<style>
+    /* GLOBAL */
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #334155;
+    }
+
+    /* SECTION HEADERS */
+
+    h1 {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    h4 {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    /* CARD SECTIONS */
+
+    #stage-section>div {
+        margin-bottom: 20px;
+    }
+
+    /* TABLE BASE */
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    /* TABLE HEADER */
+
+    table thead {
+        background: #f8fafc;
+    }
+
+    table th {
+        padding: 10px 12px !important;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    /* TABLE CELLS */
+
+    table td {
+        padding: 10px 12px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    /* ZEBRA ROWS */
+
+    table tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    /* INTERVIEW CARD */
+
+    #interview-list>div>div {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        background: #ffffff !important;
+    }
+
+    /* STATUS BADGE */
+
+    #interview-list span {
+        background: #e0f2fe !important;
+        color: #0369a1;
+        padding: 4px 10px !important;
+        border-radius: 20px !important;
+        font-size: 12px;
+    }
+
+    /* BUTTONS */
+
+    button {
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+    }
+
+    #interview-filter-btn {
+        background: #0ea5e9;
+        color: white;
+    }
+
+    #interview-clear-btn {
+        background: #e2e8f0;
+    }
+
+    #load-more-interviews {
+        background: #0ea5e9 !important;
+    }
+
+    /* FEEDBACK BOX */
+
+    .feedback-box {
+        background: #f1f5f9;
+        padding: 6px 10px;
+        border-radius: 6px;
+    }
+
+    /* FILTER BAR */
+
+    #interview-container {
+        max-height: 400px;
+        overflow: auto;
+    }
+
+    /* RESPONSIVE TABLE SCROLL */
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    /* MOBILE IMPROVEMENTS */
+
+    @media (max-width:768px) {
+
+        table {
+            min-width: 600px;
+        }
+
+        #interview-container {
+            overflow-x: auto;
+        }
+
+        input {
+            width: 100%;
+        }
+
+    }
+</style>
 {% if not is_verified %}
 
 <div
@@ -128,6 +270,155 @@
 
     }
 </script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let interview_offset = 0;
+    const interview_limit = 5;
+
+    function load_interviews(append = false) {
+
+        let search = document.getElementById("interview-search").value;
+        let from_date = document.getElementById("interview-from").value;
+        let to_date = document.getElementById("interview-to").value;
+
+        if (from_date && to_date && from_date > to_date) {
+            alert("From Date cannot be greater than To Date");
+            return;
+        }
+
+        fetch(`/api/method/verp_staffing.www.customer.get_customer_history?customer={{ full_history.customer.customer_name }}&interview_offset=${interview_offset}&interview_limit=${interview_limit}&search=${search}&from_date=${from_date}&to_date=${to_date}`)
+            .then(res => res.json())
+            .then(res => {
+
+                let data = (res.message && res.message.departments && res.message.departments.Interview) || [];
+
+                let container = document.getElementById("interview-list");
+
+                if (!append) container.innerHTML = ""
+
+                if (!data.length) {
+                    container.innerHTML =
+                        "<div style='text-align:center;color:#64748b;padding:20px;'>No interviews found</div>";
+                    return;
+                }
+
+                let html = "";
+
+                data.forEach((rec) => {
+
+                    html += `
+                <div style="margin-top:10px;">
+                    <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f9fafb;">
+
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                          
+
+                            <span style="background:#e0f2fe;padding:4px 10px;border-radius:20px;font-size:12px;">
+                                ${rec.status || "-"}
+                            </span>
+                        </div>
+
+                        <div style="color:#64748b;margin-bottom:8px;">
+                            Company: ${rec.company || "-"} • Role: ${rec.role || "-"}
+                        </div>
+
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">#</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Round</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Date</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Type</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Interview</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Time</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Feedback</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(rec.interview_rounds_table || []).map((r, i) => `
+                                    <tr style="border-bottom:1px solid #cbd5e1;">
+                                        <td style="padding:8px;">${i + 1}</td>
+                                        <td style="padding:8px;">${r.round || "-"}</td>
+                                        <td style="padding:8px;">${r.date || "-"}</td>
+                                        <td style="padding:8px;">${r.type_of_interview || "-"}</td>
+                                        <td style="padding:8px;">${r.date_of_interview || "-"}</td>
+                                        <td style="padding:8px;">${r.time_of_interview || "-"}</td>
+                                        <td style="padding:8px;">
+                                            ${r.feedback && r.feedback.trim()
+                            ? `<div style="background:#f1f5f9;padding:6px;border-radius:6px;">${r.feedback}</div>`
+                            : `<button onclick="openFeedbackDialog('${r.name}', this)"
+                                                    style="padding:4px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;">
+                                                    Add
+                                                </button>`
+                        }
+                                        </td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+                `;
+                });
+
+                container.innerHTML += html;
+
+                if (data.length === interview_limit) {
+
+                    document.getElementById("interview-load-more").innerHTML =
+                        `<button id="load-more-interviews"
+            style="
+                padding:8px 16px;
+                background:#0ea5e9;
+                color:white;
+                border:none;
+                border-radius:6px;
+                cursor:pointer;
+            ">
+            Load More
+        </button>`;
+
+                } else {
+
+                    document.getElementById("interview-load-more").innerHTML = "";
+
+                }
+
+            });
+    }
+
+    $(document).on("click", "#load-more-interviews", function () {
+        interview_offset += interview_limit;
+        load_interviews(true);
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        document.getElementById("interview-filter-btn").onclick = function () {
+            interview_offset = 0;
+            load_interviews(false);
+        };
+
+        document.getElementById("interview-clear-btn").onclick = function () {
+            document.getElementById("interview-search").value = "";
+            document.getElementById("interview-from").value = "";
+            document.getElementById("interview-to").value = "";
+            interview_offset = 0;
+            load_interviews(false);
+        };
+
+    });
+
+    $(document).on("click", "#interview-clear-btn", function () {
+        $("#interview-search").val("");
+        $("#interview-from").val("");
+        $("#interview-to").val("");
+        interview_offset = 0;
+        load_interviews(false);
+    });
+</script>
+
 <div id="feedbackDialog" style="display:none;
             position:fixed;
             top:0;
@@ -184,34 +475,49 @@
     {% if full_history %}
 
     <!-- ================= CUSTOMER CREATED ================= -->
-    <div style="padding:15px;border-left:4px solid #28a745;margin-bottom:15px;">
+    <!-- <div style="
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:18px;
+    background:#f9fafb;
+">
         <h4>Customer Created</h4>
         <p><b>Customer:</b> {{ full_history.customer.customer_name }}</p>
         <p><b>Owner:</b> {{ full_history.customer.owner }}</p>
-    </div>
+    </div> -->
 
 
     <!-- ================= SALES ORDER ================= -->
     {% if full_history.departments.get("Sales Order") %}
 
-    <div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
-
+    <div style="
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:18px;
+    background:#fff;
+">
         <h4>Sales Order</h4>
 
-        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-
+        <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
             <thead>
-                <tr style="background:#f5f5f5;">
-                    <th style="border:1px solid #ddd; padding:6px;">No.</th>
+                <tr style="background:#f1f5f9;">
+                    <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
                     <!-- <th style="border:1px solid #ddd; padding:6px;">ID</th> -->
-                    <th style="border:1px solid #ddd; padding:6px;">Agreement</th>
+                    <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Agreement</th>
                 </tr>
             </thead>
 
             <tbody>
                 {% for so in full_history.departments["Sales Order"] %}
                 <tr>
-                    <td style="border:1px solid #ddd; padding:6px;">{{ loop.index }}</td>
+                    <td style="padding:8px;border-bottom:2px solid #cbd5e1;">{{ loop.index }}</td>
 
                     <!-- <td style="border:1px solid #ddd; padding:6px;">
                         <a href="/app/sales-order/{{ so.id }}" target="_blank">
@@ -219,7 +525,7 @@
                         </a>
                     </td> -->
 
-                    <td style="border:1px solid #ddd; padding:6px;">
+                    <td style="padding:8px;border-bottom:2px solid #cbd5e1;">
                         {{ so.agreement or "-" }}
                     </td>
                 </tr>
@@ -242,13 +548,72 @@
 
     <div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
 
-        <h4>{{ dept }}</h4>
+        <h4 style="margin-bottom:10px;font-weight:600;">
+            {{ dept }}
+        </h4>
+
+        {% if dept == "Interview" %}
+
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:18px;background:#fff;">
 
 
+            <!-- FILTER BAR -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+
+                    <input type="text" id="interview-search" placeholder="Search company / role / status"
+                        style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;" />
+
+                    From :
+                    <input type="date" id="interview-from"
+                        style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
+
+                    To :
+                    <input type="date" id="interview-to"
+                        style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
+
+                    <button id="interview-filter-btn"
+                        style="padding:6px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;">
+                        Apply
+                    </button>
+
+                    <button id="interview-clear-btn"
+                        style="padding:6px 12px;background:#e5e7eb;color:#334155;border:none;border-radius:6px;">
+                        Clear
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- SCROLL AREA -->
+            <div id="interview-container"
+                style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f8fafc;">
+
+                <div id="interview-list"></div>
+
+            </div>
+
+            <!-- LOAD MORE -->
+            <div id="interview-load-more" style="text-align:center;margin-top:15px;"></div>
+
+        </div>
+
+        {% endif %}
+
+
+
+
+        {% if dept != "Interview" %}
         {% for rec in records %}
 
-        <div style="margin-left:10px;margin-top:10px;">
-
+        <div style="
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:14px;
+    margin-top:10px;
+    background:#f9fafb;
+">
 
             <!-- ID -->
             <!-- <p>
@@ -259,48 +624,54 @@
             </p> -->
 
 
-            <p><b>Status:</b> {{ rec.status }}</p>
+            <p style="margin:4px 0;color:#334155;font-size:13px;">
+                <b>Status:</b> {{ rec.status }}
+            </p>
 
             {% if rec.department != "Interview" %}
-            <p><b>Assigned To:</b> {{ rec.assign_to or "-" }}</p>
-            {% endif %}
-
-
-            {% if rec.resume %}
-            <p>
-                <b>Resume:</b>
-                <a href="{{ rec.resume }}" target="_blank">View Resume</a>
+            <p style="margin:4px 0;color:#334155;font-size:13px;">
+                <b>Assigned To:</b> {{ rec.assign_to or "-" }}
             </p>
             {% endif %}
 
 
-            {% if rec.department == "Interview" and rec.company %}
+            {% if rec.resume %}
+            <p style="margin:4px 0;color:#334155;font-size:13px;">
+                <b>Resume:</b>
+                {% endif %}
+
+
+                <!-- {% if rec.department == "Interview" and rec.company %}
             <p><b>Company:</b> {{ rec.company }}</p>
             {% endif %}
 
             {% if rec.department == "Interview" and rec.role %}
             <p><b>Role:</b> {{ rec.role }}</p>
-            {% endif %}
+            {% endif %} -->
 
 
 
-            <!-- ================= SESSION ================= -->
+                <!-- ================= SESSION ================= -->
 
-            {% if rec.session_details %}
+                {% if rec.session_details %}
 
             <div style="margin-top:10px;">
 
                 <b>Session Details:</b>
 
-                <table style="width:100%; border-collapse:collapse; margin-top:5px;">
-
+                <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
                     <thead>
-                        <tr style="background:#f5f5f5;">
-                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Duration</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Projects</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Quality</th>
+                        <tr>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Duration</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Date</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Projects</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Quality</th>
                         </tr>
                     </thead>
 
@@ -309,23 +680,24 @@
                         {% for s in rec.session_details %}
 
                         <tr>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ loop.index }}</td>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ s.session_duration_in_hour or "-" }}</td>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ s.date or "-" }}</td>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ s.projects or "-" }}</td>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ s.quality or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ loop.index }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.session_duration_in_hour or
+                                "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.date or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.projects or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.quality or "-" }}</td>
                         </tr>
 
                         {% endfor %}
 
                     </tbody>
+
                 </table>
 
             </div>
 
             {% endif %}
 
-            <!-- ================= JOB APPLICATIONS ================= -->
 
             <!-- ================= MARKETING APPLICATION COUNT ================= -->
 
@@ -335,15 +707,19 @@
 
                 <b>Job Application Count:</b>
 
-                <table style="width:100%; border-collapse:collapse; margin-top:5px;">
-
+                <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
                     <thead>
-                        <tr style="background:#f5f5f5;">
-                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Small</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Large</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Total</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
+                        <tr>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Small</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Large</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Total</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Date</th>
                         </tr>
                     </thead>
 
@@ -352,25 +728,24 @@
                         {% for m in rec.job_application_count %}
 
                         <tr>
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ loop.index }}
-                            </td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ loop.index }}</td>
 
-                            <td style="border:1px solid #ddd; padding:6px;">
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
                                 {{ m.small_application or "-" }}
                             </td>
 
-                            <td style="border:1px solid #ddd; padding:6px;">
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
                                 {{ m.large_application or "-" }}
                             </td>
 
-                            <td style="border:1px solid #ddd; padding:6px;">
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
                                 {{ m.total_application or "-" }}
                             </td>
 
-                            <td style="border:1px solid #ddd; padding:6px;">
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
                                 {{ m.date or "-" }}
                             </td>
+
                         </tr>
 
                         {% endfor %}
@@ -393,14 +768,18 @@
 
                 <b>Proof of Work:</b>
 
-                <table style="width:100%; border-collapse:collapse; margin-top:5px;">
-
+                <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
                     <thead>
-                        <tr style="background:#f5f5f5;">
-                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Description</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Attachments</th>
+                        <tr>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Date</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Description</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Attachments</th>
                         </tr>
                     </thead>
 
@@ -409,11 +788,11 @@
                         {% for p in rec.proof_of_work %}
 
                         <tr>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ loop.index }}</td>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ p.date or "-" }}</td>
-                            <td style="border:1px solid #ddd; padding:6px;">{{ p.description or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ loop.index }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ p.date or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ p.description or "-" }}</td>
 
-                            <td style="border:1px solid #ddd; padding:6px;">
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
                                 {% if p.attachments %}
                                 <a href="{{ p.attachments }}" target="_blank">View</a>
                                 {% else %}
@@ -437,7 +816,7 @@
 
             <!-- ================= INTERVIEW ROUNDS ================= -->
 
-            {% if rec.department == "Interview" and rec.interview_rounds_table %}
+            <!-- {% if rec.department == "Interview" and rec.interview_rounds_table %}
 
             <div style="margin-top:10px;">
 
@@ -496,8 +875,9 @@
 
                                 {% else %}
 
-                                <button type="button" onclick="openFeedbackDialog('{{ r.name }}', this)">
-                                    Add Feedback
+                                <button type="button" onclick="openFeedbackDialog('{{ r.name }}', this)"
+                                    style="padding:4px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;">
+                                    Add
                                 </button>
 
                                 {% endif %}
@@ -514,13 +894,13 @@
 
             </div>
 
-            {% endif %}
+            {% endif %} -->
 
 
         </div>
 
         {% endfor %}
-
+        {% endif %}
     </div>
 
     {% endif %}
@@ -531,4 +911,9 @@
     {% endif %}
 
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        load_interviews(false);
+    });
+</script>
 {% endif %}

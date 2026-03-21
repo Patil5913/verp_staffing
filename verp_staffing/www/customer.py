@@ -251,7 +251,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def get_customer_history(customer):
+def get_customer_history(customer , interview_limit=5, interview_offset=0):
     # =====================================================
     # get customer
     # =====================================================
@@ -470,11 +470,58 @@ def get_customer_history(customer):
         # interview history
         # -------------------------------------------------
 
+        search = frappe.form_dict.get("search")
+        from_date = frappe.form_dict.get("from_date")
+        to_date = frappe.form_dict.get("to_date")
+
+        filters = {
+            "marketing_link": customer
+        }
+
+        or_filters = []
+
+        # 🔍 Search
+        if search:
+            or_filters = [
+                ["company", "like", f"%{search}%"],
+                ["status", "like", f"%{search}%"],
+                ["role", "like", f"%{search}%"]
+            ]
+
+        # 📅 Date filter (assuming 'creation' or change to your field)
+        if from_date and to_date:
+
+            interview_names = frappe.get_all(
+                "Interview Round",
+                filters={
+                    "date_of_interview": ["between", [from_date, to_date]]
+                },
+                pluck="parent"
+            )
+
+            if interview_names:
+                filters["name"] = ["in", interview_names]
+            else:
+                filters["name"] = ["in", [""]]  # forces empty result
+
         interviews = frappe.get_all(
-            "Interview",
-            filters={"marketing_link": customer},
-            fields=["name", "status", "company"],
+           "Interview",
+            filters=filters,
+            or_filters=or_filters if search else None,
+            fields=["name", "status", "company", "role"],
+            limit_page_length=int(interview_limit),
+            limit_start=int(interview_offset),
+            order_by="creation desc"
         )
+
+        total_interviews = frappe.get_all(
+           "Interview",
+            filters=filters,
+            or_filters=or_filters if search else None,
+            fields=["name"]
+        )
+        
+        total_interviews = len(total_interviews)
 
         if interviews:
             history["departments"]["Interview"] = []
@@ -489,10 +536,9 @@ def get_customer_history(customer):
                     "id": iv.name,
                     "company": iv.company,
                     "role": iv_doc.role,
-                    "interview_rounds_table": []   # ✅ child table data
+                    "interview_rounds_table": []
                 }
 
-                # ✅ fetch child table
                 for row in iv_doc.interview_rounds_table:
                     iv_entry["interview_rounds_table"].append({
                         "name": row.name,
@@ -505,5 +551,12 @@ def get_customer_history(customer):
                     })
 
                 history["departments"]["Interview"].append(iv_entry)
+
+        # ✅ ADD THIS
+        history["interview_meta"] = {
+            "total": total_interviews,
+            "limit": int(interview_limit),
+            "offset": int(interview_offset)
+        }
 
     return history
