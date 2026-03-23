@@ -1,0 +1,42 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"gA8t4u9sm0\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">CR</span>\",\"col\":12}},{\"id\":\"soSH-nLEMT\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer\",\"col\":3}}]",
+ "creation": "2026-03-21 14:00:22.239739",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "assign",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "CR",
+ "links": [],
+ "modified": "2026-03-21 14:21:37.860268",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "CR",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "_show_cr"
+  }
+ ],
+ "sequence_id": 28.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Customer",
+   "link_to": "Customer",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "CR"
+}

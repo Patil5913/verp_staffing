@@ -90,3 +90,23 @@ def user_belongs_to_department(user, department):
 
 def get_employee_from_user(user):
     return frappe.db.get_value("Employee", {"user": user}, "name")
+
+@frappe.whitelist()
+def get_user_departments(user=None):
+
+    user = user or frappe.session.user
+
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user": user},
+        "name"
+    )
+
+    if not employee:
+        return []
+
+    return frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"parent": employee},
+        pluck="department"
+    )

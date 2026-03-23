@@ -46,6 +46,8 @@ ROLES = [
     "_show_technical",
     "_show_marketing",
     "_show_employees",
+    "_show_onboarding",
+    "_show_cr"
 ]
 
 PERM_FIELDS = [
@@ -1269,6 +1271,8 @@ DEPARTMENT_WORKSPACE_ROLE_MAP = {
     "Technical": ["_show_technical"],
     "Marketing": ["_show_marketing"],
     "HR": ["_show_employees"],
+    "Onboarding": ["_show_onboarding"],
+    "CR":["_show_cr"]
 }
 
 
