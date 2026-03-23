@@ -236,10 +236,17 @@ def verify_token(token):
         if not hmac.compare_digest(signature, expected_signature):
             return None
 
-        return json.loads(payload)
+        data = json.loads(payload)
+
+        # 🔥 EXPIRY CHECK
+        if data.get("exp"):
+            if datetime.utcnow().timestamp() > data["exp"]:
+                return None
+
+        return data
 
     except Exception:
-            return None
+        return None
     
 
 def load_signature_clean(img_path):
@@ -450,7 +457,7 @@ def apply_signature_and_audit_to_pdf(
             rgb(FOOTER_CLR)
             c.setFont("Helvetica-Oblique", 7.5)
             c.drawString(ML, 30,
-                "This audit trail certificate is an electronically generated record. "
+                "This signature certificate is an electronically generated record. "
                 "Retain with the signed document.")
             c.restoreState()
     
@@ -537,7 +544,7 @@ def apply_signature_and_audit_to_pdf(
         c.saveState()
         rgb(NAVY)
         c.setFont("Helvetica-Bold", 26)
-        c.drawString(ML, y, "AUDIT TRAIL CERTIFICATE")
+        c.drawString(ML, y, "SIGNATURE CERTIFICATE")
         y -= 14
         rgb(ACCENT)
         c.setFont("Helvetica", 9)
@@ -899,6 +906,49 @@ def add_audit_log(token, audit):
     frappe.db.commit()
 
     return {"status": "success"}
+
+
+@frappe.whitelist(allow_guest=True)
+def request_new_agreement_link(sales_order, signer_email, agreementValue):
+    customer_name = frappe.db.get_value("Sales Order", sales_order, "customer")
+    if not customer_name:
+        frappe.throw(f"Sales Order '{sales_order}' not found.")
+
+    customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
+    if not customer_owner:
+        frappe.throw("No customer owner assigned.")
+
+    opp_owner_user = frappe.db.get_value("Employee", customer_owner, "user")
+
+    frappe.sendmail(
+        recipients=[signer_email],
+        subject="Agreement Link Request Received",
+        message=f"""
+            <p>Dear Customer,</p>
+            <p>We have received your request for a new agreement link.</p>
+            <p>Our team will review and send you a fresh link shortly.</p>
+            <p>Best regards,<br>Team</p>
+        """,
+        now=True,
+    )
+
+    send_notification(
+        recipients=[opp_owner_user],
+        subject="Customer Requested a New Agreement Link",
+        message=(
+            f"The customer has requested a new agreement link.\n\n"
+            f"Agreement: {agreementValue}\n"
+            f"Sales Order: {sales_order}\n\n"
+            f"Please generate and send a new link at the earliest."
+        ),
+        reference_doctype="Sales Order",
+        reference_name=sales_order,
+        send_email=1,
+        send_system=1,
+    )
+
+    return {"status": "ok"}
+
     
 import random
 

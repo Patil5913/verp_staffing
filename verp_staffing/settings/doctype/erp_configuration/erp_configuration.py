@@ -2,11 +2,32 @@
 # For license information, please see license.txt
 
 import frappe
+import re
 from frappe.model.document import Document
 
 
 class ERPConfiguration(Document):
-	pass
+
+    def validate(self):
+        self.validate_expiry_time()
+
+    def validate_expiry_time(self):
+        value = self.expiry_hours_of_agreement
+
+        if not value:
+            frappe.throw("Expiry duration is required.")
+
+        # Strict HH:MM format (00:00 to 23:59)
+        if not re.match(r"^\d{2}:\d{2}$", value):
+            frappe.throw("Invalid format. Use HH:MM (e.g., 02:30)")
+
+        hours, minutes = map(int, value.split(":"))
+
+        if hours > 23 or minutes > 59:
+            frappe.throw("Time cannot exceed 23:59.")
+
+        if hours == 0 and minutes == 0:
+            frappe.throw("Expiry duration must be greater than 00:00.")
 
 @frappe.whitelist()
 def get_services():

@@ -9,6 +9,7 @@ import hmac
 import hashlib
 import base64
 import json
+from datetime import datetime, timedelta
 
 class SalesOrder(Document):
 	def before_insert(self):
@@ -32,9 +33,32 @@ def generate_token(data: dict):
     return token
 
 
-def generate_form_url(recipient, sales_order, customer, agreement=None, p=None,  ia=False):
+def get_expiry_timestamp():
+    value = frappe.db.get_single_value(
+        "ERP Configuration",
+        "expiry_hours_of_agreement"
+    )
+
+    if not value:
+        return None
+
+    try:
+        hours, minutes = map(int, value.split(":"))
+    except Exception:
+        return None
+
+    total_seconds = hours * 3600 + minutes * 60
+
+    expiry_dt = datetime.utcnow() + timedelta(seconds=total_seconds)
+
+    return int(expiry_dt.timestamp())
+
+
+def generate_form_url(recipient, sales_order, customer, agreement=None, p=None, ia=False):
     base_url = frappe.utils.get_url()
     so = frappe.get_doc("Sales Order", sales_order)
+
+    expiry = get_expiry_timestamp() if ia else None
 
     data = {
         "so": so.name,
@@ -42,7 +66,8 @@ def generate_form_url(recipient, sales_order, customer, agreement=None, p=None, 
         "customer": customer,
         "agr": agreement,
         "e": recipient,
-        "ia": int(ia)
+        "ia": int(ia),
+        "exp": expiry  # 🔥 ADD THIS
     }
 
     token = generate_token(data)
