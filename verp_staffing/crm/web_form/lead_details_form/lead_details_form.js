@@ -80,6 +80,22 @@ frappe.ready(async function () {
 	customerEmail = data.e;
 	customerValue = data.customer;
 
+	console.log("data.exp", data.exp);
+
+	// 🔥 EXPIRY CHECK (initial)
+	if (data.exp && isExpired(data.exp)) {
+		blockExpiredUI();
+		throw new Error("Link expired");
+	}
+
+	if (data.exp) {
+		setInterval(() => {
+			if (isExpired(data.exp)) {
+				blockExpiredUI();
+			}
+		}, 60000); // every 1 minute
+	}
+
 	// Wait until Web Form UI loads
 	if (isAgreement) {
 		fetch_server_fingerprint(function (fp) {
@@ -431,6 +447,249 @@ frappe.ready(async function () {
 		});
 	}
 });
+
+function isExpired(exp) {
+	if (!exp) return false;
+
+	const now = Math.floor(Date.now() / 1000);
+	return now > exp;
+}
+
+function blockExpiredUI() {
+    // ── Persist state across refreshes using localStorage ────────────────────
+    const STORAGE_KEY = "agreement_link_requested_" + (token);
+    const alreadyRequested = localStorage.getItem(STORAGE_KEY) === "true";
+
+    const html = `
+    <div style="
+        position: relative;
+        width: 420px;
+        padding: 48px 40px 40px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 12px 40px rgba(0,0,0,0.08);
+        overflow: hidden;
+        text-align: center;
+        font-family: 'Georgia', serif;
+        margin: 0 auto;
+    ">
+        <div style="
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #c0392b, #e74c3c, #e67e22);
+        "></div>
+
+        <div style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: #fff0ee;
+            border: 1.5px solid #fad4cf;
+            margin-bottom: 24px;
+        ">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                stroke="#c0392b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+        </div>
+
+        <p style="margin: 0 0 6px; font-size: 11px; letter-spacing: 2.5px;
+            text-transform: uppercase; color: #c0392b; font-family: 'Georgia', serif;">
+            Agreement Notice
+        </p>
+
+        <h3 style="margin: 0 0 16px; font-size: 24px; font-weight: normal;
+            color: #1a1a1a; letter-spacing: -0.3px; font-family: 'Georgia', serif;">
+            This link has expired
+        </h3>
+
+        <div style="width: 40px; height: 1px; background: #e0dbd5; margin: 0 auto 20px;"></div>
+
+        <p style="margin: 0 0 32px; font-size: 14.5px; line-height: 1.75;
+            color: #666; font-family: 'Georgia', serif;">
+            The agreement link you followed is no longer valid.<br/>
+            Please request a new link to proceed.
+        </p>
+
+        <button
+            id="request-new-link-btn"
+            onclick="handleRequestNewLink(this)"
+            style="
+                padding: 12px 32px;
+                background: #c0392b;
+                color: #fff;
+                border: 1.5px solid #c0392b;
+                border-radius: 3px;
+                font-size: 13px;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                font-family: 'Georgia', serif;
+                cursor: pointer;
+                min-width: 200px;
+            "
+        >
+            Request New Link
+        </button>
+
+        <div id="request-status-msg" style="
+            display: none;
+            margin-top: 16px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+            line-height: 1.6;
+        "></div>
+    </div>
+    `;
+
+    frappe.web_form.set_df_property("form_token", "hidden", 1);
+    document.querySelector(".discard-btn")?.remove();
+    document.querySelector(".btn-next")?.remove();
+    document.querySelector(".submit-btn")?.remove();
+
+    const wrapper = frappe.web_form.fields_dict["authentication_html"]?.$wrapper;
+    if (wrapper) {
+        wrapper.html(html);
+    }
+
+    // ── After DOM is injected, apply already-requested state immediately ─────
+    if (alreadyRequested) {
+        applyAlreadyRequestedState();
+    }
+
+    // ── Spinner keyframe ──────────────────────────────────────────────────────
+    if (!document.getElementById("spin-keyframe")) {
+        const style = document.createElement("style");
+        style.id = "spin-keyframe";
+        style.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+        document.head.appendChild(style);
+    }
+
+    // ── Apply already-sent state on load (no button, just success message) ───
+    function applyAlreadyRequestedState() {
+        const btn = document.getElementById("request-new-link-btn");
+        const statusEl = document.getElementById("request-status-msg");
+        if (!btn || !statusEl) return;
+
+        btn.disabled = true;
+        btn.style.cursor = "not-allowed";
+        btn.style.background = "#27ae60";
+        btn.style.borderColor = "#27ae60";
+        btn.style.opacity = "1";
+        btn.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Request Sent
+            </span>
+        `;
+        showStatus(
+            statusEl,
+            "✔ Your request has already been sent. You will receive a new agreement link shortly.",
+            "#f0faf4", "#27ae60", "#1e8449"
+        );
+    }
+
+    function showStatus(el, message, bgColor, borderColor, textColor) {
+        el.style.display = "block";
+        el.style.background = bgColor;
+        el.style.border = `1px solid ${borderColor}`;
+        el.style.color = textColor;
+        el.textContent = message;
+    }
+
+    // ── Click handler ─────────────────────────────────────────────────────────
+    window.handleRequestNewLink = function (btn) {
+        if (localStorage.getItem(STORAGE_KEY) === "true") return; // ← double guard
+
+        // Lock immediately
+        btn.disabled = true;
+        btn.style.cursor = "not-allowed";
+        btn.style.opacity = "0.6";
+
+        const statusEl = document.getElementById("request-status-msg");
+
+        btn.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="animation: spin 1s linear infinite;">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                Sending Request…
+            </span>
+        `;
+
+        frappe.call({
+            method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.request_new_agreement_link",
+            args: {
+                sales_order: salesOrder,
+                signer_email: customerEmail,
+                agreementValue: agreementValue,
+            },
+            callback: function (response) {
+                const success = response
+                    && response.message
+                    && response.message.status === "ok";
+
+                if (success) {
+                    // ✅ Persist to localStorage so refresh keeps it locked
+                    localStorage.setItem(STORAGE_KEY, "true");
+
+                    btn.style.background = "#27ae60";
+                    btn.style.borderColor = "#27ae60";
+                    btn.style.opacity = "1";
+                    btn.innerHTML = `
+                        <span style="display:inline-flex;align-items:center;gap:8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Request Sent
+                        </span>
+                    `;
+                    showStatus(
+                        statusEl,
+                        "✔ Your request has been sent. You will receive a new agreement link shortly.",
+                        "#f0faf4", "#27ae60", "#1e8449"
+                    );
+                } else {
+                    btn.style.background = "#95a5a6";
+                    btn.style.borderColor = "#95a5a6";
+                    btn.style.opacity = "1";
+                    btn.innerHTML = "Request Unavailable";
+                    showStatus(
+                        statusEl,
+                        "⚠ Something went wrong. Please contact your agreement administrator directly.",
+                        "#fff8f0", "#e67e22", "#a04000"
+                    );
+                }
+            },
+            error: function () {
+                btn.style.background = "#95a5a6";
+                btn.style.borderColor = "#95a5a6";
+                btn.style.opacity = "1";
+                btn.innerHTML = "Request Unavailable";
+                showStatus(
+                    statusEl,
+                    "⚠ Unable to reach the server. Please contact your agreement administrator directly.",
+                    "#fff8f0", "#e67e22", "#a04000"
+                );
+            }
+        });
+    };
+}
 
 function shouldValidate(fieldname, candidateFields) {
 	return candidateFields.includes(fieldname);
@@ -1209,8 +1468,6 @@ function validate_ssn_digit(value) {
 	return true;
 }
 
-
-
 async function get_signature_value(method) {
 	if (method === "Draw") {
 		return frappe.web_form.get_value("signature") || null;
@@ -1224,14 +1481,13 @@ async function get_signature_value(method) {
 	try {
 		const r = await frappe.call({
 			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_signature",
-			args: { token }
+			args: { token },
 		});
 
 		// ✅ r.message is now a plain string, not an object
-        const value = r.message || null;
-        SIGNATURE_CACHE = value;
-        return value;
-		
+		const value = r.message || null;
+		SIGNATURE_CACHE = value;
+		return value;
 	} catch (e) {
 		console.error("Signature fetch failed", e);
 		return null;
