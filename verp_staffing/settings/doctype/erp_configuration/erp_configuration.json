@@ -14,7 +14,16 @@
   "ead_card",
   "column_break_aivw",
   "old_resume",
-  "visa_copy"
+  "visa_copy",
+  "candidate_form_fields_tab",
+  "select_candidate_details_form_fields_html",
+  "candidate_details_form_fields",
+  "department_display_fields_tab",
+  "select_department_display_form_fields_html",
+  "department_display_form_fields",
+  "department_access_fields_tab",
+  "department_access_fields",
+  "department_access_form_fields"
  ],
  "fields": [
   {
@@ -70,13 +79,61 @@
    "fieldname": "visa_copy",
    "fieldtype": "Check",
    "label": "Is Visa Copy Mandatory"
+  },
+  {
+   "fieldname": "candidate_form_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Candidate Form Fields"
+  },
+  {
+   "fieldname": "select_candidate_details_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "candidate_details_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "select_department_display_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Department Display Form Fields"
+  },
+  {
+   "fieldname": "department_display_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Department Display Form Fields"
+  },
+  {
+   "fieldname": "department_display_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Department Display Fields"
+  },
+  {
+   "fieldname": "department_access_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Department Access Fields"
+  },
+  {
+   "fieldname": "department_access_fields",
+   "fieldtype": "HTML",
+   "label": "Department Access Fields"
+  },
+  {
+   "fieldname": "department_access_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Department Access Form Fields"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-11 16:02:34.642665",
+ "modified": "2026-03-21 13:40:58.262405",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

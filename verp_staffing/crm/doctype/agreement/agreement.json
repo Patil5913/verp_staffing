@@ -6,22 +6,30 @@
  "engine": "InnoDB",
  "field_order": [
   "sales_order",
+  "pdf",
+  "column_break_whbw",
   "template",
+  "certificate_id",
+  "signature_image",
+  "section_break_fnhs",
   "data",
-  "pdf"
+  "audit_trail"
  ],
  "fields": [
   {
    "fieldname": "sales_order",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Sales Order",
-   "options": "Sales Order"
+   "options": "Sales Order",
+   "read_only": 1
   },
   {
    "fieldname": "template",
    "fieldtype": "Link",
    "label": "Template",
-   "options": "Pdf Agreement Template"
+   "options": "Pdf Agreement Template",
+   "read_only": 1
   },
   {
    "fieldname": "data",
@@ -33,12 +41,40 @@
    "fieldname": "pdf",
    "fieldtype": "Attach",
    "label": "PDF"
+  },
+  {
+   "fieldname": "column_break_whbw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "certificate_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Certificate ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_fnhs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "audit_trail",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "Audit Trail"
+  },
+  {
+   "fieldname": "signature_image",
+   "fieldtype": "Link",
+   "label": "Signature Image",
+   "options": "File",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-26 10:10:52.076807",
+ "modified": "2026-03-23 12:25:45.743216",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
@@ -49,18 +85,6 @@
    "read": 1,
    "role": "Sales Employee",
    "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
    "write": 1
   },
   {
@@ -79,15 +103,27 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Team Lead",
-   "select": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "role": "Sales Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
    "select": 1,
    "write": 1
   }

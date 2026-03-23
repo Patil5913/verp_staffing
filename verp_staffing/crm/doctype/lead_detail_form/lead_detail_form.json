@@ -7,20 +7,17 @@
  "field_order": [
   "authentication_section",
   "authentication_html",
+  "form_token",
   "agreement_section",
   "agreement_html",
-  "agreement_link",
   "consent_and_electronic_signature_confirmation_section",
   "signature_method",
   "signature",
   "signature_custom_html",
-  "signature_image",
   "column_break_reui",
   "my_electronic_signature_has_same_effect_as_handwritten",
   "i_consent_to_receive_sign_and_store_documents_electronically",
   "i_confirm_my_identity_and_signing_this_document_intentionally",
-  "audit_trail",
-  "certificate_id",
   "personal_information_section",
   "surname",
   "first_name",
@@ -30,7 +27,6 @@
   "email",
   "personal_linkedin",
   "date_of_birth",
-  "sales_order",
   "educational_details_section",
   "educational_details",
   "past_experience_details_section",
@@ -44,7 +40,7 @@
   "current_address",
   "address_history_section",
   "address_history",
-  "section_break_bxyq",
+  "other_information_section",
   "certificate_or_completed_course",
   "column_break_ylcw",
   "current_visa_status",
@@ -59,7 +55,7 @@
   "column_break_mffv",
   "ssn_digit",
   "availability_for_interview",
-  "section_break_xllz",
+  "files_upload_section",
   "remarks",
   "column_break_vext",
   "files_custom_html",
@@ -198,10 +194,6 @@
    "label": "Address History"
   },
   {
-   "fieldname": "section_break_bxyq",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "column_break_ylcw",
    "fieldtype": "Column Break"
   },
@@ -217,10 +209,6 @@
   {
    "fieldname": "column_break_mffv",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_xllz",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_vext",
@@ -331,11 +319,6 @@
    "label": "Consent and Electronic Signature Confirmation"
   },
   {
-   "fieldname": "audit_trail",
-   "fieldtype": "Small Text",
-   "label": "Audit Trail"
-  },
-  {
    "default": "Draw",
    "fieldname": "signature_method",
    "fieldtype": "Select",
@@ -346,12 +329,6 @@
    "fieldname": "signature_custom_html",
    "fieldtype": "Data",
    "label": "Signature Upload HTML"
-  },
-  {
-   "fieldname": "signature_image",
-   "fieldtype": "Link",
-   "label": "Signature Image",
-   "options": "File"
   },
   {
    "fieldname": "files_custom_html",
@@ -374,12 +351,6 @@
    "fieldtype": "Data"
   },
   {
-   "fieldname": "agreement_link",
-   "fieldtype": "Link",
-   "label": "Agreement Link",
-   "options": "Agreement"
-  },
-  {
    "description": "NOTE: Provide country code with number.",
    "fieldname": "personal_phone_number",
    "fieldtype": "Data",
@@ -396,13 +367,6 @@
    "fieldtype": "Data"
   },
   {
-   "fieldname": "certificate_id",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Certificate ID",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_odpr",
    "fieldtype": "Section Break"
   },
@@ -413,11 +377,17 @@
    "options": "Doctype Reference"
   },
   {
-   "fieldname": "sales_order",
-   "fieldtype": "Link",
-   "label": "Sales Order",
-   "options": "Sales Order",
-   "unique": 1
+   "fieldname": "form_token",
+   "fieldtype": "Small Text",
+   "label": "Form Token"
+  },
+  {
+   "fieldname": "other_information_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "files_upload_section",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "after_placement_data_section",
@@ -457,7 +427,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-21 09:55:20.384619",
+ "modified": "2026-03-23 12:27:06.323989",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -466,15 +436,11 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
    "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -490,15 +456,11 @@
   },
   {
    "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
    "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager"
   },
   {
    "read": 1,
@@ -506,7 +468,7 @@
   },
   {
    "read": 1,
-   "role": "Resume Person"
+   "role": "marketing Master Manager"
   },
   {
    "read": 1,
@@ -514,7 +476,19 @@
   },
   {
    "read": 1,
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
    "role": "Marketing Mentor"
+  },
+  {
+   "read": 1,
+   "role": "Resume Person"
   },
   {
    "read": 1,
@@ -522,7 +496,15 @@
   },
   {
    "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
    "role": "Senior Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Onboarding Person"
   },
   {
    "read": 1,
@@ -530,19 +512,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Manager"
-  },
-  {
-   "read": 1,
    "role": "JDC"
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator"
   },
   {
    "read": 1,
@@ -554,7 +524,7 @@
   },
   {
    "read": 1,
-   "role": "Onboarding Person"
+   "role": "Technical Master Manager"
   },
   {
    "read": 1,
