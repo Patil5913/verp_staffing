@@ -8,6 +8,7 @@
   "authentication_section",
   "authentication_html",
   "form_token",
+  "try",
   "agreement_section",
   "agreement_html",
   "consent_and_electronic_signature_confirmation_section",
@@ -18,7 +19,6 @@
   "my_electronic_signature_has_same_effect_as_handwritten",
   "i_consent_to_receive_sign_and_store_documents_electronically",
   "i_confirm_my_identity_and_signing_this_document_intentionally",
-  "signature_image",
   "personal_information_section",
   "surname",
   "first_name",
@@ -41,7 +41,7 @@
   "current_address",
   "address_history_section",
   "address_history",
-  "section_break_bxyq",
+  "other_information_section",
   "certificate_or_completed_course",
   "column_break_ylcw",
   "current_visa_status",
@@ -56,7 +56,7 @@
   "column_break_mffv",
   "ssn_digit",
   "availability_for_interview",
-  "section_break_xllz",
+  "files_upload_section",
   "remarks",
   "column_break_vext",
   "files_custom_html",
@@ -195,10 +195,6 @@
    "label": "Address History"
   },
   {
-   "fieldname": "section_break_bxyq",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "column_break_ylcw",
    "fieldtype": "Column Break"
   },
@@ -214,10 +210,6 @@
   {
    "fieldname": "column_break_mffv",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_xllz",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_vext",
@@ -391,10 +383,17 @@
    "label": "Form Token"
   },
   {
-   "fieldname": "signature_image",
-   "fieldtype": "Link",
-   "label": "Signature Image",
-   "options": "File"
+   "fieldname": "other_information_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "files_upload_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "try",
+   "fieldtype": "Data",
+   "label": "try "
   },
   {
    "fieldname": "after_placement_data_section",

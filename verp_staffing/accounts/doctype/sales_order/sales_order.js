@@ -4,7 +4,7 @@
 frappe.ui.form.on("Sales Order", {
 	async refresh(frm) {
 		const config = await load_erp_config(frm);
-		const requirements = await get_service_requirements(frm);
+		const requirements = get_requirements_from_config(frm, config);
 
 		if (!config.sendCandidateFormImmediately && requirements.candidate_required) {
 			frm.add_custom_button(
@@ -75,7 +75,7 @@ frappe.ui.form.on("Sales Order", {
 
 	async validate(frm) {
 		const config = await load_erp_config(frm);
-		const requirements = await get_service_requirements(frm);
+		const requirements = get_requirements_from_config(frm, config);
 
 		if (config.sendAgreementImmediately && requirements.agreement_required) {
 			const key = `so_agreement_draft_${frm.doc.name || "new"}`;
@@ -116,7 +116,7 @@ frappe.ui.form.on("Sales Order", {
 		}
 
 		const config = await load_erp_config(frm);
-		const requirements = await get_service_requirements(frm);
+		const requirements = get_requirements_from_config(frm,config);
 
 		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
 			console.log("immidiate send_details_form hit ++++++");
@@ -164,53 +164,67 @@ async function load_erp_config(frm) {
 	const r = await frappe.db.get_value("ERP Configuration", "ERP Configuration", [
 		"send_candidate_form_immediatly_after_sales_order_creation",
 		"send_agreement_immediatly_after_sales_order_creation",
+		"candidate_details_form_fields",
 	]);
+
+	let rawConfig = {};
+	try {
+		rawConfig = r.message.candidate_details_form_fields
+			? JSON.parse(r.message.candidate_details_form_fields)
+			: {};
+	} catch (e) {
+		console.error("Invalid candidate_details_form_fields JSON", e);
+		rawConfig = {};
+	}
+
+	// 🔥 Normalize structure (this is critical, don't skip)
+	const serviceConfig = {};
+
+	Object.keys(rawConfig).forEach((service) => {
+		const cfg = rawConfig[service] || {};
+
+		serviceConfig[service] = {
+			fields: Array.isArray(cfg.fields) ? cfg.fields : [],
+			isAgreementRequired: !!cfg.is_agreement_required,
+			isCandidateFormRequired: !!cfg.is_candidate_form_required,
+		};
+	});
 
 	frm._erp_config = {
 		sendCandidateFormImmediately: Number(
-			r.message.send_candidate_form_immediatly_after_sales_order_creation,
+			r.message.send_candidate_form_immediatly_after_sales_order_creation
 		),
 		sendAgreementImmediately: Number(
-			r.message.send_agreement_immediatly_after_sales_order_creation,
+			r.message.send_agreement_immediatly_after_sales_order_creation
 		),
+
+		// 🔥 full service-wise config
+		serviceConfig: serviceConfig,
 	};
 
 	return frm._erp_config;
 }
 
-async function get_service_requirements(frm) {
-	if (!frm.doc.services || frm.doc.services.length === 0) {
-		return {
-			candidate_required: false,
-			agreement_required: false,
-		};
-	}
+function get_requirements_from_config(frm, config) {
+	const services = (frm.doc.services || [])
+		.map((row) => row.service)
+		.filter(Boolean);
 
-	const service_names = frm.doc.services.map((d) => d.service);
-
-	const services = await frappe.db.get_list("Service", {
-		fields: ["is_candidate_form_required", "is_agreement_required"],
-		filters: {
-			name: ["in", service_names],
-		},
-		limit: service_names.length,
-	});
-
-	let candidate_required = false;
 	let agreement_required = false;
+	let candidate_required = false;
 
-	services.forEach((s) => {
-		if (s.is_candidate_form_required) {
-			candidate_required = true;
-		}
-		if (s.is_agreement_required) {
-			agreement_required = true;
-		}
+	services.forEach((service) => {
+		const cfg = config.serviceConfig[service];
+
+		if (!cfg) return;
+
+		if (cfg.isAgreementRequired) agreement_required = true;
+		if (cfg.isCandidateFormRequired) candidate_required = true;
 	});
 
 	return {
-		candidate_required,
 		agreement_required,
+		candidate_required,
 	};
 }
 

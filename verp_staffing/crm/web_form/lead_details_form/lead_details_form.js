@@ -3,8 +3,10 @@ let AUDIT_KEY = null;
 const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
 
 let REQUIRED_LEAD_DOCS_CONFIG = null;
+let SIGNATURE_CACHE = null;
 
 let customerEmail = null;
+let customerValue = null;
 let salesOrder = null;
 let agreementValue = null;
 let isAgreement = null;
@@ -76,6 +78,7 @@ frappe.ready(async function () {
 	pdfValue = data.p;
 	isAgreement = data.ia;
 	customerEmail = data.e;
+	customerValue = data.customer;
 
 	// Wait until Web Form UI loads
 	if (isAgreement) {
@@ -172,13 +175,17 @@ frappe.ready(async function () {
 		];
 
 		if (!isAgreement) {
-			candidateFields = await getCandidateFieldsFromSalesOrder(salesOrder);
+			const res = await getCandidateFieldsFromSalesOrder(salesOrder);
+			candidateFields = res.fields || [];
+			const values = res.values || {};
+			const tableColumns = res.table_columns || {}; // 🔥
 
 			const needsDocConfig = candidateFields.some((f) => DOC_FIELDS.has(f));
-
 			if (needsDocConfig) {
 				await initRequiredLeadDocsConfig();
 			}
+
+			apply_prefill(values, tableColumns); // 🔥 pass tableColumns
 		}
 
 		const allowed = new Set(candidateFields || []);
@@ -243,6 +250,61 @@ frappe.ready(async function () {
 
 			if (hasVisibleField && frappe.web_form.fields_dict[section]) {
 				frappe.web_form.set_df_property(section, "hidden", 0);
+			}
+		});
+	}
+
+	function apply_prefill(values, tableColumns = {}) {
+		if (!values) return;
+
+		Object.keys(values).forEach((fieldname) => {
+			const field = frappe.web_form.fields_dict[fieldname];
+			if (!field) return;
+
+			const value = values[fieldname];
+
+			if (Array.isArray(value)) {
+				const allowedCols = tableColumns[fieldname];
+				const grid = field.grid;
+				if (!grid) return;
+
+				const doc = frappe.web_form.doc;
+
+				// 1️⃣ Build rows directly on doc with all required meta fields
+				doc[fieldname] = value.map((row, idx) => {
+					const cleanRow = allowedCols
+						? Object.fromEntries(
+								Object.entries(row).filter(([k]) => allowedCols.includes(k)),
+							)
+						: { ...row };
+
+					return {
+						...cleanRow,
+						doctype: field.df.options,
+						parentfield: fieldname,
+						parenttype: doc.doctype,
+						idx: idx + 1,
+						// 🔥 Use real name if it came from backend, otherwise mark as local
+						name: row.name || `new-${fieldname}-${idx}`,
+						__islocal: row.name ? 0 : 1,
+					};
+				});
+
+				if (grid.fields_map["name"]) {
+					grid.fields_map["name"].hidden = 1;
+				}
+
+				// 2️⃣ 🔥 Correct refresh API — field.grid.refresh(), NOT frappe.web_form.refresh_field()
+				grid.refresh();
+
+				// 3️⃣ Defer column hiding
+				if (allowedCols) {
+					setTimeout(() => hide_table_columns(fieldname, allowedCols), 0);
+				}
+			} else if (field.df.fieldtype === "Check") {
+				frappe.web_form.set_value(fieldname, value ? 1 : 0);
+			} else {
+				frappe.web_form.set_value(fieldname, value);
 			}
 		});
 	}
@@ -352,7 +414,7 @@ frappe.ready(async function () {
 		if (isAgreement) {
 			fetch_server_fingerprint(function (fp) {
 				add_audit_event("signature", {
-					event: "signature_added",
+					event: "signature_updated",
 					method: "Draw",
 					ip: fp.ip,
 					user_agent: fp.user_agent,
@@ -381,6 +443,14 @@ async function custom_submit_handler() {
 		if (!validate_signature(signature_method)) return false;
 
 		if (!validate_concerns()) return false;
+
+		fetch_server_fingerprint(function (fp) {
+			add_audit_event("form", {
+				event: "form_submit",
+				ip: fp.ip,
+				user_agent: fp.user_agent,
+			});
+		});
 
 		const audit = load_audit_trail();
 
@@ -450,6 +520,7 @@ async function custom_submit_handler() {
 		args: {
 			data: doc,
 			token: token,
+			signature_method: frappe.web_form.get_value("signature_method"),
 		},
 	});
 
@@ -461,7 +532,7 @@ async function custom_submit_handler() {
 async function getCandidateFieldsFromSalesOrder(salesOrderName) {
 	if (!salesOrderName) {
 		console.error("[Candidate Fields] Missing Sales Order name");
-		return [];
+		if (!salesOrderName) return { fields: [], values: {} };
 	}
 
 	try {
@@ -469,19 +540,19 @@ async function getCandidateFieldsFromSalesOrder(salesOrderName) {
 			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_candidate_fields_from_sales_order",
 			args: {
 				name: salesOrderName,
+				customer: customerValue,
 			},
 		});
 
 		// Backend already returns final processed array
-		if (!r || !Array.isArray(r.message)) {
-			console.warn("[Candidate Fields] Invalid response:", r);
-			return [];
+		if (!r || !r.message) {
+			return { fields: [], values: {} };
 		}
 
 		return r.message;
 	} catch (err) {
-		console.error("[Candidate Fields] API failed:", err);
-		return [];
+		console.error(err);
+		return { fields: [], values: {} };
 	}
 }
 
@@ -717,8 +788,8 @@ async function handle_verify_otp() {
 		if (isAgreement) {
 			add_audit_event("authentication", {
 				event: "otp_verified",
-				ip: data.message.ip || null,
-				user_agent: data.message.user_agent || null,
+				ip: data.ip || null,
+				user_agent: data.user_agent || null,
 			});
 		}
 	} else {
@@ -1138,40 +1209,53 @@ function validate_ssn_digit(value) {
 	return true;
 }
 
-function validate_signature(method) {
-	if (method === "Upload") {
-		let signature_image = frappe.web_form.get_value("signature_image");
 
-		if (!signature_image) {
-			frappe.msgprint("Please upload your signature image.");
-			return false;
-		}
-		return true;
-	}
 
-	if (method === "Text") {
-		let signature_image = frappe.web_form.get_value("signature_image");
-
-		if (!signature_image) {
-			frappe.msgprint("Please provide your Text signature image.");
-			return false;
-		}
-		return true;
-	}
-
+async function get_signature_value(method) {
 	if (method === "Draw") {
-		let signature = frappe.web_form.get_value("signature");
-
-		if (!signature) {
-			frappe.msgprint("Please draw your signature.");
-			return false;
-		}
-		return true;
+		return frappe.web_form.get_value("signature") || null;
 	}
 
-	// If no valid method selected
-	frappe.msgprint("Please select a signature method.");
-	return false;
+	// Upload/Text → fetch from server (once)
+	if (SIGNATURE_CACHE !== null) {
+		return SIGNATURE_CACHE;
+	}
+
+	try {
+		const r = await frappe.call({
+			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_signature",
+			args: { token }
+		});
+
+		// ✅ r.message is now a plain string, not an object
+        const value = r.message || null;
+        SIGNATURE_CACHE = value;
+        return value;
+		
+	} catch (e) {
+		console.error("Signature fetch failed", e);
+		return null;
+	}
+}
+
+async function validate_signature(method) {
+	if (!method) {
+		frappe.msgprint("Please select a signature method.");
+		return false;
+	}
+
+	const value = await get_signature_value(method);
+
+	if (!value) {
+		if (method === "Draw") {
+			frappe.msgprint("Please draw your signature.");
+		} else {
+			frappe.msgprint("Please upload or provide your signature.");
+		}
+		return false;
+	}
+
+	return true;
 }
 
 function load_audit_trail() {
@@ -1482,7 +1566,7 @@ function generate_signature_image(text, font, dialog) {
 			filename: "signature.png",
 			filedata: base64_img,
 		},
-		callback: function (r) {
+		callback: async function (r) {
 			if (r.message && r.message.success) {
 				if (isAgreement) {
 					fetch_server_fingerprint(function (fp) {
@@ -1500,7 +1584,13 @@ function generate_signature_image(text, font, dialog) {
 
 				frappe.web_form.set_df_property("signature_method", "read_only", 1);
 
-				frappe.web_form.set_value("signature_image", r.message.file_name);
+				await frappe.call({
+					method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.attach_signature",
+					args: {
+						token: token,
+						file_name: r.message.file_name,
+					},
+				});
 
 				frappe.web_form.set_value(
 					"signature_custom_html",
@@ -1636,7 +1726,7 @@ function upload_signature_file(file, dialog) {
 				filename: file.name,
 				filedata: base64_img,
 			},
-			callback: function (r) {
+			callback: async function (r) {
 				if (r.message && r.message.success) {
 					if (isAgreement) {
 						fetch_server_fingerprint(function (fp) {
@@ -1651,7 +1741,13 @@ function upload_signature_file(file, dialog) {
 
 					frappe.msgprint("Image Uploaded Successfully!");
 					dialog.hide();
-					frappe.web_form.set_value("signature_image", r.message.file_name);
+					await frappe.call({
+						method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.attach_signature",
+						args: {
+							token: token,
+							file_name: r.message.file_name,
+						},
+					});
 					frappe.web_form.set_df_property("signature_method", "read_only", 1);
 
 					// Set image in HTML field
