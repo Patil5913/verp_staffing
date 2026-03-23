@@ -1264,211 +1264,141 @@ window.setup_service_permission_button = function (frm) {
 	if (!frm.doc.customer || !frm.doc.name) return;
 
 	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.get_service_form_permission_status",
+		method: "frappe.client.get_value",
 		args: {
-			customer_name: frm.doc.customer,
-			service_doctype: frm.doctype,
-			service_name: frm.doc.name,
+			doctype: "Employee",
+			filters: { user: frappe.session.user },
+			fieldname: "name",
 		},
-		callback: function (r) {
-			if (!r.message) return;
-
-			const { is_owner, permission } = r.message;
-
-			if (!is_owner) {
-				window._service_show_give_permission(frm);
-				return;
-			}
-
-			if (permission === "pending") {
-				frappe.show_alert(
-					{
-						message: __("Your update request is pending manager approval."),
-						indicator: "orange",
-					},
-					5,
-				);
-				return;
-			}
-
-			if (permission === "approved") return;
-
-			frm.add_custom_button(__("Request for Update"), () => {
-				window._service_open_request_dialog(frm);
-			});
-		},
-	});
-};
-
-window._service_open_request_dialog = function (frm) {
-	frappe.call({
-		method: "verp_staffing.crm.api.permission_request._check_permission_status",
-		args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
-		callback(r) {
-			const status = r.message && r.message.status;
-
-			if (status === "pending") {
-				frappe.show_alert(
-					{ message: __("Your request is already pending."), indicator: "orange" },
-					5,
-				);
-				return;
-			}
-			if (status === "approved") {
-				frappe.show_alert(
-					{ message: __("You already have an active permission."), indicator: "green" },
-					5,
-				);
-				return;
-			}
-			if (status === "expired") {
-				frappe.show_alert(
-					{
-						message: __(
-							"Your previous permission has expired. You can request again.",
-						),
-						indicator: "orange",
-					},
-					5,
-				);
-			}
-			if (status === "declined") {
-				frappe.show_alert(
-					{
-						message: __(
-							"Your previous request was declined. You can submit a new request.",
-						),
-						indicator: "red",
-					},
-					5,
-				);
-			}
-
-			const dialog = new frappe.ui.Dialog({
-				title: __("Request Permission to Update"),
-				fields: [
-					{
-						fieldname: "reason",
-						fieldtype: "Small Text",
-						label: __("Reason for Update"),
-						reqd: 1,
-						description: __(
-							"Explain why you need to update this candidate's details.",
-						),
-					},
-				],
-				primary_action_label: __("Send Request"),
-				primary_action(values) {
-					dialog.hide();
-					frappe.call({
-						method: "verp_staffing.crm.api.permission_request._request_permission",
-						args: {
-							ref_doctype: "Customer",
-							ref_name: frm.doc.customer,
-							reason: values.reason,
-						},
-						callback(res) {
-							if (res.message && res.message.status === "success") {
-								frappe.show_alert(
-									{
-										message: __(
-											`Request sent to manager <b>${res.message.manager_employee}</b>. You will be notified when permission is granted.`,
-										),
-										indicator: "blue",
-									},
-									7,
-								);
-								frm.reload_doc();
-							}
-						},
-					});
-				},
-			});
-			dialog.show();
-		},
-	});
-};
-
-window._service_show_give_permission = function (frm) {
-	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.check_pending_requests_for_customer_manager",
-		args: { customer_name: frm.doc.customer },
-		callback(r) {
-			$(`button:contains("Give Permission")`).closest(".btn-group").remove();
-			if (!r.message || !r.message.has_pending) return;
-
-			const { requested_by, reason } = r.message;
+		callback: function (emp_res) {
+			if (!emp_res.message) return;
+			const employee = emp_res.message.name;
 
 			frappe.call({
-				method: "verp_staffing.crm.api.permission_request._check_permission_status",
-				args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
-				callback(perm_res) {
-					if (perm_res.message && perm_res.message.status === "approved") return;
+				method: "frappe.client.get_value",
+				args: {
+					doctype: frm.doctype,
+					filters: { name: frm.doc.name },
+					fieldname: "assign_to",
+				},
+				callback: function (r) {
+					if (!r.message) return;
+					const assign_to = r.message.assign_to;
+					const is_assignee = employee === assign_to;
 
-					frm.add_custom_button(__("Give Permission"), () => {
-						const perm_dialog = new frappe.ui.Dialog({
-							title: __("Permission Request"),
-							fields: [
-								{
-									fieldtype: "HTML",
-									fieldname: "request_info",
-									options: `
-                                    <div style="padding:10px 0;">
-                                        <p><b>${requested_by}</b> has requested permission to update this candidate's details.</p>
-                                        <p><b>Reason:</b> ${reason}</p>
-                                        <p>Permission valid for <b>${r.message.expires_in_minutes} minutes</b>.</p>
-                                    </div>
-                                `,
+					frappe.call({
+						method: "frappe.client.get_value",
+						args: {
+							doctype: "Customer",
+							filters: { name: frm.doc.customer },
+							fieldname: "customer_owner",
+						},
+						callback: function (cust_res) {
+							if (!cust_res.message) return;
+							const customer_owner = cust_res.message.customer_owner;
+							const is_customer_owner = employee === customer_owner;
+							const is_owner = is_assignee || is_customer_owner;
+
+							if (!is_owner) {
+								window._service_show_accept_updates(frm);
+								return;
+							}
+
+							// Check if already has pending request
+							frappe.call({
+								method: "frappe.client.get_list",
+								args: {
+									doctype: "Comment",
+									filters: {
+										reference_doctype: "Customer",
+										reference_name: frm.doc.customer,
+										comment_type: "Info",
+									},
+									fields: ["name", "content"],
+									limit_page_length: 20,
+									order_by: "creation desc",
 								},
-							],
-							primary_action_label: __("Approve"),
-							primary_action() {
-								perm_dialog.hide();
-								frappe.call({
-									method: "verp_staffing.crm.api.permission_request._give_permission",
-									args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
-									callback(res) {
-										if (res.message && res.message.status === "approved") {
-											frappe.show_alert(
-												{
-													message: __(
-														`Permission granted. <b>${requested_by}</b> has been notified.`,
-													),
-													indicator: "green",
-												},
-												6,
-											);
-											frm.reload_doc();
-										}
-									},
-								});
-							},
-							secondary_action_label: __("Decline"),
-							secondary_action() {
-								perm_dialog.hide();
-								frappe.call({
-									method: "verp_staffing.crm.api.permission_request._decline_permission",
-									args: { ref_doctype: "Customer", ref_name: frm.doc.customer },
-									callback(res) {
-										if (res.message && res.message.status === "declined") {
-											frappe.show_alert(
-												{
-													message: __(
-														`Request declined. <b>${requested_by}</b> has been notified.`,
-													),
-													indicator: "red",
-												},
-												6,
-											);
-											frm.reload_doc();
-										}
-									},
-								});
-							},
-						});
-						perm_dialog.show();
+								callback: function (comment_res) {
+									const comments = comment_res.message || [];
+									let has_pending = false;
+
+									for (const c of comments) {
+										try {
+											const data = JSON.parse(c.content);
+											if (
+												data.type === "field_update_request" &&
+												data.status === "Pending" &&
+												data.requested_by_employee === employee
+											) {
+												has_pending = true;
+												break;
+											}
+										} catch (e) {}
+									}
+
+									if (has_pending) {
+										frappe.show_alert(
+											{
+												message: __(
+													"Your update request is pending manager approval.",
+												),
+												indicator: "orange",
+											},
+											5,
+										);
+										return;
+									}
+
+									// Show Update Detail button
+									frm.add_custom_button(__("Update Detail"), () => {
+										window._service_open_update_detail_dialog(
+											frm,
+											frm._update_detail_fields || null,
+										);
+									});
+								},
+							});
+						},
 					});
 				},
+			});
+		},
+	});
+};
+
+window._service_open_update_detail_dialog = function (frm, custom_fields) {
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
+		args: { customer_name: frm.doc.customer },
+		callback: function (r) {
+			const current_values = r.message || {};
+			const fields = custom_fields || SERVICE_UPDATABLE_FIELDS;
+			_open_update_detail_dialog(frm, current_values, fields, "service");
+		},
+	});
+};
+
+window._service_show_accept_updates = function (frm) {
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request.get_pending_field_update_request",
+		args: { customer_name: frm.doc.customer },
+		callback(r) {
+			$(`button:contains("Accept Updates")`).closest(".btn-group").remove();
+			if (!r.message || !r.message.has_pending) return;
+
+			frm.add_custom_button(__("Accept Updates"), () => {
+				_open_accept_updates_dialog(
+					frm,
+					[
+						{
+							requested_by: r.message.requested_by,
+							reason: r.message.reason,
+							field_updates: r.message.field_updates,
+							comment_name: r.message.comment_name,
+						},
+					],
+					"service",
+				);
 			});
 		},
 	});
