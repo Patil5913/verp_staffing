@@ -234,12 +234,22 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
-override_whitelisted_methods = {
-    "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
-}
+# override_whitelisted_methods = {
+#     "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
+# }
 # set query permisson for doctype
 permission_query_conditions = {
-    "Customer": "verp_staffing.crm.api.helpers.customer_query"
+    "Customer": "verp_staffing.crm.api.helpers.customer_query",
+    "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
+    "Lead": "verp_staffing.crm.api.helpers.lead_query",
+    "Resume": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "RUC": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Marketing": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Training": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "JDC": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
 }
 
 # each overriding function accepts a `data` argument;
