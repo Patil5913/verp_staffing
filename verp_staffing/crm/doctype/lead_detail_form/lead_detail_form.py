@@ -54,37 +54,7 @@ class LeadDetailForm(Document):
         if next_number == 0:
             self.name = base_name
         else:
-            self.name = f"{base_name}-{next_number}"
-            
-
-    def after_insert(self):
-        print("-----------------------------after_insert----------------------")
-        data = verify_token(self.form_token)
-
-        if not data:
-            frappe.throw("Invalid or tampered token")
-
-        if(data.get("ia")):
-            try:
-                if self.signature_method == "Upload":
-                    if not self.signature_image:
-                        frappe.throw("Signature image missing for Upload method")
-                    apply_pdf_signature(self.signature_image)
-
-                elif self.signature_method == "Text":
-                    if not self.signature_image:
-                        frappe.throw("Text Signature image missing for Text method")
-                    apply_pdf_signature(self.signature_image)
-
-                elif self.signature_method == "Draw":
-                    process_drawn_signature_and_apply()
-
-            except Exception as e:
-                # ✅ Log error but don't throw — so webform sees success
-                frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
-                frappe.errprint(f"PDF processing error: {e}")
-                # Don't re-raise — webform must get success response
-                
+            self.name = f"{base_name}-{next_number}"              
 
 
 def process_drawn_signature_and_apply(doc, token):
@@ -102,21 +72,20 @@ def process_drawn_signature_and_apply(doc, token):
             try:
                 if attempt > 0:
                     time.sleep(0.2 * attempt)
-                    print(f"RETRY {label} attempt {attempt} for agr {agr}")
+                    # print(f"RETRY {label} attempt {attempt} for agr {agr}")
                 frappe.db.sql(query, values)
                 frappe.db.commit()
-                print(f"{label} SUCCESS on attempt {attempt + 1}")
+                # print(f"{label} SUCCESS on attempt {attempt + 1}")
                 return
             except Exception as e:
                 if "1020" in str(e) and attempt < max_retries - 1:
-                    print(f"1020 on {label} attempt {attempt + 1}, retrying...")
+                    # print(f"1020 on {label} attempt {attempt + 1}, retrying...")
                     frappe.db.rollback()
                     continue
                 else:
                     raise
 
     signature_image = frappe.db.get_value("Agreement", agr, "signature_image")
-    print("signature_image-------------------", signature_image)
 
     if signature_image:
         file_exists = frappe.db.exists("File", signature_image)
@@ -124,8 +93,7 @@ def process_drawn_signature_and_apply(doc, token):
             apply_pdf_signature(doc, signature_image_file=signature_image)
             return
         else:
-            print(f"File {signature_image} not found in DB, clearing stale reference")
-            # ✅ Use retry helper here too
+            # print(f"File {signature_image} not found in DB, clearing stale reference")
             sql_with_retry(
                 "UPDATE `tabAgreement` SET signature_image = NULL WHERE name = %s",
                 (agr,),
@@ -147,9 +115,6 @@ def process_drawn_signature_and_apply(doc, token):
         }).insert(ignore_permissions=True)
         frappe.db.commit()
 
-        print("file_doc-------------", file_doc)
-
-        # ✅ Use retry helper
         sql_with_retry(
             "UPDATE `tabAgreement` SET signature_image = %s WHERE name = %s",
             (file_doc.name, agr),
@@ -165,7 +130,6 @@ def process_drawn_signature_and_apply(doc, token):
 
 
 def apply_pdf_signature(doc, signature_image_file):
-    print("+++++++++++++++apply_pdf_signature++++++++++++++++++++++", signature_image_file)
     if not signature_image_file:
         frappe.throw("Signature file missing")
 
@@ -201,7 +165,7 @@ def apply_pdf_signature(doc, signature_image_file):
             import time
             if attempt > 0:
                 time.sleep(0.2 * attempt)  # 0.2s, 0.4s, 0.6s backoff
-                print(f"RETRY attempt {attempt} for agr {agr}")
+                # print(f"RETRY attempt {attempt} for agr {agr}")
 
             # Always read fresh on every attempt
             agr_data = frappe.db.get_value(
@@ -244,13 +208,13 @@ def apply_pdf_signature(doc, signature_image_file):
                 agreement=agreement,
                 certificate_id=certificate_id,
             )
-            print(f"apply_pdf_signature SUCCESS on attempt {attempt + 1}")
+            # print(f"apply_pdf_signature SUCCESS on attempt {attempt + 1}")
             return  # ✅ success — exit retry loop
 
         except Exception as e:
             error_str = str(e)
             if "1020" in error_str and attempt < max_retries - 1:
-                print(f"1020 conflict on attempt {attempt + 1}, retrying...")
+                # print(f"1020 conflict on attempt {attempt + 1}, retrying...")
                 frappe.db.rollback()
                 continue  # retry
             else:
@@ -322,8 +286,6 @@ def apply_signature_and_audit_to_pdf(
     if not output_path:
         output_path = input_pdf_path
     
-    print("output_path+++++++++++++++++++++++++++",output_path)
-
     # ---------------------------------------------------------
     # NORMALIZE AUDIT JSON
     # ---------------------------------------------------------
@@ -332,8 +294,6 @@ def apply_signature_and_audit_to_pdf(
             audit_trail_text = json.loads(audit_trail_text)
         except Exception:
             audit_trail_text = {}
-    # frappe.errprint(f"Normalized audit trail:")
-    print("audit_trail_text+++++++++++++++++++++++++++",audit_trail_text)
     
     # ---------------------------------------------------------
     # STEP 1: APPLY SIGNATURES
@@ -1225,7 +1185,6 @@ def attach_signature(token, file_name):
         frappe.throw("Invalid token")
 
     agr = token_data.get("agr")
-    print("agr++++++++++++++++++++++++++++++++++", agr)
 
     if not agr:
         frappe.throw("Agreement not found")
@@ -1241,10 +1200,7 @@ def attach_signature(token, file_name):
 
 @frappe.whitelist(allow_guest=True)
 def get_signature(token):
-    print("------------------------------get_signature -----------------------------",token)
-    
     token_data = verify_token(token)
-    print("token_data -----------------------------",token_data)
 
     if not token_data:
         frappe.throw("Invalid token")
@@ -1266,8 +1222,6 @@ def upsert_lead_detail_form(data, token, signature_method=None):
     if not token_data:
         frappe.throw("Invalid or tampered token")
         
-    print("token_data+++++++++++++++++++++++++++++++++", token_data)
-
     customer = token_data.get("customer")
     ia = token_data.get("ia")
 
@@ -1326,10 +1280,6 @@ def upsert_lead_detail_form(data, token, signature_method=None):
     
     signature_image = get_signature(token)
 
-    print("signature_method+++++++++++++++++++++++++++++++++", signature_method)
-    print("signature_image+++++++++++++++++++++++++++++++++", signature_image)
-    print("ia+++++++++++++++++++++++++++++++++", ia)  # 👈 add this
-
     if ia:
         try:
             if signature_method in ("Upload", "Text"):
@@ -1337,7 +1287,6 @@ def upsert_lead_detail_form(data, token, signature_method=None):
             elif signature_method == "Draw":
                 process_drawn_signature_and_apply(doc, token)
         except Exception as e:
-            print("SIGNATURE ERROR++++++++++++++++++++++++", str(e))  # 👈 and this
             frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
 
     return {

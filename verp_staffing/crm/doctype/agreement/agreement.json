@@ -21,13 +21,15 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Sales Order",
-   "options": "Sales Order"
+   "options": "Sales Order",
+   "read_only": 1
   },
   {
    "fieldname": "template",
    "fieldtype": "Link",
    "label": "Template",
-   "options": "Pdf Agreement Template"
+   "options": "Pdf Agreement Template",
+   "read_only": 1
   },
   {
    "fieldname": "data",
@@ -48,7 +50,8 @@
    "fieldname": "certificate_id",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Certificate ID"
+   "label": "Certificate ID",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_fnhs",
@@ -57,19 +60,21 @@
   {
    "fieldname": "audit_trail",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Audit Trail"
   },
   {
    "fieldname": "signature_image",
    "fieldtype": "Link",
    "label": "Signature Image",
-   "options": "File"
+   "options": "File",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-23 11:49:16.834868",
+ "modified": "2026-03-23 12:25:45.743216",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
@@ -91,6 +96,13 @@
   },
   {
    "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
@@ -104,7 +116,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Person",
    "select": 1,
    "write": 1
   },
@@ -112,13 +124,6 @@
    "create": 1,
    "read": 1,
    "role": "Sales Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Person",
    "select": 1,
    "write": 1
   }
