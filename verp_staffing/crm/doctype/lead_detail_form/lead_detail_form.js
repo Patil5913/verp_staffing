@@ -66,7 +66,7 @@ function update_parent_skills(frm) {
 	frm.set_value("additional_skills", merged.join(", "));
 }
 
-// ── Handles Lead logic: lock email, first_name, surname for lead owner ──
+// ── Lead department: lock email, first_name, surname for lead owner ──
 function apply_lead_detail_readonly(frm) {
 	if (!frm.doc.reference_table || !frm.doc.reference_table.length) return;
 
@@ -104,12 +104,12 @@ function apply_lead_detail_readonly(frm) {
 					frm.refresh_field("first_name");
 					frm.refresh_field("surname");
 
-					// Lock/unlock email based on permission
+					// Lock/unlock email based on Lead permission
 					frappe.call({
 						method: "verp_staffing.crm.api.permission_request._check_permission_status",
 						args: {
-							ref_doctype: "Lead", // ← always "Lead"
-							ref_name: lead_name, // ← Lead name not frm.doc.name
+							ref_doctype: "Lead",
+							ref_name: lead_name,
 						},
 						callback: function (res) {
 							const perm = res.message && res.message.status;
@@ -135,21 +135,17 @@ function apply_lead_detail_readonly(frm) {
 	});
 }
 
-// ── Handles Customer/Sales Order logic: lock whole form based on Is Candidate Form Required ──
+// ── Customer/Sales Order: lock whole form if Is Candidate Form Required ──
 function check_candidate_form_required(frm) {
 	if (frm.is_new()) return;
 
-	// Try to find customer from reference_table first
 	const customer_row = (frm.doc.reference_table || []).find(
 		(row) => row.reference_doctype === "Customer",
 	);
 
 	if (customer_row && customer_row.reference_person) {
-		// Direct customer reference — use it
 		_apply_lock_from_customer(frm, customer_row.reference_person);
 	} else {
-		// No customer in reference_table — try to find via lead_detail_name
-		// Pass lead_detail_name so Python can find the Customer
 		if (!frm.doc.name || frm.doc.name === "new lead") return;
 
 		frappe.call({
@@ -175,41 +171,26 @@ function _apply_lock_from_customer(frm, customer_name) {
 }
 
 function _handle_lock_response(frm, message) {
-	const { is_owner, candidate_form_required, permission } = message;
+	const { is_owner, candidate_form_required } = message;
 
-	// Only applies when candidate form is required AND user is the owner
+	// No lock needed if candidate form not required
 	if (!candidate_form_required) return;
+
+	// No lock for users who are not owners (viewers, managers etc.)
 	if (!is_owner) return;
 
-	if (permission === "approved") {
-		_unlock_all_fields(frm);
-		frappe.show_alert(
-			{
-				message: __("Permission granted. You can now edit this form."),
-				indicator: "green",
-			},
-			5,
-		);
-	} else {
-		_lock_all_fields(frm);
+	// ── Lock the form — fields are updated by manager via Accept Updates ──
+	_lock_all_fields(frm);
 
-		let msg = __(
-			"This form is locked. Request permission from the Customer form to make changes.",
-		);
-		if (permission === "pending") {
-			msg = __("Form is locked. Your permission request is pending manager approval.");
-		} else if (permission === "declined") {
-			msg = __(
-				"Form is locked. Your permission request was declined. Please request again from the Customer form.",
-			);
-		} else if (permission === "expired") {
-			msg = __(
-				"Form is locked. Your permission has expired. Please request again from the Customer form.",
-			);
-		}
-
-		frappe.show_alert({ message: msg, indicator: "orange" }, 7);
-	}
+	frappe.show_alert(
+		{
+			message: __(
+				"This form is locked. Go to the Customer form and click 'Update Detail' to request changes.",
+			),
+			indicator: "orange",
+		},
+		7,
+	);
 }
 
 function _lock_all_fields(frm) {

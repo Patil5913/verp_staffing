@@ -47,6 +47,9 @@ frappe.ui.form.on("Resume", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
+		frm._update_detail_fields = {
+			first_name: "First Name",
+		};
 		window.setup_service_permission_button(frm);
 	},
 	status(frm) {

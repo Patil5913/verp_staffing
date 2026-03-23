@@ -1260,6 +1260,14 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 
 // ------------------- request for update button ------------------------
 
+// ── Updatable fields — all possible fields across all service doctypes ──
+const SERVICE_UPDATABLE_FIELDS = {
+	surname: "Surname",
+	first_name: "First Name",
+	father_name: "Father Name",
+	email: "Email",
+};
+
 window.setup_service_permission_button = function (frm) {
 	if (!frm.doc.customer || !frm.doc.name) return;
 
@@ -1283,8 +1291,7 @@ window.setup_service_permission_button = function (frm) {
 				},
 				callback: function (r) {
 					if (!r.message) return;
-					const assign_to = r.message.assign_to;
-					const is_assignee = employee === assign_to;
+					const is_assignee = employee === r.message.assign_to;
 
 					frappe.call({
 						method: "frappe.client.get_value",
@@ -1295,16 +1302,15 @@ window.setup_service_permission_button = function (frm) {
 						},
 						callback: function (cust_res) {
 							if (!cust_res.message) return;
-							const customer_owner = cust_res.message.customer_owner;
-							const is_customer_owner = employee === customer_owner;
-							const is_owner = is_assignee || is_customer_owner;
+							const is_owner =
+								is_assignee || employee === cust_res.message.customer_owner;
 
 							if (!is_owner) {
 								window._service_show_accept_updates(frm);
 								return;
 							}
 
-							// Check if already has pending request
+							// Check if this employee already has a pending request
 							frappe.call({
 								method: "frappe.client.get_list",
 								args: {
@@ -1349,7 +1355,6 @@ window.setup_service_permission_button = function (frm) {
 										return;
 									}
 
-									// Show Update Detail button
 									frm.add_custom_button(__("Update Detail"), () => {
 										window._service_open_update_detail_dialog(
 											frm,
@@ -1403,3 +1408,438 @@ window._service_show_accept_updates = function (frm) {
 		},
 	});
 };
+
+// ── Shared dialog builder — fields param controls which fields appear ──
+function _open_update_detail_dialog(frm, current_values, fields, mode) {
+	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
+	const api_method =
+		mode === "service"
+			? "verp_staffing.crm.api.permission_request.request_field_update"
+			: "verp_staffing.crm.api.permission_request.request_field_update_by_owner";
+
+	const dialog_html = `
+        <style>
+            .fg-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                border: 0.5px solid var(--color-border-tertiary);
+                border-radius: var(--border-radius-md);
+                cursor: pointer;
+                background: var(--color-background-primary);
+                user-select: none;
+            }
+            .fg-row:hover { background: var(--color-background-secondary); }
+            .fg-row.selected {
+                border-color: #260fea;
+                background: #EEEDFE;
+            }
+            .fg-cb {
+                width: 16px;
+                height: 16px;
+                border-radius: 4px;
+                border: 1.5px solid var(--color-border-secondary);
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .fg-row.selected .fg-cb {
+                background: #260fea;
+                border-color: #260fea;
+            }
+            .fg-tick {
+                display: none;
+                width: 8px;
+                height: 5px;
+                border-left: 2px solid white;
+                border-bottom: 2px solid white;
+                transform: rotate(-45deg) translate(1px, -1px);
+            }
+            .fg-row.selected .fg-tick { display: block; }
+            .fg-label {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--color-text-primary);
+            }
+            .fg-row.selected .fg-label { color: #3C3489; }
+            .fg-input-block { margin-bottom: 14px; }
+            .fg-input-block:last-child { margin-bottom: 0; }
+            .fg-input-field-name {
+                font-size: 12px;
+                font-weight: 500;
+                color: var(--color-text-secondary);
+                margin-bottom: 6px;
+            }
+            .fg-input-cols {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .fg-col-label {
+                font-size: 11px;
+                color: var(--color-text-tertiary);
+                margin-bottom: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                font-weight: 500;
+            }
+            .fg-current-val {
+                padding: 8px 10px;
+                background: var(--color-background-secondary);
+                border: 0.5px solid var(--color-border-tertiary);
+                border-radius: var(--border-radius-md);
+                font-size: 13px;
+                color: var(--color-text-secondary);
+                min-height: 36px;
+            }
+            .fg-new-input {
+                width: 100%;
+                padding: 8px 10px;
+                border: 0.5px solid var(--color-border-secondary);
+                border-radius: var(--border-radius-md);
+                font-size: 13px;
+                background: var(--color-background-primary);
+                color: var(--color-text-primary);
+                box-sizing: border-box;
+            }
+            .fg-new-input:focus {
+                outline: none;
+                border-color: #260fea;
+                box-shadow: 0 0 0 2px rgba(38,15,234,0.12);
+            }
+            .fg-divider {
+                border: none;
+                border-top: 0.5px solid var(--color-border-tertiary);
+                margin: 16px 0;
+            }
+        </style>
+
+        <p style="font-size:11px; font-weight:500; color:var(--color-text-tertiary);
+            text-transform:uppercase; letter-spacing:0.6px; margin:0 0 12px;">
+            ${__("Select field to update")}
+        </p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="fg-grid">
+            ${Object.entries(fields)
+				.map(([fieldname, label]) => {
+					const old_val = current_values[fieldname] || "";
+					return `
+                    <div class="fg-row"
+                        data-fieldname="${fieldname}"
+                        data-label="${label}"
+                        data-current="${frappe.utils.escape_html(old_val)}">
+                        <div class="fg-cb"><div class="fg-tick"></div></div>
+                        <span class="fg-label">${label}</span>
+                    </div>
+                `;
+				})
+				.join("")}
+        </div>
+
+        <div id="fg-inputs-section" style="display:none;">
+            <hr class="fg-divider" />
+            <div id="fg-inputs-container"></div>
+        </div>
+    `;
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Update Detail"),
+		fields: [
+			{
+				fieldname: "fields_html",
+				fieldtype: "HTML",
+				options: dialog_html,
+			},
+			{
+				fieldname: "reason",
+				fieldtype: "Small Text",
+				label: __("Reason for Update"),
+				reqd: 1,
+				description: __("Explain why you need to update these fields."),
+			},
+		],
+		primary_action_label: __("Send"),
+		primary_action(values) {
+			if (!values.reason) {
+				frappe.msgprint(__("Please enter a reason."));
+				return;
+			}
+
+			const field_updates = {};
+			let has_selection = false;
+			let missing_value = false;
+
+			dialog.$wrapper.find(".fg-row.selected").each(function () {
+				const fieldname = $(this).data("fieldname");
+				const input = dialog.$wrapper.find(
+					`#fg-inputs-container .fg-new-input[data-fieldname="${fieldname}"]`,
+				);
+				const new_val = input.val().trim();
+				const old_val = input.data("old");
+
+				if (!new_val) {
+					frappe.msgprint(__(`Please enter new value for ${fields[fieldname]}.`));
+					missing_value = true;
+					return false;
+				}
+
+				field_updates[fieldname] = { old: old_val, new: new_val };
+				has_selection = true;
+			});
+
+			if (missing_value) return;
+
+			if (!has_selection) {
+				frappe.msgprint(__("Please select at least one field to update."));
+				return;
+			}
+
+			dialog.hide();
+
+			frappe.call({
+				method: api_method,
+				args: {
+					customer_name: customer_name,
+					reason: values.reason,
+					field_updates: JSON.stringify(field_updates),
+				},
+				callback(res) {
+					if (res.message && res.message.status === "success") {
+						frappe.show_alert(
+							{
+								message: __(
+									`Request sent to manager <b>${res.message.manager_employee}</b>.`,
+								),
+								indicator: "blue",
+							},
+							7,
+						);
+						frm.reload_doc();
+					}
+				},
+			});
+		},
+	});
+
+	dialog.show();
+
+	const _fg_saved = {};
+
+	dialog.$wrapper.on("click", ".fg-row", function () {
+		const fieldname = $(this).data("fieldname");
+		const isSelected = $(this).toggleClass("selected").hasClass("selected");
+		_fg_rebuild(dialog, fields, current_values, _fg_saved);
+		if (isSelected) {
+			setTimeout(() => {
+				dialog.$wrapper
+					.find(`#fg-inputs-container .fg-new-input[data-fieldname="${fieldname}"]`)
+					.focus();
+			}, 30);
+		}
+	});
+}
+
+function _fg_rebuild(dialog, fields, current_values, saved) {
+	dialog.$wrapper.find(".fg-new-input").each(function () {
+		saved[$(this).data("fieldname")] = $(this).val();
+	});
+
+	const selected = dialog.$wrapper.find(".fg-row.selected");
+	const section = dialog.$wrapper.find("#fg-inputs-section");
+	const container = dialog.$wrapper.find("#fg-inputs-container");
+
+	if (!selected.length) {
+		section.hide();
+		container.empty();
+		return;
+	}
+
+	section.show();
+	container.empty();
+
+	selected.each(function () {
+		const fieldname = $(this).data("fieldname");
+		const label = fields[fieldname];
+		const old_val = current_values[fieldname] || "";
+
+		container.append(`
+            <div class="fg-input-block">
+                <div class="fg-input-field-name">${label}</div>
+                <div class="fg-input-cols">
+                    <div>
+                        <div class="fg-col-label">${__("Current")}</div>
+                        <div class="fg-current-val">
+                            ${frappe.utils.escape_html(old_val) || "—"}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="fg-col-label">${__("New")}</div>
+                        <input class="fg-new-input"
+                            type="text"
+                            data-fieldname="${fieldname}"
+                            data-old="${frappe.utils.escape_html(old_val)}"
+                            value="${frappe.utils.escape_html(saved[fieldname] || "")}"
+                            placeholder="${__("Enter new value")}" />
+                    </div>
+                </div>
+            </div>
+        `);
+	});
+}
+
+function _open_accept_updates_dialog(frm, pending_requests, mode) {
+	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
+	let all_html = "";
+
+	pending_requests.forEach((req, idx) => {
+		all_html += `
+            <div style="margin-bottom:20px; border:0.5px solid var(--color-border-tertiary);
+                border-radius:var(--border-radius-lg); overflow:hidden;">
+                <div style="background:var(--color-background-secondary); padding:10px 15px;
+                    border-bottom:0.5px solid var(--color-border-tertiary);">
+                    <span style="font-size:13px; font-weight:500; color:var(--color-text-primary);">
+                        ${__("Request")} ${idx + 1} — ${__("By:")} <b>${req.requested_by}</b>
+                    </span><br>
+                    <span style="font-size:12px; color:var(--color-text-secondary);">
+                        ${__("Reason:")} ${req.reason}
+                    </span>
+                </div>
+                <div style="padding:15px;">
+        `;
+
+		Object.entries(req.field_updates).forEach(([fieldname, values]) => {
+			const label = SERVICE_UPDATABLE_FIELDS[fieldname] || fieldname;
+			all_html += `
+                <div style="display:grid; grid-template-columns:20px 1fr 1fr;
+                    gap:10px; margin-bottom:12px; align-items:start;">
+                    <div style="padding-top:18px;">
+                        <div style="width:16px; height:16px; border-radius:4px;
+                            border:1.5px solid #260fea; background:#260fea;
+                            display:flex; align-items:center; justify-content:center;
+                            cursor:pointer;" class="au-cb-box"
+                            data-fieldname="${fieldname}"
+                            data-comment="${req.comment_name}">
+                            <div class="au-tick" style="width:8px; height:5px;
+                                border-left:2px solid white; border-bottom:2px solid white;
+                                transform:rotate(-45deg) translate(1px,-1px);"></div>
+                        </div>
+                        <input type="checkbox" class="approve-field-checkbox"
+                            data-fieldname="${fieldname}"
+                            data-comment="${req.comment_name}"
+                            checked style="display:none;" />
+                    </div>
+                    <div>
+                        <div style="font-size:11px; font-weight:500; color:var(--color-text-tertiary);
+                            text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px;">
+                            ${__("Current")}
+                        </div>
+                        <div style="font-size:12px; font-weight:500;
+                            color:var(--color-text-secondary); margin-bottom:4px;">${label}</div>
+                        <div style="padding:8px 10px; background:var(--color-background-secondary);
+                            border:0.5px solid var(--color-border-tertiary);
+                            border-radius:var(--border-radius-md); font-size:13px;
+                            color:var(--color-text-secondary);">
+                            ${frappe.utils.escape_html(values.old) || "—"}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; font-weight:500; color:var(--color-text-tertiary);
+                            text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px;">
+                            ${__("New")}
+                        </div>
+                        <div style="font-size:12px; font-weight:500;
+                            color:var(--color-text-secondary); margin-bottom:4px;">&nbsp;</div>
+                        <div style="padding:8px 10px; background:#EEEDFE;
+                            border:0.5px solid #260fea;
+                            border-radius:var(--border-radius-md); font-size:13px;
+                            color:#3C3489; font-weight:500;">
+                            ${frappe.utils.escape_html(values.new)}
+                        </div>
+                    </div>
+                </div>
+            `;
+		});
+
+		all_html += `</div></div>`;
+	});
+
+	const accept_dialog = new frappe.ui.Dialog({
+		title: __("Accept Updates"),
+		fields: [
+			{
+				fieldname: "fields_review",
+				fieldtype: "HTML",
+				options: all_html,
+			},
+		],
+		primary_action_label: __("Done"),
+		primary_action() {
+			const by_comment = {};
+
+			accept_dialog.$wrapper.find(".approve-field-checkbox:checked").each(function () {
+				const fieldname = $(this).data("fieldname");
+				const comment_name = $(this).data("comment");
+				if (!by_comment[comment_name]) by_comment[comment_name] = [];
+				by_comment[comment_name].push(fieldname);
+			});
+
+			if (!Object.keys(by_comment).length) {
+				frappe.msgprint(__("Please approve at least one field."));
+				return;
+			}
+
+			accept_dialog.hide();
+
+			const promises = Object.entries(by_comment).map(([comment_name, fields]) =>
+				frappe.call({
+					method: "verp_staffing.crm.api.permission_request.apply_field_updates",
+					args: {
+						customer_name: customer_name,
+						comment_name: comment_name,
+						approved_fields: JSON.stringify(fields),
+					},
+				}),
+			);
+
+			Promise.all(promises).then(() => {
+				frappe.show_alert(
+					{
+						message: __("Selected fields have been updated successfully."),
+						indicator: "green",
+					},
+					6,
+				);
+				frm.reload_doc();
+			});
+		},
+		secondary_action_label: __("Close"),
+		secondary_action() {
+			accept_dialog.hide();
+		},
+	});
+
+	accept_dialog.show();
+
+	accept_dialog.$wrapper.on("click", ".au-cb-box", function () {
+		const fieldname = $(this).data("fieldname");
+		const comment_name = $(this).data("comment");
+		const checkbox = accept_dialog.$wrapper.find(
+			`.approve-field-checkbox[data-fieldname="${fieldname}"][data-comment="${comment_name}"]`,
+		);
+		const is_checked = checkbox.prop("checked");
+		checkbox.prop("checked", !is_checked);
+
+		if (is_checked) {
+			$(this).css({
+				background: "var(--color-background-primary)",
+				borderColor: "var(--color-border-secondary)",
+			});
+			$(this).find(".au-tick").hide();
+		} else {
+			$(this).css({ background: "#260fea", borderColor: "#260fea" });
+			$(this).find(".au-tick").show();
+		}
+	});
+}

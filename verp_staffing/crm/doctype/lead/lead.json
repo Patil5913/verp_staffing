@@ -14,6 +14,8 @@
   "lead_owner",
   "status",
   "email",
+  "section_break_vcqc",
+  "lead_detail",
   "note_tab",
   "notes_html",
   "updates_html",
@@ -101,12 +103,21 @@
    "hidden": 1,
    "label": "Phone Number (Provide country code with number)",
    "placeholder": "Exp: +1 xxx xxx xxxx"
+  },
+  {
+   "fieldname": "section_break_vcqc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "lead_detail",
+   "fieldtype": "HTML",
+   "label": "Lead Detail"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-17 15:19:24.362837",
+ "modified": "2026-03-21 16:55:48.326519",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -115,32 +126,50 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "Lead Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Lead Master Manager",
-   "select": 1,
-   "share": 1,
+   "role": "Lead Team Lead",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "role": "Lead Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Person",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Person",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   },
   {
@@ -157,23 +186,14 @@
   },
   {
    "create": 1,
-   "read": 1,
-   "role": "Lead Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Master Manager",
+   "role": "Lead Master Manager",
    "select": 1,
    "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Lead Manager",
    "write": 1
   },
   {
@@ -195,20 +215,14 @@
    "write": 1
   },
   {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "_show_sales"
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "_show_sales"
-  },
-  {
    "read": 1,
    "report": 1,
    "role": "_show_lead"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_sales"
   },
   {
    "create": 1,

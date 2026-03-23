@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Lead", {
 	onload(frm) {
-		apply_field_readonly_for_lead_owner(frm);
+		// apply_field_readonly_for_lead_owner(frm);
 
 		// Always keep field visible but locked
 		frm.set_df_property("lead_owner", "read_only_onload", 1);
@@ -37,7 +37,7 @@ frappe.ui.form.on("Lead", {
 	refresh(frm) {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
-		apply_field_readonly_for_lead_owner(frm);
+		// apply_field_readonly_for_lead_owner(frm);
 
 		if (frm.is_new()) return;
 
@@ -66,13 +66,13 @@ frappe.ui.form.on("Lead", {
 							const current_employee = r.message && r.message.name;
 							const is_lead_owner = current_employee === lead_owner;
 
-							if (is_lead_owner) {
-								frm.add_custom_button(__("Request for Update"), () => {
-									open_request_for_update_dialog(frm);
-								});
-							} else {
-								check_and_show_give_permission_button(frm);
-							}
+							// if (is_lead_owner) {
+							// 	frm.add_custom_button(__("Request for Update"), () => {
+							// 		open_request_for_update_dialog(frm);
+							// 	});
+							// } else {
+							// 	check_and_show_give_permission_button(frm);
+							// }
 						},
 					});
 				} else {
@@ -177,277 +177,277 @@ frappe.ui.form.on("Lead", {
 // 	},
 // });
 
-function open_request_for_update_dialog(frm) {
-	frappe.call({
-		method: "verp_staffing.crm.api.permission_request._check_permission_status",
-		args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
-		callback(r) {
-			const status = r.message && r.message.status;
+// function open_request_for_update_dialog(frm) {
+// 	frappe.call({
+// 		method: "verp_staffing.crm.api.permission_request._check_permission_status",
+// 		args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
+// 		callback(r) {
+// 			const status = r.message && r.message.status;
 
-			// if (status === "approved") {
-			// 	// Permission still active — redirect to Lead Detail Form
-			// 	redirect_to_lead_detail_form(frm);
-			// 	return;
-			// }
+// 			// if (status === "approved") {
+// 			// 	// Permission still active — redirect to Lead Detail Form
+// 			// 	redirect_to_lead_detail_form(frm);
+// 			// 	return;
+// 			// }
 
-			if (status === "expired") {
-				frappe.show_alert(
-					{
-						message: __(
-							"Your previous permission has expired. You can request again.",
-						),
-						indicator: "orange",
-					},
-					5,
-				);
-			} else if (status === "pending") {
-				frappe.show_alert(
-					{
-						message: __(
-							"Your request is already pending. Please wait for your manager to approve it.",
-						),
-						indicator: "orange",
-					},
-					5,
-				);
-				return;
-			}
+// 			if (status === "expired") {
+// 				frappe.show_alert(
+// 					{
+// 						message: __(
+// 							"Your previous permission has expired. You can request again.",
+// 						),
+// 						indicator: "orange",
+// 					},
+// 					5,
+// 				);
+// 			} else if (status === "pending") {
+// 				frappe.show_alert(
+// 					{
+// 						message: __(
+// 							"Your request is already pending. Please wait for your manager to approve it.",
+// 						),
+// 						indicator: "orange",
+// 					},
+// 					5,
+// 				);
+// 				return;
+// 			}
 
-			// Show dialog to enter reason
-			const dialog = new frappe.ui.Dialog({
-				title: __("Request Permission to Update Email"),
-				fields: [
-					{
-						fieldname: "reason",
-						fieldtype: "Small Text",
-						label: __("Reason for Update"),
-						reqd: 1,
-						description: __(
-							"Explain why you need to edit the email field on this Lead.",
-						),
-					},
-				],
-				primary_action_label: __("Send Request"),
-				primary_action(values) {
-					dialog.hide();
-					frappe.call({
-						method: "verp_staffing.crm.api.permission_request._request_permission",
-						args: {
-							ref_doctype: frm.doctype,
-							ref_name: frm.doc.name,
-							reason: values.reason,
-						},
-						// freeze: true,
-						// freeze_message: __("Sending request to your manager..."),
-						callback(res) {
-							if (res.message && res.message.status === "success") {
-								frappe.show_alert(
-									{
-										message: __(
-											`Request sent to manager <b>${res.message.manager_employee}</b>. You will be notified when permission is granted.`,
-										),
-										indicator: "blue",
-									},
-									7,
-								);
-							}
-						},
-					});
-				},
-			});
+// 			// Show dialog to enter reason
+// 			const dialog = new frappe.ui.Dialog({
+// 				title: __("Request Permission to Update Email"),
+// 				fields: [
+// 					{
+// 						fieldname: "reason",
+// 						fieldtype: "Small Text",
+// 						label: __("Reason for Update"),
+// 						reqd: 1,
+// 						description: __(
+// 							"Explain why you need to edit the email field on this Lead.",
+// 						),
+// 					},
+// 				],
+// 				primary_action_label: __("Send Request"),
+// 				primary_action(values) {
+// 					dialog.hide();
+// 					frappe.call({
+// 						method: "verp_staffing.crm.api.permission_request._request_permission",
+// 						args: {
+// 							ref_doctype: frm.doctype,
+// 							ref_name: frm.doc.name,
+// 							reason: values.reason,
+// 						},
+// 						// freeze: true,
+// 						// freeze_message: __("Sending request to your manager..."),
+// 						callback(res) {
+// 							if (res.message && res.message.status === "success") {
+// 								frappe.show_alert(
+// 									{
+// 										message: __(
+// 											`Request sent to manager <b>${res.message.manager_employee}</b>. You will be notified when permission is granted.`,
+// 										),
+// 										indicator: "blue",
+// 									},
+// 									7,
+// 								);
+// 							}
+// 						},
+// 					});
+// 				},
+// 			});
 
-			dialog.show();
-		},
-	});
-}
+// 			dialog.show();
+// 		},
+// 	});
+// }
 
-function check_and_show_give_permission_button(frm) {
-	frappe.call({
-		method: "verp_staffing.crm.api.permission_request._check_pending_for_manager",
-		args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
-		callback(r) {
-			if (!r.message || !r.message.has_pending) return;
+// function check_and_show_give_permission_button(frm) {
+// 	frappe.call({
+// 		method: "verp_staffing.crm.api.permission_request._check_pending_for_manager",
+// 		args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
+// 		callback(r) {
+// 			if (!r.message || !r.message.has_pending) return;
 
-			const { requested_by, reason } = r.message;
+// 			const { requested_by, reason } = r.message;
 
-			$(`button:contains("Give Permission")`).closest(".btn-group").remove();
+// 			$(`button:contains("Give Permission")`).closest(".btn-group").remove();
 
-			frm.add_custom_button(__("Give Permission"), () => {
-				// Dialog with Approve AND Decline
-				const perm_dialog = new frappe.ui.Dialog({
-					title: __("Permission Request"),
-					fields: [
-						{
-							fieldtype: "HTML",
-							fieldname: "request_info",
-							options: `
-                                <div style="padding: 10px 0;">
-                                    <p>
-                                        <b>${requested_by}</b> has requested permission
-                                        to update the email field on this Lead.
-                                    </p>
-                                    <p><b>Reason:</b> ${reason}</p>
-                                    <p>
-                                        If approved, permission will be valid for
-                                        <b>${r.message.expires_in_minutes} minutes</b> only.
-                                    </p>
-                                </div>
-                            `,
-						},
-					],
-					primary_action_label: __("Approve"),
-					primary_action() {
-						perm_dialog.hide();
-						frappe.call({
-							method: "verp_staffing.crm.api.permission_request._give_permission",
-							args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
-							callback(res) {
-								if (res.message && res.message.status === "approved") {
-									frappe.show_alert(
-										{
-											message: __(
-												`Permission granted for ${res.message.expires_in_minutes} minutes. <b>${requested_by}</b> has been notified.`,
-											),
-											indicator: "green",
-										},
-										6,
-									);
-									frm.reload_doc();
-								}
-							},
-						});
-					},
-					secondary_action_label: __("Decline"),
-					secondary_action() {
-						perm_dialog.hide();
-						frappe.call({
-							method: "verp_staffing.crm.api.permission_request._decline_permission",
-							args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
-							callback(res) {
-								if (res.message && res.message.status === "declined") {
-									frappe.show_alert(
-										{
-											message: __(
-												`Request declined. <b>${requested_by}</b> has been notified.`,
-											),
-											indicator: "red",
-										},
-										6,
-									);
-									frm.reload_doc();
-								}
-							},
-						});
-					},
-				});
-				perm_dialog.show();
-			});
-		},
-	});
-}
+// 			frm.add_custom_button(__("Give Permission"), () => {
+// 				// Dialog with Approve AND Decline
+// 				const perm_dialog = new frappe.ui.Dialog({
+// 					title: __("Permission Request"),
+// 					fields: [
+// 						{
+// 							fieldtype: "HTML",
+// 							fieldname: "request_info",
+// 							options: `
+//                                 <div style="padding: 10px 0;">
+//                                     <p>
+//                                         <b>${requested_by}</b> has requested permission
+//                                         to update the email field on this Lead.
+//                                     </p>
+//                                     <p><b>Reason:</b> ${reason}</p>
+//                                     <p>
+//                                         If approved, permission will be valid for
+//                                         <b>${r.message.expires_in_minutes} minutes</b> only.
+//                                     </p>
+//                                 </div>
+//                             `,
+// 						},
+// 					],
+// 					primary_action_label: __("Approve"),
+// 					primary_action() {
+// 						perm_dialog.hide();
+// 						frappe.call({
+// 							method: "verp_staffing.crm.api.permission_request._give_permission",
+// 							args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
+// 							callback(res) {
+// 								if (res.message && res.message.status === "approved") {
+// 									frappe.show_alert(
+// 										{
+// 											message: __(
+// 												`Permission granted for ${res.message.expires_in_minutes} minutes. <b>${requested_by}</b> has been notified.`,
+// 											),
+// 											indicator: "green",
+// 										},
+// 										6,
+// 									);
+// 									frm.reload_doc();
+// 								}
+// 							},
+// 						});
+// 					},
+// 					secondary_action_label: __("Decline"),
+// 					secondary_action() {
+// 						perm_dialog.hide();
+// 						frappe.call({
+// 							method: "verp_staffing.crm.api.permission_request._decline_permission",
+// 							args: { ref_doctype: frm.doctype, ref_name: frm.doc.name },
+// 							callback(res) {
+// 								if (res.message && res.message.status === "declined") {
+// 									frappe.show_alert(
+// 										{
+// 											message: __(
+// 												`Request declined. <b>${requested_by}</b> has been notified.`,
+// 											),
+// 											indicator: "red",
+// 										},
+// 										6,
+// 									);
+// 									frm.reload_doc();
+// 								}
+// 							},
+// 						});
+// 					},
+// 				});
+// 				perm_dialog.show();
+// 			});
+// 		},
+// 	});
+// }
 
-// make field read only after lead become opportunity
+// // make field read only after lead become opportunity
 
-function apply_field_readonly_for_lead_owner(frm) {
-	if (frm.is_new()) return;
+// function apply_field_readonly_for_lead_owner(frm) {
+// 	if (frm.is_new()) return;
 
-	// Fetch lead_owner and status directly from DB
-	// because frm.doc may not have them loaded yet
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Lead",
-			filters: { name: frm.doc.name },
-			fieldname: ["status", "lead_owner"],
-		},
-		callback: function (lead_res) {
-			if (!lead_res.message) return;
+// 	// Fetch lead_owner and status directly from DB
+// 	// because frm.doc may not have them loaded yet
+// 	frappe.call({
+// 		method: "frappe.client.get_value",
+// 		args: {
+// 			doctype: "Lead",
+// 			filters: { name: frm.doc.name },
+// 			fieldname: ["status", "lead_owner"],
+// 		},
+// 		callback: function (lead_res) {
+// 			if (!lead_res.message) return;
 
-			const { status, lead_owner } = lead_res.message;
+// 			const { status, lead_owner } = lead_res.message;
 
-			if (status !== "Opportunity") return;
+// 			if (status !== "Opportunity") return;
 
-			// Check if logged-in user is the lead owner
-			frappe.call({
-				method: "frappe.client.get_value",
-				args: {
-					doctype: "Employee",
-					filters: { user: frappe.session.user },
-					fieldname: "name",
-				},
-				callback: function (emp_res) {
-					if (!emp_res.message) return;
-					if (emp_res.message.name !== lead_owner) return;
+// 			// Check if logged-in user is the lead owner
+// 			frappe.call({
+// 				method: "frappe.client.get_value",
+// 				args: {
+// 					doctype: "Employee",
+// 					filters: { user: frappe.session.user },
+// 					fieldname: "name",
+// 				},
+// 				callback: function (emp_res) {
+// 					if (!emp_res.message) return;
+// 					if (emp_res.message.name !== lead_owner) return;
 
-					// Lead owner — always lock source
-					frm.set_df_property("source", "read_only", 1);
-					frm.refresh_field("source");
+// 					// Lead owner — always lock source
+// 					frm.set_df_property("source", "read_only", 1);
+// 					frm.refresh_field("source");
 
-					// Check permission status for email
-					frappe.call({
-						method: "verp_staffing.crm.api.permission_request._check_permission_status",
-						args: {
-							ref_doctype: "Lead",
-							ref_name: frm.doc.name,
-						},
-						callback: function (perm_res) {
-							const perm = perm_res.message && perm_res.message.status;
+// 					// Check permission status for email
+// 					frappe.call({
+// 						method: "verp_staffing.crm.api.permission_request._check_permission_status",
+// 						args: {
+// 							ref_doctype: "Lead",
+// 							ref_name: frm.doc.name,
+// 						},
+// 						callback: function (perm_res) {
+// 							const perm = perm_res.message && perm_res.message.status;
 
-							if (perm === "approved") {
-								frm.set_df_property("email", "read_only", 0);
-								frm.refresh_field("email");
-								frappe.show_alert(
-									{
-										message: __(
-											"Permission granted. You can now update the email field.",
-										),
-										indicator: "green",
-									},
-									5,
-								);
-							} else {
-								frm.set_df_property("email", "read_only", 1);
-								frm.refresh_field("email");
+// 							if (perm === "approved") {
+// 								frm.set_df_property("email", "read_only", 0);
+// 								frm.refresh_field("email");
+// 								frappe.show_alert(
+// 									{
+// 										message: __(
+// 											"Permission granted. You can now update the email field.",
+// 										),
+// 										indicator: "green",
+// 									},
+// 									5,
+// 								);
+// 							} else {
+// 								frm.set_df_property("email", "read_only", 1);
+// 								frm.refresh_field("email");
 
-								if (perm === "pending") {
-									frappe.show_alert(
-										{
-											message: __(
-												"Email is locked. Your permission request is pending manager approval.",
-											),
-											indicator: "orange",
-										},
-										5,
-									);
-								} else if (perm === "declined") {
-									frappe.show_alert(
-										{
-											message: __(
-												"Email is locked. Your permission request was declined. Please request again.",
-											),
-											indicator: "red",
-										},
-										5,
-									);
-								} else if (perm === "expired") {
-									frappe.show_alert(
-										{
-											message: __(
-												"Email is locked. Your permission has expired. Please request again.",
-											),
-											indicator: "orange",
-										},
-										5,
-									);
-								}
-							}
-						},
-					});
-				},
-			});
-		},
-	});
-}
+// 								if (perm === "pending") {
+// 									frappe.show_alert(
+// 										{
+// 											message: __(
+// 												"Email is locked. Your permission request is pending manager approval.",
+// 											),
+// 											indicator: "orange",
+// 										},
+// 										5,
+// 									);
+// 								} else if (perm === "declined") {
+// 									frappe.show_alert(
+// 										{
+// 											message: __(
+// 												"Email is locked. Your permission request was declined. Please request again.",
+// 											),
+// 											indicator: "red",
+// 										},
+// 										5,
+// 									);
+// 								} else if (perm === "expired") {
+// 									frappe.show_alert(
+// 										{
+// 											message: __(
+// 												"Email is locked. Your permission has expired. Please request again.",
+// 											),
+// 											indicator: "orange",
+// 										},
+// 										5,
+// 									);
+// 								}
+// 							}
+// 						},
+// 					});
+// 				},
+// 			});
+// 		},
+// 	});
+// }
 
 function open_create_opportunity_dialog(frm) {
 	if (frm.is_dirty()) {

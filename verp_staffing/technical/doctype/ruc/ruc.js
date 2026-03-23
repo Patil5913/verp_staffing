@@ -34,6 +34,9 @@ frappe.ui.form.on("RUC", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
+		frm._update_detail_fields = {
+			surname: "Surname",
+		};
 		window.setup_service_permission_button(frm);
 	},
 

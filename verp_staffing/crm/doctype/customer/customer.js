@@ -21,7 +21,7 @@ frappe.ui.form.on("Customer", {
 		inject_department_css();
 		inject_status_badge_css();
 		load_department_panels(frm);
-		let userDepartments = [];
+
 		frappe.call({
 			method: "frappe.client.get_value",
 			args: {
@@ -31,56 +31,66 @@ frappe.ui.form.on("Customer", {
 			},
 			callback(r) {
 				CURRENT_EMPLOYEE = r.message?.name;
-				load_routes(frm, userDepartments);
+				load_routes(frm);
 			},
 		});
 
 		if (!frm.is_new()) {
 			show_sales_order(frm);
 
-			// Single call to check ownership + candidate form + permission
 			frappe.call({
-				method: "verp_staffing.crm.api.permission_request.get_lead_detail_form_lock_status",
-				args: { customer_name: frm.doc.name },
+				method: "frappe.client.get_value",
+				args: {
+					doctype: "Employee",
+					filters: { user: frappe.session.user },
+					fieldname: "name",
+				},
 				callback: function (r) {
-					if (!r.message) return;
+					const current_employee = r.message && r.message.name;
+					const is_customer_owner = current_employee === frm.doc.customer_owner;
 
-					const { is_owner, candidate_form_required, permission } = r.message;
+					if (is_customer_owner) {
+						// Check if candidate form required
+						frappe.call({
+							method: "verp_staffing.crm.api.permission_request.get_candidate_form_required_status",
+							args: { customer_name: frm.doc.name },
+							callback: function (res) {
+								if (!res.message || !res.message.required) return;
 
-					if (!candidate_form_required) {
-						// No service requires candidate form — no buttons needed
-						return;
-					}
+								// Candidate form required — check if already pending
+								frappe.call({
+									method: "verp_staffing.crm.api.permission_request.get_owner_pending_field_update_request",
+									args: { customer_name: frm.doc.name },
+									callback: function (pend_res) {
+										if (pend_res.message && pend_res.message.has_pending) {
+											frappe.show_alert(
+												{
+													message: __(
+														"Your update request is pending manager approval.",
+													),
+													indicator: "orange",
+												},
+												5,
+											);
+											return;
+										}
 
-					if (is_owner) {
-						// Hide button when pending or approved
-						if (permission === "pending") {
-							frappe.show_alert(
-								{
-									message: __(
-										"Your update request is pending manager approval.",
-									),
-									indicator: "orange",
-								},
-								5,
-							);
-							return;
-						}
-						if (permission === "approved") return;
-
-						// Show button for: none, expired, declined
-						frm.add_custom_button(__("Request for Update"), () => {
-							open_customer_request_for_update_dialog(frm);
+										// Show Update Detail button
+										frm.add_custom_button(__("Update Detail"), () => {
+											customer_owner_open_update_detail_dialog(frm);
+										});
+									},
+								});
+							},
 						});
 					} else {
-						// Not owner — check if manager has pending request to approve
-						check_and_show_give_permission_button_customer(frm);
+						// Manager — show Accept Updates if pending
+						customer_show_accept_updates(frm);
 					}
 				},
 			});
 		}
 
-		// clear previous content immediately
 		if (frm.fields_dict.customer_details) {
 			frm.fields_dict.customer_details.$wrapper.html(
 				"<p style='color:#888'>Loading history...</p>",
@@ -98,13 +108,7 @@ frappe.ui.form.on("Customer", {
 				interview_offset: interview_offset,
 			},
 			callback(r) {
-				if (!r.message) {
-					console.error("Empty response");
-					return;
-				}
-
-				console.log(r.message);
-
+				if (!r.message) return;
 				render_customer_history(frm, r.message);
 			},
 		});
@@ -153,11 +157,9 @@ frappe.ui.form.on("Customer", {
 
 		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Customer Form";
-
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
-		// show forward button only when form is filled
 		frappe.call({
 			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
 			callback: (r) => {
@@ -169,9 +171,7 @@ frappe.ui.form.on("Customer", {
 	},
 
 	sales_order: function (frm) {
-		frappe.new_doc("Sales Order", {
-			customer: frm.doc.name,
-		});
+		frappe.new_doc("Sales Order", { customer: frm.doc.name });
 	},
 
 	customer_from: function (frm) {
@@ -190,8 +190,6 @@ frappe.ui.form.on("Customer", {
 		if (frm.doc.customer_from && frm.doc.party_name) {
 			let source_doctype = frm.doc.customer_from;
 			let source_name = frm.doc.party_name;
-
-			// Determine which field to fetch based on the source
 			let fetch_field = source_doctype === "Lead" ? "name1" : "title";
 
 			frappe.db.get_value(source_doctype, source_name, fetch_field).then((r) => {
@@ -215,42 +213,26 @@ frappe.ui.form.on("Customer", {
 			frappe.msgprint(__("Please select a Lead."));
 			frappe.validated = false;
 		} else if (frm.doc.customer_from === "Opportunity" && !frm.doc.party_name) {
-			frappe.msgprint(__("Please select a Opportunity."));
+			frappe.msgprint(__("Please select an Opportunity."));
 			frappe.validated = false;
 		}
 	},
 });
+
 function set_customer_owner(frm) {
 	if (frm.doc.customer_owner) return;
 
-	// Case 1: Opportunity selected
 	if (frm.doc.customer_from === "Opportunity" && frm.doc.party_name) {
 		frappe.db.get_value("Opportunity", frm.doc.party_name, "opportunity_owner").then((r) => {
-			console.log("entered opp");
-			console.log(frm.doc.party_name);
-
 			if (!r.message || !r.message.opportunity_owner) return;
-
-			console.log("exists");
-			console.log(r.message.opportunity_owner);
-
 			frm.set_value("customer_owner", r.message.opportunity_owner);
-			console.log("customer_owner", frm.doc.customer_owner);
 		});
-	}
-
-	// Case 2: Lead selected
-	else if (frm.doc.customer_from === "Lead" && frm.doc.party_name) {
-		console.log("customer from lead ");
-
+	} else if (frm.doc.customer_from === "Lead" && frm.doc.party_name) {
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
 				doctype: "Employee",
-				filters: [
-					["Employee", "user", "=", frappe.session.user],
-					// ["Employee Assignment Detail", "department", "=", "Sales"]
-				],
+				filters: [["Employee", "user", "=", frappe.session.user]],
 				fields: ["name"],
 				limit: 1,
 			},
@@ -260,18 +242,12 @@ function set_customer_owner(frm) {
 				}
 			},
 		});
-	}
-
-	// Case 3: Nothing selected → logged-in Sales employee
-	else {
+	} else {
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
 				doctype: "Employee",
-				filters: [
-					["Employee", "user", "=", frappe.session.user],
-					// ["Employee Assignment Detail", "department", "=", "Sales"]
-				],
+				filters: [["Employee", "user", "=", frappe.session.user]],
 				fields: ["name"],
 				limit: 1,
 			},
@@ -287,64 +263,50 @@ function set_customer_owner(frm) {
 function load_routes(frm) {
 	frappe.call({
 		method: "verp_staffing.crm.doctype.customer.customer.get_customer_routes",
-		args: {
-			customer: frm.doc.name,
-		},
+		args: { customer: frm.doc.name },
 		callback(r) {
 			const data = r.message || [];
-
 			let html = "<p>No routing history</p>";
 
 			if (data.length) {
 				html = `
-					<table class="table table-bordered">
-						<tr>
-							<th>Department</th>
-							<th>Status</th>
-							<th>Assigned To</th>
-							<th>Forwarded On</th>
-							<th>Completed On</th>
-						</tr>
-				`;
-
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Forwarded On</th>
+                            <th>Completed On</th>
+                        </tr>
+                `;
 				data.forEach((row) => {
 					html += `
-						<tr>
-							<td>${row.department}</td>
-							<td>${get_status_html(row)}</td>
-							<td>${row.assigned_to || "-"}</td>
-							<td>${row.forwarded_on || "-"}</td>
-							<td>${row.completed_on || "-"}</td>
-						</tr>
-					`;
+                        <tr>
+                            <td>${row.department}</td>
+                            <td>${get_status_html(row)}</td>
+                            <td>${row.assigned_to || "-"}</td>
+                            <td>${row.forwarded_on || "-"}</td>
+                            <td>${row.completed_on || "-"}</td>
+                        </tr>
+                    `;
 				});
-
 				html += "</table>";
 			}
 
 			const wrapper = frm.fields_dict.department_route_html.$wrapper;
-
 			wrapper.html(html);
-
-			// remove old listeners before adding new
 			wrapper.off("change", ".route-status");
-
-			// attach event
 			wrapper.on("change", ".route-status", function () {
 				const route = $(this).data("route");
 				const value = $(this).val();
-
-				console.log("route: ", route);
 				if (value !== "Completed") return;
+
 				frappe.confirm(
 					"This action cannot be reverted. Continue?",
 					() => {
 						frappe.call({
 							method: "verp_staffing.crm.doctype.customer.customer.update_route_status",
-							args: {
-								route_name: route,
-								status: "Completed",
-							},
+							args: { route_name: route, status: "Completed" },
 							callback() {
 								frappe.msgprint("Status updated to Completed");
 								frm.refresh();
@@ -361,26 +323,18 @@ function load_routes(frm) {
 }
 
 function get_status_html(row) {
-	console.log("row.assigned_to, CURRENT_EMPLOYEE:", row.assigned_to, CURRENT_EMPLOYEE);
 	const isAssignedUser = row.assigned_to === CURRENT_EMPLOYEE;
 	const isCompleted = row.status === "Completed";
 
-	// not assigned → read only
-	if (!isAssignedUser) {
-		return `<span>${row.status}</span>`;
-	}
+	if (!isAssignedUser) return `<span>${row.status}</span>`;
+	if (isCompleted) return `<span style="color:green;">Completed</span>`;
 
-	if (isCompleted) {
-		return `<span style="color:green;">Completed</span>`;
-	}
-
-	// editable dropdown
 	return `
-		<select data-route="${row.name}" class="route-status">
-			<option value="Active" ${row.status === "Active" ? "selected" : ""}>Active</option>
-			<option value="Completed">Completed</option>
-		</select>
-	`;
+        <select data-route="${row.name}" class="route-status">
+            <option value="Active" ${row.status === "Active" ? "selected" : ""}>Active</option>
+            <option value="Completed">Completed</option>
+        </select>
+    `;
 }
 
 function toggle_tab_view(frm) {
@@ -431,76 +385,51 @@ function show_sales_order(frm) {
 			}
 
 			let html = `<div style="padding: 10px;">`;
-
 			html += `<h3>Sales Orders (${sales_orders.length})</h3><hr/>`;
 
-			sales_orders.forEach((so, idx) => {
+			sales_orders.forEach((so) => {
 				html += `
                     <div style="border:1px solid #ddd; padding:15px; border-radius:6px; margin-bottom:15px;">
-                        
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <h4>Sales Order: ${so.name}</h4>
-
-                            <button class="btn btn-primary go-to-so-btn" 
-                                data-so="${so.name}" 
-                                style="font-size:13px;">
+                            <button class="btn btn-primary go-to-so-btn"
+                                data-so="${so.name}" style="font-size:13px;">
                                 go to Sales Order
                             </button>
                         </div>
-
                         <p><b>Title:</b> ${so.title || ""}</p>
                         <p><b>Date:</b> ${so.date || ""}</p>
-                        <p><b>Customer:</b> ${so.customer || ""}</p>
-
-                        <div id="terms_${so.name}">
-                            <i>Loading Payment Terms...</i>
-                        </div>
+                        <div id="terms_${so.name}"><i>Loading Payment Terms...</i></div>
                     </div>
                 `;
-
-				// Fetch payment terms for each SO
 				load_payment_terms(so.name, frm);
 			});
 
 			html += `</div>`;
-
 			frm.fields_dict.sales_content.$wrapper.html(html);
 
-			// Attach click events for all update buttons
 			frm.fields_dict.sales_content.$wrapper.find(".go-to-so-btn").on("click", function () {
-				const so_name = $(this).data("so");
-				frappe.set_route("Form", "Sales Order", so_name);
+				frappe.set_route("Form", "Sales Order", $(this).data("so"));
 			});
 		},
 	});
 }
 
-// Fetch payment terms for each SO block dynamically
 function load_payment_terms(so_name, frm) {
 	frappe.call({
 		method: "frappe.client.get",
-		args: {
-			doctype: "Sales Order",
-			name: so_name,
-		},
+		args: { doctype: "Sales Order", name: so_name },
 		callback: function (r) {
 			if (!r.message) return;
-
 			let so = r.message;
 			let html = `
                 <h5>Payment Terms</h5>
                 <table class="table table-bordered" style="width:100%; margin-top:10px;">
                     <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Received?</th>
-                        </tr>
+                        <tr><th>#</th><th>Date</th><th>Amount</th><th>Received?</th></tr>
                     </thead>
                     <tbody>
             `;
-
 			(so.payment_terms || []).forEach((row, i) => {
 				html += `
                     <tr>
@@ -511,166 +440,8 @@ function load_payment_terms(so_name, frm) {
                     </tr>
                 `;
 			});
-
 			html += `</tbody></table>`;
-
 			frm.fields_dict.sales_content.$wrapper.find(`#terms_${so_name}`).html(html);
-		},
-	});
-}
-
-function render_lead_details(frm) {
-	frm.set_df_property(
-		"lead_details_html",
-		"options",
-		`<p style="color:#888;padding:10px;">Loading Lead Details...</p>`,
-	);
-
-	// STEP 1: Check existence
-	frappe.call({
-		method: "frappe.client.get_list",
-		args: {
-			doctype: "Lead Detail Form",
-			filters: {
-				customer: frm.doc.name,
-			},
-			fields: ["name"],
-			limit_page_length: 1,
-		},
-		callback: function (res) {
-			// ✅ CASE 1: No Lead Detail linked
-			if (!res.message || res.message.length === 0) {
-				frm.set_df_property(
-					"lead_details_html",
-					"options",
-					`
-                    <div style="padding:15px;color:#999;">
-                        <h4>Lead Details</h4>
-                        <p>No Lead Detail form not filled yet by customer.</p>
-                    </div>
-                    `,
-				);
-				return;
-			}
-
-			// STEP 2: Fetch full document
-			const c_name = res.message[0].name;
-
-			frappe.call({
-				method: "frappe.client.get",
-				args: {
-					doctype: "Lead Detail Form",
-					name: c_name,
-				},
-				callback: function (lead_res) {
-					if (!lead_res.message) {
-						frm.set_df_property(
-							"lead_details_html",
-							"options",
-							`<p style="color:red;">Failed to load Lead Details.</p>`,
-						);
-						return;
-					}
-
-					const lead = lead_res.message;
-
-					let html = `
-                        <div style="padding:15px;">
-                            <h4 style="margin-bottom:15px;">Lead Details</h4>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    `;
-
-					const exclude = [
-						"doctype",
-						"name",
-						"owner",
-						"modified",
-						"creation",
-						"modified_by",
-						"docstatus",
-						"_comments",
-						"_assign",
-						"_user_tags",
-						"idx",
-					];
-
-					// Helper for Link fields
-					const fetchLinkValue = (field, value, key) => {
-						frappe.call({
-							method: "frappe.client.get",
-							args: {
-								doctype: field.options,
-								name: value,
-							},
-							callback: function (data) {
-								const finalValue = data.message?.name || value;
-								$(`#field-${key}`).text(finalValue);
-							},
-						});
-					};
-
-					Object.keys(lead).forEach((key) => {
-						const value = lead[key];
-
-						if (
-							exclude.includes(key) ||
-							value === null ||
-							value === "" ||
-							key === "past_experience" ||
-							key === "education_table"
-						)
-							return;
-
-						const field = frappe.meta.get_docfield("Lead Detail Form", key);
-						const label = frappe.model.unscrub(key);
-
-						if (field && field.fieldtype === "Link") {
-							html += `
-                                <div style="border:1px solid #e5e5e5;padding:10px;border-radius:8px;">
-                                    <strong>${label}</strong><br>
-                                    <span id="field-${key}">Loading...</span>
-                                </div>`;
-							fetchLinkValue(field, value, key);
-						} else if (typeof value !== "object") {
-							html += `
-                                <div style="border:1px solid #e5e5e5;padding:10px;border-radius:8px;">
-                                    <strong>${label}</strong><br>
-                                    <span>${value}</span>
-                                </div>`;
-						}
-					});
-
-					html += `</div><br>`;
-
-					// Child tables
-					["past_experience", "education_table"].forEach((tblKey) => {
-						if (Array.isArray(lead[tblKey]) && lead[tblKey].length > 0) {
-							html += `<h4 style="margin-top:20px;">${frappe.model.unscrub(tblKey)}</h4>`;
-							html += `<table class="table table-bordered" style="width:100%;font-size:13px;">
-                                        <tr>`;
-
-							Object.keys(lead[tblKey][0]).forEach((col) => {
-								html += `<th>${frappe.model.unscrub(col)}</th>`;
-							});
-
-							html += `</tr>`;
-
-							lead[tblKey].forEach((row) => {
-								html += `<tr>`;
-								Object.keys(row).forEach((col) => {
-									html += `<td>${row[col] || "-"}</td>`;
-								});
-								html += `</tr>`;
-							});
-
-							html += `</table>`;
-						}
-					});
-
-					html += `</div>`;
-					frm.set_df_property("lead_details", "options", html);
-				},
-			});
 		},
 	});
 }
@@ -684,7 +455,6 @@ const DEPARTMENT_VISIBILITY = {
 
 function apply_tab_visibility(frm, department) {
 	const allowed = DEPARTMENT_VISIBILITY[department] || [];
-
 	const all_tabs = [
 		"sales_tab",
 		"resume_tab",
@@ -693,7 +463,6 @@ function apply_tab_visibility(frm, department) {
 		"note_tab",
 		"activities_tab",
 	];
-
 	all_tabs.forEach((tab) => {
 		frm.set_df_property(tab, "hidden", !allowed.includes(tab));
 	});
@@ -704,28 +473,16 @@ function inject_department_css() {
 		const style = document.createElement("style");
 		style.id = "status-badge-css";
 		style.innerHTML = `
-        .status-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background: #e6f4ea;
-            color: #1e7e34;
-        }
-
-        .status-warning {
-            background: #fff4e5;
-            color: #b26a00;
-        }
-
-        .status-neutral {
-            background: #f0f0f0;
-            color: #555;
-        }
+            .status-badge {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .status-success { background: #e6f4ea; color: #1e7e34; }
+            .status-warning { background: #fff4e5; color: #b26a00; }
+            .status-neutral { background: #f0f0f0; color: #555; }
         `;
 		document.head.appendChild(style);
 	}
@@ -733,28 +490,26 @@ function inject_department_css() {
 		const style = document.createElement("style");
 		style.id = "department-panel-css";
 		style.innerHTML = `
-        .department-box {
-            border: 1px solid #e0e0e0;
-            padding: 12px;
-            border-radius: 6px;
-            background: #fafafa;
-            margin-bottom: 10px;
-        }
-    `;
+            .department-box {
+                border: 1px solid #e0e0e0;
+                padding: 12px;
+                border-radius: 6px;
+                background: #fafafa;
+                margin-bottom: 10px;
+            }
+        `;
 		document.head.appendChild(style);
 	}
 }
 
-//load data of each department
+function inject_status_badge_css() {}
+
 function load_department_panels(frm) {
 	frappe.call({
 		method: "verp_staffing.crm.api.customer.get_customer_department_panels",
-		args: {
-			customer: frm.doc.name,
-		},
+		args: { customer: frm.doc.name },
 		callback(r) {
 			if (!r.message) return;
-
 			render_resume_panel(frm, r.message.resume);
 			render_technical_panel(frm, r.message.technical);
 			render_marketing_panel(frm, r.message.marketing);
@@ -764,61 +519,42 @@ function load_department_panels(frm) {
 
 function render_resume_panel(frm, data) {
 	const wrapper = frm.fields_dict.resume_html.$wrapper;
-
 	if (!data) {
 		wrapper.html(`<div class="text-muted">Resume not forwarded yet.</div>`);
 		return;
 	}
-
-	const status_html = get_status_badge(data.status);
-
-	const html = `
+	wrapper.html(`
         <div class="department-box">
             <h4>Resume Department</h4>
-            <p><strong>Status:</strong> ${status_html}</p>
+            <p><strong>Status:</strong> ${get_status_badge(data.status)}</p>
             <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(data.assign_to || "-")}</p>
-            <p class="text-muted">
-                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
-            </p>
+            <p class="text-muted">Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}</p>
         </div>
-    `;
-
-	wrapper.html(html);
+    `);
 }
 
 function render_technical_panel(frm, data) {
 	const wrapper = frm.fields_dict.technical_content.$wrapper;
-
 	if (!data || !data.length) {
 		wrapper.html(`<div class="text-muted">Not forwarded to Technical yet.</div>`);
 		return;
 	}
-
 	let html = "";
-
 	data.forEach((item) => {
-		const status_html = get_status_badge(item.status);
-
 		html += `
             <div class="department-box">
-                <h4> Services : ${item.name}</h4>
-                <p><strong>Status:</strong> ${status_html}</p>
-                <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(
-					item.assign_to || "-",
-				)}</p>
-                <p class="text-muted">
-                    Last Updated: ${frappe.datetime.str_to_user(item.last_updated)}
-                </p>
+                <h4>Services: ${item.name}</h4>
+                <p><strong>Status:</strong> ${get_status_badge(item.status)}</p>
+                <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(item.assign_to || "-")}</p>
+                <p class="text-muted">Last Updated: ${frappe.datetime.str_to_user(item.last_updated)}</p>
             </div>
         `;
 	});
-
 	wrapper.html(html);
 }
 
 function render_marketing_panel(frm, data) {
 	const wrapper = frm.fields_dict.marketing_content.$wrapper;
-
 	if (!data) {
 		wrapper.html(`<div class="text-muted">Not forwarded to Marketing yet.</div>`);
 		return;
@@ -826,7 +562,6 @@ function render_marketing_panel(frm, data) {
 
 	let status_label = "No Interviews";
 	let badge_class = "gray";
-
 	if (data.current_interviews > 0) {
 		status_label = "In Progress";
 		badge_class = "blue";
@@ -835,48 +570,26 @@ function render_marketing_panel(frm, data) {
 		badge_class = "green";
 	}
 
-	const html = `
+	wrapper.html(`
         <div class="department-box">
             <h4>Marketing Department</h4>
-
-            <p>
-                <strong>Status:</strong>
-                <span class="indicator ${badge_class}">${status_label}</span>
-            </p>
-
-            <p>
-                <strong>Assigned To:</strong>
-                ${frappe.utils.escape_html(data.assign_to || "-")}
-            </p>
-
-            <p>
-                <strong>Total Interviews:</strong> ${data.total_interviews}
-            </p>
-
-            <p>
-                <strong>Current Interviews:</strong> ${data.current_interviews}
-            </p>
-
-            <p class="text-muted">
-                Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}
-            </p>
+            <p><strong>Status:</strong> <span class="indicator ${badge_class}">${status_label}</span></p>
+            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(data.assign_to || "-")}</p>
+            <p><strong>Total Interviews:</strong> ${data.total_interviews}</p>
+            <p><strong>Current Interviews:</strong> ${data.current_interviews}</p>
+            <p class="text-muted">Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}</p>
         </div>
-    `;
-
-	wrapper.html(html);
+    `);
 }
 
 function get_status_badge(status) {
 	const s = (status || "").toLowerCase();
-
 	if (s.includes("completed") || s.includes("done")) {
 		return `<span class="status-badge status-success">${frappe.utils.escape_html(status)}</span>`;
 	}
-
 	if (s.includes("pending") || s.includes("open")) {
 		return `<span class="status-badge status-warning">${frappe.utils.escape_html(status)}</span>`;
 	}
-
 	return `<span class="status-badge status-neutral">${frappe.utils.escape_html(status || "-")}</span>`;
 }
 
@@ -1177,7 +890,6 @@ function render_customer_history(frm, data, append_interviews = false) {
 					}
 				});
 			}
-
 			html += `</div>`;
 		});
 	}
@@ -1606,6 +1318,39 @@ function showOnboarding_tab(frm) {
 						frm.refresh();
 					},
 				});
+			});
+		},
+	});
+}
+
+function customer_owner_open_update_detail_dialog(frm) {
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
+		args: { customer_name: frm.doc.name },
+		callback: function (r) {
+			const current_values = r.message || {};
+			const FIELDS = {
+				surname: "Surname",
+				first_name: "First Name",
+				father_name: "Father Name",
+				email: "Email",
+			};
+			_open_update_detail_dialog(frm, current_values, FIELDS, "owner");
+		},
+	});
+}
+
+function customer_show_accept_updates(frm) {
+	$(`button:contains("Accept Updates")`).closest(".btn-group").remove();
+	frappe.call({
+		method: "verp_staffing.crm.api.permission_request.get_all_pending_field_update_requests",
+		args: { customer_name: frm.doc.name },
+		callback(r) {
+			$(`button:contains("Accept Updates")`).closest(".btn-group").remove();
+			if (!r.message || !r.message.length) return;
+
+			frm.add_custom_button(__("Accept Updates"), () => {
+				_open_accept_updates_dialog(frm, r.message, "owner");
 			});
 		},
 	});
