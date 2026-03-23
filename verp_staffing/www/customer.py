@@ -6,9 +6,8 @@ from frappe.utils import nowdate, getdate, get_datetime
 
 
 def get_context(context):
+    context.no_cache = 1
 
-    print("Session ID:", frappe.session.sid)
-    print("\n================= PAGE LOAD =================")
 
     # =====================================================
     # HANDLE POST REQUEST
@@ -16,7 +15,6 @@ def get_context(context):
     if frappe.request.method == "POST":
 
         action = frappe.form_dict.get("action")
-        print("Action Received:", action)
 
         # -------------------------------------------------
         # SEND OTP
@@ -68,27 +66,7 @@ def get_context(context):
             frappe.session["lead_email"] = email
             frappe.session.modified = True
 
-        # -------------------------------------------------
-        # SAVE FEEDBACK
-        # -------------------------------------------------
-        elif action == "save_feedback":
-
-            round_name = frappe.form_dict.get("round_name")
-            feedback = frappe.form_dict.get("feedback")
-
-            if round_name and feedback is not None:
-
-                child_row = frappe.get_doc("Interview Round", round_name)
-                parent_doc = frappe.get_doc("Interview", child_row.parent)
-
-                for row in parent_doc.interview_rounds_table:
-                    if row.name == round_name:
-                        row.feedback = feedback
-                        break
-
-                parent_doc.save(ignore_permissions=True)
-                frappe.db.commit()
-
+       
     # =====================================================
     # SESSION CHECK
     # =====================================================
@@ -195,63 +173,183 @@ def get_context(context):
     # =====================================================
     # LOAD INTERVIEWS
     # =====================================================
+    from frappe.utils import get_datetime, now_datetime
+    import pytz
+
     interviews = frappe.get_all(
         "Interview",
         filters={"marketing_link": lead_name},
         fields=["name", "marketing_link", "status", "role", "company"],
     )
 
-    today = getdate(nowdate())
+    # Convert current system time → US/Eastern
+    system_now = now_datetime()
+    tz = pytz.timezone("US/Eastern")
 
-    context.past = []
-    context.current = []
-    context.upcoming = []
+    # Convert system time to Eastern
+    now_est = system_now.astimezone(tz)
+
+
+    # context.past = []
+    # context.current = []
+    # context.upcoming = []
+
+    # for interview in interviews:
+
+    #     doc = frappe.get_doc("Interview", interview.name)
+
+    #     past_rounds = []
+    #     current_rounds = []
+    #     upcoming_rounds = []
+
+    #     for round in doc.interview_rounds_table:
+
+    #         if round.date_of_interview and getattr(round, "to_time", None):
+
+    #             # Combine date + to_time
+    #             dt_str = f"{round.date_of_interview} {round.to_time}"
+    #             interview_dt = get_datetime(dt_str)
+
+    #             # Convert interview time → EST/EDT
+    #             if interview_dt.tzinfo is None:
+    #                 interview_dt = tz.localize(interview_dt)
+    #             else:
+    #                 interview_dt = interview_dt.astimezone(tz)
+
+    #             print("\n--- ROUND ---")
+    #             print("Interview Time (EST/EDT):", interview_dt)
+    #             print("Current Time (EST/EDT):", now_est)
+
+    #             # 🔥 Direct comparison (same timezone)
+    #             if now_est > interview_dt:
+    #                 print("STATUS: PAST")
+    #                 past_rounds.append(round)
+
+    #             elif now_est == interview_dt:
+    #                 print("STATUS: CURRENT")
+    #                 current_rounds.append(round)
+
+    #             else:
+    #                 print("STATUS: UPCOMING")
+    #                 upcoming_rounds.append(round)
+
+    #         else:
+    #             print("Skipping round due to missing data")
+
+    #     if past_rounds:
+    #         interview_copy = interview.copy()
+    #         interview_copy.rounds = past_rounds
+    #         context.past.append(interview_copy)
+
+    #     if current_rounds:
+    #         interview_copy = interview.copy()
+    #         interview_copy.rounds = current_rounds
+    #         context.current.append(interview_copy)
+
+    #     if upcoming_rounds:
+    #         interview_copy = interview.copy()
+    #         interview_copy.rounds = upcoming_rounds
+    #         context.upcoming.append(interview_copy)
+
+    # print("\n===== SUMMARY =====")
+    # print("Past:", len(context.past))
+    # print("Current:", len(context.current))
+    # print("Upcoming:", len(context.upcoming))
+
+
+    # ================= FEEDBACK =================
+
+    context.feedback_rounds = []
 
     for interview in interviews:
 
         doc = frappe.get_doc("Interview", interview.name)
 
-        past_rounds = []
-        current_rounds = []
-        upcoming_rounds = []
-
         for round in doc.interview_rounds_table:
 
-            if round.date_of_interview:
+            if (
+                (not round.feedback or round.feedback.strip() == "")
+                and round.date_of_interview
+                and getattr(round, "to_time", None)
+            ):
 
-                interview_date = getdate(round.date_of_interview)
+                dt_str = f"{round.date_of_interview} {round.to_time}"
+                interview_dt = get_datetime(dt_str)
 
-                if interview_date < today:
-                    past_rounds.append(round)
-
-                elif interview_date == today:
-                    current_rounds.append(round)
-
+                if interview_dt.tzinfo is None:
+                    interview_dt = tz.localize(interview_dt)
                 else:
-                    upcoming_rounds.append(round)
+                    interview_dt = interview_dt.astimezone(tz)
 
-        if past_rounds:
-            interview_copy = interview.copy()
-            interview_copy.rounds = past_rounds
-            context.past.append(interview_copy)
+            
 
-        if current_rounds:
-            interview_copy = interview.copy()
-            interview_copy.rounds = current_rounds
-            context.current.append(interview_copy)
+                # ✅ Feedback eligible when interview is over
+                if now_est >= interview_dt:
 
-        if upcoming_rounds:
-            interview_copy = interview.copy()
-            interview_copy.rounds = upcoming_rounds
-            context.upcoming.append(interview_copy)
+                    context.feedback_rounds.append(
+                        {
+                            "round_name": round.name,
+                            "company": interview.company,
+                            "role": interview.role,
+                            "round": round.round,
+                            "date": round.date_of_interview,
+                            "time": round.to_time,
+                            "type": round.type_of_interview,
+                        }
+                    )
+             
+# ================================================================
+# CUSTOMER HISTORY
+# ===============================================================
+@frappe.whitelist(allow_guest=True)
+def save_interview_feedback(feedback_data):
 
-    print("FULL HISTORY:", context.full_history)
+    if not feedback_data:
+        frappe.throw("No feedback data received")
 
+    try:
+        feedback_list = json.loads(feedback_data)
 
+        for item in feedback_list:
+            round_name = item.get("round_name")
+            feedback = item.get("feedback")
+
+            if not round_name:
+                continue
+
+            parent_id = frappe.db.get_value(
+                "Interview Round",
+                round_name,
+                "parent"
+            )
+
+            if not parent_id:
+                continue
+
+            parent_doc = frappe.get_doc("Interview", parent_id)
+
+            for row in parent_doc.interview_rounds_table:
+                if row.name == round_name:
+                    row.feedback = feedback
+                    break
+
+            parent_doc.save(ignore_permissions=True)
+
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": "Feedback updated successfully"
+        }
+
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Feedback Save Error")
+        frappe.throw(str(e))
 
 
 @frappe.whitelist()
-def get_customer_history(customer , interview_limit=5, interview_offset=0):
+def get_customer_history(customer, interview_limit=5, interview_offset=0):
     # =====================================================
     # get customer
     # =====================================================
@@ -261,10 +359,7 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
         fields=["name", "stage", "owner", "name"],
     )
     if not Customer:
-        return {
-        "customer": {},
-        "departments": {}
-        }
+        return {"customer": {}, "departments": {}}
 
     history = {
         "customer": {
@@ -273,7 +368,6 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
         },
         "departments": {},
     }
-    print("Customer History for:", Customer[0].name)
 
     # --------------------------------------------------
     # Department Workflow History
@@ -294,8 +388,6 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
         customer_doc = Customer[0]
         stage_data = customer_doc["stage"]
 
-        print("Customer Data:", customer_doc)
-        print("Stage Data:", stage_data)
 
         if not stage_data:
             return history
@@ -310,7 +402,6 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
         for stage, value in stage_data.items():
 
             doctype = departments.get(stage)
-            print("Mapped Doctype:", doctype)
 
             if not doctype:
 
@@ -327,7 +418,6 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
 
                 if not doctype:
                     continue
-            print("======================Mapped Doctype:", doctype)
 
             if doctype != "JDC":
 
@@ -351,8 +441,7 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
                 interview_name = frappe.get_all(
                     "Interview", filters={"marketing_link": customer}, pluck="name"
                 )
-                print("........................")
-                print("INTERVIEW NAME: ", interview_name)
+               
 
                 docs = frappe.get_all(
                     "JDC",
@@ -402,8 +491,14 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
                             }
                         )
 
-
-                if doctype in ["JDC", "Cover Letter", "Training", "Marketing Other Services", "Technical Other Services","Other Services"]:
+                if doctype in [
+                    "JDC",
+                    "Cover Letter",
+                    "Training",
+                    "Marketing Other Services",
+                    "Technical Other Services",
+                    "Other Services",
+                ]:
 
                     dept_entry["proof_of_work"] = []
                     dept_entry["source_doctype"] = doctype
@@ -424,17 +519,11 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
                 if doctype == "Resume" and d.get("resume"):
                     dept_entry["resume"] = d.get("resume")
 
-            
-
                 if doctype not in history["departments"]:
                     history["departments"][doctype] = []
 
                 history["departments"][doctype].append(dept_entry)
-                print(
-                    "DEPARTMENT HISTORY:-------------------------------------",
-                    history["departments"],
-                )
-
+              
 
         # -------------------------------------------------
         # sales order history
@@ -442,8 +531,8 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
 
         sales_orders = frappe.get_all(
             "Sales Order",
-            filters={"customer":customer},
-            fields=["name", "status","agreement"]
+            filters={"customer": customer},
+            fields=["name", "status", "agreement"],
         )
 
         if sales_orders:
@@ -461,10 +550,7 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
                 }
 
                 history["departments"]["Sales Order"].append(so_entry)
-                print(
-                    "SALES ORDER HISTORY:-------------------------------------",
-                    history["departments"]["Sales Order"],
-                )
+              
 
         # -------------------------------------------------
         # interview history
@@ -474,9 +560,7 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
         from_date = frappe.form_dict.get("from_date")
         to_date = frappe.form_dict.get("to_date")
 
-        filters = {
-            "marketing_link": customer
-        }
+        filters = {"marketing_link": customer}
 
         or_filters = []
 
@@ -485,7 +569,7 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
             or_filters = [
                 ["company", "like", f"%{search}%"],
                 ["status", "like", f"%{search}%"],
-                ["role", "like", f"%{search}%"]
+                ["role", "like", f"%{search}%"],
             ]
 
         # 📅 Date filter (assuming 'creation' or change to your field)
@@ -493,10 +577,8 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
 
             interview_names = frappe.get_all(
                 "Interview Round",
-                filters={
-                    "date_of_interview": ["between", [from_date, to_date]]
-                },
-                pluck="parent"
+                filters={"date_of_interview": ["between", [from_date, to_date]]},
+                pluck="parent",
             )
 
             if interview_names:
@@ -505,22 +587,22 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
                 filters["name"] = ["in", [""]]  # forces empty result
 
         interviews = frappe.get_all(
-           "Interview",
+            "Interview",
             filters=filters,
             or_filters=or_filters if search else None,
             fields=["name", "status", "company", "role"],
             limit_page_length=int(interview_limit),
             limit_start=int(interview_offset),
-            order_by="creation desc"
+            order_by="creation desc",
         )
 
         total_interviews = frappe.get_all(
-           "Interview",
+            "Interview",
             filters=filters,
             or_filters=or_filters if search else None,
-            fields=["name"]
+            fields=["name"],
         )
-        
+
         total_interviews = len(total_interviews)
 
         if interviews:
@@ -536,19 +618,24 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
                     "id": iv.name,
                     "company": iv.company,
                     "role": iv_doc.role,
-                    "interview_rounds_table": []
+                    "interview_rounds_table": [],
                 }
 
                 for row in iv_doc.interview_rounds_table:
-                    iv_entry["interview_rounds_table"].append({
-                        "name": row.name,
-                        "round": row.round,
-                        "date": row.date,
-                        "type_of_interview": row.type_of_interview,
-                        "date_of_interview": row.date_of_interview,
-                        "time_of_interview": row.time_of_interview,
-                        "feedback": row.feedback,
-                    })
+                    iv_entry["interview_rounds_table"].append(
+                        {
+                            "name": row.name,
+                            "round": row.round,
+                            "date": row.date,
+                            "type_of_interview": row.type_of_interview,
+                            "date_of_interview": row.date_of_interview,
+                            "from_time": row.from_time,
+                            "to_time": row.to_time,
+                            "edt_est":row.edt_est,
+                            "feedback": row.feedback,
+
+                        }
+                    )
 
                 history["departments"]["Interview"].append(iv_entry)
 
@@ -556,7 +643,7 @@ def get_customer_history(customer , interview_limit=5, interview_offset=0):
         history["interview_meta"] = {
             "total": total_interviews,
             "limit": int(interview_limit),
-            "offset": int(interview_offset)
+            "offset": int(interview_offset),
         }
 
     return history

@@ -1442,7 +1442,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 								<a
 									href="/app/sales-order/${so.id}"
 									target="_blank"
-									style="color:#0ea5e9;font-weight:500;text-decoration:none;"
+									style="color:#260fea;font-weight:500;text-decoration:none;"
 								>
 									${so.id}
 								</a>
@@ -1493,7 +1493,7 @@ function render_customer_history(frm, data, append_interviews = false) {
         To : <input type="date" id="interview-to" style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
 
         <button id="interview-filter-btn"
-    style="padding:6px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;">
+    style="padding:6px 12px;background:#260fea;color:#fff;border:none;border-radius:6px;">
     Apply
 </button>
 
@@ -1529,7 +1529,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 							<a
 								href="/app/${dept.department.toLowerCase().replace(/\s+/g, "-")}/${dept.id}"
 								target="_blank"
-								style="color:#0ea5e9;font-weight:500;text-decoration:none;"
+								style="color:#260fea;font-weight:500;text-decoration:none;"
 							>
 								${dept.id}
 							</a>
@@ -1543,10 +1543,9 @@ function render_customer_history(frm, data, append_interviews = false) {
 							Assigned: ${dept.assign_to || "-"}
 						</p>
 
-						${
-							dept.resume
-								? `<p><a href="${dept.resume}" target="_blank" style="color:#0ea5e9;">View Resume</a></p>`
-								: ""
+						${dept.resume
+							? `<p><a href="${dept.resume}" target="_blank" style="color:#260fea;">View Resume</a></p>`
+							: ""
 						}
 
 					</div>
@@ -1646,11 +1645,10 @@ function render_customer_history(frm, data, append_interviews = false) {
 										<td style="${td}">${row.date || "-"}</td>
 										<td style="${td}">${row.description || "-"}</td>
 										<td style="${td}">
-											${
-												row.attachments
-													? `<a href="${row.attachments}" target="_blank" style="color:#0ea5e9;">View</a>`
-													: "-"
-											}
+											${row.attachments
+								? `<a href="${row.attachments}" target="_blank" style="color:#260fea;">View</a>`
+								: "-"
+							}
 										</td>
 									</tr>
 								`,
@@ -1760,8 +1758,150 @@ function render_customer_history(frm, data, append_interviews = false) {
 			});
 		});
 }
+ window.viewFullFeedback= function(encodedText) {
+    const fullText = decodeURIComponent(encodedText);
+
+    const dialog = document.createElement("div");
+    dialog.style = `
+        position:fixed;
+        top:0;left:0;right:0;bottom:0;
+        background:rgba(0,0,0,0.5);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        z-index:9999;
+    `;
+
+    dialog.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:24px;
+            border-radius:12px;
+            width:700px;
+            max-width:95%;
+            max-height:80vh;
+            display:flex;
+            flex-direction:column;
+        ">
+            <h3 style="margin-bottom:12px;">Full Feedback</h3>
+
+            <div style="
+                overflow-y:auto;
+                padding-right:6px;
+                margin-bottom:15px;
+            ">
+                <p style="
+                    color:#334155;
+                    font-size:14px;
+                    line-height:1.6;
+                    word-break:break-word;
+                    white-space:pre-wrap;
+                "></p>
+            </div>
+
+            <div style="text-align:right;">
+                <button onclick="this.closest('[data-dialog]').remove()"
+                    style="
+                        padding:6px 14px;
+                        background:#260fea;
+                        color:#fff;
+                        border:none;
+                        border-radius:6px;
+                        cursor:pointer;
+                    ">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+
+    dialog.setAttribute("data-dialog", "true");
+     // ✅ Close when clicking outside
+    dialog.addEventListener("click", function (e) {
+        if (!e.target.closest("#feedbackBox")) {
+            dialog.remove();
+        }
+    });
+
+    document.body.appendChild(dialog);
+
+    // ✅ Safe text injection (no HTML breaking)
+    dialog.querySelector("p").innerText = fullText;
+}
+ window.viewFullFeedback= function(encodedText) {
+    const fullText = decodeURIComponent(encodedText);
+
+    const dialog = document.createElement("div");
+    dialog.style = `
+        position:fixed;
+        top:0;left:0;right:0;bottom:0;
+        background:rgba(0,0,0,0.5);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        z-index:9999;
+    `;
+
+    dialog.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:24px;
+            border-radius:12px;
+            width:700px;
+            max-width:95%;
+            max-height:80vh;
+            display:flex;
+            flex-direction:column;
+        ">
+            <h3 style="margin-bottom:12px;">Full Feedback</h3>
+
+            <div style="
+                overflow-y:auto;
+                padding-right:6px;
+                margin-bottom:15px;
+            ">
+                <p style="
+                    color:#334155;
+                    font-size:14px;
+                    line-height:1.6;
+                    word-break:break-word;
+                    white-space:pre-wrap;
+                "></p>
+            </div>
+
+            <div style="text-align:right;">
+                <button onclick="this.closest('[data-dialog]').remove()"
+                    style="
+                        padding:6px 14px;
+                        background:#260fea;
+                        color:#fff;
+                        border:none;
+                        border-radius:6px;
+                        cursor:pointer;
+                    ">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+
+    dialog.setAttribute("data-dialog", "true");
+     // ✅ Close when clicking outside
+    dialog.addEventListener("click", function (e) {
+        if (!e.target.closest("#feedbackBox")) {
+            dialog.remove();
+        }
+    });
+
+    document.body.appendChild(dialog);
+
+    // ✅ Safe text injection (no HTML breaking)
+    dialog.querySelector("p").innerText = fullText;
+}
 
 function render_interviews(data, append = false) {
+	
+
 	let container = $("#interview-list");
 
 	if (!append) {
@@ -1824,15 +1964,14 @@ function render_interviews(data, append = false) {
                       ${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${r.edt_est || ""}` : "-"}
                     </td>
                     <td style="padding:8px;">
-                                        ${
-											r.feedback && r.feedback.trim()
-												? (() => {
-														const text = r.feedback.trim();
-														const limit = 20; // 👈 number of characters you want
-														const shortText = text.slice(0, limit);
-
-														if (text.length > limit) {
-															return `
+                                        ${r.feedback && r.feedback.trim()
+                                            ? (() => {
+                                                const text = r.feedback.trim();
+                                                const limit = 20; // 👈 number of characters you want
+                                                const shortText = text.slice(0, limit);
+                                            
+                                                if (text.length > limit) {
+                                                    return `
                                                         
                                                             ${shortText}...
                                                             <span 
@@ -1842,12 +1981,12 @@ function render_interviews(data, append = false) {
                                                                 view
                                                             </span>
                                                     `;
-														} else {
-															return text;
-														}
-													})()
-												: "-"
-										}
+                                                } else {
+                                                    return text;
+                                                }
+                                            })()
+                                            : "-"
+                                        }
                                         </td>
                 </tr>
             `,

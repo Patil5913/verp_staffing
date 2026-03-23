@@ -4,7 +4,25 @@
     body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: #334155;
+    
     }
+    .page-wrapper {
+    padding: 0 20px; /* mobile default (small spacing) */
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .page-wrapper {
+        padding: 0 40px;
+    }
+}
+
+/* Desktop (like your screenshot) */
+@media (min-width: 1200px) {
+    .page-wrapper {
+        padding: 50px 220px;
+    }
+}
 
     /* SECTION HEADERS */
 
@@ -89,7 +107,7 @@
     }
 
     #interview-filter-btn {
-        background: #0ea5e9;
+        background: #260fea;
         color: white;
     }
 
@@ -98,7 +116,7 @@
     }
 
     #load-more-interviews {
-        background: #0ea5e9 !important;
+        background: #260fea !important;
     }
 
     /* FEEDBACK BOX */
@@ -140,6 +158,8 @@
 
     }
 </style>
+
+<!-- ==============verification block========================= -->
 {% if not is_verified %}
 
 <div
@@ -185,91 +205,268 @@
 
 {% else %}
 
+<!-- ================Customer Feedback======================== -->
+<div id="feedbackDialog" style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(15,23,42,0.65);
+    z-index:9999;
+    justify-content:center;
+    align-items:center;
+    backdrop-filter: blur(6px);
+">
+
+    <div style="
+        background:#ffffff;
+        width:720px;
+        max-height:90vh;
+        overflow:hidden;
+        border-radius:16px;
+        box-shadow:0 25px 60px rgba(0,0,0,0.2);
+        display:flex;
+        flex-direction:column;
+        font-family:system-ui, -apple-system, sans-serif;
+    ">
+
+        <!-- HEADER -->
+        <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+            <h3 style="margin:0;font-weight:600;color:#0f172a;font-size:18px;">
+                Interview Feedback
+            </h3>
+            <p style="margin-top:6px;color:#64748b;font-size:13px;">
+                Share your feedback for completed interview rounds
+            </p>
+        </div>
+
+        <!-- BODY -->
+        <div style="padding:18px 24px;overflow-y:auto;background:#f1f5f9;">
+
+            <form id="multiFeedbackForm">
+
+                <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+                <input type="hidden" name="action" value="save_feedback">
+
+                <div id="feedbackRoundsContainer">
+
+                    {% for r in feedback_rounds %}
+
+                    <div style="
+                        border:1px solid #e2e8f0;
+                        border-radius:12px;
+                        padding:16px;
+                        margin-bottom:14px;
+                        background:#ffffff;
+                        box-shadow:0 4px 10px rgba(0,0,0,0.04);
+                    ">
+
+                        <!-- HEADER ROW -->
+                        <div style="margin-bottom:12px;">
+                            <div style="margin-bottom:6px;">
+                                <span style="font-size:12px;color:#64748b;">Company</span><br>
+                                <span style="font-size:15px;font-weight:600;color:#0f172a;">{{ r.company }}</span>
+                            </div>
+
+                            <div>
+                                <span style="font-size:12px;color:#64748b;">Role</span><br>
+                                <span style="font-size:14px;font-weight:500;color:#334155;">{{ r.role }}</span>
+                            </div>
+                        </div>
+
+                        <!-- DETAILS GRID -->
+                        <div style="
+                            display:grid;
+                            grid-template-columns:repeat(2, 1fr);
+                            gap:10px 20px;
+                            font-size:12px;
+                            margin-bottom:12px;
+                            padding:10px;
+                            background:#f8fafc;
+                            border-radius:8px;
+                        ">
+
+                            <div>
+                                <span style="color:#64748b;">Round</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.round }}</span>
+                            </div>
+
+                            <div>
+                                <span style="color:#64748b;">Type</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.type }}</span>
+                            </div>
+
+                            <div>
+                                <span style="color:#64748b;">Date</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.date }}</span>
+                            </div>
+
+                            <div>
+                                <span style="color:#64748b;">Time</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.time }}</span>
+                            </div>
+
+                        </div>
+
+                        <!-- TEXTAREA -->
+                        <div>
+                            <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block;">
+                                Your Feedback
+                            </label>
+                            <textarea class="feedback-input" name="feedback" data-round="{{ r.round_name }}"
+                                placeholder="Write your feedback..." style="
+                                    width:100%;
+                                    min-height:80px;
+                                    resize:vertical;
+                                    padding:12px;
+                                    font-size:13px;
+                                    border:1px solid #e2e8f0;
+                                    border-radius:10px;
+                                    outline:none;
+                                    transition:all 0.2s;
+                                    background:#ffffff;
+                                "
+                                onfocus="this.style.borderColor='#260fea';this.style.boxShadow='0 0 0 3px rgba(14,165,233,0.15)'"
+                                onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'"></textarea>
+                        </div>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+                <!-- FOOTER BUTTON -->
+                <div style="
+                    padding-top:14px;
+                    text-align:right;
+                    background:#f1f5f9;
+                    position:sticky;
+                    bottom:0;
+                ">
+
+                    <button type="button" id="submitFeedbackBtn" style="
+                            display:none;
+                            padding:12px 26px;
+                            background:linear-gradient(135deg,#260fea,#0284c7);
+                            color:white;
+                            border:none;
+                            border-radius:10px;
+                            font-size:14px;
+                            font-weight:600;
+                            cursor:pointer;
+                            transition:all 0.25s;
+                            box-shadow:0 6px 14px rgba(14,165,233,0.3);
+                        "
+                        onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 20px rgba(14,165,233,0.35)'"
+                        onmouseout="this.style.transform='none';this.style.boxShadow='0 6px 14px rgba(14,165,233,0.3)'">
+                        Submit Feedback
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
 <script>
-    function hideAfterSave(button) {
+    document.addEventListener("DOMContentLoaded", function () {
 
-        const form = button.closest("form");
-        const formData = new FormData(form);
+        const dialog = document.getElementById("feedbackDialog");
+        const history = document.getElementById("stage-section");
+        const submitBtn = document.getElementById("submitFeedbackBtn");
 
-        fetch(window.location.href, {
+        const inputs = document.querySelectorAll(".feedback-input");
+
+        if (inputs.length > 0) {
+
+            dialog.style.display = "flex";
+            history.style.display = "none";
+
+        }
+
+        inputs.forEach(input => {
+
+            input.addEventListener("input", function () {
+
+                let allFilled = true;
+
+                inputs.forEach(i => {
+
+                    if (!i.value.trim()) {
+                        allFilled = false;
+                    }
+
+                });
+
+                if (allFilled) {
+                    submitBtn.style.display = "inline-block";
+                } else {
+                    submitBtn.style.display = "none";
+                }
+
+            });
+
+        });
+
+    });
+    document.getElementById("submitFeedbackBtn").onclick = function () {
+        const inputs = document.querySelectorAll(".feedback-input");
+        let feedback_list = [];
+
+        inputs.forEach(input => {
+            if (input.value.trim()) {
+                feedback_list.push({
+                    round_name: input.dataset.round,
+                    feedback: input.value.trim()
+                });
+            }
+        });
+
+        if (feedback_list.length === 0) {
+            alert("Please enter feedback before submitting.");
+            return;
+        }
+
+        fetch("/api/method/verp_staffing.www.customer.save_interview_feedback", {
             method: "POST",
-            body: formData
-        })
-            .then(response => response.text())
-            .then(() => {
-
-                const textarea = form.querySelector("textarea");
-                const feedbackText = textarea.value;
-
-                const feedbackDiv = document.createElement("div");
-                feedbackDiv.className = "feedback-box";
-                feedbackDiv.innerText = feedbackText;
-
-                const label = document.createElement("p");
-                // label.innerHTML = "<strong>Feedback:</strong>";
-
-                const parent = form.parentNode;
-                parent.innerHTML = "";
-                parent.appendChild(label);
-                parent.appendChild(feedbackDiv);
-
+            headers: {
+                "Content-Type": "application/json",
+                "X-Frappe-CSRF-Token": document.querySelector('[name="csrf_token"]').value
+            },
+            body: JSON.stringify({
+                feedback_data: JSON.stringify(feedback_list)
             })
-            .catch(error => {
-                alert("Error saving feedback.");
-                console.error(error);
-            });
-    }
-
-    let currentButton = null;
-
-    function openFeedbackDialog(roundName, button) {
-
-        currentButton = button;
-
-        document.getElementById("feedbackDialog").style.display = "flex";
-
-        document.getElementById("roundNameInput").value = roundName;
-
-    }
-
-    function closeFeedbackDialog() {
-
-        document.getElementById("feedbackDialog").style.display = "none";
-
-    }
-
-    function saveDialogFeedback() {
-
-        const form = document.getElementById("feedbackForm");
-
-        const formData = new FormData(form);
-
-        fetch(window.location.href, {
-            method: "POST",
-            body: formData
         })
-            .then(res => res.text())
-            .then(() => {
+            .then(res => res.json())
+            .then(r => {
+                if (r.message && r.message.status === "success") {
 
-                const textarea =
-                    form.querySelector("textarea");
+                    // alert("Feedback saved!");
 
-                const text = textarea.value;
+                    inputs.forEach(input => {
+                        const text = input.value;
+                        input.parentNode.innerHTML =
+                            `<div style="background:#f8fafc;padding:6px;border-radius:6px;">${text}</div>`;
+                    });
 
-                const td =
-                    currentButton.parentNode;
-
-                td.innerHTML =
-                    "<div style='background:#f8fafc;padding:6px;border-radius:6px;'>"
-                    + text +
-                    "</div>";
-
-                closeFeedbackDialog();
-
+                    document.getElementById("feedbackDialog").style.display = "none";
+                    document.getElementById("stage-section").style.display = "block";
+                }
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                alert("Something went wrong");
             });
-
-    }
+    };
 </script>
+<!--================customer history==========================-->
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     let interview_offset = 0;
@@ -313,7 +510,7 @@
                         <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
                           
 
-                            <span style="background:#e0f2fe;padding:4px 10px;border-radius:20px;font-size:12px;">
+                            <span style="background:#260fea;padding:4px 10px;border-radius:20px;font-size:12px;">
                                 ${rec.status || "-"}
                             </span>
                         </div>
@@ -327,9 +524,8 @@
                                 <tr>
                                     <th style="padding:8px;border-bottom:2px solid #cbd5f5;">#</th>
                                     <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Round</th>
-                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Date</th>
                                     <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Type</th>
-                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Interview</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Interview Date</th>
                                     <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Time</th>
                                     <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Feedback</th>
                                 </tr>
@@ -339,18 +535,36 @@
                                     <tr style="border-bottom:1px solid #cbd5e1;">
                                         <td style="padding:8px;">${i + 1}</td>
                                         <td style="padding:8px;">${r.round || "-"}</td>
-                                        <td style="padding:8px;">${r.date || "-"}</td>
                                         <td style="padding:8px;">${r.type_of_interview || "-"}</td>
                                         <td style="padding:8px;">${r.date_of_interview || "-"}</td>
-                                        <td style="padding:8px;">${r.time_of_interview || "-"}</td>
                                         <td style="padding:8px;">
-                                            ${r.feedback && r.feedback.trim()
-                            ? `<div style="background:#f1f5f9;padding:6px;border-radius:6px;">${r.feedback}</div>`
-                            : `<button onclick="openFeedbackDialog('${r.name}', this)"
-                                                    style="padding:4px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;">
-                                                    Add
-                                                </button>`
-                        }
+                                          ${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${r.edt_est || ""}` : "-"}
+                                        </td>
+
+                                      <td style="padding:8px;">
+                                        ${r.feedback && r.feedback.trim()
+                                            ? (() => {
+                                                const text = r.feedback.trim();
+                                                const limit = 20; // 👈 number of characters you want
+                                                const shortText = text.slice(0, limit);
+                                            
+                                                if (text.length > limit) {
+                                                    return `
+                                                        
+                                                            ${shortText}...
+                                                            <span 
+                                                                style="cursor:pointer;font-weight:500;"
+                                                                onclick="viewFullFeedback('${encodeURIComponent(text)}')"
+                                                            >
+                                                                view
+                                                            </span>
+                                                    `;
+                                                } else {
+                                                    return text;
+                                                }
+                                            })()
+                                            : "-"
+                                        }
                                         </td>
                                     </tr>
                                 `).join("")}
@@ -370,7 +584,7 @@
                         `<button id="load-more-interviews"
             style="
                 padding:8px 16px;
-                background:#0ea5e9;
+                background:#260fea;
                 color:white;
                 border:none;
                 border-radius:6px;
@@ -417,59 +631,84 @@
         interview_offset = 0;
         load_interviews(false);
     });
+
+ function viewFullFeedback(encodedText) {
+    const fullText = decodeURIComponent(encodedText);
+
+    const dialog = document.createElement("div");
+    dialog.style = `
+        position:fixed;
+        top:0;left:0;right:0;bottom:0;
+        background:rgba(0,0,0,0.5);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        z-index:9999;
+    `;
+
+    dialog.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:24px;
+            border-radius:12px;
+            width:700px;
+            max-width:95%;
+            max-height:80vh;
+            display:flex;
+            flex-direction:column;
+        ">
+            <h3 style="margin-bottom:12px;">Full Feedback</h3>
+
+            <div style="
+                overflow-y:auto;
+                padding-right:6px;
+                margin-bottom:15px;
+            ">
+                <p style="
+                    color:#334155;
+                    font-size:14px;
+                    line-height:1.6;
+                    word-break:break-word;
+                    white-space:pre-wrap;
+                "></p>
+            </div>
+
+            <div style="text-align:right;">
+                <button onclick="this.closest('[data-dialog]').remove()"
+                    style="
+                        padding:6px 14px;
+                        background:#260fea;
+                        color:#fff;
+                        border:none;
+                        border-radius:6px;
+                        cursor:pointer;
+                    ">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+
+    dialog.setAttribute("data-dialog", "true");
+     // ✅ Close when clicking outside
+    dialog.addEventListener("click", function (e) {
+        if (!e.target.closest("#feedbackBox")) {
+            dialog.remove();
+        }
+    });
+
+    document.body.appendChild(dialog);
+
+    // ✅ Safe text injection (no HTML breaking)
+    dialog.querySelector("p").innerText = fullText;
+}
+
 </script>
-
-<div id="feedbackDialog" style="display:none;
-            position:fixed;
-            top:0;
-            left:0;
-            right:0;
-            bottom:0;
-            background:rgba(0,0,0,0.4);
-            justify-content:center;
-            align-items:center;">
-
-    <div style="
-        background:white;
-        padding:20px;
-        border-radius:10px;
-        width:350px;
-    ">
-
-        <h3>Add Feedback</h3>
-
-        <p style="color:red;font-size:12px;">
-            ⚠ You can submit feedback only once
-        </p>
-
-        <form id="feedbackForm">
-
-            <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
-
-            <input type="hidden" name="action" value="save_feedback">
-
-            <input type="hidden" name="round_name" id="roundNameInput">
-
-            <textarea name="feedback" rows="3" style="width:100%;"></textarea>
-
-            <br><br>
-
-            <button type="button" onclick="saveDialogFeedback()">
-                Save
-            </button>
-
-            <button type="button" onclick="closeFeedbackDialog()">
-                Cancel
-            </button>
-
-        </form>
-
-    </div>
 
 </div>
 
 <!-- ================= CUSTOMER STAGE SECTION ================= -->
-<div id="stage-section">
+<div id="stage-section" class="page-wrapper">
     <h1 style="margin-bottom: 25px; font-weight: 600;">History</h1>
 
     {% if full_history %}
@@ -546,7 +785,7 @@
 
     {% if dept != "Sales Order" %}
 
-    <div style="padding:15px;border-left:4px solid #ffc107;margin-bottom:15px;">
+    <div style="padding:15px; margin-bottom:15px;">
 
         <h4 style="margin-bottom:10px;font-weight:600;">
             {{ dept }}
@@ -574,7 +813,7 @@
                         style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
 
                     <button id="interview-filter-btn"
-                        style="padding:6px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;">
+                        style="padding:6px 12px;background:#260fea;color:#fff;border:none;border-radius:6px;">
                         Apply
                     </button>
 
@@ -814,87 +1053,6 @@
 
 
 
-            <!-- ================= INTERVIEW ROUNDS ================= -->
-
-            <!-- {% if rec.department == "Interview" and rec.interview_rounds_table %}
-
-            <div style="margin-top:10px;">
-
-                <table style="width:100%; border-collapse:collapse;">
-
-                    <thead>
-                        <tr style="background:#f1f5f9;">
-                            <th style="border:1px solid #ddd; padding:6px;">No.</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Round</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Date</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Type</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Interview Date</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Time</th>
-                            <th style="border:1px solid #ddd; padding:6px;">Feedback</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        {% for r in rec.interview_rounds_table %}
-
-                        <tr>
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ loop.index }}
-                            </td>
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ r.round or "-" }}
-                            </td>
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ r.date or "-" }}
-                            </td>
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ r.type_of_interview or "-" }}
-                            </td>
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ r.date_of_interview or "-" }}
-                            </td>
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-                                {{ r.time_of_interview or "-" }}
-                            </td>
-
-
-                            <td style="border:1px solid #ddd; padding:6px;">
-
-                                {% if r.feedback and r.feedback.strip() %}
-
-                                <div style="background:#f8fafc;padding:6px;border-radius:6px;">
-                                    {{ r.feedback }}
-                                </div>
-
-                                {% else %}
-
-                                <button type="button" onclick="openFeedbackDialog('{{ r.name }}', this)"
-                                    style="padding:4px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;font-size:12px;">
-                                    Add
-                                </button>
-
-                                {% endif %}
-
-                            </td>
-
-                        </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            {% endif %} -->
 
 
         </div>
@@ -916,4 +1074,5 @@
         load_interviews(false);
     });
 </script>
+
 {% endif %}
