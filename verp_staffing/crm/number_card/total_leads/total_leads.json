@@ -1,6 +1,7 @@
 {
  "aggregate_function_based_on": "",
- "background_color": "#ffffff",
+ "background_color": "",
+ "color": "",
  "creation": "2025-12-31 16:07:17.083051",
  "currency": "",
  "docstatus": 0,
@@ -13,7 +14,8 @@
  "is_public": 1,
  "is_standard": 1,
  "label": "Total Leads",
- "modified": "2026-03-09 15:51:53.521516",
+ "method": "verp_staffing.crm.api.workspace.get_visible_lead_count",
+ "modified": "2026-03-16 09:59:25.666126",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Total Leads",

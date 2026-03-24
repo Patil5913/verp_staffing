@@ -23,11 +23,12 @@ class CoverLetter(Document):
         stage = json.loads(customer.stage) if customer.stage else {}
 
         department = parents[0].parent
-        stage["cover letter"] = {
+        if "cover letter" not in stage:
+            stage["cover letter"] = []
+        stage["cover letter"].append({
             "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
+            "timestamp": str(now_datetime())
+        })
         frappe.db.set_value(
             "Customer",
             customer,

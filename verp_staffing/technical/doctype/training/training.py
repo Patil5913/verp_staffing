@@ -16,18 +16,16 @@ class Training(Document):
         WHERE service_name=%s
         """, (service), as_dict=True)
 
-        customer = frappe.get_doc({
-            "doctype":  "Customer",
-            "name": self.customer
-        })
+        customer = frappe.get_doc("Customer", self.customer)
         stage = json.loads(customer.stage) if customer.stage else {}
 
         department = parents[0].parent
-        stage["training"] = {
+        if "training" not in stage:
+            stage["training"] = []
+        stage["training"].append({
             "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
+            "timestamp": str(now_datetime())
+        })
         frappe.db.set_value(
             "Customer",
             customer,

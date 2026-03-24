@@ -16,19 +16,17 @@ class TechnicalOtherServices(Document):
         WHERE service_name=%s
         """, (service), as_dict=True)
 
-        customer = frappe.get_doc({
-            "doctype":  "Customer",
-            "name": self.customer
-        })
+        customer = frappe.get_doc("Customer", self.customer)
         stage = json.loads(customer.stage) if customer.stage else {}
 
         department = parents[0].parent
         serice_key = service.strip().lower()
-        stage[serice_key] = {
+        if serice_key not in stage:
+            stage[serice_key] = []
+        stage[serice_key].append({
             "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
+            "timestamp": str(now_datetime())
+        })
         frappe.db.set_value(
             "Customer",
             customer,

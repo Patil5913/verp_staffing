@@ -427,7 +427,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-23 12:27:06.323989",
+ "modified": "2026-03-16 10:42:54.919307",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -436,11 +436,15 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Master Manager"
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -456,11 +460,11 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Marketing Master Manager"
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Person"
   },
   {
    "read": 1,
@@ -468,7 +472,7 @@
   },
   {
    "read": 1,
-   "role": "marketing Master Manager"
+   "role": "Resume Person"
   },
   {
    "read": 1,
@@ -484,10 +488,6 @@
   },
   {
    "read": 1,
-   "role": "Marketing Mentor"
-  },
-  {
-   "read": 1,
    "role": "Resume Person"
   },
   {
@@ -496,19 +496,15 @@
   },
   {
    "read": 1,
-   "role": "Technical Manager"
+   "role": "Marketing Mentor"
   },
   {
    "read": 1,
-   "role": "Senior Resume Person"
+   "role": "Senior Recruiter"
   },
   {
    "read": 1,
-   "role": "Onboarding Person"
-  },
-  {
-   "read": 1,
-   "role": "Training Person"
+   "role": "Recruiter"
   },
   {
    "read": 1,
@@ -516,7 +512,15 @@
   },
   {
    "read": 1,
+   "role": "Training Person"
+  },
+  {
+   "read": 1,
    "role": "RUC Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
   },
   {
    "read": 1,
@@ -539,5 +543,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

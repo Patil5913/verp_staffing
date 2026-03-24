@@ -24,9 +24,9 @@ frappe.ui.form.on("Interview", {
 		}
 	},
 
-	validate(frm) {
-		validate_interview_times(frm);
-	},
+	// validate(frm) {
+	// 	validate_interview_times(frm);
+	// },
 });
 
 frappe.ui.form.on("Interview Round", {
@@ -73,26 +73,26 @@ function set_round_numbers(frm) {
 	frm.refresh_field("interview_rounds_table");
 }
 
-function validate_interview_times(frm) {
-	const rows = frm.doc.interview_rounds_table || [];
+// function validate_interview_times(frm) {
+// 	const rows = frm.doc.interview_rounds_table || [];
 
-	const timeRegex =
-		/^(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s-\s(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s\((EDT|EST)\)$/;
+// 	const timeRegex =
+// 		/^(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s-\s(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s\((EDT|EST)\)$/;
 
-	rows.forEach((row, index) => {
-		if (!row.time_of_interview) {
-			frappe.throw(`Row ${index + 1}: Time of Interview is required`);
-		}
+// 	rows.forEach((row, index) => {
+// 		// if (!row.time_of_interview) {
+// 		// 	frappe.throw(`Row ${index + 1}: Time of Interview is required`);
+// 		// }
 
-		if (!timeRegex.test(row.time_of_interview)) {
-			frappe.throw(
-				`Row ${index + 1}: Invalid Time of Interview format.\n` +
-					`Expected: HH:MM (AM/PM) - HH:MM (AM/PM) (EDT/EST)\n` +
-					`Example: 01:00 PM - 03:00 PM (EST)`,
-			);
-		}
-	});
-}
+// 		if (!timeRegex.test(row.time_of_interview)) {
+// 			frappe.throw(
+// 				`Row ${index + 1}: Invalid Time of Interview format.\n` +
+// 					`Expected: HH:MM (AM/PM) - HH:MM (AM/PM) (EDT/EST)\n` +
+// 					`Example: 01:00 PM - 03:00 PM (EST)`,
+// 			);
+// 		}
+// 	});
+// }
 
 function fetch_and_render_resume(frm) {
 	frappe.db

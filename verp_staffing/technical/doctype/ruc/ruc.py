@@ -23,11 +23,12 @@ class RUC(Document):
         stage = json.loads(customer.stage) if customer.stage else {}
 
         department = parents[0].parent
-        stage["ruc"] = {
+        if "ruc" not in stage:
+            stage["ruc"] = []
+        stage["ruc"].append({
             "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
+            "timestamp": str(now_datetime())
+        })
         frappe.db.set_value(
             "Customer",
             customer,

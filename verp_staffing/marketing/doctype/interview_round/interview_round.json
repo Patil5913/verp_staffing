@@ -9,7 +9,9 @@
   "date",
   "type_of_interview",
   "date_of_interview",
-  "time_of_interview",
+  "edt_est",
+  "from_time",
+  "to_time",
   "support",
   "feedback",
   "follow_up"
@@ -46,15 +48,6 @@
    "reqd": 1
   },
   {
-   "description": "NOTE: Time Format: HH:MM (PM/AM) - HH:MM (PM/AM) (EDT/EST)",
-   "fieldname": "time_of_interview",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Time of Interview",
-   "placeholder": "Exp: 01:00 PM - 03:00 PM (EST)",
-   "reqd": 1
-  },
-  {
    "default": "0",
    "fieldname": "support",
    "fieldtype": "Check",
@@ -65,7 +58,8 @@
    "fieldname": "feedback",
    "fieldtype": "Small Text",
    "in_list_view": 1,
-   "label": "Feedback"
+   "label": "Feedback",
+   "set_only_once": 1
   },
   {
    "default": "0",
@@ -75,13 +69,29 @@
    "label": "Follow Up",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "edt_est",
+   "fieldtype": "Select",
+   "label": "(EDT/EST)",
+   "options": "EDT\nEST"
+  },
+  {
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "label": "From"
+  },
+  {
+   "fieldname": "to_time",
+   "fieldtype": "Time",
+   "label": "To"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-18 16:55:10.613787",
+ "modified": "2026-03-23 16:33:17.344017",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Round",

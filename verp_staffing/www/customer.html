@@ -1,15 +1,177 @@
+<style>
+    /* GLOBAL */
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #334155;
+    
+    }
+    .page-wrapper {
+    padding: 0 20px; /* mobile default (small spacing) */
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .page-wrapper {
+        padding: 0 40px;
+    }
+}
+
+/* Desktop (like your screenshot) */
+@media (min-width: 1200px) {
+    .page-wrapper {
+        padding: 50px 220px;
+    }
+}
+
+    /* SECTION HEADERS */
+
+    h1 {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    h4 {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    /* CARD SECTIONS */
+
+    #stage-section>div {
+        margin-bottom: 20px;
+    }
+
+    /* TABLE BASE */
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    /* TABLE HEADER */
+
+    table thead {
+        background: #f8fafc;
+    }
+
+    table th {
+        padding: 10px 12px !important;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    /* TABLE CELLS */
+
+    table td {
+        padding: 10px 12px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    /* ZEBRA ROWS */
+
+    table tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    /* INTERVIEW CARD */
+
+    #interview-list>div>div {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        background: #ffffff !important;
+    }
+
+    /* STATUS BADGE */
+
+    #interview-list span {
+        background: #e0f2fe !important;
+        color: #0369a1;
+        padding: 4px 10px !important;
+        border-radius: 20px !important;
+        font-size: 12px;
+    }
+
+    /* BUTTONS */
+
+    button {
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+    }
+
+    #interview-filter-btn {
+        background: #260fea;
+        color: white;
+    }
+
+    #interview-clear-btn {
+        background: #e2e8f0;
+    }
+
+    #load-more-interviews {
+        background: #260fea !important;
+    }
+
+    /* FEEDBACK BOX */
+
+    .feedback-box {
+        background: #f1f5f9;
+        padding: 6px 10px;
+        border-radius: 6px;
+    }
+
+    /* FILTER BAR */
+
+    #interview-container {
+        max-height: 400px;
+        overflow: auto;
+    }
+
+    /* RESPONSIVE TABLE SCROLL */
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    /* MOBILE IMPROVEMENTS */
+
+    @media (max-width:768px) {
+
+        table {
+            min-width: 600px;
+        }
+
+        #interview-container {
+            overflow-x: auto;
+        }
+
+        input {
+            width: 100%;
+        }
+
+    }
+</style>
+
+<!-- ==============verification block========================= -->
 {% if not is_verified %}
 
 <div
     style="max-width:400px;margin:100px auto;background:white;padding:30px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
 
-<h2>
-{% if otp_sent %}
-Verify OTP
-{% else %}
-Email Verification
-{% endif %}
-</h2>
+    <h2>
+        {% if otp_sent %}
+        Verify OTP
+        {% else %}
+        Email Verification
+        {% endif %}
+    </h2>
     {% if auth_error %}
     <p style="color:red;">{{ auth_error }}</p>
     {% endif %}
@@ -43,406 +205,874 @@ Email Verification
 
 {% else %}
 
-<!-- ================= TOGGLE BUTTONS ================= -->
-<div style="margin-bottom:25px;">
+<!-- ================Customer Feedback======================== -->
+<div id="feedbackDialog" style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(15,23,42,0.65);
+    z-index:9999;
+    justify-content:center;
+    align-items:center;
+    backdrop-filter: blur(6px);
+">
 
-    {% if current or past or upcoming %}
-    <button onclick="showSection('interviews')" id="btn-interviews">Interviews</button>
-    <button onclick="showSection('stage')" id="btn-stage" style="margin-left:10px;background:#6b7280;">History</button>
+    <div style="
+        background:#ffffff;
+        width:720px;
+        max-height:90vh;
+        overflow:hidden;
+        border-radius:16px;
+        box-shadow:0 25px 60px rgba(0,0,0,0.2);
+        display:flex;
+        flex-direction:column;
+        font-family:system-ui, -apple-system, sans-serif;
+    ">
+
+        <!-- HEADER -->
+        <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+            <h3 style="margin:0;font-weight:600;color:#0f172a;font-size:18px;">
+                Interview Feedback
+            </h3>
+            <p style="margin-top:6px;color:#64748b;font-size:13px;">
+                Share your feedback for completed interview rounds
+            </p>
+        </div>
+
+        <!-- BODY -->
+        <div style="padding:18px 24px;overflow-y:auto;background:#f1f5f9;">
+
+            <form id="multiFeedbackForm">
+
+                <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+                <input type="hidden" name="action" value="save_feedback">
+
+                <div id="feedbackRoundsContainer">
+
+                    {% for r in feedback_rounds %}
+
+                    <div style="
+                        border:1px solid #e2e8f0;
+                        border-radius:12px;
+                        padding:16px;
+                        margin-bottom:14px;
+                        background:#ffffff;
+                        box-shadow:0 4px 10px rgba(0,0,0,0.04);
+                    ">
+
+                        <!-- HEADER ROW -->
+                        <div style="margin-bottom:12px;">
+                            <div style="margin-bottom:6px;">
+                                <span style="font-size:12px;color:#64748b;">Company</span><br>
+                                <span style="font-size:15px;font-weight:600;color:#0f172a;">{{ r.company }}</span>
+                            </div>
+
+                            <div>
+                                <span style="font-size:12px;color:#64748b;">Role</span><br>
+                                <span style="font-size:14px;font-weight:500;color:#334155;">{{ r.role }}</span>
+                            </div>
+                        </div>
+
+                        <!-- DETAILS GRID -->
+                        <div style="
+                            display:grid;
+                            grid-template-columns:repeat(2, 1fr);
+                            gap:10px 20px;
+                            font-size:12px;
+                            margin-bottom:12px;
+                            padding:10px;
+                            background:#f8fafc;
+                            border-radius:8px;
+                        ">
+
+                            <div>
+                                <span style="color:#64748b;">Round</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.round }}</span>
+                            </div>
+
+                            <div>
+                                <span style="color:#64748b;">Type</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.type }}</span>
+                            </div>
+
+                            <div>
+                                <span style="color:#64748b;">Date</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.date }}</span>
+                            </div>
+
+                            <div>
+                                <span style="color:#64748b;">Time</span><br>
+                                <span style="color:#0f172a;font-weight:500;">{{ r.time }}</span>
+                            </div>
+
+                        </div>
+
+                        <!-- TEXTAREA -->
+                        <div>
+                            <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block;">
+                                Your Feedback
+                            </label>
+                            <textarea class="feedback-input" name="feedback" data-round="{{ r.round_name }}"
+                                placeholder="Write your feedback..." style="
+                                    width:100%;
+                                    min-height:80px;
+                                    resize:vertical;
+                                    padding:12px;
+                                    font-size:13px;
+                                    border:1px solid #e2e8f0;
+                                    border-radius:10px;
+                                    outline:none;
+                                    transition:all 0.2s;
+                                    background:#ffffff;
+                                "
+                                onfocus="this.style.borderColor='#260fea';this.style.boxShadow='0 0 0 3px rgba(14,165,233,0.15)'"
+                                onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'"></textarea>
+                        </div>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+                <!-- FOOTER BUTTON -->
+                <div style="
+                    padding-top:14px;
+                    text-align:right;
+                    background:#f1f5f9;
+                    position:sticky;
+                    bottom:0;
+                ">
+
+                    <button type="button" id="submitFeedbackBtn" style="
+                            display:none;
+                            padding:12px 26px;
+                            background:linear-gradient(135deg,#260fea,#0284c7);
+                            color:white;
+                            border:none;
+                            border-radius:10px;
+                            font-size:14px;
+                            font-weight:600;
+                            cursor:pointer;
+                            transition:all 0.25s;
+                            box-shadow:0 6px 14px rgba(14,165,233,0.3);
+                        "
+                        onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 20px rgba(14,165,233,0.35)'"
+                        onmouseout="this.style.transform='none';this.style.boxShadow='0 6px 14px rgba(14,165,233,0.3)'">
+                        Submit Feedback
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const dialog = document.getElementById("feedbackDialog");
+        const history = document.getElementById("stage-section");
+        const submitBtn = document.getElementById("submitFeedbackBtn");
+
+        const inputs = document.querySelectorAll(".feedback-input");
+
+        if (inputs.length > 0) {
+
+            dialog.style.display = "flex";
+            history.style.display = "none";
+
+        }
+
+        inputs.forEach(input => {
+
+            input.addEventListener("input", function () {
+
+                let allFilled = true;
+
+                inputs.forEach(i => {
+
+                    if (!i.value.trim()) {
+                        allFilled = false;
+                    }
+
+                });
+
+                if (allFilled) {
+                    submitBtn.style.display = "inline-block";
+                } else {
+                    submitBtn.style.display = "none";
+                }
+
+            });
+
+        });
+
+    });
+    document.getElementById("submitFeedbackBtn").onclick = function () {
+        const inputs = document.querySelectorAll(".feedback-input");
+        let feedback_list = [];
+
+        inputs.forEach(input => {
+            if (input.value.trim()) {
+                feedback_list.push({
+                    round_name: input.dataset.round,
+                    feedback: input.value.trim()
+                });
+            }
+        });
+
+        if (feedback_list.length === 0) {
+            alert("Please enter feedback before submitting.");
+            return;
+        }
+
+        fetch("/api/method/verp_staffing.www.customer.save_interview_feedback", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Frappe-CSRF-Token": document.querySelector('[name="csrf_token"]').value
+            },
+            body: JSON.stringify({
+                feedback_data: JSON.stringify(feedback_list)
+            })
+        })
+            .then(res => res.json())
+            .then(r => {
+                if (r.message && r.message.status === "success") {
+
+                    // alert("Feedback saved!");
+
+                    inputs.forEach(input => {
+                        const text = input.value;
+                        input.parentNode.innerHTML =
+                            `<div style="background:#f8fafc;padding:6px;border-radius:6px;">${text}</div>`;
+                    });
+
+                    document.getElementById("feedbackDialog").style.display = "none";
+                    document.getElementById("stage-section").style.display = "block";
+                }
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                alert("Something went wrong");
+            });
+    };
+</script>
+<!--================customer history==========================-->
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let interview_offset = 0;
+    const interview_limit = 5;
+
+    function load_interviews(append = false) {
+
+        let search = document.getElementById("interview-search").value;
+        let from_date = document.getElementById("interview-from").value;
+        let to_date = document.getElementById("interview-to").value;
+
+        if (from_date && to_date && from_date > to_date) {
+            alert("From Date cannot be greater than To Date");
+            return;
+        }
+
+        fetch(`/api/method/verp_staffing.www.customer.get_customer_history?customer={{ full_history.customer.customer_name }}&interview_offset=${interview_offset}&interview_limit=${interview_limit}&search=${search}&from_date=${from_date}&to_date=${to_date}`)
+            .then(res => res.json())
+            .then(res => {
+
+                let data = (res.message && res.message.departments && res.message.departments.Interview) || [];
+
+                let container = document.getElementById("interview-list");
+
+                if (!append) container.innerHTML = ""
+
+                if (!data.length) {
+                    container.innerHTML =
+                        "<div style='text-align:center;color:#64748b;padding:20px;'>No interviews found</div>";
+                    return;
+                }
+
+                let html = "";
+
+                data.forEach((rec) => {
+
+                    html += `
+                <div style="margin-top:10px;">
+                    <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f9fafb;">
+
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                          
+
+                            <span style="background:#260fea;padding:4px 10px;border-radius:20px;font-size:12px;">
+                                ${rec.status || "-"}
+                            </span>
+                        </div>
+
+                        <div style="color:#64748b;margin-bottom:8px;">
+                            Company: ${rec.company || "-"} • Role: ${rec.role || "-"}
+                        </div>
+
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">#</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Round</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Type</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Interview Date</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Time</th>
+                                    <th style="padding:8px;border-bottom:2px solid #cbd5f5;">Feedback</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(rec.interview_rounds_table || []).map((r, i) => `
+                                    <tr style="border-bottom:1px solid #cbd5e1;">
+                                        <td style="padding:8px;">${i + 1}</td>
+                                        <td style="padding:8px;">${r.round || "-"}</td>
+                                        <td style="padding:8px;">${r.type_of_interview || "-"}</td>
+                                        <td style="padding:8px;">${r.date_of_interview || "-"}</td>
+                                        <td style="padding:8px;">
+                                          ${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${r.edt_est || ""}` : "-"}
+                                        </td>
+
+                                      <td style="padding:8px;">
+                                        ${r.feedback && r.feedback.trim()
+                                            ? (() => {
+                                                const text = r.feedback.trim();
+                                                const limit = 20; // 👈 number of characters you want
+                                                const shortText = text.slice(0, limit);
+                                            
+                                                if (text.length > limit) {
+                                                    return `
+                                                        
+                                                            ${shortText}...
+                                                            <span 
+                                                                style="cursor:pointer;font-weight:500;"
+                                                                onclick="viewFullFeedback('${encodeURIComponent(text)}')"
+                                                            >
+                                                                view
+                                                            </span>
+                                                    `;
+                                                } else {
+                                                    return text;
+                                                }
+                                            })()
+                                            : "-"
+                                        }
+                                        </td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+                `;
+                });
+
+                container.innerHTML += html;
+
+                if (data.length === interview_limit) {
+
+                    document.getElementById("interview-load-more").innerHTML =
+                        `<button id="load-more-interviews"
+            style="
+                padding:8px 16px;
+                background:#260fea;
+                color:white;
+                border:none;
+                border-radius:6px;
+                cursor:pointer;
+            ">
+            Load More
+        </button>`;
+
+                } else {
+
+                    document.getElementById("interview-load-more").innerHTML = "";
+
+                }
+
+            });
+    }
+
+    $(document).on("click", "#load-more-interviews", function () {
+        interview_offset += interview_limit;
+        load_interviews(true);
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        document.getElementById("interview-filter-btn").onclick = function () {
+            interview_offset = 0;
+            load_interviews(false);
+        };
+
+        document.getElementById("interview-clear-btn").onclick = function () {
+            document.getElementById("interview-search").value = "";
+            document.getElementById("interview-from").value = "";
+            document.getElementById("interview-to").value = "";
+            interview_offset = 0;
+            load_interviews(false);
+        };
+
+    });
+
+    $(document).on("click", "#interview-clear-btn", function () {
+        $("#interview-search").val("");
+        $("#interview-from").val("");
+        $("#interview-to").val("");
+        interview_offset = 0;
+        load_interviews(false);
+    });
+
+ function viewFullFeedback(encodedText) {
+    const fullText = decodeURIComponent(encodedText);
+
+    const dialog = document.createElement("div");
+    dialog.style = `
+        position:fixed;
+        top:0;left:0;right:0;bottom:0;
+        background:rgba(0,0,0,0.5);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        z-index:9999;
+    `;
+
+    dialog.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:24px;
+            border-radius:12px;
+            width:700px;
+            max-width:95%;
+            max-height:80vh;
+            display:flex;
+            flex-direction:column;
+        ">
+            <h3 style="margin-bottom:12px;">Full Feedback</h3>
+
+            <div style="
+                overflow-y:auto;
+                padding-right:6px;
+                margin-bottom:15px;
+            ">
+                <p style="
+                    color:#334155;
+                    font-size:14px;
+                    line-height:1.6;
+                    word-break:break-word;
+                    white-space:pre-wrap;
+                "></p>
+            </div>
+
+            <div style="text-align:right;">
+                <button onclick="this.closest('[data-dialog]').remove()"
+                    style="
+                        padding:6px 14px;
+                        background:#260fea;
+                        color:#fff;
+                        border:none;
+                        border-radius:6px;
+                        cursor:pointer;
+                    ">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+
+    dialog.setAttribute("data-dialog", "true");
+     // ✅ Close when clicking outside
+    dialog.addEventListener("click", function (e) {
+        if (!e.target.closest("#feedbackBox")) {
+            dialog.remove();
+        }
+    });
+
+    document.body.appendChild(dialog);
+
+    // ✅ Safe text injection (no HTML breaking)
+    dialog.querySelector("p").innerText = fullText;
+}
+
+</script>
+
+</div>
+
+<!-- ================= CUSTOMER STAGE SECTION ================= -->
+<div id="stage-section" class="page-wrapper">
+    <h1 style="margin-bottom: 25px; font-weight: 600;">History</h1>
+
+    {% if full_history %}
+
+    <!-- ================= CUSTOMER CREATED ================= -->
+    <!-- <div style="
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:18px;
+    background:#f9fafb;
+">
+        <h4>Customer Created</h4>
+        <p><b>Customer:</b> {{ full_history.customer.customer_name }}</p>
+        <p><b>Owner:</b> {{ full_history.customer.owner }}</p>
+    </div> -->
+
+
+    <!-- ================= SALES ORDER ================= -->
+    {% if full_history.departments.get("Sales Order") %}
+
+    <div style="
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:18px;
+    background:#fff;
+">
+        <h4>Sales Order</h4>
+
+        <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
+            <thead>
+                <tr style="background:#f1f5f9;">
+                    <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                    <!-- <th style="border:1px solid #ddd; padding:6px;">ID</th> -->
+                    <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Agreement</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for so in full_history.departments["Sales Order"] %}
+                <tr>
+                    <td style="padding:8px;border-bottom:2px solid #cbd5e1;">{{ loop.index }}</td>
+
+                    <!-- <td style="border:1px solid #ddd; padding:6px;">
+                        <a href="/app/sales-order/{{ so.id }}" target="_blank">
+                            <span style="color:#007bff;">{{ so.id }}</span>
+                        </a>
+                    </td> -->
+
+                    <td style="padding:8px;border-bottom:2px solid #cbd5e1;">
+                        {{ so.agreement or "-" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- ================= OTHER DEPARTMENTS ================= -->
+
+    {% for dept, records in full_history.departments.items() %}
+
+    {% if dept != "Sales Order" %}
+
+    <div style="padding:15px; margin-bottom:15px;">
+
+        <h4 style="margin-bottom:10px;font-weight:600;">
+            {{ dept }}
+        </h4>
+
+        {% if dept == "Interview" %}
+
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:18px;background:#fff;">
+
+
+            <!-- FILTER BAR -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+
+                    <input type="text" id="interview-search" placeholder="Search company / role / status"
+                        style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;" />
+
+                    From :
+                    <input type="date" id="interview-from"
+                        style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
+
+                    To :
+                    <input type="date" id="interview-to"
+                        style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
+
+                    <button id="interview-filter-btn"
+                        style="padding:6px 12px;background:#260fea;color:#fff;border:none;border-radius:6px;">
+                        Apply
+                    </button>
+
+                    <button id="interview-clear-btn"
+                        style="padding:6px 12px;background:#e5e7eb;color:#334155;border:none;border-radius:6px;">
+                        Clear
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- SCROLL AREA -->
+            <div id="interview-container"
+                style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f8fafc;">
+
+                <div id="interview-list"></div>
+
+            </div>
+
+            <!-- LOAD MORE -->
+            <div id="interview-load-more" style="text-align:center;margin-top:15px;"></div>
+
+        </div>
+
+        {% endif %}
+
+
+
+
+        {% if dept != "Interview" %}
+        {% for rec in records %}
+
+        <div style="
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:14px;
+    margin-top:10px;
+    background:#f9fafb;
+">
+
+            <!-- ID -->
+            <!-- <p>
+                <b>ID:</b>
+                <a href="/app/{{ rec.department | lower | replace(' ','-') }}/{{ rec.id }}" target="_blank">
+                    <span style="color:#007bff;">{{ rec.id }}</span>
+                </a>
+            </p> -->
+
+
+            <p style="margin:4px 0;color:#334155;font-size:13px;">
+                <b>Status:</b> {{ rec.status }}
+            </p>
+
+            {% if rec.department != "Interview" %}
+            <p style="margin:4px 0;color:#334155;font-size:13px;">
+                <b>Assigned To:</b> {{ rec.assign_to or "-" }}
+            </p>
+            {% endif %}
+
+
+            {% if rec.resume %}
+            <p style="margin:4px 0;color:#334155;font-size:13px;">
+                <b>Resume:</b>
+                {% endif %}
+
+
+                <!-- {% if rec.department == "Interview" and rec.company %}
+            <p><b>Company:</b> {{ rec.company }}</p>
+            {% endif %}
+
+            {% if rec.department == "Interview" and rec.role %}
+            <p><b>Role:</b> {{ rec.role }}</p>
+            {% endif %} -->
+
+
+
+                <!-- ================= SESSION ================= -->
+
+                {% if rec.session_details %}
+
+            <div style="margin-top:10px;">
+
+                <b>Session Details:</b>
+
+                <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
+                    <thead>
+                        <tr>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Duration</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Date</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Projects</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Quality</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for s in rec.session_details %}
+
+                        <tr>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ loop.index }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.session_duration_in_hour or
+                                "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.date or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.projects or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ s.quality or "-" }}</td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% endif %}
+
+
+            <!-- ================= MARKETING APPLICATION COUNT ================= -->
+
+            {% if rec.job_application_count %}
+
+            <div style="margin-top:10px;">
+
+                <b>Job Application Count:</b>
+
+                <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
+                    <thead>
+                        <tr>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Small</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Large</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Total</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Date</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for m in rec.job_application_count %}
+
+                        <tr>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ loop.index }}</td>
+
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
+                                {{ m.small_application or "-" }}
+                            </td>
+
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
+                                {{ m.large_application or "-" }}
+                            </td>
+
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
+                                {{ m.total_application or "-" }}
+                            </td>
+
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
+                                {{ m.date or "-" }}
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% endif %}
+
+
+
+            <!-- ================= PROOF ================= -->
+
+            {% if rec.proof_of_work %}
+
+            <div style="margin-top:10px;">
+
+                <b>Proof of Work:</b>
+
+                <table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    margin-top:8px;
+">
+                    <thead>
+                        <tr>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">No.</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Date</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Description</th>
+                            <th style="padding:8px;border-bottom:2px solid #cbd5e1;">Attachments</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for p in rec.proof_of_work %}
+
+                        <tr>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ loop.index }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ p.date or "-" }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">{{ p.description or "-" }}</td>
+
+                            <td style="padding:8px;border-bottom:1px solid #e5e7eb;">
+                                {% if p.attachments %}
+                                <a href="{{ p.attachments }}" target="_blank">View</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% endif %}
+
+
+
+
+
+        </div>
+
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    {% endif %}
+    {% endfor %}
+
     {% else %}
-    <!-- <button onclick="showSection('stage')" id="btn-stage">History</button> -->
+    <p>No history found</p>
     {% endif %}
 
 </div>
-
 <script>
-    function showSection(section) {
-        document.getElementById("interviews-section").style.display = "none";
-        document.getElementById("stage-section").style.display = "none";
-
-        document.getElementById("btn-interviews").style.background = "#6b7280";
-        document.getElementById("btn-stage").style.background = "#6b7280";
-
-        if (section === "interviews") {
-            document.getElementById("interviews-section").style.display = "block";
-            document.getElementById("btn-interviews").style.background = "#2563eb";
-        } else {
-            document.getElementById("stage-section").style.display = "block";
-            document.getElementById("btn-stage").style.background = "#2563eb";
-        }
-    }
+    document.addEventListener("DOMContentLoaded", function () {
+        load_interviews(false);
+    });
 </script>
-{% if current or past or upcoming %}
-<div id="interviews-section">
-
-    <h1 style="margin-bottom: 30px; font-weight: 600;">Customer Dashboard</h1>
-
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f8fafc;
-            color: #333;
-        }
-
-        .section {
-            margin-bottom: 55px;
-        }
-
-        .section h2 {
-            margin-bottom: 22px;
-            font-size: 20px;
-            font-weight: 600;
-            padding-left: 12px;
-        }
-
-        .current-section h2 {
-            border-left: 4px solid #16a34a;
-        }
-
-        .past-section h2 {
-            border-left: 4px solid #eab308;
-        }
-
-        .upcoming-section h2 {
-            border-left: 4px solid #2563eb;
-        }
-
-        .card {
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 22px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            border-left: 6px solid transparent;
-        }
-
-        .current-section .card {
-            border-left-color: #16a34a;
-        }
-
-        .past-section .card {
-            border-left-color: #eab308;
-        }
-
-        .upcoming-section .card {
-            border-left-color: #2563eb;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-        }
-
-        .card h3 {
-            margin-bottom: 8px;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .status {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 15px;
-        }
-
-        ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        li {
-            background: #f1f5f9;
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
-
-        .round-title {
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        textarea {
-            width: 50%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-            resize: vertical;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-        }
-
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            background: #2563eb;
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        button:hover {
-            background: #1e40af;
-        }
-
-        .feedback-box {
-            padding: 12px;
-            background: #ffffff;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            margin-top: 8px;
-        }
-
-        .service-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .service-pill {
-            background-color: #e0f2fe;
-            color: #0369a1;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            border: 1px solid #bae6fd;
-            transition: all 0.2s ease;
-        }
-
-        .service-pill:hover {
-            background-color: #2563eb;
-            color: white;
-            border-color: #2563eb;
-            cursor: default;
-        }
-    </style>
-
-    <!-- ================= CURRENT ================= -->
-    <div class="section current-section">
-        <h2>Current Interviews</h2>
-
-        {% for interview in current %}
-        <div class="card">
-            <h3>{{ interview.marketing_link }}</h3>
-            <div class="status">Status: {{ interview.status }}</div>
-
-            {% if interview.rounds %}
-            <ul>
-                {% for round in interview.rounds %}
-                <li>
-                    <div class="round-title">Round: {{ round.round }}</div>
-                    Interview Date: {{ round.date_of_interview }} <br>
-                    Type of Interview: {{ round.type_of_interview }} <br>
-                    Time of Interview: {{ round.time_of_interview }}
-
-                    {% if round.feedback and round.feedback.strip() %}
-                    <p><strong>Feedback:</strong></p>
-                    <div class="feedback-box">
-                        {{ round.feedback }}
-                    </div>
-                    {% else %}
-                    <form method="post" class="feedback-form">
-                        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
-                        <input type="hidden" name="action" value="save_feedback">
-                        <input type="hidden" name="round_name" value="{{ round.name }}">
-
-                        <label><strong>Feedback:</strong></label><br><br>
-
-                        <textarea name="feedback" rows="3"
-                            style="width:50%; padding:8px; border-radius:8px; border:1px solid #ccc;">
-        {{ round.feedback or '' }}
-    </textarea>
-
-                        <br><br>
-
-                        <button type="button" onclick="hideAfterSave(this)"
-                            style="padding:6px 12px; border:none; border-radius:6px; background:#007bff; color:white;">
-                            Save
-                        </button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No Rounds Available</p>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No ongoing interviews.</p>
-        {% endfor %}
-    </div>
-
-    <!-- ================= PAST ================= -->
-    <div class="section past-section">
-        <h2>Past Interviews</h2>
-        {% for interview in past %}
-        <div class="card">
-            <h3>{{ interview.marketing_link }}</h3>
-            <div class="status">Status: {{ interview.status }}</div>
-            {% if interview.rounds %}
-            <ul>
-                {% for round in interview.rounds %}
-                <li>
-                    <div class="round-title">Round: {{ round.round }}</div>
-                    Interview Date: {{ round.date_of_interview }} <br>
-                    Type of Interview: {{ round.type_of_interview }} <br>
-                    Time of Interview: {{ round.time_of_interview }} <br>
-                    {% if round.feedback and round.feedback.strip() %}
-                    <p><strong>Feedback:</strong></p>
-                    <div class="feedback-box">
-                        {{ round.feedback }}
-                    </div>
-                    {% else %}
-                    <form method="post" class="feedback-form">
-                        <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
-                        <input type="hidden" name="action" value="save_feedback">
-                        <input type="hidden" name="round_name" value="{{ round.name }}">
-
-                        <label><strong>Feedback:</strong></label><br><br>
-
-                        <textarea name="feedback" rows="3"
-                            style="width:50%; padding:8px; border-radius:8px; border:1px solid #ccc;">
-        {{ round.feedback or '' }}
-    </textarea>
-
-                        <br><br>
-
-                        <button type="button" onclick="hideAfterSave(this)"
-                            style="padding:6px 12px; border:none; border-radius:6px; background:#007bff; color:white;">
-                            Save
-                        </button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No Rounds Available</p>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No past interviews.</p>
-        {% endfor %}
-    </div>
-
-    <!-- ================= UPCOMING ================= -->
-    <div class="section upcoming-section">
-        <h2>Upcoming Interviews</h2>
-        {% for interview in upcoming %}
-        <div class="card">
-            <h3>{{ interview.marketing_link }}</h3>
-            <div class="status">Status: {{ interview.status }}</div>
-            {% if interview.rounds %}
-            <ul>
-                {% for round in interview.rounds %}
-                <li>
-                    <div class="round-title">Round: {{ round.round }}</div>
-                    Interview Date: {{ round.date_of_interview }} <br>
-                    Type of Interview: {{ round.type_of_interview }} <br>
-                    Time of Interview: {{ round.time_of_interview }}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p>No Rounds Available</p>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No scheduled interviews.</p>
-        {% endfor %}
-    </div>
-
-</div>
-{% endif %}
-<script>
-    function hideAfterSave(button) {
-
-        const form = button.closest("form");
-        const formData = new FormData(form);
-
-        fetch(window.location.href, {
-            method: "POST",
-            body: formData
-        })
-            .then(response => response.text())
-            .then(() => {
-
-                const textarea = form.querySelector("textarea");
-                const feedbackText = textarea.value;
-
-                const feedbackDiv = document.createElement("div");
-                feedbackDiv.className = "feedback-box";
-                feedbackDiv.innerText = feedbackText;
-
-                const label = document.createElement("p");
-                label.innerHTML = "<strong>Feedback:</strong>";
-
-                const parent = form.parentNode;
-                parent.innerHTML = "";
-                parent.appendChild(label);
-                parent.appendChild(feedbackDiv);
-
-            })
-            .catch(error => {
-                alert("Error saving feedback.");
-                console.error(error);
-            });
-    }
-</script>
-
-<!-- ================= CUSTOMER STAGE SECTION ================= -->
-<div id="stage-section" {% if current or past or upcoming %}style="display:none;"{% endif %}>
-
-<h1 style="margin-bottom: 30px; font-weight: 600;">History</h1>
-
-{% if customer_history %}
-<h2>Service History</h2>
-
-{% for stage in customer_history %}
-
-<div class="card" style="margin-bottom:20px;">
-
-    <h4 style="margin-bottom:10px;">{{ stage.stage }}</h4>
-
-    <span class="resume-status">
-        start date: {{ stage.timestamp.strftime("%Y-%m-%d") if stage.timestamp }}
-    </span>
-
-    <div class="resume-list" style="margin-top:10px;">
-
-        {% for rec in stage.records %}
-        <div class="resume-item">
-
-            <span class="resume-status">
-                status : {{ rec.status }}
-            </span>
-
-        </div>
-        {% endfor %}
-
-    </div>
-
-</div>
-
-{% endfor %}
-
-{% else %}
-<p>No customer history found.</p>
-{% endif %}
-
-</div>
 
 {% endif %}
