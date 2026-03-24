@@ -12,110 +12,97 @@ import json
 from datetime import datetime, timedelta
 
 class SalesOrder(Document):
-	def before_insert(self):
-		title =f"SO-{self.customer}-{self.date}",
-		self.title = title
-  
+    def before_insert(self):
+        title = (f"SO-{self.customer}-{self.date}",)
+        self.title = title
+
 
 def generate_token(data: dict):
     payload = json.dumps(data)
 
     signature = hmac.new(
-        frappe.conf.get("encryption_key").encode(),
-        payload.encode(),
-        hashlib.sha256
+        frappe.conf.get("encryption_key").encode(), payload.encode(), hashlib.sha256
     ).hexdigest()
 
-    token = base64.urlsafe_b64encode(
-        f"{payload}|{signature}".encode()
-    ).decode()
+    token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
 
     return token
 
 
-def get_expiry_timestamp():
-    value = frappe.db.get_single_value(
-        "ERP Configuration",
-        "expiry_hours_of_agreement"
-    )
+def generate_form_url(
+    recipient, sales_order, customer, agreement=None, p=None, ia=False
+):
+    try:
+        base_url = frappe.utils.get_url()
 
-    if not value:
-        return None
+        data = {
+            "so": sales_order,
+            "p": p,
+            "customer": customer,
+            "agr": agreement,
+            "e": recipient,
+            "ia": int(ia),
+        }
+
+        token = generate_token(data)
+
+        return f"{base_url}/details-form/new?t={token}"
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Generate Form URL Error")
+        raise
+
+
+@frappe.whitelist()
+def send_agreement_notification(recipient, sales_order, customer, agreement):
 
     try:
-        hours, minutes = map(int, value.split(":"))
-    except Exception:
-        return None
+        doc = frappe.get_doc("Agreement", agreement)
 
-    total_seconds = hours * 3600 + minutes * 60
+        if not doc.pdf:
+            frappe.throw("Agreement PDF missing")
 
-    expiry_dt = datetime.utcnow() + timedelta(seconds=total_seconds)
+        file_path = frappe.get_site_path("public", doc.pdf.lstrip("/"))
 
-    return int(expiry_dt.timestamp())
+        if not os.path.exists(file_path):
+            frappe.throw("PDF file not found on server")
 
+        form_url = generate_form_url(
+            recipient, sales_order, customer, agreement, doc.pdf, ia=True
+        )
 
-def generate_form_url(recipient, sales_order, customer, agreement=None, p=None, ia=False):
-    base_url = frappe.utils.get_url()
-    so = frappe.get_doc("Sales Order", sales_order)
+        with open(file_path, "rb") as f:
+            file_content = f.read()
 
-    expiry = get_expiry_timestamp() if ia else None
+        send_notification(
+            recipients=[recipient],
+            subject="Agreement for Review and Signature",
+            message=f"Form: {form_url}",
+            attachments=[
+                {
+                    "fname": os.path.basename(doc.pdf),
+                    "fcontent": file_content,
+                }
+            ],
+            send_email=1,
+            send_system=0,
+            now=False,
+        )
 
-    data = {
-        "so": so.name,
-        "p": p,
-        "customer": customer,
-        "agr": agreement,
-        "e": recipient,
-        "ia": int(ia),
-        "exp": expiry  # 🔥 ADD THIS
-    }
+        return {"success": "Agreement sent"}
 
-    token = generate_token(data)
-
-    return f"{base_url}/details-form/new?t={token}"
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Agreement Notification Error")
+        raise
 
 
 @frappe.whitelist()
-def send_agreement_notification(recipient,sales_order,customer,agreement):
-	p = ""
-	if agreement:
-		doc = frappe.get_doc("Agreement", agreement)
-		p = doc.pdf
-	
-	form_url = generate_form_url(recipient, sales_order, customer, agreement, p, ia=True)
-
-    # If already generated, return saved file
-	send_notification(
-        recipients=[recipient],
-        subject="Agreement for Review and Signature",
-        message=(
-            "Dear Customer,\n\n"
-            "Please find your agreement attached.\n\n"
-            "Complete Signature procedure using the form link below:\n\n"
-            f"{form_url}\n\n"
-            "If you have any questions or need assistance, please contact us.\n\n"
-            "Best regards,\n"
-            "Team"
-        ),
-        attachments=[
-            {
-                "fname": os.path.basename(p),
-                "fcontent": open(
-                    frappe.get_site_path("public", p.lstrip("/")), "rb"
-                ).read(),
-            }
-        ],
-        send_email=1,
-        send_system=0,
+def send_details_form_notification(recipient, sales_order, customer):
+    form_url = generate_form_url(
+        recipient, sales_order, customer, agreement=None, p=None, ia=False
     )
-	return {"success":"Agreement sent"}
 
-
-@frappe.whitelist()
-def send_details_form_notification(recipient,sales_order,customer):
-	form_url = generate_form_url(recipient, sales_order, customer, agreement=None, p=None, ia=False)
-    
-	send_notification(
+    send_notification(
         recipients=[recipient],
         subject="candidate details form",
         message=(
@@ -129,4 +116,4 @@ def send_details_form_notification(recipient,sales_order,customer):
         send_email=1,
         send_system=0,
     )
-	return {"success":"Agreement sent"}
+    return {"success": "Agreement sent"}

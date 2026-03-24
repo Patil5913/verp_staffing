@@ -10,7 +10,6 @@
   "services",
   "column_break_wknv",
   "date",
-  "agreement",
   "status",
   "payment_terms_section",
   "payment_terms",
@@ -55,14 +54,6 @@
    "options": "Customer Payment Terms"
   },
   {
-   "fieldname": "agreement",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Agreement",
-   "options": "Agreement",
-   "unique": 1
-  },
-  {
    "fieldname": "agreement_tab",
    "fieldtype": "Tab Break",
    "label": "Agreement"
@@ -89,7 +80,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 15:28:37.324273",
+ "modified": "2026-03-23 14:26:53.431647",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
@@ -97,9 +88,14 @@
  "permissions": [
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "report": 1,
+   "role": "Sales Master Manager",
    "select": 1,
+   "share": 1,
    "write": 1
   },
   {
@@ -123,14 +119,9 @@
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Manager",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {

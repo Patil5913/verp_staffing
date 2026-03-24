@@ -319,6 +319,7 @@ def notify(
     send_email_flag=True,
     send_system_flag=True,
     attachments=None,
+    now=False
 ):
     """
     Internal dispatcher
@@ -343,7 +344,7 @@ def notify(
             subject=subject,
             message=message,
             attachments=attachments,
-            now=True,
+            now=now,
         )
 
 
@@ -362,7 +363,7 @@ def send_notification(**kwargs):
     attachments = kwargs.get("attachments")  # FIXED
     send_email_flag = int(kwargs.get("send_email", 1))
     send_system_flag = int(kwargs.get("send_system", 1))
-
+    now = kwargs.get("now",False)
     # ---- Validation ----
     if not recipients:
         frappe.throw("recipients is required")
@@ -389,6 +390,7 @@ def send_notification(**kwargs):
         reference_name=reference_name,
         send_email_flag=bool(send_email_flag),
         send_system_flag=bool(send_system_flag),
+        now=now
     )
 
     return {
