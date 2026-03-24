@@ -108,12 +108,21 @@ function fetch_and_render_resume(frm) {
 				return;
 			}
 			const customer = Marketing_res[0].customer;
+			if (!frm.doc.customer) {
+				frm.set_df_property(
+					"resume",
+					"options",
+					"<div style='color:#888'>No customer selected</div>",
+				);
+				return;
+			}
 			frappe.db
 				.get_list("Resume", {
 					filters: {
 						customer: customer,
 					},
 					fields: ["name", "resume"],
+					order_by: "creation desc",
 					limit: 1,
 				})
 				.then((res) => {
