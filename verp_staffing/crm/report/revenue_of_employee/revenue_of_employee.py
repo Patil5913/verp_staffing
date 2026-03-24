@@ -1,7 +1,8 @@
 import frappe
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from verp_staffing.marketing.api.utils import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names
+
 
 def execute(filters=None):
     filters = filters or {}
@@ -67,7 +68,6 @@ def filter_sales_employees(employee_list):
     return [row.name for row in data]
 
 
-
 def employees_to_users(employee_list):
     """Get user IDs linked to given employees in Sales department."""
     if not employee_list:
@@ -121,7 +121,6 @@ def get_data(filters):
 
     user = frappe.session.user
     employee_filter = filters.get("employee")
-
 
     allowed_employees = get_visible_employee_names(user)
 
@@ -198,6 +197,7 @@ def get_chart(data):
             ],
         },
         "type": "bar",
+        "colors": ["#28a745"],
     }
 
 

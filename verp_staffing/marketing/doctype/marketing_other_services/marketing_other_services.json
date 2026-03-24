@@ -104,9 +104,10 @@
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-16 10:44:42.383140",
+ "modified": "2026-03-15 12:19:33.286471",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing Other Services",
@@ -128,23 +129,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Team Lead",
+   "role": "Senior Recruiter",
    "select": 1,
    "write": 1
   },
@@ -160,7 +145,23 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Senior Recruiter",
+   "role": "Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   }

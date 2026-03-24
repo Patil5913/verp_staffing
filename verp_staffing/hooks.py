@@ -33,7 +33,6 @@ app_include_js = [
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/about_override.js",
     # "/assets/verp_staffing/js/protection.js",
-    "/assets/verp_staffing/js/quick_entry_override.js",
 ]
 
 # include js, css files in header of web template
@@ -51,7 +50,7 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services"]
+validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Opportunity", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services"]
 doctype_js = {
     **{doc: "public/js/reusable.js" for doc in validation_docs},
 }

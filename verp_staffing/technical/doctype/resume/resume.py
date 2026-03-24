@@ -41,7 +41,10 @@ class Resume(Document):
         """
         After save, if resume exists and status is not completed,
         silently mark it completed.
-        """
+        """  
+        if not self.resume and self.status == "Completed":
+            self.db_set("status", "Pending", update_modified=False)
+            
         if self.resume and self.status != "Completed":
             self.db_set("status", "Completed", update_modified=False)
     

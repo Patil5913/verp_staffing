@@ -21,5 +21,6 @@ frappe.ui.form.on("JDC", {
 				"old_resume",
 			],
 		});
+		window.setup_service_permission_button(frm);
 	},
 });

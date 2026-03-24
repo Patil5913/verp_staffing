@@ -356,6 +356,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Phone Number (Provide country code with number)",
+   "permlevel": 2,
    "placeholder": "Exp: +1 xxx xxx xxxx"
   },
   {
@@ -436,7 +437,7 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "marketing Master Manager"
   },
   {
    "read": 1,
@@ -444,7 +445,18 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Master Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager"
   },
   {
    "create": 1,
@@ -460,7 +472,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -468,11 +480,15 @@
   },
   {
    "read": 1,
-   "role": "Marketing Manager"
+   "role": "Sales Team Lead"
   },
   {
    "read": 1,
    "role": "Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager"
   },
   {
    "read": 1,
@@ -480,31 +496,23 @@
   },
   {
    "read": 1,
-   "role": "Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator"
-  },
-  {
-   "read": 1,
-   "role": "Resume Person"
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor"
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter"
+   "role": "Marketing Manager"
   },
   {
    "read": 1,
    "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
   },
   {
    "read": 1,
@@ -516,11 +524,23 @@
   },
   {
    "read": 1,
-   "role": "RUC Person"
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
   },
   {
    "read": 1,
    "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
   },
   {
    "read": 1,
@@ -528,7 +548,11 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager"
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
   },
   {
    "read": 1,
@@ -537,6 +561,18 @@
   {
    "read": 1,
    "role": "JD"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lead Person",
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

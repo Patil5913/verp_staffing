@@ -3,7 +3,6 @@
 
 frappe.ui.form.on("Employee", {
 	refresh(frm) {
-
 		frm.set_query("user", function () {
 			return {
 				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
@@ -16,11 +15,23 @@ frappe.ui.form.on("Employee", {
 		// DESIGNATION FILTER
 		frm.fields_dict.employee_assignment_details_table.grid.get_field("designation").get_query =
 			function (doc, cdt, cdn) {
-
 				const row = locals[cdt][cdn];
 
 				if (!row.department) {
-					return {};
+					let selected_roles = (frm.doc.employee_assignment_details_table || [])
+						.filter((d) => d.name !== row.name)
+						.map((d) => d.designation)
+						.filter(Boolean);
+
+					if (!selected_roles.length) {
+						return { filters: { name: ["=", ""] } };
+					}
+
+					return {
+						filters: {
+							name: ["not in", selected_roles],
+						},
+					};
 				}
 
 				const hierarchy = frm._department_hierarchy?.[row.department];
@@ -39,7 +50,14 @@ frappe.ui.form.on("Employee", {
 					}
 				});
 
-				const role_list = Array.from(roles);
+				let role_list = Array.from(roles);
+
+				let selected_roles = (frm.doc.employee_assignment_details_table || [])
+					.filter((d) => d.name !== row.name) 
+					.map((d) => d.designation)
+					.filter(Boolean);
+
+				role_list = role_list.filter((role) => !selected_roles.includes(role));
 
 				return {
 					filters: {
@@ -51,7 +69,6 @@ frappe.ui.form.on("Employee", {
 		// ASSIGNED TO FILTER
 		frm.fields_dict.employee_assignment_details_table.grid.get_field("assigned_to").get_query =
 			function (doc, cdt, cdn) {
-
 				const row = locals[cdt][cdn];
 
 				if (!row || !row.department || !row.designation) {
@@ -101,12 +118,9 @@ frappe.ui.form.on("Employee", {
 	},
 });
 
-
 // CHILD TABLE EVENTS
 frappe.ui.form.on("Employee Assignment Detail", {
-
 	async department(frm, cdt, cdn) {
-
 		const row = locals[cdt][cdn];
 
 		if (!row.department) return;
@@ -153,7 +167,6 @@ frappe.ui.form.on("Employee Assignment Detail", {
 function apply_assigned_to_filter(frm, cdt, cdn) {
 	frm.fields_dict.employee_assignment_details_table.grid.get_field("assigned_to").get_query =
 		function (doc, cdt_inner, cdn_inner) {
-
 			const row = locals[cdt_inner][cdn_inner];
 
 			if (!row || !row.department || !row.designation) {

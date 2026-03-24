@@ -1,13 +1,11 @@
 import frappe
 import json
 
-
 @frappe.whitelist()
 def create_sales_order(**kwargs):
 
     opportunity = kwargs.get("opportunity")
-    opportunity_from = kwargs.get("opportunity_from")
-    party_name = kwargs.get("party_name")
+    opportunity_from_lead = kwargs.get("opportunity_from_lead")
     data = kwargs.get("data")
 
     if not opportunity:
@@ -25,7 +23,12 @@ def create_sales_order(**kwargs):
     customer_doc = None
     customer_name = None
 
-    # NEW CUSTOMER LOOKUP LOGIC
+    # Get opportunity_owner to set as customer_owner
+    opportunity_owner = frappe.db.get_value(
+        "Opportunity", opportunity, "opportunity_owner"
+    )
+
+    # Check if Customer already exists for this Opportunity
     existing_customer = frappe.db.get_value(
         "Customer",
         {
@@ -43,13 +46,20 @@ def create_sales_order(**kwargs):
             "title": customer_doc.name1 or customer_doc.name,
         }
 
+        # Fix customer_owner if it was not set before
+        if not customer_doc.customer_owner and opportunity_owner:
+            frappe.db.set_value(
+                "Customer", customer_doc.name, "customer_owner", opportunity_owner
+            )
+            customer_doc.customer_owner = opportunity_owner
+
     else:
         opportunity_doc = frappe.get_doc("Opportunity", opportunity)
 
         base_name = (
             opportunity_doc.title
             or getattr(opportunity_doc, "name1", None)
-            or party_name
+            or opportunity_from_lead
             or f"Customer-{frappe.utils.now()}"
         )
 
@@ -58,6 +68,8 @@ def create_sales_order(**kwargs):
             "customer_from": "Opportunity",
             "party_name": opportunity,
             "name1": base_name,
+            # ── Set customer_owner from opportunity_owner ──
+            "customer_owner": opportunity_owner or None,
         }
 
         customer_doc = frappe.get_doc(customer_data)
@@ -68,8 +80,8 @@ def create_sales_order(**kwargs):
             "title": customer_doc.name1 or customer_doc.name,
         }
 
+    # Build services list
     services = []
-
     for service in data.get("services", []):
         services.append({"service": service})
 
@@ -89,10 +101,30 @@ def create_sales_order(**kwargs):
 
     so.insert(ignore_permissions=True)
 
+    # ── Link Sales Order to Lead Detail Form ──
+    lead_detail_name = frappe.db.get_value(
+        "Customer", customer_doc.name, "lead_details"
+    )
+
+    if lead_detail_name:
+        frappe.db.set_value(
+            "Lead Detail Form", lead_detail_name, "sales_order", so.name
+        )
+    else:
+        # Fallback: find Lead Detail Form via Lead
+        if opportunity_from_lead:
+            lead_detail_name = frappe.db.get_value(
+                "Lead", opportunity_from_lead, "lead_details"
+            )
+            if lead_detail_name:
+                frappe.db.set_value(
+                    "Lead Detail Form", lead_detail_name, "sales_order", so.name
+                )
+
     frappe.db.set_value("Opportunity", opportunity, "status", "Converted")
 
-    if opportunity_from == "Lead" and party_name:
-        frappe.db.set_value("Lead", party_name, "status", "Won")
+    if opportunity_from_lead:
+        frappe.db.set_value("Lead", opportunity_from_lead, "status", "Won")
 
     frappe.db.commit()
 
@@ -100,3 +132,22 @@ def create_sales_order(**kwargs):
         "sales_order": so.name,
         "customer": customer_name["name"],
     }
+
+
+@frappe.whitelist()
+def get_sales_order_services(sales_order):
+    """
+    Returns list of service names from a Sales Order.
+    Uses ignore_permissions on child table fetch to avoid
+    ERP Configuration permission error.
+    """
+    services = frappe.db.get_all(
+        "SalesOrderServices",
+        filters={
+            "parent": sales_order,
+            "parenttype": "Sales Order",
+        },
+        fields=["service"],
+        ignore_permissions=True,
+    )
+    return [row.service for row in services if row.service]

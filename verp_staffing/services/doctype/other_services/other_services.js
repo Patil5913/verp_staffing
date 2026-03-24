@@ -7,5 +7,6 @@ frappe.ui.form.on("Other Services", {
 		window.render_notes(frm);
 		window.fetch_and_render_resume(frm);
 		window.render_activity_section(frm);
+		window.setup_service_permission_button(frm);
 	},
 });

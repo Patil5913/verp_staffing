@@ -1,6 +1,3 @@
-// Copyright (c) 2025, Vrugle and contributors
-// For license information, please see license.txt
-
 frappe.ui.form.on("Resume", {
 	refresh(frm) {
 		window.render_notes(frm);
@@ -47,9 +44,13 @@ frappe.ui.form.on("Resume", {
 
 		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Resume Form";
-
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
+
+		frm._update_detail_fields = {
+			first_name: "First Name",
+		};
+		window.setup_service_permission_button(frm);
 	},
 	status(frm) {
 		if (frm.doc.status == "Completed") {
@@ -57,96 +58,3 @@ frappe.ui.form.on("Resume", {
 		}
 	},
 });
-
-function render_customer_details(frm) {
-	const wrapper = frm.fields_dict.customer_details_html.$wrapper;
-
-	if (!frm.doc.name) {
-		wrapper.html(`<p class="text-muted">Customer not saved yet.</p>`);
-		return;
-	}
-
-	frappe.call({
-		method: "frappe.client.get_list",
-		args: {
-			doctype: "Lead Detail Form",
-			filters: {
-				customer: frm.doc.customer,
-			},
-			limit_page_length: 1,
-		},
-		callback(r) {
-			if (!r.message || !r.message.length) {
-				wrapper.html(`
-                    <div class="text-muted">
-                        No Lead Details available for this customer.
-                    </div>
-                `);
-				return;
-			}
-
-			const lead_name = r.message[0].name;
-
-			frappe.call({
-				method: "frappe.client.get",
-				args: {
-					doctype: "Lead Detail Form",
-					name: lead_name,
-				},
-				callback(res) {
-					if (!res.message) {
-						wrapper.html(`<p class="text-muted">Unable to load Lead Details.</p>`);
-						return;
-					}
-
-					const lead = res.message;
-
-					const EXCLUDE_FIELDS = [
-						"name",
-						"doctype",
-						"owner",
-						"creation",
-						"modified",
-						"modified_by",
-						"docstatus",
-						"idx",
-						"customer",
-					];
-
-					let html = `
-                        <div style="padding:15px;">
-                            <h4>Customer Details</h4>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                    `;
-
-					Object.keys(lead).forEach((key) => {
-						if (EXCLUDE_FIELDS.includes(key)) return;
-
-						const value = lead[key];
-						if (value === null || value === "") return;
-						if (typeof value === "object") return;
-
-						const df = frappe.meta.get_docfield("Lead Detail Form", key);
-						const label = df?.label || frappe.model.unscrub(key);
-
-						html += `
-                            <div style="
-                                border:1px solid #e5e5e5;
-                                padding:10px;
-                                border-radius:8px;
-                                background:#fafafa;
-                            ">
-                                <strong>${label}</strong><br>
-                                <span>${frappe.utils.escape_html(value)}</span>
-                            </div>
-                        `;
-					});
-
-					html += `</div></div>`;
-
-					wrapper.html(html);
-				},
-			});
-		},
-	});
-}
