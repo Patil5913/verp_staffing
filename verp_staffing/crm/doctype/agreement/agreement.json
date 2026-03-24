@@ -59,7 +59,7 @@
   },
   {
    "fieldname": "audit_trail",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text",
    "hidden": 1,
    "label": "Audit Trail"
   },
@@ -74,7 +74,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-23 12:25:45.743216",
+ "modified": "2026-03-24 10:30:03.755801",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
@@ -97,7 +97,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
    "select": 1,
    "write": 1
   },
@@ -116,14 +123,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Person",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Manager",
    "select": 1,
    "write": 1
   }

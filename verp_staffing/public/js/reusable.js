@@ -462,6 +462,11 @@ function open_forward_prompt(frm, services) {
 				fieldtype: "Link",
 				options: "Employee",
 				hidden: 1,
+				get_query: function () {
+					return {
+						filters: [["Employee Assignment Detail", "department", "=", "Onboarding"]],
+					};
+				},
 			},
 		],
 		primary_action_label: "Forward",
