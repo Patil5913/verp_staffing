@@ -30,6 +30,7 @@ app_include_css = ["/assets/verp_staffing/css/globel.css"]
 app_include_js = [
     "pdf_lib_bundle.bundle.js",
     "/assets/verp_staffing/js/reusable.js",
+    "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/about_override.js",
     # "/assets/verp_staffing/js/protection.js",
@@ -50,9 +51,10 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Opportunity", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services"]
+validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Opportunity", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services","Sales Order", "Agreement"]
 doctype_js = {
     **{doc: "public/js/reusable.js" for doc in validation_docs},
+    **{doc: "public/js/salesOrder.js" for doc in validation_docs},
 }
 
 doctype_list_js = {

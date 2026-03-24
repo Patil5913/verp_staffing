@@ -54,58 +54,98 @@ def preview_agreement(template, data):
     return {"file_url": url}
 
 
+from verp_staffing.accounts.doctype.sales_order.sales_order import (
+    send_agreement_notification,
+)
+
+@frappe.whitelist()
+def send_existing_agreement(agreement):
+
+    try:
+        if not agreement:
+            frappe.throw("Agreement is required")
+
+        doc = frappe.get_doc("Agreement", agreement)
+
+        if doc.status != "Ready To Send":
+            frappe.throw("Agreement is not in sendable state")
+
+        if not doc.sales_order:
+            frappe.throw("Sales Order not linked")
+
+        so = frappe.get_doc("Sales Order", doc.sales_order)
+
+        if not so.customer:
+            frappe.throw("Customer not found in Sales Order")
+
+        recipient = get_customer_email(so.customer)
+
+        if not recipient:
+            frappe.throw("Customer email not found")
+
+        if not doc.pdf:
+            frappe.throw("Agreement PDF not generated")
+
+
+        send_agreement_notification(
+            recipient=recipient,
+            sales_order=so.name,
+            customer=so.customer,
+            agreement=doc.name
+        )
+
+
+        doc.db_set("status", "Sent For Signature")
+
+        return {"success": True}
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Send Agreement Error")
+        raise
+
 # Final submit
 @frappe.whitelist()
-def submit_and_generate(sales_order, template, data):
-    """
-    Generates final PDF and saves it permanently to the agreement doctype
-    Only run when salesman clicks submit/send.
-    """
+def submit_and_generate(sales_order, template, data, send_email=0):
 
     data_dict = json.loads(data) if isinstance(data, str) else (data or {})
 
-    # Prevent duplicates
-    if frappe.db.exists("Agreement", {"sales_order": sales_order}):
-        frappe.throw("Agreement already exists for this Sales Order.")
-
     tpl = frappe.get_doc("Pdf Agreement Template", template)
+
     try:
         fields = json.loads(tpl.fields_json or "[]")
     except Exception:
         fields = []
 
-    # input PDF
     if not tpl.upload_pdf_template:
         frappe.throw("Template has no uploaded PDF")
+
     filename = os.path.basename(tpl.upload_pdf_template)
     input_pdf_path = frappe.get_site_path("public", "files", filename)
+
     if not os.path.exists(input_pdf_path):
         frappe.throw("Template PDF not found on disk")
 
-    # Collect payment_terms from Sales Order child table if not passed in data
     payment_terms = data_dict.get("Payment_Terms")
 
     out_path, url = generate_pdf(
         input_pdf_path, fields, data_dict, payment_terms=payment_terms, save_final=True
     )
 
-    # Create Agreement doc
+    # ✅ CREATE AGREEMENT (NO DUPLICATE BLOCK)
     agreement = frappe.get_doc(
         {
             "doctype": "Agreement",
             "sales_order": sales_order,
             "template": template,
             "data": json.dumps(data_dict),
-            "status": "Locked",
+            "pdf": url,
+            "status": "Ready To Send",
         }
     ).insert(ignore_permissions=True)
-    # attach agreement to sales order
-    so = frappe.get_doc("Sales Order", sales_order)
-    so.agreement = agreement.name
 
-    so.save(ignore_permissions=True)
-
-    agreement.db_set("pdf", url)
+    # ✅ OPTIONAL SEND
+    if int(send_email):
+        send_existing_agreement(agreement.name)
 
     frappe.db.commit()
 
@@ -165,7 +205,6 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
             val = data_dict.get(name, "")
             fontsize = int(f.get("font_size") or 11)
             ftype = f.get("type", "Text")
-
             if ftype == "Text" and val:
                 c.setFont("Helvetica", fontsize)
                 c.drawString(x, y + (h - fontsize), str(val))
@@ -176,7 +215,11 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 c.line(x, y, x + h, y + h)
                 c.line(x, y + h, x + h, y)
                 drew_anything = True
-
+            elif ftype == "Date" and val:
+                formatted = format_date_value(val)
+                c.setFont("Helvetica", fontsize)
+                c.drawString(x, y + (h - fontsize), formatted)
+                drew_anything = True
             elif ftype == "Signature" and val:
                 img = Image.open(val)
                 c.drawImage(
@@ -189,12 +232,18 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 )
                 drew_anything = True
 
-            elif ftype == "Payment_Terms" and payment_terms:
+            elif ftype == "Payment_Terms" and val:
                 c.setFont("Helvetica", fontsize)
-                text = c.beginText(x, y + h - fontsize)
-                for line in payment_terms.split("\n"):
-                    text.textLine(line)
-                c.drawText(text)
+                text_obj = c.beginText(x, y + h - fontsize)
+
+                # ensure list
+                if isinstance(val, str):
+                    payment_terms = [t.strip() for t in val.split(",") if t.strip()]
+
+                for i, term in enumerate(payment_terms, 1):
+                    text_obj.textLine(f"{i}. {term}")
+
+                c.drawText(text_obj)
                 drew_anything = True
 
         # 🔴 REQUIRED
@@ -225,7 +274,6 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
     return out_path, url
 
 
-
 def wrap_text_for_annotation(text, max_chars):
     words = text.split(" ")
     lines, line = [], ""
@@ -238,6 +286,7 @@ def wrap_text_for_annotation(text, max_chars):
     if line:
         lines.append(line)
     return "\n".join(lines)
+
 
 def render_text(page, rect, value, fontsize=15, line_height=1.2):
     """
@@ -255,14 +304,11 @@ def render_text(page, rect, value, fontsize=15, line_height=1.2):
         fontname="helv",
         text_color=(0, 0, 0),
         fill_color=None,
-        align=0
+        align=0,
     )
 
     try:
-        annot.set_info({
-            "wrap": "true",
-            "line_height": str(line_height)
-        })
+        annot.set_info({"wrap": "true", "line_height": str(line_height)})
     except Exception:
         pass
 
@@ -303,7 +349,46 @@ def render_signature(page, rect, file_url):
             title="Agreement PDF",
         )
 
-# this fucntion is commented out cause it's using fitz package whcih we are now not using 
+
+from datetime import datetime
+
+
+def format_date_value(value, output_format="%d-%m-%Y"):
+    """
+    Normalize any incoming date into consistent format
+    """
+
+    if not value:
+        return ""
+
+    # Already datetime
+    if isinstance(value, datetime):
+        return value.strftime(output_format)
+
+    value = str(value).strip()
+
+    # Try common formats
+    formats = [
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+        "%d/%m/%Y",
+        "%Y/%m/%d",
+        "%d %b %Y",
+        "%d %B %Y",
+    ]
+
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(value, fmt)
+            return dt.strftime(output_format)
+        except Exception:
+            continue
+
+    # fallback (don’t break flow)
+    return value
+
+
+# this fucntion is commented out cause it's using fitz package whcih we are now not using
 
 # def render_payment_terms_table(page, rect, terms):
 #     """
@@ -500,12 +585,14 @@ def render_payment_terms_table(canvas, rect, terms):
 
         y -= row_height
 
+
 @frappe.whitelist()
 def get_customer_email(customer):
     """
     Fetch email for a Customer from Lead Detail Form using raw SQL.
     """
-    email = frappe.db.sql("""
+    email = frappe.db.sql(
+        """
         SELECT ldf.email
         FROM `tabLead Detail Form` ldf
         INNER JOIN `tabDoctype Reference` dr
@@ -513,7 +600,10 @@ def get_customer_email(customer):
         WHERE dr.reference_doctype = 'Customer'
           AND dr.reference_person = %s
         LIMIT 1
-    """, (customer,), as_dict=True)
+    """,
+        (customer,),
+        as_dict=True,
+    )
 
     if not email:
         frappe.throw(f"No email found in Lead Details for Customer {customer}")

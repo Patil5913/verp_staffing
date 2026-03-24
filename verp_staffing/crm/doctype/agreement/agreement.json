@@ -12,8 +12,12 @@
   "certificate_id",
   "signature_image",
   "section_break_fnhs",
-  "data",
-  "audit_trail"
+  "template_data_fill_html",
+  "column_break_vrre",
+  "audit_trail",
+  "status",
+  "section_break_yapn",
+  "data"
  ],
  "fields": [
   {
@@ -41,6 +45,26 @@
    "fieldname": "pdf",
    "fieldtype": "Attach",
    "label": "PDF"
+  },
+  {
+   "fieldname": "template_data_fill_html",
+   "fieldtype": "HTML",
+   "label": "Template Data"
+  },
+  {
+   "fieldname": "column_break_vrre",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Ready To Send",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Ready To Send\nSent"
+  },
+  {
+   "fieldname": "section_break_yapn",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_whbw",
@@ -97,14 +121,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Person",
+   "role": "Sales Manager",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Person",
    "select": 1,
    "write": 1
   },
@@ -120,10 +144,11 @@
    "share": 1,
    "write": 1
   },
+
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Team Lead",
    "select": 1,
    "write": 1
   }

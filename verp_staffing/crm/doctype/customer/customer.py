@@ -156,7 +156,6 @@ def get_services_for_customer(customer):
     )
 
 def is_all_services_completed(customer, services):
-
     for service in services:
         if not is_service_completed(service, customer):
             return False
@@ -205,7 +204,7 @@ def is_service_completed(service,customer):
             as_dict=True
         )
 
-    if not doc or doc[0].status == "Completed":
+    if len(doc) > 0 and doc[0].status == "Completed":
         return True
     else: 
         return False
