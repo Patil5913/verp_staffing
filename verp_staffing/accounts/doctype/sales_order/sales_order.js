@@ -2,14 +2,9 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Sales Order", {
-<<<<<<< HEAD
 	async refresh(frm) {
 		const config = await load_erp_config(frm);
 		const requirements = get_requirements_from_config(frm, config);
-=======
-	refresh(frm) {
-		// console.log("++++++++++++++++++++++++++++++++");
->>>>>>> 42d131c (fix one import path , make permission feature for services and slaes department)
 
 		if (!config.sendCandidateFormImmediately && requirements.candidate_required) {
 			frm.add_custom_button(
@@ -107,14 +102,9 @@ frappe.ui.form.on("Sales Order", {
 		if (frm._temp_name) {
 			const newKey = `so_agreement_draft_${frm.doc.name}`;
 
-<<<<<<< HEAD
 			Object.keys(localStorage).forEach((k) => {
 				if (k.includes(frm._temp_name)) {
 					const draft = localStorage.getItem(k);
-=======
-			const settings = r.message || {};
-			// console.log("settings++++++++++++++++++++++++++++++++",settings);
->>>>>>> 42d131c (fix one import path , make permission feature for services and slaes department)
 
 					if (draft) {
 						localStorage.setItem(newKey, draft);

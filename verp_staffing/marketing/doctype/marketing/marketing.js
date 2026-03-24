@@ -122,6 +122,9 @@ frappe.ui.form.on("Marketing", {
 		if (!frm.is_new()) {
 			frm.set_df_property("customer", "read_only", 1);
 		}
+		frm._update_detail_fields = {
+			email: "Email",
+		};
 		window.setup_service_permission_button(frm);
 
 		// to display the interview list
