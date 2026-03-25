@@ -6,6 +6,7 @@ from frappe.model.document import Document
 from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
 from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
+from verp_staffing.crm.api.naming import generate_name_series
 
 
 class Opportunity(Document):
@@ -65,49 +66,12 @@ class Opportunity(Document):
             self.db_update()
 
     def autoname(self):
-        import re
+        name = self.name1
 
-        if not self.name1:
-            self.name = frappe.generate_hash(length=10)
-            return
+        if not name:
+            frappe.throw("Opportunity Name is required")
 
-        base_name = self.name1.strip()
-
-        if not base_name:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        self.title = base_name
-
-        # Get all titles starting with base_name
-        existing_titles = frappe.get_all(
-            "Opportunity",
-            filters={"title": ["like", f"{base_name}%"]},
-            pluck="name"
-        )
-
-        if not existing_titles:
-            # First record → just base name
-            self.name = base_name
-            return
-
-        max_count = 0
-
-        for existing_name in existing_titles:
-
-            # Exact match → rahi
-            if existing_name == base_name:
-                max_count = max(max_count, 0)
-                continue
-
-            # Match rahi-1, rahi-2 etc
-            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", existing_name)
-            if match:
-                count = int(match.group(1))
-                max_count = max(max_count, count)
-
-        # Generate next number
-        self.name = f"{base_name}-{max_count + 1}"
+        self.name = generate_name_series("Opportunity", name)
 
     def validate(self):
         self.block_manual_conversion()

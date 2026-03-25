@@ -1,11 +1,20 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
-from frappe.utils import now_datetime
 
 import frappe,json
+from frappe.utils import now_datetime
 from frappe.model.document import Document
+from verp_staffing.crm.api.naming import generate_name_series
 
 class Resume(Document):
+    
+    def autoname(self):
+        if not self.customer:
+            frappe.throw("Customer is required")
+
+        customer_name = frappe.db.get_value("Customer", self.customer, "name1")
+
+        self.name = generate_name_series("Resume", customer_name)
 
     def validate(self):
         self._prevent_manual_completion()

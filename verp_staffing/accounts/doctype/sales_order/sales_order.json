@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2025-11-28 16:20:13.489961",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -80,10 +79,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-23 14:26:53.431647",
+ "modified": "2026-03-25 16:09:35.771722",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -120,14 +120,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Person",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Person",
+   "role": "Sales Manager",
    "select": 1,
    "write": 1
   }

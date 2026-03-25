@@ -4,11 +4,23 @@
 import frappe,json
 from frappe.utils import now_datetime
 from frappe.model.document import Document
-
+from verp_staffing.crm.api.naming import generate_name_series
 
 class RUC(Document):
+    
+    def autoname(self):
+        if not self.customer:
+            frappe.throw("Customer is required")
+
+        customer_name = frappe.db.get_value("Customer", self.customer, "name1")
+
+        self.name = generate_name_series("RUC", customer_name)
+            
+            
     def after_insert(self):
         self.create_customer()
+        
+        
     def create_customer(self):
         service = "ruc"
         parents = frappe.db.sql("""

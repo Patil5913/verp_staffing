@@ -7,9 +7,18 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import get_visible_employee_names
 import json
 from frappe.utils import now_datetime
+from verp_staffing.crm.api.naming import generate_name_series
 
 
 class Marketing(Document):
+    def autoname(self):
+        if not self.customer:
+            frappe.throw("Customer is required")
+
+        customer_name = frappe.db.get_value("Customer", self.customer, "name1")
+
+        self.name = generate_name_series("Marketing", customer_name)    
+
     def after_insert(self):
         self.create_customer()
 

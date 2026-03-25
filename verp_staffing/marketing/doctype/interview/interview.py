@@ -4,10 +4,18 @@
 
 import frappe
 from frappe.model.document import Document
+from verp_staffing.crm.api.naming import generate_name_series
+
 
 class Interview(Document):
-	pass
+    def autoname(self):
+        if not self.marketing_link:
+            frappe.throw("Marketing is required")
 
+        customer = frappe.db.get_value("Marketing", self.marketing_link, "customer")
+        customer_name = frappe.db.get_value("Customer", customer, "name1")
+
+        self.name = generate_name_series("Interview", customer_name)
 
 KANBAN_NAME = "Interview"
 

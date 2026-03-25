@@ -15,8 +15,10 @@
   {
    "fieldname": "department",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "department",
    "options": "Department",
+   "reqd": 1,
    "unique": 1
   },
   {
@@ -45,7 +47,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 10:37:45.898524",
+ "modified": "2026-03-25 16:28:15.681508",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Hierarchy",

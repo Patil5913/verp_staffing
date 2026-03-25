@@ -9,9 +9,19 @@ import hmac
 import hashlib
 import base64
 import json
-from datetime import datetime, timedelta
+from verp_staffing.crm.api.naming import generate_name_series
+
 
 class SalesOrder(Document):
+    def autoname(self):
+        if not self.customer:
+            frappe.throw("Customer is required")
+
+        customer_name = frappe.db.get_value("Customer", self.customer, "name1")
+
+        self.name = generate_name_series("SO", customer_name) 
+    
+    
     def before_insert(self):
         title = (f"SO-{self.customer}-{self.date}",)
         self.title = title

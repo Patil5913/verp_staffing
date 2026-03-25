@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-01-27 14:20:31.463104",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -111,10 +110,11 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-18 09:20:10.596961",
+ "modified": "2026-03-25 15:59:02.117224",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -133,7 +133,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Technical Manager",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },
@@ -141,7 +141,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   },
