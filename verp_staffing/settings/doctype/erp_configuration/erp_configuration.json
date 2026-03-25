@@ -128,7 +128,6 @@
   {
    "fieldname": "department_access_form_fields",
    "fieldtype": "Long Text",
-   "hidden": 1,
    "label": "Department Access Form Fields"
   },
   {
@@ -159,7 +158,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-24 10:23:55.269807",
+ "modified": "2026-03-25 14:05:28.892967",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
@@ -174,6 +173,106 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Person"
+  },
+  {
+   "read": 1,
+   "role": "Lead Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "marketing Manager"
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "Training Person"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Onboarding Person"
+  },
+  {
+   "read": 1,
+   "role": "HR"
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
   }
  ],
  "row_format": "Dynamic",
