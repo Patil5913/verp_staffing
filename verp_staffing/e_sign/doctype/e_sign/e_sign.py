@@ -15,7 +15,7 @@ import os
 from frappe.utils import now_datetime
 
 
-class e_sign(Document):
+class ESign(Document):
 
 
     def validate(self):
@@ -53,7 +53,7 @@ class e_sign(Document):
 @frappe.whitelist()
 def generate_pdf_pages(docname):
 
-    doc = frappe.get_doc("e_sign", docname)
+    doc = frappe.get_doc("E Sign", docname)
     print(f"Generating PDF pages for {docname} with original PDF: {doc.original_pdf}")
 
     if not doc.original_pdf:
@@ -175,7 +175,7 @@ def complete_signing(token=None, fields=None):
     frappe.db.commit()
 
     # 3️⃣ Check if agreement complete
-    agreement = frappe.get_doc("e_sign", field.parent)
+    agreement = frappe.get_doc("E Sign", field.parent)
 
     all_signed = all(row.signed for row in agreement.signature_fields)
 
@@ -198,7 +198,7 @@ def complete_signing(token=None, fields=None):
 def send_all_signers(agreement):
     
 
-    doc = frappe.get_doc("e_sign", agreement)
+    doc = frappe.get_doc("E Sign", agreement)
 
     unique_emails = list(set([
         row.signer_email for row in doc.signature_fields
@@ -239,7 +239,7 @@ def send_all_signers(agreement):
 
 def send_final_signed_email(agreement_name):
 
-    agreement = frappe.get_doc("e_sign", agreement_name)
+    agreement = frappe.get_doc("E Sign", agreement_name)
 
     if not agreement.signed_pdf:
         frappe.log_error("Signed PDF not found", "Email Send Failed")
@@ -301,7 +301,7 @@ def calculate_file_hash(file_path):
 
 def generate_final_signed_pdf(agreement_name):
 
-    agreement = frappe.get_doc("e_sign", agreement_name)
+    agreement = frappe.get_doc("E Sign", agreement_name)
 
     if not agreement.original_pdf:
         return
@@ -378,7 +378,7 @@ def generate_certificate_page(agreement_name):
     from reportlab.lib.utils import ImageReader
     from pdfrw import PdfReader, PdfWriter
 
-    agreement = frappe.get_doc("e_sign", agreement_name)
+    agreement = frappe.get_doc("E Sign", agreement_name)
 
     if not agreement.signed_pdf:
         return
@@ -390,10 +390,10 @@ def generate_certificate_page(agreement_name):
     # -------------------------
     # GROUP UNIQUE SIGNERS
     # -------------------------
-    unique_signers = {}
+    uniquESigners = {}
     for field in agreement.signature_fields:
-        if field.signer_email not in unique_signers:
-            unique_signers[field.signer_email] = field
+        if field.signer_email not in uniquESigners:
+            uniquESigners[field.signer_email] = field
 
     # -------------------------
     # CREATE CERTIFICATE PAGE
@@ -423,7 +423,7 @@ def generate_certificate_page(agreement_name):
     # -------------------------
     # SIGNERS LOOP
     # -------------------------
-    for email, field in unique_signers.items():
+    for email, field in uniquESigners.items():
 
         if y < 120:
             c.showPage()
@@ -533,7 +533,7 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
     agreement_name = fields[0]["parent"]
     signer_email = fields[0]["signer_email"]
 
-    agreement = frappe.get_doc("e_sign", agreement_name)
+    agreement = frappe.get_doc("E Sign", agreement_name)
 
     ip_address = frappe.local.request_ip
 

@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class Teste_sign(FrappeTestCase):
+class TestESign(FrappeTestCase):
 	pass

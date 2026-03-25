@@ -32,7 +32,7 @@ const colorPalette = [
   "#d946ef"  // Fuchsia/Magenta (Vibrant Purple-Pink)
 
 ];
-frappe.ui.form.on("e_sign", {
+frappe.ui.form.on("E Sign", {
   refresh(frm) {
 
     if (!frm.doc.original_pdf) return;
@@ -470,7 +470,6 @@ const fieldIcons = {
   signature: "fa-pencil",
   initial: "fa-font",
   text: "fa-keyboard-o",
-  date_sign: "fa-calendar",
   name: "fa-user",
   email: "fa-envelope",
   date: "fa-calendar",
