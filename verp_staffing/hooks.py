@@ -326,5 +326,12 @@ fixtures = [
         "dt": "Kanban Board",
         "filters": [["kanban_board_name", "=", "Interview"]]
     },
-    {"dt": "Workspace", "filters": [["name", "=", "Email Inbox"]]},
+    {
+        "dt": "Custom HTML Block",
+        "filters": [["name", "=", "Email Inbox"]]
+    },
+    {
+        "dt": "Workspace",
+        "filters": [["name", "=", "Email Inbox"]]
+    },
 ]
