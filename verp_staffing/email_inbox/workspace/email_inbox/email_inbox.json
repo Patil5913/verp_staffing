@@ -1,0 +1,34 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"HV4ffu_cYW\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Email Inbox</span>\",\"col\":12}},{\"id\":\"QllJUzjW4G\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Email Inbox\",\"col\":12}}]",
+ "creation": "2026-03-25 11:43:25.525031",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Email Inbox",
+   "label": "Email Inbox"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "list",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Email Inbox",
+ "links": [],
+ "modified": "2026-03-25 12:24:39.500655",
+ "modified_by": "Administrator",
+ "module": "Email Inbox",
+ "name": "Email Inbox",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 29.0,
+ "shortcuts": [],
+ "title": "Email Inbox"
+}
