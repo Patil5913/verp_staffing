@@ -111,6 +111,7 @@ frappe.ui.form.on("Lead", {
 
 		getDepartmentFields("Lead").then(fields => {
 
+			
 			console.log("Allowed Fields:", fields);
 			let lead_detail_name = frm.doc.name1
 			frappe.db.get_doc("Lead Detail Form", lead_detail_name)
