@@ -110,8 +110,7 @@ function open_custom_dialog() {
 
 			// If Lead selected
 			if (values.lead) {
-				doc.opportunity_from = "Lead";
-				doc.party_name = values.lead;
+				doc.opportunity_from_lead = values.lead;
 			}
 
 			// If Referral Customer selected
