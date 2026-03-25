@@ -1,51 +1,53 @@
 [
-  {
-    "doctype": "Kanban Board",
-    "name": "Interview",
-    "kanban_board_name": "Interview",
-    "reference_doctype": "Interview",
-    "field_name": "status",
-    "fields": "[\"company\",\"role\"]",
-    "private": 0,
-    "show_labels": 1,
-    "docstatus": 0,
-    "columns": [
-      {
-        "column_name": "Interview Scheduled",
-        "indicator": "Blue",
-        "status": "Active",
-        "parent": "Interview",
-        "parenttype": "Kanban Board",
-        "parentfield": "columns",
-        "order": "[]"
-      },
-      {
-        "column_name": "Ongoing Interview",
-        "indicator": "Yellow",
-        "status": "Active",
-        "parent": "Interview",
-        "parenttype": "Kanban Board",
-        "parentfield": "columns",
-        "order": "[]"
-      },
-      {
-        "column_name": "Accepted",
-        "indicator": "Green",
-        "status": "Active",
-        "parent": "Interview",
-        "parenttype": "Kanban Board",
-        "parentfield": "columns",
-        "order": "[]"
-      },
-      {
-        "column_name": "Rejected",
-        "indicator": "Red",
-        "status": "Active",
-        "parent": "Interview",
-        "parenttype": "Kanban Board",
-        "parentfield": "columns",
-        "order": "[]"
-      }
-    ]
-  }
+ {
+  "columns": [
+   {
+    "column_name": "Interview Scheduled",
+    "indicator": "Blue",
+    "order": "[]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Ongoing Interview",
+    "indicator": "Yellow",
+    "order": "[\n \"j0m89u027l\",\n \"ihk12vieo6\",\n \"m061fvq52u\"\n]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Accepted",
+    "indicator": "Green",
+    "order": "[\n \"38377dh8cd\",\n \"mmg6dj8qbf\",\n \"fqrnqfmoro\"\n]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   },
+   {
+    "column_name": "Rejected",
+    "indicator": "Red",
+    "order": "[]",
+    "parent": "Interview",
+    "parentfield": "columns",
+    "parenttype": "Kanban Board",
+    "status": "Active"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Kanban Board",
+  "field_name": "status",
+  "fields": "[\"company\",\"role\"]",
+  "filters": null,
+  "kanban_board_name": "Interview",
+  "modified": "2026-03-25 12:06:44.806008",
+  "name": "Interview",
+  "private": 0,
+  "reference_doctype": "Interview",
+  "show_labels": 1
+ }
 ]
