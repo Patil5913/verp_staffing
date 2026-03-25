@@ -1,7 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
- "autoname": "field:series",
  "creation": "2025-11-14 12:06:33.180575",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -107,16 +105,16 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 17:35:13.533119",
+ "modified": "2026-03-25 15:45:41.032778",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
- "naming_rule": "By fieldname",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
-   "role": "Lead Person"
+   "role": "Lead Team Lead"
   },
   {
    "read": 1,
@@ -136,7 +134,7 @@
   },
   {
    "read": 1,
-   "role": "Lead Team Lead"
+   "role": "Lead Person"
   },
   {
    "read": 1,
@@ -148,7 +146,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -156,31 +154,11 @@
   },
   {
    "read": 1,
-   "role": "Marketing Manager",
-   "select": 1
+   "role": "Sales Team Lead"
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Resume Person",
+   "role": "marketing Master Manager",
    "select": 1
   },
   {
@@ -190,7 +168,17 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
    "select": 1
   },
   {
@@ -200,12 +188,17 @@
   },
   {
    "read": 1,
-   "role": "Senior Recruiter",
+   "role": "Resume Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "RUC Person",
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
    "select": 1
   },
   {
@@ -215,17 +208,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "JDC",
    "select": 1
   },
   {
@@ -236,12 +219,12 @@
   },
   {
    "read": 1,
-   "role": "JD",
+   "role": "Support Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Support Person",
+   "role": "JDC",
    "select": 1
   },
   {
@@ -249,6 +232,26 @@
    "read": 1,
    "role": "HR",
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Onboarding Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "JD",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
   },
   {
    "read": 1,

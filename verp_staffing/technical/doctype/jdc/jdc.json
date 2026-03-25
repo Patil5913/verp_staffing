@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-01-27 14:57:16.567128",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -103,10 +102,11 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-15 12:17:27.432608",
+ "modified": "2026-03-25 16:04:19.435615",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {

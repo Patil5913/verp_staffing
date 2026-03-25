@@ -5,6 +5,8 @@ import frappe, json
 from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
+from verp_staffing.crm.api.naming import generate_name_series
+
 
 class Customer(Document):
 
@@ -12,32 +14,12 @@ class Customer(Document):
         unlink_and_clean_lead_detail("Customer", self.name)
 
     def autoname(self):
-        if not self.name1:
-            self.name = frappe.generate_hash(length=10)
-            return
+        name = self.name1
 
-        base_name = self.name1.strip()
-        if not base_name:
-            self.name = frappe.generate_hash(length=10)
-            return
+        if not name:
+            frappe.throw("Customer Name is required")
 
-        # Safely check for cleaner name fields in case name1 has suffix like "try-1"
-        if hasattr(self, "customer_name") and self.customer_name:
-            base_name = self.customer_name.strip()
-        elif hasattr(self, "full_name") and self.full_name:
-            base_name = self.full_name.strip()
-
-        self.title = base_name
-
-        # Find a unique name using direct DB query
-        candidate = base_name
-        counter = 0
-
-        while frappe.db.exists(self.doctype, candidate):
-            counter += 1
-            candidate = f"{base_name}-{counter}"
-
-        self.name = candidate
+        self.name = generate_name_series("Customer", name)
 
     def after_insert(self):
         lead_detail_name = None

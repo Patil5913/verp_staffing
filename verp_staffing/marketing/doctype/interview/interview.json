@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2025-12-17 12:10:25.512845",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -20,7 +19,8 @@
    "fieldname": "marketing_link",
    "fieldtype": "Link",
    "label": "Marketing",
-   "options": "Marketing"
+   "options": "Marketing",
+   "reqd": 1
   },
   {
    "fieldname": "company",
@@ -69,10 +69,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-13 17:02:39.749939",
+ "modified": "2026-03-25 16:16:04.458195",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -80,12 +81,8 @@
    "role": "Sales Master Manager"
   },
   {
-   "create": 1,
    "read": 1,
-   "report": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
+   "role": "Sales Person"
   },
   {
    "create": 1,
@@ -101,6 +98,18 @@
   },
   {
    "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "create": 1,
    "delete": 1,
    "email": 1,
    "print": 1,
@@ -112,30 +121,22 @@
    "write": 1
   },
   {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
    "read": 1,
    "role": "Sales Team Lead"
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
+   "report": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Manager",
+   "role": "Recruiter",
    "select": 1,
    "write": 1
   },
@@ -151,7 +152,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Recruiter",
+   "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   }

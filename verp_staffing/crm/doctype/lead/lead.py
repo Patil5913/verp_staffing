@@ -5,48 +5,20 @@ import frappe
 from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
+from verp_staffing.crm.api.naming import generate_name_series
 
 
 class Lead(Document):
 
     def autoname(self):
-        import re
+        name = self.name1
+        
+        if not name:
+            frappe.throw("Lead Name is required")
+            
+        self.name = generate_name_series("Lead", name)
 
-        base_name = (self.name1 or "").strip()
-
-        # Safety fallback
-        if not base_name:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        # 🔥 DO NOT MODIFY name1
-        # Only set title (for display if needed)
-        self.title = base_name
-
-        # -------- FIND EXISTING IDS -------- #
-        existing_names = frappe.get_all(
-            "Lead", filters={"name": ["like", f"{base_name}%"]}, pluck="name"
-        )
-
-        if not existing_names:
-            self.name = base_name
-            return
-
-        max_count = 0
-
-        for name in existing_names:
-
-            if name == base_name:
-                max_count = max(max_count, 0)
-                continue
-
-            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", name)
-            if match:
-                max_count = max(max_count, int(match.group(1)))
-
-        # 🔥 ONLY ID CHANGES
-        self.name = f"{base_name}-{max_count + 1}"
-
+        
     def before_insert(self):
         # Auto assign lead_owner to logged-in user's Employee if not set
         if not self.lead_owner:

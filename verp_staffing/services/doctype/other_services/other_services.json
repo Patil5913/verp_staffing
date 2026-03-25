@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-01-09 17:03:13.883790",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -127,10 +126,11 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-15 12:19:07.284731",
+ "modified": "2026-03-25 16:26:24.179923",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -143,6 +143,22 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
    "write": 1
   },
   {
@@ -166,22 +182,6 @@
    "read": 1,
    "report": 1,
    "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
   }

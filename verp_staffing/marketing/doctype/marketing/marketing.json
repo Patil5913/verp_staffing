@@ -1,6 +1,5 @@
 {
  "actions": [],
- "autoname": "field:customer",
  "creation": "2025-12-15 16:01:57.359022",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -156,17 +155,13 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 11:50:24.570778",
+ "modified": "2026-03-25 16:12:28.323881",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
- "naming_rule": "By fieldname",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
-  {
-   "read": 1,
-   "role": "Sales Manager"
-  },
   {
    "read": 1,
    "role": "Sales Master Manager"
@@ -174,6 +169,18 @@
   {
    "read": 1,
    "role": "Sales Person"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -192,8 +199,21 @@
    "role": "Sales Team Lead"
   },
   {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
    "create": 1,
    "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
    "role": "Senior Recruiter",
    "select": 1,
    "write": 1
@@ -201,6 +221,7 @@
   {
    "create": 1,
    "read": 1,
+   "report": 1,
    "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
@@ -208,25 +229,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
    "report": 1,
-   "role": "marketing Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Marketing Mentor",
    "select": 1,
    "write": 1
@@ -234,7 +237,8 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Marketing Manager",
+   "report": 1,
+   "role": "Recruiter",
    "select": 1,
    "write": 1
   }

@@ -3,21 +3,17 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.model.naming import make_autoname
-from frappe.utils import today
+from verp_staffing.crm.api.naming import generate_name_series
 
 class Employee(Document):    
+    
     def autoname(self):
-        # Get today's date in YYYY-MM-DD
-        date_str = today()
+        name = self.employee_name
 
-        # Naming pattern: EMP-YYYY-MM-DD-####
-        email = self.employee_name.strip().lower() if self.employee_name else ''
-        name = email.split('@')[0] if email else 'EMP'
-        series = f"{name}-{date_str}-.####"
+        if not name:
+            frappe.throw("Employee Name is required")
 
-        # Generate incrementing name
-        self.series = make_autoname(series)
+        self.name = generate_name_series("Employee", name)
 
 @frappe.whitelist()
 def get_users_not_linked_to_employee(doctype, txt, searchfield, start, page_len, filters):

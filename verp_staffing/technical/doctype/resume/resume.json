@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2025-12-15 10:54:22.302861",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -102,15 +101,16 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-15 12:16:31.318484",
+ "modified": "2026-03-25 15:51:34.904630",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Master Manager"
   },
   {
    "read": 1,
@@ -130,23 +130,23 @@
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Team Lead"
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Senior Resume Person",
+   "role": "Resume Person",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Resume Person",
+   "role": "Senior Resume Person",
    "select": 1,
    "write": 1
   },
@@ -160,14 +160,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   }
