@@ -9,3 +9,4 @@ User
 Services
 E-Sign
 CR
+Email Inbox
