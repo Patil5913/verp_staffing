@@ -90,6 +90,60 @@ frappe.ui.form.on("Lead", {
 			});
 		}
 
+		function getDepartmentFields(doctype_name) {
+
+			return frappe.db.get_single_value(
+				"ERP Configuration",
+				"department_access_form_fields"
+			).then(data => {
+
+				if (!data) return [];
+
+				try {
+					let json = JSON.parse(data);
+					return json[doctype_name] || [];
+				} catch (e) {
+					console.error("Invalid JSON", e);
+					return [];
+				}
+			});
+		}
+
+		getDepartmentFields("Lead").then(fields => {
+
+			
+			console.log("Allowed Fields:", fields);
+			let lead_detail_name = frm.doc.name1
+			frappe.db.get_doc("Lead Detail Form", lead_detail_name)
+				.then(doc => {
+
+					console.log("Lead Detail Doc:", doc);
+
+					let html = `<div style="padding:10px;">`;
+					html += `<h4>Lead Detail Values</h4><ul>`;
+
+					// Step 4: match + extract values
+					fields.forEach(field => {
+
+						let label = frappe.model.unscrub(field);
+						let value = doc[field] || "Not set";
+
+						html += `
+                <li>
+                    <b>${label}:</b> ${value}
+                </li>
+            `;
+					});
+
+					html += `</ul></div>`;
+
+					// Step 5: show in HTML field
+					frm.set_df_property('lead_detail', 'options', html);
+
+				});
+
+		});
+
 		const roles = frappe.user_roles;
 
 		if (roles.includes("Extra Menu Item Not Show")) {
@@ -116,7 +170,7 @@ frappe.ui.form.on("Lead", {
 				MENU_HIDE.forEach((label) => {
 					try {
 						frm.page.remove_menu_item(label);
-					} catch {}
+					} catch { }
 				});
 				hideElements({
 					keywordSelectors: [".dropdown-menu .dropdown-item"],

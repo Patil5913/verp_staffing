@@ -13,7 +13,7 @@
   "original_pdf",
   "section_break_crjn",
   "signature_fields",
-  "section_break_mrwv",
+  "column_break_wujr",
   "signers_panel",
   "section_break_ixwc",
   "activity"
@@ -64,10 +64,6 @@
    "label": "Signers Panel"
   },
   {
-   "fieldname": "section_break_mrwv",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "section_break_ixwc",
    "fieldtype": "Section Break"
   },
@@ -81,15 +77,19 @@
   {
    "fieldname": "section_break_mqgi",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_wujr",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 10:23:55.092433",
+ "modified": "2026-03-20 10:44:29.787120",
  "modified_by": "Administrator",
  "module": "E-Sign",
- "name": "e_sign",
+ "name": "E Sign",
  "owner": "Administrator",
  "permissions": [
   {

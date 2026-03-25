@@ -36,7 +36,7 @@ def get_context(context):
         return
 
     agreement_name = fields[0]["parent"]
-    agreement = frappe.get_doc("e_sign", agreement_name)
+    agreement = frappe.get_doc("E Sign", agreement_name)
     
     signed_fields = frappe.get_all(
     "Signature Fields",
