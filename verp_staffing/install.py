@@ -88,23 +88,27 @@ ROLE_PERMISSIONS = {
             "report",
             "share",
         ],
-        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
+        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
         "Employee": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Lead Manager": {
-        "Lead": ["read", "write", "create"],
-        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
+        "Lead": ["read", "write", "create", "report"],
+        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
         "Employee": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Lead Team Lead": {
-        "Lead": ["read", "write", "create"],
-        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
+        "Lead": ["read", "write", "create", "report"],
+        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
         "Employee": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Lead Person": {
-        "Lead": ["read", "write", "create"],
-        "Opportunity": {"perms": ["read", "write", "create"], "if_owner": 1},
+        "Lead": ["read", "write", "create", "report"],
+        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
         "Employee": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Sales Master Manager": {
         "Lead": [
@@ -129,7 +133,7 @@ ROLE_PERMISSIONS = {
             "report",
             "share",
         ],
-        "Customer": ["read", "write", "create"],
+        "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order": [
@@ -151,12 +155,13 @@ ROLE_PERMISSIONS = {
         "Marketing": ["read"],
         "Interview": ["read"],
         "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"]
+        "Sales Stage": ["read", "create","select"],
+        "ERP Configuration": ["read"],
     },
     "Sales Manager": {
-        "Lead": ["read", "write", "create"],
-        "Opportunity": ["read", "write", "create"],
-        "Customer": ["read", "write", "create"],
+        "Lead": ["read", "write", "create", "report"],
+        "Opportunity": ["read", "write", "create", "report"],
+        "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order": ["select", "read", "write", "create"],
@@ -168,12 +173,13 @@ ROLE_PERMISSIONS = {
         "Marketing": ["read"],
         "Interview": ["read"],
         "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"]
+        "Sales Stage": ["read", "create","select"],
+        "ERP Configuration": ["read"],
     },
     "Sales Team Lead": {
-        "Lead": ["read", "write", "create"],
-        "Opportunity": ["read", "write", "create"],
-        "Customer": ["read", "write", "create"],
+        "Lead": ["read", "write", "create", "report"],
+        "Opportunity": ["read", "write", "create", "report"],
+        "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order": ["select", "read", "write", "create"],
@@ -185,12 +191,13 @@ ROLE_PERMISSIONS = {
         "Marketing": ["read"],
         "Interview": ["read"],
         "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"]
+        "Sales Stage": ["read", "create","select"],
+        "ERP Configuration": ["read"],
     },
     "Sales Person": {
-        "Lead": ["read", "write", "create"],
-        "Opportunity": ["read", "write", "create"],
-        "Customer": ["read", "write", "create"],
+        "Lead": ["read", "write", "create", "report"],
+        "Opportunity": ["read", "write", "create", "report"],
+        "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
         "Sales Stage": ["read", "create"],
         "Sales Order": ["select", "read", "write", "create"],
@@ -202,7 +209,8 @@ ROLE_PERMISSIONS = {
         "Marketing": ["read"],
         "Interview": ["read"],
         "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"]
+        "Sales Stage": ["read", "create","select"],
+        "ERP Configuration": ["read"],
     },
     "Marketing Master Manager": {
         "Marketing": [
@@ -230,36 +238,40 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Marketing Manager": {
-        "Marketing": ["read", "write", "create", "select"],
+        "Marketing": ["read", "write", "create", "select", "report"],
         "Interview": ["read", "write", "create", "select", "report"],
         "Other Services": ["read", "write", "create", "select", "report"],
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Marketing Team Lead": {
-        "Marketing": ["read", "write", "create", "select"],
+        "Marketing": ["read", "write", "create", "select", "report"],
         "Interview": ["read", "write", "create", "select", "report"],
         "Other Services": ["read", "write", "create", "select", "report"],
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Senior Recruiter": {
-        "Marketing": ["read", "write", "create", "select"],
+        "Marketing": ["read", "write", "create", "select", "report"],
         "Interview": ["read", "write", "create", "select", "report"],
         "Other Services": ["read", "write", "create", "select", "report"],
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Marketing Mentor": {
-        "Marketing": ["read", "write", "create", "select"],
+        "Marketing": ["read", "write", "create", "select", "report"],
         "Interview": ["read", "write", "create", "select", "report"],
         "Other Services": ["read", "write", "create", "select", "report"],
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
@@ -268,25 +280,28 @@ ROLE_PERMISSIONS = {
         "Lead Detail Form": ["read"],
     },
     "Recruiter": {
-        "Marketing": ["read", "write", "create", "select"],
+        "Marketing": ["read", "write", "create", "select", "report"],
         "Interview": ["read", "write", "create", "select", "report"],
         "Other Services": ["read", "write", "create", "select", "report"],
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Senior Resume Person": {
         "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Resume Person": {
         "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Technical Coordinator": {
         "RUC": ["read", "write", "create", "select"],
@@ -298,6 +313,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Technical Manager": {
         "RUC": ["read", "write", "create", "select"],
@@ -309,6 +325,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Technical Master Manager": {
         "RUC": ["read", "write", "create", "select"],
@@ -320,6 +337,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "RUC Person": {
         "RUC": ["read", "write", "create", "select"],
@@ -327,6 +345,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Training Person": {
         "Training": ["read", "write", "create", "select"],
@@ -334,6 +353,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "Support Person": {
         "RUC": ["read", "write", "create", "select"],
@@ -341,6 +361,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "JDC": {
         "JDC": ["read", "write", "create", "select"],
@@ -348,14 +369,17 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "HR Manager": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
+        "ERP Configuration": ["read"],
     },
     "HR": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
+        "ERP Configuration": ["read"],
     },
     "Inbox User": {
         "Communication": ["read", "create", "email"],
@@ -367,6 +391,7 @@ ROLE_PERMISSIONS = {
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "ERP Configuration": ["read"],
     },
     "_show_marketing": {"Customer": ["read", "report"]},
     "_show_lead": {"Lead": ["read", "report"]},
@@ -716,19 +741,35 @@ FORM_TOURS = {
             },
         ],
     },
-    # "Customer": {
-    #     "title": "Customer Form",
-    #     "steps": [
-    #         {
-    #             "title": "Select Opportunity",
-    #             "fieldname": "opportunity",
-    #             "description": "Select the opportunity which you want to convert as customer.",
-    #             "position": "Right Center",
-    #             "label": "Opportunity",
-    #             "fieldtype": "Link",
-    #         }
-    #     ],
-    # },
+    "Customer": {
+        "title": "Customer Creation Guide",
+        "steps": [
+            {
+                "title": "Enter Customer Name",
+                "fieldname": "name1",
+                "description": "Provide the official name of the customer. This will be used across all transactions and records.",
+                "position": "Right Center",
+                "label": "Customer Name",
+                "fieldtype": "Data"
+            },
+            {
+                "title": "Select Customer Source",
+                "fieldname": "customer_from",
+                "description": "Choose where this customer originated from. Select <b>Lead</b> or <b>Opportunity</b>.",
+                "position": "Right Center",
+                "label": "Customer From",
+                "fieldtype": "Link"
+            },
+            {
+                "title": "Link the Source Record",
+                "fieldname": "party_name",
+                "description": "Based on the selected source, choose the relevant record. Only matching <b>Leads</b> or <b>Opportunities</b> will be shown.",
+                "position": "Right Center",
+                "label": "Party",
+                "fieldtype": "Dynamic Link"
+            }
+        ]
+    },
 }
 
 
@@ -1137,6 +1178,9 @@ def remove_default_workspaces():
         "Sales",
         "Leads",
         "Other Service",
+        "Email Inbox",
+        "CR",
+        "Onboarding"
     ]
 
     # Hide all others

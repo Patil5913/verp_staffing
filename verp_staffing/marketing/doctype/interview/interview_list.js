@@ -1,4 +1,5 @@
-let marketing_filter_initialized = false;
+let _marketing_applied_value = null;
+let _marketing_is_setting = false;
 
 frappe.listview_settings["Interview"] = {
     refresh(listview) {
@@ -6,9 +7,7 @@ frappe.listview_settings["Interview"] = {
         if (!page) return;
 
         setTimeout(() => {
-            page.wrapper
-                .find('.add-new-column')
-                .hide();
+            page.wrapper.find('.add-new-column').hide();
         }, 300);
 
         hide_list_controls(page);
@@ -20,19 +19,20 @@ frappe.listview_settings["Interview"] = {
             });
         }
 
-        if (!marketing_filter_initialized) {
-            marketing_filter_initialized = true;
-            frappe.after_ajax(() => {
-                auto_apply_marketing_filter(listview);
-            });
-        }
+        // ✅ Block if we ourselves triggered this refresh
+        if (_marketing_is_setting) return;
+
+        const param = get_marketing_param();
+
+        // ✅ Block if this value was already applied — don't re-apply
+        if (_marketing_applied_value === param && param) return;
+
+        auto_apply_marketing_filter(listview);
     }
 };
 
 function hide_list_controls(page) {
-    page.wrapper.find(
-        '.filter-button, .filter-x-button, .menu-btn-group'
-    ).hide();
+    page.wrapper.find('.filter-section, .menu-btn-group').hide();
 }
 
 function get_marketing_param() {
@@ -49,16 +49,6 @@ function auto_apply_marketing_filter(listview) {
     const fa = listview.filter_area;
     if (!fa) return;
 
-    // filters may not be initialized yet
-    const filters = Array.isArray(fa.filters) ? fa.filters : [];
-
-    // Check if marketing_link filter already exists
-    const already_applied = filters.some(f => {
-        return f[1] === "marketing_link";
-    });
-
-    if (already_applied) return;
-
     frappe.call({
         method: "verp_staffing.marketing.doctype.interview.interview.get_marketing_customer_options",
         callback(r) {
@@ -67,27 +57,64 @@ function auto_apply_marketing_filter(listview) {
                 const body = listview.page?.body;
                 if (body) {
                     body.html(`
-                    <div class="text-muted text-center mt-5">
-                        You are not assigned to any customer.
-                    </div>
-                `);
+                        <div class="text-muted text-center mt-5">
+                            You are not assigned to any customer.
+                        </div>
+                    `);
                 }
                 return;
             }
 
-
             const param = get_marketing_param();
             const value = param || options[0].value;
-
             if (!param) set_marketing_param(value);
 
-            fa.add([
-                ["Interview", "marketing_link", "=", value]
-            ]);
+            // ✅ If already applied this exact value — skip entirely
+            if (_marketing_applied_value === value) {
+                update_customer_label(listview.page, options, value);
+                return;
+            }
 
+            // ✅ Set guard so the refresh caused by filter change is ignored
+            _marketing_is_setting = true;
+            _marketing_applied_value = value;
+
+            set_filter_without_loop(listview, value);
             update_customer_label(listview.page, options, value);
+
+            // ✅ Release guard after Frappe settles
+            setTimeout(() => {
+                _marketing_is_setting = false;
+            }, 1000);
         }
     });
+}
+
+function set_filter_without_loop(listview, value) {
+    // ✅ Directly manipulate filter state without triggering refresh chain
+    try {
+        const existing = listview.filter_area.filter_list.filters || [];
+
+        // Remove old marketing_link filter if present
+        const without_marketing = existing.filter(f =>
+            f.fieldname !== "marketing_link"
+        );
+
+        // Use listview's internal method that doesn't fire refresh
+        listview.filter_area.filter_list.filters = without_marketing;
+
+        // Now add cleanly
+        listview.filter_area.add([
+            ["Interview", "marketing_link", "=", value]
+        ]);
+
+    } catch(e) {
+        // Fallback
+        listview.filter_area.clear();
+        listview.filter_area.add([
+            ["Interview", "marketing_link", "=", value]
+        ]);
+    }
 }
 
 function ensure_customer_label(page) {
@@ -125,7 +152,6 @@ function ensure_customer_label(page) {
 function update_customer_label(page, options, selected_value) {
     const pill = ensure_customer_label(page);
     const valueEl = pill.find(".marketing-customer-value");
-
     const selected = options.find(o => o.value === selected_value);
 
     if (!selected) {
@@ -137,8 +163,6 @@ function update_customer_label(page, options, selected_value) {
     valueEl.text(selected.label ? selected.label : selected.value);
     pill.css("opacity", 1);
 }
-
-
 
 function open_marketing_customer_dialog(listview) {
     const current_value = get_marketing_param();
@@ -158,16 +182,17 @@ function open_marketing_customer_dialog(listview) {
                     fieldtype: "Select",
                     fieldname: "marketing",
                     label: "Customer",
-                    options: options.map(o => ({
-                        label: o.label,
-                        value: o.value
-                    })),
+                    options: options.map(o => ({ label: o.label, value: o.value })),
                     default: current_value,
                     reqd: 1
                 }],
                 primary_action_label: "Apply",
                 primary_action(values) {
                     dialog.hide();
+
+                    // ✅ Reset applied value so filter re-applies with new value
+                    _marketing_applied_value = null;
+
                     set_marketing_param(values.marketing);
                     apply_marketing_filter(listview, values.marketing);
                     update_customer_label(listview.page, options, values.marketing);
@@ -182,12 +207,13 @@ function open_marketing_customer_dialog(listview) {
 function apply_marketing_filter(listview, value) {
     if (!value || !listview.filter_area) return;
 
-    listview.filter_area.clear();
-    listview.filter_area.add(
-        "Interview",
-        "marketing_link",
-        "=",
-        value
-    );
+    _marketing_is_setting = true;
+    _marketing_applied_value = value;
 
+    listview.filter_area.clear();
+    listview.filter_area.add("Interview", "marketing_link", "=", value);
+
+    setTimeout(() => {
+        _marketing_is_setting = false;
+    }, 1000);
 }
