@@ -19,7 +19,7 @@ class SalesOrder(Document):
 
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
-        self.name = generate_name_series("SO", customer_name) 
+        self.name = generate_name_series("Sales Order", customer_name) 
     
     
     def before_insert(self):

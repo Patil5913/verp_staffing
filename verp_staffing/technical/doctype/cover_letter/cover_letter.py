@@ -14,7 +14,7 @@ class CoverLetter(Document):
 
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
-        self.name = generate_name_series("CL", customer_name)
+        self.name = generate_name_series("Cover Letter", customer_name)
         
         
     def after_insert(self):

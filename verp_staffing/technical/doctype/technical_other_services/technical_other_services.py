@@ -15,7 +15,7 @@ class TechnicalOtherServices(Document):
 
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
-        self.name = generate_name_series("TOS", customer_name)
+        self.name = generate_name_series("Technical Other Services", customer_name)
         
         
     def after_insert(self):
