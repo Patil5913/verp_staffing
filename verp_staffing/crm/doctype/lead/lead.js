@@ -131,6 +131,341 @@ frappe.ui.form.on("Lead", {
 			});
 		});
 
+		function getDepartmentFields(doctype_name) {
+
+			return frappe.db.get_single_value(
+				"ERP Configuration",
+				"department_access_form_fields"
+			).then(data => {
+
+				if (!data) return [];
+
+				try {
+					let json = JSON.parse(data);
+					return json[doctype_name] || [];
+				} catch (e) {
+					console.error("Invalid JSON", e);
+					return [];
+				}
+			});
+		}
+
+		getDepartmentFields("Lead").then(fields => {
+
+			let lead_detail_name = frm.doc.name1;
+			if (!lead_detail_name) return;
+
+			Promise.all([
+				frappe.db.get_doc("Lead Detail Form", lead_detail_name),
+				frappe.db.get_doc("DocType", "Lead Detail Form")
+			]).then(([doc, meta]) => {
+
+				let field_map = {};
+				meta.fields.forEach(f => {
+					field_map[f.fieldname] = f;
+				});
+				console.log("field_map", field_map);
+
+
+				let html = `
+<div class="form-layout">
+    <div class="form-section">
+        <div class="section-head">Lead Detail Form</div>
+        <div class="section-body">
+            <div style="
+                display:flex;
+                flex-wrap:wrap;
+                gap:16px;
+            ">
+`;
+
+				fields.forEach(field => {
+
+					let meta_field = field_map[field];
+					if (!meta_field) return;
+
+					let label = meta_field.label || frappe.model.unscrub(field);
+					let fieldtype = meta_field.fieldtype;
+					let value = doc[field] || "";
+
+					let input_html = getInputHTML(fieldtype, value, field);
+
+					// ✅ FULL WIDTH for TABLE / LONG TEXT
+					let isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(fieldtype);
+
+					html += `
+        <div style="
+            width: ${isFullWidth ? "100%" : "calc(50% - 8px)"};
+            min-width: ${isFullWidth ? "100%" : "250px"};
+        ">
+            <div class="frappe-control">
+
+                <div class="control-label" style="margin-bottom:6px;">
+                    ${label}
+                    ${meta_field.reqd ? '<span style="color:red;">*</span>' : ''}
+                </div>
+
+                <div class="control-input">
+                    ${input_html}
+                </div>
+
+            </div>
+        </div>
+    `;
+				});
+
+				html += `
+            </div>
+
+            <div style="margin-top:20px;">
+                <button class="btn btn-primary btn-sm" id="save_dynamic_btn">
+                    Save
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+`;
+
+				frm.set_df_property('lead_detail', 'options', html);
+				// ✅ SAVE BUTTON LOGIC (FIXED - NO DUPLICATE)
+				setTimeout(() => {
+
+					let btn = document.getElementById("save_dynamic_btn");
+					if (!btn) return;
+
+					btn.onclick = null;
+
+					btn.onclick = () => {
+
+						if (!validateWithMeta(field_map)) {
+							frappe.msgprint("Please fix highlighted fields");
+							return;
+						}
+
+						let data = {};
+
+						document.querySelectorAll('.dynamic-input').forEach(input => {
+
+							let field = input.dataset.field;
+
+							data[field] = input.type === "checkbox"
+								? (input.checked ? 1 : 0)
+								: input.value;
+
+						});
+
+						// UX improvement
+						btn.innerText = "Saving...";
+						btn.disabled = true;
+
+						frappe.call({
+							method: "frappe.client.set_value",
+							args: {
+								doctype: "Lead Detail Form",
+								name: frm.doc.name1,
+								fieldname: data
+							},
+							callback: function () {
+
+								btn.innerText = "Save";
+								btn.disabled = false;
+
+								frappe.show_alert({
+									message: "Saved Successfully",
+									indicator: "green"
+								});
+
+							}
+						});
+
+					};
+
+				}, 300);
+
+			});
+
+		});
+
+		function getInputHTML(fieldtype, value, field) {
+			console.log("field ", fieldtype);
+
+
+			// normalize value
+			value = value || "";
+
+			let common_class = "form-control input-with-feedback dynamic-input";
+
+			switch (fieldtype) {
+
+				case "Date":
+					value = value ? value.split(" ")[0] : "";
+					return `
+                <input 
+                    type="date"
+                    value="${value}"
+                    data-field="${field}"
+                    class="${common_class}"
+                />
+            `;
+
+				case "Int":
+				case "Float":
+				case "Currency":
+					return `
+                <input 
+                    type="number"
+                    value="${value}"
+                    data-field="${field}"
+                    class="${common_class}"
+                />
+            `;
+
+				case "Table":
+					let rows = doc[field] || [];
+
+					let table_html = `<table class="table table-bordered">
+        <tr><th>#</th><th>Rows</th></tr>`;
+
+					rows.forEach((row, i) => {
+						table_html += `<tr>
+            <td>${i + 1}</td>
+            <td>Row Data</td>
+        </tr>`;
+					});
+
+					table_html += `</table>`;
+
+					return table_html;
+
+				case "Check":
+					return `
+                <div class="checkbox" style="margin-top:6px;">
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input 
+                            type="checkbox"
+                            data-field="${field}"
+                            class="dynamic-input"
+                            ${value ? "checked" : ""}
+                        />
+                        <span></span>
+                    </label>
+                </div>
+            `;
+
+				case "Email":
+					return `
+                <input 
+                    type="email"
+                    value="${value}"
+                    data-field="${field}"
+                    class="${common_class}"
+                    placeholder="Enter ${frappe.model.unscrub(field)}"
+                />
+            `;
+
+				default:
+					return `
+                <input 
+                    type="text"
+                    value="${value}"
+                    data-field="${field}"
+                    class="${common_class}"
+                    placeholder="Enter ${frappe.model.unscrub(field)}"
+                />
+            `;
+			}
+		}
+
+		function markInvalid(input, message) {
+
+			input.style.border = "1px solid red";
+
+			let error = document.createElement("div");
+			error.className = "error-text";
+			error.style.color = "red";
+			error.style.fontSize = "12px";
+			error.style.marginTop = "4px";
+			error.innerText = message;
+
+			input.parentNode.appendChild(error);
+		}
+
+		function validateWithMeta(field_map) {
+
+			let isValid = true;
+			let firstInvalid = null;
+
+			document.querySelectorAll('.dynamic-input').forEach(input => {
+
+				let field = input.dataset.field;
+				let meta = field_map[field];
+
+				if (!meta) return;
+
+				let value = input.type === "checkbox"
+					? (input.checked ? 1 : 0)
+					: input.value;
+
+				// ✅ Reset UI
+				input.style.border = "1px solid #ccc";
+
+				let old = input.parentNode.querySelector(".error-text");
+				if (old) old.remove();
+
+				// 🔴 Required (FIXED)
+				if (meta.reqd) {
+
+					let isEmpty =
+						input.type === "checkbox"
+							? false // checkbox always valid unless custom logic
+							: !value;
+
+					if (isEmpty) {
+						markInvalid(input, `${meta.label} is required`);
+						isValid = false;
+					}
+				}
+
+				// 🔴 Email
+				if (meta.fieldtype === "Email" && value) {
+					let regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+					if (!regex.test(value)) {
+						markInvalid(input, `${meta.label} must be valid email`);
+						isValid = false;
+					}
+				}
+
+				// 🔴 Number
+				if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value) {
+					if (isNaN(value)) {
+						markInvalid(input, `${meta.label} must be a number`);
+						isValid = false;
+					}
+				}
+
+				// 🔴 Date
+				if (meta.fieldtype === "Date" && value) {
+					if (isNaN(Date.parse(value))) {
+						markInvalid(input, `${meta.label} must be valid date`);
+						isValid = false;
+					}
+				}
+
+				if (!firstInvalid && !isValid) {
+					firstInvalid = input;
+				}
+
+			});
+
+			if (firstInvalid) {
+				firstInvalid.focus();
+				firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+			}
+
+			return isValid;
+		}
 		const roles = frappe.user_roles;
 
 		if (roles.includes("Extra Menu Item Not Show")) {
