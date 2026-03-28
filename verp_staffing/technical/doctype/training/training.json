@@ -10,6 +10,7 @@
   "resume",
   "section_break_xjvc",
   "proof_of_work",
+  "lead_details",
   "notes_section",
   "notes_html",
   "updates_section",
@@ -83,6 +84,10 @@
   {
    "fieldname": "resume",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
@@ -118,14 +123,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },

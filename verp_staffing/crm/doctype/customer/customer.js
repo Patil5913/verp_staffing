@@ -1323,19 +1323,32 @@ function showOnboarding_tab(frm) {
 	});
 }
 
-function customer_owner_open_update_detail_dialog(frm) {
+function customer_owner_open_update_detail_dialog(frm, custom_fields) {
 	frappe.call({
 		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
 		args: { customer_name: frm.doc.name },
 		callback: function (r) {
 			const current_values = r.message || {};
-			const FIELDS = {
+			const all_fields = custom_fields || {
 				surname: "Surname",
 				first_name: "First Name",
 				father_name: "Father Name",
 				email: "Email",
+				address_history: "table",
 			};
-			_open_update_detail_dialog(frm, current_values, FIELDS, "owner");
+
+			const simple_fields = {};
+			const table_fields = {};
+
+			Object.entries(all_fields).forEach(([fieldname, label]) => {
+				if (SERVICE_UPDATABLE_TABLE_FIELDS[fieldname]) {
+					table_fields[fieldname] = SERVICE_UPDATABLE_TABLE_FIELDS[fieldname];
+				} else {
+					simple_fields[fieldname] = label;
+				}
+			});
+
+			_open_update_detail_dialog(frm, current_values, simple_fields, table_fields, "owner");
 		},
 	});
 }

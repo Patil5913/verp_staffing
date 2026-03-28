@@ -7,9 +7,12 @@ from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 
+from verp_staffing.crm.api.helpers import get_employee_name, get_all_subordinates , get_all_superiors_with_roles
+
 
 class Customer(Document):
-
+    
+    
     def on_trash(self):
         unlink_and_clean_lead_detail("Customer", self.name)
 
@@ -81,8 +84,10 @@ def get_employee_department():
     emp = frappe.get_doc("Employee", employee_name)
     return emp.employee_assignment_details_table
 
+
 from verp_staffing.install import SERVICE_DOCTYPE_MAP
 from verp_staffing.employee.doctype.employee.employee import user_belongs_to_department
+
 
 @frappe.whitelist()
 def get_forwardable_departments(customer):
@@ -113,6 +118,8 @@ def get_forwardable_departments(customer):
         options.append("Onboarding")
 
     return options
+
+
 def get_services_for_customer(customer):
 
     so = frappe.get_all(
@@ -137,6 +144,7 @@ def get_services_for_customer(customer):
         pluck="service",
     )
 
+
 def is_all_services_completed(customer, services):
     for service in services:
         if not is_service_completed(service, customer):
@@ -144,7 +152,8 @@ def is_all_services_completed(customer, services):
 
     return True
 
-def is_service_completed(service,customer):
+
+def is_service_completed(service, customer):
     service_key = service.lower()
 
     # resolve doctype
@@ -153,13 +162,13 @@ def is_service_completed(service,customer):
     if not doctype:
 
         parents = frappe.db.sql(
-        """
+            """
         SELECT parent FROM `tabDepartment Service`
         WHERE service_name = %s
         """,
-                (service,),
-                as_dict=True,
-            )
+            (service,),
+            as_dict=True,
+        )
 
         if not parents:
             frappe.throw(f"No department found for service {service}")
@@ -175,22 +184,22 @@ def is_service_completed(service,customer):
 
         # check if record exists
     doc = frappe.db.sql(
-            f"""
+        f"""
             SELECT status
             FROM `tab{doctype}`
             WHERE customer = %s
             ORDER BY creation DESC
             LIMIT 1
             """,
-            customer,
-            as_dict=True
-        )
+        customer,
+        as_dict=True,
+    )
 
     if len(doc) > 0 and doc[0].status == "Completed":
         return True
-    else: 
+    else:
         return False
-    
+
 
 def get_active_departments(customer):
 
@@ -202,12 +211,17 @@ def get_active_departments(customer):
         pluck="department",
     )
 
+
 def can_user_forward_to_department(user, department):
     frappe.errprint(f"user: {user}")
     if user == "Administrator":
         return True
-    return user_belongs_to_department(user, "Marketing") \
-        if department == "Onboarding" else True
+    return (
+        user_belongs_to_department(user, "Marketing")
+        if department == "Onboarding"
+        else True
+    )
+
 
 @frappe.whitelist()
 def get_forwardable_departments_from_service(doctype, docname):
@@ -265,13 +279,15 @@ def get_customer_routes(customer):
             "assigned_to",
             "forwarded_by",
             "forwarded_on",
-            "completed_on"
+            "completed_on",
         ],
-        order_by="forwarded_on desc"
+        order_by="forwarded_on desc",
     )
+
 
 from frappe.utils import now_datetime
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
+
 
 @frappe.whitelist()
 def update_route_status(route_name, status):
@@ -284,7 +300,7 @@ def update_route_status(route_name, status):
     # 1. Block if already completed
     if route.status == "Completed":
         frappe.throw("Status already completed. Cannot revert.")
-    
+
     # 2. Get employee of current user
     employee = get_employee_from_user(frappe.session.user)
 
@@ -301,10 +317,8 @@ def update_route_status(route_name, status):
 
     route.save(ignore_permissions=True)
 
-    return {
-        "status": "success",
-        "message": f"{route.department} marked as Completed"
-    }
+    return {"status": "success", "message": f"{route.department} marked as Completed"}
+
 
 @frappe.whitelist()
 def get_after_placement_details(customer):
@@ -322,8 +336,9 @@ def get_after_placement_details(customer):
         "job_duration": data.job_duration,
         "salary": data.salary,
         "company_percentage": data.company_percentage,
-        "lead_name": data.name
+        "lead_name": data.name,
     }
+
 
 @frappe.whitelist()
 def update_company_percentage(lead_name, company_percentage):

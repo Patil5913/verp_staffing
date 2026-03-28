@@ -12,6 +12,7 @@
   "status",
   "section_break_izli",
   "proof_of_work",
+  "lead_details",
   "tab_2_tab",
   "notes_html",
   "updates_section",
@@ -100,6 +101,10 @@
   {
    "fieldname": "resume",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
@@ -145,7 +150,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Recruiter",
+   "role": "Senior Recruiter",
    "select": 1,
    "write": 1
   },

@@ -15,17 +15,13 @@ def get_user(employee_name):
     if not employee_name:
         return None
 
-    # Try common field names for User link on Employee doctype
-    # Check which field actually exists on your Employee doctype
-    for field in ["user", "user_id", "employee_user_id"]:
-        try:
-            user = frappe.db.get_value("Employee", employee_name, field)
-            if user:
-                # Verify this user exists in User doctype
-                if frappe.db.exists("User", user):
-                    return user
-        except Exception:
-            continue
+    try:
+        user = frappe.db.get_value("Employee", employee_name, "user")
+        if user:
+            if frappe.db.exists("User", user):
+                return user
+    except Exception:
+        return None
 
     return None
 
@@ -117,6 +113,121 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
     )
 
 
+@frappe.whitelist()
+def get_all_superiors_with_roles(employee: str, department: str | None = None):
+    result = []
+    visited = set()
+    current = employee
+
+    while current:
+        filters = {"parent": current}
+        if department:
+            filters["department"] = department
+
+        # Get manager (assigned_to)
+        manager = frappe.db.get_value(
+            "Employee Assignment Detail", filters, "assigned_to"
+        )
+
+        if not manager or manager in visited:
+            break
+
+        visited.add(manager)
+
+        # Get linked User for this manager Employee
+        manager_user = frappe.db.get_value("Employee", manager, "user")
+
+        # Get all Frappe roles assigned to that user
+        roles = []
+        if manager_user:
+            roles = frappe.db.get_all(
+                "Has Role",
+                filters={"parent": manager_user, "parenttype": "User"},
+                pluck="role",
+            )
+
+        result.append({"employee": manager, "roles": roles})
+
+        current = manager  # move upward
+
+    return result
+
+
+def get_approver_by_department(employee_name):
+    """
+    Determines the correct approver for an employee based on:
+    1. Employee's department from Employee Assignment Detail
+    2. Matching department → role mapping from ERP Configuration
+    3. Walking up hierarchy to find first superior with that role
+    4. Falls back to direct manager if no match found
+    """
+    try:
+        erp_config = frappe.get_single("ERP Configuration")
+    except Exception:
+        frappe.throw("ERP Configuration not found.")
+
+    # Get employee's departments
+    departments = frappe.db.get_all(
+        "Employee Assignment Detail",
+        filters={"parent": employee_name},
+        pluck="department",
+    )
+
+    # Map department name → ERP config role
+    dept_role_map = {
+        "Sales": erp_config.get("sales_department"),
+        "Marketing": erp_config.get("marketing_department"),
+    }
+
+    # All technical/service departments map to technical_department role
+    technical_depts = [
+        "Technical",
+        "Resume",
+        "RUC",
+        "JDC",
+        "Training",
+        "Cover Letter",
+        "Technical Other Services",
+        "Marketing Other Services",
+    ]
+    for dept in technical_depts:
+        dept_role_map[dept] = erp_config.get("technical_department")
+
+    # Find required role based on employee's department
+    required_role = None
+    for dept in departments:
+        if dept in dept_role_map and dept_role_map[dept]:
+            required_role = dept_role_map[dept]
+            break
+
+    # Fallback to direct manager if no department/role match
+    if not required_role:
+        return (
+            frappe.db.get_value(
+                "Employee Assignment Detail",
+                filters={"parent": employee_name},
+                fieldname="assigned_to",
+            )
+            or None
+        )
+
+    # Walk up hierarchy and find first superior with required role
+    superiors = get_all_superiors_with_roles(employee_name)
+    for superior in superiors:
+        if required_role in superior.get("roles", []):
+            return superior.get("employee")
+
+    # Fallback to direct manager if no superior found with required role
+    return (
+        frappe.db.get_value(
+            "Employee Assignment Detail",
+            filters={"parent": employee_name},
+            fieldname="assigned_to",
+        )
+        or None
+    )
+
+
 # to get visible employee names for a user
 def get_visible_employee_names(user, department=None):
     root_employee = get_employee_name(user)
@@ -177,7 +288,7 @@ def get_allowed_leads(user):
 #             [["Opportunity", "opportunity_owner", "in", owners]]
 #         )
 #         return original_get(**frappe.local.form_dict)
-    
+
 #     if doctype == "Resume" or doctype == "RUC":
 #         owners = get_visible_employee_names(user)
 #         frappe.local.form_dict["filters"] = frappe.as_json(
@@ -219,14 +330,14 @@ def get_allowed_leads(user):
 #         frappe.local.form_dict["filters"] = frappe.as_json(
 #             [["Technical Other Services","assign_to","in",owners]]
 #         )
-    
+
 #     if doctype == "Marketing Other Services":
 #         owners = get_visible_employee_names(user)
 #         frappe.local.form_dict["filters"] = frappe.as_json(
 #             [["Marketing Other Services","assign_to","in",owners]]
 #         )
 
-    # return original_get(**frappe.local.form_dict)
+# return original_get(**frappe.local.form_dict)
 
 import json
 
@@ -418,6 +529,7 @@ def generic_assign_query(user):
 
     return f"`tab{doctype}`.assign_to IN ({team_sql})"
 
+
 def opportunity_query(user):
 
     if user == "Administrator":
@@ -432,7 +544,9 @@ def opportunity_query(user):
 
     return f"`tabOpportunity`.opportunity_owner IN ({team_sql})"
 
+
 from verp_staffing.employee.doctype.employee.employee import get_user_departments
+
 
 def lead_query(user):
 
@@ -454,28 +568,35 @@ def lead_query(user):
     # -------------------------
     if "Sales" in departments:
 
-        conditions.append(f"""
+        conditions.append(
+            f"""
             `tabLead`.lead_owner IN ({team_sql})
-        """)
+        """
+        )
 
-        conditions.append(f"""
+        conditions.append(
+            f"""
             `tabLead`.name IN (
                 SELECT `tabOpportunity`.party_name
                 FROM `tabOpportunity`
                 WHERE `tabOpportunity`.opportunity_owner IN ({team_sql})
             )
-        """)
+        """
+        )
 
     # -------------------------
     # NON-SALES LOGIC (fallback)
     # -------------------------
     else:
         # optional: restrict completely OR allow hierarchy
-        conditions.append(f"""
+        conditions.append(
+            f"""
             `tabLead`.lead_owner IN ({team_sql})
-        """)
+        """
+        )
 
     return "(" + " OR ".join(conditions) + ")"
+
 
 def customer_query(user):
 
@@ -483,20 +604,14 @@ def customer_query(user):
         return ""
 
     # 1. get employee
-    employee = frappe.db.get_value(
-        "Employee",
-        {"user": user},
-        "name"
-    )
+    employee = frappe.db.get_value("Employee", {"user": user}, "name")
 
     if not employee:
         return "1=0"
 
     # 2. get departments
     departments = frappe.get_all(
-        "Employee Assignment Detail",
-        filters={"parent": employee},
-        pluck="department"
+        "Employee Assignment Detail", filters={"parent": employee}, pluck="department"
     )
 
     # 3. get team
@@ -513,9 +628,11 @@ def customer_query(user):
     # SALES LOGIC
     # -------------------------
     if "Sales" in departments:
-        conditions.append(f"""
+        conditions.append(
+            f"""
             `tabCustomer`.customer_owner IN ({team_sql})
-        """)
+        """
+        )
 
     # -------------------------
     # CR / ONBOARDING LOGIC
@@ -532,7 +649,8 @@ def customer_query(user):
 
         dept_sql = ",".join([frappe.db.escape(d) for d in routing_departments])
 
-        conditions.append(f"""
+        conditions.append(
+            f"""
             EXISTS (
                 SELECT 1
                 FROM `tabCustomer Department Route`
@@ -541,7 +659,8 @@ def customer_query(user):
                     AND `tabCustomer Department Route`.department IN ({dept_sql})
                     AND `tabCustomer Department Route`.assigned_to IN ({team_sql})
             )
-        """)
+        """
+        )
 
     # -------------------------
     # FINAL CONDITION
