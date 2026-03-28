@@ -12,6 +12,7 @@
   "status",
   "section_break_zoqd",
   "proof_of_work",
+  "lead_details",
   "notes_section",
   "notes_html",
   "updates_section",
@@ -104,13 +105,17 @@
    "fieldtype": "Table",
    "label": "Proof Of Work",
    "options": "Proof Of Work"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 15:59:02.117224",
+ "modified": "2026-03-25 09:39:56.168956",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",

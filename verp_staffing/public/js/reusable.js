@@ -331,6 +331,46 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 	});
 };
 
+window.get_display_fields = async function (doctype) {
+	try {
+		const res = await frappe.db.get_single_value(
+			"ERP Configuration",
+			"department_display_form_fields",
+		);
+		// console.log("doctype" , doctype)
+		const CONFIG = res ? JSON.parse(res) : {};
+		// console.log(CONFIG)
+
+		const key = Object.keys(CONFIG).find((k) => k.toLowerCase() === doctype.toLowerCase());
+		// console.log("key" , key)
+
+		const fields = key ? CONFIG[key] : [];
+
+		return Array.isArray(fields) ? fields : [];
+	} catch (e) {
+		console.error("Error fetching display fields:", e);
+		return [];
+	}
+};
+
+window.get_access_fields = async function (doctype) {
+	try {
+		const res = await frappe.db.get_single_value(
+			"ERP Configuration",
+			"department_access_form_fields",
+		);
+		const CONFIG = res ? JSON.parse(res) : {};
+
+		const key = Object.keys(CONFIG).find((k) => k.toLowerCase() === doctype.toLowerCase());
+
+		const fields = key ? CONFIG[key] : [];
+		return Array.isArray(fields) ? fields : [];
+	} catch (e) {
+		console.error("Error fetching access fields:", e);
+		return [];
+	}
+};
+
 // --------------------- forward - button --------------------------
 
 window.add_forward_button = async function add_forward_button(frm) {
@@ -938,7 +978,12 @@ function open_new_task_dialog(frm) {
 	const d = new frappe.ui.Dialog({
 		title: __("Create Task"),
 		fields: [
-			{ label: "Description", fieldname: "description", fieldtype: "Small Text", reqd: 1 },
+			{
+				label: "Description",
+				fieldname: "description",
+				fieldtype: "Small Text",
+				reqd: 1,
+			},
 			{
 				label: "Date",
 				fieldname: "date",
@@ -946,7 +991,12 @@ function open_new_task_dialog(frm) {
 				default: frappe.datetime.now_datetime(),
 				reqd: 1,
 			},
-			{ label: "Assigned To", fieldname: "assigned_to", fieldtype: "Link", options: "User" },
+			{
+				label: "Assigned To",
+				fieldname: "assigned_to",
+				fieldtype: "Link",
+				options: "User",
+			},
 		],
 		primary_action_label: __("Create"),
 		primary_action(values) {
@@ -965,7 +1015,10 @@ function open_new_task_dialog(frm) {
 					assigned_to: values.assigned_to,
 				},
 				callback(r) {
-					frappe.show_alert({ message: __("Task created"), indicator: "green" });
+					frappe.show_alert({
+						message: __("Task created"),
+						indicator: "green",
+					});
 					d.hide();
 					render_activity_section(frm);
 				},
@@ -1032,7 +1085,12 @@ function open_edit_task_dialog(task_name, frm) {
 					default: doc.description,
 					reqd: 1,
 				},
-				{ label: "Date", fieldname: "date", fieldtype: "Datetime", default: doc.date },
+				{
+					label: "Date",
+					fieldname: "date",
+					fieldtype: "Datetime",
+					default: doc.date,
+				},
 				{
 					label: "Assigned To",
 					fieldname: "assigned_to",
@@ -1107,8 +1165,17 @@ function open_new_event_dialog(frm) {
 				reqd: 1,
 			},
 			{ label: "Summary", fieldname: "summary", fieldtype: "Data", reqd: 1 },
-			{ label: "Description", fieldname: "description", fieldtype: "Text Editor" },
-			{ label: "Assigned To", fieldname: "assigned_to", fieldtype: "Link", options: "User" },
+			{
+				label: "Description",
+				fieldname: "description",
+				fieldtype: "Text Editor",
+			},
+			{
+				label: "Assigned To",
+				fieldname: "assigned_to",
+				fieldtype: "Link",
+				options: "User",
+			},
 		],
 		primary_action_label: __("Create"),
 		primary_action(values) {
@@ -1260,12 +1327,14 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 
 // ------------------- request for update button ------------------------
 
-// ── Updatable fields — all possible fields across all service doctypes ──
-const SERVICE_UPDATABLE_FIELDS = {
-	surname: "Surname",
-	first_name: "First Name",
-	father_name: "Father Name",
-	email: "Email",
+// ── Known field labels — matches Lead Detail Form ──
+
+window._build_update_detail_fields = function (fieldnames) {
+	const result = {};
+	fieldnames.forEach((fieldname) => {
+		result[fieldname] = fieldname.replace(/_/g, " ");
+	});
+	return result;
 };
 
 window.setup_service_permission_button = function (frm) {
@@ -1310,7 +1379,6 @@ window.setup_service_permission_button = function (frm) {
 								return;
 							}
 
-							// Check if this employee already has a pending request
 							frappe.call({
 								method: "frappe.client.get_list",
 								args: {
@@ -1373,12 +1441,17 @@ window.setup_service_permission_button = function (frm) {
 
 window._service_open_update_detail_dialog = function (frm, custom_fields) {
 	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
-		args: { customer_name: frm.doc.customer },
+		method: "frappe.client.get",
+		args: {
+			doctype: "Customer",
+			name: frm.doc.customer,
+		},
 		callback: function (r) {
-			const current_values = r.message || {};
-			const fields = custom_fields || SERVICE_UPDATABLE_FIELDS;
-			_open_update_detail_dialog(frm, current_values, fields, "service");
+			const current_values = {};
+
+			const all_fields = custom_fields;
+
+			_open_update_detail_dialog(frm, current_values, all_fields, {}, "service");
 		},
 	});
 };
@@ -1409,13 +1482,109 @@ window._service_show_accept_updates = function (frm) {
 	});
 };
 
-// ── Shared dialog builder — fields param controls which fields appear ──
-function _open_update_detail_dialog(frm, current_values, fields, mode) {
+function _open_update_detail_dialog(frm, current_values, fields, table_fields, mode) {
 	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
 	const api_method =
 		mode === "service"
 			? "verp_staffing.crm.api.permission_request.request_field_update"
 			: "verp_staffing.crm.api.permission_request.request_field_update_by_owner";
+
+	// ── Build table field rows HTML ──
+	const table_fields_html = Object.entries(table_fields || {})
+		.map(([fieldname, config]) => {
+			const old_rows = current_values[fieldname] || [];
+
+			const tbody_html = old_rows.length
+				? old_rows
+						.map(
+							(row, idx) => `
+            <tr data-row-idx="${idx}">
+                ${Object.entries(config.columns)
+					.map(
+						([col, col_label]) => `
+                    <td style="padding:4px 6px;">
+                        <input type="text"
+                            class="fg-table-cell"
+                            data-fieldname="${fieldname}"
+                            data-col="${col}"
+                            value="${frappe.utils.escape_html(row[col] || "")}"
+                            placeholder="${col_label}"
+                            style="width:100%; border:0.5px solid var(--color-border-secondary);
+                                border-radius:4px; padding:5px 7px; font-size:12px;
+                                background:var(--color-background-primary);
+                                color:var(--color-text-primary); box-sizing:border-box;" />
+                    </td>
+                `,
+					)
+					.join("")}
+                <td style="padding:4px; text-align:center; width:28px;">
+                    <button class="fg-table-del-row" data-fieldname="${fieldname}"
+                        style="border:none; background:transparent;
+                            color:#E24B4A; cursor:pointer; font-size:15px; line-height:1;">✕</button>
+                </td>
+            </tr>
+        `,
+						)
+						.join("")
+				: `
+            <tr class="fg-empty-row">
+                <td colspan="${Object.keys(config.columns).length + 1}"
+                    style="padding:12px; text-align:center;
+                        color:var(--color-text-tertiary); font-size:13px;">
+                    No rows
+                </td>
+            </tr>
+        `;
+
+			return `
+            <div style="margin-top:8px;">
+                <div class="fg-row fg-table-toggle" data-fieldname="${fieldname}">
+                    <div class="fg-cb"><div class="fg-tick"></div></div>
+                    <span class="fg-label">${config.label}</span>
+                </div>
+                <div class="fg-table-editor" data-fieldname="${fieldname}"
+                    style="display:none; margin-top:8px;
+                        border:0.5px solid var(--color-border-tertiary);
+                        border-radius:var(--border-radius-md); overflow:hidden;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:var(--color-background-secondary);">
+                                ${Object.values(config.columns)
+									.map(
+										(col_label) => `
+                                    <th style="padding:7px 8px; font-size:11px; font-weight:500;
+                                        color:var(--color-text-secondary); text-align:left;
+                                        text-transform:uppercase; letter-spacing:0.4px;
+                                        border-bottom:0.5px solid var(--color-border-tertiary);">
+                                        ${col_label}
+                                    </th>
+                                `,
+									)
+									.join("")}
+                                <th style="width:28px;
+                                    border-bottom:0.5px solid var(--color-border-tertiary);"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="fg-table-body" data-fieldname="${fieldname}">
+                            ${tbody_html}
+                        </tbody>
+                    </table>
+                    <div style="padding:8px 10px;
+                        border-top:0.5px solid var(--color-border-tertiary);">
+                        <button class="fg-table-add-row" data-fieldname="${fieldname}"
+                            style="font-size:12px; padding:4px 10px;
+                                border:0.5px solid var(--color-border-secondary);
+                                border-radius:var(--border-radius-md);
+                                background:transparent;
+                                color:var(--color-text-secondary); cursor:pointer;">
+                            + Add Row
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+		})
+		.join("");
 
 	const dialog_html = `
         <style>
@@ -1538,6 +1707,8 @@ function _open_update_detail_dialog(frm, current_values, fields, mode) {
 				.join("")}
         </div>
 
+        ${table_fields_html}
+
         <div id="fg-inputs-section" style="display:none;">
             <hr class="fg-divider" />
             <div id="fg-inputs-container"></div>
@@ -1571,7 +1742,8 @@ function _open_update_detail_dialog(frm, current_values, fields, mode) {
 			let has_selection = false;
 			let missing_value = false;
 
-			dialog.$wrapper.find(".fg-row.selected").each(function () {
+			// ── Collect simple fields ──
+			dialog.$wrapper.find("#fg-grid .fg-row.selected").each(function () {
 				const fieldname = $(this).data("fieldname");
 				const input = dialog.$wrapper.find(
 					`#fg-inputs-container .fg-new-input[data-fieldname="${fieldname}"]`,
@@ -1627,7 +1799,8 @@ function _open_update_detail_dialog(frm, current_values, fields, mode) {
 
 	const _fg_saved = {};
 
-	dialog.$wrapper.on("click", ".fg-row", function () {
+	// ── Simple field row click ──
+	dialog.$wrapper.on("click", "#fg-grid .fg-row", function () {
 		const fieldname = $(this).data("fieldname");
 		const isSelected = $(this).toggleClass("selected").hasClass("selected");
 		_fg_rebuild(dialog, fields, current_values, _fg_saved);
@@ -1646,7 +1819,7 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 		saved[$(this).data("fieldname")] = $(this).val();
 	});
 
-	const selected = dialog.$wrapper.find(".fg-row.selected");
+	const selected = dialog.$wrapper.find("#fg-grid .fg-row.selected");
 	const section = dialog.$wrapper.find("#fg-inputs-section");
 	const container = dialog.$wrapper.find("#fg-inputs-container");
 
@@ -1669,7 +1842,7 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
                 <div class="fg-input-field-name">${label}</div>
                 <div class="fg-input-cols">
                     <div>
-                        <div class="fg-col-label">${__("Current")}</div>
+                        <div class="fg-col-label">${"Current"}</div>
                         <div class="fg-current-val">
                             ${frappe.utils.escape_html(old_val) || "—"}
                         </div>
@@ -1693,6 +1866,53 @@ function _open_accept_updates_dialog(frm, pending_requests, mode) {
 	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
 	let all_html = "";
 
+	const render_table = (rows, config, is_new) => {
+		if (!rows || !rows.length) {
+			return `<div style="padding:10px; color:var(--color-text-tertiary);
+                font-size:12px;">No rows</div>`;
+		}
+		return `
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <thead>
+                    <tr style="background:var(--color-background-secondary);">
+                        ${Object.values(config.columns)
+							.map(
+								(col_label) => `
+                            <th style="padding:6px 8px; text-align:left; font-weight:500;
+                                border-bottom:0.5px solid var(--color-border-tertiary);
+                                color:var(--color-text-secondary);">
+                                ${col_label}
+                            </th>
+                        `,
+							)
+							.join("")}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows
+						.map(
+							(row) => `
+                        <tr>
+                            ${Object.keys(config.columns)
+								.map(
+									(col) => `
+                                <td style="padding:6px 8px;
+                                    border-bottom:0.5px solid var(--color-border-tertiary);
+                                    color:${is_new ? "#3C3489" : "var(--color-text-secondary)"};">
+                                    ${frappe.utils.escape_html(row[col] || "—")}
+                                </td>
+                            `,
+								)
+								.join("")}
+                        </tr>
+                    `,
+						)
+						.join("")}
+                </tbody>
+            </table>
+        `;
+	};
+
 	pending_requests.forEach((req, idx) => {
 		all_html += `
             <div style="margin-bottom:20px; border:0.5px solid var(--color-border-tertiary);
@@ -1710,56 +1930,56 @@ function _open_accept_updates_dialog(frm, pending_requests, mode) {
         `;
 
 		Object.entries(req.field_updates).forEach(([fieldname, values]) => {
-			const label = SERVICE_UPDATABLE_FIELDS[fieldname] || fieldname;
+			const label = fieldname;
+
 			all_html += `
-                <div style="display:grid; grid-template-columns:20px 1fr 1fr;
-                    gap:10px; margin-bottom:12px; align-items:start;">
-                    <div style="padding-top:18px;">
-                        <div style="width:16px; height:16px; border-radius:4px;
-                            border:1.5px solid #260fea; background:#260fea;
-                            display:flex; align-items:center; justify-content:center;
-                            cursor:pointer;" class="au-cb-box"
-                            data-fieldname="${fieldname}"
-                            data-comment="${req.comment_name}">
-                            <div class="au-tick" style="width:8px; height:5px;
-                                border-left:2px solid white; border-bottom:2px solid white;
-                                transform:rotate(-45deg) translate(1px,-1px);"></div>
+                    <div style="display:grid; grid-template-columns:20px 1fr 1fr;
+                        gap:10px; margin-bottom:12px; align-items:start;">
+                        <div style="padding-top:18px;">
+                            <div style="width:16px; height:16px; border-radius:4px;
+                                border:1.5px solid #260fea; background:#260fea;
+                                display:flex; align-items:center; justify-content:center;
+                                cursor:pointer;" class="au-cb-box"
+                                data-fieldname="${fieldname}"
+                                data-comment="${req.comment_name}">
+                                <div class="au-tick" style="width:8px; height:5px;
+                                    border-left:2px solid white; border-bottom:2px solid white;
+                                    transform:rotate(-45deg) translate(1px,-1px);"></div>
+                            </div>
+                            <input type="checkbox" class="approve-field-checkbox"
+                                data-fieldname="${fieldname}"
+                                data-comment="${req.comment_name}"
+                                checked style="display:none;" />
                         </div>
-                        <input type="checkbox" class="approve-field-checkbox"
-                            data-fieldname="${fieldname}"
-                            data-comment="${req.comment_name}"
-                            checked style="display:none;" />
+                        <div>
+                            <div style="font-size:11px; font-weight:500;
+                                color:var(--color-text-tertiary); text-transform:uppercase;
+                                letter-spacing:0.4px; margin-bottom:4px;">${__("Current")}</div>
+                            <div style="font-size:12px; font-weight:500;
+                                color:var(--color-text-secondary); margin-bottom:4px;">${label}</div>
+                            <div style="padding:8px 10px;
+                                background:var(--color-background-secondary);
+                                border:0.5px solid var(--color-border-tertiary);
+                                border-radius:var(--border-radius-md); font-size:13px;
+                                color:var(--color-text-secondary);">
+                                ${frappe.utils.escape_html(values.old) || "—"}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:11px; font-weight:500;
+                                color:var(--color-text-tertiary); text-transform:uppercase;
+                                letter-spacing:0.4px; margin-bottom:4px;">${__("New")}</div>
+                            <div style="font-size:12px; font-weight:500;
+                                color:var(--color-text-secondary); margin-bottom:4px;">&nbsp;</div>
+                            <div style="padding:8px 10px; background:#EEEDFE;
+                                border:0.5px solid #260fea;
+                                border-radius:var(--border-radius-md); font-size:13px;
+                                color:#3C3489; font-weight:500;">
+                                ${frappe.utils.escape_html(values.new)}
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size:11px; font-weight:500; color:var(--color-text-tertiary);
-                            text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px;">
-                            ${__("Current")}
-                        </div>
-                        <div style="font-size:12px; font-weight:500;
-                            color:var(--color-text-secondary); margin-bottom:4px;">${label}</div>
-                        <div style="padding:8px 10px; background:var(--color-background-secondary);
-                            border:0.5px solid var(--color-border-tertiary);
-                            border-radius:var(--border-radius-md); font-size:13px;
-                            color:var(--color-text-secondary);">
-                            ${frappe.utils.escape_html(values.old) || "—"}
-                        </div>
-                    </div>
-                    <div>
-                        <div style="font-size:11px; font-weight:500; color:var(--color-text-tertiary);
-                            text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px;">
-                            ${__("New")}
-                        </div>
-                        <div style="font-size:12px; font-weight:500;
-                            color:var(--color-text-secondary); margin-bottom:4px;">&nbsp;</div>
-                        <div style="padding:8px 10px; background:#EEEDFE;
-                            border:0.5px solid #260fea;
-                            border-radius:var(--border-radius-md); font-size:13px;
-                            color:#3C3489; font-weight:500;">
-                            ${frappe.utils.escape_html(values.new)}
-                        </div>
-                    </div>
-                </div>
-            `;
+                `;
 		});
 
 		all_html += `</div></div>`;

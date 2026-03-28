@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Marketing", {
-	refresh(frm) {
+	async refresh(frm) {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
@@ -92,32 +92,6 @@ frappe.ui.form.on("Marketing", {
 
 		window.add_forward_button(frm);
 		// to display the lead details
-		window.render_customer_related_html({
-			frm: frm,
-			html_field: "customer_details_html",
-			customer: frm.doc.customer,
-			fields: [
-				"surname",
-				"first_name",
-				"father_name",
-				"personal_phone_number",
-				"email",
-				"number_for_marketing",
-				"marketing_linkedin",
-				"linkedin_password",
-				"technologies",
-				"ssn_digit",
-				"date_of_birth",
-				"current_address",
-				"current_visa_status",
-				"ead_card",
-				"past_experience_table",
-				"entry_date",
-				"certificate_or_completed_course",
-				"availability_for_interview",
-				"driving_licence",
-			],
-		});
 
 		if (!frm.is_new()) {
 			frm.set_df_property("customer", "read_only", 1);
@@ -129,8 +103,23 @@ frappe.ui.form.on("Marketing", {
 
 		// to display the interview list
 		render_interview_list(frm);
+		const [display_fields, access_fieldnames] = await Promise.all([
+			window.get_display_fields(frm.doctype),
+			window.get_access_fields(frm.doctype),
+		]);
+	
+		window.render_customer_related_html({
+			frm: frm,
+			html_field: "lead_details",
+			customer: frm.doc.customer,
+			fields: display_fields,
+		});
+		if (access_fieldnames.length) {
+			frm._update_detail_fields = _build_update_detail_fields(access_fieldnames);
+		}
+		window.setup_service_permission_button(frm);
 	},
-
+	
 	customer(frm) {
 		frm.trigger("refresh");
 	},
