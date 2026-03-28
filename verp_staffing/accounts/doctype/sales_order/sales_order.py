@@ -60,7 +60,6 @@ def generate_form_url(
 
 @frappe.whitelist()
 def send_agreement_notification(recipient, sales_order, customer, agreement):
-
     try:
         doc = frappe.get_doc("Agreement", agreement)
 
@@ -76,20 +75,39 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
             recipient, sales_order, customer, agreement, doc.pdf, ia=True
         )
 
+        # Read PDF
         with open(file_path, "rb") as f:
             file_content = f.read()
 
+        # 🔹 Try to use Email Template
+        template_name = "Document Signature and Certificate"
+
+        if frappe.db.exists("Email Template", template_name):
+            print("--------------using email template")
+            template = frappe.get_doc("Email Template", template_name)
+
+            context = {
+                "recipient": recipient,
+                "sales_order": sales_order,
+                "customer": customer,
+                "agreement": agreement,
+                "link": form_url,
+            }
+
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html, context)
+
+        else:
+            # 🔻 Fallback (your current behavior)
+            print("------------not using template")
+            subject = "Agreement for Review and Signature"
+            message = f"Form: {form_url}"
+
+        # 🔹 Send
         send_notification(
             recipients=[recipient],
-            subject="Agreement for Review and Signature",
-            message=(
-                "Dear Customer,\n\n"
-	            "Submit the required details using the form link below:\n\n"
-	            f"{form_url}\n\n"
-	            "If you have any questions or need assistance, please contact us.\n\n"
-	            "Best regards,\n"
-	            "Team"
-                ),
+            subject=subject,
+            message=message,
             attachments=[
                 {
                     "fname": os.path.basename(doc.pdf),
@@ -103,10 +121,9 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         return {"success": "Agreement sent"}
 
-    except Exception as e:
+    except Exception:
         frappe.log_error(frappe.get_traceback(), "Agreement Notification Error")
         raise
-
 
 @frappe.whitelist()
 def send_details_form_notification(recipient, sales_order, customer):
