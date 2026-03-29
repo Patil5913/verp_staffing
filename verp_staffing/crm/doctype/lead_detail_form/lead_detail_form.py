@@ -124,7 +124,6 @@ def process_drawn_signature_and_apply(doc, token):
         apply_pdf_signature(doc, signature_image_file=file_doc.name)
 
     except Exception as e:
-        frappe.errprint(f"Error processing drawn signature: {e}")
         frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
         frappe.throw("Failed to process drawn signature")
 
@@ -793,7 +792,6 @@ def apply_signature_and_audit_to_pdf(
 
     with open(output_path, "rb") as f:
         content = f.read()
-    frappe.errprint(f"Final PDF generated at {output_path} with hash {document_hash}")
     send_notification(
         recipients=[signer_email],
         subject="Agreement signed successfully",

@@ -30,7 +30,6 @@ def get_notes(reference_doctype, reference_name, limit=20, start=0):
 
     notes = []
     updates = []
-
     for r in records:
         if r.reference_doctype == r.current_doctype:
             notes.append(r)

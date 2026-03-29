@@ -68,8 +68,6 @@ frappe.ui.form.on("Sales Order", {
 		const requirements = get_requirements_from_config(frm, config);
 
 		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
-			console.log("immidiate send_details_form hit ++++++");
-
 			send_details_form(frm);
 		}
 

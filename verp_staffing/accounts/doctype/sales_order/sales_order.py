@@ -87,7 +87,14 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
         send_notification(
             recipients=[recipient],
             subject="Agreement for Review and Signature",
-            message=f"Form: {form_url}",
+            message=(
+                "Dear Customer,\n\n"
+	            "Submit the required details using the form link below:\n\n"
+	            f"{form_url}\n\n"
+	            "If you have any questions or need assistance, please contact us.\n\n"
+	            "Best regards,\n"
+	            "Team"
+                ),
             attachments=[
                 {
                     "fname": os.path.basename(doc.pdf),

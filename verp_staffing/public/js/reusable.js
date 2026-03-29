@@ -687,7 +687,7 @@ function forward_candidate(frm, values) {
 		},
 		callback(r) {
 			const noteDoctype = r.message.doctype;
-			if (values.notes) {
+			if (values.note) {
 				frappe.call({
 					method: "verp_staffing.crm.api.notes.add_note",
 					args: {
@@ -917,6 +917,74 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
 		},
 	});
 	d.show();
+}
+
+function get_notes(frm, $wrapper) {
+	$wrapper.html(`<div class="p-3 text-muted">Loading notes...</div>`);
+
+	frappe.call({
+		method: "verp_staffing.crm.api.notes.get_notes",
+		args: {
+			reference_doctype: frm.doctype,
+			reference_name: frm.doc.name,
+		},
+		callback: function (r) {
+			const notes = r.message || [];
+
+			if (!notes.length) {
+				$wrapper.html(`
+	                    <div class="p-3 text-center">
+	                        <div class="text-muted mb-2">No notes yet.</div>
+	                        <button class="btn btn-primary btn-sm add-note-btn">Add Note</button>
+	                    </div>
+	                `);
+				$wrapper
+					.find(".add-note-btn")
+					.on("click", () => open_add_note_dialog(frm, $wrapper));
+				return;
+			}
+
+			let html = `
+	            <div class="mt-2 mb-2">
+	                    <button class="btn btn-secondary btn-sm add-note-inline">Add Note</button>
+	                </div>
+	                <div class="notes-list list-group">
+	            `;
+
+			notes.forEach((n) => {
+				const added_on = frappe.datetime.str_to_user(n.added_on);
+
+				html += `
+	                <div class="list-group-item" data-id="${n.name}">
+	                    <div class="d-flex justify-content-between">
+	                        <div>
+	                            <b>${n.added_by}</b>
+	                            <span class="text-muted" style="margin-left: 6px;">
+	                                ${added_on}
+	                            </span>
+	                        </div>
+	                        <div>
+	                            <span class="text-primary edit-note" style="cursor:pointer;margin-right:10px;">Edit</span>
+	                            <span class="text-danger delete-note" style="cursor:pointer;">Delete</span>
+	                        </div>
+	                    </div>
+	                    <div class="note-content mt-2">${n.note}</div>
+	                </div>`;
+			});
+
+			html += `
+	                </div>
+	                
+	            `;
+
+			$wrapper.html(html);
+
+			$wrapper
+				.find(".add-note-inline")
+				.on("click", () => open_add_note_dialog(frm, $wrapper));
+			attach_edit_delete_events(frm, $wrapper);
+		},
+	});
 }
 
 // --------------------- activity --------------------------

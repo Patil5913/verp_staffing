@@ -56,7 +56,6 @@ def get_customer_department_panels(customer):
         fields=["name", "status", "assign_to", "modified" , "service"],
     )
     
-    frappe.errprint(otherservies)
     if ruc:
         result["technical"].append({
             "name": "RUC",

@@ -877,13 +877,15 @@
             {% if rec.resume %}
             <p style="margin:4px 0;color:#334155;font-size:13px;">
                 <b>Resume:</b>
-                {% endif %}
-
-
-                <!-- {% if rec.department == "Interview" and rec.company %}
+                <a href="/api/method/verp_staffing.www.customer.download_resume?file_url={{ rec.resume }}"
+                style="color:#260fea;font-weight:500;">
+                    Download
+                </a>
+            </p>
+            {% endif %}
+            <!-- {% if rec.department == "Interview" and rec.company %}
             <p><b>Company:</b> {{ rec.company }}</p>
             {% endif %}
-
             {% if rec.department == "Interview" and rec.role %}
             <p><b>Role:</b> {{ rec.role }}</p>
             {% endif %} -->

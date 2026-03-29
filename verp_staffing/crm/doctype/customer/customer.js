@@ -343,8 +343,6 @@ function toggle_tab_view(frm) {
 		callback: function (r) {
 			const departments = r.message || [];
 
-			console.log("Departments:", departments);
-
 			// reset all first (important)
 			frm.toggle_display("sales_tab", true);
 			frm.toggle_display("sales_content", true);
