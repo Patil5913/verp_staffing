@@ -40,6 +40,7 @@ def get_context(context):
                 subject="Your OTP",
                 message=f"Your OTP is {otp}",
                 delayed=False,
+                now=True
             )
 
             context.otp_sent = True
@@ -647,3 +648,23 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
         }
 
     return history
+
+
+# Download Resume
+@frappe.whitelist(allow_guest=True)
+def download_resume(file_url):
+    import frappe
+    from frappe.utils.file_manager import get_file_path
+
+    if not file_url:
+        frappe.throw("Missing file")
+
+    # sanitize
+    file_url = file_url.replace("/private/files/", "")
+
+    file_path = get_file_path(file_url)
+
+    with open(file_path, "rb") as f:
+        frappe.local.response.filename = file_url
+        frappe.local.response.filecontent = f.read()
+        frappe.local.response.type = "download"

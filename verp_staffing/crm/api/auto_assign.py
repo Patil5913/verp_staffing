@@ -164,7 +164,7 @@ def forward_candidate(customer, service, interview=None):
                         frappe.db.set_value(
                             doctype, d.name, "status", "Request for Update"
                         )
-
+                frappe.msgprint(f"reforward doctype: {doctype}, name:{docs[0].name}")
                 return {"reforward": True, "doctype": doctype, "name": docs[0].name}
 
             for d in docs:
@@ -397,7 +397,6 @@ def handle_CR_Onboarding_forward(
         assignee = assign_employee
     else:
         assignee = get_department_load_employee(department)
-    frappe.errprint(f"assignee:{assignee}, assign_employee:{assign_employee},")
     # GET CUSTOMER + LEAD DETAIL
     customer_doc = frappe.get_doc("Customer", customer)
 

@@ -82,6 +82,5 @@ def update_status_based_on_opportunity(lead_name, status):
     }
 
     new_status = STATUS_MAP.get(status.strip().lower(), "Lead") if status else "Lead"
-    frappe.errprint(f"lead status {new_status}")
 
     frappe.db.set_value("Lead", lead_name, "status", new_status)

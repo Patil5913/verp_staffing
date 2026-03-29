@@ -54,8 +54,8 @@ app_include_js = [
 # include js in doctype views
 validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Opportunity", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services","Sales Order", "Agreement"]
 doctype_js = {
-    **{doc: "public/js/reusable.js" for doc in validation_docs},
-    **{doc: "public/js/salesOrder.js" for doc in validation_docs},
+    doc: ["public/js/reusable.js", "public/js/salesOrder.js"]
+    for doc in validation_docs
 }
 
 doctype_list_js = {

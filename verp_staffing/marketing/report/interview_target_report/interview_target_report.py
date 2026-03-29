@@ -146,7 +146,6 @@ def get_data(filters):
                 """,
                 as_dict=True,
             )
-            # frappe.errprint(data)
             valid_employees = [row.name for row in data]
 
         else:

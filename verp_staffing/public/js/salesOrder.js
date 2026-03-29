@@ -1,4 +1,4 @@
-const BRAND_COLOR = "#1E3A5F";
+const BRAND_COLOR = "#3b82f6";
 
 window.render_agreement_module = function ({ frm, wrapper, sales_order, allow_create = true }) {
 	wrapper.empty();
@@ -184,26 +184,31 @@ function render_agreement_cards(wrapper, agreements) {
 
 	container.off("click", ".send-agreement");
 	container.on("click", ".send-agreement", function () {
-		const name = $(this).data("name");
-		console.log("name: ", name);
-		frappe
-			.call({
-				method: "verp_staffing.crm.api.agreement.send_existing_agreement",
-				args: { agreement: name },
+		const $btn = $(this);
+		const name = $btn.data("name");
 
-				callback(r) {
-					console.log("SUCCESS RESPONSE:", r);
+		setButtonState($btn, "loading", "Sending...");
 
-					if (r.message && r.message.success) {
-						frappe.msgprint("Agreement sent");
-						location.reload();
-					} else {
-						frappe.msgprint("Something failed (no success flag)");
-					}
-				},
-			})
-			.then((r) => console.log("response:", r))
-			.catch((error) => console.log("Error: ", error));
+		frappe.call({
+			method: "verp_staffing.crm.api.agreement.send_existing_agreement",
+			args: { agreement: name },
+
+			callback(r) {
+				if (r.message && r.message.success) {
+					frappe.msgprint("Agreement sent");
+					setButtonState($btn, "reset");
+					fetch_and_render_agreements(wrapper, sales_order);
+				} else {
+					frappe.msgprint("Failed to send agreement");
+					setButtonState($btn, "reset");
+				}
+			},
+
+			error() {
+				frappe.msgprint("Server error while sending");
+				setButtonState($btn, "reset");
+			},
+		});
 	});
 }
 
@@ -230,8 +235,15 @@ function load_templates(wrapper) {
 function bind_builder_events(frm, wrapper, sales_order) {
 	wrapper.on("change", "#ag_template", () => load_form_fields(wrapper));
 
-	wrapper.on("click", "#ag_preview", () => preview(frm, wrapper));
+	wrapper.on("click", "#ag_preview", function () {
+		const $btn = $(this);
 
+		setButtonState($btn, "loading", "Generating Preview...");
+
+		preview(frm, wrapper).finally(() => {
+			setButtonState($btn, "reset");
+		});
+	});
 	wrapper.on("click", "#ag_save", () => submit(frm, wrapper, sales_order, false));
 
 	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
@@ -245,6 +257,10 @@ function submit(frm, wrapper, sales_order, send_email) {
 		return;
 	}
 
+	const $btn = send_email ? wrapper.find("#ag_save_send") : wrapper.find("#ag_save");
+
+	setButtonState($btn, "loading", send_email ? "Saving & Sending..." : "Saving...");
+
 	const data = collect_agreement_data(frm, wrapper);
 
 	frappe.call({
@@ -257,7 +273,12 @@ function submit(frm, wrapper, sales_order, send_email) {
 		},
 		callback() {
 			frappe.msgprint("Agreement created");
-			location.reload();
+			setButtonState($btn, "reset");
+			fetch_and_render_agreements(wrapper, sales_order);
+		},
+		error() {
+			frappe.msgprint("Failed to save agreement");
+			setButtonState($btn, "reset");
 		},
 	});
 }
@@ -343,18 +364,35 @@ function load_form_fields(wrapper) {
 }
 
 function preview(frm, wrapper) {
-	const template = frm.get_field("agreement_html").$wrapper.find("#ag_template").val();
-	if (!template) return frappe.msgprint("Choose a template first");
+	return new Promise((resolve, reject) => {
+		const template = frm.get_field("agreement_html").$wrapper.find("#ag_template").val();
+		if (!template) {
+			frappe.msgprint("Choose a template first");
+			reject();
+			return;
+		}
 
-	const data = collect_agreement_data(frm, wrapper);
+		const data = collect_agreement_data(frm, wrapper);
 
-	frappe.call({
-		method: "verp_staffing.crm.api.agreement.preview_agreement",
-		args: { template, data: JSON.stringify(data) },
-		callback(r) {
-			if (!r.message) return frappe.msgprint("Preview error");
-			window.open(r.message.file_url);
-		},
+		frappe.call({
+			method: "verp_staffing.crm.api.agreement.preview_agreement",
+			args: { template, data: JSON.stringify(data) },
+
+			callback(r) {
+				if (!r.message) {
+					frappe.msgprint("Preview error");
+					reject();
+					return;
+				}
+				window.open(r.message.file_url);
+				resolve();
+			},
+
+			error() {
+				frappe.msgprint("Preview failed");
+				reject();
+			},
+		});
 	});
 }
 
@@ -373,4 +411,17 @@ function collect_so_agreement_data(frm, wrapper) {
 	}));
 
 	return data;
+}
+
+function setButtonState($btn, state, originalText) {
+	if (state === "loading") {
+		$btn.data("original-text", $btn.text());
+		$btn.prop("disabled", true);
+		$btn.css("opacity", "0.6");
+		$btn.text(originalText);
+	} else {
+		$btn.prop("disabled", false);
+		$btn.css("opacity", "1");
+		$btn.text($btn.data("original-text"));
+	}
 }

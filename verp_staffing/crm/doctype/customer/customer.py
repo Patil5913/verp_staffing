@@ -203,7 +203,6 @@ def get_active_departments(customer):
     )
 
 def can_user_forward_to_department(user, department):
-    frappe.errprint(f"user: {user}")
     if user == "Administrator":
         return True
     return user_belongs_to_department(user, "Marketing") \
@@ -277,7 +276,6 @@ from verp_staffing.employee.doctype.employee.employee import get_employee_from_u
 def update_route_status(route_name, status):
     if status != "Completed":
         frappe.throw("Only 'Completed' status update is allowed")
-    frappe.errprint(f"route_name: {route_name}, status {status}")
     route = frappe.get_doc("Customer Department Route", route_name)
 
     # Already completed
