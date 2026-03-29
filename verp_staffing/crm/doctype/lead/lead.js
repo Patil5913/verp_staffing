@@ -503,7 +503,6 @@ function open_create_opportunity_dialog(frm) {
 		args: {
 			doctype: "Opportunity",
 			filters: { opportunity_from_lead: frm.doc.name },
-			filters: { opportunity_from_lead: frm.doc.name },
 			limit_page_length: 1,
 		},
 		callback: function (r) {

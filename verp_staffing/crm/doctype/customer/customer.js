@@ -18,9 +18,6 @@ frappe.ui.form.on("Customer", {
 			};
 		});
 		showOnboarding_tab(frm);
-		inject_department_css();
-		inject_status_badge_css();
-		load_department_panels(frm);
 
 		frappe.call({
 			method: "frappe.client.get_value",
@@ -362,6 +359,10 @@ function toggle_tab_view(frm) {
 	});
 }
 
+function make_safe_id(name) {
+	return name.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
 function show_sales_order(frm) {
 	frappe.call({
 		method: "frappe.client.get_list",
@@ -386,6 +387,7 @@ function show_sales_order(frm) {
 			html += `<h3>Sales Orders (${sales_orders.length})</h3><hr/>`;
 
 			sales_orders.forEach((so) => {
+				let safe_id = make_safe_id(so.name);
 				html += `
                     <div style="border:1px solid #ddd; padding:15px; border-radius:6px; margin-bottom:15px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -397,7 +399,7 @@ function show_sales_order(frm) {
                         </div>
                         <p><b>Title:</b> ${so.title || ""}</p>
                         <p><b>Date:</b> ${so.date || ""}</p>
-                        <div id="terms_${so.name}"><i>Loading Payment Terms...</i></div>
+                        <div id="terms_${safe_id}"><i>Loading Payment Terms...</i></div>
                     </div>
                 `;
 				load_payment_terms(so.name, frm);
@@ -439,7 +441,9 @@ function load_payment_terms(so_name, frm) {
                 `;
 			});
 			html += `</tbody></table>`;
-			frm.fields_dict.sales_content.$wrapper.find(`#terms_${so_name}`).html(html);
+			let safe_id = make_safe_id(so_name);
+
+			frm.fields_dict.sales_content.$wrapper.find(`#terms_${safe_id}`).html(html);
 		},
 	});
 }
@@ -466,120 +470,6 @@ function apply_tab_visibility(frm, department) {
 	});
 }
 
-function inject_department_css() {
-	if (!document.getElementById("status-badge-css")) {
-		const style = document.createElement("style");
-		style.id = "status-badge-css";
-		style.innerHTML = `
-            .status-badge {
-                display: inline-block;
-                padding: 3px 8px;
-                border-radius: 12px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-            .status-success { background: #e6f4ea; color: #1e7e34; }
-            .status-warning { background: #fff4e5; color: #b26a00; }
-            .status-neutral { background: #f0f0f0; color: #555; }
-        `;
-		document.head.appendChild(style);
-	}
-	if (!document.getElementById("department-panel-css")) {
-		const style = document.createElement("style");
-		style.id = "department-panel-css";
-		style.innerHTML = `
-            .department-box {
-                border: 1px solid #e0e0e0;
-                padding: 12px;
-                border-radius: 6px;
-                background: #fafafa;
-                margin-bottom: 10px;
-            }
-        `;
-		document.head.appendChild(style);
-	}
-}
-
-function inject_status_badge_css() {}
-
-function load_department_panels(frm) {
-	frappe.call({
-		method: "verp_staffing.crm.api.customer.get_customer_department_panels",
-		args: { customer: frm.doc.name },
-		callback(r) {
-			if (!r.message) return;
-			render_resume_panel(frm, r.message.resume);
-			render_technical_panel(frm, r.message.technical);
-			render_marketing_panel(frm, r.message.marketing);
-		},
-	});
-}
-
-function render_resume_panel(frm, data) {
-	const wrapper = frm.fields_dict.resume_html.$wrapper;
-	if (!data) {
-		wrapper.html(`<div class="text-muted">Resume not forwarded yet.</div>`);
-		return;
-	}
-	wrapper.html(`
-        <div class="department-box">
-            <h4>Resume Department</h4>
-            <p><strong>Status:</strong> ${get_status_badge(data.status)}</p>
-            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(data.assign_to || "-")}</p>
-            <p class="text-muted">Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}</p>
-        </div>
-    `);
-}
-
-function render_technical_panel(frm, data) {
-	const wrapper = frm.fields_dict.technical_content.$wrapper;
-	if (!data || !data.length) {
-		wrapper.html(`<div class="text-muted">Not forwarded to Technical yet.</div>`);
-		return;
-	}
-	let html = "";
-	data.forEach((item) => {
-		html += `
-            <div class="department-box">
-                <h4>Services: ${item.name}</h4>
-                <p><strong>Status:</strong> ${get_status_badge(item.status)}</p>
-                <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(item.assign_to || "-")}</p>
-                <p class="text-muted">Last Updated: ${frappe.datetime.str_to_user(item.last_updated)}</p>
-            </div>
-        `;
-	});
-	wrapper.html(html);
-}
-
-function render_marketing_panel(frm, data) {
-	const wrapper = frm.fields_dict.marketing_content.$wrapper;
-	if (!data) {
-		wrapper.html(`<div class="text-muted">Not forwarded to Marketing yet.</div>`);
-		return;
-	}
-
-	let status_label = "No Interviews";
-	let badge_class = "gray";
-	if (data.current_interviews > 0) {
-		status_label = "In Progress";
-		badge_class = "blue";
-	} else if (data.total_interviews > 0) {
-		status_label = "Completed";
-		badge_class = "green";
-	}
-
-	wrapper.html(`
-        <div class="department-box">
-            <h4>Marketing Department</h4>
-            <p><strong>Status:</strong> <span class="indicator ${badge_class}">${status_label}</span></p>
-            <p><strong>Assigned To:</strong> ${frappe.utils.escape_html(data.assign_to || "-")}</p>
-            <p><strong>Total Interviews:</strong> ${data.total_interviews}</p>
-            <p><strong>Current Interviews:</strong> ${data.current_interviews}</p>
-            <p class="text-muted">Last Updated: ${frappe.datetime.str_to_user(data.last_updated)}</p>
-        </div>
-    `);
-}
-
 function get_status_badge(status) {
 	const s = (status || "").toLowerCase();
 	if (s.includes("completed") || s.includes("done")) {
@@ -590,8 +480,6 @@ function get_status_badge(status) {
 	}
 	return `<span class="status-badge status-neutral">${frappe.utils.escape_html(status || "-")}</span>`;
 }
-
-function inject_status_badge_css() {}
 
 function render_customer_history(frm, data, append_interviews = false) {
 	let html = "";

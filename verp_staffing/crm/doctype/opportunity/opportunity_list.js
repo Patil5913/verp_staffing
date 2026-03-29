@@ -73,13 +73,13 @@ function open_custom_dialog() {
 				reqd: 1,
 			},
 			{
-				fieldname: "lead",
+				fieldname: "opportunity_from_lead",
 				fieldtype: "Link",
 				label: "Opportunity From Lead",
 				options: "Lead",
 
 				onchange: function () {
-					let lead = dialog.get_value("lead");
+					let lead = dialog.get_value("opportunity_from_lead");
 
 					if (lead) {
 						frappe.db.get_value("Lead", lead, "name1").then((r) => {
@@ -109,8 +109,8 @@ function open_custom_dialog() {
 			};
 
 			// If Lead selected
-			if (values.lead) {
-				doc.opportunity_from_lead = values.lead;
+			if (values.opportunity_from_lead) {
+				doc.opportunity_from_lead = values.opportunity_from_lead;
 			}
 
 			// If Referral Customer selected

@@ -20,11 +20,6 @@ class SalesOrder(Document):
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
         self.name = generate_name_series("Sales Order", customer_name) 
-    
-    
-    def before_insert(self):
-        title = (f"SO-{self.customer}-{self.date}",)
-        self.title = title
 
 
 def generate_token(data: dict):

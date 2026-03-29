@@ -18,6 +18,10 @@ class Marketing(Document):
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
         self.name = generate_name_series("Marketing", customer_name)    
+        
+    def validate(self):
+        if self.start_date and (not self.target or self.target <= 0):
+            frappe.throw("Target must be greater than 0 when Start Date is set")
 
     def after_insert(self):
         self.create_customer()

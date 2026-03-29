@@ -116,35 +116,21 @@ def get_allowed_employee_ids(department):
 # FINAL API FOR LINK FIELD
 @frappe.whitelist()
 def get_marketing_customer_options():
-    """
-    Returns marketing customer options.
-    Administrator:
-      - Sees ALL customers
-      - Gets an extra 'ALL' option at top
-    Others:
-      - Sees customers based on hierarchy visibility
-    """
-
     department = "Marketing"
 
-    # ADMINISTRATOR: FULL ACCESS
+    # ADMIN
     if frappe.session.user == "Administrator":
         query = """
             SELECT
                 m.name AS value,
-                CONCAT(
-                    m.title,
-                    ' (',
-                    m.assign_to,
-                    ')'
-                ) AS label
+                c.name AS label
             FROM `tabMarketing` m
-            ORDER BY m.title
+            LEFT JOIN `tabCustomer` c ON c.name = m.customer
+            ORDER BY c.name
         """
-
         return frappe.db.sql(query, as_dict=True)
 
-    # NON-ADMIN: RESTRICTED ACCESS
+    # NON-ADMIN
     allowed_employees = get_allowed_employee_ids(department)
 
     if not allowed_employees:
@@ -155,15 +141,11 @@ def get_marketing_customer_options():
     query = f"""
         SELECT
             m.name AS value,
-            CONCAT(
-                m.title,
-                ' (',
-                m.assign_to,
-                ')'
-            ) AS label
+            c.name AS label
         FROM `tabMarketing` m
+        LEFT JOIN `tabCustomer` c ON c.name = m.customer
         WHERE m.assign_to IN ({placeholders})
-        ORDER BY m.title
+        ORDER BY c.name
     """
 
     return frappe.db.sql(query, allowed_employees, as_dict=True)

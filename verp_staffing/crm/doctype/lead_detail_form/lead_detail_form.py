@@ -196,13 +196,17 @@ def apply_pdf_signature(doc, signature_image_file):
 
             # Load fresh agreement doc LAST — right before passing it in
             agreement = frappe.get_doc("Agreement", agr)
+            
+            signer_name = " ".join(
+                filter(None, [doc.surname, doc.first_name, doc.father_name])
+            )
 
             apply_signature_and_audit_to_pdf(
                 input_pdf_path=input_pdf_path,
                 fields=fields,
                 signature_image_path=signature_image_path,
                 audit_trail_text=audit_text,
-                signer_name=f"{doc.surname} {doc.first_name} {doc.father_name}",
+                signer_name=signer_name,
                 signer_email=f"{doc.email}",
                 agreement=agreement,
                 certificate_id=certificate_id,
