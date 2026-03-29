@@ -57,9 +57,6 @@ function open_custom_dialog() {
 						// 🔥 Update Party label dynamically
 						dialog.set_df_property("party_name", "label", source);
 
-						// Refresh field UI
-						dialog.refresh_field("party_name");
-
 						// Clear party_name when source changes
 						dialog.set_value("party_name", "");
 					}

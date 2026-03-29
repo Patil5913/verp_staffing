@@ -151,10 +151,6 @@ frappe.ui.form.on("Opportunity", {
 				if (attempts++ > 12) clearInterval(timer);
 			}, 200);
 		}
-
-		if (!frm.is_new()) {
-			load_lead_details_after_save(frm);
-		}
 	},
 
 	status(frm) {
@@ -165,9 +161,6 @@ frappe.ui.form.on("Opportunity", {
 
 	opportunity_from_lead: function (frm) {
 		frm.trigger("fetch_source_details");
-		if (!frm.is_new()) {
-			load_lead_details_after_save(frm);
-		}
 		if (frm.doc.opportunity_from_lead) {
 
 			let source_name = frm.doc.opportunity_from_lead;
@@ -197,17 +190,6 @@ frappe.ui.form.on("Opportunity", {
 				}
 			});
 		}
-	},
-
-// 	validate: function (frm) {
-// 		if (!frm.doc.opportunity_from_lead) {
-// 			frappe.msgprint(__("Please select a Lead."));
-// 			frappe.validated = false;
-// }
-// 			},
-
-	after_save(frm) {
-		load_lead_details_after_save(frm);
 	},
 });
 

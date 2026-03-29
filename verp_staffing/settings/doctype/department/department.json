@@ -45,6 +45,7 @@
   {
    "fieldname": "roles_json",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Roles JSON"
   },
   {
@@ -67,7 +68,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 15:19:40.549928",
+ "modified": "2026-03-28 14:12:48.247087",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Department",
