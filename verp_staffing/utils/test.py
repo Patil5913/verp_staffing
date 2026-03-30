@@ -278,11 +278,378 @@ def seed_email_template():
 """
 },
 
-  {
-                "name": "Plans of Service",
-                "subject": "Staffing Service Proposal — {{Client_Company}} | Proposal Ref. {{Proposal_Ref}}",
-                "html_content": "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'><title>Plans of Service</title><style>body{margin:0;padding:0;background:#f4f7fa;font-family:'Segoe UI',Arial,sans-serif;}</style></head><body><table width='100%' bgcolor='#f4f7fa' cellpadding='0' cellspacing='0'><tr><td align='center' style='padding:32px 16px;'><table width='620' cellpadding='0' cellspacing='0' style='background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.09);'><tr><td style='background:#ffffff;padding:22px 44px;border-bottom:3px solid #0A6EBD;'><table width='100%'><tr><td><div style='font-family:Georgia,serif;font-size:20px;font-weight:700;color:#0D1B2A;'>Talent<span style='color:#0A6EBD;'>Bridge</span></div><div style='font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#4A6274;margin-top:3px;'>Staffing Solutions Pvt. Ltd.</div></td><td align='right' style='font-size:11px;color:#4A6274;line-height:1.6;'>Proposal Ref: <strong>{{Proposal_Ref}}</strong><br>Date: {{Date}}<br>Valid Until: {{Valid_Until}}</td></tr></table></td></tr><tr><td style='padding:36px 44px;'><p style='font-size:16px;font-weight:600;color:#0D1B2A;margin:0 0 14px;'>Dear {{Client_Name}},</p><p style='font-size:14px;line-height:1.8;color:#334B5C;margin:0 0 16px;'>Thank you for taking the time to meet with us and share your organization&rsquo;s hiring requirements. It was a pleasure understanding <strong>{{Client_Company}}</strong>&rsquo;s workforce objectives, and we are confident that TalentBridge is ideally positioned to support your talent acquisition goals.</p><p style='font-size:14px;line-height:1.8;color:#334B5C;margin:0 0 20px;'>Please find below our <strong>customized Staffing Service Plan</strong>, prepared specifically based on the roles, timelines, and commercial expectations discussed during our meeting on <strong>{{Meeting_Date}}</strong>.</p><div style='background:#EBF5FF;border-left:4px solid #0A6EBD;border-radius:0 8px 8px 0;padding:18px 22px;margin:0 0 20px;'><p style='font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#0A6EBD;margin:0 0 12px;'>&#128204; Scope of Engagement</p><table width='100%' style='border-collapse:collapse;font-size:13px;'><tr style='border-bottom:1px solid #C8E4FA;'><td style='padding:10px 12px;font-weight:700;color:#0D1B2A;width:38%;background:#F0F8FF;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;'>Client Organisation</td><td style='padding:10px 12px;color:#2C4255;'><strong>{{Client_Company}}</strong></td></tr><tr style='border-bottom:1px solid #C8E4FA;'><td style='padding:10px 12px;font-weight:700;color:#0D1B2A;background:#F0F8FF;font-size:12px;text-transform:uppercase;'>Service Type</td><td style='padding:10px 12px;color:#2C4255;'>{{Service_Type}}</td></tr><tr style='border-bottom:1px solid #C8E4FA;'><td style='padding:10px 12px;font-weight:700;color:#0D1B2A;background:#F0F8FF;font-size:12px;text-transform:uppercase;'>Department / Function</td><td style='padding:10px 12px;color:#2C4255;'>{{Department}}</td></tr><tr style='border-bottom:1px solid #C8E4FA;'><td style='padding:10px 12px;font-weight:700;color:#0D1B2A;background:#F0F8FF;font-size:12px;text-transform:uppercase;'>Number of Open Positions</td><td style='padding:10px 12px;color:#2C4255;'>{{Role_Count}} Roles</td></tr><tr style='border-bottom:1px solid #C8E4FA;'><td style='padding:10px 12px;font-weight:700;color:#0D1B2A;background:#F0F8FF;font-size:12px;text-transform:uppercase;'>Target Joining Date</td><td style='padding:10px 12px;color:#2C4255;'>{{Target_Date}}</td></tr><tr><td style='padding:10px 12px;font-weight:700;color:#0D1B2A;background:#F0F8FF;font-size:12px;text-transform:uppercase;'>Work Location(s)</td><td style='padding:10px 12px;color:#2C4255;'>{{Locations}}</td></tr></table></div><p style='font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0D1B2A;margin:22px 0 12px;'>Selected Service Plan: <span style='color:#0A6EBD;'>{{Plan_Name}}</span></p><table width='100%' style='border-collapse:collapse;font-size:13px;'><tr style='border-bottom:1px solid #DDE5ED;'><td style='padding:11px 14px;font-weight:700;color:#0D1B2A;width:38%;background:#F9FAFB;font-size:12px;text-transform:uppercase;'>Recruitment Fee</td><td style='padding:11px 14px;color:#2C4255;'>{{Fee_Pct}}% of Annual Cost-to-Company (CTC) per placement, or Flat Fee &#8377;{{Flat_Fee}} per position as agreed</td></tr><tr style='border-bottom:1px solid #DDE5ED;'><td style='padding:11px 14px;font-weight:700;color:#0D1B2A;background:#F9FAFB;font-size:12px;text-transform:uppercase;'>Replacement Guarantee</td><td style='padding:11px 14px;color:#2C4255;'>{{Guarantee_Days}} calendar days from date of joining. TalentBridge will provide a free replacement search at no additional cost if a placed candidate exits within this period.</td></tr><tr style='border-bottom:1px solid #DDE5ED;'><td style='padding:11px 14px;font-weight:700;color:#0D1B2A;background:#F9FAFB;font-size:12px;text-transform:uppercase;'>Shortlist TAT</td><td style='padding:11px 14px;color:#2C4255;'>First shortlist of {{Shortlist_Count}} profiles within {{TAT_Days}} working days of receiving confirmed JD &amp; mandate</td></tr><tr style='border-bottom:1px solid #DDE5ED;'><td style='padding:11px 14px;font-weight:700;color:#0D1B2A;background:#F9FAFB;font-size:12px;text-transform:uppercase;'>Dedicated Consultant</td><td style='padding:11px 14px;color:#2C4255;'>{{Consultant_Name}} ({{Consultant_Phone}}) &mdash; sole point of contact throughout the engagement</td></tr><tr style='border-bottom:1px solid #DDE5ED;'><td style='padding:11px 14px;font-weight:700;color:#0D1B2A;background:#F9FAFB;font-size:12px;text-transform:uppercase;'>Background Verification</td><td style='padding:11px 14px;color:#2C4255;'>Included &mdash; address, employment, education, and criminal database checks via empanelled BGV partner</td></tr><tr><td style='padding:11px 14px;font-weight:700;color:#0D1B2A;background:#F9FAFB;font-size:12px;text-transform:uppercase;'>Payment Terms</td><td style='padding:11px 14px;color:#2C4255;'>{{Invoice_Trigger}} &mdash; Net {{Payment_Days}} days from invoice date</td></tr></table><div style='background:#E6F7F5;border-left:4px solid #0E9B8A;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0;'><p style='font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#0E9B8A;margin:0 0 10px;'>&#10003; Full Scope of Deliverables</p><table width='100%'><tr><td style='padding:7px 0;border-bottom:1px solid #A7F3D0;font-size:13.5px;color:#2C4255;'>&#10003;&nbsp; Multi-channel talent sourcing: Naukri, LinkedIn, Indeed, internal database, referrals, direct headhunting</td></tr><tr><td style='padding:7px 0;border-bottom:1px solid #A7F3D0;font-size:13.5px;color:#2C4255;'>&#10003;&nbsp; Structured screening: telephonic pre-screen, competency-based interview, technical assessment</td></tr><tr><td style='padding:7px 0;border-bottom:1px solid #A7F3D0;font-size:13.5px;color:#2C4255;'>&#10003;&nbsp; Employment and educational reference checks prior to offer recommendation</td></tr><tr><td style='padding:7px 0;border-bottom:1px solid #A7F3D0;font-size:13.5px;color:#2C4255;'>&#10003;&nbsp; Offer letter review, negotiation support, and offer acceptance follow-up</td></tr><tr><td style='padding:7px 0;border-bottom:1px solid #A7F3D0;font-size:13.5px;color:#2C4255;'>&#10003;&nbsp; Joining follow-up and first-week check-in to reduce no-shows and early attrition</td></tr><tr><td style='padding:7px 0;font-size:13.5px;color:#2C4255;'>&#10003;&nbsp; Post-placement support: 30-day, 60-day, 90-day check-ins with both client and candidate</td></tr></table></div><div style='background:#FEF3C7;border-left:4px solid #D97706;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0;'><p style='font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#D97706;margin:0 0 10px;'>&#9878; Terms &amp; Conditions Summary</p><p style='font-size:13.5px;color:#2C4255;line-height:1.75;margin:0;'>This proposal is subject to execution of a formal <strong>Master Service Agreement (MSA)</strong> between {{Client_Company}} and TalentBridge Staffing Solutions Pvt. Ltd. Either party may terminate the engagement with <strong>30 days&rsquo; written notice</strong>. All candidate data shared by the client shall be treated as confidential and governed by applicable data protection laws.</p></div><p style='font-size:14px;line-height:1.8;color:#334B5C;margin:18px 0 28px;'>To proceed, please click below to accept and sign the Agreement. Once confirmed, your dedicated consultant <strong>{{Consultant_Name}}</strong> will reach out within <strong>1 business day</strong> to initiate onboarding and collect role mandates.</p><table width='100%'><tr><td align='center'><a href='#' style='display:inline-block;background:#0A6EBD;color:#ffffff;padding:13px 30px;border-radius:7px;font-size:13px;font-weight:700;margin-right:10px;'>Accept &amp; Sign Agreement &rarr;</a><a href='#' style='display:inline-block;background:transparent;color:#0D1B2A;padding:12px 28px;border-radius:7px;font-size:13px;font-weight:700;border:2px solid #DDE5ED;'>Schedule a Discussion</a></td></tr></table><hr style='border:none;border-top:1px solid #DDE5ED;margin:28px 0;'><div><p style='font-size:15px;font-weight:700;color:#0D1B2A;margin:0;'>{{Sender_Name}}</p><p style='font-size:12px;color:#4A6274;margin:2px 0;'>{{Sender_Title}}</p><p style='font-size:12px;font-weight:700;color:#0A6EBD;margin:2px 0;'>TalentBridge Staffing Solutions Pvt. Ltd.</p><p style='font-size:12px;color:#4A6274;margin-top:8px;'>&#128231; {{Sender_Email}} &nbsp;|&nbsp; &#128222; {{Sender_Phone}}</p></div></td></tr><tr><td style='background:#F3F6F9;border-top:1px solid #DDE5ED;padding:18px 44px;text-align:center;font-size:11px;color:#8FA3B1;'>&copy; {{Year}} TalentBridge Staffing Solutions Pvt. Ltd. &middot; This proposal is confidential and intended solely for {{Client_Company}}.</td></tr></table></td></tr></table></body></html>"
-                }
+{
+  "name": "Service Plan Email",
+  "subject": "Choose the Right Plan for You",
+  "html_content": """
+<table width="100%" bgcolor="#f5f6fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+
+  <tr>
+    <td align="center" style="padding:20px 10px;">
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+        <tr>
+          <td>
+
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <tr>
+                <td style="padding:28px 24px;">
+
+                  <!-- HEADER -->
+                  <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:22px;font-weight:700;color:#1f2937;">
+                      Find Your Perfect Plan
+                    </div>
+                    <div style="font-size:14px;color:#6b7280;margin-top:6px;">
+                      Simple pricing. Powerful results.
+                    </div>
+                  </div>
+
+                  <!-- DESCRIPTION -->
+                  <div style="font-size:14px;color:#4b5563;line-height:1.6;text-align:center;margin-bottom:25px;">
+                    Get access to expertly designed programs that accelerate your placement success.
+                  </div>
+
+                  <!-- STARTER -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                    style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:16px;">
+                    <tr>
+                      <td style="padding:20px;text-align:center;">
+
+                        <div style="font-size:15px;font-weight:600;color:#374151;">
+                          Starter Plan
+                        </div>
+
+                        <div style="font-size:24px;font-weight:700;color:#111827;margin:10px 0;">
+                          $1500 + 12%
+                        </div>
+
+                        <div style="font-size:13px;color:#6b7280;margin-bottom:12px;">
+                          6 Month Support
+                        </div>
+
+                        <!-- FEATURES -->
+                        <table width="100%" style="text-align:left;font-size:13px;color:#374151;">
+                          <tr><td>✔ Interview Preparation (Webinar)</td></tr>
+                          <tr><td>✔ Recorded Technical Training</td></tr>
+                          <tr><td>✔ Resume Preparation</td></tr>
+                          <tr><td>✔ Resume Marketing</td></tr>
+                        </table>
+
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- PROFESSIONAL -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                    style="border:2px solid #4f46e5;border-radius:10px;margin-bottom:16px;">
+                    
+                    <tr>
+                      <td style="padding:20px;text-align:center;">
+
+                        <div style="font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:6px;">
+                          MOST POPULAR
+                        </div>
+
+                        <div style="font-size:16px;font-weight:700;color:#4f46e5;">
+                          Professional Plan
+                        </div>
+
+                        <div style="font-size:26px;font-weight:700;color:#111827;margin:10px 0;">
+                          $2500 + 12%
+                        </div>
+
+                        <div style="font-size:13px;color:#6b7280;margin-bottom:12px;">
+                          4 Month Fast Track
+                        </div>
+
+                        <!-- FEATURES -->
+                        <table width="100%" style="text-align:left;font-size:13px;color:#374151;">
+                          <tr><td>✔ Live Technical Sessions</td></tr>
+                          <tr><td>✔ Mock Interview Support</td></tr>
+                          <tr><td>✔ Resume Marketing</td></tr>
+                          <tr><td>✔ Dedicated Recruiter</td></tr>
+                          <tr><td>✔ Email / LinkedIn Support</td></tr>
+                        </table>
+
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- PREMIUM -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                    style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:20px;text-align:center;">
+
+                        <div style="font-size:15px;font-weight:600;color:#374151;">
+                          Premium Plan
+                        </div>
+
+                        <div style="font-size:24px;font-weight:700;color:#111827;margin:10px 0;">
+                          $9000 + flat
+                        </div>
+
+                        <div style="font-size:13px;color:#6b7280;margin-bottom:12px;">
+                          3 Month Placement
+                        </div>
+
+                        <!-- FEATURES -->
+                        <table width="100%" style="text-align:left;font-size:13px;color:#374151;">
+                          <tr><td>✔ Personal Recruiter</td></tr>
+                          <tr><td>✔ Automation Tools</td></tr>
+                          <tr><td>✔ Priority Placement Support</td></tr>
+                          <tr><td>✔ Fast Track Hiring</td></tr>
+                        </table>
+
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- CTA (kept only global one) -->
+                  <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:13px;color:#6b7280;margin-bottom:10px;">
+                      Not sure which plan fits you?
+                    </div>
+
+                    <a href="#"
+                      style="background:#111827;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;display:inline-block;">
+                      Talk to an Advisor
+                    </a>
+                  </div>
+
+                  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+
+                  <!-- FOOTER -->
+                  <div style="font-size:12px;color:#9ca3af;text-align:center;line-height:1.6;">
+                    © 2026 Your Company<br>
+                    You received this email because you signed up.
+                  </div>
+
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+
+</table>
+
+"""
+
+},
+{
+  "name": "Candidate Details Form",
+  "subject": "Candidate Details Form",
+  "html_content": """ 
+<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;margin:0;padding:0;">
+
+  <tr>
+    <td align="center" style="padding:20px 12px;">
+
+      <!-- Wrapper -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <tr>
+          <td>
+
+            <!-- Main Card -->
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #260fea;">
+
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Candidate Details Form
+                  </div>
+
+                  <div style="font-size:13px;color:#6b7280;margin-top:4px;">
+                    Quick & Secure Submission
+                  </div>
+
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:28px;">
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear Customer,
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 18px;">
+                    Please submit the required candidate details using the secure form link below.
+                    This will help us proceed efficiently with your request.
+                  </p>
+
+                  <!-- CTA Button -->
+                  <div style="text-align:center;margin:22px 0;">
+                    <a href="{{form_url}}"
+                      style="background:#260fea ;color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:6px;font-size:14px;font-weight:600;display:inline-block;">
+                      Fill Candidate Details Form →
+                    </a>
+                  </div>
+
+                  <!-- Fallback Link -->
+                  <p style="font-size:12px;color:#6b7280;line-height:1.6;margin:18px 0;">
+                    If the button above doesn’t work, copy and paste this link into your browser:
+                    <br>
+                    <a href="{{form_url}}" style="color:#260fea;word-break:break-all;">
+                      {{form_url}}
+                    </a>
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:20px 0 0;">
+                    If you have any questions or need assistance, feel free to contact us.
+                  </p>
+
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#F3F6F9;border-top:1px solid #E5E7EB;padding:18px;text-align:center;">
+
+                  <div style="font-size:13px;font-weight:600;color:#0D1B2A;">
+                    Best regards,
+                  </div>
+
+                  <div style="font-size:13px;color:#4A6274;margin-top:4px;">
+                    Team
+                  </div>
+
+                  <div style="font-size:11px;color:#9CA3AF;margin-top:10px;">
+                    © {{year}} Your Company. All rights reserved.
+                  </div>
+
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+
+</table>
+ """
+},
+{
+  "name": "Agreement Signed - Customer",
+  "subject": "Agreement signed successfully",
+  "html_content": """
+<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:20px;">
+      <table width="100%" style="max-width:600px;">
+        <tr>
+          <td>
+
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
+
+              <tr>
+                <td style="padding:24px;border-bottom:2px solid #0A6EBD;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Agreement Signed Successfully
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;">Dear {{customer}},</p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;">
+                    Thank you for signing the agreement. We have successfully received your signed document.
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;">
+                    Please find the signed agreement attached along with the signing certificate for your records.
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="background:#F3F6F9;padding:16px;text-align:center;">
+                  <div style="font-size:13px;">Best regards,</div>
+                  <div style="font-size:13px;font-weight:600;">Team</div>
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>"""
+},
+{
+    "name": "Agreement Signed - Internal",
+    "subject" : "Agreement Signed by Customer",
+    "html_content":"""
+<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:20px;">
+      <table width="100%" style="max-width:600px;">
+        <tr>
+          <td>
+
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
+
+              <tr>
+                <td style="padding:24px;border-bottom:2px solid #0A6EBD;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Agreement Signed by Customer
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;">
+                    The customer has successfully signed the agreement.
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;">
+                    <strong>Sales Order:</strong> {{sales_order}}
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="background:#F3F6F9;padding:16px;text-align:center;">
+                  <div style="font-size:13px;">System Notification</div>
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>"""
+}
  
     ]
 
