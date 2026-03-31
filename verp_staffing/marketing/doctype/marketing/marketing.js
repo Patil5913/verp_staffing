@@ -103,23 +103,19 @@ frappe.ui.form.on("Marketing", {
 
 		// to display the interview list
 		render_interview_list(frm);
-		const [display_fields, access_fieldnames] = await Promise.all([
-			window.get_display_fields(frm.doctype),
-			window.get_access_fields(frm.doctype),
-		]);
-	
+		
+		const display_fields = await window.get_display_fields(frm.doctype);
+
 		window.render_customer_related_html({
 			frm: frm,
-			html_field: "lead_details",
+			html_field: "customer_details_html",
 			customer: frm.doc.customer,
 			fields: display_fields,
 		});
-		if (access_fieldnames.length) {
-			frm._update_detail_fields = _build_update_detail_fields(access_fieldnames);
-		}
+
 		window.setup_service_permission_button(frm);
 	},
-	
+
 	customer(frm) {
 		frm.trigger("refresh");
 	},
@@ -194,46 +190,44 @@ function open_create_interview_dialog(frm) {
 }
 
 function create_interview(frm, values) {
-	frappe.db.get_single_value("ERP Configuration", "default_interview_status")
-		.then((status) => {
+	frappe.db.get_single_value("ERP Configuration", "default_interview_status").then((status) => {
+		if (!status) {
+			frappe.throw("Default Interview Status is not set in ERP Configuration");
+		}
 
-			if (!status) {
-				frappe.throw("Default Interview Status is not set in ERP Configuration");
-			}
+		const interview_doc = {
+			doctype: "Interview",
+			marketing_link: frm.doc.name,
+			company: values.company,
+			role: values.role,
+			status: status, // 🔥 dynamic now
+		};
 
-			const interview_doc = {
-				doctype: "Interview",
-				marketing_link: frm.doc.name,
-				company: values.company,
-				role: values.role,
-				status: status, // 🔥 dynamic now
-			};
-
-			frappe.call({
-				method: "frappe.client.insert",
-				args: {
-					doc: interview_doc,
-				},
-				callback(r) {
-					if (r.message) {
-						frappe.msgprint({
-							title: __("Success"),
-							message: __("Interview Created Successfully"),
-							indicator: "green",
-						});
-
-						frappe.set_route("Form", "Interview", r.message.name);
-					}
-				},
-				error(err) {
+		frappe.call({
+			method: "frappe.client.insert",
+			args: {
+				doc: interview_doc,
+			},
+			callback(r) {
+				if (r.message) {
 					frappe.msgprint({
-						title: __("Error"),
-						message: err?.exc || __("Failed to create Interview"),
-						indicator: "red",
+						title: __("Success"),
+						message: __("Interview Created Successfully"),
+						indicator: "green",
 					});
-				},
-			});
+
+					frappe.set_route("Form", "Interview", r.message.name);
+				}
+			},
+			error(err) {
+				frappe.msgprint({
+					title: __("Error"),
+					message: err?.exc || __("Failed to create Interview"),
+					indicator: "red",
+				});
+			},
 		});
+	});
 }
 
 function render_interview_list(frm) {

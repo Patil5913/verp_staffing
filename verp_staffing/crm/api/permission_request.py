@@ -1,6 +1,3 @@
-# Copyright (c) 2025, Vrugle and contributors
-# For license information, please see license.txt
-
 import frappe
 import json
 from datetime import datetime, timedelta, timezone
@@ -8,104 +5,51 @@ from datetime import datetime, timedelta, timezone
 from verp_staffing.crm.api.helpers import (
     get_employee_name,
     get_user,
-    send_system_notification,
     send_notification,
     get_approver_by_department,
 )
 
 PERMISSION_EXPIRY_MINUTES = 30
 
-# UPDATABLE_FIELDS = {
-#     "surname": "Surname",
-#     "first_name": "First Name",
-#     "father_name": "Father Name",
-#     # "email": "Email",
-# }
 
-# UPDATABLE_TABLE_FIELDS = {
-#     "address_history": {
-#         "label": "Address History",
-#         "doctype": "Lead Address History",
-#         "columns": {
-#             "state": "State",
-#             "country": "Country",
-#             "from_date": "From Date",
-#             "to_date": "To Date",
-#         },
-#     }
-# }
-
-
-@frappe.whitelist()
-def get_lead_detail_fields_meta():
+def _add_activity_log(doctype, docname, message, user):
+    """Add a comment as activity log on a document."""
     try:
-        meta = frappe.get_meta("Lead Detail Form")
-    except Exception:
-        return {}
-
-    # frappe.errprint(f"{meta}")
-    skip_fieldtypes = [
-        "Section Break",
-        "Column Break",
-        "Tab Break",
-        "HTML",
-        "Button",
-        "Fold",
-        "Heading",
-    ]
-
-    fields = {}
-
-    for df in meta.fields:
-        if df.fieldtype in skip_fieldtypes:
-            continue
-
-        if not df.fieldname:
-            continue
-
-        fields[df.fieldname] = df.label or df.fieldname.replace("_", " ").title()
-
-    return fields
-
-
-def get_manager_of_employee(employee_name):
-    result = frappe.db.get_value(
-        "Employee Assignment Detail",
-        filters={"parent": employee_name},
-        fieldname="assigned_to",
-    )
-    return result or None
+        frappe.get_doc(
+            {
+                "doctype": "Comment",
+                "comment_type": "Info",
+                "reference_doctype": doctype,
+                "reference_name": docname,
+                "content": message,
+                "comment_by": user,
+            }
+        ).insert(ignore_permissions=True)
+    except Exception as e:
+        frappe.log_error(str(e), "Activity Log Error")
 
 
 def check_candidate_form_required_from_sales_order(so_name):
     if not so_name:
         return False
 
-    candidate_form_fields_tab = frappe.db.get_single_value(
+    raw = frappe.db.get_single_value(
         "ERP Configuration", "candidate_details_form_fields"
     )
-
-    if not candidate_form_fields_tab:
+    if not raw:
         return False
 
     try:
-        tab_data = json.loads(candidate_form_fields_tab)
-
+        tab_data = json.loads(raw)
         services = frappe.db.get_all(
             "SalesOrderServices",
             filters={"parent": so_name, "parenttype": "Sales Order"},
             pluck="service",
         )
-
         for service in services:
-            service_key = (service or "").lower().strip()
-            service_config = tab_data.get(service_key)
-            if (
-                service_config
-                and service_config.get("is_candidate_form_required") is True
-            ):
+            config = tab_data.get((service or "").lower().strip())
+            if config and config.get("is_candidate_form_required") is True:
                 return True
-
     except Exception as e:
         frappe.log_error(str(e), "Candidate Form Check Error")
 
@@ -119,156 +63,115 @@ def is_permission_expired(granted_at_str):
         granted_at = datetime.fromisoformat(granted_at_str)
         if granted_at.tzinfo is None:
             granted_at = granted_at.replace(tzinfo=timezone.utc)
-        expiry_time = granted_at + timedelta(minutes=PERMISSION_EXPIRY_MINUTES)
-        now_utc = datetime.now(timezone.utc)
-        return now_utc > expiry_time
+        return datetime.now(timezone.utc) > granted_at + timedelta(
+            minutes=PERMISSION_EXPIRY_MINUTES
+        )
     except Exception:
         return True
 
 
-@frappe.whitelist()
-def _request_permission(ref_doctype, ref_name, reason):
-    user = frappe.session.user
-    employee = get_employee_name(user)
-    if not employee:
-        frappe.throw("No Employee record found for the current user.")
+def _get_dept_access_config():
+    try:
+        raw = frappe.db.get_single_value(
+            "ERP Configuration", "department_access_form_fields"
+        )
+        if not raw:
+            return {}
+        return {k.lower().strip(): v for k, v in json.loads(raw).items()}
+    except Exception:
+        return {}
 
-    if ref_doctype == "Customer":
-        customer_owner = frappe.db.get_value("Customer", ref_name, "customer_owner")
-        if not customer_owner:
-            frappe.throw("No customer owner found for this Customer.")
-        manager_employee = get_approver_by_department(customer_owner)
-    else:
-        manager_employee = get_approver_by_department(employee)
 
-    if not manager_employee:
-        frappe.throw("No suitable approver found in the hierarchy.")
+def _build_fields_from_fieldnames(allowed_fieldnames):
+    """
+    Given a list of fieldnames, returns simple_fields and table_fields
+    by reading Lead Detail Form meta and child doctype metas dynamically.
+    """
+    try:
+        lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    except Exception:
+        return {"simple_fields": {}, "table_fields": {}}
 
-    manager_user = get_user(manager_employee)
-    if not manager_user:
-        frappe.throw("Approver employee has no linked User account.")
-
-    comment = frappe.get_doc(
-        {
-            "doctype": "Comment",
-            "comment_type": "Info",
-            "reference_doctype": ref_doctype,
-            "reference_name": ref_name,
-            "content": json.dumps(
-                {
-                    "type": "update_permission_request",
-                    "reason": reason,
-                    "requested_by_employee": employee,
-                    "requested_by_user": user,
-                    "approver_employee": manager_employee,
-                    "approver_user": manager_user,
-                    "status": "Pending",
-                    "granted_at": None,
-                }
-            ),
-            "comment_by": user,
-        }
-    )
-    comment.insert(ignore_permissions=True)
-
-    manager_email = frappe.db.get_value("User", manager_user, "email")
-
-    send_notification(
-        recipients=[manager_email],
-        subject=f"Update Permission Request for {ref_doctype} {ref_name}",
-        message=(
-            f"Employee <b>{employee}</b> has requested permission to update "
-            f"fields on {ref_doctype} <b>{ref_name}</b>.<br><br>"
-            f"<b>Reason:</b> {reason}<br><br>"
-            f"Please open the form and click <b>Give Permission</b> to approve."
-        ),
-        reference_doctype=ref_doctype,
-        reference_name=ref_name,
-        send_email=1,
-        send_system=1,
-    )
-
-    return {
-        "status": "success",
-        "comment_name": comment.name,
-        "manager_employee": manager_employee,
-        "manager_user": manager_user,
+    skip_fieldtypes = {
+        "Section Break",
+        "Column Break",
+        "Tab Break",
+        "HTML",
+        "Button",
+        "Fold",
+        "Heading",
+        "Read Only",
+        "Attach",
+        "Attach Image",
+    }
+    system_fields = {
+        "name",
+        "parent",
+        "parenttype",
+        "parentfield",
+        "idx",
+        "owner",
+        "modified_by",
+        "creation",
+        "modified",
+        "docstatus",
     }
 
+    simple_fields = {}
+    table_fields = {}
 
-@frappe.whitelist()
-def _check_permission_status(ref_doctype, ref_name):
-    user = frappe.session.user
-    employee = get_employee_name(user)
-
-    if not employee:
-        return {"status": "none"}
-
-    comments = frappe.get_all(
-        "Comment",
-        filters={
-            "reference_doctype": ref_doctype,
-            "reference_name": ref_name,
-            "comment_type": "Info",
-        },
-        fields=["name", "content"],
-        order_by="creation desc",
-    )
-
-    for c in comments:
-        try:
-            data = json.loads(c.content)
-            if (
-                data.get("type") == "update_permission_request"
-                and data.get("requested_by_employee") == employee
-            ):
-                raw_status = data.get("status", "Pending")
-
-                if raw_status == "Approved":
-                    granted_at = data.get("granted_at")
-
-                    if is_permission_expired(granted_at):
-                        data["status"] = "Expired"
-                        frappe.db.set_value(
-                            "Comment", c.name, "content", json.dumps(data)
-                        )
-                        frappe.db.commit()
-                        return {"status": "expired"}
-
-                    granted_dt = datetime.fromisoformat(granted_at)
-                    if granted_dt.tzinfo is None:
-                        granted_dt = granted_dt.replace(tzinfo=timezone.utc)
-                    expiry_dt = granted_dt + timedelta(
-                        minutes=PERMISSION_EXPIRY_MINUTES
-                    )
-                    remaining_seconds = int(
-                        (expiry_dt - datetime.now(timezone.utc)).total_seconds()
-                    )
-
-                    return {
-                        "status": "approved",
-                        "remaining_seconds": max(remaining_seconds, 0),
-                    }
-
-                if raw_status == "Declined":
-                    return {"status": "declined"}
-
-                return {"status": raw_status.lower()}
-
-        except Exception:
+    for fieldname in allowed_fieldnames:
+        fieldname = (fieldname or "").strip()
+        if not fieldname:
             continue
 
-    return {"status": "none"}
+        df = lead_detail_meta.get_field(fieldname)
+        if not df:
+            frappe.log_error(
+                f"Field '{fieldname}' not found in Lead Detail Form meta",
+                "build_fields_missing_field",
+            )
+            continue
+
+        if df.fieldtype == "Table":
+            child_doctype = df.options
+            if not child_doctype:
+                continue
+            try:
+                child_meta = frappe.get_meta(child_doctype)
+            except Exception:
+                continue
+
+            columns = {
+                child_df.fieldname: child_df.label
+                or child_df.fieldname.replace("_", " ").title()
+                for child_df in child_meta.fields
+                if child_df.fieldtype not in skip_fieldtypes
+                and child_df.fieldname not in system_fields
+                and child_df.fieldname
+            }
+
+            if columns:
+                table_fields[fieldname] = {
+                    "label": df.label or fieldname.replace("_", " ").title(),
+                    "doctype": child_doctype,
+                    "columns": columns,
+                }
+        else:
+            simple_fields[fieldname] = {
+                "label": df.label or fieldname.replace("_", " ").title(),
+                "fieldtype": df.fieldtype,
+                "options": df.options or "",
+                "reqd": df.reqd or 0,
+            }
+
+    return {"simple_fields": simple_fields, "table_fields": table_fields}
 
 
 @frappe.whitelist()
 def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     user = frappe.session.user
-
-    try:
-        employee = get_employee_name(user)
-    except Exception:
-        employee = None
+    employee = get_employee_name(user)
 
     if not employee:
         return {
@@ -292,10 +195,8 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
     is_customer_owner = employee == customer_owner
 
-    # Check if employee is lead_owner of linked Lead
     lead_owner_match = False
     lead_detail_doc = frappe.db.get_value("Customer", customer_name, "lead_details")
-
     if lead_detail_doc:
         lead_ref = frappe.db.get_value(
             "Doctype Reference",
@@ -308,11 +209,10 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
         )
         if lead_ref:
             lead_owner = frappe.db.get_value("Lead", lead_ref, "lead_owner")
-            if lead_owner == employee:
-                lead_owner_match = True
+            lead_owner_match = lead_owner == employee
 
-    # Check if employee is assign_to on ANY service doctype for this customer
-    service_doctypes = [
+    is_service_assignee = False
+    for doctype in [
         "Resume",
         "RUC",
         "JDC",
@@ -321,19 +221,11 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
         "Marketing",
         "Technical Other Services",
         "Marketing Other Services",
-    ]
-    is_service_assignee = False
-
-    for doctype in service_doctypes:
+    ]:
         try:
-            exists = frappe.db.exists(
-                doctype,
-                {
-                    "customer": customer_name,
-                    "assign_to": employee,
-                },
-            )
-            if exists:
+            if frappe.db.exists(
+                doctype, {"customer": customer_name, "assign_to": employee}
+            ):
                 is_service_assignee = True
                 break
         except Exception:
@@ -341,15 +233,10 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
 
     is_owner = is_customer_owner or lead_owner_match or is_service_assignee
 
-    # Check candidate form required via ERP Configuration JSON
-    resolved_lead_detail = frappe.db.get_value(
-        "Customer", customer_name, "lead_details"
-    )
     candidate_form_required = False
-
-    if resolved_lead_detail:
+    if lead_detail_doc:
         so_name = frappe.db.get_value(
-            "Lead Detail Form", resolved_lead_detail, "sales_order"
+            "Lead Detail Form", lead_detail_doc, "sales_order"
         )
         candidate_form_required = check_candidate_form_required_from_sales_order(
             so_name
@@ -364,22 +251,218 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
 
 
 @frappe.whitelist()
-def request_field_update(customer_name, reason, field_updates):
+def _check_permission_status(ref_doctype, ref_name):
     user = frappe.session.user
+    employee = get_employee_name(user)
+    if not employee:
+        return {"status": "none"}
+
+    comments = frappe.get_all(
+        "Comment",
+        filters={
+            "reference_doctype": ref_doctype,
+            "reference_name": ref_name,
+            "comment_type": "Info",
+        },
+        fields=["name", "content"],
+        order_by="creation desc",
+    )
+
+    for c in comments:
+        try:
+            data = json.loads(c.content)
+            if (
+                data.get("type") == "update_permission_request"
+                and data.get("requested_by_employee") == employee
+            ):
+
+                raw_status = data.get("status", "Pending")
+
+                if raw_status == "Approved":
+                    granted_at = data.get("granted_at")
+                    if is_permission_expired(granted_at):
+                        data["status"] = "Expired"
+                        frappe.db.set_value(
+                            "Comment", c.name, "content", json.dumps(data)
+                        )
+                        frappe.db.commit()
+                        return {"status": "expired"}
+
+                    granted_dt = datetime.fromisoformat(granted_at)
+                    if granted_dt.tzinfo is None:
+                        granted_dt = granted_dt.replace(tzinfo=timezone.utc)
+                    expiry_dt = granted_dt + timedelta(
+                        minutes=PERMISSION_EXPIRY_MINUTES
+                    )
+                    remaining_seconds = int(
+                        (expiry_dt - datetime.now(timezone.utc)).total_seconds()
+                    )
+                    return {
+                        "status": "approved",
+                        "remaining_seconds": max(remaining_seconds, 0),
+                    }
+
+                if raw_status == "Declined":
+                    return {"status": "declined"}
+
+                return {"status": raw_status.lower()}
+        except Exception:
+            continue
+
+    return {"status": "none"}
+
+
+@frappe.whitelist()
+def get_department_updatable_fields(doctype=None):
+    dept_access = _get_dept_access_config()
+    if not dept_access:
+        return {"simple_fields": {}, "table_fields": {}}
+
+    if not doctype:
+        return {"simple_fields": {}, "table_fields": {}}
+
+    key = (doctype or "").lower().strip()
+
+    allowed_fieldnames = dept_access.get(key, [])
+
+    if not allowed_fieldnames:
+        return {"simple_fields": {}, "table_fields": {}}
+
+    return _build_fields_from_fieldnames(allowed_fieldnames)
+
+
+@frappe.whitelist()
+def get_customer_owner_updatable_fields():
+    """
+    Returns simple_fields and table_fields for the customer owner
+    using the 'customer' key in ERP Configuration → department_access_form_fields.
+    Called when Update Detail dialog opens on Customer form.
+    """
+    dept_access_normalized = _get_dept_access_config()
+    allowed_fieldnames = dept_access_normalized.get("customer", [])
+    if not allowed_fieldnames:
+        return {"simple_fields": {}, "table_fields": {}}
+    return _build_fields_from_fieldnames(allowed_fieldnames)
+
+
+@frappe.whitelist()
+def get_lead_detail_field_values(customer_name):
+    """
+    Returns current field values from Lead Detail Form for a customer.
+    Fetches all fields that any department could possibly see.
+    Called before opening the Update Detail dialog to show current values.
+    """
+    lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
+    if not lead_detail_name:
+        return {}
+
+    dept_access_normalized = _get_dept_access_config()
+
+    # Collect ALL fieldnames across ALL department keys
+    all_fieldnames = set()
+    for fieldnames in dept_access_normalized.values():
+        for f in fieldnames:
+            if f and f.strip():
+                all_fieldnames.add(f.strip())
+
+    if not all_fieldnames:
+        return {}
 
     try:
-        employee = get_employee_name(user)
+        lead_detail_meta = frappe.get_meta("Lead Detail Form")
     except Exception:
-        employee = None
+        return {}
 
+    skip_fieldtypes = {
+        "Section Break",
+        "Column Break",
+        "Tab Break",
+        "HTML",
+        "Button",
+        "Fold",
+        "Heading",
+        "Read Only",
+        "Attach",
+        "Attach Image",
+    }
+    system_fields = {
+        "name",
+        "parent",
+        "parenttype",
+        "parentfield",
+        "idx",
+        "owner",
+        "modified_by",
+        "creation",
+        "modified",
+        "docstatus",
+    }
+
+    # Separate simple and table fieldnames
+    simple_fieldnames = []
+    table_fieldnames = []
+
+    for fieldname in all_fieldnames:
+        df = lead_detail_meta.get_field(fieldname)
+        if not df:
+            continue
+        if df.fieldtype == "Table":
+            table_fieldnames.append(fieldname)
+        else:
+            simple_fieldnames.append(fieldname)
+
+    # Fetch simple field values in one query
+    values = {}
+    if simple_fieldnames:
+        values = (
+            frappe.db.get_value(
+                "Lead Detail Form",
+                lead_detail_name,
+                simple_fieldnames,
+                as_dict=True,
+            )
+            or {}
+        )
+
+    # Fetch table field values
+    for fieldname in table_fieldnames:
+        df = lead_detail_meta.get_field(fieldname)
+        if not df or not df.options:
+            continue
+        try:
+            child_meta = frappe.get_meta(df.options)
+            col_fieldnames = [
+                cf.fieldname
+                for cf in child_meta.fields
+                if cf.fieldtype not in skip_fieldtypes
+                and cf.fieldname not in system_fields
+                and cf.fieldname
+            ]
+            rows = frappe.db.get_all(
+                df.options,
+                filters={"parent": lead_detail_name, "parenttype": "Lead Detail Form"},
+                fields=col_fieldnames,
+                order_by="idx asc",
+            )
+            values[fieldname] = rows
+        except Exception:
+            continue
+
+    return values
+
+
+@frappe.whitelist()
+def request_field_update(
+    customer_name, reason, field_updates, service_doctype=None, service_name=None
+):
+    user = frappe.session.user
+    employee = get_employee_name(user)
     if not employee:
         frappe.throw("No Employee record found for the current user.")
 
-    customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
-    if not customer_owner:
+    if not frappe.db.get_value("Customer", customer_name, "customer_owner"):
         frappe.throw("No customer owner found for this Customer.")
 
-    # Route based on requesting employee's own department
     manager_employee = get_approver_by_department(employee)
     if not manager_employee:
         frappe.throw("No suitable approver found in your hierarchy.")
@@ -390,6 +473,118 @@ def request_field_update(customer_name, reason, field_updates):
 
     if isinstance(field_updates, str):
         field_updates = json.loads(field_updates)
+
+    # Build field labels for activity log
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    field_labels = []
+    for f in field_updates.keys():
+        df = lead_detail_meta.get_field(f)
+
+        label = None
+
+        if df:
+            label = df.label or df.fieldname  # fallback if label is None
+
+        if not label:
+            label = f.replace("_", " ").title()
+
+        field_labels.append(str(label))
+
+    comment = frappe.get_doc(
+        {
+            "doctype": "Comment",
+            "comment_type": "Info",
+            "reference_doctype": "Customer",
+            "reference_name": customer_name,
+            "content": json.dumps(
+                {
+                    "type": "field_update_request",
+                    "reason": reason,
+                    "requested_by_employee": employee,
+                    "requested_by_user": user,
+                    "approver_employee": manager_employee,
+                    "approver_user": manager_user,
+                    "status": "Pending",
+                    "field_updates": field_updates,
+                    "service_doctype": service_doctype,
+                    "service_name": service_name,
+                    "requested_at": datetime.now(timezone.utc).isoformat(),
+                }
+            ),
+            "comment_by": user,
+        }
+    )
+    comment.insert(ignore_permissions=True)
+
+    manager_email = frappe.db.get_value("User", manager_user, "email")
+    send_notification(
+        recipients=[manager_email],
+        subject=f"Field Update Request for Customer {customer_name}",
+        message=(
+            f"Employee <b>{employee}</b> has requested to update fields "
+            f"on Customer <b>{customer_name}</b>.<br><br>"
+            f"<b>Reason:</b> {reason}<br><br>"
+            f"<b>Fields:</b> {', '.join(field_labels)}<br><br>"
+            f"Please open Customer <b>{customer_name}</b> and click <b>Accept Updates</b> to review."
+        ),
+        reference_doctype="Customer",
+        reference_name=customer_name,
+        send_email=1,
+        send_system=1,
+    )
+
+    activity_message = (
+        f"<b> requested field update for: <b>{', '.join(field_labels)}</b>.<br>"
+        f"<b>Reason:</b> {reason}<br>"
+        f"Sent to manager <b>{manager_employee}</b> for approval."
+    )
+
+    # ── Log on Customer ──
+    _add_activity_log("Customer", customer_name, activity_message, user)
+
+    # ── Log on service doctype if provided ──
+    if service_doctype and service_name:
+        _add_activity_log(service_doctype, service_name, activity_message, user)
+
+    return {"status": "success", "manager_employee": manager_employee}
+
+
+@frappe.whitelist()
+def request_field_update_by_owner(customer_name, reason, field_updates):
+    user = frappe.session.user
+    employee = get_employee_name(user)
+    if not employee:
+        frappe.throw("No Employee record found for the current user.")
+
+    customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
+    if customer_owner != employee:
+        frappe.throw("Only the customer owner can send this request.")
+
+    manager_employee = get_approver_by_department(employee)
+    if not manager_employee:
+        frappe.throw("No suitable approver found in your hierarchy.")
+
+    manager_user = get_user(manager_employee)
+    if not manager_user:
+        frappe.throw("Approver employee has no linked User account.")
+
+    if isinstance(field_updates, str):
+        field_updates = json.loads(field_updates)
+
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    field_labels = []
+    for f in field_updates.keys():
+        df = lead_detail_meta.get_field(f)
+
+        label = None
+
+        if df:
+            label = df.label or df.fieldname  # fallback if label is None
+
+        if not label:
+            label = f.replace("_", " ").title()
+
+        field_labels.append(str(label))
 
     comment = frappe.get_doc(
         {
@@ -416,7 +611,6 @@ def request_field_update(customer_name, reason, field_updates):
     comment.insert(ignore_permissions=True)
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
-
     send_notification(
         recipients=[manager_email],
         subject=f"Field Update Request for Customer {customer_name}",
@@ -424,8 +618,8 @@ def request_field_update(customer_name, reason, field_updates):
             f"Employee <b>{employee}</b> has requested to update fields "
             f"on Customer <b>{customer_name}</b>.<br><br>"
             f"<b>Reason:</b> {reason}<br><br>"
-            f"Please open Customer <b>{customer_name}</b> and click "
-            f"<b>Accept Updates</b> to review."
+            f"<b>Fields:</b> {', '.join(field_labels)}<br><br>"
+            f"Please open Customer <b>{customer_name}</b> and click <b>Accept Updates</b> to review."
         ),
         reference_doctype="Customer",
         reference_name=customer_name,
@@ -433,21 +627,23 @@ def request_field_update(customer_name, reason, field_updates):
         send_system=1,
     )
 
-    return {
-        "status": "success",
-        "manager_employee": manager_employee,
-    }
+    activity_message = (
+        f"<b>{employee}</b> (Customer Owner) requested field update for: <b>{', '.join(field_labels)}</b>.<br>"
+        f"<b>Reason:</b> {reason}<br>"
+        f"Sent to manager <b>{manager_employee}</b> for approval."
+    )
+
+    # ── Log on Customer only (owner request) ──
+    _add_activity_log("Customer", customer_name, activity_message, user)
+
+    return {"status": "success", "manager_employee": manager_employee}
 
 
 @frappe.whitelist()
 def get_pending_field_update_request(customer_name):
+    """Returns single pending request where logged-in employee is the approver."""
     user = frappe.session.user
-
-    try:
-        current_employee = get_employee_name(user)
-    except Exception:
-        current_employee = None
-
+    current_employee = get_employee_name(user)
     if not current_employee:
         return {"has_pending": False}
 
@@ -485,13 +681,9 @@ def get_pending_field_update_request(customer_name):
 
 @frappe.whitelist()
 def get_all_pending_field_update_requests(customer_name):
+    """Returns ALL pending requests where logged-in employee is the approver."""
     user = frappe.session.user
-
-    try:
-        current_employee = get_employee_name(user)
-    except Exception:
-        current_employee = None
-
+    current_employee = get_employee_name(user)
     if not current_employee:
         return []
 
@@ -529,611 +721,20 @@ def get_all_pending_field_update_requests(customer_name):
     return pending
 
 
-# @frappe.whitelist()
-# def apply_field_updates(customer_name, comment_name, approved_fields):
-#     user = frappe.session.user
-
-#     try:
-#         manager_employee = get_employee_name(user)
-#     except Exception:
-#         manager_employee = None
-
-#     if not manager_employee:
-#         frappe.throw("No Employee record found.")
-
-#     if isinstance(approved_fields, str):
-#         approved_fields = json.loads(approved_fields)
-
-#     comment_doc = frappe.get_doc("Comment", comment_name)
-#     data = json.loads(comment_doc.content)
-
-#     if data.get("status") != "Pending":
-#         frappe.throw("This request has already been processed.")
-
-#     field_updates = data.get("field_updates", {})
-
-#     lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
-
-#     if not lead_detail_name:
-#         frappe.throw("No Lead Detail Form found for this Customer.")
-
-#     updated_fields = {}
-
-#     for field in approved_fields:
-#         if field in field_updates:
-#             # ── Handle table fields ──
-#             if field in UPDATABLE_TABLE_FIELDS:
-#                 config = UPDATABLE_TABLE_FIELDS[field]
-#                 new_rows = field_updates[field].get("new", [])
-
-#                 # Delete existing rows
-#                 frappe.db.delete(
-#                     config["doctype"],
-#                     {
-#                         "parent": lead_detail_name,
-#                         "parenttype": "Lead Detail Form",
-#                     },
-#                 )
-
-#                 # Insert new rows
-#                 for idx, row in enumerate(new_rows):
-#                     new_row = frappe.get_doc(
-#                         {
-#                             "doctype": config["doctype"],
-#                             "parent": lead_detail_name,
-#                             "parenttype": "Lead Detail Form",
-#                             "parentfield": field,
-#                             "idx": idx + 1,
-#                             **{k: row.get(k, "") for k in config["columns"].keys()},
-#                         }
-#                     )
-#                     new_row.insert(ignore_permissions=True)
-
-#                 updated_fields[field] = new_rows
-
-#             # ── Handle simple fields ──
-#             elif field in UPDATABLE_FIELDS:
-#                 new_value = field_updates[field].get("new")
-#                 frappe.db.set_value(
-#                     "Lead Detail Form",
-#                     lead_detail_name,
-#                     field,
-#                     new_value,
-#                 )
-#                 updated_fields[field] = new_value
-
-#     # Mark comment as processed
-#     data["status"] = "Approved"
-#     data["approved_by"] = manager_employee
-#     data["approved_fields"] = approved_fields
-#     data["approved_at"] = datetime.now(timezone.utc).isoformat()
-#     frappe.db.set_value("Comment", comment_name, "content", json.dumps(data))
-#     frappe.db.commit()
-
-#     # Notify requester
-#     requester_user = data.get("requested_by_user")
-#     if requester_user:
-#         requester_email = frappe.db.get_value("User", requester_user, "email")
-#         if requester_email:
-#             field_names = ", ".join(
-#                 UPDATABLE_FIELDS.get(
-#                     f, UPDATABLE_TABLE_FIELDS.get(f, {}).get("label", f)
-#                 )
-#                 for f in approved_fields
-#             )
-#             send_notification(
-#                 recipients=[requester_email],
-#                 subject=f"Field Updates Approved for Customer {customer_name}",
-#                 message=(
-#                     f"Your manager <b>{manager_employee}</b> has approved updates "
-#                     f"for: <b>{field_names}</b>.<br><br>"
-#                     f"The Lead Detail Form has been updated."
-#                 ),
-#                 reference_doctype="Customer",
-#                 reference_name=customer_name,
-#                 send_email=1,
-#                 send_system=1,
-#             )
-
-#     return {
-#         "status": "success",
-#         "updated_fields": updated_fields,
-#     }
-
-
-@frappe.whitelist()
-def apply_field_updates(customer_name, comment_name, approved_fields):
-    user = frappe.session.user
-    try:
-        manager_employee = get_employee_name(user)
-    except Exception:
-        manager_employee = None
-
-    if not manager_employee:
-        frappe.throw("No Employee record found.")
-
-    if isinstance(approved_fields, str):
-        approved_fields = json.loads(approved_fields)
-
-    comment_doc = frappe.get_doc("Comment", comment_name)
-    data = json.loads(comment_doc.content)
-
-    if data.get("status") != "Pending":
-        frappe.throw("This request has already been processed.")
-
-    field_updates = data.get("field_updates", {})
-    lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
-
-    if not lead_detail_name:
-        frappe.throw("No Lead Detail Form found for this Customer.")
-
-    # Get Lead Detail Form meta for dynamic field handling
-    lead_detail_meta = frappe.get_meta("Lead Detail Form")
-    updated_fields = {}
-
-    for field in approved_fields:
-        if field not in field_updates:
-            continue
-
-        df = lead_detail_meta.get_field(field)
-        if not df:
-            frappe.log_error(
-                f"Field '{field}' not found in Lead Detail Form", "apply_field_updates"
-            )
-            continue
-
-        # Handle TABLE fields
-        if df.fieldtype == "Table":
-            child_doctype = df.options
-            if not child_doctype:
-                continue
-
-            new_rows = field_updates[field].get("new", [])
-
-            # Delete existing rows for this table field
-            frappe.db.delete(
-                child_doctype,
-                {
-                    "parent": lead_detail_name,
-                    "parenttype": "Lead Detail Form",
-                    "parentfield": field,  # Important: specify parentfield
-                },
-            )
-
-            # Insert new rows
-            for idx, row in enumerate(new_rows):
-                new_row = frappe.get_doc(
-                    {
-                        "doctype": child_doctype,
-                        "parent": lead_detail_name,
-                        "parenttype": "Lead Detail Form",
-                        "parentfield": field,
-                        "idx": idx + 1,
-                        **row,  # Spread row data
-                    }
-                )
-                new_row.insert(ignore_permissions=True)
-
-            updated_fields[field] = new_rows
-
-        # Handle SIMPLE fields (Data, Text, Date, etc.)
-        elif df.fieldtype in [
-            "Data",
-            "Text",
-            "Small Text",
-            "Long Text",
-            "Date",
-            "Datetime",
-            "Int",
-            "Float",
-            "Currency",
-            "Check",
-        ]:
-            new_value = field_updates[field].get("new")
-            frappe.db.set_value(
-                "Lead Detail Form",
-                lead_detail_name,
-                field,
-                new_value,
-            )
-            updated_fields[field] = new_value
-
-        else:
-            frappe.log_error(
-                f"Unsupported fieldtype '{df.fieldtype}' for field '{field}'",
-                "apply_field_updates",
-            )
-
-    # Mark comment as processed
-    data["status"] = "Approved"
-    data["approved_by"] = manager_employee
-    data["approved_fields"] = approved_fields
-    data["approved_at"] = datetime.now(timezone.utc).isoformat()
-    frappe.db.set_value("Comment", comment_name, "content", json.dumps(data))
-    frappe.db.commit()
-
-    # Notify requester (same as before)
-    requester_user = data.get("requested_by_user")
-    if requester_user:
-        requester_email = frappe.db.get_value("User", requester_user, "email")
-        if requester_email:
-            # Get field labels dynamically
-            field_labels = []
-            for f in approved_fields:
-                df = lead_detail_meta.get_field(f)
-                label = df.label if df else f.replace("_", " ").title()
-                field_labels.append(label)
-
-            field_names = ", ".join(field_labels)
-            send_notification(
-                recipients=[requester_email],
-                subject=f"Field Updates Approved for Customer {customer_name}",
-                message=(
-                    f"Your manager <b>{manager_employee}</b> has approved updates "
-                    f"for: <b>{field_names}</b>.<br><br>"
-                    f"The Lead Detail Form has been updated."
-                ),
-                reference_doctype="Customer",
-                reference_name=customer_name,
-                send_email=1,
-                send_system=1,
-            )
-
-    return {
-        "status": "success",
-        "updated_fields": updated_fields,
-    }
-
-
-# @frappe.whitelist()
-# def get_lead_detail_field_values(customer_name):
-#     lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
-
-#     if not lead_detail_name:
-#         return {}
-
-#     values = (
-#         frappe.db.get_value(
-#             "Lead Detail Form",
-#             lead_detail_name,
-#             list(UPDATABLE_FIELDS.keys()),
-#             as_dict=True,
-#         )
-#         or {}
-#     )
-
-#     # ── Fetch ALL table fields from ERP Configuration dynamically ──
-#     # so any table field in any dept key is returned
-#     try:
-#         dept_access_raw = frappe.db.get_single_value(
-#             "ERP Configuration", "department_access_form_fields"
-#         )
-#         if dept_access_raw:
-#             dept_access = json.loads(dept_access_raw)
-#             lead_detail_meta = frappe.get_meta("Lead Detail Form")
-
-#             # Collect all unique fieldnames across all dept keys
-#             all_fieldnames = set()
-#             for fieldnames in dept_access.values():
-#                 for f in fieldnames:
-#                     all_fieldnames.add((f or "").strip())
-
-#             for fieldname in all_fieldnames:
-#                 if not fieldname or fieldname in values:
-#                     continue
-
-#                 df = lead_detail_meta.get_field(fieldname)
-#                 if not df:
-#                     continue
-
-#                 if df.fieldtype == "Table":
-#                     child_doctype = df.options
-#                     if not child_doctype:
-#                         continue
-
-#                     child_meta = frappe.get_meta(child_doctype)
-#                     skip_fieldtypes = {
-#                         "Section Break",
-#                         "Column Break",
-#                         "Tab Break",
-#                         "HTML",
-#                         "Button",
-#                         "Fold",
-#                         "Heading",
-#                         "Read Only",
-#                         "Attach",
-#                         "Attach Image",
-#                     }
-#                     col_fieldnames = [
-#                         cf.fieldname
-#                         for cf in child_meta.fields
-#                         if cf.fieldtype not in skip_fieldtypes
-#                         and cf.fieldname
-#                         not in (
-#                             "name",
-#                             "parent",
-#                             "parenttype",
-#                             "parentfield",
-#                             "idx",
-#                             "owner",
-#                             "modified_by",
-#                             "creation",
-#                             "modified",
-#                             "docstatus",
-#                         )
-#                     ]
-
-#                     rows = frappe.db.get_all(
-#                         child_doctype,
-#                         filters={
-#                             "parent": lead_detail_name,
-#                             "parenttype": "Lead Detail Form",
-#                         },
-#                         fields=col_fieldnames + ["name"],
-#                         order_by="idx asc",
-#                     )
-#                     values[fieldname] = rows
-
-#     except Exception as e:
-#         frappe.log_error(str(e), "get_lead_detail_field_values dynamic fetch")
-
-#     # ── Also fetch hardcoded table fields ──
-#     for fieldname, config in UPDATABLE_TABLE_FIELDS.items():
-#         if fieldname not in values:
-#             rows = frappe.db.get_all(
-#                 config["doctype"],
-#                 filters={
-#                     "parent": lead_detail_name,
-#                     "parenttype": "Lead Detail Form",
-#                 },
-#                 fields=list(config["columns"].keys()) + ["name"],
-#                 order_by="idx asc",
-#             )
-#             values[fieldname] = rows
-
-#     return values
-
-
-@frappe.whitelist()
-def get_lead_detail_field_values(customer_name):
-    lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
-    if not lead_detail_name:
-        return {}
-
-    # Get ALL updatable fields dynamically from ERP Configuration
-    try:
-        dept_access_raw = frappe.db.get_single_value(
-            "ERP Configuration", "department_access_form_fields"
-        )
-        if dept_access_raw:
-            dept_access = json.loads(dept_access_raw)
-
-            # Get current user's allowed fields
-            user = frappe.session.user
-            employee = get_employee_name(user)
-            allowed_fieldnames = []
-
-            if employee:
-                assignment_rows = frappe.db.get_all(
-                    "Employee Assignment Detail",
-                    filters={"parent": employee},
-                    fields=["department", "designation"],
-                )
-
-                dept_access_normalized = {
-                    k.lower().strip(): v for k, v in dept_access.items()
-                }
-
-                for row in assignment_rows:
-                    designation = (row.get("designation") or "").lower().strip()
-                    department = (row.get("department") or "").lower().strip()
-
-                    # Check designation first
-                    if designation and designation in dept_access_normalized:
-                        allowed_fieldnames = dept_access_normalized[designation]
-                        break
-
-                    # Check department
-                    if department and department in dept_access_normalized:
-                        allowed_fieldnames = dept_access_normalized[department]
-                        break
-
-            # Also check customer owner fields
-            customer_owner_fields = dept_access_normalized.get("customer", [])
-            allowed_fieldnames.extend(customer_owner_fields)
-            allowed_fieldnames = list(
-                set([f.strip() for f in allowed_fieldnames if f.strip()])
-            )
-    except Exception:
-        allowed_fieldnames = []
-
-    # Get Lead Detail Form meta
-    try:
-        lead_detail_meta = frappe.get_meta("Lead Detail Form")
-    except Exception:
-        return {}
-
-    # Fetch simple field values
-    simple_field_values = (
-        frappe.db.get_value(
-            "Lead Detail Form",
-            lead_detail_name,
-            [f for f in allowed_fieldnames if f],
-            as_dict=True,
-        )
-        or {}
-    )
-
-    values = {**simple_field_values}
-
-    # Fetch table field values dynamically
-    skip_fieldtypes = {
-        "Section Break",
-        "Column Break",
-        "Tab Break",
-        "HTML",
-        "Button",
-        "Fold",
-        "Heading",
-        "Read Only",
-        "Attach",
-        "Attach Image",
-    }
-
-    system_fields = {
-        "name",
-        "parent",
-        "parenttype",
-        "parentfield",
-        "idx",
-        "owner",
-        "modified_by",
-        "creation",
-        "modified",
-        "docstatus",
-    }
-
-    for fieldname in allowed_fieldnames:
-        fieldname = fieldname.strip()
-        if not fieldname or fieldname in values:
-            continue
-
-        df = lead_detail_meta.get_field(fieldname)
-        if not df:
-            continue
-
-        if df.fieldtype == "Table":
-            child_doctype = df.options
-            if not child_doctype:
-                continue
-
-            try:
-                child_meta = frappe.get_meta(child_doctype)
-                col_fieldnames = [
-                    cf.fieldname
-                    for cf in child_meta.fields
-                    if (
-                        cf.fieldtype not in skip_fieldtypes
-                        and cf.fieldname not in system_fields
-                        and cf.fieldname
-                    )
-                ]
-
-                rows = frappe.db.get_all(
-                    child_doctype,
-                    filters={
-                        "parent": lead_detail_name,
-                        "parenttype": "Lead Detail Form",
-                    },
-                    fields=col_fieldnames,
-                    order_by="idx asc",
-                )
-                values[fieldname] = rows
-            except Exception:
-                continue
-
-    return values
-
-
-@frappe.whitelist()
-def request_field_update_by_owner(customer_name, reason, field_updates):
-    user = frappe.session.user
-
-    try:
-        employee = get_employee_name(user)
-    except Exception:
-        employee = None
-
-    if not employee:
-        frappe.throw("No Employee record found for the current user.")
-
-    # Verify logged-in user is actually the customer_owner
-    customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
-    if customer_owner != employee:
-        frappe.throw("Only the customer owner can send this request.")
-
-    manager_employee = get_approver_by_department(employee)
-    if not manager_employee:
-        frappe.throw("No suitable approver found in your hierarchy.")
-
-    manager_user = get_user(manager_employee)
-    if not manager_user:
-        frappe.throw("Approver employee has no linked User account.")
-
-    if isinstance(field_updates, str):
-        field_updates = json.loads(field_updates)
-
-    comment = frappe.get_doc(
-        {
-            "doctype": "Comment",
-            "comment_type": "Info",
-            "reference_doctype": "Customer",
-            "reference_name": customer_name,
-            "content": json.dumps(
-                {
-                    "type": "field_update_request",
-                    "reason": reason,
-                    "requested_by_employee": employee,
-                    "requested_by_user": user,
-                    "approver_employee": manager_employee,
-                    "approver_user": manager_user,
-                    "status": "Pending",
-                    "field_updates": field_updates,
-                    "requested_at": datetime.now(timezone.utc).isoformat(),
-                }
-            ),
-            "comment_by": user,
-        }
-    )
-    comment.insert(ignore_permissions=True)
-
-    manager_email = frappe.db.get_value("User", manager_user, "email")
-
-    send_notification(
-        recipients=[manager_email],
-        subject=f"Field Update Request for Customer {customer_name}",
-        message=(
-            f"Employee <b>{employee}</b> has requested to update fields "
-            f"on Customer <b>{customer_name}</b>.<br><br>"
-            f"<b>Reason:</b> {reason}<br><br>"
-            f"Please open Customer <b>{customer_name}</b> and click "
-            f"<b>Accept Updates</b> to review."
-        ),
-        reference_doctype="Customer",
-        reference_name=customer_name,
-        send_email=1,
-        send_system=1,
-    )
-
-    return {
-        "status": "success",
-        "manager_employee": manager_employee,
-    }
-
-
 @frappe.whitelist()
 def get_candidate_form_required_status(customer_name):
     lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
     if not lead_detail_name:
         return {"required": False}
-
     so_name = frappe.db.get_value("Lead Detail Form", lead_detail_name, "sales_order")
-    if not so_name:
-        return {"required": False}
-
-    required = check_candidate_form_required_from_sales_order(so_name)
-    return {"required": required}
+    return {"required": check_candidate_form_required_from_sales_order(so_name)}
 
 
 @frappe.whitelist()
 def get_owner_pending_field_update_request(customer_name):
+    """Checks if customer_owner already has a pending request."""
     user = frappe.session.user
-
-    try:
-        employee = get_employee_name(user)
-    except Exception:
-        employee = None
-
+    employee = get_employee_name(user)
     if not employee:
         return {"has_pending": False}
 
@@ -1163,55 +764,47 @@ def get_owner_pending_field_update_request(customer_name):
     return {"has_pending": False}
 
 
-def _build_fields_from_fieldnames(allowed_fieldnames):
-    """
-    Given a list of fieldnames, returns simple_fields and table_fields
-    by reading Lead Detail Form meta and child doctype metas dynamically.
-    """
-    try:
-        lead_detail_meta = frappe.get_meta("Lead Detail Form")
-    except Exception:
-        return {"simple_fields": {}, "table_fields": {}}
+@frappe.whitelist()
+def apply_field_updates(customer_name, comment_name, approved_fields):
+    user = frappe.session.user
+    manager_employee = get_employee_name(user)
+    if not manager_employee:
+        frappe.throw("No Employee record found.")
 
-    skip_fieldtypes = {
-        "Section Break",
-        "Column Break",
-        "Tab Break",
-        "HTML",
-        "Button",
-        "Fold",
-        "Heading",
-        "Read Only",
-        "Attach",
-        "Attach Image",
-    }
+    if isinstance(approved_fields, str):
+        approved_fields = json.loads(approved_fields)
 
-    system_fields = {
-        "name",
-        "parent",
-        "parenttype",
-        "parentfield",
-        "idx",
-        "owner",
-        "modified_by",
-        "creation",
-        "modified",
-        "docstatus",
-    }
+    comment_doc = frappe.get_doc("Comment", comment_name)
+    data = json.loads(comment_doc.content)
 
-    simple_fields = {}
-    table_fields = {}
+    if data.get("status") != "Pending":
+        frappe.throw("This request has already been processed.")
 
-    for fieldname in allowed_fieldnames:
-        fieldname = (fieldname or "").strip()
-        if not fieldname:
+    field_updates = data.get("field_updates", {})
+    requester_employee = data.get("requested_by_employee")
+    service_doctype = data.get("service_doctype")
+    service_name = data.get("service_name")
+
+    lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
+    if not lead_detail_name:
+        frappe.throw("No Lead Detail Form found for this Customer.")
+
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    updated_fields = {}
+    rejected_fields = []
+
+    # Find which fields were NOT approved (rejected)
+    all_requested_fields = list(field_updates.keys())
+    rejected_fields = [f for f in all_requested_fields if f not in approved_fields]
+
+    for field in approved_fields:
+        if field not in field_updates:
             continue
 
-        df = lead_detail_meta.get_field(fieldname)
+        df = lead_detail_meta.get_field(field)
         if not df:
             frappe.log_error(
-                f"Field '{fieldname}' not found in Lead Detail Form meta",
-                "build_fields_missing_field",
+                f"Field '{field}' not found in Lead Detail Form", "apply_field_updates"
             )
             continue
 
@@ -1219,135 +812,188 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
             child_doctype = df.options
             if not child_doctype:
                 continue
+            new_rows = field_updates[field].get("new", [])
 
-            try:
-                child_meta = frappe.get_meta(child_doctype)
-            except Exception:
-                continue
+            frappe.db.delete(
+                child_doctype,
+                {
+                    "parent": lead_detail_name,
+                    "parenttype": "Lead Detail Form",
+                    "parentfield": field,
+                },
+            )
 
-            columns = {}
-            for child_df in child_meta.fields:
-                if child_df.fieldtype in skip_fieldtypes:
-                    continue
-                if child_df.fieldname in system_fields:
-                    continue
-                columns[child_df.fieldname] = (
-                    child_df.label or child_df.fieldname.replace("_", " ").title()
-                )
+            for idx, row in enumerate(new_rows):
+                frappe.get_doc(
+                    {
+                        "doctype": child_doctype,
+                        "parent": lead_detail_name,
+                        "parenttype": "Lead Detail Form",
+                        "parentfield": field,
+                        "idx": idx + 1,
+                        **row,
+                    }
+                ).insert(ignore_permissions=True)
 
-            if columns:
-                table_fields[fieldname] = {
-                    "label": df.label or fieldname.replace("_", " ").title(),
-                    "doctype": child_doctype,
-                    "columns": columns,
-                }
-        else:
-            simple_fields[fieldname] = df.label or fieldname.replace("_", " ").title()
+            updated_fields[field] = new_rows
 
-    return {"simple_fields": simple_fields, "table_fields": table_fields}
+        elif df.fieldtype in [
+            "Data",
+            "Text",
+            "Small Text",
+            "Long Text",
+            "Date",
+            "Datetime",
+            "Int",
+            "Float",
+            "Currency",
+            "Check",
+            "Select",
+            "Link",
+        ]:
+            new_value = field_updates[field].get("new")
+            frappe.db.set_value("Lead Detail Form", lead_detail_name, field, new_value)
+            updated_fields[field] = new_value
 
+    data["status"] = "Approved"
+    data["approved_by"] = manager_employee
+    data["approved_fields"] = approved_fields
+    data["rejected_fields"] = rejected_fields
+    data["approved_at"] = datetime.now(timezone.utc).isoformat()
+    frappe.db.set_value("Comment", comment_name, "content", json.dumps(data))
+    frappe.db.commit()
 
-# ─────────────────────────────────────────────
-# HELPER: get normalized dept access config
-# ─────────────────────────────────────────────
+    # ── Build activity log message ──
+    approved_labels = []
+    rejected_labels = []
+    for f in approved_fields:
+        df = lead_detail_meta.get_field(f)
+        label = df.label if df and df.label else f.replace("_", " ").title()
+        approved_labels.append(str(label))
+    for f in rejected_fields:
+        df = lead_detail_meta.get_field(f)
+        label = df.label if df and df.label else f.replace("_", " ").title()
+        rejected_labels.append(str(label))
 
+    activity_parts = []
+    if approved_labels:
+        activity_parts.append(f" Approved: <b>{', '.join(approved_labels)}</b>")
+    if rejected_labels:
+        activity_parts.append(f" Rejected: <b>{', '.join(rejected_labels)}</b>")
 
-def _get_dept_access_config():
-    try:
-        raw = frappe.db.get_single_value(
-            "ERP Configuration", "department_access_form_fields"
-        )
-        if not raw:
-            return {}
-        return {k.lower().strip(): v for k, v in json.loads(raw).items()}
-    except Exception:
-        return {}
-
-
-@frappe.whitelist()
-def get_department_updatable_fields():
-    """
-    Returns simple_fields and table_fields for the logged-in employee
-    based on their designation/department matching keys in
-    ERP Configuration → department_access_form_fields.
-    """
-    user = frappe.session.user
-    employee = get_employee_name(user)
-
-    if not employee:
-        return {"simple_fields": {}, "table_fields": {}}
-
-    assignment_rows = frappe.db.get_all(
-        "Employee Assignment Detail",
-        filters={"parent": employee},
-        fields=["department", "designation"],
+    activity_message = (
+        f"Field update request from <b>{requester_employee}</b> reviewed by <b>{manager_employee}</b>.<br>"
+        + "<br>".join(activity_parts)
     )
 
-    if not assignment_rows:
-        return {"simple_fields": {}, "table_fields": {}}
+    # ── Add activity log to Customer ──
+    _add_activity_log("Customer", customer_name, activity_message, user)
 
-    dept_access_normalized = _get_dept_access_config()
-    if not dept_access_normalized:
-        return {"simple_fields": {}, "table_fields": {}}
+    # ── Add activity log to Service Doctype (NEW) ──
+    if service_doctype and service_name:
+        _add_activity_log(service_doctype, service_name, activity_message, user)
 
-    allowed_fieldnames = []
+    # ── Notify requester ──
+    requester_user = data.get("requested_by_user")
+    if requester_user:
+        requester_email = frappe.db.get_value("User", requester_user, "email")
+        if requester_email:
+            notify_parts = []
+            if approved_labels:
+                notify_parts.append(f"Approved: <b>{', '.join(approved_labels)}</b>")
+            if rejected_labels:
+                notify_parts.append(f"Rejected: <b>{', '.join(rejected_labels)}</b>")
 
-    for row in assignment_rows:
-        designation = (row.get("designation") or "").lower().strip()
-        department = (row.get("department") or "").lower().strip()
+            send_notification(
+                recipients=[requester_email],
+                subject=f"Field Update Request Reviewed for Customer {customer_name}",
+                message=(
+                    f"Your manager <b>{manager_employee}</b> has reviewed your field update request.<br><br>"
+                    + "<br>".join(notify_parts)
+                    + "<br><br>The Lead Detail Form has been updated accordingly."
+                ),
+                reference_doctype="Customer",
+                reference_name=customer_name,
+                send_email=1,
+                send_system=1,
+            )
 
-        # 1. Exact designation match
-        if designation and designation in dept_access_normalized:
-            allowed_fieldnames = dept_access_normalized[designation]
-            break
-
-        # 2. Partial designation match
-        if designation:
-            for config_key, config_fields in dept_access_normalized.items():
-                if config_key in designation or designation in config_key:
-                    allowed_fieldnames = config_fields
-                    break
-
-        if allowed_fieldnames:
-            break
-
-        # 3. Exact department match
-        if department and department in dept_access_normalized:
-            allowed_fieldnames = dept_access_normalized[department]
-            break
-
-        # 4. Partial department match
-        if department:
-            for config_key, config_fields in dept_access_normalized.items():
-                if config_key in department or department in config_key:
-                    allowed_fieldnames = config_fields
-                    break
-
-        if allowed_fieldnames:
-            break
-
-    if not allowed_fieldnames:
-        frappe.log_error(
-            f"No match for employee {employee}. "
-            f"Rows: {[(r.get('designation',''), r.get('department','')) for r in assignment_rows]}. "
-            f"Config keys: {list(dept_access_normalized.keys())}",
-            "dept_fields_no_match",
-        )
-        return {"simple_fields": {}, "table_fields": {}}
-
-    return _build_fields_from_fieldnames(allowed_fieldnames)
+    return {
+        "status": "success",
+        "updated_fields": updated_fields,
+        "rejected_fields": rejected_fields,
+    }
 
 
 @frappe.whitelist()
-def get_customer_owner_updatable_fields():
-    """
-    Returns simple_fields and table_fields for the customer owner
-    using the 'customer' key in ERP Configuration → department_access_form_fields.
-    """
-    dept_access_normalized = _get_dept_access_config()
-    allowed_fieldnames = dept_access_normalized.get("customer", [])
+def reject_field_update_request(customer_name, comment_name):
+    """Manager rejects entire field update request."""
+    user = frappe.session.user
+    manager_employee = get_employee_name(user)
+    if not manager_employee:
+        frappe.throw("No Employee record found.")
 
-    if not allowed_fieldnames:
-        return {"simple_fields": {}, "table_fields": {}}
+    comment_doc = frappe.get_doc("Comment", comment_name)
+    data = json.loads(comment_doc.content)
 
-    return _build_fields_from_fieldnames(allowed_fieldnames)
+    if data.get("status") != "Pending":
+        frappe.throw("This request has already been processed.")
+
+    requester_employee = data.get("requested_by_employee")
+    field_updates = data.get("field_updates", {})
+    service_doctype = data.get("service_doctype")
+    service_name = data.get("service_name")
+
+    # Build field labels
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    field_labels = []
+    for f in field_updates.keys():
+        df = lead_detail_meta.get_field(f)
+
+        label = None
+
+        if df:
+            label = df.label or df.fieldname  # fallback if label is None
+
+        if not label:
+            label = f.replace("_", " ").title()
+
+        field_labels.append(str(label))
+
+    data["status"] = "Rejected"
+    data["rejected_by"] = manager_employee
+    data["rejected_at"] = datetime.now(timezone.utc).isoformat()
+    frappe.db.set_value("Comment", comment_name, "content", json.dumps(data))
+    frappe.db.commit()
+
+    activity_message = (
+        f"<b>{manager_employee}</b> rejected field update request from <b>{requester_employee}</b>.<br>"
+        f" Rejected fields: <b>{', '.join(field_labels)}</b>"
+    )
+
+    # ── Log on Customer ──
+    _add_activity_log("Customer", customer_name, activity_message, user)
+
+    # ── Log on service doctype if present ──
+    if service_doctype and service_name:
+        _add_activity_log(service_doctype, service_name, activity_message, user)
+
+    # ── Notify requester ──
+    requester_user = data.get("requested_by_user")
+    if requester_user:
+        requester_email = frappe.db.get_value("User", requester_user, "email")
+        if requester_email:
+            send_notification(
+                recipients=[requester_email],
+                subject=f"Field Update Request Rejected for Customer {customer_name}",
+                message=(
+                    f"Your manager <b>{manager_employee}</b> has rejected your field update request.<br><br>"
+                    f" <b>Rejected fields:</b> {', '.join(field_labels)}"
+                ),
+                reference_doctype="Customer",
+                reference_name=customer_name,
+                send_email=1,
+                send_system=1,
+            )
+
+    return {"status": "success"}

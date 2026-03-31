@@ -5,7 +5,7 @@ const interview_limit = 5;
 let CURRENT_EMPLOYEE = null;
 
 frappe.ui.form.on("Customer", {
-	refresh(frm) {
+	async refresh(frm) {
 		set_customer_owner(frm);
 		window.render_notes(frm);
 		window.render_activity_section(frm);
@@ -110,46 +110,13 @@ frappe.ui.form.on("Customer", {
 			},
 		});
 
+		const display_fields = await window.get_display_fields(frm.doctype);
+
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details_html",
 			customer: frm.doc.name,
-			fields: [
-				"agreement_link",
-				"signature_method",
-				"signature_image",
-				"my_electronic_signature_has_same_effect_as_handwritten",
-				"i_consent_to_receive_sign_and_store_documents_electronically",
-				"i_confirm_my_identity_and_signing_this_document_intentionally",
-				"surname",
-				"first_name",
-				"father_name",
-				"personal_phone_number",
-				"email",
-				"personal_linkedin",
-				"date_of_birth",
-				"educational_details",
-				"past_experience_table",
-				"technologies",
-				"additional_skills",
-				"entry_date",
-				"current_address",
-				"address_history",
-				"certificate_or_completed_course",
-				"current_visa_status",
-				"experience",
-				"number_for_marketing",
-				"google_voice_number",
-				"marketing_linkedin",
-				"passport_number",
-				"ssn_digit",
-				"availability_for_interview",
-				"remarks",
-				"visa_copy",
-				"ead_card",
-				"driving_licence",
-				"old_resume",
-			],
+			fields: display_fields,
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
@@ -1081,7 +1048,7 @@ function render_interviews(data, append = false) {
 											r.feedback && r.feedback.trim()
 												? (() => {
 														const text = r.feedback.trim();
-														const limit = 20; // 👈 number of characters you want
+														const limit = 20;
 														const shortText = text.slice(0, limit);
 
 														if (text.length > limit) {
@@ -1209,32 +1176,29 @@ function showOnboarding_tab(frm) {
 	});
 }
 
-function customer_owner_open_update_detail_dialog(frm, custom_fields) {
+function customer_owner_open_update_detail_dialog(frm) {
 	frappe.call({
 		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
 		args: { customer_name: frm.doc.name },
 		callback: function (r) {
 			const current_values = r.message || {};
-			const all_fields = custom_fields || {
-				surname: "Surname",
-				first_name: "First Name",
-				father_name: "Father Name",
-				email: "Email",
-				address_history: "table",
-			};
 
-			const simple_fields = {};
-			const table_fields = {};
-
-			Object.entries(all_fields).forEach(([fieldname, label]) => {
-				if (SERVICE_UPDATABLE_TABLE_FIELDS[fieldname]) {
-					table_fields[fieldname] = SERVICE_UPDATABLE_TABLE_FIELDS[fieldname];
-				} else {
-					simple_fields[fieldname] = label;
-				}
+			frappe.call({
+				method: "verp_staffing.crm.api.permission_request.get_customer_owner_updatable_fields",
+				callback: function (fields_res) {
+					const dept_fields = fields_res.message || {
+						simple_fields: {},
+						table_fields: {},
+					};
+					_open_update_detail_dialog(
+						frm,
+						current_values,
+						dept_fields.simple_fields || {},
+						dept_fields.table_fields || {},
+						"owner",
+					);
+				},
 			});
-
-			_open_update_detail_dialog(frm, current_values, simple_fields, table_fields, "owner");
 		},
 	});
 }
