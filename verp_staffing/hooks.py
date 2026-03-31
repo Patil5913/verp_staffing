@@ -52,15 +52,28 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Opportunity", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services","Sales Order", "Agreement"]
+validation_docs = [
+    "Lead",
+    "Lead Course",
+    "Resume",
+    "RUC",
+    "Opportunity",
+    "Marketing",
+    "Marketing Other Services",
+    "Customer",
+    "JDC",
+    "Cover Letter",
+    "Technical Other Services",
+    "Training",
+    "Other Services",
+    "Sales Order",
+    "Agreement",
+]
 doctype_js = {
-    doc: ["public/js/reusable.js", "public/js/salesOrder.js"]
-    for doc in validation_docs
+    doc: ["public/js/reusable.js", "public/js/salesOrder.js" , "public/js/permission_feature.js"] for doc in validation_docs
 }
 
-doctype_list_js = {
-    "Lead": "public/js/lead_list.js"
-}
+doctype_list_js = {"Lead": "public/js/lead_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -205,7 +218,7 @@ doc_events = {
         "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
         "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",
         "on_update": "verp_staffing.marketing.doctype.interview.interview.sync_kanban",
-    }
+    },
 }
 
 # Scheduled Tasks
@@ -322,16 +335,7 @@ before_request = [
 # }
 
 fixtures = [
-    {
-        "dt": "Kanban Board",
-        "filters": [["kanban_board_name", "=", "Interview"]]
-    },
-    {
-        "dt": "Custom HTML Block",
-        "filters": [["name", "=", "Email Inbox"]]
-    },
-    {
-        "dt": "Workspace",
-        "filters": [["name", "=", "Email Inbox"]]
-    },
+    {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
+    {"dt": "Custom HTML Block", "filters": [["name", "=", "Email Inbox"]]},
+    {"dt": "Workspace", "filters": [["name", "=", "Email Inbox"]]},
 ]
