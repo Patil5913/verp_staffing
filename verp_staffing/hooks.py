@@ -70,7 +70,7 @@ validation_docs = [
     "Agreement",
 ]
 doctype_js = {
-    doc: ["public/js/reusable.js", "public/js/salesOrder.js"] for doc in validation_docs
+    doc: ["public/js/reusable.js", "public/js/salesOrder.js" , "public/js/permission_feature.js"] for doc in validation_docs
 }
 
 doctype_list_js = {"Lead": "public/js/lead_list.js"}
