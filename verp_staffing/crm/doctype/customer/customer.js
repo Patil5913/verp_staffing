@@ -165,7 +165,6 @@ frappe.ui.form.on("Customer", {
 		}
 		set_customer_owner(frm);
 	},
-
 	validate: function (frm) {
 		if (frm.doc.customer_from === "Lead" && !frm.doc.party_name) {
 			frappe.msgprint(__("Please select a Lead."));
