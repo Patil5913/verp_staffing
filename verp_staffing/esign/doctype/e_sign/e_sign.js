@@ -166,7 +166,7 @@ async function load_pdf_pages(frm) {
   render_recipient_list();
   
   const response = await frappe.call({
-    method: "verp_staffing.e_sign.doctype.e_sign.e_sign.generate_pdf_pages",
+    method: "verp_staffing.esign.doctype.e_sign.e_sign.generate_pdf_pages",
     args: { docname: frm.doc.name }
   });
 
@@ -780,7 +780,7 @@ async function send_for_signature(frm) {
 
 
   frappe.call({
-    method: "verp_staffing.e_sign.doctype.e_sign.e_sign.send_all_signers",
+    method: "verp_staffing.esign.doctype.e_sign.e_sign.send_all_signers",
     args: {
       agreement: frm.doc.name
     },

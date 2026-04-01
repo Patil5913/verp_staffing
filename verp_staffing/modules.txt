@@ -7,7 +7,7 @@ Marketing
 Settings
 User
 Services
-E-Sign
 CR
-Email Inbox
 Onboarding
+ESign
+Email Inbox

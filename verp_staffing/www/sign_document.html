@@ -4,40 +4,66 @@
 {% else %}
 
 {% if not is_verified %}
+<div class="header">
+  <div class="left">
+    <img src="/assets/vrugle/logo.png" class="logo">
+  </div>
+
+  <div class="right">
+    <span class="secure">Secure Document Signing</span>
+  </div>
+</div>
+
+<div class="progress-wrapper">
+
+  <div class="progress-line"></div>
+
+  <div class="progress-steps">
+
+    <div class="step active">
+      <div class="circle">🔓</div>
+      <p>Verify</p>
+    </div>
+
+    <div class="step">
+      <div class="circle">🔒</div>
+      <p>Sign Document</p>
+    </div>
+
+    <div class="step">
+      <div class="circle">🔒</div>
+      <p>Complete</p>
+    </div>
+
+  </div>
+</div>
 
 <!-- 🔐 Verification Section -->
-<div id="verification-section" style="
-    max-width:450px;
-    margin:80px auto;
-    background:#fff;
-    padding:30px;
-    border-radius:10px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.1);
-    text-align:center;
-  ">
+<div id="verification-section" class="card">
 
-  <h3>Email Verification</h3>
-  <p>We’ll send a verification code to {{ fields[0].signer_email }} email address.</p>
+  <h2>Verify your identity</h2>
 
+  <p class="desc">
+    For security purposes, we need to verify your identity before allowing access to the document.
+  </p>
 
-  <button id="sendotp-btn" onclick="sendOTP()" class="otp-btn">
-    <span id="otp-btn-text">Send OTP</span>
-    <span id="otp-loader" class="loader" style="display:none;"></span>
-  </button>
+  <p class="email">
+    A one-time password (OTP) will be sent to:<br>
+    <strong>{{ fields[0].signer_email }}</strong>
+  </p>
 
   <div id="otp-section" style="margin-top:20px; display:none;">
-    <input type="text" id="otp-input" placeholder="Enter OTP"
-      style="padding:8px; width:70%; border:1px solid #ccc; border-radius:6px;">
-    <button id="verify-btn" onclick="verifyOTP()" style="
-        padding:8px 12px;
-        background:#28a745;
-        color:white;
-        border:none;
-        border-radius:6px;">
+    <input type="text" id="otp-input" placeholder="Enter OTP">
+    <button id="verify-btn" onclick="verifyOTP()">
       Verify
     </button>
     <div id="otp-timer" style="margin-top:10px; font-size:14px; color:#555;"></div>
   </div>
+  <button id="sendotp-btn" onclick="sendOTP()" class="btn-primary">
+    <span id="otp-btn-text">Send Verification Code</span>
+    <span id="otp-loader" class="loader" style="display:none;"></span>
+  </button>
+
 
 </div>
 
@@ -46,6 +72,22 @@
 <!-- ✅ PDF SECTION (ONLY AFTER VERIFIED) -->
 
 <h2>Sign Document</h2>
+
+<div id="field-progress-bar">
+  <div id="fp-left">
+    <span id="fp-done">0</span> of <span id="fp-total">0</span> fields completed
+  </div>
+  <div id="fp-right">
+    <span id="fp-remaining">0</span> remaining
+  </div>
+  <div id="fp-track">
+    <div id="fp-fill"></div>
+  </div>
+</div>
+
+<div id="fp-next-hint">
+  <span id="fp-hint-text">Complete the fields below to proceed</span>
+</div>
 
 <div id="modal-overlay" style="
 position:fixed;
@@ -88,10 +130,23 @@ z-index:999;
 
 </div>
 
-<div style="text-align:center;margin:30px;">
+<div id="fp-submit-wrap" style="
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 999;
+  padding: 16px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+">
   <button id="finish-btn" onclick="submitFields()" class="finish-btn">
-    Finish Signing
+    Submit Signed Document
   </button>
+  <p style="margin-top:8px; font-size:12px; color:#9ca3af;">
+    All fields completed. Please review before submitting.
+  </p>
 </div>
 
 <div id="signature-modal" style="
@@ -100,7 +155,6 @@ z-index:999;
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  background:white;
   padding:20px;
   border:1px solid #ccc;
   z-index:1000;
@@ -109,7 +163,7 @@ z-index:999;
   border-radius:10px;
 ">
 
-  <h3>Create Signature</h3>
+  <h3>Add Your Signature</h3>
 
   <!-- Tabs -->
   <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -188,11 +242,637 @@ z-index:999;
 </div>
 {% endif %}
 
+<div class="footer">
+  <p>
+    This document is securely processed by <strong>Vrugle</strong>.
+  </p>
+  <p class="small">
+    Your information is encrypted and handled with industry-standard security practices.
+  </p>
+</div>
+
 <!-- SIGNATURE MODAL -->
 
 
 <!-- ✅ ONLY CSS ADDED BELOW -->
 <style>
+  /* ── Success Modal ── */
+  .success-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 32px 32px;
+    max-width: 460px;
+    width: 95%;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .success-card--visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  .success-icon-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .success-checkmark {
+    width: 64px;
+    height: 64px;
+  }
+
+  .checkmark-circle {
+    stroke: #16a34a;
+    stroke-width: 2;
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    animation: stroke-circle 0.5s ease forwards 0.1s;
+  }
+
+  .checkmark-check {
+    stroke: #16a34a;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke-check 0.3s ease forwards 0.6s;
+  }
+
+  @keyframes stroke-circle {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes stroke-check {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .success-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 10px;
+  }
+
+  .success-desc {
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .success-meta {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .success-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #374151;
+    background: #f0fdf4;
+    border: 1px solid #dcfce7;
+    border-radius: 20px;
+    padding: 6px 14px;
+  }
+
+  .success-meta-icon {
+    font-size: 14px;
+  }
+
+  .success-btn {
+    width: 100%;
+    padding: 13px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-bottom: 16px;
+  }
+
+  .success-btn:hover {
+    background: #15803d;
+  }
+
+  .success-footer {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 0;
+  }
+
+  /* ── Field label ── */
+  .field-label-tag {
+    position: absolute;
+    top: -18px;
+    left: 0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
+  /* ── All field boxes base ── */
+  .field-box {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  /* ── Signature field ── */
+  .field-box[data-type="signature"] {
+    border: 1.5px dashed #2563eb;
+    background: rgba(37, 99, 235, 0.04);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #2563eb;
+  }
+
+  .field-box[data-type="signature"]:hover {
+    background: rgba(37, 99, 235, 0.09);
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+  }
+
+  /* ── Text / input field wrappers ── */
+  .field-box.text-field {
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .field-box.text-field:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  /* ── Inputs inside field boxes ── */
+  .field-box input[type="text"],
+  .field-box input[type="email"],
+  .field-box input[type="number"],
+  .field-box input[type="date"] {
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    font-family: Inter, sans-serif;
+    color: #111827;
+    padding: 0 8px;
+  }
+
+  .field-box input::placeholder {
+    color: #9ca3af;
+    font-size: 12px;
+  }
+
+  /* ── Checkbox field ── */
+  .field-box.checkbox-field {
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    border-radius: 6px;
+  }
+
+  .field-box.checkbox-field:hover {
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.04);
+  }
+
+  .field-box input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+
+  /* ── Validation error state ── */
+  .field-box.error {
+    border: 1.5px solid #ef4444 !important;
+    background: rgba(239, 68, 68, 0.04) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+  }
+
+  /* ── Signed image overlay ── */
+  .signed-image {
+    position: absolute;
+    z-index: 15;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  #field-status {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1px solid #eef0f3;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Top row */
+  .status-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .status-title {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  #status-count {
+    font-size: 13px;
+    font-weight: 500;
+    color: #111827;
+  }
+
+  /* Progress bar */
+  .status-bar {
+    width: 100%;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  #status-progress {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #2563eb, #1d4ed8);
+    transition: width 0.3s ease;
+  }
+
+  /* Bottom text */
+  #status-subtext {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .header {
+    height: 64px;
+    padding: 0 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb;
+    background: #fff;
+  }
+
+  .logo {
+    height: 62px;
+  }
+
+  .secure {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .steps {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 30px 0;
+  }
+
+  .step {
+    font-size: 14px;
+    color: #9ca3af;
+    font-weight: 500;
+  }
+
+  .step.active {
+    color: #000;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4px;
+  }
+
+
+  body {
+    font-family: Inter, sans-serif;
+    background: #f9fafb;
+  }
+
+  .card {
+    max-width: 460px;
+    margin: 80px auto;
+    padding: 30px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .desc {
+    font-size: 14px;
+    color: #4b5563;
+    margin-bottom: 15px;
+  }
+
+  .email {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+
+
+  /* ===== BUTTON WRAPPER SPACING ===== */
+  #sendotp-btn {
+    margin-top: 18px;
+  }
+
+
+
+  /* ===== PRIMARY BUTTON (Send OTP) ===== */
+
+  /* ===== OTP SECTION SPACING ===== */
+  #otp-section {
+    margin-top: 24px !important;
+  }
+
+  /* ===== INPUT FIX (REMOVE INLINE WIDTH ISSUE) ===== */
+  #otp-input {
+    width: 100% !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    margin-bottom: 12px;
+  }
+
+  /* ===== VERIFY BUTTON (BETTER COLOR) ===== */
+
+  #verify-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+
+  #verify-btn:hover {
+    background: #1d4ed8;
+  }
+
+  /* ===== TIMER SPACING ===== */
+  #otp-timer {
+    margin-top: 10px !important;
+    font-size: 12px !important;
+    color: #9ca3af !important;
+  }
+
+  .btn-secondary {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px;
+    background: #111;
+    color: white;
+    border: none;
+    border-radius: 6px;
+  }
+
+  input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 8px;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #6b7280;
+  }
+
+  .footer .small {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  .progress-wrapper {
+    position: relative;
+    max-width: 500px;
+    margin: 40px auto;
+  }
+
+  /* LINE */
+  .progress-line {
+    position: absolute;
+    top: 20px;
+    left: 12%;
+    width: 76%;
+    height: 2px;
+    background: #e5e7eb;
+    z-index: 0;
+  }
+
+  /* STEPS */
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+
+  .step {
+    text-align: center;
+    width: 33.33%;
+  }
+
+  .circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin: 0 auto;
+    transition: 0.3s;
+  }
+
+  /* TEXT */
+  .step p {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  /* ACTIVE (UNLOCKED) */
+  .step.active .circle {
+    background: #000;
+    color: #fff;
+  }
+
+  .step.active p {
+    color: #000;
+    font-weight: 500;
+  }
+
+  /* LOCKED */
+  .step.locked .circle {
+    background: #e5e7eb;
+    color: #9ca3af;
+  }
+
+  /* ===== PAGE BACKGROUND ===== */
+  body {
+    background: #f8fafc;
+    font-family: Inter, sans-serif;
+  }
+
+
+
+  /* ===== CARD ===== */
+  #verification-section {
+    max-width: 440px;
+    margin: 80px auto;
+    padding: 36px 32px;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eef0f3;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
+    text-align: center;
+  }
+
+  /* ===== TITLE ===== */
+  #verification-section h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 12px;
+  }
+
+  /* ===== TEXT ===== */
+  .desc {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .email {
+    font-size: 14px;
+    color: #334155;
+    margin-bottom: 24px;
+  }
+
+  .email strong {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  /* ===== PRIMARY BUTTON (Send OTP) ===== */
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: #f1f5f9;
+    color: #111827;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    background: #e2e8f0;
+  }
+
+  /* ===== OTP SECTION ===== */
+  #otp-section {
+    margin-top: 28px !important;
+  }
+
+  /* ===== INPUT ===== */
+  #otp-input {
+    width: 100% !important;
+    padding: 12px !important;
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    font-size: 14px;
+    margin-bottom: 14px;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+  }
+
+  #otp-input:focus {
+    border-color: #3b82f6;
+    background: #fff;
+    outline: none;
+  }
+
+
+  /* ===== TIMER ===== */
+  #otp-timer {
+    margin-top: 10px !important;
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+  }
+
+  /* ===== LOADER ===== */
+  .loader {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
   /* ===== Header ===== */
   h2 {
     text-align: center;
@@ -214,6 +894,27 @@ z-index:999;
     margin-right: auto !important;
   }
 
+  #fp-submit-wrap {
+    display: none;
+  }
+
+  .finish-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 13px 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .finish-btn:hover {
+    background: #1d4ed8;
+  }
+
   /* OTP Button */
   .otp-btn {
     margin-top: 20px;
@@ -229,6 +930,108 @@ z-index:999;
     gap: 8px;
     min-width: 120px;
     transition: 0.2s ease;
+  }
+
+  /* ── Progress Bar ── */
+  #field-progress-bar {
+    max-width: 900px;
+    margin: 0 auto 6px;
+    padding: 14px 18px 10px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+  }
+
+  #fp-left {
+    font-size: 13px;
+    font-weight: 500;
+    color: #111827;
+    margin-bottom: 8px;
+    float: left;
+  }
+
+  #fp-right {
+    font-size: 13px;
+    color: #6b7280;
+    float: right;
+  }
+
+  #fp-track {
+    clear: both;
+    width: 100%;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  #fp-fill {
+    height: 100%;
+    width: 0%;
+    background: #2563eb;
+    border-radius: 999px;
+    transition: width 0.35s ease;
+  }
+
+  /* ── Hint text ── */
+  #fp-next-hint {
+    max-width: 900px;
+    margin: 0 auto 16px;
+    padding: 9px 14px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  /* ── Active field highlight (guided) ── */
+  .field-box.fp-active-field {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    background: rgba(37, 99, 235, 0.05) !important;
+  }
+
+  /* ── Completed field ── */
+  .field-box.fp-done-field {
+    border-color: #16a34a !important;
+    background: rgba(22, 163, 74, 0.04) !important;
+  }
+
+  .field-box[data-type="signature"].fp-done-field {
+    border-style: solid !important;
+  }
+
+  /* ── Submit button hidden by default ── */
+  /* REMOVE this block entirely or change to: */
+  #finish-btn {
+    /* Remove display:none, opacity:0, transform — these fight with the wrap */
+    display: inline-block;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  #finish-btn.fp-visible {
+    display: inline-block;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── All done banner ── */
+  #fp-all-done-msg {
+    display: none;
+    max-width: 900px;
+    margin: 0 auto 16px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #15803d;
+    text-align: center;
   }
 
   .otp-btn:disabled {
@@ -268,18 +1071,6 @@ z-index:999;
     background: #0f5ed7;
   }
 
-  .font-box {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    text-align: center;
-    cursor: pointer;
-  }
-
-  .font-box.active {
-    border: 2px solid #1677ff;
-    background: #eef4ff;
-  }
 
   .font-preview {
     font-size: 26px;
@@ -287,39 +1078,169 @@ z-index:999;
     display: block;
   }
 
-  .field-box {
-    position: absolute;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+
+  /* ===== MODAL ===== */
+  #signature-modal {
+    background: #f7f4f4;
+    /* remove grey */
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
   }
 
-  .field-box.text-field {
-    border: 1px solid #cbd5e1;
-    background: #fff;
+  /* ===== TABS ===== */
+  #signature-modal button {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+    padding: 6px 12px;
     border-radius: 6px;
+    font-size: 13px;
   }
 
-  .field-box.checkbox-field,
-  .field-box.radio-field {
-    background: transparent;
-    border: none;
+  #signature-modal button:hover {
+    background: #f1f5f9;
   }
 
-  .field-box input[type="text"],
-  .field-box input[type="email"],
-  .field-box input[type="number"],
-  .field-box input[type="date"] {
-    width: 100%;
-    height: 100%;
-    border: none;
+  /* ===== INPUT ===== */
+  #typed-name {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+    background: #fff;
+  }
+
+  #typed-name:focus {
+    border-color: #d1d5db !important;
     outline: none;
-    font-size: 14px;
-    padding: 6px;
   }
 
-  .field-box input[type="checkbox"],
+  /* ===== FONT GRID ===== */
+  .font-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* ===== FONT BOX (MAIN FIX) ===== */
+  .font-box {
+    padding: 10px;
+    border: 1px solid #f1f5f9;
+    /* very soft border */
+    border-radius: 8px;
+    background: #ffffff;
+    /* clean white */
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  /* Hover = very subtle */
+  .font-box:hover {
+    background: #fafafa;
+    border-color: #e5e7eb;
+  }
+
+  /* Active (selected) = subtle highlight */
+  .font-box.active {
+    background: #f8fafc;
+    /* very light */
+    border-color: #cbd5e1;
+  }
+
+  /* TEXT */
+  .font-preview {
+    font-size: 18px;
+    color: #111827;
+  }
+
+  /* ===== CANVAS ===== */
+  #signature-canvas,
+  #typed-preview {
+    border: 1px dashed #e5e7eb !important;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  /* ===== UPLOAD WARNING ===== */
+  #upload-section p {
+    color: #ef4444;
+    font-size: 12px;
+  }
+
+  /* ===== FOOTER BUTTONS ===== */
+  #signature-modal>button {
+    margin-top: 10px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  /* Primary button */
+  #signature-modal>button:first-of-type {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+  }
+
+  #signature-modal>button:first-of-type:hover {
+    background: #1d4ed8;
+  }
+
+  /* ===== FONT GRID ===== */
+  .font-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* ===== FONT BOX ===== */
+  .font-box {
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+
+    /* KEY FIX */
+    background: #ffffff;
+
+    transition: all 0.2s ease;
+  }
+
+  /* ===== HOVER ===== */
+  .font-box:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  /* ===== ACTIVE (SELECTED) ===== */
+  .font-box.active {
+    background: #eff6ff;
+    /* very light blue */
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb inset;
+  }
+
+  /* ===== TEXT ===== */
+  .font-preview {
+    font-size: 18px;
+    color: #111827;
+  }
+
+  #typed-name {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+
+  #typed-name:focus {
+    border-color: #2563eb;
+    outline: none;
+  }
 
   .signed-image {
     position: absolute;
@@ -328,23 +1249,6 @@ z-index:999;
 
   img {
     pointer-events: none;
-  }
-
-  .font-box:hover {
-    border-color: #1677ff;
-    background: #f0f6ff;
-    transform: translateY(-2px);
-  }
-
-  .font-box.active {
-    border: 2px solid #1677ff;
-    background: #eaf3ff;
-  }
-
-  .font-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
   }
 
 
@@ -359,29 +1263,7 @@ z-index:999;
     background: rgba(37, 99, 235, 0.25) !important;
   }
 
-  /* ===== Modal ===== */
-  #signature-modal {
-    width: 95% !important;
-    max-width: 500px;
-    border-radius: 10px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-  }
 
-  /* ===== Canvas Responsive ===== */
-  #signature-canvas {
-    width: 100% !important;
-    height: auto !important;
-    touch-action: none;
-  }
-
-  /* ===== Buttons ===== */
-  #signature-modal button {
-    padding: 8px 14px;
-    margin: 5px 4px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-  }
 
   /* ===== Mobile Optimization ===== */
   @media (max-width: 768px) {
@@ -394,13 +1276,61 @@ z-index:999;
       font-size: 18px;
     }
 
-    #signature-modal {
-      padding: 15px !important;
-    }
-
   }
 </style>
 
+<!-- ✅ SUCCESS MODAL -->
+<div id="success-modal" style="
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+">
+  <div class="success-card">
+
+    <!-- Checkmark Circle -->
+    <div class="success-icon-wrap">
+      <svg class="success-checkmark" viewBox="0 0 52 52">
+        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+        <path class="checkmark-check" fill="none" d="M14 27 l8 8 l16-16" />
+      </svg>
+    </div>
+
+    <h2 class="success-title">Document Signed Successfully!</h2>
+
+    <p class="success-desc">
+      🎉 Congratulations! Your document has been signed and submitted securely.
+      A confirmation will be sent to your registered email address.
+    </p>
+
+    <div class="success-meta">
+      <div class="success-meta-item">
+        <span class="success-meta-icon">🔒</span>
+        <span>Encrypted & Secured</span>
+      </div>
+      <div class="success-meta-item">
+        <span class="success-meta-icon">📄</span>
+        <span>Document Recorded</span>
+      </div>
+      <div class="success-meta-item">
+        <span class="success-meta-icon">📧</span>
+        <span>Confirmation Sent</span>
+      </div>
+    </div>
+
+    <button class="success-btn" onclick="handleSuccessClose()">
+      Done
+    </button>
+
+    <p class="success-footer">
+      Powered by <strong>Vrugle</strong> · Secure Document Signing
+    </p>
+
+  </div>
+</div>
 
 <script src="/assets/frappe/js/frappe-web.min.js"></script>
 
@@ -431,10 +1361,217 @@ z-index:999;
       mode === "type" ? "block" : "none";
   }
 
+  function updateStep(step) {
+    const steps = document.querySelectorAll(".step");
+
+    steps.forEach((el, index) => {
+      el.classList.remove("active", "locked");
+
+      if (index === step) {
+        el.classList.add("active");
+        el.querySelector(".circle").innerHTML = "🔓";
+      }
+      else if (index > step) {
+        el.classList.add("locked");
+        el.querySelector(".circle").innerHTML = "🔒";
+      }
+      else {
+        // completed (still unlocked)
+        el.querySelector(".circle").innerHTML = "🔓";
+      }
+    });
+  }
+
+  function handleSuccessClose() {
+    // Hide modal then show landing page
+    document.getElementById("success-modal").style.display = "none";
+    showLandingPage();
+  }
+
+  function showLandingPage() {
+    // Replace entire page content with landing page
+    document.body.innerHTML = `
+    <div class="landing-wrap">
+
+      <div class="landing-header">
+        <img src="/assets/vrugle/logo.png" class="logo" style="height:52px;">
+        <span style="font-size:13px; color:#6b7280;">Secure Document Signing</span>
+      </div>
+
+      <div class="landing-card">
+
+        <div class="landing-confetti">🎊</div>
+
+        <div class="landing-check">
+          <svg viewBox="0 0 52 52" width="64" height="64">
+            <circle cx="26" cy="26" r="25" fill="#16a34a" />
+            <path fill="none" stroke="white" stroke-width="3.5"
+              stroke-linecap="round" stroke-linejoin="round"
+              d="M14 27 l8 8 l16-16"/>
+          </svg>
+        </div>
+
+        <h1 class="landing-title">Signing Complete!</h1>
+        <p class="landing-subtitle">Congratulations — your document has been signed successfully.</p>
+
+        <div class="landing-info-grid">
+          <div class="landing-info-box">
+            <div class="landing-info-icon">🔐</div>
+            <div class="landing-info-label">Secured</div>
+            <div class="landing-info-text">Your document is encrypted and safely stored.</div>
+          </div>
+          <div class="landing-info-box">
+            <div class="landing-info-icon">📋</div>
+            <div class="landing-info-label">Recorded</div>
+            <div class="landing-info-text">Signing details have been logged with timestamp.</div>
+          </div>
+          <div class="landing-info-box">
+            <div class="landing-info-icon">📧</div>
+            <div class="landing-info-label">Notified</div>
+            <div class="landing-info-text">A confirmation email is on its way to you.</div>
+          </div>
+        </div>
+
+        <div class="landing-divider"></div>
+
+        <p class="landing-note">
+          You may now safely close this window.<br>
+          If you have any questions, please contact the sender directly.
+        </p>
+
+      </div>
+
+      <div class="landing-footer">
+        <p>This document was securely processed by <strong>Vrugle</strong>.</p>
+        <p style="font-size:12px; color:#9ca3af; margin-top:4px;">
+          Your information is encrypted and handled with industry-standard security practices.
+        </p>
+      </div>
+
+    </div>
+
+    <style>
+      body { margin: 0; font-family: Inter, sans-serif; background: #f0fdf4; }
+
+      .landing-wrap {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 16px 40px;
+      }
+
+      .landing-header {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid #dcfce7;
+        margin-bottom: 40px;
+      }
+
+      .landing-card {
+        width: 100%;
+        max-width: 560px;
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #bbf7d0;
+        box-shadow: 0 20px 50px rgba(22,163,74,0.08);
+        padding: 48px 40px 36px;
+        text-align: center;
+      }
+
+      .landing-confetti {
+        font-size: 40px;
+        margin-bottom: 16px;
+        animation: bounce 1s ease infinite alternate;
+      }
+
+      @keyframes bounce {
+        from { transform: translateY(0); }
+        to   { transform: translateY(-8px); }
+      }
+
+      .landing-check {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .landing-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #15803d;
+        margin: 0 0 10px;
+      }
+
+      .landing-subtitle {
+        font-size: 15px;
+        color: #4b5563;
+        margin: 0 0 32px;
+        line-height: 1.6;
+      }
+
+      .landing-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+
+      .landing-info-box {
+        background: #f0fdf4;
+        border: 1px solid #dcfce7;
+        border-radius: 12px;
+        padding: 16px 10px;
+      }
+
+      .landing-info-icon { font-size: 22px; margin-bottom: 6px; }
+      .landing-info-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #15803d;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .landing-info-text { font-size: 11px; color: #6b7280; line-height: 1.4; }
+
+      .landing-divider {
+        height: 1px;
+        background: #f1f5f9;
+        margin-bottom: 24px;
+      }
+
+      .landing-note {
+        font-size: 13px;
+        color: #9ca3af;
+        line-height: 1.8;
+      }
+
+      .landing-footer {
+        margin-top: 32px;
+        text-align: center;
+        color: #6b7280;
+        font-size: 13px;
+      }
+
+      @media (max-width: 480px) {
+        .landing-card { padding: 32px 20px 28px; }
+        .landing-info-grid { grid-template-columns: 1fr; }
+        .landing-title { font-size: 22px; }
+      }
+    </style>
+  `;
+  }
+
 
   document.addEventListener("DOMContentLoaded", function () {
 
     initFields();
+    fpInit();
     // initFonts();
     // initSignedImages();
 
@@ -503,7 +1640,6 @@ z-index:999;
   // Position unsigned boxes
   function initFields() {
     document.querySelectorAll(".field-box").forEach(box => {
-
       const type = box.dataset.type;
 
       box.style.position = "absolute";
@@ -512,65 +1648,49 @@ z-index:999;
       box.style.width = box.dataset.width + "%";
       box.style.height = box.dataset.height + "%";
 
-      box.style.border = "2px solid #2563eb";
-      box.style.background = "rgba(37,99,235,0.12)";
-      box.style.borderRadius = "6px";
-
+      // Label tag above every field
+      const label = document.createElement("div");
+      label.className = "field-label-tag";
+      label.innerText = type.toUpperCase();
+      box.appendChild(label);
 
       if (type === "signature") {
-
-        box.innerHTML = "✍ Sign";
-        box.style.fontWeight = "500";
-        box.style.color = "#1d4ed8";
-        box.style.display = "flex";
-        box.style.alignItems = "center";
-        box.style.justifyContent = "center";
-        box.style.cursor = "pointer";
-
+        box.innerHTML += "SIGN HERE";
+        box.style.fontWeight = "600";
+        box.style.fontSize = "11px";
+        box.style.letterSpacing = "0.6px";
         box.onclick = () => {
           currentField = box.dataset.field;
           openSignatureModal();
-        }
-
+        };
         return;
       }
 
       let input;
-      let placeholder = type.toUpperCase();
 
-      if (type === "name") {
+      if (type === "name" || type === "text") {
         input = document.createElement("input");
         input.type = "text";
-        input.placeholder = "Enter name";
+        input.placeholder = type === "name" ? "Full name" : "Enter text";
         box.classList.add("text-field");
       }
-      if (type === "text") {
-        input = document.createElement("input");
-        input.type = "text";
-        input.placeholder = "Enter text";
-        box.classList.add("text-field");
-      }
-
       if (type === "email") {
         input = document.createElement("input");
         input.type = "email";
-        input.placeholder = "Enter email";
+        input.placeholder = "email@example.com";
         box.classList.add("text-field");
       }
-
       if (type === "number") {
         input = document.createElement("input");
         input.type = "number";
-        input.placeholder = "Enter number";
+        input.placeholder = "0";
         box.classList.add("text-field");
       }
-
       if (type === "date") {
         input = document.createElement("input");
         input.type = "date";
         box.classList.add("text-field");
       }
-
       if (type === "checkbox") {
         input = document.createElement("input");
         input.type = "checkbox";
@@ -578,34 +1698,172 @@ z-index:999;
       }
 
       if (input) {
-
-        if (type !== "checkbox") {
-          input.style.width = "100%";
-          input.style.height = "100%";
-        }
-
-        input.style.background = "#fff";
-        input.style.border = "1px solid #cbd5e1";
-        input.style.borderRadius = "4px";
-        input.style.padding = "4px";
-        input.style.padding = "4px";
-        input.style.fontSize = "14px";
         input.style.pointerEvents = "auto";
-        input.style.outline = "none";
-
         box.appendChild(input);
       }
+    });
+  }
 
-      const label = document.createElement("div");
-      label.innerText = type.toUpperCase();
-      label.style.position = "absolute";
-      label.style.top = "-18px";
-      label.style.fontSize = "11px";
-      label.style.color = "#475569";
-      box.appendChild(label);
+  /* ══════════════════════════════
+   FIELD PROGRESS ENGINE
+══════════════════════════════ */
 
+  let fpTotal = 0;
+  let fpCompleted = new Set();
+  let fpOrder = []; // ordered list of field names
+
+  function fpInit() {
+    const allBoxes = document.querySelectorAll(".field-box");
+    console.log("fpInit: found", allBoxes.length, "fields"); // DEBUG — remove after fix
+
+    fpTotal = allBoxes.length;
+    fpOrder = Array.from(allBoxes).map(b => b.dataset.field);
+
+    document.getElementById("fp-total").innerText = fpTotal;
+    document.getElementById("fp-remaining").innerText = fpTotal;
+    document.getElementById("fp-done").innerText = 0;
+    document.getElementById("fp-fill").style.width = "0%";
+
+    // Safety: if no fields exist at all, show submit immediately
+    if (fpTotal === 0) {
+      fpShowAllDone();
+      return;
+    }
+
+    fpAttachListeners();
+    // Auto-mark any field types that don't need user input
+    document.querySelectorAll(".field-box").forEach(box => {
+      const type = box.dataset.type;
+      const field = box.dataset.field;
+
+      // Date inputs: mark done if they have a value already
+      if (type === "date") {
+        const input = box.querySelector("input");
+        if (input && input.value) fpMarkField(field, true);
+      }
+    });
+    fpHighlightNext();
+  }
+
+  function fpAttachListeners() {
+    document.querySelectorAll(".field-box").forEach(box => {
+      const type = box.dataset.type;
+      const field = box.dataset.field;
+
+      if (type === "signature") return;
+
+      const input = box.querySelector("input");
+      if (!input) return;
+
+      if (input.type === "checkbox") {
+        // DO NOT auto-mark — user must explicitly check it
+        input.addEventListener("change", () => {
+          fpMarkField(field, input.checked); // only true when actually checked
+        });
+
+      } else {
+        input.addEventListener("input", () => {
+          fpMarkField(field, input.value.trim() !== "");
+        });
+
+        input.addEventListener("change", () => {
+          fpMarkField(field, input.value.trim() !== "");
+        });
+
+        input.addEventListener("blur", () => {
+          fpMarkField(field, input.value.trim() !== "");
+        });
+      }
+    });
+  }
+
+  function fpMarkField(fieldName, isDone) {
+    const box = document.querySelector(`.field-box[data-field="${fieldName}"]`);
+    if (!box) return;
+
+    if (isDone) {
+      fpCompleted.add(fieldName);
+      box.classList.add("fp-done-field");
+      box.classList.remove("fp-active-field", "error");
+    } else {
+      fpCompleted.delete(fieldName);
+      box.classList.remove("fp-done-field");
+    }
+
+    fpUpdateBar();
+    fpHighlightNext();
+  }
+
+  // Call this from saveSignature() after signature is saved
+  function fpMarkSignature(fieldName) {
+    fpMarkField(fieldName, true);
+  }
+
+  function fpUpdateBar() {
+    const done = fpCompleted.size;
+    const remaining = fpTotal - done;
+    const pct = fpTotal > 0 ? Math.round((done / fpTotal) * 100) : 0;
+
+    document.getElementById("fp-done").innerText = done;
+    document.getElementById("fp-remaining").innerText = remaining;
+    document.getElementById("fp-fill").style.width = pct + "%";
+
+    // >= instead of === to handle any edge case overcounting
+    if (done >= fpTotal && fpTotal > 0) {
+      fpShowAllDone();
+    }
+  }
+  function fpHighlightNext() {
+    // Remove active highlight from all
+    document.querySelectorAll(".field-box").forEach(b => {
+      b.classList.remove("fp-active-field");
     });
 
+    // Find first incomplete field in order
+    for (let name of fpOrder) {
+      if (!fpCompleted.has(name)) {
+        const box = document.querySelector(`.field-box[data-field="${name}"]`);
+        if (box) {
+          box.classList.add("fp-active-field");
+
+          // Update hint text
+          const type = box.dataset.type;
+          const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+          document.getElementById("fp-hint-text").innerText =
+            `Next: fill in the ${typeLabel} field`;
+
+          // Smooth scroll to the field
+          box.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+    }
+  }
+
+  function fpShowAllDone() {
+    let banner = document.getElementById("fp-all-done-msg");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "fp-all-done-msg";
+      banner.innerText = "All fields completed. Review your document and submit below.";
+      document.getElementById("field-progress-bar").after(banner);
+    }
+    banner.style.display = "block";
+
+    document.getElementById("fp-next-hint").style.display = "none";
+    document.getElementById("fp-fill").style.background = "#16a34a";
+
+    // ✅ Show the fixed bottom bar
+    const wrap = document.getElementById("fp-submit-wrap");
+    wrap.style.display = "block";
+
+    // ✅ Also explicitly show the button inside it
+    const btn = document.getElementById("finish-btn");
+    btn.style.display = "inline-block";
+    btn.style.opacity = "1";
+    btn.style.transform = "none";
+
+    document.body.style.paddingBottom = "100px";
   }
   const fontBoxes = document.querySelectorAll(".font-box");
 
@@ -796,7 +2054,7 @@ z-index:999;
   if ("{{ is_verified }}" === "True") {
     document.addEventListener('DOMContentLoaded', (event) => {
 
-      fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.track_ip_and_device", {
+      fetch("/api/method/verp_staffing.esign.doctype.e_sign.e_sign.track_ip_and_device", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -874,6 +2132,8 @@ z-index:999;
 
     storeFieldImage(currentField, "signature", imageData);
 
+    fpMarkSignature(currentField);
+
     closeModal();
 
   }
@@ -899,7 +2159,7 @@ z-index:999;
     loader.style.display = "inline-block";
     btnText.innerText = "Sending...";
 
-    fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.send_otp", {
+    fetch("/api/method/verp_staffing.esign.doctype.e_sign.e_sign.send_otp", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -963,26 +2223,21 @@ z-index:999;
   function submitFields() {
 
     const boxes = document.querySelectorAll(".field-box");
-
     let valid = true;
 
     boxes.forEach(box => {
-
       const field = box.dataset.field;
       const type = box.dataset.type;
 
       if (type === "signature") {
-
         if (!fieldImages[field] || !fieldImages[field].image) {
           valid = false;
           box.style.border = "2px solid red";
         }
-
         return;
       }
 
       const input = box.querySelector("input");
-
       if (!input) return;
 
       let value = input.type === "checkbox" ? input.checked : input.value;
@@ -993,11 +2248,8 @@ z-index:999;
         return;
       }
 
-      // convert to image
       const image = textToImage(value);
-
       storeFieldImage(field, type, image);
-
     });
 
     if (!valid) {
@@ -1005,9 +2257,20 @@ z-index:999;
       return;
     }
 
+    // ✅ Show loader on button
+    const btn = document.getElementById("finish-btn");
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerHTML = `
+    <span style="display:inline-flex; align-items:center; gap:10px;">
+      <span class="loader" style="border-color:rgba(255,255,255,0.3); border-top-color:white;"></span>
+      Submitting...
+    </span>
+  `;
+
     const payloadFields = Object.values(fieldImages || {});
 
-    fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.complete_signing", {
+    fetch("/api/method/verp_staffing.esign.doctype.e_sign.e_sign.complete_signing", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -1021,14 +2284,31 @@ z-index:999;
     })
       .then(r => r.json())
       .then(res => {
-        alert("Document signed successfully");
-        location.reload();
+        // ✅ Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+
+        // ✅ Show success modal
+        showSuccessModal();
       })
       .catch(err => {
         console.error(err);
-        alert("Error completing document");
-      });
 
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+
+        alert("Error completing document. Please try again.");
+      });
+  }
+
+  function showSuccessModal() {
+    const modal = document.getElementById("success-modal");
+    modal.style.display = "flex";
+
+    // Trigger animation
+    setTimeout(() => {
+      modal.querySelector(".success-card").classList.add("success-card--visible");
+    }, 50);
   }
 
   function verifyOTP() {
@@ -1041,7 +2321,7 @@ z-index:999;
     }
 
 
-    fetch("/api/method/verp_staffing.e_sign.doctype.e_sign.e_sign.verify_otp", {
+    fetch("/api/method/verp_staffing.esign.doctype.e_sign.e_sign.verify_otp", {
       method: "POST",
       credentials: "include",
       headers: {
