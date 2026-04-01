@@ -337,12 +337,9 @@ window.get_display_fields = async function (doctype) {
 			"ERP Configuration",
 			"department_display_form_fields",
 		);
-		// console.log("doctype" , doctype)
 		const CONFIG = res ? JSON.parse(res) : {};
-		// console.log(CONFIG)
 
 		const key = Object.keys(CONFIG).find((k) => k.toLowerCase() === doctype.toLowerCase());
-		// console.log("key" , key)
 
 		const fields = key ? CONFIG[key] : [];
 
@@ -359,7 +356,6 @@ window.add_forward_button = async function add_forward_button(frm) {
 	frm.add_custom_button("Forward Candidate", async () => {
 		let method = "";
 		let args = {};
-
 		if (frm.doctype === "Customer") {
 			method = "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments";
 			args = {
@@ -378,8 +374,24 @@ window.add_forward_button = async function add_forward_button(frm) {
 			method: method,
 			args: args,
 			callback(r) {
-				let services = r.message || [];
+				const response = r.message;
 
+				// Handle new shaped response {blocked, options} and legacy plain array
+				const isNewShape =
+					response && typeof response === "object" && !Array.isArray(response);
+				// --- Blocked: customer already active in CR or Onboarding ---
+				if (isNewShape && response.blocked) {
+					const depts = response.active_in.join(" and ");
+					frappe.msgprint({
+						title: "Forwarding Not Allowed",
+						indicator: "red",
+						message: `This customer is currently active in <b>${depts}</b>. 
+                                  No further forwarding is allowed.`,
+					});
+					return;
+				}
+				// Normalize services list from either shape
+				let services = isNewShape ? response.options || [] : response || [];
 				if (!services.length) {
 					frappe.msgprint("No services available for forwarding.");
 					return;
@@ -893,7 +905,7 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
 				callback: () => {
 					frappe.show_alert("Note updated");
 					d.hide();
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 			});
 		},

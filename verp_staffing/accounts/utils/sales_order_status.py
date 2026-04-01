@@ -173,9 +173,17 @@ def on_service_update(customer: str) -> None:
 # ---------------------------------------------------------------------------
 # Hook shims (called by Frappe doc_events, receive the doc object)
 # ---------------------------------------------------------------------------
+from verp_staffing.crm.api.customer_overall_status import compute_customer_status
 def on_service_update_hook(doc, method=None):
     """Shim for doc_events — extracts customer and delegates."""
     on_service_update(doc.customer)
+     # unified status update 
+    try:
+        status = compute_customer_status(doc.customer)
+        frappe.db.set_value("Customer", doc.customer, "overall_status", status)
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Customer Status Update Failed")
 
 
 def on_sales_order_update_hook(doc, method=None):

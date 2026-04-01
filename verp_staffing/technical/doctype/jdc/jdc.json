@@ -44,7 +44,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nComplered\nRequest for Update"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "lead_details",
@@ -102,13 +102,20 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 16:04:19.435615",
+ "modified": "2026-03-30 15:05:14.977526",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -131,7 +138,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   },
@@ -139,13 +146,6 @@
    "create": 1,
    "read": 1,
    "role": "JDC",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   }

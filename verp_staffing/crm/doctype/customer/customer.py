@@ -94,6 +94,18 @@ def get_forwardable_departments(customer):
 
     user = frappe.session.user
 
+    # If customer already has active CR or Onboarding, block all forwarding
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
+    onboarding_active = frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"})
+    if cr_active or onboarding_active:
+        active_in = []
+        if cr_active:
+            active_in.append("CR")
+        if onboarding_active:
+            active_in.append("Onboarding")
+        # Return a special response instead of a plain list
+        return {"blocked": True, "active_in": active_in}
+
     services = get_services_for_customer(customer)
 
     if not services:
@@ -231,15 +243,31 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     # Step 1: Get the service document
     doc = frappe.get_doc(doctype, docname)
-
+    frappe.errprint(f'Document fetched for {doctype} {docname}: {doctype not in ["CR", "Onboardings"]}')
     if not doc.customer:
         frappe.throw("No Customer linked with this document.")
 
     customer = doc.customer
+    # If customer already has active CR or Onboarding, block all forwarding
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
+    onboarding_active = frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"})
+    frappe.errprint(f"doctype")
+    if doctype not in ["CR", "Onboardings"]:
+        frappe.errprint(f"Checking active ")
+        if cr_active or onboarding_active:
+            active_in = []
+            if cr_active:
+                active_in.append("CR")
+            if onboarding_active:
+                active_in.append("Onboarding")
+            # Return a special response instead of a plain list
+            frappe.errprint(f"Forwardable options for {customer}: {active_in}")
+            return {"blocked": True, "active_in": active_in}
 
     services = get_services_for_customer(customer)
+    frappe.errprint(f"Services for customer {customer}: {services}")
     if not services:
-        return ["CR"]
+        return {"blocked": False, "options": ["CR"]}
 
     active_departments = get_active_departments(customer)
 
@@ -258,8 +286,7 @@ def get_forwardable_departments_from_service(doctype, docname):
         and can_user_forward_to_department(frappe.session.user, "Onboarding")
     ):
         options.append("Onboarding")
-
-    return options
+    return {"blocked": False, "options": options}
 
 
 import frappe
