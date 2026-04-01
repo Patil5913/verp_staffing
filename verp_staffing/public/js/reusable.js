@@ -905,7 +905,7 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
 				callback: () => {
 					frappe.show_alert("Note updated");
 					d.hide();
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 			});
 		},
