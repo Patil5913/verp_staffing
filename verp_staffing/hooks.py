@@ -188,6 +188,12 @@ doc_events = {
     "Marketing": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },
+    "Onboardings": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "CR": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
     "Technical Other Services": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },
@@ -265,6 +271,8 @@ permission_query_conditions = {
     "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "CR": "verp_staffing.crm.api.helpers.generic_assign_query",
 }
 
 # each overriding function accepts a `data` argument;

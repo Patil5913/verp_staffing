@@ -115,7 +115,6 @@ def forward_candidate(customer, service, interview=None):
             salary=frappe.form_dict.get("salary"),
             company_percentage=frappe.form_dict.get("company_percentage"),
         )
-
     if service_key in stage:
 
         doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
@@ -130,7 +129,6 @@ def forward_candidate(customer, service, interview=None):
         docs = frappe.get_all(
             doctype, filters={"customer": customer}, fields=["name", "assign_to"]
         )
-
         if not docs:
             return None
 
@@ -368,19 +366,29 @@ def handle_CR_Onboarding_forward(
     salary=None,
     company_percentage=None,
 ):
-    # duplicate Validation
-    existing = frappe.db.exists(
-        "Customer Department Route",
+    # Map department name to its doctype
+    DEPARTMENT_DOCTYPE = {
+        "CR": "CR",
+        "Onboarding": "Onboardings",
+    }
+
+    target_doctype = DEPARTMENT_DOCTYPE.get(department)
+    if not target_doctype:
+        frappe.throw(f"Invalid department: {department}")
+
+    # Duplicate Validation — only block if an ACTIVE record exists
+    existing_active = frappe.db.exists(
+        target_doctype,
         {
             "customer": customer,
-            "department": department,
+            "status": "Active",
         },
     )
 
-    if existing:
+    if existing_active:
         frappe.throw(f"Customer already forwarded to {department}")
+    # Fields Validation (only required for Onboarding)
     if department == "Onboarding":
-        # Fields Validation
         required_fields = {
             "Position": position,
             "Placement Company": placement_company,
@@ -392,27 +400,24 @@ def handle_CR_Onboarding_forward(
             if not value:
                 frappe.throw(f"{label} is required for onboarding")
 
-    # determine assignee
-    if assign_employee:
-        assignee = assign_employee
-    else:
-        assignee = get_department_load_employee(department)
-    # GET CUSTOMER + LEAD DETAIL
-    customer_doc = frappe.get_doc("Customer", customer)
+    # Determine assignee
+    assignee = assign_employee or get_department_load_employee(department)
 
+    # Get Customer + Lead Detail
+    customer_doc = frappe.get_doc("Customer", customer)
     if not customer_doc.lead_details:
         frappe.throw("Lead Detail Form not linked to customer")
 
     lead_doc = frappe.get_doc("Lead Detail Form", customer_doc.lead_details)
 
-    # UPDATE LEAD DETAIL FORM
-    lead_doc.position = position
-    lead_doc.placement_company = placement_company
-    lead_doc.job_duration = job_duration
-    lead_doc.salary = salary
-    lead_doc.company_percentage = company_percentage
-
-    lead_doc.save(ignore_permissions=True)
+    # Update Lead Detail Form (only relevant fields for Onboarding)
+    if department == "Onboarding":
+        lead_doc.position = position
+        lead_doc.placement_company = placement_company
+        lead_doc.job_duration = job_duration
+        lead_doc.salary = salary
+        lead_doc.company_percentage = company_percentage
+        lead_doc.save(ignore_permissions=True)
 
     # Get current employee
     employee = frappe.get_all(
@@ -421,38 +426,32 @@ def handle_CR_Onboarding_forward(
         pluck="name",
         distinct=True,
     )
+    if not employee:
+        frappe.throw("No Employee record found for the current user")
 
-    # 3. create new route
+    # Create new department record
     route = frappe.get_doc(
         {
-            "doctype": "Customer Department Route",
+            "doctype": target_doctype,
             "customer": customer,
-            "department": department,
             "status": "Active",
             "assigned_to": assignee,
             "forwarded_by": employee[0],
             "forwarded_on": now_datetime(),
         }
     )
-
     route.insert(ignore_permissions=True)
 
-    frappe.enqueue(
-        "verp_staffing.crm.api.auto_assign.notify_assignees",
-        queue="short",
-        doc=customer,
-        service=department,
-        customer=customer,
-    )
+    # Notify assignee
     emp_user = frappe.db.get_value("Employee", assignee, "user")
     if emp_user:
         send_notification(
             recipients=[emp_user],
-            subject=f"New Candidate Assigned)",
+            subject=f"New Candidate Assigned",
             message=(
                 f"You have been assigned a new candidate.\n\n"
                 f"Customer: {customer}\n"
-                f"for {department}"
+                f"Department: {department}"
             ),
             send_email=0,
             send_system=1,

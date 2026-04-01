@@ -9,6 +9,8 @@ SERVICE_DOCTYPE_MAP = {
     "training": "Training",
     "cover letter": "Cover Letter",
     "marketing": "Marketing",
+    "cr":"CR",
+    "onboarding": "Onboarding"
 }
 
 
@@ -1180,7 +1182,8 @@ def remove_default_workspaces():
         "Other Service",
         "Email Inbox",
         "CR",
-        "Onboarding"
+        "Onboarding",
+        "Email Inbox"
     ]
 
     # Hide all others

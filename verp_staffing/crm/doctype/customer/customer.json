@@ -9,9 +9,8 @@
   "customer_from",
   "party_name",
   "customer_owner",
-  "title",
   "column_break_emkf",
-  "status",
+  "overall_status",
   "stage",
   "section_break_roxl",
   "lead_details_html",
@@ -31,15 +30,6 @@
   "after_placement_details"
  ],
  "fields": [
-  {
-   "bold": 1,
-   "default": "Open",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Status",
-   "options": "Open\nCandidate Placed\nCandidate Withdrawn"
-  },
   {
    "fieldname": "note_tab",
    "fieldtype": "Tab Break",
@@ -96,15 +86,9 @@
    "label": "Stage"
   },
   {
-   "fieldname": "title",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Title",
-   "read_only": 1
-  },
-  {
    "fieldname": "name1",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Customer Name",
    "reqd": 1
   },
@@ -170,12 +154,21 @@
    "fieldtype": "Link",
    "label": "Customer Owner",
    "options": "Employee"
+  },
+  {
+   "default": "Idle",
+   "fieldname": "overall_status",
+   "fieldtype": "Data",
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "label": "Overall Status",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 12:13:31.658026",
+ "modified": "2026-03-30 15:19:15.956014",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -200,6 +193,13 @@
    "create": 1,
    "read": 1,
    "report": 1,
+   "role": "Sales Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
    "role": "Sales Person",
    "write": 1
   },
@@ -216,50 +216,8 @@
    "write": 1
   },
   {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales Team Lead",
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager",
-   "select": 1
-  },
-  {
    "read": 1,
    "role": "marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -269,7 +227,57 @@
   },
   {
    "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
    "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Training Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "RUC Person",
    "select": 1
   },
   {
@@ -280,47 +288,32 @@
   },
   {
    "read": 1,
-   "role": "Support Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "RUC Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "JDC",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Onboarding Person",
+   "role": "Support Person",
    "select": 1
   },
   {
    "read": 1,
    "report": 1,
    "role": "_show_marketing"
+  },
+  {
+   "read": 1,
+   "role": "Onboarding Person",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "title",
+ "search_fields": "name1",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "title",
+ "title_field": "name1",
  "track_changes": 1,
  "track_views": 1
 }
