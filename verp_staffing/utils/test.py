@@ -2126,6 +2126,365 @@ def seed_email_template():
 
 """ + Common_Footer,
 },
+    {
+    "name": "Field Update Request - permission request",
+    "subject": "Field Update Request for Customer {{ customer_name }}",
+    "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #3b82f6;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Field Update Request
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear Manager,
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    Employee <strong>{{ employee }}</strong> has requested to update
+                    fields on Customer <strong>{{ customer_name }}</strong>.
+                    Please review and take appropriate action.
+                  </p>
+
+                  <!-- Details -->
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Customer:</strong> {{ customer_name }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Requested By:</strong> {{ employee }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Reason:</strong> {{ reason }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 20px;">
+                    <strong>Fields Requested:</strong> {{ field_labels }}
+                  </p>
+
+                  <!-- Info Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #3b82f6;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#1e40af;line-height:1.6;">
+                        ℹ️ Please open Customer <strong>{{ customer_name }}</strong>
+                        and click <strong>Accept Updates</strong> to review and
+                        approve this request.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    If you have any questions regarding this request, please reach
+                    out to the employee directly.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
+
+    {
+    "name": "Field Update Request Rejected - permission request",
+    "subject": "Field Update Request Rejected for Customer {{ customer_name }}",
+    "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #3b82f6;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Field Update Request Rejected
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear {{ requester_employee }},
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    Your field update request for Customer <strong>{{ customer_name }}</strong>
+                    has been reviewed and rejected by your manager.
+                    Please reach out to your manager for further clarification.
+                  </p>
+
+                  <!-- Details -->
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Customer:</strong> {{ customer_name }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Rejected By:</strong> {{ manager_employee }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 20px;">
+                    <strong>Rejected Fields:</strong> {{ field_labels }}
+                  </p>
+
+                  <!-- Error Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#fef2f2;border-left:4px solid #ef4444;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#991b1b;line-height:1.6;">
+                        ❌ Your request has been rejected. No changes have been
+                        made to the customer record.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    If you believe this is a mistake or need further assistance,
+                    please contact your manager directly.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
+    {
+    "name": "Field Update Request Reviewed - permission request",
+    "subject": "Field Update Request Reviewed for Customer {{ customer_name }}",
+    "html_content": """
+<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #3b82f6;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Field Update Request Reviewed
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear {{ requester_employee }},
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    Your manager <strong>{{ manager_employee }}</strong> has reviewed
+                    your field update request for Customer
+                    <strong>{{ customer_name }}</strong>.
+                  </p>
+
+                  <!-- Details -->
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Customer:</strong> {{ customer_name }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 16px;">
+                    <strong>Reviewed By:</strong> {{ manager_employee }}
+                  </p>
+
+                  <!-- Review Summary Box -->
+                  <p style="font-size:14px;font-weight:700;color:#0D1B2A;margin:0 0 10px;">
+                    Review Summary:
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #3b82f6;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:14px 18px;font-size:13px;
+                                 color:#334B5C;line-height:1.8;">
+                        {{ notify_parts }}
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Success Notice -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0fdf4;border-left:4px solid #22c55e;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#166534;line-height:1.6;">
+                        ✅ The Lead Detail Form has been updated accordingly.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    If you have any questions regarding the changes made,
+                    please reach out to your manager directly.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
+
+    {
+    "name": "Field Update Request by owner - Permission Request",
+    "subject": "Field Update Permission Request for Customer {{ customer_name }}",
+    "html_content": """
+<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #3b82f6;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Field Update Permission Request
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear Manager,
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    The customer owner <strong>{{ employee }}</strong> has submitted
+                    a request to update fields on Customer
+                    <strong>{{ customer_name }}</strong>.
+                    As the customer owner, they are requesting your approval
+                    to proceed with the following changes.
+                  </p>
+
+                  <!-- Details -->
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Customer:</strong> {{ customer_name }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Requested By:</strong> {{ employee }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Reason:</strong> {{ reason }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 20px;">
+                    <strong>Fields Requested:</strong> {{ field_labels }}
+                  </p>
+
+                  <!-- Info Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #3b82f6;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#1e40af;line-height:1.6;">
+                        ℹ️ This request has been submitted by the <strong>Customer Owner</strong>.
+                        Please open Customer <strong>{{ customer_name }}</strong>
+                        and click <strong>Accept Updates</strong> to review and approve.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    If you have any questions regarding this request, please
+                    contact the customer owner directly.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
     ]
 
     for t in templates:
