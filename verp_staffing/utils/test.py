@@ -2303,7 +2303,7 @@ def seed_email_template():
     "name": "Field Update Request Reviewed - permission request",
     "subject": "Field Update Request Reviewed for Customer {{ customer_name }}",
     "html_content": """
-<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
@@ -2399,7 +2399,7 @@ def seed_email_template():
     "name": "Field Update Request by owner - Permission Request",
     "subject": "Field Update Permission Request for Customer {{ customer_name }}",
     "html_content": """
-<table width="100%" bgcolor="#f4f7fa" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
