@@ -2240,16 +2240,66 @@ z-index:999;
       const input = box.querySelector("input");
       if (!input) return;
 
-      let value = input.type === "checkbox" ? input.checked : input.value;
+      if (input.type === "checkbox") {
+        if (!input.checked) {
+          valid = false;
+          box.style.border = "2px solid red";
+          return;
+        }
 
-      if (!value) {
-        valid = false;
-        box.style.border = "2px solid red";
-        return;
+        // const canvas = document.createElement("canvas");
+        // canvas.width = 16;
+        // canvas.height = 16;
+        // const ctx = canvas.getContext("2d");
+
+        // ctx.strokeStyle = "#000000";
+        // ctx.lineWidth = 1.5;
+        // ctx.strokeRect(1, 1, 14, 14);
+
+        // ctx.strokeStyle = "#000000";
+        // ctx.lineWidth = 1.5;
+        // ctx.lineCap = "round";
+        // ctx.lineJoin = "round";
+        // ctx.beginPath();
+        // ctx.moveTo(3, 8);
+        // ctx.lineTo(6, 11);
+        // ctx.lineTo(13, 4);
+
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext("2d");
+
+        // Draw small checkbox in center of large canvas
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 8;
+        ctx.strokeRect(80, 80, 40, 40);  // small box in center
+
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(86, 100);
+        ctx.lineTo(95, 110);
+        ctx.lineTo(114, 88);
+        ctx.stroke();
+
+        const image = canvas.toDataURL("image/png");
+        storeFieldImage(field, type, image);  // ✅ inside forEach
+
+      } else {
+        // ✅ handle text/other inputs
+        const value = input.value;
+        if (!value) {
+          valid = false;
+          box.style.border = "2px solid red";
+          return;
+        }
+        const image = textToImage(value);
+        storeFieldImage(field, type, image);  // ✅ inside forEach
       }
-
-      const image = textToImage(value);
-      storeFieldImage(field, type, image);
     });
 
     if (!valid) {
@@ -2257,16 +2307,15 @@ z-index:999;
       return;
     }
 
-    // ✅ Show loader on button
     const btn = document.getElementById("finish-btn");
     const originalText = btn.innerText;
     btn.disabled = true;
     btn.innerHTML = `
-    <span style="display:inline-flex; align-items:center; gap:10px;">
-      <span class="loader" style="border-color:rgba(255,255,255,0.3); border-top-color:white;"></span>
-      Submitting...
-    </span>
-  `;
+        <span style="display:inline-flex; align-items:center; gap:10px;">
+            <span class="loader" style="border-color:rgba(255,255,255,0.3); border-top-color:white;"></span>
+            Submitting...
+        </span>
+    `;
 
     const payloadFields = Object.values(fieldImages || {});
 
@@ -2284,23 +2333,17 @@ z-index:999;
     })
       .then(r => r.json())
       .then(res => {
-        // ✅ Reset button
         btn.disabled = false;
         btn.innerHTML = originalText;
-
-        // ✅ Show success modal
         showSuccessModal();
       })
       .catch(err => {
         console.error(err);
-
         btn.disabled = false;
         btn.innerHTML = originalText;
-
         alert("Error completing document. Please try again.");
       });
   }
-
   function showSuccessModal() {
     const modal = document.getElementById("success-modal");
     modal.style.display = "flex";
