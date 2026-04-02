@@ -90,45 +90,446 @@ frappe.ui.form.on("Lead", {
 			});
 		}
 
-		function getDepartmentFields(doctype_name) {
-			return frappe.db
-				.get_single_value("ERP Configuration", "department_access_form_fields")
-				.then((data) => {
-					if (!data) return [];
+		// ─── Helpers ────────────────────────────────────────────────────────────────
+		// ─── Fieldname-based overrides ───────────────────────────────────────────────
+		const EMAIL_FIELDS = new Set(["email", "email_id", "email_address"]);
+		const MONTH_YEAR_FIELDS = new Set(["start_date", "end_date"]);
 
+		const isEmailField = f => EMAIL_FIELDS.has(f.toLowerCase());
+		const isMonthYearField = f => MONTH_YEAR_FIELDS.has(f.toLowerCase());
+
+		function toMonthYear(value) {
+			if (!value) return "";
+			const parts = value.split("-");
+			return parts.length >= 2 ? `${parts[1]}-${parts[0]}` : value;
+		}
+
+		function fromMonthYear(value) {
+			if (!value) return "";
+			const match = value.match(/^(\d{2})-(\d{4})$/);
+			return match ? `${match[2]}-${match[1]}-01` : value;
+		}
+
+		function isValidMonthYear(value) {
+			const match = value.match(/^(\d{2})-(\d{4})$/);
+			if (!match) return false;
+			const month = parseInt(match[1], 10);
+			const year = parseInt(match[2], 10);
+			return month >= 1 && month <= 12 && year >= 1900 && year <= 2100;
+		}
+
+		// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+		function clearError(input) {
+			input.style.border = "1px solid #ccc";
+			const old = input.closest(".control-input")?.querySelector(".error-text");
+			if (old) old.remove();
+		}
+
+		function markInvalid(input, message) {
+			input.style.border = "1px solid red";
+			const wrapper = input.closest(".control-input") || input.parentNode;
+			const error = document.createElement("div");
+			error.className = "error-text";
+			error.style.cssText = "color:red; font-size:12px; margin-top:4px;";
+			error.innerText = message;
+			wrapper.appendChild(error);
+		}
+
+		function getTableColumns(child_meta) {
+			return child_meta.fields.filter(f =>
+				f.fieldname &&
+				!f.hidden &&
+				!f.read_only &&
+				!["Section Break", "Column Break", "HTML", "Button", "Fold", "Heading"].includes(f.fieldtype)
+			);
+		}
+
+		function getDepartmentFields(doctype_name) {
+			return frappe.db.get_single_value("ERP Configuration", "department_access_form_fields")
+				.then(data => {
+					if (!data) return [];
 					try {
-						let json = JSON.parse(data);
-						return json[doctype_name] || [];
+						return JSON.parse(data)[doctype_name] || [];
 					} catch (e) {
-						console.error("Invalid JSON", e);
+						console.error("Invalid JSON in department_access_form_fields", e);
 						return [];
 					}
 				});
 		}
 
-		getDepartmentFields("Lead").then((fields) => {
-			let lead_detail_name = frm.doc.name1;
-			frappe.db.get_doc("Lead Detail Form", lead_detail_name).then((doc) => {
-				let html = `<div style="padding:10px;">`;
-				html += `<h4>Lead Detail Values</h4><ul>`;
+		// ─── Input renderers ─────────────────────────────────────────────────────────
 
-				// Step 4: match + extract values
-				fields.forEach((field) => {
-					let label = frappe.model.unscrub(field);
-					let value = doc[field] || "Not set";
+		function getInputHTML(fieldtype, value, field, meta_field) {
+			value = value ?? "";
+			const cls = "form-control input-with-feedback dynamic-input";
+			const placeholder = `placeholder="Enter ${frappe.model.unscrub(field)}"`;
 
-					html += `
-                <li>
-                    <b>${label}:</b> ${value}
-                </li>
-            `;
+			// ── Fieldname overrides (take priority over fieldtype) ──
+			if (isEmailField(field)) {
+				return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" placeholder="Enter email address" />`;
+			}
+
+			if (isMonthYearField(field)) {
+				return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
+			}
+
+			switch (fieldtype) {
+				case "Date":
+					return `<input type="date" value="${value.split(" ")[0] || ""}" data-field="${field}" class="${cls}" />`;
+
+				case "Int":
+				case "Float":
+				case "Currency":
+					return `<input type="number" value="${value}" data-field="${field}" class="${cls}" />`;
+
+				case "Check":
+					return `
+				<div class="checkbox" style="margin-top:6px;">
+					<input type="checkbox" data-field="${field}" class="dynamic-input" ${value ? "checked" : ""} />
+				</div>`;
+
+				case "Email":
+					return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" ${placeholder} />`;
+
+				case "Select": {
+					const opts = (meta_field.options || "").split("\n").filter(Boolean);
+					return `
+				<select data-field="${field}" class="form-control dynamic-input">
+					<option value="">Select</option>
+					${opts.map(o => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
+				</select>`;
+				}
+
+				case "Table": {
+					const child_doctype = meta_field.options;
+					if (!child_doctype) return `<div style="color:red;">No Child Doctype configured</div>`;
+
+					const child_meta = frappe.get_meta(child_doctype);
+					if (!child_meta?.fields) return `<div style="color:orange;">Child meta not loaded for: ${child_doctype}</div>`;
+
+					const columns = getTableColumns(child_meta);
+					const rows = Array.isArray(value) ? value : [];
+
+					return `
+				<div class="dynamic-table" data-field="${field}">
+					<table class="table table-bordered table-sm">
+						<thead>
+							<tr>
+								${columns.map(col => `<th>${col.label}</th>`).join("")}
+								<th style="width:80px;">Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							${rows.map((row, i) => `
+								<tr>
+									${columns.map(col => `<td>${getTableInput(col, row[col.fieldname], field, i)}</td>`).join("")}
+									<td><button class="btn btn-xs btn-danger remove-row">X</button></td>
+								</tr>
+							`).join("")}
+						</tbody>
+					</table>
+					<button class="btn btn-xs btn-primary add-row">+ Add Row</button>
+				</div>`;
+				}
+
+				default:
+					return `<input type="text" value="${value}" data-field="${field}" class="${cls}" ${placeholder} />`;
+			}
+		}
+
+		function getTableInput(col, value, parent_field, rowIndex) {
+			value = value ?? "";
+			const attrs = `data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" class="form-control table-input"`;
+
+			// ── Fieldname overrides ──
+			if (isEmailField(col.fieldname)) {
+				return `<input type="email" value="${value}" data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" data-override="email" class="form-control table-input" placeholder="Enter email" />`;
+			}
+
+			if (isMonthYearField(col.fieldname)) {
+				return `<input type="text" value="${toMonthYear(value)}" data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" data-override="month-year" class="form-control table-input" placeholder="MM-YYYY" maxlength="7" />`;
+			}
+
+			switch (col.fieldtype) {
+				case "Date":
+					return `<input type="date" value="${value.split(" ")[0] || ""}" ${attrs} />`;
+				case "Int":
+				case "Float":
+				case "Currency":
+					return `<input type="number" value="${value}" ${attrs} />`;
+				case "Check":
+					return `<input type="checkbox" ${value ? "checked" : ""} data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" class="table-input" />`;
+				case "Select": {
+					const opts = (col.options || "").split("\n").filter(Boolean);
+					return `
+				<select ${attrs}>
+					<option value="">Select</option>
+					${opts.map(o => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
+				</select>`;
+				}
+				case "Text":
+				case "Small Text":
+				case "Long Text":
+					return `<textarea ${attrs}>${value}</textarea>`;
+				case "Link":
+					return `<input type="text" value="${value}" ${attrs} placeholder="Search..." />`;
+				default:
+					return `<input type="text" value="${value}" ${attrs} />`;
+			}
+		}
+
+		// ─── Validation ──────────────────────────────────────────────────────────────
+
+		function validateSingleInput(input, field_map) {
+			const field = input.dataset.field;
+			const meta = field_map[field];
+			if (!meta || meta.fieldtype === "Table" || input.type === "checkbox") return;
+
+			clearError(input);
+
+			const value = input.value.trim();
+			const label = meta.label || frappe.model.unscrub(field);
+			const override = input.dataset.override;
+
+			if (meta.reqd && !value) {
+				return markInvalid(input, `${label} is required`);
+			}
+			if (override === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+				return markInvalid(input, `${label} must be a valid email address`);
+			}
+			if (override === "month-year" && value && !isValidMonthYear(value)) {
+				return markInvalid(input, `${label} must be in MM-YYYY format (e.g. 06-2023)`);
+			}
+			if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value && isNaN(value)) {
+				return markInvalid(input, `${label} must be a number`);
+			}
+			if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value))) {
+				return markInvalid(input, `${label} must be a valid date`);
+			}
+		}
+
+		function validateWithMeta(field_map) {
+			let isValid = true;
+			let firstInvalid = null;
+
+			document.querySelectorAll(".dynamic-input").forEach(input => {
+				const field = input.dataset.field;
+				const meta = field_map[field];
+				if (!meta || meta.fieldtype === "Table") return;
+
+				clearError(input);
+
+				const value = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
+				const label = meta.label || frappe.model.unscrub(field);
+				const override = input.dataset.override;
+
+				const fail = (msg) => {
+					markInvalid(input, msg);
+					isValid = false;
+					if (!firstInvalid) firstInvalid = input;
+				};
+
+				if (meta.reqd && !value && input.type !== "checkbox") {
+					return fail(`${label} is required`);
+				}
+				if (override === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+					return fail(`${label} must be a valid email address`);
+				}
+				if (override === "month-year" && value && !isValidMonthYear(value)) {
+					return fail(`${label} must be in MM-YYYY format (e.g. 06-2023)`);
+				}
+				if (meta.fieldtype === "Select" && value) {
+					const opts = (meta.options || "").split("\n");
+					if (!opts.includes(value)) return fail(`${label} must be a valid option`);
+				}
+				if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value && isNaN(value)) {
+					return fail(`${label} must be a number`);
+				}
+				if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value))) {
+					return fail(`${label} must be a valid date`);
+				}
+			});
+
+			if (firstInvalid) {
+				firstInvalid.focus();
+				firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+			}
+
+			return isValid;
+		}
+
+		// ─── Data collection ─────────────────────────────────────────────────────────
+
+		function collectFormData(field_map) {
+			const data = {};
+
+			document.querySelectorAll(".dynamic-input").forEach(input => {
+				const meta = field_map[input.dataset.field];
+				if (!meta || meta.fieldtype === "Table") return;
+
+				let val = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
+				if (input.dataset.override === "month-year" && val) val = fromMonthYear(val);
+
+				data[input.dataset.field] = val;
+			});
+
+			document.querySelectorAll(".dynamic-table").forEach(table => {
+				const field = table.dataset.field;
+				const child_doctype = field_map[field].options;
+				const rows = [];
+
+				table.querySelectorAll("tbody tr").forEach(tr => {
+					const row = {};
+					tr.querySelectorAll("input, select, textarea").forEach(input => {
+						const child_field = input.dataset.child;
+						if (!child_field) return;
+						let val = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
+						if (input.dataset.override === "month-year" && val) val = fromMonthYear(val);
+						row[child_field] = val;
+					});
+					if (Object.values(row).some(v => v !== "" && v !== 0 && v !== null)) {
+						rows.push({
+							...row,
+							doctype: child_doctype,
+							parent: frm.doc.name1,
+							parentfield: field,
+							parenttype: "Lead Detail Form"
+						});
+					}
 				});
 
-				html += `</ul></div>`;
-
-				// Step 5: show in HTML field
-				frm.set_df_property("lead_detail", "options", html);
+				data[field] = rows;
 			});
+
+			return data;
+		}
+
+		// ─── Event binding ───────────────────────────────────────────────────────────
+
+		function attachLiveValidation(field_map) {
+			document.querySelectorAll(".dynamic-input").forEach(input => {
+				input.addEventListener("input", () => clearError(input));
+				input.addEventListener("blur", () => validateSingleInput(input, field_map));
+			});
+
+			document.querySelectorAll(".dynamic-table").forEach(table => {
+				const field = table.dataset.field;
+				const child_doctype = field_map[field].options;
+				const child_meta = frappe.get_meta(child_doctype);
+				const columns = getTableColumns(child_meta);
+				const tbody = table.querySelector("tbody");
+
+				table.querySelector(".add-row").onclick = () => {
+					const rowIndex = tbody.querySelectorAll("tr").length;
+					const row_html = `
+				<tr>
+					${columns.map(col => `<td>${getTableInput(col, "", field, rowIndex)}</td>`).join("")}
+					<td><button class="btn btn-xs btn-danger remove-row">X</button></td>
+				</tr>`;
+					tbody.insertAdjacentHTML("beforeend", row_html);
+				};
+
+				table.addEventListener("click", e => {
+					if (e.target.classList.contains("remove-row")) {
+						e.target.closest("tr").remove();
+					}
+				});
+			});
+		}
+
+		// ─── Main entry point ────────────────────────────────────────────────────────
+
+		getDepartmentFields("Lead").then(async fields => {
+			const lead_detail_name = frm.doc.name1;
+			if (!lead_detail_name) return;
+
+			const [doc, meta] = await Promise.all([
+				frappe.db.get_doc("Lead Detail Form", lead_detail_name),
+				frappe.db.get_doc("DocType", "Lead Detail Form")
+			]);
+
+			await Promise.all(
+				meta.fields
+					.filter(f => f.fieldtype === "Table" && f.options)
+					.map(f => frappe.model.with_doctype(f.options))
+			);
+
+			const field_map = Object.fromEntries(meta.fields.map(f => [f.fieldname, f]));
+
+			const formFields = fields.map(field => {
+				const meta_field = field_map[field];
+				if (!meta_field) return "";
+
+				const label = meta_field.label || frappe.model.unscrub(field);
+				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(meta_field.fieldtype);
+
+				return `
+			<div style="width:${isFullWidth ? "100%" : "calc(50% - 8px)"}; min-width:${isFullWidth ? "100%" : "250px"};">
+				<div class="frappe-control">
+					<div class="control-label" style="margin-bottom:6px;">
+						${label}
+						${meta_field.reqd ? '<span style="color:red;">*</span>' : ""}
+					</div>
+					<div class="control-input">
+						${getInputHTML(meta_field.fieldtype, doc[field], field, meta_field)}
+					</div>
+				</div>
+			</div>`;
+			}).join("");
+
+			const html = `
+		<div class="form-layout">
+			<div class="form-section">
+				<div class="section-head">Lead Detail Form</div>
+				<div class="section-body">
+					<div style="display:flex; flex-wrap:wrap; gap:16px;">
+						${formFields}
+					</div>
+					<div style="margin-top:20px;">
+						<button class="btn btn-primary btn-sm" id="save_dynamic_btn">Save</button>
+					</div>
+				</div>
+			</div>
+		</div>`;
+
+			frm.set_df_property("lead_detail", "options", html);
+
+			setTimeout(() => {
+				const btn = document.getElementById("save_dynamic_btn");
+				if (!btn) return;
+
+				attachLiveValidation(field_map);
+
+				btn.onclick = async () => {
+					if (!validateWithMeta(field_map)) {
+						frappe.msgprint("Please fix highlighted fields before saving.");
+						return;
+					}
+
+					const data = collectFormData(field_map);
+					btn.innerText = "Saving...";
+					btn.disabled = true;
+
+					try {
+						const latest_doc = await frappe.db.get_doc("Lead Detail Form", frm.doc.name1);
+						Object.assign(latest_doc, data);
+
+						await frappe.call({
+							method: "frappe.client.save",
+							args: { doc: latest_doc }
+						});
+
+						frappe.show_alert({ message: "Saved successfully", indicator: "green" });
+					} catch (err) {
+						console.error("Save error:", err);
+						frappe.msgprint("An error occurred while saving. Please try again.");
+					} finally {
+						btn.innerText = "Save";
+						btn.disabled = false;
+					}
+				};
+			}, 300);
 		});
 
 		const roles = frappe.user_roles;

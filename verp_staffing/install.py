@@ -1183,7 +1183,8 @@ def remove_default_workspaces():
         "Email Inbox",
         "CR",
         "Onboarding",
-        "Email Inbox"
+        "Email Inbox",
+        "ESign"
     ]
 
     # Hide all others

@@ -372,11 +372,81 @@ def generate_certificate_page(agreement_name):
 
     import os
     import io
-    from PIL import Image
+    from PIL import Image, ImageDraw
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.utils import ImageReader
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
     from pdfrw import PdfReader, PdfWriter
+
+    NAVY        = (0.06, 0.08, 0.20)
+    ACCENT      = (0.09, 0.39, 0.93)
+    ACCENT_DARK = (0.05, 0.24, 0.60)
+    SILVER      = (0.95, 0.96, 0.98)
+    MID_GREY    = (0.55, 0.58, 0.64)
+    BORDER      = (0.88, 0.90, 0.94)
+    GREEN       = (0.06, 0.63, 0.35)
+    WHITE       = (1, 1, 1)
+
+    def set_rgb(c, rgb):
+        c.setFillColorRGB(*rgb)
+
+    def set_stroke_rgb(c, rgb):
+        c.setStrokeColorRGB(*rgb)
+
+    def draw_rounded_rect(c, x, y, w, h, r=6, fill=None, stroke=None, line_width=0.5):
+        p = c.beginPath()
+        p.moveTo(x + r, y)
+        p.lineTo(x + w - r, y)
+        p.arcTo(x + w - r, y, x + w, y + r, startAng=-90, extent=90)
+        p.lineTo(x + w, y + h - r)
+        p.arcTo(x + w - r, y + h - r, x + w, y + h, startAng=0, extent=90)
+        p.lineTo(x + r, y + h)
+        p.arcTo(x, y + h - r, x + r, y + h, startAng=90, extent=90)
+        p.lineTo(x, y + r)
+        p.arcTo(x, y, x + r, y + r, startAng=180, extent=90)
+        p.close()
+        if fill:
+            c.setFillColorRGB(*fill)
+        if stroke:
+            c.setStrokeColorRGB(*stroke)
+            c.setLineWidth(line_width)
+        if fill and stroke:
+            c.drawPath(p, fill=1, stroke=1)
+        elif fill:
+            c.drawPath(p, fill=1, stroke=0)
+        else:
+            c.drawPath(p, fill=0, stroke=1)
+
+    def draw_pill(c, x, y, w, h, fill):
+        r = h / 2
+        draw_rounded_rect(c, x, y, w, h, r=r, fill=fill)
+
+    def draw_divider(c, x, y, w, color=BORDER):
+        set_stroke_rgb(c, color)
+        c.setLineWidth(0.4)
+        c.line(x, y, x + w, y)
+
+    # ── FIX 1: label drawn at y, value drawn below at y - (label_size + 3) ──
+    def draw_label_value(c, lx, vx, y, label, value,
+                          label_color=MID_GREY, value_color=NAVY,
+                          label_size=7.5, value_size=9.5):
+        c.setFont("Helvetica", label_size)
+        set_rgb(c, label_color)
+        c.drawString(lx, y, label.upper())
+        c.setFont("Helvetica-Bold", value_size)
+        set_rgb(c, value_color)
+        c.drawString(vx, y - label_size - 3, str(value) if value else "—")
+
+    def draw_badge(c, x, y, text, bg=GREEN):
+        badge_w = c.stringWidth(text, "Helvetica-Bold", 7) + 14
+        badge_h = 13
+        draw_pill(c, x, y, badge_w, badge_h, fill=bg)
+        c.setFont("Helvetica-Bold", 7)
+        set_rgb(c, WHITE)
+        c.drawString(x + 7, y + 3.5, text)
+        return badge_w
 
     agreement = frappe.get_doc("E Sign", agreement_name)
 
@@ -387,134 +457,279 @@ def generate_certificate_page(agreement_name):
         agreement.signed_pdf.replace("/files/", "public/files/")
     )
 
-    # -------------------------
-    # GROUP UNIQUE SIGNERS
-    # -------------------------
-    uniquESigners = {}
+    unique_signers = {}
     for field in agreement.signature_fields:
-        if field.signer_email not in uniquESigners:
-            uniquESigners[field.signer_email] = field
+        if field.signer_email not in unique_signers:
+            unique_signers[field.signer_email] = field
 
-    # -------------------------
-    # CREATE CERTIFICATE PAGE
-    # -------------------------
-    packet = io.BytesIO()
-    c = canvas.Canvas(packet, pagesize=A4)
-
-    width, height = A4
-    y = height - 50
-
-    # Header
-    c.setFont("Helvetica-Bold", 20)
-    c.drawString(50, y, "Signature Certificate")
-    y -= 40
-    
     document_hash = calculate_file_hash(signed_path)
 
-    # Agreement info
-    c.setFont("Helvetica", 11)
-    c.drawString(50, y, f"Agreement ID: {agreement.name}")
-    y -= 15
-    
-    c.setFont("Helvetica", 11)
-    c.drawString(50, y, f"Certificate ID: {document_hash}")
-    y -= 30
+    packet   = io.BytesIO()
+    c        = canvas.Canvas(packet, pagesize=A4)
+    W, H     = A4
+    MARGIN   = 36
+    COL_W    = W - 2 * MARGIN
 
-    # -------------------------
-    # SIGNERS LOOP
-    # -------------------------
-    for email, field in uniquESigners.items():
+    draw_rounded_rect(c, 0, H - 72, W, 72, r=0, fill=NAVY)
+    set_rgb(c, SILVER)
+    c.rect(0, 0, W, H - 72, fill=1, stroke=0)
+    draw_rounded_rect(c, 0, 0, 4, H - 72, r=0, fill=ACCENT)
 
-        if y < 120:
-            c.showPage()
-            y = height - 50
+    c.setFont("Helvetica-Bold", 22)
+    set_rgb(c, WHITE)
+    c.drawString(MARGIN, H - 44, "Vrugle")
 
-        c.setFont("Helvetica-Bold", 11)
-        c.drawString(50, y, f"Email: {email}")
-        y -= 15
+    c.setFont("Helvetica", 9)
+    set_rgb(c, (0.65, 0.72, 0.85))
+    c.drawString(MARGIN, H - 58, "Secure Document Signing Platform")
 
-        c.setFont("Helvetica", 10)
-        c.drawString(50, y, f"Sent Time: {field.email_sent_on}")
-        y -= 15
+    cert_label = "SIGNATURE CERTIFICATE"
+    c.setFont("Helvetica-Bold", 9)
+    set_rgb(c, (0.65, 0.72, 0.85))
+    lw = c.stringWidth(cert_label, "Helvetica-Bold", 9)
+    c.drawString(W - MARGIN - lw, H - 42, cert_label)
 
-        c.drawString(50, y, f"Signed Time: {field.signed_on}")
-        y -= 15
-        
-        c.drawString(50, y, f"Email Verified : {field.verified_on}")
-        y -= 15
+    draw_badge(c, W - MARGIN - 70, H - 62, "✓  VERIFIED", bg=GREEN)
 
-        # ⭐ Signature preview (FIXED)
+    # ── FIX 2: card_h increased from 60 → 76 to fit two label+value rows ──
+    card_y  = H - 148
+    card_h  = 76
+    draw_rounded_rect(c, MARGIN, card_y, COL_W, card_h,
+                      r=8, fill=WHITE, stroke=BORDER, line_width=0.5)
+
+    half = COL_W / 2
+
+    # ── FIX 3: top row y pushed up to card_h - 18 so label+value both fit ──
+    draw_label_value(c,
+        lx=MARGIN + 14, vx=MARGIN + 14,
+        y=card_y + card_h - 18,
+        label="Agreement ID", value=agreement.name)
+
+    draw_label_value(c,
+        lx=MARGIN + half + 10, vx=MARGIN + half + 10,
+        y=card_y + card_h - 18,
+        label="Status", value="Completed")
+
+    # Divider sits below the value text (label_size=7.5, value_size=9.5, gap=3 → ~20pt total)
+    draw_divider(c, MARGIN + 14, card_y + card_h - 40, COL_W - 28)
+
+    hash_display = document_hash
+
+    # ── FIX 4: hash row y raised from card_y+12 → card_y+28 so label isn't clipped ──
+    draw_label_value(c,
+        lx=MARGIN + 14, vx=MARGIN + 14,
+        y=card_y + 28,
+        label="Document Hash (SHA-256)", value=hash_display,
+        value_color=MID_GREY, value_size=8)
+
+    def draw_section_title(c, y, title):
+        c.setFont("Helvetica-Bold", 8)
+        set_rgb(c, ACCENT)
+        c.drawString(MARGIN, y, title.upper())
+        draw_divider(c, MARGIN, y - 5, COL_W, color=ACCENT)
+        return y - 18
+
+    cursor_y = card_y - 28
+    cursor_y = draw_section_title(c, cursor_y, "Signers")
+
+    def new_page(c):
+        c.showPage()
+        draw_rounded_rect(c, 0, H - 72, W, 72, r=0, fill=NAVY)
+        set_rgb(c, SILVER)
+        c.rect(0, 0, W, H - 72, fill=1, stroke=0)
+        draw_rounded_rect(c, 0, 0, 4, H - 72, r=0, fill=ACCENT)
+        c.setFont("Helvetica-Bold", 10)
+        set_rgb(c, WHITE)
+        c.drawString(MARGIN, H - 44, "Vrugle  ·  Signature Certificate ")
+        return H - 100
+
+    for idx, (email, field) in enumerate(unique_signers.items()):
+
+        SIGNER_CARD_H = 140
+        signer_activity = [a for a in agreement.activity if a.email == email]
+        activity_extra  = max(0, len(signer_activity) - 0) * 20
+
+        needed = SIGNER_CARD_H + activity_extra + 20
+        if cursor_y - needed < 60:
+            cursor_y = new_page(c)
+            cursor_y = draw_section_title(c, cursor_y, "Signers (cont.)")
+
+        sc_h = SIGNER_CARD_H + activity_extra
+        draw_rounded_rect(c, MARGIN, cursor_y - sc_h, COL_W, sc_h,
+                          r=8, fill=WHITE, stroke=BORDER, line_width=0.5)
+        draw_rounded_rect(c, MARGIN, cursor_y - sc_h, 3, sc_h,
+                          r=2, fill=ACCENT)
+
+                # 
+        badge_r = 11
+        row_center_y = cursor_y - 22   # single reference line for all three elements
+
+        # Number circle — centered on row_center_y
+        bx = MARGIN + 16 + badge_r
+        draw_pill(c, bx - badge_r, row_center_y - badge_r,
+                badge_r * 2, badge_r * 2, fill=ACCENT)
+        c.setFont("Helvetica-Bold", 9)
+        set_rgb(c, WHITE)
+        c.drawCentredString(bx, row_center_y - 4, str(idx + 1))
+
+        # Email — vertically centered on same row_center_y
+        c.setFont("Helvetica-Bold", 10.5)
+        set_rgb(c, NAVY)
+        c.drawString(MARGIN + 42, row_center_y - 4, email)
+
+        # SIGNED badge — vertically centered on same row_center_y
+        draw_badge(c, W - MARGIN - 56, row_center_y - 7, "SIGNED", bg=GREEN)
+
+        draw_divider(c, MARGIN + 14, cursor_y - 34, COL_W - 28)
+
+        # ── FIX 5: label drawn at row_y, value at row_y - 13 (already done via draw_label_value fix) ──
+        row_y    = cursor_y - 50
+        col_unit = COL_W / 4
+        cx       = MARGIN + 14
+
+        fields_data = [
+            ("Sent",     field.email_sent_on),
+            ("Verified", field.verified_on),
+            ("Signed",   field.signed_on),
+            ("Method",   "OTP Email"),
+        ]
+
+        for i, (lbl, val) in enumerate(fields_data):
+            xpos = cx + i * col_unit
+            c.setFont("Helvetica", 7)
+            set_rgb(c, MID_GREY)
+            c.drawString(xpos, row_y, lbl.upper())
+            c.setFont("Helvetica-Bold", 8.5)
+            set_rgb(c, NAVY)
+            # ── FIX 6: was [:18] which cut seconds — [:22] shows full timestamp ──
+            val_str = str(val) if val else "—"
+            c.drawString(xpos, row_y - 13, val_str)
+
+        draw_divider(c, MARGIN + 14, row_y - 24, COL_W - 28)
+
+        sig_y = row_y - 80
+
+        c.setFont("Helvetica", 7)
+        set_rgb(c, MID_GREY)
+        c.drawString(MARGIN + 14, sig_y + 50, "SIGNATURE PREVIEW")
+
+        sig_box_x = MARGIN + 14
+        sig_box_y = sig_y - 5
+        sig_box_w = 160
+        sig_box_h = 48
+        draw_rounded_rect(c, sig_box_x, sig_box_y, sig_box_w, sig_box_h,
+                          r=5, fill=(0.97, 0.98, 1.0), stroke=BORDER, line_width=0.4)
+
         if field.signature_image:
             img_path = frappe.get_site_path(
                 field.signature_image.replace("/files/", "public/files/")
             )
-
             if os.path.exists(img_path):
-                img = Image.open(img_path)
-
-                # Flatten transparency
-                if img.mode in ("RGBA", "LA"):
-                    bg = Image.new("RGB", img.size, (255, 255, 255))
-                    bg.paste(img, mask=img.split()[-1])
-                    img = bg
-                else:
-                    img = img.convert("RGB")
-
-                c.drawImage(
-                    ImageReader(img),
-                    350,
-                    y-20,
-                    width=150,
-                    height=50,
-                    preserveAspectRatio=True,
-                    mask=None
-                )
-
-        y -= 50
-
-        # -------------------------
-        # ACTIVITY PER SIGNER
-        # -------------------------
-        signer_activity = [a for a in agreement.activity if a.email == email]
+                try:
+                    img = Image.open(img_path)
+                    if img.mode in ("RGBA", "LA"):
+                        bg = Image.new("RGB", img.size, (248, 250, 255))
+                        bg.paste(img, mask=img.split()[-1])
+                        img = bg
+                    else:
+                        img = img.convert("RGB")
+                    c.drawImage(
+                        ImageReader(img),
+                        sig_box_x + 6,
+                        sig_box_y + 4,
+                        width=sig_box_w - 12,
+                        height=sig_box_h - 8,
+                        preserveAspectRatio=True,
+                        mask=None
+                    )
+                except Exception:
+                    pass
 
         if signer_activity:
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(50, y, "Activity")
-            y -= 15
+            act_x       = MARGIN + 200
+            act_title_y = sig_y + 50
 
-            c.setFont("Helvetica", 10)
-            for act in signer_activity:
+            c.setFont("Helvetica", 7)
+            set_rgb(c, MID_GREY)
+            c.drawString(act_x, act_title_y, "ACTIVITY LOG")
 
-                if y < 100:
-                    c.showPage()
-                    y = height - 50
+            log_y = act_title_y - 14
+            for act_idx, act in enumerate(signer_activity):
+                if log_y < cursor_y - sc_h + 8:
+                    break
 
-                c.drawString(60, y, f"IP: {act.ip_address}")
-                y -= 12
-                c.drawString(60, y, f"Visited: {act.visited_at}")
-                y -= 15
+                row_bg = (0.97, 0.98, 1.0) if act_idx % 2 == 0 else WHITE
+                draw_rounded_rect(c, act_x - 2, log_y - 3,
+                                  COL_W - 200 - 14, 14,
+                                  r=3, fill=row_bg)
 
-        y -= 15
+                print(f"Activity for {email}: {act.visited_at}, IP: {act.ip_address}, Browser: {act.browser}, OS: {act.os}, Device: {act.device}")
+
+                c.setFont("Helvetica", 7.5)
+                set_rgb(c, NAVY)
+                ip_text = f"IP: {act.ip_address or '—'}"
+                c.drawString(act_x + 4, log_y, ip_text)
+
+                c.setFont("Helvetica", 7)
+                set_rgb(c, MID_GREY)
+                # ── FIX 7: was [:18] — increased to [:22] for full timestamp ──
+                visited_str = str(act.visited_at) if act.visited_at else "—"
+                c.drawString(act_x + 140, log_y, visited_str)
+
+                log_y -= 18
+
+        cursor_y -= (sc_h + 14)
+
+    if cursor_y - 70 < 40:
+        cursor_y = new_page(c)
+
+    footer_y = 52
+    draw_divider(c, MARGIN, footer_y + 28, COL_W, color=BORDER)
+
+    c.setFont("Helvetica-Bold", 7.5)
+    set_rgb(c, NAVY)
+    c.drawString(MARGIN, footer_y + 16, "Vrugle Secure Signing")
+
+    c.setFont("Helvetica", 7)
+    set_rgb(c, MID_GREY)
+    legal = (
+        "This certificate is a legally binding record of the electronic signing event. "
+        "All signatures were authenticated via OTP email verification. "
+        "Document integrity is guaranteed by the SHA-256 hash recorded above."
+    )
+    words  = legal.split()
+    line   = ""
+    line_y = footer_y + 4
+    max_w  = COL_W - 80
+    for word in words:
+        test = (line + " " + word).strip()
+        if c.stringWidth(test, "Helvetica", 7) < max_w:
+            line = test
+        else:
+            c.drawString(MARGIN, line_y, line)
+            line_y -= 9
+            line = word
+    if line:
+        c.drawString(MARGIN, line_y, line)
+
+    c.setFont("Helvetica", 7)
+    set_rgb(c, MID_GREY)
+    c.drawRightString(W - MARGIN, footer_y - 2, f"Certificate ID: {document_hash}")
 
     c.save()
     packet.seek(0)
 
     cert_pdf = PdfReader(packet)
-
-    # -------------------------
-    # APPEND TO SIGNED PDF
-    # -------------------------
-    reader = PdfReader(signed_path)
-    writer = PdfWriter()
+    reader   = PdfReader(signed_path)
+    writer   = PdfWriter()
 
     for p in reader.pages:
         writer.addpage(p)
-
     for p in cert_pdf.pages:
         writer.addpage(p)
 
     writer.write(signed_path)
-
+    
 @frappe.whitelist(allow_guest=True)
 def track_ip_and_device(browser=None, os=None, device=None, token=None):
 

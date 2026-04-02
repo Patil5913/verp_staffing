@@ -86,9 +86,9 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 10:44:29.787120",
+ "modified": "2026-03-31 14:26:18.128167",
  "modified_by": "Administrator",
- "module": "E-Sign",
+ "module": "ESign",
  "name": "E Sign",
  "owner": "Administrator",
  "permissions": [
@@ -109,5 +109,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }
