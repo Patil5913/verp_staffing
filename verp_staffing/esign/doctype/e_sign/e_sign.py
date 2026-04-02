@@ -196,45 +196,48 @@ def complete_signing(token=None, fields=None):
 
 @frappe.whitelist()
 def send_all_signers(agreement):
-    
 
     doc = frappe.get_doc("E Sign", agreement)
-
     unique_emails = list(set([
         row.signer_email for row in doc.signature_fields
         if row.signer_email
     ]))
 
+    # fetch template once outside the loop
+    template_name = "Document Sign Request - e_sign"
+    template = frappe.get_doc("Email Template", template_name) if frappe.db.exists("Email Template", template_name) else None
+
     for email in unique_emails:
-
         token = str(uuid.uuid4())
-
         for row in doc.signature_fields:
-
             if row.signer_email == email:
-
                 if not row.sign_token:
                     row.sign_token = token
-
                 if not row.email_sent_on:
                     row.email_sent_on = format_timestamp_utc()
 
         link = f"{frappe.utils.get_url()}/sign_document?token={token}"
 
-        frappe.sendmail(
-            recipients=[email],
-            subject="Please Sign Document",
-            message=f"""
+        if template:
+            context = {"link": link}
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html or template.response, context)
+        else:
+            subject = "Please Sign Document"
+            message = f"""
                 <p>You have a document to sign.</p>
                 <p><a href="{link}">Click here to Sign</a></p>
-            """,
+            """
+
+        frappe.sendmail(
+            recipients=[email],
+            subject=subject,
+            message=message,
             delayed=False
         )
 
     doc.status = "Sent"
-
     doc.save(ignore_permissions=True)
-
     return "Emails Sent"
 
 def send_final_signed_email(agreement_name):
@@ -266,21 +269,30 @@ def send_final_signed_email(agreement_name):
         pdf_content = f.read()
 
     # Send individually
+    # Fetch template once outside the loop
+    template_name = "Final Signed Agreement Email - e_sign"
+    template = frappe.get_doc("Email Template", template_name) if frappe.db.exists("Email Template", template_name) else None
+
+    # Send individually
     for email in signer_emails:
-
-        frappe.sendmail(
-            recipients=[email],  # single recipient
-            subject="Final Signed Agreement",
-            message=f"""
+        if template:
+            context = {"agreement_name": agreement.name}
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html or template.response, context)
+        else:
+            subject = "Final Signed Agreement"
+            message = f"""
                 <p>Hello,</p>
-
                 <p>The agreement <b>{agreement.name}</b> has been fully signed.</p>
-
                 <p>Please find the final signed document attached.</p>
-
                 <br>
                 <p>Thank you.</p>
-            """,
+            """
+
+        frappe.sendmail(
+            recipients=[email],
+            subject=subject,
+            message=message,
             attachments=[{
                 "fname": "Final_Signed_Agreement.pdf",
                 "fcontent": pdf_content
@@ -788,14 +800,25 @@ def send_otp(token=None):
 
         frappe.cache().set_value(f"otp_{token}", otp, expires_in_sec=300)
 
+         # Fetch template
+        template_name = "OTP Verification Email"
+        if frappe.db.exists("Email Template", template_name):
+            template = frappe.get_doc("Email Template", template_name)
+            context = {"otp": otp}
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html or template.response, context)
+        else:
+            subject = "Your Verification Code"
+            message = f"<p>Your OTP is: <b>{otp}</b></p>"
+
         frappe.sendmail(
             recipients=[email],
-            subject="Your Verification Code",
-            message=f"<p>Your OTP is: <b>{otp}</b></p>",
-            delayed = False
+            subject=subject,
+            message=message,
+            delayed=False
         )
-
         return {"status": "sent"}
+    
     except Exception:
         frappe.log_error(frappe.get_traceback(), "OTP Send Failed")
         return {"status": "error"}

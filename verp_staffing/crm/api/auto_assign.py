@@ -261,19 +261,31 @@ def forward_candidate(customer, service, interview=None):
 
 
 def notify_assignees(doc, service, customer):
-
     emp_user = frappe.db.get_value("Employee", doc.assign_to, "user")
     if not emp_user:
         return
 
-    send_notification(
-        recipients=[emp_user],
-        subject=f"New Candidate Assigned ({service})",
-        message=(
+    template_name = "New Candidate Assigned"
+    if frappe.db.exists("Email Template", template_name):
+        template = frappe.get_doc("Email Template", template_name)
+        context = {
+            "service": service,
+            "customer": customer,
+        }
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response, context)
+    else:
+        subject = f"New Candidate Assigned ({service})"
+        message = (
             f"You have been assigned a new candidate.\n\n"
             f"Customer: {customer}\n"
             f"Service: {service}"
-        ),
+        )
+
+    send_notification(
+        recipients=[emp_user],
+        subject=subject,
+        message=message,
         send_email=1,
         send_system=1,
     )

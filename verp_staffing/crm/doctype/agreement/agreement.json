@@ -16,6 +16,8 @@
   "column_break_vrre",
   "audit_trail",
   "status",
+  "sent_on",
+  "last_reminder_sent",
   "section_break_yapn",
   "data"
  ],
@@ -93,24 +95,27 @@
    "label": "Signature Image",
    "options": "File",
    "read_only": 1
+  },
+  {
+   "fieldname": "sent_on",
+   "fieldtype": "Datetime",
+   "label": "Sent on"
+  },
+  {
+   "fieldname": "last_reminder_sent",
+   "fieldtype": "Datetime",
+   "label": "Last Reminder Sent"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-24 10:30:03.755801",
+ "modified": "2026-03-30 14:02:16.213725",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
  "owner": "Administrator",
  "permissions": [
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Employee",
-   "select": 1,
-   "write": 1
-  },
   {
    "create": 1,
    "read": 1,
@@ -121,7 +126,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Employee",
    "select": 1,
    "write": 1
   },
@@ -129,6 +134,20 @@
    "create": 1,
    "read": 1,
    "role": "Sales Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
    "select": 1,
    "write": 1
   },
@@ -142,14 +161,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "write": 1
-  },
-
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Team Lead",
-   "select": 1,
    "write": 1
   }
  ],

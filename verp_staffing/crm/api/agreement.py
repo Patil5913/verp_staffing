@@ -3,7 +3,7 @@ import os
 from verp_staffing.crm.api.helpers import send_notification
 from frappe.utils import get_url
 from urllib.parse import quote
-
+from frappe.utils import now_datetime
 
 @frappe.whitelist()
 def download_agreement(agreement):
@@ -95,7 +95,11 @@ def send_existing_agreement(agreement):
         )
 
 
-        doc.db_set("status", "Sent For Signature")
+        doc.db_set({
+            "status": "Sent For Signature",
+            "sent_on": now_datetime(),
+            "last_reminder_sent": None
+        })
 
         return {"success": True}
 
@@ -103,6 +107,83 @@ def send_existing_agreement(agreement):
         frappe.log_error(frappe.get_traceback(), "Send Agreement Error")
         raise
 
+
+import frappe
+from frappe.utils import now_datetime, time_diff_in_hours
+
+def send_agreement_reminders():
+    frappe.logger().info("REMINDER FUNCTION STARTED")
+
+    agreements = frappe.get_all(
+        "Agreement",
+        filters={"status": "Sent For Signature"},
+        fields=["name", "sent_on", "last_reminder_sent", "sales_order"]
+    )
+    print("-----agreement", agreements)
+
+    # fetch template once outside the loop
+    template_name = "Agreement Signature Reminder"
+    template = frappe.get_doc("Email Template", template_name) if frappe.db.exists("Email Template", template_name) else None
+
+    for ag in agreements:
+        frappe.logger().info(f"Processing Agreement: {ag.name}")
+        if not ag.sent_on:
+            continue
+
+        doc = frappe.get_doc("Agreement", ag.name)
+
+        # 🔁 decide reference time
+        reference_time = ag.last_reminder_sent or ag.sent_on
+        print("---------------", reference_time)
+        hours_passed = time_diff_in_hours(now_datetime(), reference_time)
+
+        # ⏰ check 24 hours passed
+        if hours_passed >= 24:
+            # safety check
+            if doc.status != "Sent For Signature":
+                continue
+
+            so = frappe.get_doc("Sales Order", doc.sales_order)
+            recipient = get_customer_email(so.customer)
+
+            if template:
+                context = {
+                    "agreement": doc.name,
+                    "sales_order": so.name,
+                }
+                subject = frappe.render_template(template.subject, context)
+                message = frappe.render_template(template.response_html or template.response, context)
+            else:
+                subject = "Reminder: Agreement Pending Your Signature"
+                message = (
+                    f"This is a reminder that the agreement is still pending signature.\n\n"
+                    f"Agreement: {doc.name}\n"
+                    f"Sales Order: {so.name}\n\n"
+                    f"Please take necessary action."
+                )
+
+            # 📧 SEND EMAIL
+            send_notification(
+                recipients=[recipient],
+                subject=subject,
+                message=message,
+                reference_doctype="Sales Order",
+                reference_name=so.name,
+                send_email=1,
+                send_system=0,
+            )
+
+            # ✅ update last reminder timestamp
+            frappe.db.set_value(
+                "Agreement",
+                doc.name,
+                "last_reminder_sent",
+                now_datetime(),
+                update_modified=False
+            )
+            frappe.db.commit()
+            print("------------------")
+            frappe.logger().info(f"Reminder sent for Agreement {doc.name}")
 # Final submit
 @frappe.whitelist()
 def submit_and_generate(sales_order, template, data, send_email=0):
