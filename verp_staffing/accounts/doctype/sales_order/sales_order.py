@@ -83,7 +83,6 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
         template_name = "Document Signature and Certificate"
 
         if frappe.db.exists("Email Template", template_name):
-            print("--------------using email template")
             template = frappe.get_doc("Email Template", template_name)
 
             context = {
@@ -99,7 +98,6 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         else:
             # 🔻 Fallback (your current behavior)
-            print("------------not using template")
             subject = "Agreement for Review and Signature"
             message = f"Form: {form_url}"
 
@@ -138,7 +136,6 @@ def send_details_form_notification(recipient, sales_order, customer):
         template_name = "Candidate Details Form"
 
         if frappe.db.exists("Email Template", template_name):
-            print("--------------using email template")
 
             template = frappe.get_doc("Email Template", template_name)
 
@@ -159,7 +156,6 @@ def send_details_form_notification(recipient, sales_order, customer):
 
         else:
             # 🔻 Fallback (your existing logic)
-            print("------------not using template")
 
             subject = "Candidate Details Form"
             message = (

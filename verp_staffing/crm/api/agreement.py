@@ -119,7 +119,6 @@ def send_agreement_reminders():
         filters={"status": "Sent For Signature"},
         fields=["name", "sent_on", "last_reminder_sent", "sales_order"]
     )
-    print("-----agreement", agreements)
 
     # fetch template once outside the loop
     template_name = "Agreement Signature Reminder"
@@ -134,7 +133,6 @@ def send_agreement_reminders():
 
         # 🔁 decide reference time
         reference_time = ag.last_reminder_sent or ag.sent_on
-        print("---------------", reference_time)
         hours_passed = time_diff_in_hours(now_datetime(), reference_time)
 
         # ⏰ check 24 hours passed
@@ -182,7 +180,6 @@ def send_agreement_reminders():
                 update_modified=False
             )
             frappe.db.commit()
-            print("------------------")
             frappe.logger().info(f"Reminder sent for Agreement {doc.name}")
 # Final submit
 @frappe.whitelist()
