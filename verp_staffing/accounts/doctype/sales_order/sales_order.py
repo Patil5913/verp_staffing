@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
+from datetime import datetime, timedelta
 import os
 import frappe
 from frappe.model.document import Document
@@ -33,6 +34,24 @@ def generate_token(data: dict):
 
     return token
 
+def get_expiry_timestamp():
+    value = frappe.db.get_single_value(
+        "ERP Configuration",
+        "expiry_hours_of_agreement"
+    )
+    if not value:
+            return None
+
+   
+       
+    try:
+        hours, minutes = map(int, value.split(":"))
+    except Exception:
+        return None
+    total_seconds = hours * 3600 + minutes * 60
+    expiry_dt = datetime.utcnow() + timedelta(seconds=total_seconds)
+    return int(expiry_dt.timestamp())
+
 
 def generate_form_url(
     recipient, sales_order, customer, agreement=None, p=None, ia=False
@@ -40,6 +59,7 @@ def generate_form_url(
     try:
         base_url = frappe.utils.get_url()
 
+        expiry = get_expiry_timestamp() if ia else None
         data = {
             "so": sales_order,
             "p": p,
@@ -47,6 +67,7 @@ def generate_form_url(
             "agr": agreement,
             "e": recipient,
             "ia": int(ia),
+            "exp": expiry 
         }
 
         token = generate_token(data)

@@ -23,9 +23,7 @@ class ERPConfiguration(Document):
 
         hours, minutes = map(int, value.split(":"))
 
-        if hours > 23 or minutes > 59:
-            frappe.throw("Time cannot exceed 23:59.")
-
+        
         if hours == 0 and minutes == 0:
             frappe.throw("Expiry duration must be greater than 00:00.")
 
