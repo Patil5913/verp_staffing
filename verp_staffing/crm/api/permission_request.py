@@ -479,15 +479,11 @@ def request_field_update(
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
-
         label = None
-
         if df:
-            label = df.label or df.fieldname  # fallback if label is None
-
+            label = df.label or df.fieldname
         if not label:
             label = f.replace("_", " ").title()
-
         field_labels.append(str(label))
 
     comment = frappe.get_doc(
@@ -517,16 +513,33 @@ def request_field_update(
     comment.insert(ignore_permissions=True)
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
-    send_notification(
-        recipients=[manager_email],
-        subject=f"Field Update Request for Customer {customer_name}",
-        message=(
+
+    # 📧 SEND EMAIL
+    template_name = "Field Update Request - permission request"
+    if frappe.db.exists("Email Template", template_name):
+        template = frappe.get_doc("Email Template", template_name)
+        context = {
+            "customer_name": customer_name,
+            "employee": employee,
+            "reason": reason,
+            "field_labels": ", ".join(field_labels),
+        }
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response, context)
+    else:
+        subject = f"Field Update Request for Customer {customer_name}"
+        message = (
             f"Employee <b>{employee}</b> has requested to update fields "
             f"on Customer <b>{customer_name}</b>.<br><br>"
             f"<b>Reason:</b> {reason}<br><br>"
             f"<b>Fields:</b> {', '.join(field_labels)}<br><br>"
             f"Please open Customer <b>{customer_name}</b> and click <b>Accept Updates</b> to review."
-        ),
+        )
+
+    send_notification(
+        recipients=[manager_email],
+        subject=subject,
+        message=message,
         reference_doctype="Customer",
         reference_name=customer_name,
         send_email=1,
@@ -547,7 +560,6 @@ def request_field_update(
         _add_activity_log(service_doctype, service_name, activity_message, user)
 
     return {"status": "success", "manager_employee": manager_employee}
-
 
 @frappe.whitelist()
 def request_field_update_by_owner(customer_name, reason, field_updates):
@@ -575,15 +587,11 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
-
         label = None
-
         if df:
-            label = df.label or df.fieldname  # fallback if label is None
-
+            label = df.label or df.fieldname
         if not label:
             label = f.replace("_", " ").title()
-
         field_labels.append(str(label))
 
     comment = frappe.get_doc(
@@ -611,16 +619,33 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
     comment.insert(ignore_permissions=True)
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
-    send_notification(
-        recipients=[manager_email],
-        subject=f"Field Update Request for Customer {customer_name}",
-        message=(
+
+    # 📧 SEND EMAIL
+    template_name = "Field Update Request by owner - Permission Request"
+    if frappe.db.exists("Email Template", template_name):
+        template = frappe.get_doc("Email Template", template_name)
+        context = {
+            "customer_name": customer_name,
+            "employee": employee,
+            "reason": reason,
+            "field_labels": ", ".join(field_labels),
+        }
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response, context)
+    else:
+        subject = f"Field Update Request for Customer {customer_name}"
+        message = (
             f"Employee <b>{employee}</b> has requested to update fields "
             f"on Customer <b>{customer_name}</b>.<br><br>"
             f"<b>Reason:</b> {reason}<br><br>"
             f"<b>Fields:</b> {', '.join(field_labels)}<br><br>"
             f"Please open Customer <b>{customer_name}</b> and click <b>Accept Updates</b> to review."
-        ),
+        )
+
+    send_notification(
+        recipients=[manager_email],
+        subject=subject,
+        message=message,
         reference_doctype="Customer",
         reference_name=customer_name,
         send_email=1,
@@ -637,8 +662,6 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
     _add_activity_log("Customer", customer_name, activity_message, user)
 
     return {"status": "success", "manager_employee": manager_employee}
-
-
 @frappe.whitelist()
 def get_pending_field_update_request(customer_name):
     """Returns single pending request where logged-in employee is the approver."""
@@ -904,14 +927,29 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
             if rejected_labels:
                 notify_parts.append(f"Rejected: <b>{', '.join(rejected_labels)}</b>")
 
-            send_notification(
-                recipients=[requester_email],
-                subject=f"Field Update Request Reviewed for Customer {customer_name}",
-                message=(
+            template_name = "Field Update Request Reviewed - permission request"
+            if frappe.db.exists("Email Template", template_name):
+                template = frappe.get_doc("Email Template", template_name)
+                context = {
+                    "customer_name": customer_name,
+                    "manager_employee": manager_employee,
+                    "requester_employee": requester_employee,
+                    "notify_parts": "<br>".join(notify_parts),
+                }
+                subject = frappe.render_template(template.subject, context)
+                message = frappe.render_template(template.response_html or template.response, context)
+            else:
+                subject = f"Field Update Request Reviewed for Customer {customer_name}"
+                message = (
                     f"Your manager <b>{manager_employee}</b> has reviewed your field update request.<br><br>"
                     + "<br>".join(notify_parts)
                     + "<br><br>The Lead Detail Form has been updated accordingly."
-                ),
+                )
+
+            send_notification(
+                recipients=[requester_email],
+                subject=subject,
+                message=message,
                 reference_doctype="Customer",
                 reference_name=customer_name,
                 send_email=1,
@@ -949,15 +987,11 @@ def reject_field_update_request(customer_name, comment_name):
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
-
         label = None
-
         if df:
-            label = df.label or df.fieldname  # fallback if label is None
-
+            label = df.label or df.fieldname
         if not label:
             label = f.replace("_", " ").title()
-
         field_labels.append(str(label))
 
     data["status"] = "Rejected"
@@ -983,13 +1017,28 @@ def reject_field_update_request(customer_name, comment_name):
     if requester_user:
         requester_email = frappe.db.get_value("User", requester_user, "email")
         if requester_email:
+            template_name = "Field Update Request Rejected - permission request"
+            if frappe.db.exists("Email Template", template_name):
+                template = frappe.get_doc("Email Template", template_name)
+                context = {
+                    "customer_name": customer_name,
+                    "manager_employee": manager_employee,
+                    "requester_employee": requester_employee,
+                    "field_labels": ", ".join(field_labels),
+                }
+                subject = frappe.render_template(template.subject, context)
+                message = frappe.render_template(template.response_html or template.response, context)
+            else:
+                subject = f"Field Update Request Rejected for Customer {customer_name}"
+                message = (
+                    f"Your manager <b>{manager_employee}</b> has rejected your field update request.<br><br>"
+                    f"<b>Rejected fields:</b> {', '.join(field_labels)}"
+                )
+
             send_notification(
                 recipients=[requester_email],
-                subject=f"Field Update Request Rejected for Customer {customer_name}",
-                message=(
-                    f"Your manager <b>{manager_employee}</b> has rejected your field update request.<br><br>"
-                    f" <b>Rejected fields:</b> {', '.join(field_labels)}"
-                ),
+                subject=subject,
+                message=message,
                 reference_doctype="Customer",
                 reference_name=customer_name,
                 send_email=1,

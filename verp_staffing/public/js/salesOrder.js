@@ -266,7 +266,7 @@ function submit(frm, wrapper, sales_order, send_email) {
 	frappe.call({
 		method: "verp_staffing.crm.api.agreement.submit_and_generate",
 		args: {
-			sales_order,
+			sales_order,	
 			template,
 			data: JSON.stringify(data),
 			send_email: send_email ? 1 : 0,

@@ -20,7 +20,13 @@ app_license = "mit"
 # 		"has_permission": "verp_staffing.api.permission.has_app_permission"
 # 	}
 # ]
-
+# scheduler_events = {
+#     "cron": {
+#         "* * * * *": [
+#             "verp_staffing.crm.api.agreement.send_agreement_reminders"
+#         ]
+#     }
+# }
 # Includes in <head>
 # ------------------
 
@@ -244,7 +250,11 @@ scheduler_events = {
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
         ],
-    },
+        "0 */12 * * *": [
+            "verp_staffing.crm.api.agreement.send_agreement_reminders"
+        ]
+    }
+   
 }
 
 # Testing

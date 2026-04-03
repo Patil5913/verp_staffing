@@ -508,6 +508,7 @@ def send_notification(**kwargs):
         "status": "success",
         "recipients": recipients,
     }
+
 # permission query
 def generic_assign_query(user):
 

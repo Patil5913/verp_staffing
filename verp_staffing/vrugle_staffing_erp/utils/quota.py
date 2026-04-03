@@ -25,20 +25,33 @@ def user_limit(doc=None, method=None):
     # count current users
     total_users = frappe.db.count("User", filters={"enabled": 1})
     if total_users >= users_limit:
-        send_notification(
-            recipients=["Administrator"],
-            subject="User Limit Exceeded",
-            message=(
+         template_name = "User Limit Exceeded"
+         if frappe.db.exists("Email Template", template_name):
+            template = frappe.get_doc("Email Template", template_name)
+            context = {
+                "users_limit": users_limit,
+                "total_users": total_users,
+            }
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html or template.response, context)
+         else:
+            subject = "User Limit Exceeded"
+            message = (
                 f"Your site has exceeded the allowed user limit.\n\n"
                 f"Allowed Users: {users_limit}\n"
                 f"Current Users: {total_users}\n\n"
                 f"Please upgrade your plan or remove inactive users."
-            ),
+            )
+
+         send_notification(
+            recipients=["Administrator"],
+            subject=subject,
+            message=message,
             reference_doctype="User",
             send_email=1,
             send_system=1,
         )
-        frappe.throw(f"User limit exceeded. Limit = {users_limit}, Current = {total_users}")
+         frappe.throw(f"User limit exceeded. Limit = {users_limit}, Current = {total_users}")
 
 
 # fetch site storage usage in GB
@@ -74,29 +87,42 @@ def get_site_storage_usage():
 # site space limit validate
 def site_space_limit(doc=None, method=None):
     quota = frappe.get_site_config().get("quota", {})
-    site_space_limit_gb = quota.get('site_space_limit_gb')
+    site_space_limit_gb = quota.get("site_space_limit_gb")
 
     # Validate type as numbers
     if not isinstance(site_space_limit_gb, (int, float)):
         frappe.throw("Site space limit must be a number")
 
     total_space = get_site_storage_usage()
-    
+
     if total_space > site_space_limit_gb:
-        send_notification(
-            recipients=["Administrator"],
-            subject="Site Storage Limit Exceeded",
-            message=(
+        template_name = "Site Storage Limit Exceeded"
+        if frappe.db.exists("Email Template", template_name):
+            template = frappe.get_doc("Email Template", template_name)
+            context = {
+                "site_space_limit_gb": site_space_limit_gb,
+                "total_space": total_space,
+            }
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html or template.response, context)
+        else:
+            subject = "Site Storage Limit Exceeded"
+            message = (
                 f"Your site storage usage has exceeded the allowed limit.\n\n"
                 f"Allowed Storage: {site_space_limit_gb} GB\n"
                 f"Current Usage: {total_space} GB\n\n"
                 f"Please delete unused files or upgrade your storage plan."
-            ),
+            )
+
+        send_notification(
+            recipients=["Administrator"],
+            subject=subject,
+            message=message,
             send_email=1,
             send_system=1,
         )
+
         frappe.throw(f"Site used space {total_space}GB exceed the limit of {site_space_limit_gb}GB")
-    
 
 # site expiery check
 def site_expiry_check():
@@ -128,8 +154,7 @@ def check_site_expiry():
 
     # Load expiry date from site_config.json
     quota = frappe.get_site_config().get("quota", {})
-    expiry_date = quota.get('expiry_date')
-
+    expiry_date = quota.get("expiry_date")
     if not expiry_date:
         return
 
@@ -140,35 +165,43 @@ def check_site_expiry():
     # Only notify if 1–5 days are remaining
     if 0 < days_left <= 5:
         admin_user = "Administrator"
-        subject = f"Site Expiring in {days_left} Day(s)"
-        message = f"Your site will expire in {days_left} day(s). Expiry Date: {expiry_date}"
 
         existing = frappe.get_all(
             "Notification Log",
             filters={
                 "for_user": "Administrator",
-                "subject": f"Site Expiry in {days_left} Day(s)"
+                "subject": f"Site Expiry in {days_left} Day(s)",
             },
-            limit=1
+            limit=1,
         )
 
-        if  not existing:
-            # Insert Notification Log
+        if not existing:
+            template_name = "Site Expiry Notification"
+            if frappe.db.exists("Email Template", template_name):
+                template = frappe.get_doc("Email Template", template_name)
+                context = {
+                    "days_left": days_left,
+                    "expiry_date": expiry_date,
+                }
+                subject = frappe.render_template(template.subject, context)
+                message = frappe.render_template(template.response_html or template.response, context)
+            else:
+                subject = f"Site Expiring in {days_left} Day(s)"
+                message = f"Your site will expire in {days_left} day(s). Expiry Date: {expiry_date}"
+
             send_notification(
-                recipients=["Administrator"],
+                recipients=[admin_user],
                 subject=subject,
                 message=message,
                 send_email=1,
                 send_system=1,
             )
 
-            # Show real-time notification
             frappe.publish_realtime(
                 event="notification",
                 message={"type": "Alert", "message": message},
-                user=admin_user
+                user=admin_user,
             )
-
 
 # block non admin login in archive mode
 def block_non_admin():

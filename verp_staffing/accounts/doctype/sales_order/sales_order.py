@@ -60,7 +60,6 @@ def generate_form_url(
 
 @frappe.whitelist()
 def send_agreement_notification(recipient, sales_order, customer, agreement):
-
     try:
         doc = frappe.get_doc("Agreement", agreement)
 
@@ -76,20 +75,37 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
             recipient, sales_order, customer, agreement, doc.pdf, ia=True
         )
 
+        # Read PDF
         with open(file_path, "rb") as f:
             file_content = f.read()
 
+        # 🔹 Try to use Email Template
+        template_name = "Document Signature and Certificate"
+
+        if frappe.db.exists("Email Template", template_name):
+            template = frappe.get_doc("Email Template", template_name)
+
+            context = {
+                "recipient": recipient,
+                "sales_order": sales_order,
+                "customer": customer,
+                "agreement": agreement,
+                "link": form_url,
+            }
+
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html, context)
+
+        else:
+            # 🔻 Fallback (your current behavior)
+            subject = "Agreement for Review and Signature"
+            message = f"Form: {form_url}"
+
+        # 🔹 Send
         send_notification(
             recipients=[recipient],
-            subject="Agreement for Review and Signature",
-            message=(
-                "Dear Customer,\n\n"
-	            "Submit the required details using the form link below:\n\n"
-	            f"{form_url}\n\n"
-	            "If you have any questions or need assistance, please contact us.\n\n"
-	            "Best regards,\n"
-	            "Team"
-                ),
+            subject=subject,
+            message=message,
             attachments=[
                 {
                     "fname": os.path.basename(doc.pdf),
@@ -103,29 +119,65 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         return {"success": "Agreement sent"}
 
-    except Exception as e:
+    except Exception:
         frappe.log_error(frappe.get_traceback(), "Agreement Notification Error")
         raise
 
-
 @frappe.whitelist()
 def send_details_form_notification(recipient, sales_order, customer):
-    form_url = generate_form_url(
-        recipient, sales_order, customer, agreement=None, p=None, ia=False
-    )
 
-    send_notification(
-        recipients=[recipient],
-        subject="candidate details form",
-        message=(
-            "Dear Customer,\n\n"
-            "Submit the required details using the form link below:\n\n"
-            f"{form_url}\n\n"
-            "If you have any questions or need assistance, please contact us.\n\n"
-            "Best regards,\n"
-            "Team"
-        ),
-        send_email=1,
-        send_system=0,
-    )
-    return {"success": "Agreement sent"}
+    try:
+        # 🔗 Generate form URL
+        form_url = generate_form_url(
+            recipient, sales_order, customer, agreement=None, p=None, ia=False
+        )
+
+        # 🔹 Try Email Template
+        template_name = "Candidate Details Form"
+
+        if frappe.db.exists("Email Template", template_name):
+
+            template = frappe.get_doc("Email Template", template_name)
+
+            context = {
+                "recipient": recipient,
+                "sales_order": sales_order,
+                "customer": customer,
+                "form_url": form_url,
+                "year": frappe.utils.now_datetime().year,
+            }
+
+            subject = frappe.render_template(template.subject, context)
+
+            # ⚠️ handle both cases (depends on your template setup)
+            message = frappe.render_template(
+                template.response_html or template.response, context
+            )
+
+        else:
+            # 🔻 Fallback (your existing logic)
+
+            subject = "Candidate Details Form"
+            message = (
+                "Dear Customer,\n\n"
+                "Submit the required details using the form link below:\n\n"
+                f"{form_url}\n\n"
+                "If you have any questions or need assistance, please contact us.\n\n"
+                "Best regards,\n"
+                "Team"
+            )
+
+        # 🔹 Send Notification
+        send_notification(
+            recipients=[recipient],
+            subject=subject,
+            message=message,
+            send_email=1,
+            send_system=0,
+        )
+
+        return {"success": "Details form sent"}
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Details Form Notification Error")
+        raise
