@@ -1252,9 +1252,7 @@ def seed_email_template():
                   <p style="font-size:14px;color:#334B5C;margin:0 0 6px;">
                     <strong>Account:</strong> {{ user }}
                   </p>
-                  <p style="font-size:14px;color:#334B5C;margin:0 0 20px;">
-                    <strong>Site:</strong> {{ host_name }}
-                  </p>
+                  
 
                   <!-- CTA Button -->
                   <div style="text-align:center;margin:24px 0;">
@@ -1701,6 +1699,196 @@ def seed_email_template():
                   <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
                     Please contact your system manager immediately to investigate
                     and resolve this issue.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
+   {
+    "name": "File Backup Notification",
+    "subject": "Your File Backup is Ready",
+    "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #22c55e;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Your File Backup is Ready!
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:24px;">
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Hi {{ user_email }},
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    Your file backup has been completed successfully.
+                    Use the links below to download your backup files.
+                  </p>
+
+                  <!-- Success Notice -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0fdf4;border-left:4px solid #22c55e;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#166534;line-height:1.6;">
+                        ✅ Your backup is ready and available for download.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Download Links -->
+                  <p style="font-size:14px;font-weight:700;color:#0D1B2A;margin:0 0 10px;">
+                    Download Links:
+                  </p>
+
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #3b82f6;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:14px 18px;">
+
+                        {% if backup_path_db %}
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-bottom:10px;">
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:4px;">
+                              🗄️ <strong>Database Backup</strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="{{ backup_path_db }}"
+                                 style="display:inline-block;padding:8px 18px;
+                                        background:#3b82f6;color:#ffffff;
+                                        font-size:13px;font-weight:600;
+                                        text-decoration:none;border-radius:5px;">
+                                Download Database
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        {% endif %}
+
+                        {% if backup_path_files %}
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-bottom:10px;">
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:4px;">
+                              📁 <strong>Public Files</strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="{{ backup_path_files }}"
+                                 style="display:inline-block;padding:8px 18px;
+                                        background:#3b82f6;color:#ffffff;
+                                        font-size:13px;font-weight:600;
+                                        text-decoration:none;border-radius:5px;">
+                                Download Public Files
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        {% endif %}
+
+                        {% if backup_path_private_files %}
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-bottom:10px;">
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:4px;">
+                              🔒 <strong>Private Files</strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="{{ backup_path_private_files }}"
+                                 style="display:inline-block;padding:8px 18px;
+                                        background:#3b82f6;color:#ffffff;
+                                        font-size:13px;font-weight:600;
+                                        text-decoration:none;border-radius:5px;">
+                                Download Private Files
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        {% endif %}
+
+                        {% if backup_path_conf %}
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:4px;">
+                              ⚙️ <strong>Config Backup</strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="{{ backup_path_conf }}"
+                                 style="display:inline-block;padding:8px 18px;
+                                        background:#3b82f6;color:#ffffff;
+                                        font-size:13px;font-weight:600;
+                                        text-decoration:none;border-radius:5px;">
+                                Download Config
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        {% endif %}
+
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Warning Notice -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#fff8f0;border-left:4px solid #f59e0b;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#92400e;line-height:1.6;">
+                        ⚠️ These links are <strong>private and signed</strong>.
+                        Do not share them with anyone.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    If you did not request this backup, please contact
+                    your system manager immediately.
                   </p>
                 </td>
               </tr>
