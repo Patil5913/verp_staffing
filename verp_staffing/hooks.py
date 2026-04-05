@@ -123,6 +123,8 @@ after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
+    "verp_staffing.overrides.email_template.patch",
+    "verp_staffing.utils.test.seed_email_template"
 ]
 
 # Uninstallation
@@ -169,7 +171,12 @@ after_migrate = [
 # ---------------
 # Override standard doctype classes
 
-override_doctype_class = {"User": "verp_staffing.overrides.override_user.CustomUser"}
+override_doctype_class = {
+    "User": "verp_staffing.overrides.override_user.CustomUser",
+    "Personal Data Download Request": "verp_staffing.overrides.email_template.CustomPersonalDataDownloadRequest",
+        "Personal Data Deletion Request": "verp_staffing.overrides.email_template.CustomPersonalDataDeletionRequest",
+
+    }
 
 # Document Events
 # ---------------
@@ -256,6 +263,8 @@ scheduler_events = {
     }
    
 }
+
+
 
 # Testing
 # -------
@@ -357,3 +366,13 @@ fixtures = [
     {"dt": "Custom HTML Block", "filters": [["name", "=", "Email Inbox"]]},
     {"dt": "Workspace", "filters": [["name", "=", "Email Inbox"]]},
 ]
+
+override_whitelisted_methods = {
+    "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
+    "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
+}
+# # verp_staffing/hooks.py
+
+# override_doctype_class = {
+#     "Personal Data Download Request": "verp_staffing.overrides.personal_data_download_request.CustomPersonalDataDownloadRequest"
+# }
