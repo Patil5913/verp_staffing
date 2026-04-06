@@ -164,6 +164,7 @@ def send_details_form_notification(recipient, sales_order, customer):
          "message": "from candidate detail form",
         "template": template_name,
         "template in database":frappe.db.exists("Email Template", template_name)})
+        print(f"-----template in details form: {template_name}, exists: {frappe.db.exists('Email Template', template_name)}")
 
         if frappe.db.exists("Email Template", template_name):
 

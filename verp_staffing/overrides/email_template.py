@@ -134,6 +134,7 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
          "message": "request personal data",
         "template": template_name,
         "template in database":frappe.db.exists("Email Template", template_name)})
+        print(f"-----template in personal data download: {template_name}, exists: {frappe.db.exists('Email Template', template_name)}")
 
         if frappe.db.exists("Email Template", template_name):
             email_template = frappe.get_doc("Email Template", template_name)
