@@ -358,6 +358,7 @@ def get_recipients(doctype, email_field):
 def patch():
     import frappe.integrations.offsite_backup_utils as backup_utils
     backup_utils.send_email = send_email
+    print("Patched send_email in offsite_backup_utils")
 
 
 

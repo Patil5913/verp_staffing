@@ -127,7 +127,7 @@ after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
-    "verp_staffing.overrides.email_template.patch",
+    # "verp_staffing.overrides.email_template.patch",
     "verp_staffing.utils.test.seed_email_template"
 ]
 
@@ -318,6 +318,7 @@ permission_query_conditions = {
 before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
     "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
+     "verp_staffing.overrides.email_template.patch"
 ]
 
 # after_request = ["verp_staffing.utils.after_request"]
