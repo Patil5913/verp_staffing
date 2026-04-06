@@ -173,3 +173,34 @@ class Company(NestedSet):
 			"default_payable_account",
 			frappe.db.get_value("Account", {"company": self.name, "account_type": "Payable", "is_group": 0}),
 		)
+
+	def on_trash(self):
+		"""
+		Trash accounts and cost centers for this company if no gl entry exists
+		"""
+		NestedSet.validate_if_child_exists(self)
+		frappe.utils.nestedset.update_nsm(self)
+		frappe.errprint(f"self: {self.name}")
+		rec = frappe.db.sql(f"SELECT name from `tabGL Entry` where company = %s", self.name)
+		if not rec:
+
+			for doctype in ["Account"]:
+				frappe.db.sql(f"delete from `tab{doctype}` where company = %s", self.name)
+	
+		frappe.defaults.clear_default("company", value=self.name)
+
+		# reset default company
+		frappe.db.sql(
+			"""update `tabSingles` set value=''
+			where doctype='Global Defaults' and field='default_company'
+			and value=%s""",
+			self.name,
+		)
+
+		# reset default company
+		frappe.db.sql(
+			"""update `tabSingles` set value=''
+			where doctype='Chart of Accounts Importer' and field='company'
+			and value=%s""",
+			self.name,
+		)

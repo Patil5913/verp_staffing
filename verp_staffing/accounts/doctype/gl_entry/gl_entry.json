@@ -12,6 +12,8 @@
   "is_cancelled",
   "column_break_pysf",
   "due_date",
+  "fiscal_year",
+  "company",
   "account_details_section",
   "account",
   "account_currency",
@@ -168,13 +170,28 @@
    "fieldname": "is_cancelled",
    "fieldtype": "Check",
    "label": "is Canceled"
+  },
+  {
+   "fieldname": "fiscal_year",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Fiscal Year",
+   "options": "Fiscal Year"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-list",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-05 18:53:29.270899",
+ "modified": "2026-04-06 18:04:17.086663",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "GL Entry",
