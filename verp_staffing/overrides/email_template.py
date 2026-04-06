@@ -280,6 +280,8 @@ class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
 # verp_staffing/overrides/offsite_backup_utils.py
 
 from frappe.integrations.offsite_backup_utils import get_recipients
+from frappe.utils import cint, split_emails
+
 
 def send_email(success, service_name, doctype, email_field, error_status=None):
     print("-------------from backup successful")
@@ -350,6 +352,8 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
                     <p>Please contact your system manager for more information.</p>
                 """,
             )
+def get_recipients(doctype, email_field):
+	return split_emails(frappe.db.get_value(doctype, None, email_field))
 
 def patch():
     import frappe.integrations.offsite_backup_utils as backup_utils
