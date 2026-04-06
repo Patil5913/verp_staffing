@@ -57,9 +57,7 @@ def send_message(sender, message, subject="Website Query"):
             reply_subject = frappe.render_template(email_template.subject, context)
             reply_content = frappe.render_template(email_template.response_html, context)
 
-            print(f"---------------------Using custom template: {template_name}")
-            print(f"----------------context: {reply_content}")
-
+           
         else:
             # Fallback to original if template not found
             reply_subject = _("We've received your query!")
@@ -157,7 +155,6 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
                 content=content,
                 # header=[_("Download Your Data"), "green"],
             )
-            print("---------------------email sent via template")
 
         else:
             # Fallback to original Frappe behavior
@@ -304,6 +301,7 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
             "error_status": None,
         }
         rendered = get_rendered_template("Backup Upload Successful", context)
+        print(f"--------backup successful:{rendered}")
 
         if rendered:
             frappe.sendmail(
