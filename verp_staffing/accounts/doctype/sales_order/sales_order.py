@@ -11,6 +11,7 @@ import hashlib
 import base64
 import json
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.permission_request import on_sales_order_save
 
 
 class SalesOrder(Document):
@@ -20,7 +21,13 @@ class SalesOrder(Document):
 
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
-        self.name = generate_name_series("Sales Order", customer_name) 
+        self.name = generate_name_series("Sales Order", customer_name)
+
+    def after_insert(self):
+        on_sales_order_save(self)
+
+    def on_submit(self):
+        on_sales_order_save(self)
 
 
 def generate_token(data: dict):
@@ -34,16 +41,12 @@ def generate_token(data: dict):
 
     return token
 
-def get_expiry_timestamp():
-    value = frappe.db.get_single_value(
-        "ERP Configuration",
-        "expiry_hours_of_agreement"
-    )
-    if not value:
-            return None
 
-   
-       
+def get_expiry_timestamp():
+    value = frappe.db.get_single_value("ERP Configuration", "expiry_hours_of_agreement")
+    if not value:
+        return None
+
     try:
         hours, minutes = map(int, value.split(":"))
     except Exception:
@@ -67,7 +70,7 @@ def generate_form_url(
             "agr": agreement,
             "e": recipient,
             "ia": int(ia),
-            "exp": expiry 
+            "exp": expiry,
         }
 
         token = generate_token(data)
@@ -143,6 +146,7 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Agreement Notification Error")
         raise
+
 
 @frappe.whitelist()
 def send_details_form_notification(recipient, sales_order, customer):

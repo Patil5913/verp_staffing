@@ -168,6 +168,49 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
     return {"simple_fields": simple_fields, "table_fields": table_fields}
 
 
+def _check_candidate_form_required_for_customer(customer_name, lead_detail_doc=None):
+    """
+    Checks if candidate form is required for this customer.
+    Checks ALL Sales Orders linked to this customer — both:
+    1. Via Lead Detail Form (sales_order field)
+    2. Via Sales Order.customer field (button-created)
+    """
+    so_names_to_check = set()
+
+    if lead_detail_doc:
+        so_via_lead = frappe.db.get_value(
+            "Lead Detail Form", lead_detail_doc, "sales_order"
+        )
+        if so_via_lead:
+            so_names_to_check.add(so_via_lead)
+
+    so_via_customer = frappe.db.get_all(
+        "Sales Order",
+        filters={"customer": customer_name},
+        pluck="name",
+    )
+    for so in so_via_customer:
+        so_names_to_check.add(so)
+
+    if not so_names_to_check:
+        return False
+
+    for so_name in so_names_to_check:
+        if check_candidate_form_required_from_sales_order(so_name):
+            return True
+
+    return False
+
+@frappe.whitelist()
+def on_sales_order_save(doc):
+    if not doc.customer:
+        return
+
+    customer_name = doc.customer
+    lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
+    _check_candidate_form_required_for_customer(customer_name, lead_detail_name)
+
+
 @frappe.whitelist()
 def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     user = frappe.session.user
@@ -233,14 +276,11 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
 
     is_owner = is_customer_owner or lead_owner_match or is_service_assignee
 
-    candidate_form_required = False
-    if lead_detail_doc:
-        so_name = frappe.db.get_value(
-            "Lead Detail Form", lead_detail_doc, "sales_order"
-        )
-        candidate_form_required = check_candidate_form_required_from_sales_order(
-            so_name
-        )
+    # ── Check candidate form required ──
+    # Check ALL Sales Orders for this customer — both from Lead Detail Form and button-created ones
+    candidate_form_required = _check_candidate_form_required_for_customer(
+        customer_name, lead_detail_doc
+    )
 
     return {
         "is_owner": is_owner,
@@ -525,7 +565,9 @@ def request_field_update(
             "field_labels": ", ".join(field_labels),
         }
         subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(template.response_html or template.response, context)
+        message = frappe.render_template(
+            template.response_html or template.response, context
+        )
     else:
         subject = f"Field Update Request for Customer {customer_name}"
         message = (
@@ -560,6 +602,7 @@ def request_field_update(
         _add_activity_log(service_doctype, service_name, activity_message, user)
 
     return {"status": "success", "manager_employee": manager_employee}
+
 
 @frappe.whitelist()
 def request_field_update_by_owner(customer_name, reason, field_updates):
@@ -631,7 +674,9 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
             "field_labels": ", ".join(field_labels),
         }
         subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(template.response_html or template.response, context)
+        message = frappe.render_template(
+            template.response_html or template.response, context
+        )
     else:
         subject = f"Field Update Request for Customer {customer_name}"
         message = (
@@ -662,6 +707,8 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
     _add_activity_log("Customer", customer_name, activity_message, user)
 
     return {"status": "success", "manager_employee": manager_employee}
+
+
 @frappe.whitelist()
 def get_pending_field_update_request(customer_name):
     """Returns single pending request where logged-in employee is the approver."""
@@ -747,10 +794,10 @@ def get_all_pending_field_update_requests(customer_name):
 @frappe.whitelist()
 def get_candidate_form_required_status(customer_name):
     lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
-    if not lead_detail_name:
-        return {"required": False}
-    so_name = frappe.db.get_value("Lead Detail Form", lead_detail_name, "sales_order")
-    return {"required": check_candidate_form_required_from_sales_order(so_name)}
+    required = _check_candidate_form_required_for_customer(
+        customer_name, lead_detail_name
+    )
+    return {"required": required}
 
 
 @frappe.whitelist()
@@ -937,7 +984,9 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
                     "notify_parts": "<br>".join(notify_parts),
                 }
                 subject = frappe.render_template(template.subject, context)
-                message = frappe.render_template(template.response_html or template.response, context)
+                message = frappe.render_template(
+                    template.response_html or template.response, context
+                )
             else:
                 subject = f"Field Update Request Reviewed for Customer {customer_name}"
                 message = (
@@ -1027,7 +1076,9 @@ def reject_field_update_request(customer_name, comment_name):
                     "field_labels": ", ".join(field_labels),
                 }
                 subject = frappe.render_template(template.subject, context)
-                message = frappe.render_template(template.response_html or template.response, context)
+                message = frappe.render_template(
+                    template.response_html or template.response, context
+                )
             else:
                 subject = f"Field Update Request Rejected for Customer {customer_name}"
                 message = (
