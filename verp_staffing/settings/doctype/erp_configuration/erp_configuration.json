@@ -1,217 +1,320 @@
 {
-  "actions": [],
-  "allow_rename": 1,
-  "creation": "2026-03-11 15:37:32.755850",
-  "doctype": "DocType",
-  "engine": "InnoDB",
-  "field_order": [
-    "immediate_triggerer_configuration_section",
-    "send_agreement_immediatly_after_sales_order_creation",
-    "expiry_hours_of_agreement",
-    "column_break_zgmd",
-    "send_candidate_form_immediatly_after_sales_order_creation",
-    "cadidate_form_configuration_section",
-    "driving_licence",
-    "ead_card",
-    "column_break_aivw",
-    "old_resume",
-    "visa_copy",
-    "interview_configuration_section",
-    "default_interview_status",
-    "permission_request_configuration_section",
-    "sales_department",
-    "column_break_qzfw",
-    "technical_department",
-    "column_break_kvwy",
-    "marketing_department",
-    "candidate_form_fields_tab",
-    "select_candidate_details_form_fields_html",
-    "candidate_details_form_fields",
-    "department_display_fields_tab",
-    "select_department_display_form_fields_html",
-    "department_display_form_fields",
-    "department_access_fields_tab",
-    "department_access_fields",
-    "department_access_form_fields"
-  ],
-  "fields": [
-    {
-      "fieldname": "cadidate_form_configuration_section",
-      "fieldtype": "Section Break",
-      "label": "Cadidate Form Configuration"
-    },
-    {
-      "fieldname": "column_break_aivw",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "0",
-      "fieldname": "send_agreement_immediatly_after_sales_order_creation",
-      "fieldtype": "Check",
-      "label": "Send agreement immediatly after sales order creation"
-    },
-    {
-      "fieldname": "column_break_zgmd",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": "0",
-      "fieldname": "send_candidate_form_immediatly_after_sales_order_creation",
-      "fieldtype": "Check",
-      "label": "Send candidate form immediatly after sales order creation"
-    },
-    {
-      "fieldname": "immediate_triggerer_configuration_section",
-      "fieldtype": "Section Break",
-      "label": "Immediate Triggerer Configuration"
-    },
-    {
-      "default": "0",
-      "fieldname": "driving_licence",
-      "fieldtype": "Check",
-      "label": "Is Driving Licence Mandatory"
-    },
-    {
-      "default": "0",
-      "fieldname": "ead_card",
-      "fieldtype": "Check",
-      "label": "Is EAD Card Mandatory"
-    },
-    {
-      "default": "0",
-      "fieldname": "old_resume",
-      "fieldtype": "Check",
-      "label": "Is Old Resume Mandatory"
-    },
-    {
-      "default": "0",
-      "fieldname": "visa_copy",
-      "fieldtype": "Check",
-      "label": "Is Visa Copy Mandatory"
-    },
-    {
-      "fieldname": "candidate_form_fields_tab",
-      "fieldtype": "Tab Break",
-      "label": "Candidate Form Fields"
-    },
-    {
-      "fieldname": "select_candidate_details_form_fields_html",
-      "fieldtype": "HTML",
-      "label": "Select Candidate Details Form Fields"
-    },
-    {
-      "fieldname": "candidate_details_form_fields",
-      "fieldtype": "Long Text",
-      "label": "Candidate Details Form Fields"
-    },
-    {
-      "fieldname": "select_department_display_form_fields_html",
-      "fieldtype": "HTML",
-      "label": "Select Department Display Form Fields"
-    },
-    {
-      "fieldname": "department_display_form_fields",
-      "fieldtype": "Long Text",
-      "label": "Department Display Form Fields"
-    },
-    {
-      "fieldname": "department_display_fields_tab",
-      "fieldtype": "Tab Break",
-      "label": "Department Display Fields"
-    },
-    {
-      "fieldname": "department_access_fields_tab",
-      "fieldtype": "Tab Break",
-      "label": "Department Access Fields"
-    },
-    {
-      "fieldname": "department_access_fields",
-      "fieldtype": "HTML",
-      "label": "Department Access Fields"
-    },
-    {
-      "fieldname": "department_access_form_fields",
-      "fieldtype": "Long Text",
-      "label": "Department Access Form Fields"
-    },
-    {
-      "default": "01:00",
-      "description": "Enter duration in HH:MM format (00:01 to 23:59). Example: 02:30 = 2 hours 30 minutes",
-      "fieldname": "expiry_hours_of_agreement",
-      "fieldtype": "Data",
-      "in_list_view": 1,
-      "label": "Agreement Expiry Duration",
-      "reqd": 1
-    },
-    {
-      "fieldname": "interview_configuration_section",
-      "fieldtype": "Section Break",
-      "label": "Interview Configuration"
-    },
-    {
-      "bold": 1,
-      "fieldname": "default_interview_status",
-      "fieldtype": "Link",
-      "label": "Select default interview status ",
-      "options": "Interview Status",
-      "reqd": 1
-    },
-    {
-      "fieldname": "permission_request_configuration_section",
-      "fieldtype": "Section Break",
-      "label": "Permission Request Configuration"
-    },
-    {
-      "fieldname": "sales_department",
-      "fieldtype": "Link",
-      "label": "Sales Department",
-      "options": "Role"
-    },
-    {
-      "fieldname": "technical_department",
-      "fieldtype": "Link",
-      "label": "Technical Department",
-      "options": "Role"
-    },
-    {
-      "fieldname": "marketing_department",
-      "fieldtype": "Link",
-      "label": "Marketing Department",
-      "options": "Role"
-    },
-    {
-      "fieldname": "column_break_qzfw",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "column_break_kvwy",
-      "fieldtype": "Column Break"
-    }
-  ],
-  "grid_page_length": 50,
-  "index_web_pages_for_search": 1,
-  "issingle": 1,
-  "links": [],
-  "modified": "2026-03-25 15:10:42.103804",
-  "modified_by": "Administrator",
-  "module": "Settings",
-  "name": "ERP Configuration",
-  "owner": "Administrator",
-  "permissions": [
-    {
-      "create": 1,
-      "delete": 1,
-      "email": 1,
-      "print": 1,
-      "read": 1,
-      "role": "System Manager",
-      "share": 1,
-      "write": 1
-    }
-  ],
-  "row_format": "Dynamic",
-  "rows_threshold_for_grid_search": 20,
-  "sort_field": "modified",
-  "sort_order": "DESC",
-  "states": []
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-11 15:37:32.755850",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "immediate_triggerer_configuration_section",
+  "send_agreement_immediatly_after_sales_order_creation",
+  "expiry_hours_of_agreement",
+  "column_break_zgmd",
+  "send_candidate_form_immediatly_after_sales_order_creation",
+  "cadidate_form_configuration_section",
+  "driving_licence",
+  "ead_card",
+  "column_break_aivw",
+  "old_resume",
+  "visa_copy",
+  "interview_configuration_section",
+  "default_interview_status",
+  "permission_request_configuration_section",
+  "sales_department",
+  "column_break_qzfw",
+  "technical_department",
+  "column_break_kvwy",
+  "marketing_department",
+  "candidate_form_fields_tab",
+  "select_candidate_details_form_fields_html",
+  "candidate_details_form_fields",
+  "department_display_fields_tab",
+  "select_department_display_form_fields_html",
+  "department_display_form_fields",
+  "department_access_fields_tab",
+  "department_access_fields",
+  "department_access_form_fields"
+ ],
+ "fields": [
+  {
+   "fieldname": "cadidate_form_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Cadidate Form Configuration"
+  },
+  {
+   "fieldname": "column_break_aivw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_agreement_immediatly_after_sales_order_creation",
+   "fieldtype": "Check",
+   "label": "Send agreement immediatly after sales order creation"
+  },
+  {
+   "fieldname": "column_break_zgmd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_candidate_form_immediatly_after_sales_order_creation",
+   "fieldtype": "Check",
+   "label": "Send candidate form immediatly after sales order creation"
+  },
+  {
+   "fieldname": "immediate_triggerer_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Immediate Triggerer Configuration"
+  },
+  {
+   "default": "0",
+   "fieldname": "driving_licence",
+   "fieldtype": "Check",
+   "label": "Is Driving Licence Mandatory"
+  },
+  {
+   "default": "0",
+   "fieldname": "ead_card",
+   "fieldtype": "Check",
+   "label": "Is EAD Card Mandatory"
+  },
+  {
+   "default": "0",
+   "fieldname": "old_resume",
+   "fieldtype": "Check",
+   "label": "Is Old Resume Mandatory"
+  },
+  {
+   "default": "0",
+   "fieldname": "visa_copy",
+   "fieldtype": "Check",
+   "label": "Is Visa Copy Mandatory"
+  },
+  {
+   "fieldname": "candidate_form_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Candidate Form Fields"
+  },
+  {
+   "fieldname": "select_candidate_details_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "candidate_details_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "select_department_display_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Department Display Form Fields"
+  },
+  {
+   "fieldname": "department_display_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Department Display Form Fields"
+  },
+  {
+   "fieldname": "department_display_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Department Display Fields"
+  },
+  {
+   "fieldname": "department_access_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Department Access Fields"
+  },
+  {
+   "fieldname": "department_access_fields",
+   "fieldtype": "HTML",
+   "label": "Department Access Fields"
+  },
+  {
+   "fieldname": "department_access_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Department Access Form Fields"
+  },
+  {
+   "default": "01:00",
+   "description": "Enter duration in HH:MM format (00:01 to 23:59). Example: 02:30 = 2 hours 30 minutes",
+   "fieldname": "expiry_hours_of_agreement",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Agreement Expiry Duration",
+   "reqd": 1
+  },
+  {
+   "fieldname": "interview_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Interview Configuration"
+  },
+  {
+   "bold": 1,
+   "fieldname": "default_interview_status",
+   "fieldtype": "Link",
+   "label": "Select default interview status ",
+   "options": "Interview Status",
+   "reqd": 1
+  },
+  {
+   "fieldname": "permission_request_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Permission Request Configuration"
+  },
+  {
+   "fieldname": "sales_department",
+   "fieldtype": "Link",
+   "label": "Sales Department",
+   "options": "Role"
+  },
+  {
+   "fieldname": "technical_department",
+   "fieldtype": "Link",
+   "label": "Technical Department",
+   "options": "Role"
+  },
+  {
+   "fieldname": "marketing_department",
+   "fieldtype": "Link",
+   "label": "Marketing Department",
+   "options": "Role"
+  },
+  {
+   "fieldname": "column_break_qzfw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_kvwy",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-04-06 09:51:32.885877",
+ "modified_by": "Administrator",
+ "module": "Settings",
+ "name": "ERP Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Lead Person"
+  },
+  {
+   "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
+  },
+  {
+   "read": 1,
+   "role": "Training Person"
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "read": 1,
+   "role": "HR"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
 }
