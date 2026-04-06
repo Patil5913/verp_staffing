@@ -78,7 +78,6 @@ class Opportunity(Document):
 
     def on_update(self):
         if self.opportunity_from_lead:
-            frappe.errprint(f"opportunity status {self.status}")
             update_status_based_on_opportunity(self.opportunity_from_lead, self.status)
 
     def block_manual_conversion(self):
