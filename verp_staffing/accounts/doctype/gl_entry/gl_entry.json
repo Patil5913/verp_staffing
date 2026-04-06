@@ -1,0 +1,204 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "ACC-GLE-.YYYY.-.#####",
+ "creation": "2026-04-05 17:48:09.141820",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "posting_date",
+  "transaction_date",
+  "is_cancelled",
+  "column_break_pysf",
+  "due_date",
+  "account_details_section",
+  "account",
+  "account_currency",
+  "column_break_fsen",
+  "against",
+  "party_type",
+  "party",
+  "transaction_details_section",
+  "voucher_type",
+  "voucher_no",
+  "voucher_subtype",
+  "transaction_currency",
+  "column_break_kvwj",
+  "against_voucher_type",
+  "against_voucher",
+  "voucher_detail_no",
+  "transaction_exchange_rate"
+ ],
+ "fields": [
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "label": "Posting Date",
+   "search_index": 1
+  },
+  {
+   "fieldname": "transaction_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Transaction Date"
+  },
+  {
+   "fieldname": "column_break_pysf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "account_details_section",
+   "fieldtype": "Section Break",
+   "label": "Account Details"
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Account",
+   "options": "Account",
+   "search_index": 1
+  },
+  {
+   "fieldname": "account_currency",
+   "fieldtype": "Link",
+   "label": "Account Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "column_break_fsen",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "against",
+   "fieldtype": "Text",
+   "in_filter": 1,
+   "label": "Against"
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "options": "DocType",
+   "search_index": 1
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "in_standard_filter": 1,
+   "label": "Party",
+   "options": "party_type",
+   "search_index": 1
+  },
+  {
+   "fieldname": "transaction_details_section",
+   "fieldtype": "Section Break",
+   "label": "Transaction Details"
+  },
+  {
+   "fieldname": "voucher_type",
+   "fieldtype": "Link",
+   "in_filter": 1,
+   "label": "Vouncher Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "voucher_no",
+   "fieldtype": "Dynamic Link",
+   "in_filter": 1,
+   "in_standard_filter": 1,
+   "label": "Vouncher Number",
+   "options": "voucher_type",
+   "search_index": 1
+  },
+  {
+   "fieldname": "voucher_subtype",
+   "fieldtype": "Small Text",
+   "label": "Voucher Subtype"
+  },
+  {
+   "fieldname": "transaction_currency",
+   "fieldtype": "Link",
+   "label": "Transaction Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "column_break_kvwj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "against_voucher_type",
+   "fieldtype": "Link",
+   "label": "Against Vouncher Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "against_voucher",
+   "fieldtype": "Dynamic Link",
+   "in_filter": 1,
+   "label": "Against Vouncher",
+   "options": "against_voucher_type",
+   "search_index": 1
+  },
+  {
+   "fieldname": "voucher_detail_no",
+   "fieldtype": "Date",
+   "label": "Voucher Detail No",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "transaction_exchange_rate",
+   "fieldtype": "Float",
+   "label": "Transaction Exchange Rate",
+   "precision": "9"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "label": "is Canceled"
+  }
+ ],
+ "grid_page_length": 50,
+ "icon": "fa fa-list",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-05 18:53:29.270899",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "GL Entry",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "voucher_no,account,posting_date,against_voucher",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-06 12:21:02.447786",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "account_name",
+  "account",
+  "bank",
+  "account_type",
+  "account_subtype",
+  "column_break_lhqw",
+  "disabled",
+  "is_default",
+  "is_company_account",
+  "company",
+  "section_break_11",
+  "party_type",
+  "column_break_rwbc",
+  "party",
+  "account_details_section",
+  "iban",
+  "column_break_pfiw",
+  "branch_code",
+  "bank_account_no",
+  "address_and_contact",
+  "address_html",
+  "column_break_azbn",
+  "contact_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "account_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Account name",
+   "reqd": 1
+  },
+  {
+   "depends_on": "is_company_account",
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "label": "Company Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "label": "Bank",
+   "options": "Bank",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_lhqw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Is Default Account"
+  },
+  {
+   "default": "0",
+   "description": "Setting the account as a Company Account is necessary for Bank Reconciliation",
+   "fieldname": "is_company_account",
+   "fieldtype": "Check",
+   "label": "Is Company Account"
+  },
+  {
+   "depends_on": "is_company_account",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "mandatory_depends_on": "is_company_account",
+   "options": "Company"
+  },
+  {
+   "fieldname": "account_type",
+   "fieldtype": "Link",
+   "label": "Account type",
+   "options": "Bank Account Type"
+  },
+  {
+   "fieldname": "account_subtype",
+   "fieldtype": "Link",
+   "label": "Account subtype",
+   "options": "Bank Account Subtype"
+  },
+  {
+   "fieldname": "section_break_11",
+   "fieldtype": "Section Break",
+   "label": "Party Details"
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "column_break_rwbc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "options": "party_type"
+  },
+  {
+   "fieldname": "account_details_section",
+   "fieldtype": "Section Break",
+   "label": "Account Details"
+  },
+  {
+   "fieldname": "iban",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "IBAN",
+   "options": "IBAN"
+  },
+  {
+   "fieldname": "column_break_pfiw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "branch_code",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Branch Code"
+  },
+  {
+   "fieldname": "bank_account_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Bank Account No",
+   "length": 30
+  },
+  {
+   "fieldname": "address_and_contact",
+   "fieldtype": "Section Break",
+   "label": "Address and contact",
+   "options": "fa fa-map-marker"
+  },
+  {
+   "fieldname": "address_html",
+   "fieldtype": "HTML",
+   "label": "Address"
+  },
+  {
+   "fieldname": "column_break_azbn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "contact_html",
+   "fieldtype": "HTML",
+   "label": "Contact"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-06 14:30:53.289114",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Bank Account",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
