@@ -282,8 +282,9 @@ class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
 from frappe.integrations.offsite_backup_utils import get_recipients
 
 def send_email(success, service_name, doctype, email_field, error_status=None):
+    print("-------------from backup successful")
     recipients = get_recipients(doctype, email_field)
-
+    print(f"--------recipients: {recipients}")
     if not recipients:
         frappe.log_error(
             f"No Email Recipient found for {service_name}",
@@ -309,8 +310,10 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
                 subject=rendered["subject"],
                 content=rendered["content"],
             )
+            print(f"---------------------Using template for backup successful")
         else:
             # Fallback to original
+            print("template not used")
             frappe.sendmail(
                 recipients=recipients,
                 subject="Backup Upload Successful",
