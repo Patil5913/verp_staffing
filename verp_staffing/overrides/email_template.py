@@ -100,7 +100,7 @@ from frappe.website.doctype.personal_data_download_request.personal_data_downloa
     get_signed_params,
 )
 
-
+logger = frappe.logger("template_logs", allow_site=True)
 class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
 
     def generate_file_and_send_mail(self, personal_data):
@@ -130,6 +130,10 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
 
         # ── Your custom template logic ──
         template_name = "Personal Data Download Request"  # your Email Template name
+        logger.info({
+         "message": "request personal data",
+        "template": template_name,
+        "template in database":frappe.db.exists("Email Template", template_name)})
 
         if frappe.db.exists("Email Template", template_name):
             email_template = frappe.get_doc("Email Template", template_name)
