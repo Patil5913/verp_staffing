@@ -11,3 +11,4 @@ CR
 Onboarding
 ESign
 Email Inbox
+Stock
