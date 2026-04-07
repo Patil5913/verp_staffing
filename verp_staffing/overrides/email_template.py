@@ -57,9 +57,7 @@ def send_message(sender, message, subject="Website Query"):
             reply_subject = frappe.render_template(email_template.subject, context)
             reply_content = frappe.render_template(email_template.response_html, context)
 
-            print(f"---------------------Using custom template: {template_name}")
-            print(f"----------------context: {reply_content}")
-
+           
         else:
             # Fallback to original if template not found
             reply_subject = _("We've received your query!")
@@ -100,7 +98,7 @@ from frappe.website.doctype.personal_data_download_request.personal_data_downloa
     get_signed_params,
 )
 
-
+logger = frappe.logger("template_logs", allow_site=True)
 class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
 
     def generate_file_and_send_mail(self, personal_data):
@@ -130,6 +128,11 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
 
         # ── Your custom template logic ──
         template_name = "Personal Data Download Request"  # your Email Template name
+        logger.info({
+         "message": "request personal data",
+        "template": template_name,
+        "template in database":frappe.db.exists("Email Template", template_name)})
+        print(f"-----template in personal data download: {template_name}, exists: {frappe.db.exists('Email Template', template_name)}")
 
         if frappe.db.exists("Email Template", template_name):
             email_template = frappe.get_doc("Email Template", template_name)
@@ -152,7 +155,6 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
                 content=content,
                 # header=[_("Download Your Data"), "green"],
             )
-            print("---------------------email sent via template")
 
         else:
             # Fallback to original Frappe behavior
@@ -278,10 +280,13 @@ class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
 # verp_staffing/overrides/offsite_backup_utils.py
 
 from frappe.integrations.offsite_backup_utils import get_recipients
+from frappe.utils import cint, split_emails
+
 
 def send_email(success, service_name, doctype, email_field, error_status=None):
+    print("-------------from backup successful")
     recipients = get_recipients(doctype, email_field)
-
+    print(f"--------recipients: {recipients}")
     if not recipients:
         frappe.log_error(
             f"No Email Recipient found for {service_name}",
@@ -299,6 +304,7 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
             "error_status": None,
         }
         rendered = get_rendered_template("Backup Upload Successful", context)
+        print(f"--------backup successful:{rendered}")
 
         if rendered:
             frappe.sendmail(
@@ -306,8 +312,10 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
                 subject=rendered["subject"],
                 content=rendered["content"],
             )
+            print(f"---------------------Using template for backup successful")
         else:
             # Fallback to original
+            print("template not used")
             frappe.sendmail(
                 recipients=recipients,
                 subject="Backup Upload Successful",
@@ -344,10 +352,13 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
                     <p>Please contact your system manager for more information.</p>
                 """,
             )
+def get_recipients(doctype, email_field):
+	return split_emails(frappe.db.get_value(doctype, None, email_field))
 
 def patch():
     import frappe.integrations.offsite_backup_utils as backup_utils
     backup_utils.send_email = send_email
+    print("Patched send_email in offsite_backup_utils")
 
 
 

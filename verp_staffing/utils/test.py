@@ -83,7 +83,7 @@ def seed_email_template():
             "name": "Welcome Email Template",
             "subject": "Welcome {{ first_name or user }}",
             "html_content": """ 
-<table width="100%" bgcolor="#f5f6fa" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
   <tr>
     <td align="center">
 
@@ -168,7 +168,7 @@ def seed_email_template():
             "name": "Reset Password Email",
             "subject": "Reset Your Password",
             "html_content": """ 
-<table width="100%" bgcolor="#f5f6fa" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
   <tr>
     <td align="center">
 
