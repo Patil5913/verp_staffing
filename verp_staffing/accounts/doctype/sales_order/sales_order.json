@@ -32,6 +32,7 @@
    "in_standard_filter": 1,
    "label": "Customer",
    "options": "Customer",
+   "reqd": 1,
    "set_only_once": 1
   },
   {
@@ -71,7 +72,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-28 17:30:52.455432",
+ "modified": "2026-04-08 14:18:34.133569",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
@@ -81,15 +82,20 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Manager",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "report": 1,
+   "role": "Sales Master Manager",
    "select": 1,
+   "share": 1,
    "write": 1
   },
   {
@@ -106,14 +112,9 @@
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "Sales Master Manager",
+   "role": "Sales Team Lead",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {

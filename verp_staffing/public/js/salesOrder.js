@@ -262,7 +262,32 @@ function load_templates(wrapper) {
 	});
 }
 
+// function bind_builder_events(frm, wrapper, sales_order) {
+// 	wrapper.on("change", "#ag_template", () => load_form_fields(wrapper));
+
+// 	wrapper.on("click", "#ag_preview", function () {
+// 		const $btn = $(this);
+
+// 		setButtonState($btn, "loading", "Generating Preview...");
+
+// 		preview(frm, wrapper).finally(() => {
+// 			setButtonState($btn, "reset");
+// 		});
+// 	});
+// 	wrapper.on("click", "#ag_save", () => submit(frm, wrapper, sales_order, false));
+
+// 	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
+// }
+
 function bind_builder_events(frm, wrapper, sales_order) {
+
+	// remove old bindings first (IMPORTANT)
+	wrapper.off("change", "#ag_template");
+	wrapper.off("click", "#ag_preview");
+	wrapper.off("click", "#ag_save");
+	wrapper.off("click", "#ag_save_send");
+
+	// bind again (single time)
 	wrapper.on("change", "#ag_template", () => load_form_fields(wrapper));
 
 	wrapper.on("click", "#ag_preview", function () {
@@ -274,9 +299,14 @@ function bind_builder_events(frm, wrapper, sales_order) {
 			setButtonState($btn, "reset");
 		});
 	});
-	wrapper.on("click", "#ag_save", () => submit(frm, wrapper, sales_order, false));
 
-	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
+	wrapper.on("click", "#ag_save", () => 
+		submit(frm, wrapper, sales_order, false)
+	);
+
+	wrapper.on("click", "#ag_save_send", () => 
+		submit(frm, wrapper, sales_order, true)
+	);
 }
 
 function submit(frm, wrapper, sales_order, send_email) {

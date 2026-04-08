@@ -23,10 +23,24 @@ frappe.ui.form.on("Pdf Agreement Template", {
         });
     },
 
+    // upload_pdf_template(frm) {
+    //     // re-render builder when user uploads a template
+    //     frm.trigger("render_builder");
+    // },
     upload_pdf_template(frm) {
-        // re-render builder when user uploads a template
-        frm.trigger("render_builder");
+        const file_url = frm.doc.upload_pdf_template;
+
+        if (file_url && !file_url.toLowerCase().endsWith(".pdf")) {
+            frm.set_value("upload_pdf_template", "");
+            frappe.throw("Only PDF files are allowed. Please upload a valid PDF template.");
+            return;
+        }
+
+        if (file_url) {
+            frm.trigger("render_builder");
+        }
     },
+
 
     render_builder(frm) {
         const wrapper = frm.fields_dict && frm.fields_dict.builder_html && frm.fields_dict.builder_html.$wrapper;
