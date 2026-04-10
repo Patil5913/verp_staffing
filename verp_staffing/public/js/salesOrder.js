@@ -279,6 +279,7 @@ function load_templates(wrapper) {
 // 	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
 // }
 
+
 function bind_builder_events(frm, wrapper, sales_order) {
 
 	// remove old bindings first (IMPORTANT)
@@ -300,11 +301,11 @@ function bind_builder_events(frm, wrapper, sales_order) {
 		});
 	});
 
-	wrapper.on("click", "#ag_save", () => 
+	wrapper.on("click", "#ag_save", () =>
 		submit(frm, wrapper, sales_order, false)
 	);
 
-	wrapper.on("click", "#ag_save_send", () => 
+	wrapper.on("click", "#ag_save_send", () =>
 		submit(frm, wrapper, sales_order, true)
 	);
 }
@@ -334,6 +335,10 @@ function submit(frm, wrapper, sales_order, send_email) {
 		callback() {
 			frappe.msgprint("Agreement created");
 			setButtonState($btn, "reset");
+			wrapper.find("#ag_dynamic_form").hide();
+
+			// optional: also reset template
+			wrapper.find("#ag_template").val("");
 			fetch_and_render_agreements(wrapper, sales_order);
 		},
 		error() {

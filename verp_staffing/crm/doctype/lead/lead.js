@@ -93,8 +93,9 @@ frappe.ui.form.on("Lead", {
 		// ─── Helpers ────────────────────────────────────────────────────────────────
 		// ─── Fieldname-based overrides ───────────────────────────────────────────────
 		const EMAIL_FIELDS = new Set(["email", "email_id", "email_address"]);
-		const MONTH_YEAR_FIELDS = new Set(["start_date", "end_date"]);
-
+		const MONTH_YEAR_FIELDS = new Set(["start_date", "end_date", "entry_date"]);
+		const PHONE_FIELDS = new Set(["phone_number", "phone", "mobile", "mobile_no", "personal_phone_number"]);
+		const isPhoneField = f => PHONE_FIELDS.has(f.toLowerCase());
 		const isEmailField = f => EMAIL_FIELDS.has(f.toLowerCase());
 		const isMonthYearField = f => MONTH_YEAR_FIELDS.has(f.toLowerCase());
 
@@ -119,19 +120,22 @@ frappe.ui.form.on("Lead", {
 		}
 
 		// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 		function clearError(input) {
 			input.style.border = "1px solid #ccc";
-			const old = input.closest(".control-input")?.querySelector(".error-text");
+			const wrapper = input.closest("td") || input.closest(".control-input") || input.parentNode;
+			const old = wrapper?.querySelector(".error-text");
 			if (old) old.remove();
 		}
 
 		function markInvalid(input, message) {
 			input.style.border = "1px solid red";
-			const wrapper = input.closest(".control-input") || input.parentNode;
+
+			// For table inputs, append error below the cell <td>
+			const wrapper = input.closest("td") || input.closest(".control-input") || input.parentNode;
+
 			const error = document.createElement("div");
 			error.className = "error-text";
-			error.style.cssText = "color:red; font-size:12px; margin-top:4px;";
+			error.style.cssText = "color:red; font-size:11px; margin-top:3px;";
 			error.innerText = message;
 			wrapper.appendChild(error);
 		}
@@ -169,10 +173,13 @@ frappe.ui.form.on("Lead", {
 			if (isEmailField(field)) {
 				return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" placeholder="Enter email address" />`;
 			}
-
 			if (isMonthYearField(field)) {
 				return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
 			}
+			if (isPhoneField(field)) {
+				return `<input type="tel" value="${value}" data-field="${field}" data-override="phone" class="${cls}" placeholder="+91-9876543210" />`;
+			}
+
 
 			switch (fieldtype) {
 				case "Date":
@@ -246,7 +253,9 @@ frappe.ui.form.on("Lead", {
 			if (isEmailField(col.fieldname)) {
 				return `<input type="email" value="${value}" data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" data-override="email" class="form-control table-input" placeholder="Enter email" />`;
 			}
-
+			if (isPhoneField(col.fieldname)) {
+				return `<input type="tel" value="${value}" data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" data-override="phone" class="form-control table-input" placeholder="+91-9876543210" />`;
+			}
 			if (isMonthYearField(col.fieldname)) {
 				return `<input type="text" value="${toMonthYear(value)}" data-field="${parent_field}" data-child="${col.fieldname}" data-row="${rowIndex}" data-override="month-year" class="form-control table-input" placeholder="MM-YYYY" maxlength="7" />`;
 			}
@@ -301,6 +310,10 @@ frappe.ui.form.on("Lead", {
 			if (override === "month-year" && value && !isValidMonthYear(value)) {
 				return markInvalid(input, `${label} must be in MM-YYYY format (e.g. 06-2023)`);
 			}
+			// ADD THESE TWO:
+			if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value)) {
+				return markInvalid(input, `${label} must include country code (e.g. +91-9876543210)`);
+			}
 			if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value && isNaN(value)) {
 				return markInvalid(input, `${label} must be a number`);
 			}
@@ -339,6 +352,10 @@ frappe.ui.form.on("Lead", {
 				if (override === "month-year" && value && !isValidMonthYear(value)) {
 					return fail(`${label} must be in MM-YYYY format (e.g. 06-2023)`);
 				}
+				// inside validateWithMeta (uses fail instead of markInvalid):
+				if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value)) {
+					return fail(`${label} must include country code (e.g. +91-9876543210)`);
+				}
 				if (meta.fieldtype === "Select" && value) {
 					const opts = (meta.options || "").split("\n");
 					if (!opts.includes(value)) return fail(`${label} must be a valid option`);
@@ -347,6 +364,52 @@ frappe.ui.form.on("Lead", {
 					return fail(`${label} must be a number`);
 				}
 				if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value))) {
+					return fail(`${label} must be a valid date`);
+				}
+			});
+			// Table input validation
+			document.querySelectorAll(".table-input").forEach(input => {
+				const field = input.dataset.field;
+				const child = input.dataset.child;
+				if (!child) return;
+
+				const parent_meta = field_map[field];
+				if (!parent_meta || parent_meta.fieldtype !== "Table") return;
+
+				const child_meta = frappe.get_meta(parent_meta.options);
+				if (!child_meta) return;
+
+				const col = child_meta.fields.find(f => f.fieldname === child);
+				if (!col) return;
+
+				clearError(input);
+
+				const value = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value.trim();
+				const label = col.label || frappe.model.unscrub(child);
+				const override = input.dataset.override;
+
+				const fail = (msg) => {
+					markInvalid(input, msg);
+					isValid = false;
+					if (!firstInvalid) firstInvalid = input;
+				};
+
+				if (col.reqd && !value && input.type !== "checkbox") {
+					return fail(`${label} is required`);
+				}
+				if (override === "month-year" && value && !isValidMonthYear(value)) {
+					return fail(`${label} must be in MM-YYYY format (e.g. 06-2023)`);
+				}
+				if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value)) {
+					return fail(`${label} must include country code (e.g. +91-9876543210)`);
+				}
+				if (override === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+					return fail(`${label} must be a valid email address`);
+				}
+				if (["Int", "Float", "Currency"].includes(col.fieldtype) && value && isNaN(value)) {
+					return fail(`${label} must be a number`);
+				}
+				if (col.fieldtype === "Date" && value && isNaN(Date.parse(value))) {
 					return fail(`${label} must be a valid date`);
 				}
 			});
@@ -412,6 +475,39 @@ frappe.ui.form.on("Lead", {
 				input.addEventListener("input", () => clearError(input));
 				input.addEventListener("blur", () => validateSingleInput(input, field_map));
 			});
+			// ADD after the existing .dynamic-input forEach loop:
+			document.querySelectorAll(".table-input").forEach(input => {
+				input.addEventListener("input", () => clearError(input));
+				input.addEventListener("blur", () => {
+					const field = input.dataset.field;
+					const child = input.dataset.child;
+					if (!child) return;
+
+					const parent_meta = field_map[field];
+					if (!parent_meta) return;
+
+					const child_meta = frappe.get_meta(parent_meta.options);
+					if (!child_meta) return;
+
+					const col = child_meta.fields.find(f => f.fieldname === child);
+					if (!col) return;
+
+					clearError(input);
+					const value = input.value.trim();
+					const label = col.label || frappe.model.unscrub(child);
+					const override = input.dataset.override;
+
+					if (override === "month-year" && value && !isValidMonthYear(value)) {
+						return markInvalid(input, `${label} must be in MM-YYYY format (e.g. 06-2023)`);
+					}
+					if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value)) {
+						return markInvalid(input, `${label} must include country code (e.g. +91-9876543210)`);
+					}
+					if (override === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+						return markInvalid(input, `${label} must be a valid email address`);
+					}
+				});
+			});
 
 			document.querySelectorAll(".dynamic-table").forEach(table => {
 				const field = table.dataset.field;
@@ -465,35 +561,85 @@ frappe.ui.form.on("Lead", {
 				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(meta_field.fieldtype);
 
 				return `
-			<div style="width:${isFullWidth ? "100%" : "calc(50% - 8px)"}; min-width:${isFullWidth ? "100%" : "250px"};">
-				<div class="frappe-control">
-					<div class="control-label" style="margin-bottom:6px;">
-						${label}
-						${meta_field.reqd ? '<span style="color:red;">*</span>' : ""}
-					</div>
-					<div class="control-input">
-						${getInputHTML(meta_field.fieldtype, doc[field], field, meta_field)}
-					</div>
-				</div>
-			</div>`;
+        <div style="width:${isFullWidth ? "100%" : "calc(50% - 8px)"}; min-width:${isFullWidth ? "100%" : "250px"};">
+            <div class="frappe-control">
+                <div class="control-label" style="margin-bottom:6px;">
+                    ${label}
+                    ${meta_field.reqd ? '<span style="color:red;">*</span>' : ""}
+                </div>
+                <div class="control-input">
+                    ${getInputHTML(meta_field.fieldtype, doc[field], field, meta_field)}
+                </div>
+            </div>
+        </div>`;
 			}).join("");
 
 			const html = `
-		<div class="form-layout">
-			<div class="form-section">
-				<div class="section-head">Lead Detail Form</div>
-				<div class="section-body">
-					<div style="display:flex; flex-wrap:wrap; gap:16px;">
-						${formFields}
-					</div>
-					<div style="margin-top:20px;">
-						<button class="btn btn-primary btn-sm" id="save_dynamic_btn">Save</button>
-					</div>
-				</div>
-			</div>
-		</div>`;
+    <div class="form-layout">
+        <div class="form-section">
+            <div class="section-head">Lead Detail Form</div>
+            <div class="section-body">
+                <div style="display:flex; flex-wrap:wrap; gap:16px;">
+                    ${formFields}
+                </div>
+                <div style="margin-top:20px;">
+                    <button class="btn btn-primary btn-sm" id="save_dynamic_btn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
 
 			frm.set_df_property("lead_detail", "options", html);
+
+			let isSaving = false;
+
+			async function saveLeadDetailForm() {
+				if (!validateWithMeta(field_map)) {
+					frappe.msgprint("Please fix highlighted fields in Lead Detail Form before saving.");
+					return false;
+				}
+
+				const data = collectFormData(field_map);
+
+				try {
+					const latest_doc = await frappe.db.get_doc("Lead Detail Form", frm.doc.name1);
+					Object.keys(data).forEach(key => latest_doc[key] = data[key]);
+
+					await frappe.call({
+						method: "frappe.client.save",
+						args: { doc: latest_doc }
+					});
+
+					frappe.show_alert({ message: "Lead Detail Form saved", indicator: "green" });
+					return true;
+
+				} catch (err) {
+					console.error("Save error:", err);
+					frappe.msgprint("An error occurred while saving. Please try again.");
+					return false;
+				}
+			}
+
+			// ── before_save handles top button + Ctrl+S (both go through same hook) ──
+			if (!frm._lead_detail_hook) {
+				frm._lead_detail_hook = true;
+				frappe.ui.form.on(frm.doctype, {
+					before_save: async (f) => {
+						if (f.doc.name !== frm.doc.name) return;
+						if (isSaving) return;
+						isSaving = true;
+						try {
+							const success = await saveLeadDetailForm();
+							// ── If child saved OK but parent has no changes, cancel parent save ──
+							if (success) {
+								frappe.validated = false;
+							}
+						} finally {
+							isSaving = false;
+						}
+					}
+				});
+			}
 
 			setTimeout(() => {
 				const btn = document.getElementById("save_dynamic_btn");
@@ -501,34 +647,21 @@ frappe.ui.form.on("Lead", {
 
 				attachLiveValidation(field_map);
 
+				// ── Bottom Save button (saves child only, no parent save needed) ─
 				btn.onclick = async () => {
-					if (!validateWithMeta(field_map)) {
-						frappe.msgprint("Please fix highlighted fields before saving.");
-						return;
-					}
-
-					const data = collectFormData(field_map);
+					if (isSaving) return;
+					isSaving = true;
 					btn.innerText = "Saving...";
 					btn.disabled = true;
-
-					try {
-						const latest_doc = await frappe.db.get_doc("Lead Detail Form", frm.doc.name1);
-						Object.assign(latest_doc, data);
-
-						await frappe.call({
-							method: "frappe.client.save",
-							args: { doc: latest_doc }
-						});
-
-						frappe.show_alert({ message: "Saved successfully", indicator: "green" });
-					} catch (err) {
-						console.error("Save error:", err);
-						frappe.msgprint("An error occurred while saving. Please try again.");
-					} finally {
-						btn.innerText = "Save";
-						btn.disabled = false;
-					}
+					await saveLeadDetailForm();
+					btn.innerText = "Save";
+					btn.disabled = false;
+					isSaving = false;
 				};
+
+				// ── NO Ctrl+S handler here — Frappe's native Ctrl+S already ─────
+				// ── triggers before_save which handles it ────────────────────────
+
 			}, 300);
 		});
 
@@ -558,7 +691,7 @@ frappe.ui.form.on("Lead", {
 				MENU_HIDE.forEach((label) => {
 					try {
 						frm.page.remove_menu_item(label);
-					} catch {}
+					} catch { }
 				});
 				hideElements({
 					keywordSelectors: [".dropdown-menu .dropdown-item"],

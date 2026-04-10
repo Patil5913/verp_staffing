@@ -98,8 +98,7 @@ frappe.ui.form.on("Customer", {
 			);
 		}
 
-		if (!frm.doc.name) return;
-
+		if (!frm.doc.name) return;		
 		frappe.call({
 			method: "verp_staffing.www.customer.get_customer_history",
 			args: {
