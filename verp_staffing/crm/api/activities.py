@@ -20,7 +20,6 @@ def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
     task_filters = {
         "reference_doctype": reference_doctype,
         "related_to": reference_name,
-        "is_completed": 0
     }
 
     event_filters = {

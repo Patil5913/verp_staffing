@@ -1,9 +1,8 @@
 // Copyright (c) 2025, Vrugle and contributors
-// For license information, please see license.txt
 
 frappe.ui.form.on("Employee", {
-	refresh: async function (frm) {
-		frm.set_query("user", function () {
+	async refresh(frm) {
+		frm.set_query("user", () => {
 			return {
 				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
 			};
@@ -12,9 +11,7 @@ frappe.ui.form.on("Employee", {
 		toggle_linkedin_section(frm);
 		toggle_revenue_target_section(frm);
 
-		// -------------------------------
-		// 🔥 PRELOAD ALL HIERARCHIES
-		// -------------------------------
+		// 🔥 Load hierarchy
 		if (!frm._department_hierarchy) {
 			frm._department_hierarchy = {};
 		}
@@ -140,6 +137,29 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 
+	validate(frm) {
+		(frm.doc.employee_assignment_details_table || []).forEach((row) => {
+			if (!row.department || !row.designation) return;
+
+			const hierarchy = frm._department_hierarchy?.[row.department];
+			if (!hierarchy) return;
+
+			let all_child_roles = new Set();
+
+			hierarchy.forEach((r) => {
+				if (Array.isArray(r.child_roles)) {
+					r.child_roles.forEach((cr) => all_child_roles.add(cr));
+				}
+			});
+
+			let is_top_role = !all_child_roles.has(row.designation);
+
+			if (!is_top_role && !row.assigned_to) {
+				frappe.throw(`Row ${row.idx}: Assigned To is required`);
+			}
+		});
+	},
+
 	user(frm) {
 		if (!frm.doc.user) return;
 
@@ -195,20 +215,16 @@ frappe.ui.form.on("Employee Assignment Detail", {
 	designation(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 
-		if (!row.department) {
-			frappe.model.set_value(cdt, cdn, "assigned_to", null);
-			return;
-		}
+		if (!row.department) return;
 
 		const hierarchy = frm._department_hierarchy?.[row.department];
 		if (!hierarchy) return;
 
-		const validRoles = new Set();
+		let all_child_roles = new Set();
 
 		hierarchy.forEach((r) => {
-			if (r.parent_role) validRoles.add(r.parent_role);
 			if (Array.isArray(r.child_roles)) {
-				r.child_roles.forEach((cr) => validRoles.add(cr));
+				r.child_roles.forEach((cr) => all_child_roles.add(cr));
 			}
 		});
 

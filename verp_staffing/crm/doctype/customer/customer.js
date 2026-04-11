@@ -17,7 +17,10 @@ frappe.ui.form.on("Customer", {
 				filters: [["Employee Assignment Detail", "department", "=", "Sales"]],
 			};
 		});
-		showOnboarding_tab(frm);
+
+		if (!frm.is_new()) {
+			showOnboarding_tab(frm);
+		}
 
 		frappe.call({
 			method: "frappe.client.get_value",
@@ -440,14 +443,14 @@ function get_status_badge(status) {
 	return `<span class="status-badge status-neutral">${frappe.utils.escape_html(status || "-")}</span>`;
 }
 
-	function render_customer_history(frm, data, append_interviews = false) {
-		let html = "";
+function render_customer_history(frm, data, append_interviews = false) {
+	let html = "";
 
-		// ============================
-		// COMMON STYLES
-		// ============================
+	// ============================
+	// COMMON STYLES
+	// ============================
 
-		const card = `
+	const card = `
 			border:1px solid #e5e7eb;
 			border-radius:10px;
 			padding:16px;
@@ -456,13 +459,13 @@ function get_status_badge(status) {
 			box-shadow:0 1px 2px rgba(0,0,0,0.05);
 		`;
 
-		const table = `
+	const table = `
 			width:100%;
 			border-collapse:collapse;
 			font-size:13px;
 		`;
 
-		const th = `
+	const th = `
 			padding:8px;
 			text-align:left;
 			background:#f8fafc;
@@ -470,31 +473,31 @@ function get_status_badge(status) {
 			font-weight:500;
 		`;
 
-		const td = `
+	const td = `
 			padding:8px;
 			border-top:1px solid #f1f5f9;
 			color:#334155;
 		`;
 
-		// ============================
-		// CUSTOMER CREATION
-		// ============================
+	// ============================
+	// CUSTOMER CREATION
+	// ============================
 
-		html += `
+	html += `
 		<div style="${card}">
 			<p><b>Customer:</b> ${data.customer.customer_name}</p>
 			<p><b>Owner:</b> ${data.customer.owner}</p>
 		</div>
 		`;
 
-		// ============================
-		// SALES ORDER
-		// ============================
+	// ============================
+	// SALES ORDER
+	// ============================
 
-		if (data.departments?.["Sales Order"]) {
-			let records = data.departments["Sales Order"];
+	if (data.departments?.["Sales Order"]) {
+		let records = data.departments["Sales Order"];
 
-			html += `
+		html += `
 			<div style="${card}">
 				<h4 style="margin-bottom:10px;">Sales Order</h4>
 				<table style="${table}">
@@ -521,7 +524,22 @@ function get_status_badge(status) {
 									</a>
 								</td>
 								<td style="${td}">
-									${so.agreement || "-"}
+									${
+										so.agreement && so.agreement.length
+											? so.agreement
+													.map(
+														(ag) => `
+                <div>
+                    <a href="/app/agreement/${ag}" target="_blank"
+                        style="color:#260fea;text-decoration:none;">
+                        ${ag}
+                    </a>
+                </div>
+            `,
+													)
+													.join("")
+											: "-"
+									}
 								</td>
 							</tr>
 						`,
@@ -531,29 +549,29 @@ function get_status_badge(status) {
 				</table>
 			</div>
 			`;
-		}
+	}
 
-		// ============================
-		// OTHER DEPARTMENTS
-		// ============================
+	// ============================
+	// OTHER DEPARTMENTS
+	// ============================
 
-		if (data.departments) {
-			Object.keys(data.departments).forEach((dept_name) => {
-				let records = data.departments[dept_name];
+	if (data.departments) {
+		Object.keys(data.departments).forEach((dept_name) => {
+			let records = data.departments[dept_name];
 
-				if (dept_name === "Sales Order") return;
+			if (dept_name === "Sales Order") return;
 
-				html += `
+			html += `
 				<div style="${card}">
 					<h4 style="margin-bottom:10px;">${dept_name}</h4>
 				`;
 
-				// ============================
-				// INTERVIEW (special case)
-				// ============================
+			// ============================
+			// INTERVIEW (special case)
+			// ============================
 
-				if (dept_name === "Interview") {
-					html += `
+			if (dept_name === "Interview") {
+				html += `
 	<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
 
 		<div style="display:flex;gap:8px;align-items:center;">
@@ -589,13 +607,13 @@ function get_status_badge(status) {
 	<!-- ✅ LOAD MORE OUTSIDE -->
 	<div id="interview-load-more" style="text-align:center;margin-top:15px;"></div>
 	`;
-				} else {
-					// ============================
-					// NORMAL DEPARTMENTS
-					// ============================
+			} else {
+				// ============================
+				// NORMAL DEPARTMENTS
+				// ============================
 
-					records.forEach((dept) => {
-						html += `
+				records.forEach((dept) => {
+					html += `
 						<div style="margin-bottom:12px;">
 
 							<p>
@@ -625,12 +643,12 @@ function get_status_badge(status) {
 						</div>
 						`;
 
-						// ============================
-						// SESSION TABLE
-						// ============================
+					// ============================
+					// SESSION TABLE
+					// ============================
 
-						if (dept.session_details?.length) {
-							html += `
+					if (dept.session_details?.length) {
+						html += `
 							<table style="${table}">
 								<thead>
 									<tr>
@@ -658,14 +676,14 @@ function get_status_badge(status) {
 								</tbody>
 							</table>
 							`;
-						}
+					}
 
-						// ============================
-						// JOB APPLICATION
-						// ============================
+					// ============================
+					// JOB APPLICATION
+					// ============================
 
-						if (dept.job_application_count?.length) {
-							html += `
+					if (dept.job_application_count?.length) {
+						html += `
 							<table style="${table}">
 								<thead>
 									<tr>
@@ -693,14 +711,14 @@ function get_status_badge(status) {
 								</tbody>
 							</table>
 							`;
-						}
+					}
 
-						// ============================
-						// PROOF OF WORK
-						// ============================
+					// ============================
+					// PROOF OF WORK
+					// ============================
 
-						if (dept.proof_of_work?.length) {
-							html += `
+					if (dept.proof_of_work?.length) {
+						html += `
 							<table style="${table}">
 								<thead>
 									<tr>
@@ -732,111 +750,111 @@ function get_status_badge(status) {
 								</tbody>
 							</table>
 							`;
-						}
-					});
-				}
-				html += `</div>`;
-			});
-		}
-
-		// ============================
-		// RENDER
-		// ============================
-
-		frm.fields_dict.customer_details.$wrapper.html(html);
-		render_interviews(data, append_interviews);
-
-		$(document)
-			.off("click", "#load-more-interviews")
-			.on("click", "#load-more-interviews", function () {
-				interview_offset += interview_limit;
-				let from_date = $("#interview-from").val();
-				let to_date = $("#interview-to").val();
-
-				if (from_date && to_date && from_date > to_date) {
-					frappe.msgprint("From Date cannot be greater than To Date");
-					return;
-				}
-
-				frappe.call({
-					method: "verp_staffing.www.customer.get_customer_history",
-					args: {
-						customer: cur_frm.doc.name,
-						interview_limit: interview_limit,
-						interview_offset: interview_offset,
-						search: $("#interview-search").val(),
-						from_date: $("#interview-from").val(),
-						to_date: $("#interview-to").val(),
-					},
-					callback: function (r) {
-						render_interviews(r.message, true);
-					},
+					}
 				});
-			});
-
-		$(document)
-			.off("click", "#interview-filter-btn")
-			.on("click", "#interview-filter-btn", function () {
-				let search = $("#interview-search").val();
-				let from_date = $("#interview-from").val();
-				let to_date = $("#interview-to").val();
-
-				// ✅ DATE VALIDATION
-				if (from_date && to_date && from_date > to_date) {
-					frappe.msgprint("From Date cannot be greater than To Date");
-					return;
-				}
-
-				interview_offset = 0;
-
-				frappe.call({
-					method: "verp_staffing.www.customer.get_customer_history",
-					args: {
-						customer: cur_frm.doc.name,
-						interview_limit: interview_limit,
-						interview_offset: interview_offset,
-						search: search,
-						from_date: from_date,
-						to_date: to_date,
-					},
-					callback: function (r) {
-						render_interviews(r.message, false);
-					},
-				});
-			});
-		$(document)
-			.off("click", "#interview-clear-btn")
-			.on("click", "#interview-clear-btn", function () {
-				// ✅ Reset inputs
-				$("#interview-search").val("");
-				$("#interview-from").val("");
-				$("#interview-to").val("");
-
-				// ✅ Reset pagination
-				interview_offset = 0;
-
-				// ✅ Reload default data (NO filters)
-				frappe.call({
-					method: "verp_staffing.www.customer.get_customer_history",
-					args: {
-						customer: cur_frm.doc.name,
-						interview_limit: interview_limit,
-						interview_offset: interview_offset,
-						search: "",
-						from_date: "",
-						to_date: "",
-					},
-					callback: function (r) {
-						render_interviews(r.message, false);
-					},
-				});
-			});
+			}
+			html += `</div>`;
+		});
 	}
-	window.viewFullFeedback = function (encodedText) {
-		const fullText = decodeURIComponent(encodedText);
 
-		const dialog = document.createElement("div");
-		dialog.style = `
+	// ============================
+	// RENDER
+	// ============================
+
+	frm.fields_dict.customer_details.$wrapper.html(html);
+	render_interviews(data, append_interviews);
+
+	$(document)
+		.off("click", "#load-more-interviews")
+		.on("click", "#load-more-interviews", function () {
+			interview_offset += interview_limit;
+			let from_date = $("#interview-from").val();
+			let to_date = $("#interview-to").val();
+
+			if (from_date && to_date && from_date > to_date) {
+				frappe.msgprint("From Date cannot be greater than To Date");
+				return;
+			}
+
+			frappe.call({
+				method: "verp_staffing.www.customer.get_customer_history",
+				args: {
+					customer: cur_frm.doc.name,
+					interview_limit: interview_limit,
+					interview_offset: interview_offset,
+					search: $("#interview-search").val(),
+					from_date: $("#interview-from").val(),
+					to_date: $("#interview-to").val(),
+				},
+				callback: function (r) {
+					render_interviews(r.message, true);
+				},
+			});
+		});
+
+	$(document)
+		.off("click", "#interview-filter-btn")
+		.on("click", "#interview-filter-btn", function () {
+			let search = $("#interview-search").val();
+			let from_date = $("#interview-from").val();
+			let to_date = $("#interview-to").val();
+
+			// ✅ DATE VALIDATION
+			if (from_date && to_date && from_date > to_date) {
+				frappe.msgprint("From Date cannot be greater than To Date");
+				return;
+			}
+
+			interview_offset = 0;
+
+			frappe.call({
+				method: "verp_staffing.www.customer.get_customer_history",
+				args: {
+					customer: cur_frm.doc.name,
+					interview_limit: interview_limit,
+					interview_offset: interview_offset,
+					search: search,
+					from_date: from_date,
+					to_date: to_date,
+				},
+				callback: function (r) {
+					render_interviews(r.message, false);
+				},
+			});
+		});
+	$(document)
+		.off("click", "#interview-clear-btn")
+		.on("click", "#interview-clear-btn", function () {
+			// ✅ Reset inputs
+			$("#interview-search").val("");
+			$("#interview-from").val("");
+			$("#interview-to").val("");
+
+			// ✅ Reset pagination
+			interview_offset = 0;
+
+			// ✅ Reload default data (NO filters)
+			frappe.call({
+				method: "verp_staffing.www.customer.get_customer_history",
+				args: {
+					customer: cur_frm.doc.name,
+					interview_limit: interview_limit,
+					interview_offset: interview_offset,
+					search: "",
+					from_date: "",
+					to_date: "",
+				},
+				callback: function (r) {
+					render_interviews(r.message, false);
+				},
+			});
+		});
+}
+window.viewFullFeedback = function (encodedText) {
+	const fullText = decodeURIComponent(encodedText);
+
+	const dialog = document.createElement("div");
+	dialog.style = `
 			position:fixed;
 			top:0;left:0;right:0;bottom:0;
 			background:rgba(0,0,0,0.5);
@@ -846,7 +864,7 @@ function get_status_badge(status) {
 			z-index:9999;
 		`;
 
-		dialog.innerHTML = `
+	dialog.innerHTML = `
 			<div style="
 				background:#fff;
 				padding:24px;
@@ -889,109 +907,109 @@ function get_status_badge(status) {
 			</div>
 		`;
 
-		dialog.setAttribute("data-dialog", "true");
-		// ✅ Close when clicking outside
-		dialog.addEventListener("click", function (e) {
-			if (!e.target.closest("#feedbackBox")) {
-				dialog.remove();
-			}
-		});
-
-		document.body.appendChild(dialog);
-
-		// ✅ Safe text injection (no HTML breaking)
-		dialog.querySelector("p").innerText = fullText;
-	};
-	window.viewFullFeedback = function (encodedText) {
-		const fullText = decodeURIComponent(encodedText);
-
-		const dialog = document.createElement("div");
-		dialog.style = `
-			position:fixed;
-			top:0;left:0;right:0;bottom:0;
-			background:rgba(0,0,0,0.5);
-			display:flex;
-			justify-content:center;
-			align-items:center;
-			z-index:9999;
-		`;
-
-		dialog.innerHTML = `
-			<div style="
-				background:#fff;
-				padding:24px;
-				border-radius:12px;
-				width:700px;
-				max-width:95%;
-				max-height:80vh;
-				display:flex;
-				flex-direction:column;
-			">
-				<h3 style="margin-bottom:12px;">Full Feedback</h3>
-
-				<div style="
-					overflow-y:auto;
-					padding-right:6px;
-					margin-bottom:15px;
-				">
-					<p style="
-						color:#334155;
-						font-size:14px;
-						line-height:1.6;
-						word-break:break-word;
-						white-space:pre-wrap;
-					"></p>
-				</div>
-
-				<div style="text-align:right;">
-					<button onclick="this.closest('[data-dialog]').remove()"
-						style="
-							padding:6px 14px;
-							background:#260fea;
-							color:#fff;
-							border:none;
-							border-radius:6px;
-							cursor:pointer;
-						">
-						Close
-					</button>
-				</div>
-			</div>
-		`;
-
-		dialog.setAttribute("data-dialog", "true");
-		// ✅ Close when clicking outside
-		dialog.addEventListener("click", function (e) {
-			if (!e.target.closest("#feedbackBox")) {
-				dialog.remove();
-			}
-		});
-
-		document.body.appendChild(dialog);
-
-		// ✅ Safe text injection (no HTML breaking)
-		dialog.querySelector("p").innerText = fullText;
-	};
-
-	function render_interviews(data, append = false) {
-		let container = $("#interview-list");
-
-		if (!append) {
-			container.html("");
+	dialog.setAttribute("data-dialog", "true");
+	// ✅ Close when clicking outside
+	dialog.addEventListener("click", function (e) {
+		if (!e.target.closest("#feedbackBox")) {
+			dialog.remove();
 		}
+	});
 
-		let html = "";
-		let records = data.departments?.Interview || [];
+	document.body.appendChild(dialog);
 
-		if (!records.length) {
-			html += `
+	// ✅ Safe text injection (no HTML breaking)
+	dialog.querySelector("p").innerText = fullText;
+};
+window.viewFullFeedback = function (encodedText) {
+	const fullText = decodeURIComponent(encodedText);
+
+	const dialog = document.createElement("div");
+	dialog.style = `
+			position:fixed;
+			top:0;left:0;right:0;bottom:0;
+			background:rgba(0,0,0,0.5);
+			display:flex;
+			justify-content:center;
+			align-items:center;
+			z-index:9999;
+		`;
+
+	dialog.innerHTML = `
+			<div style="
+				background:#fff;
+				padding:24px;
+				border-radius:12px;
+				width:700px;
+				max-width:95%;
+				max-height:80vh;
+				display:flex;
+				flex-direction:column;
+			">
+				<h3 style="margin-bottom:12px;">Full Feedback</h3>
+
+				<div style="
+					overflow-y:auto;
+					padding-right:6px;
+					margin-bottom:15px;
+				">
+					<p style="
+						color:#334155;
+						font-size:14px;
+						line-height:1.6;
+						word-break:break-word;
+						white-space:pre-wrap;
+					"></p>
+				</div>
+
+				<div style="text-align:right;">
+					<button onclick="this.closest('[data-dialog]').remove()"
+						style="
+							padding:6px 14px;
+							background:#260fea;
+							color:#fff;
+							border:none;
+							border-radius:6px;
+							cursor:pointer;
+						">
+						Close
+					</button>
+				</div>
+			</div>
+		`;
+
+	dialog.setAttribute("data-dialog", "true");
+	// ✅ Close when clicking outside
+	dialog.addEventListener("click", function (e) {
+		if (!e.target.closest("#feedbackBox")) {
+			dialog.remove();
+		}
+	});
+
+	document.body.appendChild(dialog);
+
+	// ✅ Safe text injection (no HTML breaking)
+	dialog.querySelector("p").innerText = fullText;
+};
+
+function render_interviews(data, append = false) {
+	let container = $("#interview-list");
+
+	if (!append) {
+		container.html("");
+	}
+
+	let html = "";
+	let records = data.departments?.Interview || [];
+
+	if (!records.length) {
+		html += `
 			<div style="text-align:center;color:#64748b;padding:20px;">
 				No interviews found
 			</div>
 		`;
-		} else {
-			records.forEach((dept) => {
-				html += `
+	} else {
+		records.forEach((dept) => {
+			html += `
 			<div style="margin-top:10px;">
 				<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f9fafb;">
 
@@ -1073,24 +1091,24 @@ function get_status_badge(status) {
 				</div>
 			</div>
 			`;
-			});
+		});
 
-			container.append(html);
+		container.append(html);
 
-			let meta = data.interview_meta;
+		let meta = data.interview_meta;
 
-			if (meta && meta.offset + meta.limit < meta.total) {
-				$("#interview-load-more").html(`
+		if (meta && meta.offset + meta.limit < meta.total) {
+			$("#interview-load-more").html(`
 				<button id="load-more-interviews"
 					style="padding:8px 16px;border:none;background:#260fea;color:white;border-radius:6px;">
 					Load More
 				</button>
 			`);
-			} else {
-				$("#interview-load-more").html("");
-			}
+		} else {
+			$("#interview-load-more").html("");
 		}
 	}
+}
 
 function showOnboarding_tab(frm) {
 	if (!frm.doc.name) return;

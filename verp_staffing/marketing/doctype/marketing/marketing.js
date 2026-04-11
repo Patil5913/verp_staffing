@@ -7,6 +7,10 @@ frappe.ui.form.on("Marketing", {
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 
+		if (frm.doc.status === "Completed") {
+			frm.set_df_property("status", "read_only", 1);
+		}
+
 		frappe.call({
 			method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing",
 			args: {

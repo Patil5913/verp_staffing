@@ -4,66 +4,89 @@ window.render_agreement_module = function ({ frm, wrapper, sales_order, allow_cr
 	wrapper.empty();
 
 	wrapper.append(`
-		<div id="agreement_module">
+    <div id="agreement_module" style="padding: 16px;">
 
-			<div id="agreement_list_section">
-				<h3>📄 Agreements</h3>
-				<div id="agreement_cards"></div>
-			</div>
+      <!-- AGREEMENT LIST -->
+      <div id="agreement_list_section" class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0" style="font-weight:600; color: var(--heading-color);">
+            📄 Agreements
+          </h5>
+          <button id="ag_refresh_btn" class="btn btn-xs btn-default">
+            <svg class="icon icon-xs"><use href="#icon-refresh"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="agreement_cards"></div>
+      </div>
 
-			${
-				allow_create
-					? `
-			<hr/>
-			<div id="agreement_builder_section">
-	<h3 style="color:${BRAND_COLOR}">➕ Create Agreement</h3>
+      ${
+			allow_create
+				? `
+      <hr class="my-4"/>
 
-	<select id="ag_template" class="form-control" style="
-		border:1px solid ${BRAND_COLOR};
-		border-radius:6px;
-	"></select>
+      <!-- BUILDER SECTION -->
+      <div id="agreement_builder_section">
+        <h5 class="mb-3" style="font-weight:600; color: var(--heading-color);">
+          ➕ Create Agreement
+        </h5>
 
-	<div id="ag_dynamic_form" style="margin-top: 15px;"></div>
+        <div class="frappe-card" style="
+          background: var(--card-bg);
+          border: 1px solid var(--border-color);
+          border-radius: var(--border-radius-lg);
+          padding: 20px;
+        ">
+          <!-- Template Select -->
+          <div class="form-group">
+            <label class="control-label" style="font-size: 12px; font-weight: 600; color: var(--text-muted);">
+              TEMPLATE <span class="text-danger">*</span>
+            </label>
+            <select id="ag_template" class="form-control" style="
+              max-width: 400px;
+              border: 1px solid var(--border-color);
+              border-radius: var(--border-radius);
+              background: var(--control-bg);
+              color: var(--text-color);
+              padding: 6px 10px;
+              height: 34px;
+              font-size: 13px;
+            ">
+              <option value="">Select Template...</option>
+            </select>
+          </div>
 
-	<button id="ag_preview" style="
-		margin-top:10px;
-		background:white;
-		color:${BRAND_COLOR};
-		border:1px solid ${BRAND_COLOR};
-		padding:6px 12px;
-		border-radius:6px;
-	">
-		Preview
-	</button>
+          <!-- Dynamic Fields -->
+          <div id="ag_dynamic_form" class="mt-3"></div>
 
-	<button id="ag_save" style="
-		margin-top:10px;
-		background:${BRAND_COLOR};
-		color:white;
-		border:none;
-		padding:6px 12px;
-		border-radius:6px;
-	">
-		Save
-	</button>
+          <!-- Action Buttons -->
+          <div class="mt-4 d-flex gap-2 flex-wrap" style="gap: 8px;">
+           <button id="ag_preview" class="btn btn-default btn-sm" style="text-center>
+              <svg class="icon icon-xs mr-1"><use href="#icon-eye"/></svg>
+              Preview
+            </button>
+            <button id="ag_save" class="btn btn-primary btn-sm" style="text-center>
+              <svg class="icon icon-xs mr-1"><use href="#icon-save"/></svg>
+              Save
+            </button>
+            <button id="ag_save_send" class="btn btn-sm" style="
+              background: var(--gray-900);
+              color: white;
+              border: none;
+			  text-center
+            >
+              <svg class="icon icon-xs mr-1"><use href="#icon-send"/></svg>
+              Save &amp; Send
+            </button>
+          </div>
+        </div>
+      </div>
+      `
+				: ""
+		}
 
-	<button id="ag_save_send" style="
-		margin-top:10px;
-		background: black;
-		color:white;
-		border:none;
-		padding:6px 12px;
-		border-radius:6px;
-	">
-		Save & Send
-	</button>
-</div>
-			`
-					: ""
-			}
-
-		</div>
-	`);
+    </div>
+  `);
 
 	fetch_and_render_agreements(wrapper, sales_order);
 
@@ -93,87 +116,94 @@ function render_agreement_cards(wrapper, agreements) {
 	container.empty();
 
 	if (!agreements.length) {
-		container.append(`<p style="color:#888">No agreements created yet</p>`);
+		container.append(`
+      <div style="
+        padding: 24px 16px;
+        text-align: center;
+        background: var(--subtle-fg);
+        border: 1px dashed var(--border-color);
+        border-radius: var(--border-radius-lg);
+        color: var(--text-muted);
+        font-size: 13px;
+      ">
+        <svg class="icon icon-lg mb-2" style="opacity:0.3;"><use href="#icon-list"/></svg>
+        <div>No agreements created yet</div>
+      </div>
+    `);
 		return;
 	}
 
 	agreements.forEach((ag) => {
+		const status_color =
+			ag.status === "Ready To Send"
+				? "blue"
+				: ag.status === "Sent"
+					? "green"
+					: ag.status === "Draft"
+						? "orange"
+						: "gray";
+
 		container.append(`
-			<div class="agreement-card" style="
-				border:1px solid #e5e7eb;
-				padding:16px;
-				border-radius:12px;
-				margin-bottom:12px;
-				background:#fff;
-				box-shadow:0 2px 8px rgba(0,0,0,0.04);
-			">
+      <div class="agreement-card" style="
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-lg);
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        transition: box-shadow 0.15s ease;
+      "
+      onmouseenter="this.style.boxShadow='var(--shadow-sm)'"
+      onmouseleave="this.style.boxShadow='none'"
+      >
+        <div class="d-flex justify-content-between align-items-start">
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:13px; margin-bottom:2px;">
+  <a href="/app/agreement/${ag.name}"
+     style="color:#260fea; text-decoration:none;"
+     onmouseenter="this.style.color='#1d0ed6'"
+     onmouseleave="this.style.color='#260fea'"
+  >
+    ${ag.name}
+  </a>
+</div>
+            <div style="font-size:12px; color: var(--text-muted); margin-bottom:2px;">
+              Template: <span style="color: var(--text-color);">${ag.template || "—"}</span>
+            </div>
+            <div style="font-size:11px; color: var(--text-muted);">
+              ${frappe.datetime.str_to_user(ag.creation)}
+            </div>
+          </div>
 
-				<div style="display:flex; justify-content:space-between; align-items:center;">
-					<div>
-						<b style="color:${BRAND_COLOR}">${ag.name || "Agreement"}</b><br/>
-                        <b style="">Template: ${ag.template || "Agreement"}</b><br/>
-						<small style="color:#666">${ag.creation}</small>
-					</div>
-					<div>
-						<span style="
-							background:${BRAND_COLOR}15;
-							color:${BRAND_COLOR};
-							padding:4px 10px;
-							border-radius:20px;
-							font-size:12px;
-							font-weight:600;
-						">
-							${ag.status || "Draft"}
-						</span>
-					</div>
-				</div>
+          <span class="indicator-pill ${status_color}" style="flex-shrink:0; margin-left:12px; font-size:11px;">
+            ${ag.status || "Draft"}
+          </span>
+        </div>
 
-				<div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
-
-					<a class="btn-primary" href="/app/agreement/${ag.name}" style="
-						border-radius:6px;
-                        padding: 2px 5px;
-                        background-color: transparent;
-						border:1px solid ${BRAND_COLOR};
-						color:${BRAND_COLOR};
-						text-decoration:none;
-						font-weight:500;
-					">
-						View
-					</a>
-
-					${
-						ag.pdf
-							? `
-						<button class="open-pdf btn-primary" data-url="${ag.pdf}" style="
-							border-radius:6px;
-							background:${BRAND_COLOR};
-							color:white;
-							border:none;
-						">
-							View PDF
-						</button>
-					`
-							: ""
-					}
-
-					${
-						ag.status === "Ready To Send"
-							? `
-						<button class="send-agreement btn-primary" data-name="${ag.name}" style="
-							border-radius:6px;
-							background: black;
-							color:white;
-							border:none;
-						">
-							Send
-						</button>
-					`
-							: ""
-					}
-				</div>
-			</div>
-		`);
+        <div class="mt-2 d-flex flex-wrap" style="gap:6px; margin-top:10px !important;">
+          <a href="/app/agreement/${ag.name}" class="btn btn-xs btn-default">
+            View
+          </a>
+          ${
+				ag.pdf
+					? `
+            <button class="btn btn-xs btn-default open-pdf" data-url="${ag.pdf}">
+              View PDF
+            </button>
+          `
+					: ""
+			}
+          ${
+				ag.status === "Ready To Send"
+					? `
+            <button class="btn btn-xs  btn-primary send-agreement" data-name="${ag.name}">
+              Send
+            </button>
+          `
+					: ""
+			}
+        </div>
+      </div>
+    `);
 	});
 
 	// Events
@@ -253,7 +283,7 @@ function submit(frm, wrapper, sales_order, send_email) {
 	const template = wrapper.find("#ag_template").val();
 
 	if (!template) {
-		frappe.msgprint("Select template");
+		frappe.show_alert({ message: "Please select a template", indicator: "orange" });
 		return;
 	}
 
@@ -266,7 +296,7 @@ function submit(frm, wrapper, sales_order, send_email) {
 	frappe.call({
 		method: "verp_staffing.crm.api.agreement.submit_and_generate",
 		args: {
-			sales_order,	
+			sales_order,
 			template,
 			data: JSON.stringify(data),
 			send_email: send_email ? 1 : 0,
@@ -290,7 +320,10 @@ function collect_agreement_data(frm, wrapper) {
 		const key = $(this).data("field");
 		let val = $(this).val();
 		if (key === "Payment_Terms" && !val.length) {
-			frappe.msgprint("Please enter valid payment terms");
+			frappe.show_alert({
+				message: "Please enter valid payment terms",
+				indicator: "orange",
+			});
 			return;
 		}
 		// normalize Payment Terms
@@ -323,40 +356,82 @@ function load_form_fields(wrapper) {
 			const blocks = JSON.parse(tpl.fields_json || "[]");
 			form_div.empty();
 
+			if (!blocks.length) return;
+
+			form_div.append(`
+        <div style="
+          border-top: 1px solid var(--border-color);
+          padding-top: 16px;
+          margin-top: 4px;
+        ">
+          <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:12px; letter-spacing:0.5px;">
+            TEMPLATE FIELDS
+          </div>
+        </div>
+      `);
+
 			blocks.forEach((b) => {
 				if (["Text", "Number", "Date"].includes(b.type)) {
 					form_div.append(`
-                        <div style="margin-bottom: 10px;">
-                            <label>${b.label || b.name}</label>
-                            <input type="${b.type ?? "text"}" 
-                            style="
-                            border:1px solid #ddd;
-                            border-radius:6px;
-                            padding:6px;
-                            max-width: 400px
-                            " 
-                            class="form-control ag-field"
-                            data-field="${b.name}">
-                        </div>
-                    `);
+            <div class="form-group" style="margin-bottom:14px; max-width:400px;">
+              <label class="control-label" style="
+                font-size:12px;
+                font-weight:600;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+              ">
+                ${b.label || b.name}
+              </label>
+              <input
+                type="${b.type === "Number" ? "number" : b.type === "Date" ? "date" : "text"}"
+                class="form-control ag-field"
+                data-field="${b.name}"
+                placeholder="Enter ${b.label || b.name}..."
+                style="
+                  border: 1px solid var(--border-color);
+                  border-radius: var(--border-radius);
+                  background: var(--control-bg);
+                  color: var(--text-color);
+                  padding: 6px 10px;
+                  font-size: 13px;
+                  height: 34px;
+                "
+              />
+            </div>
+          `);
 				} else if (b.type === "Payment_Terms") {
 					form_div.append(`
-                        <div style="margin-bottom: 10px;">
-                            <label>${b.label || b.name}</label>
-                            <textarea 
-                                class="form-control ag-field"
-                                data-field="${b.name}"
-                                placeholder="Enter comma separated terms"
-                                style="
-                                    border:1px solid #ddd;
-                                    border-radius:6px;
-                                    padding:6px;
-                                    max-width:400px;
-                                    min-height:80px;
-                                "
-                            ></textarea>
-                        </div>
-                    `);
+            <div class="form-group" style="margin-bottom:14px; max-width:400px;">
+              <label class="control-label" style="
+                font-size:12px;
+                font-weight:600;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+              ">
+                ${b.label || b.name}
+              </label>
+              <textarea
+                class="form-control ag-field"
+                data-field="${b.name}"
+                placeholder="Enter comma-separated terms (e.g. 50% upfront, 50% on delivery)"
+                style="
+                  border: 1px solid var(--border-color);
+                  border-radius: var(--border-radius);
+                  background: var(--control-bg);
+                  color: var(--text-color);
+                  padding: 6px 10px;
+                  font-size: 13px;
+                  min-height: 80px;
+                  resize: vertical;
+                "
+              ></textarea>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                Separate multiple terms with commas
+              </div>
+            </div>
+          `);
 				}
 			});
 		},
@@ -367,7 +442,7 @@ function preview(frm, wrapper) {
 	return new Promise((resolve, reject) => {
 		const template = frm.get_field("agreement_html").$wrapper.find("#ag_template").val();
 		if (!template) {
-			frappe.msgprint("Choose a template first");
+			frappe.show_alert({ message: "Choose a template first", indicator: "orange" });
 			reject();
 			return;
 		}
@@ -413,15 +488,18 @@ function collect_so_agreement_data(frm, wrapper) {
 	return data;
 }
 
-function setButtonState($btn, state, originalText) {
+function setButtonState($btn, state, text) {
 	if (state === "loading") {
-		$btn.data("original-text", $btn.text());
-		$btn.prop("disabled", true);
-		$btn.css("opacity", "0.6");
-		$btn.text(originalText);
+		$btn.data("original-text", $btn.html());
+		$btn.prop("disabled", true).css("opacity", "0.65");
+		$btn.html(`
+      <span class="spinner-border spinner-border-sm mr-1"
+            style="width:11px;height:11px;border-width:2px;"
+            role="status"></span>
+      ${text}
+    `);
 	} else {
-		$btn.prop("disabled", false);
-		$btn.css("opacity", "1");
-		$btn.text($btn.data("original-text"));
+		$btn.prop("disabled", false).css("opacity", "1");
+		$btn.html($btn.data("original-text"));
 	}
 }

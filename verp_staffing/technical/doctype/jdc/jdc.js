@@ -9,6 +9,10 @@ frappe.ui.form.on("JDC", {
 		window.fetch_and_render_resume(frm);
 		const display_fields = await window.get_display_fields(frm.doctype);
 
+		if (frm.doc.status === "Completed") {
+			frm.set_df_property("status", "read_only", 1);
+		}
+
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details",

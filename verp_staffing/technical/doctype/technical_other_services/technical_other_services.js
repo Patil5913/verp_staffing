@@ -9,6 +9,10 @@ frappe.ui.form.on("Technical Other Services", {
 		window.render_activity_section(frm);
 		window.setup_service_permission_button(frm);
 
+		if (frm.doc.status === "Completed") {
+			frm.set_df_property("status", "read_only", 1);
+		}
+
 		const display_fields = await window.get_display_fields(frm.doc.service);
 
 		window.render_customer_related_html({

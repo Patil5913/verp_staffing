@@ -168,19 +168,22 @@
    "fieldname": "sales_department",
    "fieldtype": "Link",
    "label": "Sales Department",
-   "options": "Role"
+   "options": "Role",
+   "reqd": 1
   },
   {
    "fieldname": "technical_department",
    "fieldtype": "Link",
    "label": "Technical Department",
-   "options": "Role"
+   "options": "Role",
+   "reqd": 1
   },
   {
    "fieldname": "marketing_department",
    "fieldtype": "Link",
    "label": "Marketing Department",
-   "options": "Role"
+   "options": "Role",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_qzfw",
@@ -195,7 +198,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-06 09:51:32.885877",
+ "modified": "2026-04-08 13:34:55.872511",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
@@ -213,6 +216,14 @@
   },
   {
    "read": 1,
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Lead Team Lead"
   },
   {
@@ -221,19 +232,7 @@
   },
   {
    "read": 1,
-   "role": "Lead Master Manager"
-  },
-  {
-   "read": 1,
    "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -241,23 +240,11 @@
   },
   {
    "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
    "role": "Marketing Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator"
   },
   {
    "read": 1,
@@ -265,7 +252,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Manager"
+   "role": "Recruiter"
   },
   {
    "read": 1,
@@ -273,15 +260,23 @@
   },
   {
    "read": 1,
+   "role": "marketing Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager"
+  },
+  {
+   "read": 1,
    "role": "Senior Recruiter"
   },
   {
    "read": 1,
-   "role": "Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "JDC"
+   "role": "Support Person"
   },
   {
    "read": 1,
@@ -293,11 +288,15 @@
   },
   {
    "read": 1,
-   "role": "HR"
+   "role": "JDC"
   },
   {
    "read": 1,
-   "role": "Technical Master Manager"
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
   },
   {
    "read": 1,
@@ -305,7 +304,11 @@
   },
   {
    "read": 1,
-   "role": "Support Person"
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "HR"
   },
   {
    "read": 1,

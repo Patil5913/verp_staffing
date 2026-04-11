@@ -434,17 +434,17 @@ function open_forward_prompt(frm, services) {
 				},
 			},
 			{
-				fieldname: "note",
-				fieldtype: "Text Editor",
-				label: "Required",
-				hidden: 1,
-			},
-			{
 				fieldname: "interview",
 				fieldtype: "Select",
 				label: "Select Interview",
 				hidden: 1,
 				options: [],
+			},
+			{
+				fieldname: "note",
+				fieldtype: "Text Editor",
+				label: "Note (Optional)",
+				hidden: 1,
 			},
 			{
 				fieldname: "manual_assign",
@@ -812,7 +812,7 @@ function load_notes(frm, $notes_wrapper, $updates_wrapper) {
 				.find(".add-note-btn")
 				.on("click", () => open_add_note_dialog(frm, $notes_wrapper));
 
-			attach_edit_delete_events(frm, $notes_wrapper);
+			attach_edit_delete_events_for_note(frm, $notes_wrapper);
 		},
 	});
 }
@@ -857,7 +857,7 @@ function open_add_note_dialog(frm, $wrapper) {
 	d.show();
 }
 
-function attach_edit_delete_events(frm, $wrapper) {
+function attach_edit_delete_events_for_note(frm, $wrapper) {
 	// Edit note
 	$wrapper.find(".edit-note").on("click", function () {
 		const note_id = $(this).closest(".list-group-item").data("id");
@@ -976,7 +976,7 @@ function get_notes(frm, $wrapper) {
 			$wrapper
 				.find(".add-note-inline")
 				.on("click", () => open_add_note_dialog(frm, $wrapper));
-			attach_edit_delete_events(frm, $wrapper);
+			attach_edit_delete_events_for_note(frm, $wrapper);
 		},
 	});
 }
@@ -996,6 +996,7 @@ window.render_activity_section = function render_activity_section(frm) {
 		callback: function (r) {
 			let tasks = r.message.tasks;
 			let events = r.message.events;
+			tasks.sort((a, b) => a.is_completed - b.is_completed);
 			let html = `
             <div style="display:flex; gap:20px;">
                 
@@ -1030,7 +1031,7 @@ window.render_activity_section = function render_activity_section(frm) {
 			$wrapper.html(html);
 			$wrapper.find(".add-task-btn").on("click", () => open_new_task_dialog(frm));
 			$wrapper.find(".add-event-btn").on("click", () => open_new_event_dialog(frm));
-			attach_edit_delete_events(frm, $wrapper);
+			attach_edit_delete_events_for_task_and_event(frm, $wrapper);
 			bind_task_checkbox_actions(frm);
 		},
 	});
@@ -1097,16 +1098,24 @@ function open_new_task_dialog(frm) {
 
 function render_task_card(t, frm) {
 	return `
-    <div class="task-card list-group-item" data-id="${t.name}" style="padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" class="task-complete" data-id="${t.name}" />
+    <div class="task-card list-group-item" data-id="${t.name}" style="padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:10px; ${
+		t.is_completed ? "opacity:0.5; filter: grayscale(0.3);" : ""
+	}">
+        <input type="checkbox" ${t.is_completed ? "checked" : ""} class="task-complete" data-id="${t.name}" />
 
         <div style="flex:1">
             <b>${t.description}</b><br>
             <small>Due: ${t.date || "No date"} | Assigned: ${t.assigned_to || "N/A"}</small>
         </div>
-        <button class="btn btn-xs btn-secondary edit-task-btn"">Edit</button>
-        <button class="btn btn-xs btn-secondary delete-task-btn text-danger">Delete</button>
+        <button class="btn btn-xs btn-secondary edit-task-btn" 
+			${t.is_completed ? "disabled" : ""}>
+			Edit
+		</button>
 
+		<button class="btn btn-xs btn-secondary delete-task-btn text-danger" 
+			${t.is_completed ? "disabled" : ""}>
+			Delete
+		</button>
     </div>
     `;
 }
@@ -1169,19 +1178,12 @@ function open_edit_task_dialog(task_name, frm) {
 			],
 			primary_action_label: __("Update"),
 			primary_action(values) {
-				frappe.call({
-					method: "verp_staffing.crm.api.activities.mark_task_complete",
-					args: {
-						task_name: task_name,
-						completed: values.is_completed ? 1 : 0,
-					},
-				});
-
 				frappe.db
 					.set_value("CRM Task", task_name, {
 						description: values.description,
 						date: values.date,
 						assigned_to: values.assigned_to,
+						is_completed: values.is_completed ? 1 : 0,
 					})
 					.then(() => {
 						frappe.show_alert("Task updated");
@@ -1336,6 +1338,44 @@ function open_edit_event_dialog(event_name, frm) {
 		});
 
 		d.show();
+	});
+}
+
+function attach_edit_delete_events_for_task_and_event(frm, $wrapper) {
+	$wrapper.find(".edit-task-btn").on("click", function () {
+		let task_id = $(this).closest(".task-card").data("id");
+		open_edit_task_dialog(task_id, frm);
+	});
+
+	$wrapper.find(".delete-task-btn").on("click", function () {
+		let task_id = $(this).closest(".task-card").data("id");
+
+		frappe.call({
+			method: "verp_staffing.crm.api.activities.delete_activity",
+			args: { doctype: "CRM Task", name: task_id },
+			callback() {
+				frappe.show_alert("Task deleted");
+				render_activity_section(frm);
+			},
+		});
+	});
+
+	$wrapper.find(".edit-event-btn").on("click", function () {
+		let event_id = $(this).closest(".event-card").data("id");
+		open_edit_event_dialog(event_id, frm);
+	});
+
+	$wrapper.find(".delete-event-btn").on("click", function () {
+		let event_id = $(this).closest(".event-card").data("id");
+
+		frappe.call({
+			method: "verp_staffing.crm.api.activities.delete_activity",
+			args: { doctype: "CRM Event", name: event_id },
+			callback() {
+				frappe.show_alert("Event deleted");
+				render_activity_section(frm);
+			},
+		});
 	});
 }
 
