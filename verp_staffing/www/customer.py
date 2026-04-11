@@ -90,84 +90,84 @@ def get_context(context):
         return
 
     lead_name = lead_doc[0].name
-    context.full_history = get_customer_history(lead_name)
+
     # =====================================================
-    # LOAD CUSTOMER HISTORY
+    # FIND CUSTOMER LINKED TO THIS LEAD DETAIL FORM
+    # via Doctype Reference child table
     # =====================================================
-    # customer = frappe.get_all(
-    #     "Customer",
-    #     filters={"name": lead_name},
-    #     fields=["name", "stage"]
-    # )
+    customer_ref = frappe.db.sql(
+        """
+        SELECT reference_person
+        FROM `tabDoctype Reference`
+        WHERE parenttype = 'Lead Detail Form'
+          AND parent = %s
+          AND reference_doctype = 'Customer'
+        LIMIT 1
+        """,
+        (lead_name,),
+        as_dict=True,
+    )
 
-    # context.customer_history = []
+    if customer_ref:
+        customer_name = customer_ref[0].reference_person
+    else:
+        # Fallback: Lead Detail Form → Lead → Opportunity → Customer
+        lead_ref = frappe.db.sql(
+            """
+            SELECT reference_person
+            FROM `tabDoctype Reference`
+            WHERE parenttype = 'Lead Detail Form'
+              AND parent = %s
+              AND reference_doctype = 'Lead'
+            LIMIT 1
+            """,
+            (lead_name,),
+            as_dict=True,
+        )
 
-    # SERVICE_MAP = {
-    #     "ruc": "RUC",
-    #     "training": "Training",
-    #     "resume": "Resume",
-    #     "cover letter": "Cover Letter",
-    #     "jdc": "JDC",
+        if not lead_ref:
+            context.full_history = None
+            context.feedback_rounds = []
+            return
 
-    # }
+        lead_person = lead_ref[0].reference_person
 
-    # if customer:
+        # Try Opportunity → Customer
+        opp = frappe.get_all(
+            "Opportunity",
+            filters={"opportunity_from_lead": lead_person},
+            fields=["name"],
+            limit=1,
+        )
 
-    #     customer_doc = customer[0]
-    #     stage_data = customer_doc["stage"]
+        customer_name = None
 
-    #     print("Customer Data:", customer)
-    #     print("Stage Data:", stage_data)
+        if opp:
+            cust = frappe.get_all(
+                "Customer",
+                filters={"party_name": opp[0].name, "customer_from": "Opportunity"},
+                fields=["name"],
+                limit=1,
+            )
+            if cust:
+                customer_name = cust[0].name
 
-    #     if isinstance(stage_data, str):
-    #         stage_data = json.loads(stage_data)
+        if not customer_name:
+            cust = frappe.get_all(
+                "Customer",
+                filters={"party_name": lead_person, "customer_from": "Lead"},
+                fields=["name"],
+                limit=1,
+            )
+            if cust:
+                customer_name = cust[0].name
 
-    #     for stage, value in stage_data.items():
+        if not customer_name:
+            context.full_history = None
+            context.feedback_rounds = []
+            return
 
-    #         doctype = SERVICE_MAP.get(stage)
-
-    #         # handle unknown services
-    #         if not doctype:
-
-    #             department = None
-
-    #             if isinstance(value, list) and value:
-    #                 department = value[0].get("department")
-
-    #             if department == "Technical":
-    #                 doctype = "Technical Other Services"
-    #             elif department == "Marketing":
-    #                 doctype = "Marketing Other Services"
-    #             elif department == "Resume":
-    #                 doctype = "Other Services"
-    #             else:
-    #                 continue
-
-    #         service_docs = frappe.get_all(
-    #             doctype,
-    #             filters={"customer": customer_doc["name"]},
-    #             fields=[ "status"]
-    #         )
-
-    #         timestamp = None
-    #         if isinstance(value, list) and value:
-    #             ts = value[0].get("timestamp")
-    #             if ts:
-    #                 timestamp = get_datetime(ts)
-
-    #         context.customer_history.append({
-    #             "stage": stage,
-    #             "records": service_docs,
-    #             "timestamp": timestamp
-    #         })
-
-    #         print("timestamp", timestamp)
-
-    #     context.customer_history.sort(
-    #         key=lambda x: x.get("timestamp") or get_datetime("1900-01-01"),
-    #         reverse=True
-    #     )
-    #     print("Sorted Customer History:", context.customer_history)
+    context.full_history = get_customer_history(customer_name)
 
     # =====================================================
     # LOAD INTERVIEWS
@@ -175,9 +175,15 @@ def get_context(context):
     from frappe.utils import get_datetime, now_datetime
     import pytz
 
+    marketing_names_ctx = frappe.get_all(
+        "Marketing",
+        filters={"customer": customer_name},
+        pluck="name",
+    )
+
     interviews = frappe.get_all(
         "Interview",
-        filters={"marketing_link": lead_name},
+        filters={"marketing_link": ["in", marketing_names_ctx]} if marketing_names_ctx else {"name": ["in", ["__no_match__"]]},
         fields=["name", "marketing_link", "status", "role", "company"],
     )
 
@@ -278,7 +284,6 @@ def get_context(context):
                 else:
                     interview_dt = interview_dt.astimezone(tz)
 
-                # ✅ Feedback eligible when interview is over
                 if now_est >= interview_dt:
 
                     context.feedback_rounds.append(
@@ -337,7 +342,7 @@ def save_interview_feedback(feedback_data):
         frappe.throw(str(e))
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_customer_history(customer, interview_limit=5, interview_offset=0):
     # =====================================================
     # get customer
@@ -345,7 +350,7 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
     Customer = frappe.get_all(
         "Customer",
         filters={"name": customer},
-        fields=["name", "stage", "owner", "name"],
+        fields=["name", "stage", "owner"],
     )
     if not Customer:
         return {"customer": {}, "departments": {}}
@@ -377,9 +382,10 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
         customer_doc = Customer[0]
         stage_data = customer_doc["stage"]
 
-        if not stage_data:
-            return history
-
+    if not stage_data:
+        # no stage data — still load sales orders and interviews
+        pass
+    else:
         if isinstance(stage_data, str):
             stage_data = json.loads(stage_data)
 
@@ -389,7 +395,8 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
 
         for stage, value in stage_data.items():
 
-            doctype = departments.get(stage)
+            # ✅ lowercase for safe matching
+            doctype = departments.get(stage.lower())
 
             if not doctype:
 
@@ -408,10 +415,7 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                     continue
 
             if doctype != "JDC":
-
-                fields = ["name", "assign_to", "status", "name"]
-
-                # ---------fields for resume----------------
+                fields = ["name", "assign_to", "status"]
                 if doctype == "Resume":
                     fields.append("resume")
 
@@ -422,12 +426,10 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                 )
 
             else:
-                # ---------------------------------
-                # for JDC
-                # ---------------------------------
-
                 interview_name = frappe.get_all(
-                    "Interview", filters={"marketing_link": customer}, pluck="name"
+                    "Interview",
+                    filters={"marketing_link": customer},
+                    pluck="name",
                 )
 
                 docs = frappe.get_all(
@@ -449,12 +451,10 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                     "assign_to": d.assign_to,
                     "status": d.status,
                     "id": d.name,
-                    # "assign_history": [],  # ✅ ADD THIS
                 }
 
                 if doctype == "RUC":
                     dept_entry["session_details"] = []
-
                     for row in full_doc.session_details:
                         dept_entry["session_details"].append(
                             {
@@ -467,7 +467,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
 
                 if doctype == "Marketing":
                     dept_entry["job_application_count"] = []
-
                     for row in full_doc.job_application_count:
                         dept_entry["job_application_count"].append(
                             {
@@ -486,7 +485,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                     "Technical Other Services",
                     "Other Services",
                 ]:
-
                     dept_entry["proof_of_work"] = []
                     dept_entry["source_doctype"] = doctype
 
@@ -511,129 +509,155 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
 
                 history["departments"][doctype].append(dept_entry)
 
-        # -------------------------------------------------
-        # sales order history
-        # -------------------------------------------------
+    # -------------------------------------------------
+    # SALES ORDER
+    # -------------------------------------------------
+    sales_orders = frappe.get_all(
+        "Sales Order",
+        filters={"customer": customer},
+        fields=["name", "status", "agreement"],
+    )
 
-        sales_orders = frappe.get_all(
-            "Sales Order",
-            filters={"customer": customer},
-            fields=["name", "status", "agreement"],
+    if sales_orders:
+        history["departments"]["Sales Order"] = []
+        for so in sales_orders:
+            agreements = frappe.get_all(
+                "Agreement",
+                filters={"sales_order": so.name},
+                pluck="name",
+            )
+            so_entry = {
+                "department": "Sales Order",
+                "docname": so.name,
+                "status": so.status,
+                "id": so.name,
+                "agreement": agreements,
+            }
+            history["departments"]["Sales Order"].append(so_entry)
+
+    # -------------------------------------------------
+    # INTERVIEWS
+    # -------------------------------------------------
+
+    # Step 1: Find Marketing docs linked to this customer
+    marketing_names = frappe.get_all(
+        "Marketing",
+        filters={"customer": customer},
+        pluck="name",
+    )
+
+    # Step 2: Also check via Lead Detail Form if no marketing found
+    if not marketing_names:
+        ldf_ref = frappe.db.sql(
+            """
+            SELECT parent FROM `tabDoctype Reference`
+            WHERE parenttype = 'Lead Detail Form'
+            AND reference_doctype = 'Customer'
+            AND reference_person = %s
+            LIMIT 1
+            """,
+            (customer,),
+            as_dict=True,
         )
-
-        if sales_orders:
-            history["departments"]["Sales Order"] = []
-
-            for so in sales_orders:
-                agreements = frappe.get_all(
-                    "Agreement", filters={"sales_order": so.name}, pluck="name"
-                )
-
-                so_doc = frappe.get_doc("Sales Order", so.name)
-
-                so_entry = {
-                    "department": "Sales Order",
-                    "docname": so.name,
-                    "status": so.status,
-                    "id": so.name,
-                    "agreement": agreements,
-                }
-
-                history["departments"]["Sales Order"].append(so_entry)
-              
-
-        # -------------------------------------------------
-        # interview history
-        # -------------------------------------------------
-
-        search = frappe.form_dict.get("search")
-        from_date = frappe.form_dict.get("from_date")
-        to_date = frappe.form_dict.get("to_date")
-
-        filters = {"marketing_link": customer}
-
-        or_filters = []
-
-        # 🔍 Search
-        if search:
-            or_filters = [
-                ["company", "like", f"%{search}%"],
-                ["status", "like", f"%{search}%"],
-                ["role", "like", f"%{search}%"],
-            ]
-
-        # 📅 Date filter (assuming 'creation' or change to your field)
-        if from_date and to_date:
-
-            interview_names = frappe.get_all(
-                "Interview Round",
-                filters={"date_of_interview": ["between", [from_date, to_date]]},
-                pluck="parent",
+        if ldf_ref:
+            lead_detail_form_name = ldf_ref[0].parent
+            marketing_names = frappe.get_all(
+                "Marketing",
+                filters={"customer": lead_detail_form_name},
+                pluck="name",
             )
 
-            if interview_names:
-                filters["name"] = ["in", interview_names]
-            else:
-                filters["name"] = ["in", [""]]  # forces empty result
+    search = frappe.form_dict.get("search")
+    from_date = frappe.form_dict.get("from_date")
+    to_date = frappe.form_dict.get("to_date")
 
-        interviews = frappe.get_all(
-            "Interview",
-            filters=filters,
-            or_filters=or_filters if search else None,
-            fields=["name", "status", "company", "role"],
-            limit_page_length=int(interview_limit),
-            limit_start=int(interview_offset),
-            order_by="creation desc",
+    if marketing_names:
+        filters = {"marketing_link": ["in", marketing_names]}
+    else:
+        filters = {"marketing_link": ["in", ["__no_match__"]]}
+
+    or_filters = []
+
+    if search:
+        or_filters = [
+            ["company", "like", f"%{search}%"],
+            ["status", "like", f"%{search}%"],
+            ["role", "like", f"%{search}%"],
+        ]
+
+    if from_date and to_date:
+        date_filtered_names = frappe.get_all(
+            "Interview Round",
+            filters={"date_of_interview": ["between", [from_date, to_date]]},
+            pluck="parent",
         )
+        if marketing_names:
+            all_interview_names_for_customer = frappe.get_all(
+                "Interview",
+                filters={"marketing_link": ["in", marketing_names]},
+                pluck="name",
+            )
+            date_filtered_names = list(
+                set(date_filtered_names) & set(all_interview_names_for_customer)
+            )
+        if date_filtered_names:
+            filters = {"name": ["in", date_filtered_names]}
+        else:
+            filters = {"name": ["in", ["__no_match__"]]}
 
-        total_interviews = frappe.get_all(
+    interviews = frappe.get_all(
+        "Interview",
+        filters=filters,
+        or_filters=or_filters if search else None,
+        fields=["name", "status", "company", "role"],
+        limit_page_length=int(interview_limit),
+        limit_start=int(interview_offset),
+        order_by="creation desc",
+    )
+
+    total_interviews = len(
+        frappe.get_all(
             "Interview",
             filters=filters,
             or_filters=or_filters if search else None,
             fields=["name"],
         )
+    )
 
-        total_interviews = len(total_interviews)
+    if interviews:
+        history["departments"]["Interview"] = []
+        for iv in interviews:
+            iv_doc = frappe.get_doc("Interview", iv.name)
+            iv_entry = {
+                "department": "Interview",
+                "docname": iv.name,
+                "status": iv.status,
+                "id": iv.name,
+                "company": iv.company,
+                "role": iv_doc.role,
+                "interview_rounds_table": [],
+            }
+            for row in iv_doc.interview_rounds_table:
+                iv_entry["interview_rounds_table"].append(
+                    {
+                        "name": row.name,
+                        "round": row.round,
+                        "date": row.date,
+                        "type_of_interview": row.type_of_interview,
+                        "date_of_interview": row.date_of_interview,
+                        "from_time": row.from_time,
+                        "to_time": row.to_time,
+                        "edt_est": row.edt_est,
+                        "feedback": row.feedback,
+                    }
+                )
+            history["departments"]["Interview"].append(iv_entry)
 
-        if interviews:
-            history["departments"]["Interview"] = []
-
-            for iv in interviews:
-                iv_doc = frappe.get_doc("Interview", iv.name)
-
-                iv_entry = {
-                    "department": "Interview",
-                    "docname": iv.name,
-                    "status": iv.status,
-                    "id": iv.name,
-                    "company": iv.company,
-                    "role": iv_doc.role,
-                    "interview_rounds_table": [],
-                }
-
-                for row in iv_doc.interview_rounds_table:
-                    iv_entry["interview_rounds_table"].append(
-                        {
-                            "name": row.name,
-                            "round": row.round,
-                            "date": row.date,
-                            "type_of_interview": row.type_of_interview,
-                            "date_of_interview": row.date_of_interview,
-                            "from_time": row.from_time,
-                            "to_time": row.to_time,
-                            "edt_est": row.edt_est,
-                            "feedback": row.feedback,
-                        }
-                    )
-
-                history["departments"]["Interview"].append(iv_entry)
-
-        # ✅ ADD THIS
-        history["interview_meta"] = {
-            "total": total_interviews,
-            "limit": int(interview_limit),
-            "offset": int(interview_offset),
-        }
+    history["interview_meta"] = {
+        "total": total_interviews,
+        "limit": int(interview_limit),
+        "offset": int(interview_offset),
+    }
 
     return history
 
@@ -641,7 +665,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
 # Download Resume
 @frappe.whitelist(allow_guest=True)
 def download_resume(file_url):
-    import frappe
     from frappe.utils.file_manager import get_file_path
 
     if not file_url:

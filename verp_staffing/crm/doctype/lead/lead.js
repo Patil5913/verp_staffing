@@ -141,17 +141,26 @@ frappe.ui.form.on("Lead", {
 		}
 
 		function getTableColumns(child_meta) {
-			return child_meta.fields.filter(f =>
-				f.fieldname &&
-				!f.hidden &&
-				!f.read_only &&
-				!["Section Break", "Column Break", "HTML", "Button", "Fold", "Heading"].includes(f.fieldtype)
+			return child_meta.fields.filter(
+				(f) =>
+					f.fieldname &&
+					!f.hidden &&
+					!f.read_only &&
+					![
+						"Section Break",
+						"Column Break",
+						"HTML",
+						"Button",
+						"Fold",
+						"Heading",
+					].includes(f.fieldtype),
 			);
 		}
 
 		function getDepartmentFields(doctype_name) {
-			return frappe.db.get_single_value("ERP Configuration", "department_access_form_fields")
-				.then(data => {
+			return frappe.db
+				.get_single_value("ERP Configuration", "department_access_form_fields")
+				.then((data) => {
 					if (!data) return [];
 					try {
 						return JSON.parse(data)[doctype_name] || [];
@@ -204,16 +213,18 @@ frappe.ui.form.on("Lead", {
 					return `
 				<select data-field="${field}" class="form-control dynamic-input">
 					<option value="">Select</option>
-					${opts.map(o => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
+					${opts.map((o) => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
 				</select>`;
 				}
 
 				case "Table": {
 					const child_doctype = meta_field.options;
-					if (!child_doctype) return `<div style="color:red;">No Child Doctype configured</div>`;
+					if (!child_doctype)
+						return `<div style="color:red;">No Child Doctype configured</div>`;
 
 					const child_meta = frappe.get_meta(child_doctype);
-					if (!child_meta?.fields) return `<div style="color:orange;">Child meta not loaded for: ${child_doctype}</div>`;
+					if (!child_meta?.fields)
+						return `<div style="color:orange;">Child meta not loaded for: ${child_doctype}</div>`;
 
 					const columns = getTableColumns(child_meta);
 					const rows = Array.isArray(value) ? value : [];
@@ -223,17 +234,21 @@ frappe.ui.form.on("Lead", {
 					<table class="table table-bordered table-sm">
 						<thead>
 							<tr>
-								${columns.map(col => `<th>${col.label}</th>`).join("")}
+								${columns.map((col) => `<th>${col.label}</th>`).join("")}
 								<th style="width:80px;">Action</th>
 							</tr>
 						</thead>
 						<tbody>
-							${rows.map((row, i) => `
+							${rows
+								.map(
+									(row, i) => `
 								<tr>
-									${columns.map(col => `<td>${getTableInput(col, row[col.fieldname], field, i)}</td>`).join("")}
+									${columns.map((col) => `<td>${getTableInput(col, row[col.fieldname], field, i)}</td>`).join("")}
 									<td><button class="btn btn-xs btn-danger remove-row">X</button></td>
 								</tr>
-							`).join("")}
+							`,
+								)
+								.join("")}
 						</tbody>
 					</table>
 					<button class="btn btn-xs btn-primary add-row">+ Add Row</button>
@@ -274,7 +289,7 @@ frappe.ui.form.on("Lead", {
 					return `
 				<select ${attrs}>
 					<option value="">Select</option>
-					${opts.map(o => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
+					${opts.map((o) => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
 				</select>`;
 				}
 				case "Text":
@@ -326,7 +341,7 @@ frappe.ui.form.on("Lead", {
 			let isValid = true;
 			let firstInvalid = null;
 
-			document.querySelectorAll(".dynamic-input").forEach(input => {
+			document.querySelectorAll(".dynamic-input").forEach((input) => {
 				const field = input.dataset.field;
 				const meta = field_map[field];
 				if (!meta || meta.fieldtype === "Table") return;
@@ -360,7 +375,11 @@ frappe.ui.form.on("Lead", {
 					const opts = (meta.options || "").split("\n");
 					if (!opts.includes(value)) return fail(`${label} must be a valid option`);
 				}
-				if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value && isNaN(value)) {
+				if (
+					["Int", "Float", "Currency"].includes(meta.fieldtype) &&
+					value &&
+					isNaN(value)
+				) {
 					return fail(`${label} must be a number`);
 				}
 				if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value))) {
@@ -427,7 +446,7 @@ frappe.ui.form.on("Lead", {
 		function collectFormData(field_map) {
 			const data = {};
 
-			document.querySelectorAll(".dynamic-input").forEach(input => {
+			document.querySelectorAll(".dynamic-input").forEach((input) => {
 				const meta = field_map[input.dataset.field];
 				if (!meta || meta.fieldtype === "Table") return;
 
@@ -437,27 +456,29 @@ frappe.ui.form.on("Lead", {
 				data[input.dataset.field] = val;
 			});
 
-			document.querySelectorAll(".dynamic-table").forEach(table => {
+			document.querySelectorAll(".dynamic-table").forEach((table) => {
 				const field = table.dataset.field;
 				const child_doctype = field_map[field].options;
 				const rows = [];
 
-				table.querySelectorAll("tbody tr").forEach(tr => {
+				table.querySelectorAll("tbody tr").forEach((tr) => {
 					const row = {};
-					tr.querySelectorAll("input, select, textarea").forEach(input => {
+					tr.querySelectorAll("input, select, textarea").forEach((input) => {
 						const child_field = input.dataset.child;
 						if (!child_field) return;
-						let val = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
-						if (input.dataset.override === "month-year" && val) val = fromMonthYear(val);
+						let val =
+							input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
+						if (input.dataset.override === "month-year" && val)
+							val = fromMonthYear(val);
 						row[child_field] = val;
 					});
-					if (Object.values(row).some(v => v !== "" && v !== 0 && v !== null)) {
+					if (Object.values(row).some((v) => v !== "" && v !== 0 && v !== null)) {
 						rows.push({
 							...row,
 							doctype: child_doctype,
 							parent: frm.doc.name1,
 							parentfield: field,
-							parenttype: "Lead Detail Form"
+							parenttype: "Lead Detail Form",
 						});
 					}
 				});
@@ -471,7 +492,7 @@ frappe.ui.form.on("Lead", {
 		// ─── Event binding ───────────────────────────────────────────────────────────
 
 		function attachLiveValidation(field_map) {
-			document.querySelectorAll(".dynamic-input").forEach(input => {
+			document.querySelectorAll(".dynamic-input").forEach((input) => {
 				input.addEventListener("input", () => clearError(input));
 				input.addEventListener("blur", () => validateSingleInput(input, field_map));
 			});
@@ -520,13 +541,13 @@ frappe.ui.form.on("Lead", {
 					const rowIndex = tbody.querySelectorAll("tr").length;
 					const row_html = `
 				<tr>
-					${columns.map(col => `<td>${getTableInput(col, "", field, rowIndex)}</td>`).join("")}
+					${columns.map((col) => `<td>${getTableInput(col, "", field, rowIndex)}</td>`).join("")}
 					<td><button class="btn btn-xs btn-danger remove-row">X</button></td>
 				</tr>`;
 					tbody.insertAdjacentHTML("beforeend", row_html);
 				};
 
-				table.addEventListener("click", e => {
+				table.addEventListener("click", (e) => {
 					if (e.target.classList.contains("remove-row")) {
 						e.target.closest("tr").remove();
 					}
@@ -536,29 +557,49 @@ frappe.ui.form.on("Lead", {
 
 		// ─── Main entry point ────────────────────────────────────────────────────────
 
-		getDepartmentFields("Lead").then(async fields => {
-			const lead_detail_name = frm.doc.name1;
-			if (!lead_detail_name) return;
+		getDepartmentFields("Lead").then(async (fields) => {
+			const res = await frappe.call({
+				method: "frappe.client.get_list",
+				args: {
+					doctype: "Lead Detail Form",
+					fields: ["name"],
+					filters: [
+						["Doctype Reference", "reference_doctype", "=", "Lead"],
+						["Doctype Reference", "reference_person", "=", frm.doc.name],
+					],
+					limit_page_length: 1,
+				},
+			});
+
+			if (!res.message.length) {
+				console.log("No Lead Detail Form found");
+				return;
+			}
+
+			const docname = res.message[0].name;
 
 			const [doc, meta] = await Promise.all([
-				frappe.db.get_doc("Lead Detail Form", lead_detail_name),
-				frappe.db.get_doc("DocType", "Lead Detail Form")
+				frappe.db.get_doc("Lead Detail Form", docname),
+				frappe.db.get_doc("DocType", "Lead Detail Form"),
 			]);
 
 			await Promise.all(
 				meta.fields
-					.filter(f => f.fieldtype === "Table" && f.options)
-					.map(f => frappe.model.with_doctype(f.options))
+					.filter((f) => f.fieldtype === "Table" && f.options)
+					.map((f) => frappe.model.with_doctype(f.options)),
 			);
 
-			const field_map = Object.fromEntries(meta.fields.map(f => [f.fieldname, f]));
+			const field_map = Object.fromEntries(meta.fields.map((f) => [f.fieldname, f]));
 
-			const formFields = fields.map(field => {
-				const meta_field = field_map[field];
-				if (!meta_field) return "";
+			const formFields = fields
+				.map((field) => {
+					const meta_field = field_map[field];
+					if (!meta_field) return "";
 
-				const label = meta_field.label || frappe.model.unscrub(field);
-				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(meta_field.fieldtype);
+					const label = meta_field.label || frappe.model.unscrub(field);
+					const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(
+						meta_field.fieldtype,
+					);
 
 				return `
         <div style="width:${isFullWidth ? "100%" : "calc(50% - 8px)"}; min-width:${isFullWidth ? "100%" : "250px"};">

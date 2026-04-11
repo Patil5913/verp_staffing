@@ -9,54 +9,20 @@ import hashlib
 import base64
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
+from verp_staffing.crm.api.naming import generate_name_series
+
 
 
 class LeadDetailForm(Document):
 
-    def autoname(self):
-        import re
-
-        if not self.first_name:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        base_name = self.first_name.strip()
-        if not base_name:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        self.title = base_name
-
-        # ✅ Query THIS doctype only, not "Customer"
-        existing_names = frappe.get_all(
-            self.doctype,  # was hardcoded "Customer" — that was the bug
-            filters={"name": ["like", f"{base_name}%"]},
-            pluck="name",
-        )
-
-        # Build a set of used number slots
-        used_numbers = set()
-
-        for name in existing_names:
-            if name == base_name:
-                used_numbers.add(0)
-            else:
-                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", name)
-                if match:
-                    used_numbers.add(int(match.group(1)))
-
-        # Find the first unused number
-        next_number = 0
-        while next_number in used_numbers:
-            next_number += 1
-
-        # Assign name
-        if next_number == 0:
-            self.name = base_name
-        else:
-            self.name = f"{base_name}-{next_number}"              
-
-
+     def autoname(self):
+        name = self.first_name
+        
+        if not name:
+            frappe.throw("Lead Name is required")
+            
+        self.name = generate_name_series("Lead Detail Form", name)
+        
 def process_drawn_signature_and_apply(doc, token):
     import time
 
