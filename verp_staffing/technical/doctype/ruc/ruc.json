@@ -34,6 +34,7 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
+   "read_only": 1,
    "unique": 1
   },
   {
@@ -105,7 +106,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 15:57:27.946793",
+ "modified": "2026-04-08 16:11:08.821416",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
@@ -124,11 +125,19 @@
    "role": "Sales Master Manager"
   },
   {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
    "create": 1,
    "read": 1,
    "role": "JDC",
    "select": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
   },
   {
    "read": 1,
@@ -147,24 +156,9 @@
    "write": 1
   },
   {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
-  },
-  {
    "create": 1,
    "read": 1,
    "role": "Technical Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },
@@ -185,7 +179,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Onboarding Person",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },
@@ -193,6 +187,13 @@
    "create": 1,
    "read": 1,
    "role": "RUC Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "OnBoarding Person",
    "select": 1,
    "write": 1
   },

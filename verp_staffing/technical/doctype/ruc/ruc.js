@@ -7,6 +7,10 @@ frappe.ui.form.on("RUC", {
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 
+		if (frm.doc.status === "Completed") {
+			frm.set_df_property("status", "read_only", 1);
+		}
+
 		frappe.call({
 			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
 			callback: (r) => {

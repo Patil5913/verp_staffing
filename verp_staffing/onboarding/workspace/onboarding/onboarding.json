@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"AvK4xeuQEM\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Onboarding</span>\",\"col\":12}},{\"id\":\"2XGZsqEJZr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Onboarding\",\"col\":3}}]",
+ "content": "[{\"id\":\"AvK4xeuQEM\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Onboarding</span>\",\"col\":12}},{\"id\":\"Yt9zUPxa3e\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Onboarding\",\"col\":3}}]",
  "creation": "2026-03-21 13:54:10.253502",
  "custom_blocks": [],
  "docstatus": 0,
@@ -10,10 +10,10 @@
  "icon": "branch",
  "idx": 0,
  "indicator_color": "",
- "is_hidden": 0,
+ "is_hidden": 1,
  "label": "Onboarding",
  "links": [],
- "modified": "2026-03-30 11:00:48.390098",
+ "modified": "2026-04-08 13:40:55.620293",
  "modified_by": "Administrator",
  "module": "Onboarding",
  "name": "Onboarding",
@@ -33,7 +33,7 @@
    "color": "Grey",
    "doc_view": "List",
    "label": "Onboarding",
-   "link_to": "Onboarding",
+   "link_to": "Onboardings",
    "stats_filter": "[]",
    "type": "DocType"
   }

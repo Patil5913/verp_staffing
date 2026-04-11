@@ -11,6 +11,10 @@ frappe.ui.form.on("Other Services", {
 
 		const display_fields = await window.get_display_fields(frm.doc.service);
 
+		if (frm.doc.status === "Completed") {
+			frm.set_df_property("status", "read_only", 1);
+		}
+
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details",

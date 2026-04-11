@@ -91,7 +91,7 @@ function open_custom_dialog() {
 		secondary_action_label: "Edit Full Form",
 		secondary_action: function () {
 			dialog.hide();
-			frappe.new_doc("Lea");
+			frappe.new_doc("Lead");
 		},
 	});
 

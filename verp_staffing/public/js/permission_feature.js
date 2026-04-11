@@ -1,5 +1,3 @@
-// ------------------- request for update button ------------------------
-
 window.setup_service_permission_button = function (frm) {
 	if (!frm.doc.customer || !frm.doc.name) return;
 
@@ -266,75 +264,260 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		.join("");
 
 	const dialog_html = `
-        <style>
-            .fg-row { display:flex; align-items:center; gap:10px; padding:10px 12px;
-                border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);
-                cursor:pointer; background:var(--color-background-primary); user-select:none; }
-            .fg-row:hover { background:var(--color-background-secondary); }
-            .fg-row.selected { border-color:#260fea; background:#EEEDFE; }
-            .fg-cb { width:16px; height:16px; border-radius:4px;
-                border:1.5px solid var(--color-border-secondary); flex-shrink:0;
-                display:flex; align-items:center; justify-content:center; }
-            .fg-row.selected .fg-cb { background:#260fea; border-color:#260fea; }
-            .fg-tick { display:none; width:8px; height:5px;
-                border-left:2px solid white; border-bottom:2px solid white;
-                transform:rotate(-45deg) translate(1px,-1px); }
-            .fg-row.selected .fg-tick { display:block; }
-            .fg-label { font-size:13px; font-weight:500; color:var(--color-text-primary); }
-            .fg-row.selected .fg-label { color:#3C3489; }
-            .fg-input-block { margin-bottom:14px; }
-            .fg-input-block:last-child { margin-bottom:0; }
-            .fg-input-field-name { font-size:12px; font-weight:500;
-                color:var(--color-text-secondary); margin-bottom:8px; }
-            .fg-input-cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-            .fg-col-label { font-size:11px; color:var(--color-text-tertiary); margin-bottom:4px;
-                text-transform:uppercase; letter-spacing:0.4px; font-weight:500; }
-            .fg-current-val { padding:8px 10px; background:var(--color-background-secondary);
-                border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md);
-                font-size:13px; color:var(--color-text-secondary); min-height:36px; word-break:break-word; }
-            .fg-new-input { width:100%; padding:8px 10px;
-                border:0.5px solid var(--color-border-secondary); border-radius:var(--border-radius-md);
-                font-size:13px; background:var(--color-background-primary);
-                color:var(--color-text-primary); box-sizing:border-box; }
-            .fg-new-input:focus { outline:none; border-color:#260fea;
-                box-shadow:0 0 0 2px rgba(38,15,234,0.12); }
-            .fg-divider { border:none; border-top:0.5px solid var(--color-border-tertiary); margin:16px 0; }
-        </style>
+	<style>
 
-        <p style="font-size:11px; font-weight:500; color:var(--color-text-tertiary);
-            text-transform:uppercase; letter-spacing:0.6px; margin:0 0 12px;">
-            ${__("Select fields to update")}
-        </p>
+	    /* 🔥 GLOBAL CHECKBOX FIX */
+	    input[type="checkbox"] {
+	        appearance: none;
+	        -webkit-appearance: none;
+	        width:16px;
+	        height:16px;
+	        border:2px solid black;
+	        border-radius:4px;
+	        background:white;
+	        cursor:pointer;
+	        position: relative;
+	    }
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="fg-grid">
-            ${Object.entries(fields)
-				.map(([fieldname, field_meta]) => {
-					const label =
-						typeof field_meta === "string"
-							? field_meta
-							: field_meta?.label || fieldname.replace(/_/g, " ");
-					const old_val =
-						current_values[fieldname] != null ? String(current_values[fieldname]) : "";
-					return `
-                    <div class="fg-row"
-                        data-fieldname="${fieldname}"
-                        data-label="${frappe.utils.escape_html(label)}"
-                        data-current="${frappe.utils.escape_html(old_val)}">
-                        <div class="fg-cb"><div class="fg-tick"></div></div>
-                        <span class="fg-label">${frappe.utils.escape_html(label)}</span>
-                    </div>
-                `;
-				})
-				.join("")}
-        </div>
+	    input[type="checkbox"]:checked {
+	        background:black;
+	    }
 
-        ${table_fields_html}
+	    input[type="checkbox"]:checked::after {
+	        content:"";
+	        position:absolute;
+	        left:4px;
+	        top:1px;
+	        width:5px;
+	        height:9px;
+	        border:2px solid white;
+	        border-top:none;
+	        border-left:none;
+	        transform: rotate(45deg);
+	    }
 
-        <div id="fg-inputs-section" style="display:none;">
-            <hr class="fg-divider" />
-            <div id="fg-inputs-container"></div>
-        </div>
-    `;
+	    /* 🔥 GRID */
+	    #fg-grid {
+	        display:grid;
+	        grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+	        gap:12px;
+	    }
+
+	    /* 🔥 FIELD CARD */
+	    .fg-row {
+	    display:flex;
+	    align-items:center;
+	    gap:10px;
+	    padding:12px 14px;
+
+	    border:2px solid #00000020;   /* 👈 stronger visible border */
+	    border-radius:10px;
+
+	    cursor:pointer;
+	    background:white;
+
+	    transition: all 0.2s ease;
+	}
+
+	    .fg-row:hover {
+	    border-color:black;           /* 👈 strong border on hover */
+	    background:#f8f8f8;
+	    transform: translateY(-1px);
+	}
+
+	    .fg-row.selected {
+	    border:2px solid black;       /* 👈 bold border */
+	    background:#eeeeee;
+	}
+
+	    /* 🔥 CUSTOM CHECKBOX */
+	    .fg-cb {
+	        width:16px;
+	        height:16px;
+	        border-radius:4px;
+	        border:2px solid black;
+	        flex-shrink:0;
+	        display:flex;
+	        align-items:center;
+	        justify-content:center;
+	        background:white;
+	    }
+
+	    .fg-row.selected .fg-cb {
+	        background:black;
+	        border-color:black;
+	    }
+
+	    .fg-tick {
+	        display:none;
+	        width:8px;
+	        height:5px;
+	        border-left:2px solid white;
+	        border-bottom:2px solid white;
+	        transform:rotate(-45deg) translate(1px,-1px);
+	    }
+
+	    .fg-row.selected .fg-tick {
+	        display:block;
+	    }
+
+	    .fg-label {
+	        font-size:13px;
+	        font-weight:500;
+	        color:var(--color-text-primary);
+	    }
+
+	    .fg-row.selected .fg-label {
+	        color:black;
+	    }
+
+	    /* 🔥 INPUT BLOCK */
+	    .fg-input-block {
+	        margin-bottom:18px;
+	        padding:12px;
+	        border:1px solid var(--color-border-tertiary);
+	        border-radius:10px;
+	        background:var(--color-background-secondary);
+	    }
+
+	    .fg-input-field-name {
+	        font-size:12px;
+	        font-weight:600;
+	        margin-bottom:10px;
+	    }
+
+	    .fg-input-cols {
+	        display:grid;
+	        grid-template-columns:1fr 1fr;
+	        gap:14px;
+	    }
+
+	    .fg-col-label {
+	        font-size:11px;
+	        margin-bottom:5px;
+	        text-transform:uppercase;
+	        letter-spacing:0.4px;
+	    }
+
+	    .fg-current-val {
+	        padding:8px 10px;
+	        background:#f8f9fa;
+	        border:1px solid #ddd;
+	        border-radius:8px;
+	        font-size:13px;
+	        min-height:36px;
+	    }
+
+	    .fg-new-input {
+	        width:100%;
+	        padding:8px 10px;
+	        border:1px solid #ccc;
+	        border-radius:8px;
+	        font-size:13px;
+	        background:white;
+	        transition: all 0.2s ease;
+	    }
+
+	    .fg-new-input:focus {
+	        outline:none;
+	        border-color:black;
+	        box-shadow:0 0 0 2px rgba(0,0,0,0.1);
+	    }
+
+	    /* 🔥 TABLE */
+	    .fg-table-editor table {
+	        width:100%;
+	        border-collapse:separate;
+	    }
+
+	    .fg-table-editor th {
+	        padding:10px;
+	        background:#f9fafb;
+	        border-bottom:1px solid #ddd;
+	    }
+
+	    .fg-table-editor td {
+	        padding:6px;
+	    }
+
+	    .fg-table-cell {
+	        width:100%;
+	        padding:6px 8px;
+	        border:1px solid #ccc;
+	        border-radius:6px;
+	    }
+
+	    /* 🔥 ALL BUTTONS BLACK */
+	    #fg-grid button,
+	    .fg-table-editor button,
+	    #fg-inputs-section button,
+	    .modal-footer .btn {
+	        border:1px solid black !important;
+	        background:white !important;
+	        color:black !important;
+	        border-radius:6px;
+	        transition: all 0.2s ease;
+	    }
+
+	    #fg-grid button:hover,
+	    .fg-table-editor button:hover,
+	    #fg-inputs-section button:hover,
+	    .modal-footer .btn:hover {
+	        background:black !important;
+	        color:white !important;
+	    }
+
+	    /* 🔥 PRIMARY BUTTON */
+	    .modal-footer .btn-primary {
+	        background:black !important;
+	        color:white !important;
+	        border:1px solid black !important;
+	    }
+
+	    .modal-footer .btn-primary:hover {
+	        opacity:0.85;
+	    }
+
+	    .fg-divider {
+	        border:none;
+	        border-top:1px solid var(--color-border-tertiary);
+	        margin:18px 0;
+	    }
+
+	</style>
+
+	<p style="font-size:11px; font-weight:500; text-transform:uppercase; margin-bottom:12px;">
+	    ${__("Select fields to update")}
+	</p>
+
+	<div id="fg-grid">
+	    ${Object.entries(fields)
+			.map(([fieldname, field_meta]) => {
+				const label =
+					typeof field_meta === "string"
+						? field_meta
+						: field_meta?.label || fieldname.replace(/_/g, " ");
+				const old_val = current_values[fieldname] || "";
+
+				return `
+	        <div class="fg-row"
+	            data-fieldname="${fieldname}"
+	            data-label="${frappe.utils.escape_html(label)}"
+	            data-current="${frappe.utils.escape_html(old_val)}">
+	            <div class="fg-cb"><div class="fg-tick"></div></div>
+	            <span class="fg-label">${frappe.utils.escape_html(label)}</span>
+	        </div>`;
+			})
+			.join("")}
+	</div>
+
+	${table_fields_html}
+
+	<div id="fg-inputs-section" style="display:none;">
+	    <hr class="fg-divider" />
+	    <div id="fg-inputs-container"></div>
+	</div>
+	`;
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Update Detail"),
@@ -564,22 +747,15 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 
 function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {}) {
 	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
-	let all_html = "";
 
 	function render_value(val, fieldname) {
 		if (val === null || val === undefined || val === "") {
 			return `<span style="font-style:italic; color:var(--color-text-tertiary);">empty</span>`;
 		}
-
-		if (typeof val === "object" && val.name) {
-			val = val.name;
-		}
-
+		if (typeof val === "object" && val.name) val = val.name;
 		val = String(val).trim();
 		const meta = field_meta[fieldname] || {};
-		const fieldtype = meta.fieldtype;
-
-		if (fieldtype === "Link") {
+		if (meta.fieldtype === "Link") {
 			return `<a href="/app/file/${encodeURIComponent(val)}" target="_blank"
 				style="color:#260fea; font-weight:500;">📎 ${frappe.utils.escape_html(val)}</a>`;
 		}
@@ -591,7 +767,6 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 		if (!data || !data.length) {
 			return `<div style="padding:8px; color:var(--color-text-tertiary); font-size:12px;">No rows</div>`;
 		}
-
 		const columns = Object.keys(data[0]).filter(
 			(k) =>
 				![
@@ -607,7 +782,6 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 					"docstatus",
 				].includes(k),
 		);
-
 		return `
 			<table style="width:100%; border-collapse:collapse; font-size:12px;">
 				<thead>
@@ -615,10 +789,11 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 						${columns
 							.map(
 								(col) => `
-							<th style="padding:6px 8px; text-align:left;
-								border-bottom:0.5px solid var(--color-border-tertiary);
-								color:var(--color-text-secondary);">
-								${col.replace(/_/g, " ").toUpperCase()}
+							<th style="padding:7px 8px; font-size:11px; font-weight:500;
+								color:var(--color-text-secondary); text-align:left;
+								text-transform:uppercase; letter-spacing:0.4px;
+								border-bottom:0.5px solid var(--color-border-tertiary);">
+								${col.replace(/_/g, " ")}
 							</th>
 						`,
 							)
@@ -650,71 +825,7 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 		`;
 	}
 
-	const dialog_html = `
-	<style>
-		.au-row {
-			display:flex;
-			gap:10px;
-			padding:10px 12px;
-			border:0.5px solid var(--color-border-tertiary);
-			border-radius:var(--border-radius-md);
-			background:var(--color-background-primary);
-			margin-bottom:10px;
-		}
-		.au-cb {
-			width:16px; height:16px;
-			border-radius:4px;
-			border:1.5px solid #260fea;
-			background:#260fea;
-			display:flex;
-			align-items:center;
-			justify-content:center;
-			cursor:pointer;
-			margin-top:3px;
-		}
-		.au-tick {
-			width:8px; height:5px;
-			border-left:2px solid white;
-			border-bottom:2px solid white;
-			transform:rotate(-45deg) translate(1px,-1px);
-		}
-		.au-label {
-			font-size:13px;
-			font-weight:500;
-			margin-bottom:6px;
-		}
-
-		/* ✅ FIX ADDED HERE */
-		.au-cols {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 10px;
-		}
-
-		.au-box {
-			padding:8px 10px;
-			border-radius:var(--border-radius-md);
-			font-size:13px;
-		}
-		.au-old {
-			background:var(--color-background-secondary);
-			border:0.5px solid var(--color-border-tertiary);
-			color:var(--color-text-secondary);
-		}
-		.au-new {
-			background:#EEEDFE;
-			border:0.5px solid #260fea;
-			color:#3C3489;
-			font-weight:500;
-		}
-		.au-header {
-			font-size:11px;
-			color:var(--color-text-tertiary);
-			margin-bottom:4px;
-			text-transform:uppercase;
-		}
-	</style>
-	`;
+	let all_html = "";
 
 	pending_requests.forEach((req, idx) => {
 		all_html += `
@@ -731,68 +842,57 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 			const label = fieldname.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 			const is_table = Array.isArray(values.old) || Array.isArray(values.new);
 
-			// TABLE → UP/DOWN
-			if (is_table) {
-				all_html += `
-					<div class="au-row">
-						<div class="au-cb" data-fieldname="${fieldname}" data-comment="${req.comment_name}">
-							<div class="au-tick"></div>
+			const inner_content = is_table
+				? `
+					<div style="margin-top:8px;">
+						<div class="fg-col-label" style="font-size:11px; color:#666; margin-bottom:5px;
+							text-transform:uppercase; letter-spacing:0.4px; font-weight:500;">Current</div>
+						<div class="fg-current-val" style="padding:8px 10px; background:#f8f9fa;
+							border:1px solid #ddd; border-radius:8px; font-size:13px; min-height:36px;">
+							${render_table(values.old, false)}
 						</div>
-
-						<input type="checkbox" class="approve-field-checkbox"
-							data-fieldname="${fieldname}" data-comment="${req.comment_name}"
-							checked style="display:none;" />
-
-						<div style="flex:1;">
-							<div class="au-label">${label}</div>
-
-							<div style="margin-top:8px;">
-								<div class="au-header">Current</div>
-								<div class="au-box au-old">
-									${render_table(values.old, false)}
-								</div>
+					</div>
+					<div style="margin-top:10px;">
+						<div class="fg-col-label" style="font-size:11px; color:#666; margin-bottom:5px;
+							text-transform:uppercase; letter-spacing:0.4px; font-weight:500;">New</div>
+						<div style="padding:8px 10px; background:white; border:1px solid #ccc;
+							border-radius:8px; font-size:13px; min-height:36px; font-weight:500;">
+							${render_table(values.new, true)}
+						</div>
+					</div>
+				`
+				: `
+					<div class="fg-input-cols" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+						<div>
+							<div class="fg-col-label" style="font-size:11px; color:#666; margin-bottom:5px;
+								text-transform:uppercase; letter-spacing:0.4px; font-weight:500;">Current</div>
+							<div class="fg-current-val" style="padding:8px 10px; background:#f8f9fa;
+								border:1px solid #ddd; border-radius:8px; font-size:13px; min-height:36px;">
+								${render_value(values.old, fieldname)}
 							</div>
-
-							<div style="margin-top:10px;">
-								<div class="au-header">New</div>
-								<div class="au-box au-new">
-									${render_table(values.new, true)}
-								</div>
+						</div>
+						<div>
+							<div class="fg-col-label" style="font-size:11px; color:#666; margin-bottom:5px;
+								text-transform:uppercase; letter-spacing:0.4px; font-weight:500;">New</div>
+							<div style="padding:8px 10px; background:white; border:1px solid #ccc;
+								border-radius:8px; font-size:13px; min-height:36px; font-weight:500;">
+								${render_value(values.new, fieldname)}
 							</div>
 						</div>
 					</div>
 				`;
-				return;
-			}
 
-			// NORMAL → LEFT/RIGHT
 			all_html += `
-				<div class="au-row">
-					<div class="au-cb" data-fieldname="${fieldname}" data-comment="${req.comment_name}">
-						<div class="au-tick"></div>
-					</div>
-
+				<div class="fg-row au-field-row"
+					data-fieldname="${fieldname}"
+					data-comment="${req.comment_name}">
+					<div class="fg-cb"><div class="fg-tick"></div></div>
 					<input type="checkbox" class="approve-field-checkbox"
 						data-fieldname="${fieldname}" data-comment="${req.comment_name}"
 						checked style="display:none;" />
-
 					<div style="flex:1;">
-						<div class="au-label">${label}</div>
-
-						<div class="au-cols">
-							<div>
-								<div class="au-header">Current</div>
-								<div class="au-box au-old">
-									${render_value(values.old, fieldname)}
-								</div>
-							</div>
-							<div>
-								<div class="au-header">New</div>
-								<div class="au-box au-new">
-									${render_value(values.new, fieldname)}
-								</div>
-							</div>
-						</div>
+						<span class="fg-label">${frappe.utils.escape_html(label)}</span>
+						${inner_content}
 					</div>
 				</div>
 			`;
@@ -800,6 +900,84 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 
 		all_html += `</div>`;
 	});
+
+	const dialog_html = `
+	<style>
+		.fg-row {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			padding: 12px 14px;
+			border: 2px solid #00000020;
+			border-radius: 10px;
+			cursor: pointer;
+			background: white;
+			margin-bottom: 10px;
+			transition: all 0.2s ease;
+		}
+		.fg-row:hover {
+			border-color: black;
+			background: #f8f8f8;
+			transform: translateY(-1px);
+		}
+		.fg-row.selected {
+			border: 2px solid black;
+			background: #eeeeee;
+		}
+		.fg-cb {
+			width: 16px; height: 16px;
+			border-radius: 4px;
+			border: 2px solid black;
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: white;
+			margin-top: 3px;
+		}
+		.fg-row.selected .fg-cb {
+			background: black;
+			border-color: black;
+		}
+		.fg-tick {
+			display: none;
+			width: 8px; height: 5px;
+			border-left: 2px solid white;
+			border-bottom: 2px solid white;
+			transform: rotate(-45deg) translate(1px,-1px);
+		}
+		.fg-row.selected .fg-tick { display: block; }
+		.fg-label {
+			display: block;
+			font-size: 13px;
+			font-weight: 500;
+			margin-bottom: 8px;
+			color: var(--color-text-primary);
+		}
+		.fg-row.selected .fg-label { color: black; }
+		.modal-footer .btn {
+			border: 1px solid black !important;
+			background: white !important;
+			color: black !important;
+			border-radius: 6px;
+			transition: all 0.2s ease;
+		}
+		.modal-footer .btn:hover {
+			background: black !important;
+			color: white !important;
+		}
+		.modal-footer .btn-primary {
+			background: black !important;
+			color: white !important;
+			border: 1px solid black !important;
+		}
+		.modal-footer .btn-primary:hover { opacity: 0.85; }
+	</style>
+
+	<p style="font-size:11px; font-weight:500; text-transform:uppercase; margin-bottom:12px;">
+		${__("Select fields to accept")}
+	</p>
+	`;
 
 	const d = new frappe.ui.Dialog({
 		title: __("Accept Updates"),
@@ -811,13 +989,12 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 			d.$wrapper.find(".approve-field-checkbox:checked").each(function () {
 				const f = $(this).data("fieldname");
 				const c = $(this).data("comment");
-
 				if (!by_comment[c]) by_comment[c] = [];
 				by_comment[c].push(f);
 			});
 
 			if (!Object.keys(by_comment).length) {
-				frappe.msgprint("Select at least one field");
+				frappe.msgprint(__("Select at least one field."));
 				return;
 			}
 
@@ -835,14 +1012,14 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 					}),
 				),
 			).then(() => {
-				frappe.show_alert("Updated successfully");
+				frappe.show_alert({ message: __("Updated successfully"), indicator: "green" });
 				frm.reload_doc();
 			});
 		},
 
 		secondary_action_label: __("Reject All"),
 		secondary_action() {
-			frappe.confirm("Reject all updates?", () => {
+			frappe.confirm(__("Reject all updates?"), () => {
 				Promise.all(
 					pending_requests.map((req) =>
 						frappe.call({
@@ -854,7 +1031,7 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 						}),
 					),
 				).then(() => {
-					frappe.show_alert({ message: "All updates rejected", indicator: "red" });
+					frappe.show_alert({ message: __("All updates rejected"), indicator: "red" });
 					d.hide();
 					frm.reload_doc();
 				});
@@ -864,19 +1041,15 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 
 	d.show();
 
-	d.$wrapper.on("click", ".au-cb", function () {
+	// Row click — toggle checkbox + selected class
+	d.$wrapper.on("click", ".fg-row.au-field-row", function () {
+		$(this).toggleClass("selected");
 		const fieldname = $(this).data("fieldname");
 		const comment = $(this).data("comment");
-
 		const cb = d.$wrapper.find(
 			`.approve-field-checkbox[data-fieldname="${fieldname}"][data-comment="${comment}"]`,
 		);
-
-		const checked = cb.prop("checked");
-		cb.prop("checked", !checked);
-
-		$(this).css({ background: checked ? "#fff" : "#260fea" });
-		$(this).find(".au-tick").toggle(!checked);
+		cb.prop("checked", $(this).hasClass("selected"));
 	});
 }
 
@@ -951,7 +1124,23 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 					data-old="${old_val}"
 					${saved_val == "1" || saved_val == 1 ? "checked" : ""} />
 			`;
-		} else if (fieldtype === "Link") {
+		}
+
+		// ✅ DATE (🔥 FIXED)
+		else if (fieldtype === "Date") {
+			input_html = `
+				<input class="fg-new-input fg-date-input"
+					type="text"
+					data-fieldname="${fieldname}"
+					data-old="${frappe.utils.escape_html(old_val)}"
+					value="${frappe.utils.escape_html(saved_val || old_val)}"
+					placeholder="DD-MM-YYYY"
+					style="cursor:pointer;" />
+			`;
+		}
+
+		// ✅ LINK (unchanged)
+		else if (fieldtype === "Link") {
 			const link_options = options || "";
 
 			let current_display_html;
@@ -1030,3 +1219,38 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 		`);
 	});
 }
+
+$(document).on("focus", ".fg-date-input", function () {
+	const input = $(this);
+
+	if (input.data("datepicker")) return;
+
+	new frappe.ui.form.ControlDate({
+		df: { fieldtype: "Date" },
+		parent: input.parent(),
+		render_input: false,
+	});
+
+	input.datepicker({
+		dateFormat: "yyyy-mm-dd",
+		onSelect: function (dateText) {
+			input.val(dateText); 
+		},
+	});
+
+	input.data("datepicker", true);
+});
+
+$(document).on("blur", ".fg-date-input", function () {
+	let val = $(this).val();
+	if (!val) return;
+
+	const parts = val.split("-");
+	if (parts.length === 3) {
+		const [dd, mm, yyyy] = parts;
+		if (dd.length === 2 && mm.length === 2 && yyyy.length === 4) {
+			const formatted = `${yyyy}-${mm}-${dd}`;
+			$(this).attr("data-formatted", formatted);
+		}
+	}
+});

@@ -8,7 +8,6 @@ from frappe.utils import nowdate, getdate, get_datetime
 def get_context(context):
     context.no_cache = 1
 
-
     # =====================================================
     # HANDLE POST REQUEST
     # =====================================================
@@ -40,7 +39,7 @@ def get_context(context):
                 subject="Your OTP",
                 message=f"Your OTP is {otp}",
                 delayed=False,
-                now=True
+                now=True,
             )
 
             context.otp_sent = True
@@ -67,7 +66,6 @@ def get_context(context):
             frappe.session["lead_email"] = email
             frappe.session.modified = True
 
-       
     # =====================================================
     # SESSION CHECK
     # =====================================================
@@ -190,7 +188,6 @@ def get_context(context):
     # Convert system time to Eastern
     now_est = system_now.astimezone(tz)
 
-
     # context.past = []
     # context.current = []
     # context.upcoming = []
@@ -257,7 +254,6 @@ def get_context(context):
     # print("Current:", len(context.current))
     # print("Upcoming:", len(context.upcoming))
 
-
     # ================= FEEDBACK =================
 
     context.feedback_rounds = []
@@ -282,8 +278,6 @@ def get_context(context):
                 else:
                     interview_dt = interview_dt.astimezone(tz)
 
-            
-
                 # ✅ Feedback eligible when interview is over
                 if now_est >= interview_dt:
 
@@ -298,7 +292,8 @@ def get_context(context):
                             "type": round.type_of_interview,
                         }
                     )
-             
+
+
 # ================================================================
 # CUSTOMER HISTORY
 # ===============================================================
@@ -318,11 +313,7 @@ def save_interview_feedback(feedback_data):
             if not round_name:
                 continue
 
-            parent_id = frappe.db.get_value(
-                "Interview Round",
-                round_name,
-                "parent"
-            )
+            parent_id = frappe.db.get_value("Interview Round", round_name, "parent")
 
             if not parent_id:
                 continue
@@ -338,10 +329,7 @@ def save_interview_feedback(feedback_data):
 
         frappe.db.commit()
 
-        return {
-            "status": "success",
-            "message": "Feedback updated successfully"
-        }
+        return {"status": "success", "message": "Feedback updated successfully"}
 
     except Exception as e:
         frappe.db.rollback()
@@ -388,7 +376,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
     if Customer:
         customer_doc = Customer[0]
         stage_data = customer_doc["stage"]
-
 
         if not stage_data:
             return history
@@ -442,7 +429,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                 interview_name = frappe.get_all(
                     "Interview", filters={"marketing_link": customer}, pluck="name"
                 )
-               
 
                 docs = frappe.get_all(
                     "JDC",
@@ -524,7 +510,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                     history["departments"][doctype] = []
 
                 history["departments"][doctype].append(dept_entry)
-              
 
         # -------------------------------------------------
         # sales order history
@@ -540,6 +525,10 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
             history["departments"]["Sales Order"] = []
 
             for so in sales_orders:
+                agreements = frappe.get_all(
+                    "Agreement", filters={"sales_order": so.name}, pluck="name"
+                )
+
                 so_doc = frappe.get_doc("Sales Order", so.name)
 
                 so_entry = {
@@ -547,7 +536,7 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                     "docname": so.name,
                     "status": so.status,
                     "id": so.name,
-                    "agreement": so.agreement,
+                    "agreement": agreements,
                 }
 
                 history["departments"]["Sales Order"].append(so_entry)
@@ -632,9 +621,8 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                             "date_of_interview": row.date_of_interview,
                             "from_time": row.from_time,
                             "to_time": row.to_time,
-                            "edt_est":row.edt_est,
+                            "edt_est": row.edt_est,
                             "feedback": row.feedback,
-
                         }
                     )
 
