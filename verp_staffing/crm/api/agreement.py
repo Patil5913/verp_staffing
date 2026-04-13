@@ -80,8 +80,17 @@ def send_existing_agreement(agreement):
 
         recipient = get_customer_email(so.customer)
 
+        customer = frappe.get_doc("Customer", so.customer)
+        lead_name = customer.lead_details
+
         if not recipient:
-            frappe.throw("Customer email not found")
+            frappe.throw(
+                title="Email Missing",
+                msg=f'Email is required to send agreement.<br><br>'
+                    f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
+                    f'➜ Open Lead Detail Form</a>'
+            )
+
 
         if not doc.pdf:
             frappe.throw("Agreement PDF not generated")
