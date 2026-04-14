@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from verp_staffing.accounts.party import (	
 	validate_account_party_type,
@@ -89,3 +90,37 @@ class GLEntry(Document):
 	def validate_party(self):
 		validate_party_frozen_disabled(self.party_type, self.party)
 		validate_account_party_type(self)
+
+def make_gl_entries(
+	gl_map,
+	cancel=False,
+	adv_adj=False,
+	merge_entries=True,
+	update_outstanding="Yes",
+	from_repost=False,
+):
+	if gl_map:
+		if not cancel:
+			make_acc_dimensions_offsetting_entry(gl_map)
+			validate_accounting_period(gl_map)
+			validate_disabled_accounts(gl_map)
+			gl_map = process_gl_map(gl_map, merge_entries, from_repost=from_repost)
+			if gl_map and len(gl_map) > 1:
+				if gl_map[0].voucher_type != "Period Closing Voucher":
+					create_payment_ledger_entry(
+						gl_map,
+						cancel=0,
+						adv_adj=adv_adj,
+						update_outstanding=update_outstanding,
+						from_repost=from_repost,
+					)
+				save_entries(gl_map, adv_adj, update_outstanding, from_repost)
+			# Post GL Map proccess there may no be any GL Entries
+			elif gl_map:
+				frappe.throw(
+					_(
+						"Incorrect number of General Ledger Entries found. You might have selected a wrong Account in the transaction."
+					)
+				)
+		else:
+			make_reverse_gl_entries(gl_map, adv_adj=adv_adj, update_outstanding=update_outstanding)

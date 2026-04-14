@@ -436,7 +436,15 @@
  "permissions": [
   {
    "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
   },
   {
    "read": 1,

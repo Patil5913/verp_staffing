@@ -6,6 +6,7 @@
  "field_order": [
   "charts_of_accounts_tab",
   "show_balance_in_coa",
+  "default_company",
   "banking_tab",
   "enable_party_matching",
   "enable_fuzzy_matching",
@@ -91,13 +92,20 @@
    "fieldname": "book_asset_depreciation_entry_automatically",
    "fieldtype": "Check",
    "label": "Book Asset Depreciation Entry Automatically"
+  },
+  {
+   "description": "Select a default company to be used in orders, invoices, vounchers.",
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-05 17:22:18.432964",
+ "modified": "2026-04-11 10:37:12.949974",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",
