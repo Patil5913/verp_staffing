@@ -17,7 +17,13 @@
   "asset_settings_section",
   "calculate_depr_using_total_days",
   "column_break_rzzt",
-  "book_asset_depreciation_entry_automatically"
+  "book_asset_depreciation_entry_automatically",
+  "invoice_and_billing_tab",
+  "currency_exchange_section",
+  "allow_stale",
+  "stale_days",
+  "column_break_hhmf",
+  "allow_pegged_currencies_exchange_rates"
  ],
  "fields": [
   {
@@ -42,6 +48,28 @@
    "fieldname": "enable_party_matching",
    "fieldtype": "Check",
    "label": "Enable Automatic Party Matching"
+  },
+  {
+   "default": "1",
+   "fieldname": "allow_stale",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Allow Stale Exchange Rates"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.allow_stale==0",
+   "fieldname": "stale_days",
+   "fieldtype": "Int",
+   "label": "Stale Days"
+  },
+  {
+   "default": "0",
+   "description": "System will do an implicit conversion using the pegged currency. <br>\nEx: Instead of AED -&gt; INR, system will do AED -&gt; USD -&gt; INR using the pegged exchange rate of AED against USD.",
+   "documentation_url": "/app/pegged-currencies/Pegged Currencies",
+   "fieldname": "allow_pegged_currencies_exchange_rates",
+   "fieldtype": "Check",
+   "label": "Allow Implicit Pegged Currency Conversion"
   },
   {
    "default": "0",
@@ -99,13 +127,27 @@
    "fieldtype": "Link",
    "label": "Default Company",
    "options": "Company"
+  },
+  {
+   "fieldname": "invoice_and_billing_tab",
+   "fieldtype": "Tab Break",
+   "label": "Invoice & Billing"
+  },
+  {
+   "fieldname": "column_break_hhmf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency_exchange_section",
+   "fieldtype": "Section Break",
+   "label": "Currency Exchange Settings"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-11 10:37:12.949974",
+ "modified": "2026-04-11 11:35:31.113990",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",

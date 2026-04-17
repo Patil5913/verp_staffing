@@ -63,3 +63,12 @@ class BankAccount(Document):
 				"is_default",
 				0,
 			)
+   
+   
+@frappe.whitelist()
+def make_bank_account(doctype, docname):
+	doc = frappe.new_doc("Bank Account")
+	doc.party_type = doctype
+	doc.party = docname
+
+	return doc

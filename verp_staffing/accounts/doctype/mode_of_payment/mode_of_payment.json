@@ -1,39 +1,51 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:title",
- "creation": "2026-04-08 14:02:09.169560",
+ "creation": "2026-04-10 14:58:40.745334",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "title",
-  "disabled"
+  "mode_of_payment",
+  "enabled",
+  "type",
+  "accounts"
  ],
  "fields": [
   {
-   "allow_in_quick_entry": 1,
-   "fieldname": "title",
+   "fieldname": "mode_of_payment",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Title",
+   "label": "Mode of Payment",
    "reqd": 1,
    "unique": 1
   },
   {
-   "default": "0",
-   "fieldname": "disabled",
+   "default": "1",
+   "fieldname": "enabled",
    "fieldtype": "Check",
-   "label": "Disabled"
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Type",
+   "options": "Cash\nBank\nGeneral\nPhone"
+  },
+  {
+   "fieldname": "accounts",
+   "fieldtype": "Table",
+   "label": "Accounts",
+   "options": "Mode of Payment Account"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-08 14:03:48.984262",
+ "modified": "2026-04-10 15:05:44.727647",
  "modified_by": "Administrator",
  "module": "Accounts",
- "name": "Tax Category",
- "naming_rule": "By fieldname",
+ "name": "Mode of Payment",
  "owner": "Administrator",
  "permissions": [
   {

@@ -12,4 +12,8 @@ Onboarding
 ESign
 Email Inbox
 Stock
+<<<<<<< HEAD
 Selling
+=======
+Buying
+>>>>>>> 780cf8e (feat: make ourchase doctypes and change color)

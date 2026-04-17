@@ -1,0 +1,182 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-09 16:38:49.436028",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "add_deduct_tax",
+  "charge_type",
+  "row_id",
+  "included_in_print_rate",
+  "considered_in_paid_amount",
+  "column_break_aqhg",
+  "account_head",
+  "description",
+  "is_tax_withholding_account",
+  "section_break_saob",
+  "rate",
+  "account_currency",
+  "tax_amount",
+  "tax_amount_after_discount_amount",
+  "total",
+  "column_break_pkkf",
+  "base_tax_amount",
+  "base_total",
+  "base_tax_amount_after_discount_amount"
+ ],
+ "fields": [
+  {
+   "default": "Total",
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Consider Tax or Charge for",
+   "options": "Valuation and Total\nValuation\nTotal",
+   "reqd": 1
+  },
+  {
+   "default": "Add",
+   "fieldname": "add_deduct_tax",
+   "fieldtype": "Select",
+   "label": "Add or Deduct",
+   "options": "Add\nDeduct",
+   "reqd": 1
+  },
+  {
+   "default": "On Net Total",
+   "fieldname": "charge_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "\nActual\nOn Net Total\nOn Previous Row Amount\nOn Previous Row Total\nOn Item Quantity",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:[\"On Previous Row Amount\", \"On Previous Row Total\"].indexOf(doc.charge_type)!==-1",
+   "fieldname": "row_id",
+   "fieldtype": "Data",
+   "label": "Reference Row #"
+  },
+  {
+   "default": "0",
+   "description": "If checked, the tax amount will be considered as already included in the Print Rate / Print Amount",
+   "fieldname": "included_in_print_rate",
+   "fieldtype": "Check",
+   "label": "Is this Tax included in Basic Rate?"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:['Purchase Taxes and Charges Template', 'Payment Entry'].includes(parent.doctype)",
+   "description": "If checked, the tax amount will be considered as already included in the Paid Amount in Payment Entry",
+   "fieldname": "considered_in_paid_amount",
+   "fieldtype": "Check",
+   "label": "Considered In Paid Amount"
+  },
+  {
+   "fieldname": "column_break_aqhg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "account_head",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account Head",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_tax_withholding_account",
+   "fieldtype": "Check",
+   "label": "Is Tax Withholding Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_saob",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Tax Rate"
+  },
+  {
+   "fetch_from": "account_head.account_currency",
+   "fieldname": "account_currency",
+   "fieldtype": "Link",
+   "label": "Account Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency"
+  },
+  {
+   "fieldname": "tax_amount_after_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Tax Amount After Discount Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pkkf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "base_tax_amount",
+   "fieldtype": "Currency",
+   "label": "Amount (Company Currency)",
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "base_total",
+   "fieldtype": "Currency",
+   "label": "Total (Company Currency)",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "base_tax_amount_after_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Tax Amount After Discount Amount",
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-09 16:49:26.432895",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Purchase Taxes and Charges",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
