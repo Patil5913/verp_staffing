@@ -28,6 +28,15 @@ frappe.ui.form.on("Lead", {
 	},
 
 	refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Lead",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+		frappe.breadcrumbs.update();
 		window.render_notes(frm);
 		window.render_activity_section(frm);
 

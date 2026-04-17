@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-10 17:54:01.500967",
+ "description": "Settings for Selling Module",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "maintain_same_sales_rate",
+  "editable_price_list_rate",
+  "allow_negative_rates_for_items",
+  "sales_transactions_settings_section",
+  "so_required",
+  "enable_discount_accounting"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "maintain_same_sales_rate",
+   "fieldtype": "Check",
+   "label": "Maintain Same Rate Throughout Sales Cycle"
+  },
+  {
+   "default": "0",
+   "fieldname": "editable_price_list_rate",
+   "fieldtype": "Check",
+   "label": "Allow User to Edit Price List Rate in Transactions"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_negative_rates_for_items",
+   "fieldtype": "Check",
+   "label": "Allow Negative rates for Items"
+  },
+  {
+   "fieldname": "sales_transactions_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Transaction Settings"
+  },
+  {
+   "fieldname": "so_required",
+   "fieldtype": "Select",
+   "label": "Is Sales Order Required for Sales Invoice & Delivery Note Creation?",
+   "options": "No\nYes"
+  },
+  {
+   "default": "0",
+   "description": "If enabled, additional ledger entries will be made for discounts in a separate Discount Account",
+   "fieldname": "enable_discount_accounting",
+   "fieldtype": "Check",
+   "label": "Enable Discount Accounting for Selling"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-04-10 18:02:15.493213",
+ "modified_by": "Administrator",
+ "module": "Selling",
+ "name": "Selling Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

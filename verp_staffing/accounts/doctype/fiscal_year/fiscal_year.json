@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "field:year",
  "creation": "2026-04-05 18:02:03.467539",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -9,9 +9,7 @@
   "disabled",
   "is_short_year",
   "year_start_date",
-  "year_end_date",
-  "companies",
-  "auto_created"
+  "year_end_date"
  ],
  "fields": [
   {
@@ -54,31 +52,16 @@
    "no_copy": 1,
    "reqd": 1,
    "set_only_once": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "auto_created",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Auto Created",
-   "no_copy": 1,
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "companies",
-   "fieldtype": "Table",
-   "label": "Companies",
-   "options": "Fiscal Year Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-05 18:09:27.105942",
+ "modified": "2026-04-15 18:21:37.404335",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Fiscal Year",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -98,5 +81,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "year"
 }

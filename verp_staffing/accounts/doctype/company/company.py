@@ -204,3 +204,47 @@ class Company(NestedSet):
 			and value=%s""",
 			self.name,
 		)
+
+@frappe.whitelist()
+def get_company_currency(company):
+	"""Returns the default company currency"""
+	if not frappe.flags.company_currency:
+		frappe.flags.company_currency = {}
+	if company not in frappe.flags.company_currency:
+		frappe.flags.company_currency[company] = frappe.db.get_value(
+			"Company", company, "default_currency", cache=True
+		)
+	return frappe.flags.company_currency[company]
+
+
+@frappe.whitelist()
+def get_company_receivable_account(company):
+    if not company:
+        frappe.throw(_("Company is required"))
+
+    account = frappe.db.get_value(
+        "Company",
+        company,
+        "default_receivable_account"
+    )
+
+    if not account:
+        frappe.throw(
+            _("Default Receivable Account not set for Company {0}")
+            .format(frappe.bold(company))
+        )
+
+    acc = frappe.get_cached_value(
+        "Account",
+        account,
+        ["account_type", "is_group", "company"],
+        as_dict=True
+    )
+
+    if acc.is_group:
+        frappe.throw(_("Receivable account cannot be a group account"))
+
+    if acc.account_type != "Receivable":
+        frappe.throw(_("Account must be of type Receivable"))
+
+    return account

@@ -2,11 +2,8 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
-from verp_staffing.accounts.party import (	
-	validate_account_party_type,
-	validate_party_frozen_disabled
-)
 from frappe.utils import flt
 
 class GLEntry(Document):
@@ -19,73 +16,177 @@ class GLEntry(Document):
 		if self.meta.autoname == "hash":
 			self.to_rename = 0
 
-	def check_mandatory(self):
-		mandatory = ["account", "voucher_type", "voucher_no", "company"]
-		for k in mandatory:
-			if not self.get(k):
-				frappe.throw(_("{0} is required").format(_(self.meta.get_label(k))))
 
-		if not self.is_cancelled and not (self.party_type and self.party):
-			account_type = frappe.get_cached_value("Account", self.account, "account_type")
+def build_gl_entry(
+    account,
+    debit=0,
+    credit=0,
+    company=None,
+    posting_date=None,
+    voucher_type=None,
+    voucher_no=None,
+    party_type=None,
+    party=None,
+    against=None,
+    remarks=None,
+    transaction_currency=None,
+    exchange_rate=1,
+    against_voucher_type=None,
+    against_voucher=None
+):
+    if debit and credit:
+        frappe.throw(f"Both debit and credit cannot be set for account {account}")
 
-			if not frappe.flags.party_not_required:  # skipping validation if party is not required
-				if account_type == "Receivable":
-					frappe.throw(
-						_("{0} {1}: Customer is required against Receivable account {2}").format(
-							self.voucher_type, self.voucher_no, self.account
-						)
-					)
-				elif account_type == "Payable":
-					frappe.throw(
-						_("{0} {1}: Supplier is required against Payable account {2}").format(
-							self.voucher_type, self.voucher_no, self.account
-						)
-					)
+    if not debit and not credit:
+        frappe.throw(f"Either debit or credit must be set for account {account}")
+    if not account:
+        frappe.throw("Account is required for GL Entry")
 
-		# Zero value transaction is not allowed
-		if not (
-			flt(self.debit, self.precision("debit"))
-			or flt(self.credit, self.precision("credit"))
-			or (
-				self.voucher_type == "Journal Entry"
-				and frappe.get_cached_value("Journal Entry", self.voucher_no, "voucher_type")
-				== "Exchange Gain Or Loss"
-			)
-		):
-			frappe.throw(
-				_("{0} {1}: Either debit or credit amount is required for {2}").format(
-					self.voucher_type, self.voucher_no, self.account
-				)
-			)
+    entry = {
+        "account": account,
+        "debit": flt(debit),
+        "credit": flt(credit),
+        "company": company,
+        "posting_date": posting_date,
+        "voucher_type": voucher_type,
+        "voucher_no": voucher_no,
+        "party_type": party_type,
+        "party": party,
+        "against": against,
+        "remarks": remarks,
+        "transaction_currency": transaction_currency,
+        "exchange_rate": exchange_rate,
+        "against_voucher_type": against_voucher_type,
+        "against_voucher": against_voucher,
+    }
 
-	def validate_account_details(self, adv_adj):
-		"""Account must be ledger, active and not freezed"""
+    # transaction currency amounts
+    if transaction_currency and exchange_rate:
+        entry["debit_in_transaction_currency"] = flt(debit) / flt(exchange_rate)
+        entry["credit_in_transaction_currency"] = flt(credit) / flt(exchange_rate)
 
-		ret = frappe.db.sql(
-			"""select is_group, docstatus, company
-			from tabAccount where name=%s""",
-			self.account,
-			as_dict=1,
-		)[0]
+    return entry
 
-		if ret.is_group == 1:
-			frappe.throw(
-				_(
-					"""{0} {1}: Account {2} is a Group Account and group accounts cannot be used in transactions"""
-				).format(self.voucher_type, self.voucher_no, self.account)
-			)
+def make_gl_entries(gl_map,doc):
+    if not gl_map:
+        return
 
-		if ret.docstatus == 2:
-			frappe.throw(
-				_("{0} {1}: Account {2} is inactive").format(self.voucher_type, self.voucher_no, self.account)
-			)
+    total_debit = 0
+    total_credit = 0
 
-		if ret.company != self.company:
-			frappe.throw(
-				_("{0} {1}: Account {2} does not belong to Company {3}").format(
-					self.voucher_type, self.voucher_no, self.account, self.company
-				)
-			)
-	def validate_party(self):
-		validate_party_frozen_disabled(self.party_type, self.party)
-		validate_account_party_type(self)
+    enriched_entries = []
+
+    for entry in gl_map:
+        entry = enrich_gl_entry(entry, doc)
+
+        total_debit += flt(entry.get("debit"))
+        total_credit += flt(entry.get("credit"))
+        frappe.errprint(f"Prepared GL Entry: debit: {entry.get('debit')}, credit: {entry.get('credit')}, account: {entry.get('account')}")
+        enriched_entries.append(entry)
+
+    if round(total_debit, 2) != round(total_credit, 2):
+        frappe.throw(
+            f"GL not balanced: Debit={total_debit}, Credit={total_credit}"
+        )
+
+    for entry in enriched_entries:
+        frappe.get_doc({
+            "doctype": "GL Entry",
+            **entry
+        }).insert(ignore_permissions=True)
+
+
+def cancel_gl_entries(doc, method=None):
+    entries = frappe.get_all(
+        "GL Entry",
+        filters={
+            "voucher_type": doc.doctype,
+            "voucher_no": doc.name
+        },
+        fields=["name", "debit", "credit", "account"]
+    )
+
+    for e in entries:
+        original = frappe.get_doc("GL Entry", e.name)
+
+        reverse = build_gl_entry(
+            account=original.account,
+            debit=original.credit,
+            credit=original.debit,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            remarks="Reversal Entry"
+        )
+
+        frappe.get_doc({
+            "doctype": "GL Entry",
+            **reverse,
+            "is_cancelled": 1
+        }).insert(ignore_permissions=True)
+
+def get_fiscal_year(posting_date):
+    fy = frappe.get_all(
+        "Fiscal Year",
+        filters={
+            "year_start_date": ["<=", posting_date],
+            "year_end_date": [">=", posting_date]
+        },
+        fields=["name"],
+        limit=1
+    )
+
+    if not fy:
+        frappe.throw(f"No Fiscal Year found for date {posting_date}")
+
+    return fy[0].name
+
+# adds additional fields to the gl entry based on the doc (like exchange rate, fiscal year, etc.)
+def enrich_gl_entry(entry, doc):
+    exchange_rate = flt(doc.conversion_rate or 1)
+
+    # 🔹 Transaction currency
+    entry["transaction_currency"] = doc.currency
+
+    # 🔹 Exchange rate
+    entry["exchange_rate"] = exchange_rate
+
+    # 🔹 Fiscal year
+    entry["fiscal_year"] = get_fiscal_year(doc.posting_date)
+
+    # 🔹 Transaction currency amounts
+    debit = flt(entry.get("debit"))
+    credit = flt(entry.get("credit"))
+
+    if exchange_rate <= 0:
+        frappe.throw("Invalid exchange rate")
+
+    entry["debit_in_company_currency"] = debit * exchange_rate
+    entry["credit_in_company_currency"] = credit * exchange_rate
+
+    return entry
+
+
+def merge_gl_entries(gl_map):
+    grouped = {}
+
+    for entry in gl_map:
+        key = (
+            entry.get("account"),
+            entry.get("party_type"),
+            entry.get("party"),
+            entry.get("cost_center", None),
+        )
+
+        if key not in grouped:
+            grouped[key] = entry.copy()
+            grouped[key]["debit"] = 0
+            grouped[key]["credit"] = 0
+
+        grouped[key]["debit"] += flt(entry.get("debit"))
+        grouped[key]["credit"] += flt(entry.get("credit"))
+    for entry in grouped.values():
+        if entry.get("against") and isinstance(entry["against"], str):
+            entry["against"] = ", ".join(set(entry["against"].split(",")))
+    return list(grouped.values())
