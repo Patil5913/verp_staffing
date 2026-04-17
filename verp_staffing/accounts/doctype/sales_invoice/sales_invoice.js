@@ -272,31 +272,63 @@ function calculate_taxes(frm) {
 
 function apply_discount(frm) {
 	let discount = flt(frm.doc.discount_amount || 0);
-
 	if (!discount) return;
 
 	let grand_total = flt(frm.doc.grand_total);
 
-	if (frm.doc.apply_discount_on === "Grand Total") {
-		let ratio = (grand_total - discount) / grand_total;
+	// 🔹 Identify actual taxes
+	let actual_tax_total = 0;
 
-		// Adjust net total
-		let new_net_total = flt(frm.doc.net_total) * ratio;
-		frm.set_value("net_total", new_net_total);
+	(frm.doc.taxes || []).forEach((tax) => {
+		if (["Actual", "On Item Quantity"].includes(tax.charge_type)) {
+			actual_tax_total += flt(tax.tax_amount);
+		}
+	});
 
-		// Adjust taxes
-		(frm.doc.taxes || []).forEach((tax) => {
-			tax.tax_amount = flt(tax.tax_amount) * ratio;
-		});
+	// 🔹 distributable base
+	let distributable_total = grand_total - actual_tax_total;
 
-		// Recalculate taxes again (important)
-		calculate_taxes(frm);
-	} else if (frm.doc.apply_discount_on === "Net Total") {
-		let new_net_total = flt(frm.doc.net_total) - discount;
-		frm.set_value("net_total", new_net_total);
+	if (!distributable_total) return;
 
-		calculate_taxes(frm);
+	let ratio = discount / distributable_total;
+
+	// 🔹 adjust items (net_total)
+	let new_net_total = 0;
+
+	frm.doc.items.forEach((item) => {
+		let reduction = flt(item.amount) * ratio;
+		item.net_amount = flt(item.amount - reduction);
+		new_net_total += item.net_amount;
+	});
+
+	let diff = flt(frm.doc.total) - new_net_total;
+
+	if (Math.abs(diff) > 0.0001 && frm.doc.items.length) {
+		frm.doc.items[frm.doc.items.length - 1].net_amount += diff;
 	}
+	frm.set_value("net_total", new_net_total);
+
+	// 🔹 adjust taxes
+	let total_tax = 0;
+
+	(frm.doc.taxes || []).forEach((tax) => {
+		if (["Actual", "On Item Quantity"].includes(tax.charge_type)) {
+			tax.tax_amount_after_discount_amount = tax.tax_amount;
+		} else {
+			let reduction = tax.tax_amount * ratio;
+			tax.tax_amount_after_discount_amount = flt(tax.tax_amount - reduction);
+		}
+
+		total_tax += flt(tax.tax_amount_after_discount_amount);
+	});
+
+	frm.set_value("total_taxes_and_charges", total_tax);
+
+	// 🔹 recompute grand total
+	frm.set_value("grand_total", new_net_total + total_tax);
+
+	frm.refresh_field("items");
+	frm.refresh_field("taxes");
 }
 
 function calculate_base_totals(frm) {

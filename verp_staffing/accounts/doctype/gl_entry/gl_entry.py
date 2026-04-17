@@ -39,6 +39,8 @@ def build_gl_entry(
 
     if not debit and not credit:
         frappe.throw(f"Either debit or credit must be set for account {account}")
+    if not account:
+        frappe.throw("Account is required for GL Entry")
 
     entry = {
         "account": account,
@@ -79,7 +81,7 @@ def make_gl_entries(gl_map,doc):
 
         total_debit += flt(entry.get("debit"))
         total_credit += flt(entry.get("credit"))
-
+        frappe.errprint(f"Prepared GL Entry: debit: {entry.get('debit')}, credit: {entry.get('credit')}, account: {entry.get('account')}")
         enriched_entries.append(entry)
 
     if round(total_debit, 2) != round(total_credit, 2):
@@ -164,3 +166,27 @@ def enrich_gl_entry(entry, doc):
     entry["credit_in_company_currency"] = credit * exchange_rate
 
     return entry
+
+
+def merge_gl_entries(gl_map):
+    grouped = {}
+
+    for entry in gl_map:
+        key = (
+            entry.get("account"),
+            entry.get("party_type"),
+            entry.get("party"),
+            entry.get("cost_center", None),
+        )
+
+        if key not in grouped:
+            grouped[key] = entry.copy()
+            grouped[key]["debit"] = 0
+            grouped[key]["credit"] = 0
+
+        grouped[key]["debit"] += flt(entry.get("debit"))
+        grouped[key]["credit"] += flt(entry.get("credit"))
+    for entry in grouped.values():
+        if entry.get("against") and isinstance(entry["against"], str):
+            entry["against"] = ", ".join(set(entry["against"].split(",")))
+    return list(grouped.values())

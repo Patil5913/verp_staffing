@@ -46,7 +46,7 @@ class SalesInvoice(Document):
 		self.calculate_items()
 		self.calculate_totals()
 		self.calculate_taxes()
-		self.calculate_grand_total()
+		self.apply_discount_on_components()
 		self.calculate_base_totals()
 		self.calculate_rounding()	
 		self.validate_accounts()
@@ -221,30 +221,61 @@ class SalesInvoice(Document):
 		self.net_total = self.total
 
 	def calculate_taxes(self):
-		self.total_taxes_and_charges = 0
+		net_total = flt(self.net_total)
+		cumulative_total = net_total
 
-		for tax in self.taxes:
+		if not self.taxes:
+			self.total_taxes_and_charges = 0
+			return
+
+		for i, tax in enumerate(self.taxes):
+			tax_amount = 0
+
+			# CASE 1: Actual
 			if tax.charge_type == "Actual":
-				tax.tax_amount = flt(tax.tax_amount)
+				tax_amount = flt(tax.tax_amount or 0)
 
+			# CASE 2: On Net Total
 			elif tax.charge_type == "On Net Total":
-				tax.tax_amount = (flt(self.net_total) * flt(tax.rate)) / 100
+				tax_amount = (net_total * flt(tax.rate)) / 100
+
+			# CASE 3: On Previous Row Amount
+			elif tax.charge_type == "On Previous Row Amount":
+				if i == 0:
+					frappe.throw("Row 1 cannot use 'On Previous Row Amount'")
+				prev = self.taxes[i - 1]
+				tax_amount = (flt(prev.tax_amount) * flt(tax.rate)) / 100
+
+			# CASE 4: On Previous Row Total
+			elif tax.charge_type == "On Previous Row Total":
+				if i == 0:
+					frappe.throw("Row 1 cannot use 'On Previous Row Total'")
+				prev = self.taxes[i - 1]
+				tax_amount = (flt(prev.total) * flt(tax.rate)) / 100
+
+			# CASE 5: On Item Quantity
+			elif tax.charge_type == "On Item Quantity":
+				total_qty = sum(flt(item.qty) for item in self.items)
+				tax_amount = total_qty * flt(tax.rate)
 
 			else:
 				frappe.throw(f"Unsupported tax type: {tax.charge_type}")
 
-			self.total_taxes_and_charges += flt(tax.tax_amount)
+			tax.tax_amount = flt(tax_amount)
 
+			# cumulative total (same as JS)
+			cumulative_total += tax.tax_amount
+			tax.total = cumulative_total
+
+		self.total_taxes_and_charges = cumulative_total - net_total
+
+		# base currency
 		self.base_total_taxes_and_charges = (
 			flt(self.total_taxes_and_charges) * flt(self.conversion_rate)
 		)
 
-	def calculate_grand_total(self):
-		self.grand_total = (
-			flt(self.net_total)
-			+ flt(self.total_taxes_and_charges)
-			- flt(self.discount_amount or 0)
-		)
+		# also set grand total here (to match JS flow)
+		self.grand_total = cumulative_total
 
 	def calculate_base_totals(self):
 		if not self.conversion_rate:
@@ -269,7 +300,7 @@ class SalesInvoice(Document):
 			validate_account(
 				account=tax.account_head,
 				company=self.company,
-				expected_types=["Tax"],
+				expected_types=["Tax","Chargeable","Expense"],
 				label="Tax Account",
 				row=tax.idx
 			)
@@ -282,7 +313,6 @@ class SalesInvoice(Document):
 			validate_account(
 				account=self.additional_discount_account,
 				company=self.company,
-				expected_types=["Expense"],
 				label="Discount Account"
 			)
 
@@ -325,6 +355,52 @@ class SalesInvoice(Document):
 
 		for item in self.items:
 			self.calculate_item_amount(item)
+
+	def apply_discount_on_components(self):
+		discount = flt(self.discount_amount or 0)
+		if not discount:
+			return
+
+		grand_total = flt(self.net_total + self.total_taxes_and_charges)
+
+		# Identify non-distributable taxes
+		actual_tax_total = 0
+		for tax in self.taxes:
+			if tax.charge_type in ["Actual", "On Item Quantity"]:
+				actual_tax_total += flt(tax.tax_amount)
+
+		distributable_total = grand_total - actual_tax_total
+		if not distributable_total:
+			return
+
+		ratio = discount / distributable_total
+
+		# Adjust items
+		new_net_total = 0
+		for item in self.items:
+			reduction = flt(item.amount) * ratio
+			item.net_amount = flt(item.amount - reduction)
+			new_net_total += item.net_amount
+
+		self.net_total = new_net_total
+
+		# Adjust taxes
+		total_tax = 0
+		for tax in self.taxes:
+			if tax.charge_type in ["Actual", "On Item Quantity"]:
+				tax.tax_amount_after_discount_amount = tax.tax_amount
+			else:
+				reduction = flt(tax.tax_amount) * ratio
+				tax.tax_amount_after_discount_amount = flt(
+					tax.tax_amount - reduction
+				)
+
+			total_tax += flt(tax.tax_amount_after_discount_amount)
+
+		self.total_taxes_and_charges = total_tax
+
+		# Final grand total
+		self.grand_total = new_net_total + total_tax
 
 	def set_against_income_account(self):
 		"""Set against account for debit to account"""
@@ -506,11 +582,16 @@ def get_sales_invoice_gl_map(doc):
         account = frappe.db.get_value(
             "Company", doc.company, "round_off_account"
         )
+        if not account:
+            frappe.throw(
+                _("Please set Round Off Account in Company {0}").format(frappe.bold(doc.company))
+            )
 
-        if doc.rounding_adjustment > 0:
+        frappe.errprint(f"Rounding Adjustment: {doc.rounding_adjustment}, Account: {account}")
+        if doc.rounding_adjustment < 0:
             gl_map.append(build_gl_entry(
                 account=account,
-                debit=doc.rounding_adjustment,
+                debit=abs(doc.rounding_adjustment),
                 company=doc.company,
                 posting_date=doc.posting_date,
                 voucher_type=doc.doctype,
