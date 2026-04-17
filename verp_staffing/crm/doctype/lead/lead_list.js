@@ -24,6 +24,24 @@ frappe.listview_settings["Lead"] = {
 				});
 			}
 		}, 50);
+
+		const page = listview.page;
+		if (!page) return;
+
+		// setTimeout(() => {
+		// 	page.wrapper.find(".add-new-column").hide();
+
+		// 	// Hide "Select Kanban" button
+		// 	page.inner_toolbar.find("button").each(function () {
+		// 		if ($(this).text().includes("Select Kanban")) {
+		// 			$(this).parent().hide();
+		// 		}
+		// 	});
+		// }, 50);
+
+		// setTimeout(() => {
+		// 	page.wrapper.find(".add-new-column").hide();
+		// }, 50);
 	},
 	get_indicator: function (doc) {
 		const status_colors = {
@@ -39,7 +57,7 @@ frappe.listview_settings["Lead"] = {
 
 function open_custom_dialog() {
 	let dialog = new frappe.ui.Dialog({
-		title: "Create Opportunity",
+		title: "Create Lead",
 
 		fields: [
 			{
@@ -51,8 +69,8 @@ function open_custom_dialog() {
 			{
 				fieldname: "personal_phone_number",
 				fieldtype: "Data",
-				label: "Phone Number (Provide country code with number)",
-				placeholder: "Exp: +1 xxx xxx xxxx",
+				label: "Phone Number (Provide country code with number Exp: +1xxxxxxxxxx)",
+				placeholder: "Exp: +1xxxxxxxxxx or +91xxxxxxxxxx",
 			},
 			{
 				fieldname: "email",
@@ -64,10 +82,9 @@ function open_custom_dialog() {
 		primary_action_label: "Save",
 
 		primary_action(values) {
-            
-            if (values.personal_phone_number){
-                validate_phone(values.personal_phone_number, "Phone Number");
-            }
+			if (values.personal_phone_number) {
+				validate_phone(values.personal_phone_number, "Phone Number");
+			}
 
 			let doc = {
 				doctype: "Lead",

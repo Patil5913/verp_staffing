@@ -9,7 +9,7 @@ frappe.ui.form.on("ERP Configuration", {
 			callback(r) {
 				const services = r.message || [];
 				const servicesPlus = [...services, "Lead" , "Customer"];
-				const servicesPlusFordisplay = [...services , "Customer"];
+				const servicesPlusFordisplay = [...services , "Customer" , "Opportunity"];
 
 				render_field_selector_widget(
 					frm,

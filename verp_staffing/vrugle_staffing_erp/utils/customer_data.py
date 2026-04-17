@@ -31,7 +31,7 @@ def get_data_by_customer(customer, fields):
         source_doctype,
         fields=normal_fields,
         filters=[
-            ["Doctype Reference", "reference_doctype", "=", "Customer"],
+            # ["Doctype Reference", "reference_doctype", "=", "Customer"],
             ["Doctype Reference", "reference_person", "=", customer],
         ],
         order_by="`tabLead Detail Form`.creation desc",
