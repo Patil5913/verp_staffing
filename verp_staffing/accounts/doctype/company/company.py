@@ -127,7 +127,7 @@ class Company(NestedSet):
 			self.existing_company = None
 			self.create_chart_of_accounts_based_on = "Standard Template"
 			if not self.chart_of_accounts:
-				self.chart_of_accounts = "Standard"
+				self.chart_of_accounts = "India - Chart of Accounts"
 
 	def check_country_change(self):
 		frappe.flags.country_change = False
