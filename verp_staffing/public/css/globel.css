@@ -196,7 +196,7 @@ body.verp-protected::after {
 }
 
 
-/* :root {
+:root {
     --primary: #2563eb;        
     --primary-color: #2563eb;
 
@@ -234,4 +234,4 @@ body.verp-protected::after {
 
 .navbar .navbar-brand {
     color: #ffffff;
-} */
+}
