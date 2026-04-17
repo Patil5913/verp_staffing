@@ -60,8 +60,6 @@
   "column_break_ftor",
   "additional_discount_percentage",
   "discount_amount",
-  "sec_tax_breakup",
-  "other_charges_calculation",
   "payments_tab",
   "cash_bank_account",
   "section_break_ylkx",
@@ -440,20 +438,6 @@
    "options": "Account"
   },
   {
-   "collapsible": 1,
-   "fieldname": "sec_tax_breakup",
-   "fieldtype": "Section Break",
-   "label": "Tax Breakdown"
-  },
-  {
-   "fieldname": "other_charges_calculation",
-   "fieldtype": "Text Editor",
-   "label": "Taxes and Charges Calculation",
-   "no_copy": 1,
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
    "fieldname": "debit_to",
    "fieldtype": "Link",
    "label": "Debit To",
@@ -526,7 +510,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-14 16:17:44.912901",
+ "modified": "2026-04-16 16:29:29.355298",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",

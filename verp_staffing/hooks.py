@@ -242,6 +242,10 @@ doc_events = {
         "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",
         "on_update": "verp_staffing.marketing.doctype.interview.interview.sync_kanban",
     },
+    "Sales Invoice": {
+        "on_submit": "verp_staffing.accounts.doctype.sales_invoice.gl.on_submit_sales_invoice",
+        "on_cancel": "verp_staffing.accounts.doctype.sales_invoice.gl.on_cancel_sales_invoice"
+    }
 }
 
 # Scheduled Tasks

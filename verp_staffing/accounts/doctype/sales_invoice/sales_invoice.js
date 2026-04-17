@@ -3,8 +3,9 @@
 
 frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {
-		handle_currency_ui(frm);
-		calculate_invoice(frm);
+		// handle_currency_ui(frm);
+		// calculate_invoice(frm);
+		set_currency_labels(frm);
 	},
 	onload(frm) {
 		set_account_queries(frm);
@@ -14,6 +15,7 @@ frappe.ui.form.on("Sales Invoice", {
 	},
 	company(frm) {
 		handle_currency_ui(frm);
+		handle_discount_account(frm);
 		calculate_invoice(frm);
 		set_account_queries(frm);
 		if (!frm.doc.company) return;
@@ -32,6 +34,7 @@ frappe.ui.form.on("Sales Invoice", {
 	},
 	currency(frm) {
 		handle_currency_ui(frm);
+		set_currency_labels(frm);
 	},
 	conversion_rate(frm) {
 		calculate_invoice(frm);
@@ -55,6 +58,7 @@ frappe.ui.form.on("Sales Invoice", {
 	},
 	discount_amount(frm) {
 		calculate_invoice(frm);
+		handle_discount_account(frm);
 	},
 });
 
@@ -184,15 +188,17 @@ function calculate_invoice(frm) {
 
 	// STEP 1: Items + Net Total
 	let net_total = 0;
-
+	let total_qty = 0;
 	frm.doc.items.forEach((row) => {
 		const amount = flt(row.qty) * flt(row.rate);
 		row.amount = amount;
 		net_total += amount;
+		total_qty += flt(row.qty);
 	});
 
 	frm.set_value("total", net_total);
 	frm.set_value("net_total", net_total);
+	frm.set_value("total_qty", total_qty);
 
 	// STEP 2: Taxes
 	calculate_taxes(frm);
@@ -299,6 +305,10 @@ function calculate_base_totals(frm) {
 	frm.set_value("base_total", flt(frm.doc.total) * rate);
 	frm.set_value("base_net_total", flt(frm.doc.net_total) * rate);
 	frm.set_value("base_grand_total", flt(frm.doc.grand_total) * rate);
+	frm.set_value(
+		"base_total_taxes_and_charges",
+		flt(frm.doc.total_taxes_and_charges) * flt(frm.doc.conversion_rate || 1),
+	);
 }
 
 function set_account_queries(frm) {
@@ -355,6 +365,24 @@ function set_account_queries(frm) {
 			},
 		};
 	});
+
+	frm.set_query("additional_discount_account", () => {
+		if (!frm.doc.company) {
+			return {
+				filters: {
+					name: "__invalid__",
+				},
+			};
+		}
+
+		return {
+			filters: {
+				company: frm.doc.company,
+				is_group: 0,
+				report_type: "Profit and Loss",
+			},
+		};
+	});
 }
 
 function calculate_rounding(frm) {
@@ -377,4 +405,72 @@ function calculate_rounding(frm) {
 	let rate = flt(frm.doc.conversion_rate || 1);
 
 	frm.set_value("base_rounded_total", rounded * rate);
+
+	frm.set_value("outstanding_amount", rounded);
+}
+
+async function set_currency_labels(frm) {
+	const currency = frm.doc.currency || "";
+	const company_currency =
+		(await frappe.db.get_value("Company", frm.doc.company, "default_currency")) || "";
+
+	const fields = [
+		"total",
+		"net_total",
+		"grand_total",
+		"rounded_total",
+		"discount_amount",
+		"rounding_adjustment",
+		"total_taxes_and_charges",
+	];
+	fields.forEach((field) => {
+		frm.set_df_property(
+			field,
+			"label",
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${currency})`,
+		);
+	});
+	const company_currency_field = [
+		"base_total",
+		"base_net_total",
+		"base_grand_total",
+		"base_rounded_total",
+		"base_rounding_adjustment",
+		"base_total_taxes_and_charges",
+		"base_in_words",
+	];
+	company_currency_field.forEach((field) => {
+		if (
+			currency &&
+			company_currency &&
+			currency !== company_currency.message.default_currency
+		) {
+			console.log(
+				"Different currency, showing conversion rate and company currency fields",
+				currency,
+				company_currency.message.default_currency,
+			);
+			frm.set_df_property(field, "hidden", false);
+		} else {
+			frm.set_df_property(field, "hidden", true);
+		}
+
+		frm.set_df_property(
+			field,
+			"label",
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency.message.default_currency})`,
+		);
+	});
+}
+
+function handle_discount_account(frm) {
+	if (!frm.doc.company) return;
+
+	if (flt(frm.doc.discount_amount) > 0 && !frm.doc.additional_discount_account) {
+		frappe.db.get_value("Company", frm.doc.company, "default_discount_account").then((r) => {
+			if (r.message && r.message.default_discount_account) {
+				frm.set_value("additional_discount_account", r.message.default_discount_account);
+			}
+		});
+	}
 }

@@ -8,6 +8,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import add_days, cint, cstr, flt, formatdate, get_link_to_form, getdate, nowdate,now_datetime
 from frappe.model.document import Document
 from verp_staffing.accounts.doctype.company.company import get_company_currency
+from frappe.utils import money_in_words
 
 class UOMMustBeIntegerError(frappe.ValidationError):
 	pass
@@ -56,9 +57,9 @@ class SalesInvoice(Document):
 		self.calculate_items()
 
 		self.set_against_income_account()
-
+		self.set_indicator()
+		self.set_in_words()
 		self.set_status()
-
 
 	def validate_auto_set_posting_date(self):
 		# Don't auto set the posting date and time if invoice is amended
@@ -234,6 +235,10 @@ class SalesInvoice(Document):
 
 			self.total_taxes_and_charges += flt(tax.tax_amount)
 
+		self.base_total_taxes_and_charges = (
+			flt(self.total_taxes_and_charges) * flt(self.conversion_rate)
+		)
+
 	def calculate_grand_total(self):
 		self.grand_total = (
 			flt(self.net_total)
@@ -269,6 +274,10 @@ class SalesInvoice(Document):
 				row=tax.idx
 			)
 	def validate_discount_account(self):
+		if flt(self.discount_amount) > 0:
+			if not self.additional_discount_account:
+				frappe.throw("Discount Account is mandatory when discount is applied")
+
 		if self.discount_amount and self.additional_discount_account:
 			validate_account(
 				account=self.additional_discount_account,
@@ -333,14 +342,12 @@ class SalesInvoice(Document):
 
 		outstanding_amount = flt(self.outstanding_amount, self.precision("outstanding_amount"))
 		total = get_total_in_party_account_currency(self)
-
+		frappe.errprint(f"Status:{status}")
 		if not status:
 			if self.docstatus == 2:
 				status = "Cancelled"
 			elif self.docstatus == 1:
-				if self.is_internal_transfer():
-					self.status = "Internal Transfer"
-				elif is_overdue(self, total):
+				if is_overdue(self, total):
 					self.status = "Overdue"
 				elif 0 < outstanding_amount < total:
 					self.status = "Partly Paid"
@@ -360,32 +367,25 @@ class SalesInvoice(Document):
 
 			else:
 				self.status = "Draft"
-
+		frappe.errprint(f"Final Status:{self.status}")
 		if update:
 			self.db_set("status", self.status, update_modified=update_modified)
+	def set_in_words(self):
+		self.in_words = money_in_words(self.rounded_total or self.grand_total, self.currency)
 
+		self.base_in_words = money_in_words(
+			self.base_rounded_total or self.base_grand_total,
+			get_company_currency(self.company)
+		)
 
 def is_overdue(doc, total):
 	outstanding_amount = flt(doc.outstanding_amount, doc.precision("outstanding_amount"))
 	if outstanding_amount <= 0:
 		return
-
-	today = getdate()
-
-	# calculate payable amount till date
-	payment_amount_field = (
-		"base_payment_amount" if doc.party_account_currency != doc.currency else "payment_amount"
-	)
-
-	payable_amount = flt(
-		sum(
-			payment.get(payment_amount_field)
-			for payment in doc.payment_schedule
-			if getdate(payment.due_date) < today
-		),
-		doc.precision("outstanding_amount"),
-	)
-
+	if not doc.due_date:
+		return False
+	payable_amount = 0 #sample for now need to be updated when adding payment logic
+	frappe.errprint(f"Total:{total}, Outstanding Amount:{outstanding_amount}, Payable Amount:{payable_amount}")
 	return flt(total - outstanding_amount, doc.precision("outstanding_amount")) < payable_amount
 
 def get_total_in_party_account_currency(doc):
@@ -441,3 +441,91 @@ def validate_account(
 
     return acc
 
+from verp_staffing.accounts.doctype.gl_entry.gl_entry import build_gl_entry
+def get_sales_invoice_gl_map(doc):
+    gl_map = []
+
+    base_amount = doc.rounded_total or doc.grand_total
+
+    # 1. Debtors (DR)
+    gl_map.append(build_gl_entry(
+        account=doc.debit_to,
+        debit=base_amount,
+        company=doc.company,
+        posting_date=doc.posting_date,
+        voucher_type=doc.doctype,
+        voucher_no=doc.name,
+        party_type="Customer",
+        party=doc.customer,
+        against=doc.against_income_account,
+        remarks="Sales Invoice",
+		against_voucher_type=doc.doctype,
+    	against_voucher=doc.name
+    ))
+
+    # 2. Income (CR)
+    for item in doc.items:
+        gl_map.append(build_gl_entry(
+            account=item.income_account,
+            credit=item.amount,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            against=doc.customer,
+            remarks="Income"
+        ))
+
+    # 3. Taxes (CR)
+    for tax in doc.taxes:
+        gl_map.append(build_gl_entry(
+            account=tax.account_head,
+            credit=tax.tax_amount,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            against=doc.customer,
+            remarks="Tax"
+        ))
+
+    # 4. Discount (DR)
+    if doc.discount_amount and doc.additional_discount_account:
+        gl_map.append(build_gl_entry(
+            account=doc.additional_discount_account,
+            debit=doc.discount_amount,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            remarks="Discount"
+        ))
+
+    # 5. Rounding
+    if doc.rounding_adjustment:
+        account = frappe.db.get_value(
+            "Company", doc.company, "round_off_account"
+        )
+
+        if doc.rounding_adjustment > 0:
+            gl_map.append(build_gl_entry(
+                account=account,
+                debit=doc.rounding_adjustment,
+                company=doc.company,
+                posting_date=doc.posting_date,
+                voucher_type=doc.doctype,
+                voucher_no=doc.name,
+                remarks="Rounding Adjustment"
+            ))
+        else:
+            gl_map.append(build_gl_entry(
+                account=account,
+                credit=abs(doc.rounding_adjustment),
+                company=doc.company,
+                posting_date=doc.posting_date,
+                voucher_type=doc.doctype,
+                voucher_no=doc.name,
+                remarks="Rounding Adjustment"
+            ))
+
+    return gl_map
