@@ -22,13 +22,22 @@ frappe.ui.form.on("Opportunity", {
 		}
 	},
 
-	refresh(frm) {
+	async refresh(frm) {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
+
+		const display_fields = await window.get_display_fields(frm.doctype);
+
+		window.render_customer_related_html({
+			frm: frm,
+			html_field: "lead_details_html",
+			customer: frm.doc.name,
+			fields: display_fields,
+		});
+
 		if (frm.doc.status == "Converted") {
 			frm.set_df_property("status", "read_only", 1);
 		}
-
 		frm.set_query("opportunity_owner", function () {
 			return {
 				filters: [["Employee Assignment Detail", "department", "=", "Sales"]],
@@ -158,11 +167,9 @@ frappe.ui.form.on("Opportunity", {
 		frm.doc.__last_sync_status = frm.doc.status;
 	},
 
-
 	opportunity_from_lead: function (frm) {
 		frm.trigger("fetch_source_details");
 		if (frm.doc.opportunity_from_lead) {
-
 			let source_name = frm.doc.opportunity_from_lead;
 
 			frappe.db.get_value("Lead", source_name, "name1").then((r) => {

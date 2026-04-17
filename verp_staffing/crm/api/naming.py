@@ -8,6 +8,7 @@ DOCTYPE_PREFIX_MAP = {
     "Technical Other Services": "TOS",
     "Cover Letter" : "CL",
     "Marketing Other Services" : "MOS",
+    "Lead Detail Form" : "LDF"
 }
 
 def sanitize(value):

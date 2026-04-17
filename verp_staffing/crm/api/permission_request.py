@@ -142,14 +142,21 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
             except Exception:
                 continue
 
-            columns = {
-                child_df.fieldname: child_df.label
-                or child_df.fieldname.replace("_", " ").title()
-                for child_df in child_meta.fields
-                if child_df.fieldtype not in skip_fieldtypes
-                and child_df.fieldname not in system_fields
-                and child_df.fieldname
-            }
+            columns = {}
+
+            for child_df in child_meta.fields:
+                if (
+                    child_df.fieldtype not in skip_fieldtypes
+                    and child_df.fieldname not in system_fields
+                    and child_df.fieldname
+                ):
+                    columns[child_df.fieldname] = {
+                        "label": child_df.label or child_df.fieldname.replace("_", " ").title(),
+                        "fieldtype": child_df.fieldtype,
+                        "options": child_df.options or "",
+                        "reqd": child_df.reqd or 0,
+                        "description": child_df.description or "",
+                    }
 
             if columns:
                 table_fields[fieldname] = {
@@ -928,7 +935,7 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
             updated_fields[field] = new_value
 
     data["status"] = "Approved"
-    data["approved_by"] = manager_employee
+    data["approved_by"] = manager_employee  
     data["approved_fields"] = approved_fields
     data["rejected_fields"] = rejected_fields
     data["approved_at"] = datetime.now(timezone.utc).isoformat()

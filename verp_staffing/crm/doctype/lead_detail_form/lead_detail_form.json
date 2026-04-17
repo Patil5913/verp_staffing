@@ -356,8 +356,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Phone Number (Provide country code with number)",
-   "permlevel": 2,
-   "placeholder": "Exp: +1 xxx xxx xxxx"
+   "placeholder": "Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx"
   },
   {
    "fieldname": "authentication_section",
@@ -428,7 +427,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-16 10:42:54.919307",
+ "modified": "2026-04-14 17:36:25.611804",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -437,7 +436,7 @@
  "permissions": [
   {
    "read": 1,
-   "role": "marketing Master Manager"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -445,18 +444,19 @@
   },
   {
    "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Sales Master Manager"
   },
   {
-   "create": 1,
-   "delete": 1,
    "read": 1,
-   "role": "Sales Person",
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager"
+   "role": "Senior Resume Person"
   },
   {
    "create": 1,
@@ -472,15 +472,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Marketing Manager"
   },
   {
    "read": 1,
@@ -488,15 +480,7 @@
   },
   {
    "read": 1,
-   "role": "Marketing Master Manager"
-  },
-  {
-   "read": 1,
    "role": "Marketing Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager"
   },
   {
    "read": 1,
@@ -504,39 +488,15 @@
   },
   {
    "read": 1,
-   "role": "Senior Resume Person"
+   "role": "Marketing Mentor"
   },
   {
    "read": 1,
-   "role": "RUC Person"
-  },
-  {
-   "read": 1,
-   "role": "Support Person"
-  },
-  {
-   "read": 1,
-   "role": "JDC"
-  },
-  {
-   "read": 1,
-   "role": "Training Person"
+   "role": "Senior Recruiter"
   },
   {
    "read": 1,
    "role": "Technical Coordinator"
-  },
-  {
-   "read": 1,
-   "role": "JDC"
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "JDC"
   },
   {
    "read": 1,
@@ -544,15 +504,27 @@
   },
   {
    "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Support Person"
   },
   {
    "read": 1,
-   "role": "Technical Coordinator"
+   "role": "RUC Person"
   },
   {
    "read": 1,
-   "role": "RUC Person"
+   "role": "Training Person"
+  },
+  {
+   "read": 1,
+   "role": "JDC"
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person"
   },
   {
    "read": 1,
