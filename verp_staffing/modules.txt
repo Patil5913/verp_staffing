@@ -12,6 +12,5 @@ Onboarding
 ESign
 Email Inbox
 Stock
-<<<<<<< HEAD
 Selling
 Buying

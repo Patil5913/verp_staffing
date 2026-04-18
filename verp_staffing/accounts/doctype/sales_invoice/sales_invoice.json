@@ -54,7 +54,6 @@
   "outstanding_amount",
   "disable_rounded_total",
   "additional_discount_section",
-  "apply_discount_on",
   "base_discount_amount",
   "additional_discount_account",
   "column_break_ftor",
@@ -379,7 +378,7 @@
    "fieldtype": "Currency",
    "label": "Outstanding Amount",
    "no_copy": 1,
-   "options": "party_account_currency",
+   "options": "currency",
    "print_hide": 1,
    "read_only": 1
   },
@@ -395,15 +394,6 @@
    "fieldname": "additional_discount_section",
    "fieldtype": "Section Break",
    "label": "Additional Discount"
-  },
-  {
-   "default": "Grand Total",
-   "fieldname": "apply_discount_on",
-   "fieldtype": "Select",
-   "label": "Apply Additional Discount On",
-   "length": 15,
-   "options": "\nGrand Total\nNet Total",
-   "print_hide": 1
   },
   {
    "fieldname": "column_break_ftor",
@@ -510,7 +500,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-16 16:29:29.355298",
+ "modified": "2026-04-18 14:13:18.536421",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",

@@ -3,20 +3,19 @@
 
 frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {
-		// handle_currency_ui(frm);
-		// calculate_invoice(frm);
 		set_currency_labels(frm);
 	},
 	onload(frm) {
 		set_account_queries(frm);
 	},
 	validate(frm) {
-		calculate_invoice(frm);
+		console.log("Validating invoice and calculating totals");
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	company(frm) {
 		handle_currency_ui(frm);
 		handle_discount_account(frm);
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 		set_account_queries(frm);
 		if (!frm.doc.company) return;
 
@@ -35,29 +34,22 @@ frappe.ui.form.on("Sales Invoice", {
 	currency(frm) {
 		handle_currency_ui(frm);
 		set_currency_labels(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	conversion_rate(frm) {
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	additional_discount_percentage(frm) {
-		console.log(
-			"Calculating discount amount based on percentage...",
-			frm.doc.additional_discount_percentage,
-		);
-		let discount_on = frm.doc.apply_discount_on;
 		let discount_amount = 0;
-		if (discount_on === "Net Total") {
-			discount_amount =
-				(flt(frm.doc.net_total) * flt(frm.doc.additional_discount_percentage || 0)) / 100;
-		} else if (discount_on === "Grand Total") {
-			discount_amount =
-				(flt(frm.doc.grand_total) * flt(frm.doc.additional_discount_percentage || 0)) /
-				100;
-		}
+		discount_amount =
+			(flt(frm.doc.total) * flt(frm.doc.additional_discount_percentage || 0)) / 100;
+
 		frm.set_value("discount_amount", discount_amount);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	discount_amount(frm) {
-		calculate_invoice(frm);
+		console.log("discount",frm.doc.discount_amount)
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 		handle_discount_account(frm);
 	},
 });
@@ -90,12 +82,10 @@ frappe.ui.form.on("Sales Invoice Item", {
 		}
 	},
 	qty(frm, cdt, cdn) {
-		calculate_amount(frm, cdt, cdn);
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	rate(frm, cdt, cdn) {
-		calculate_invoice(frm);
-		calculate_amount(frm, cdt, cdn);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
 
@@ -120,27 +110,21 @@ frappe.ui.form.on("Sales Taxes and Charges", {
 		}
 	},
 	rate(frm) {
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	tax_amount(frm) {
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	taxes_add(frm) {
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	taxes_remove(frm) {
-		calculate_invoice(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	row_id(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
-
-function calculate_amount(frm, cdt, cdn) {
-	const row = locals[cdt][cdn];
-
-	if (row.qty != null && row.rate != null) {
-		const amount = flt(row.qty) * flt(row.rate);
-		frappe.model.set_value(cdt, cdn, "amount", amount);
-	}
-}
 
 function handle_currency_ui(frm) {
 	if (!frm.doc.company || !frm.doc.currency) return;
@@ -181,166 +165,6 @@ function toggle_base_fields(frm, show) {
 			frm.set_value(f, 0);
 		}
 	});
-}
-
-function calculate_invoice(frm) {
-	if (!frm.doc.items || frm.doc.items.length === 0) return;
-
-	// STEP 1: Items + Net Total
-	let net_total = 0;
-	let total_qty = 0;
-	frm.doc.items.forEach((row) => {
-		const amount = flt(row.qty) * flt(row.rate);
-		row.amount = amount;
-		net_total += amount;
-		total_qty += flt(row.qty);
-	});
-
-	frm.set_value("total", net_total);
-	frm.set_value("net_total", net_total);
-	frm.set_value("total_qty", total_qty);
-
-	// STEP 2: Taxes
-	calculate_taxes(frm);
-
-	// STEP 3: Discount handling
-	apply_discount(frm);
-
-	// STEP 4: Base currency
-	calculate_base_totals(frm);
-
-	// STEP 5: Rounding
-	calculate_rounding(frm);
-
-	frm.refresh_field("items");
-	frm.refresh_field("taxes");
-}
-
-function calculate_taxes(frm) {
-	let net_total = flt(frm.doc.net_total);
-	let cumulative_total = net_total;
-
-	(frm.doc.taxes || []).forEach((tax, i) => {
-		let tax_amount = 0;
-
-		// CASE 1: Actual
-		if (tax.charge_type === "Actual") {
-			tax_amount = flt(tax.tax_amount || 0);
-		}
-
-		// CASE 2: On Net Total
-		else if (tax.charge_type === "On Net Total") {
-			tax_amount = (net_total * flt(tax.rate)) / 100;
-		}
-
-		// CASE 3: On Previous Row Amount
-		else if (tax.charge_type === "On Previous Row Amount") {
-			let prev = frm.doc.taxes[i - 1];
-			if (!prev) {
-				frappe.throw("Previous row not found for tax calculation");
-			}
-			tax_amount = (flt(prev.tax_amount) * flt(tax.rate)) / 100;
-		}
-
-		// CASE 4: On Previous Row Total
-		else if (tax.charge_type === "On Previous Row Total") {
-			let prev = frm.doc.taxes[i - 1];
-			if (!prev) {
-				frappe.throw("Previous row not found for tax calculation");
-			}
-			tax_amount = (flt(prev.total) * flt(tax.rate)) / 100;
-		}
-
-		// CASE 5: On Item Quantity
-		else if (tax.charge_type === "On Item Quantity") {
-			let total_qty = 0;
-			frm.doc.items.forEach((item) => {
-				total_qty += flt(item.qty);
-			});
-			tax_amount = total_qty * flt(tax.rate);
-		}
-		tax.tax_amount = tax_amount;
-
-		// 🔥 CRITICAL: cumulative total
-		cumulative_total += tax_amount;
-		tax.total = cumulative_total;
-	});
-
-	frm.set_value("total_taxes_and_charges", cumulative_total - net_total);
-	frm.set_value("grand_total", cumulative_total);
-}
-
-function apply_discount(frm) {
-	let discount = flt(frm.doc.discount_amount || 0);
-	if (!discount) return;
-
-	let grand_total = flt(frm.doc.grand_total);
-
-	// 🔹 Identify actual taxes
-	let actual_tax_total = 0;
-
-	(frm.doc.taxes || []).forEach((tax) => {
-		if (["Actual", "On Item Quantity"].includes(tax.charge_type)) {
-			actual_tax_total += flt(tax.tax_amount);
-		}
-	});
-
-	// 🔹 distributable base
-	let distributable_total = grand_total - actual_tax_total;
-
-	if (!distributable_total) return;
-
-	let ratio = discount / distributable_total;
-
-	// 🔹 adjust items (net_total)
-	let new_net_total = 0;
-
-	frm.doc.items.forEach((item) => {
-		let reduction = flt(item.amount) * ratio;
-		item.net_amount = flt(item.amount - reduction);
-		new_net_total += item.net_amount;
-	});
-
-	let diff = flt(frm.doc.total) - new_net_total;
-
-	if (Math.abs(diff) > 0.0001 && frm.doc.items.length) {
-		frm.doc.items[frm.doc.items.length - 1].net_amount += diff;
-	}
-	frm.set_value("net_total", new_net_total);
-
-	// 🔹 adjust taxes
-	let total_tax = 0;
-
-	(frm.doc.taxes || []).forEach((tax) => {
-		if (["Actual", "On Item Quantity"].includes(tax.charge_type)) {
-			tax.tax_amount_after_discount_amount = tax.tax_amount;
-		} else {
-			let reduction = tax.tax_amount * ratio;
-			tax.tax_amount_after_discount_amount = flt(tax.tax_amount - reduction);
-		}
-
-		total_tax += flt(tax.tax_amount_after_discount_amount);
-	});
-
-	frm.set_value("total_taxes_and_charges", total_tax);
-
-	// 🔹 recompute grand total
-	frm.set_value("grand_total", new_net_total + total_tax);
-
-	frm.refresh_field("items");
-	frm.refresh_field("taxes");
-}
-
-function calculate_base_totals(frm) {
-	let rate = flt(frm.doc.conversion_rate || 1);
-
-	frm.set_value("base_total", flt(frm.doc.total) * rate);
-	frm.set_value("base_net_total", flt(frm.doc.net_total) * rate);
-	frm.set_value("base_grand_total", flt(frm.doc.grand_total) * rate);
-	frm.set_value(
-		"base_total_taxes_and_charges",
-		flt(frm.doc.total_taxes_and_charges) * flt(frm.doc.conversion_rate || 1),
-	);
 }
 
 function set_account_queries(frm) {
@@ -415,30 +239,6 @@ function set_account_queries(frm) {
 			},
 		};
 	});
-}
-
-function calculate_rounding(frm) {
-	if (frm.doc.disable_rounded_total) {
-		frm.set_value("rounded_total", frm.doc.grand_total);
-		frm.set_value("rounding_adjustment", 0);
-		frm.set_value("base_rounded_total", frm.doc.base_grand_total);
-		return;
-	}
-
-	let grand_total = flt(frm.doc.grand_total);
-
-	let rounded = Math.round(grand_total);
-
-	let adjustment = rounded - grand_total;
-
-	frm.set_value("rounded_total", rounded);
-	frm.set_value("rounding_adjustment", adjustment);
-
-	let rate = flt(frm.doc.conversion_rate || 1);
-
-	frm.set_value("base_rounded_total", rounded * rate);
-
-	frm.set_value("outstanding_amount", rounded);
 }
 
 async function set_currency_labels(frm) {
