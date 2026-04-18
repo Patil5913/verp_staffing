@@ -81,7 +81,7 @@ def generate_form_url(
         frappe.log_error(frappe.get_traceback(), "Generate Form URL Error")
         raise
 
-logger = frappe.logger("template_logs", allow_site=True)
+
 @frappe.whitelist()
 def send_agreement_notification(recipient, sales_order, customer, agreement):
     try:
@@ -160,11 +160,6 @@ def send_details_form_notification(recipient, sales_order, customer):
 
         # 🔹 Try Email Template
         template_name = "Candidate Details Form"
-        logger.info({
-         "message": "from candidate detail form",
-        "template": template_name,
-        "template in database":frappe.db.exists("Email Template", template_name)})
-        print(f"-----template in details form: {template_name}, exists: {frappe.db.exists('Email Template', template_name)}")
 
         if frappe.db.exists("Email Template", template_name):
 
@@ -183,10 +178,7 @@ def send_details_form_notification(recipient, sales_order, customer):
             # ⚠️ handle both cases (depends on your template setup)
             message = frappe.render_template(
                 template.response_html or template.response, context
-            )
-
-            
-            
+            )            
 
         else:
             # 🔻 Fallback (your existing logic)

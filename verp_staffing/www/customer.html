@@ -112,64 +112,16 @@
 
 <!-- ============== VERIFICATION BLOCK ========================= -->
 {% if not is_verified %}
+<span style="color: #64748b">if</span><br />
+<span style="color: #0f172a; font-weight: 500">{{ is_verified }}</span>
 
-<div
-	style="
-		max-width: 400px;
-		margin: 100px auto;
-		background: white;
-		padding: 30px;
-		border-radius: 12px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-	"
->
-	<h2>{% if otp_sent %}Verify OTP{% else %}Email Verification{% endif %}</h2>
-
-	{% if auth_error %}
-	<p style="color: red">{{ auth_error }}</p>
-	{% endif %} {% if not otp_sent %}
-	<form method="post">
-		<input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}" />
-		<input type="hidden" name="action" value="send_otp" />
-		<input
-			type="email"
-			name="email"
-			placeholder="Enter your email"
-			required
-			style="
-				width: 100%;
-				padding: 10px;
-				margin-bottom: 15px;
-				border-radius: 8px;
-				border: 1px solid #ddd;
-			"
-		/>
-		<button type="submit" style="width: 100%">Send OTP</button>
-	</form>
-	{% else %}
-	<form method="post">
-		<input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}" />
-		<input type="hidden" name="action" value="verify_otp" />
-		<input type="hidden" name="email" value="{{ email }}" />
-		<input
-			type="text"
-			name="otp"
-			placeholder="Enter OTP"
-			required
-			style="
-				width: 100%;
-				padding: 10px;
-				margin-bottom: 15px;
-				border-radius: 8px;
-				border: 1px solid #ddd;
-			"
-		/>
-		<button type="submit" style="width: 100%">Verify OTP</button>
-	</form>
-	{% endif %}
+<div id="otp-section-wrapper">
+	<div id="otp-root"></div>
 </div>
 
 {% else %}
+<span style="color: #64748b">else</span><br />
+<span style="color: #0f172a; font-weight: 500">{{ is_verified }}</span>
 
 <!-- ================ CUSTOMER FEEDBACK DIALOG ======================== -->
 <div
@@ -979,3 +931,5 @@
 </div>
 
 {% endif %}
+
+<script src="/assets/verp_staffing/js/customer_page.js"></script>
