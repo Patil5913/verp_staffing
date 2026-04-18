@@ -9,7 +9,6 @@ frappe.ui.form.on("Sales Invoice", {
 		set_account_queries(frm);
 	},
 	validate(frm) {
-		console.log("Validating invoice and calculating totals");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	company(frm) {
@@ -48,7 +47,6 @@ frappe.ui.form.on("Sales Invoice", {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	discount_amount(frm) {
-		console.log("discount",frm.doc.discount_amount)
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		handle_discount_account(frm);
 	},
@@ -80,6 +78,12 @@ frappe.ui.form.on("Sales Invoice Item", {
 				},
 			});
 		}
+	},
+	items_add: function (frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	items_remove: function (frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	qty(frm, cdt, cdn) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
