@@ -1,52 +1,86 @@
 // // Copyright (c) 2025, Vrugle and contributors
 // // For license information, please see license.txt
 if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "/assets/verp_staffing/js/pdf.worker.js";
+	pdfjsLib.GlobalWorkerOptions.workerSrc = "/assets/verp_staffing/js/pdf.worker.js";
 }
 
 frappe.ui.form.on("Pdf Agreement Template", {
-    refresh(frm) {
-        if (frm.doc.upload_pdf_template) {
-            frm.trigger("render_builder");
-        } else {
-            // blank builder area
-            const wrapper = frm.fields_dict && frm.fields_dict.builder_html && frm.fields_dict.builder_html.$wrapper;
-            if (wrapper) wrapper.html("<div style='padding:10px;color:#666'>Upload a PDF template to start building.</div>");
-        }
+	refresh(frm) {
+		frm._pdf_save_hook = false;
+		if (frm.doc.upload_pdf_template) {
+			frm.trigger("render_builder");
+		} else {
+			// blank builder area
+			const wrapper =
+				frm.fields_dict &&
+				frm.fields_dict.builder_html &&
+				frm.fields_dict.builder_html.$wrapper;
+			if (wrapper)
+				wrapper.html(
+					"<div style='padding:10px;color:#666'>Upload a PDF template to start building.</div>",
+				);
+		}
 
-        frm.add_custom_button("Show Form Tour", () => {
-            const tour_name = 'PDF Agreement Template Form';
+		frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "PDF Agreement Template Form";
 
-            frm.tour.init({ tour_name })
-                .then(() => frm.tour.start());
-        });
-    },
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
+		if (window._pdf_upload_observer) {
+			window._pdf_upload_observer.disconnect();
+			window._pdf_upload_observer = null;
+		}
 
-    // upload_pdf_template(frm) {
-    //     // re-render builder when user uploads a template
-    //     frm.trigger("render_builder");
-    // },
-    upload_pdf_template(frm) {
-        const file_url = frm.doc.upload_pdf_template;
+		window._pdf_upload_observer = new MutationObserver(function () {
+			document.querySelectorAll(".btn-file-upload").forEach(function (btn) {
+				const label = btn.querySelector(".mt-1");
+				if (!label) return;
+				const txt = label.innerText.trim();
+				if (txt === "My Device") {
+					// Make sure My Device is always visible
+					btn.style.removeProperty("display");
+				} else {
+					// Hide Library, Link, Camera
+					btn.style.setProperty("display", "none", "important");
+				}
+			});
+		});
 
-        if (file_url && !file_url.toLowerCase().endsWith(".pdf")) {
-            frm.set_value("upload_pdf_template", "");
-            frappe.throw("Only PDF files are allowed. Please upload a valid PDF template.");
-            return;
-        }
+		window._pdf_upload_observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+		});
 
-        if (file_url) {
-            frm.trigger("render_builder");
-        }
-    },
+		setTimeout(() => {
+			frm.fields_dict["upload_pdf_template"].$wrapper
+				.find("input[type='file']")
+				.attr("accept", ".pdf,application/pdf");
+		}, 500);
+	},
 
+	// upload_pdf_template(frm) {
+	//     // re-render builder when user uploads a template
+	//     frm.trigger("render_builder");
+	// },
+	upload_pdf_template(frm) {
+		const file_url = frm.doc.upload_pdf_template;
+		if (file_url && !file_url.toLowerCase().endsWith(".pdf")) {
+			frm.set_value("upload_pdf_template", "");
+			frappe.throw("Only PDF files are allowed.");
+			return;
+		}
+		if (file_url) {
+			frm.trigger("render_builder");
+		}
+	},
+	render_builder(frm) {
+		const wrapper =
+			frm.fields_dict &&
+			frm.fields_dict.builder_html &&
+			frm.fields_dict.builder_html.$wrapper;
+		if (!wrapper) return;
 
-    render_builder(frm) {
-        const wrapper = frm.fields_dict && frm.fields_dict.builder_html && frm.fields_dict.builder_html.$wrapper;
-        if (!wrapper) return;
-
-        wrapper.html(`
+		wrapper.html(`
             <div id="pdf-builder" style="display:flex; gap:20px; height: calc(100vh - 200px);">
                 <div id="pdf-pages-wrap" style="flex:1; overflow:auto; padding:10px; background:#f7f7f7; border:1px solid #eaeaea;">
                     <div id="pdf-pages" style="max-width:100%; margin:auto;"></div>
@@ -97,103 +131,140 @@ frappe.ui.form.on("Pdf Agreement Template", {
                 </div>
             </div>
         `);
-        wrapper.find("#save-template").on("click", () => Save_Template(frm));
+		wrapper.find("#save-template").on("click", () => Save_Template(frm));
 
-        // load PDF pages and existing fields
-        load_pdf_into_builder(frm);
-    }
+		// load PDF pages and existing fields
+		load_pdf_into_builder(frm);
+		if (!frm._pdf_save_hook) {
+			frm._pdf_save_hook = true;
+			frappe.ui.form.on("Pdf Agreement Template", {
+				before_save(frm) {
+					// Commit temp fields to fields_json before Frappe saves
+					if (frm._temp_fields && frm._temp_fields.length > 0) {
+						const names = frm._temp_fields
+							.map((f) => f.name && f.name.trim())
+							.filter(Boolean);
+						const dup = names.find((n, i) => names.indexOf(n) !== i);
+						if (dup) {
+							frappe.msgprint(
+								`Duplicate field name found: ${dup}. Use unique names.`,
+							);
+							frappe.validated = false;
+							return;
+						}
+
+						// Attach real page sizes if missing
+						frm._temp_fields = frm._temp_fields.map((f) => {
+							if (!f.page_width || !f.page_height) {
+								const $pc = $(`.pdf-page-container[data-page="${f.page}"]`);
+								f.page_width = $pc.width() || f.page_width || 0;
+								f.page_height = $pc.height() || f.page_height || 0;
+							}
+							return f;
+						});
+
+						// ✅ Commit to fields_json so it gets saved with the doc
+						frm.doc.fields_json = JSON.stringify(frm._temp_fields || []);
+					}
+				},
+			});
+		}
+	},
 });
 
-
 async function load_pdf_into_builder(frm) {
-    if (!window.pdfjsLib) {
-        frappe.throw("PDF.js not loaded. Check app_include_js.");
-    }
-    const pdf_url = frappe.urllib.get_full_url(frm.doc.upload_pdf_template);
+	if (!window.pdfjsLib) {
+		frappe.throw("PDF.js not loaded. Check app_include_js.");
+	}
+	const pdf_url = frappe.urllib.get_full_url(frm.doc.upload_pdf_template);
 
-    if (!pdf_url) return;
+	if (!pdf_url) return;
 
-    // ensure temp fields container
-    if (!frm._temp_fields) frm._temp_fields = [];
+	// ensure temp fields container
+	if (!frm._temp_fields) frm._temp_fields = [];
 
-    const wrapper = $("#pdf-pages");
-    wrapper.empty();
+	const wrapper = $("#pdf-pages");
+	wrapper.empty();
 
-    // load with pdfjsLib (assumes you included require() and worker elsewhere)
-    const pdf = await pdfjsLib.getDocument(pdf_url).promise;
+	// load with pdfjsLib (assumes you included require() and worker elsewhere)
+	const pdf = await pdfjsLib.getDocument(pdf_url).promise;
 
-    // render each page as image and a positioned overlay div
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
+	// render each page as image and a positioned overlay div
+	for (let i = 1; i <= pdf.numPages; i++) {
+		const page = await pdf.getPage(i);
+		const viewport = page.getViewport({ scale: 1.5 });
 
-        // render to canvas off-DOM
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext("2d");
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+		// render to canvas off-DOM
+		const canvas = document.createElement("canvas");
+		canvas.width = viewport.width;
+		canvas.height = viewport.height;
+		const ctx = canvas.getContext("2d");
+		await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-        // append page container
-        const pageHtml = $(`
+		// append page container
+		const pageHtml = $(`
             <div class="pdf-page-container" data-page="${i}" style="position:relative; margin: 18px auto; width:${viewport.width}px; height:${viewport.height}px; box-shadow:0 1px 4px rgba(0,0,0,0.08); background:#fff;">
                 <img src="${canvas.toDataURL()}" class="pdf-page-img" style="width:100%; height:100%; display:block;" />
                 <div class="fields-layer" style="position:absolute; top:0; left:0; width:100%; height:100%;"></div>
             </div>
         `);
 
-        wrapper.append(pageHtml);
-    }
+		wrapper.append(pageHtml);
+	}
 
-    // after pages created, load existing fields and enable interactions
-    load_existing_fields(frm);
-    setup_drag_drop(frm);
+	// after pages created, load existing fields and enable interactions
+	load_existing_fields(frm);
+	setup_drag_drop(frm);
 }
-
 
 // Render saved fields from frm.doc.fields_json into overlay
 function load_existing_fields(frm) {
-    const raw = frm.doc.fields_json || frm.doc.fields_json === "" ? frm.doc.fields_json : null;
+	const raw = frm.doc.fields_json || frm.doc.fields_json === "" ? frm.doc.fields_json : null;
 
-    let fields = [];
-    try {
-        if (raw) fields = JSON.parse(raw);
-    } catch (e) {
-        console.error("fields_json parse error", e);
-        fields = [];
-    }
+	let fields = [];
+	try {
+		if (raw) fields = JSON.parse(raw);
+	} catch (e) {
+		console.error("fields_json parse error", e);
+		fields = [];
+	}
 
-    // store to temp
-    frm._temp_fields = fields.slice();
+	// store to temp
+	frm._temp_fields = fields.slice();
 
-    // render each
-    fields.forEach(f => {
-        render_field_on_canvas(frm, f);
-    });
+	// render each
+	fields.forEach((f) => {
+		render_field_on_canvas(frm, f);
+	});
 }
 
 // Place holders for each field type
 const PREVIEW_VALUES = {
-    Text: "Acme Corporation Private Limited",
-    Number: "₹ 12,45,000",
-    Payment_Terms: "Net 30 days from invoice date",
-    Date: "31 March 2026",
-    Checkbox: "☑",
-    Signature: "Johnathan Smith"
+	Text: "Acme Corporation Private Limited",
+	Number: "₹ 12,45,000",
+	Payment_Terms: "Net 30 days from invoice date",
+	Date: "31 March 2026",
+	Checkbox: "☑",
+	Signature: "Johnathan Smith",
 };
 
 // central renderer for a single field object { field_id, name, type, page, x, y, width, height }
 function render_field_on_canvas(frm, field) {
-    const layer = $(`.pdf-page-container[data-page="${field.page}"] .fields-layer`);
-    if (!layer.length) return;
+	const layer = $(`.pdf-page-container[data-page="${field.page}"] .fields-layer`);
+	if (!layer.length) return;
 
-    // create wrapper element
-    const id = field.field_id || ("fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2, 10)));
+	// create wrapper element
+	const id =
+		field.field_id ||
+		"fld_" +
+			(frappe.utils && frappe.utils.get_random
+				? frappe.utils.get_random(8)
+				: Math.random().toString(36).slice(2, 10));
 
-    // If element already exists, remove and re-create (to update)
-    layer.find(`[data-id="${id}"]`).remove();
-    const previewText = PREVIEW_VALUES[field.type] || field.name;
-    const $el = $(`
+	// If element already exists, remove and re-create (to update)
+	layer.find(`[data-id="${id}"]`).remove();
+	const previewText = PREVIEW_VALUES[field.type] || field.name;
+	const $el = $(`
     <div class="pdf-field" data-id="${id}" data-type="${field.type}" style="
         position:absolute;
         top:${field.y}px;
@@ -270,278 +341,342 @@ function render_field_on_canvas(frm, field) {
     </div>
 `);
 
+	layer.append($el);
 
-    layer.append($el);
+	// store id in dataset if missing
+	if (!field.field_id) field.field_id = id;
 
-    // store id in dataset if missing
-    if (!field.field_id) field.field_id = id;
-
-    // attach interactions
-    make_field_resizable($el, frm, field);
-    make_field_draggable($el, frm, field);
-    attach_field_select_handlers($el, frm, field);
+	// attach interactions
+	make_field_resizable($el, frm, field);
+	make_field_draggable($el, frm, field);
+	attach_field_select_handlers($el, frm, field);
 }
 
 // Setup the workflow of selecting "Add Field" and clicking the PDF to place it
 function setup_drag_drop(frm) {
-    $("#pdf-builder .add-field").off("click").on("click", function () {
-        const type = $(this).data("type");
+	$("#pdf-builder .add-field")
+		.off("click")
+		.on("click", function () {
+			const type = $(this).data("type");
 
-        // instruct user
-        frappe.msgprint(`Click on the PDF to place a "${type}" field. You will be prompted for the field name.`);
+			// instruct user
+			frappe.msgprint(
+				`Click on the PDF to place a "${type}" field. You will be prompted for the field name.`,
+			);
 
-        // single click handler for placement
-        $(".pdf-page-container").off("click.place_field").on("click.place_field", function (evt) {
-            // compute position relative to container
-            const $pc = $(this);
-            const page = $pc.data("page");
-            const off = $pc.offset();
-            const x = evt.pageX - off.left;
-            const y = evt.pageY - off.top;
+			// single click handler for placement
+			$(".pdf-page-container")
+				.off("click.place_field")
+				.on("click.place_field", function (evt) {
+					// compute position relative to container
+					const $pc = $(this);
+					const page = $pc.data("page");
+					const off = $pc.offset();
+					const x = evt.pageX - off.left;
+					const y = evt.pageY - off.top;
 
-            // require field name
-            frappe.prompt([
-                { fieldname: "field_name", label: "Field Name (unique)", fieldtype: "Data", reqd: 1 },
-                { fieldname: "font_size", label: "Font Size", fieldtype: "Int", default: 12 },
-                { fieldname: "line_height", label: "Line Height", fieldtype: "Float", default: 1.2 }
-            ], function (values) {
-                // build field object
-                const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || { width: $pc.width(), height: $pc.height() };
+					// require field name
+					frappe.prompt(
+						[
+							{
+								fieldname: "field_name",
+								label: "Field Name (unique)",
+								fieldtype: "Data",
+								reqd: 1,
+							},
+							{
+								fieldname: "font_size",
+								label: "Font Size",
+								fieldtype: "Int",
+								default: 12,
+							},
+							{
+								fieldname: "line_height",
+								label: "Line Height",
+								fieldtype: "Float",
+								default: 1.2,
+							},
+						],
+						function (values) {
+							// build field object
+							const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || {
+								width: $pc.width(),
+								height: $pc.height(),
+							};
 
-                const id = "fld_" + (frappe.utils && frappe.utils.get_random ? frappe.utils.get_random(8) : Math.random().toString(36).slice(2, 10));
-                const fld = {
-                    field_id: id,
-                    name: values.field_name.trim(),
-                    type: type,
-                    page: page,
-                    x: Math.round(x),
-                    y: Math.round(y),
-                    width: 150,
-                    height: 30,
+							const id =
+								"fld_" +
+								(frappe.utils && frappe.utils.get_random
+									? frappe.utils.get_random(8)
+									: Math.random().toString(36).slice(2, 10));
+							const fld = {
+								field_id: id,
+								name: values.field_name.trim(),
+								type: type,
+								page: page,
+								x: Math.round(x),
+								y: Math.round(y),
+								width: 150,
+								height: 30,
 
-                    font_size: values.font_size,
-                    line_height: values.line_height,
-                    font_family: "helv",
-                    wrap: true,
-                    overflow: "warn"
-                };
+								font_size: values.font_size,
+								line_height: values.line_height,
+								font_family: "helv",
+								wrap: true,
+								overflow: "warn",
+							};
 
-                // store and render
-                if (!frm._temp_fields) frm._temp_fields = [];
-                frm._temp_fields.push(fld);
-                render_field_on_canvas(frm, fld);
-            }, "Add Field");
+							// store and render
+							if (!frm._temp_fields) frm._temp_fields = [];
+							frm._temp_fields.push(fld);
+							render_field_on_canvas(frm, fld);
+							frm.dirty();
+						},
+						"Add Field",
+					);
 
-            // remove the one-time handler
-            $(".pdf-page-container").off("click.place_field");
-        });
-    });
+					// remove the one-time handler
+					$(".pdf-page-container").off("click.place_field");
+				});
+		});
 
-    // clear placement on clear-temp
-    $(document).off("click", "#clear-temp").on("click", "#clear-temp", function () {
-        frm._temp_fields = [];
-        $(".fields-layer").empty();
-    });
+	// clear placement on clear-temp
+	$(document)
+		.off("click", "#clear-temp")
+		.on("click", "#clear-temp", function () {
+			frm._temp_fields = [];
+			$(".fields-layer").empty();
+		});
 }
-
 
 // attach edit / delete handlers for a rendered field element
 function attach_field_select_handlers($el, frm, field) {
-    // show toolbar on hover
-    $el.on("mouseenter", function () {
-        $(this).find(".pdf-field-toolbar").show();
-    }).on("mouseleave", function () {
-        $(this).find(".pdf-field-toolbar").hide();
-    });
+	// show toolbar on hover
+	$el.on("mouseenter", function () {
+		$(this).find(".pdf-field-toolbar").show();
+	}).on("mouseleave", function () {
+		$(this).find(".pdf-field-toolbar").hide();
+	});
 
-    // edit
-    $el.find(".edit-field").off("click").on("click", function (e) {
-        e.stopPropagation();
-        frappe.prompt([
-            { fieldname: "field_name", label: "Field Name", fieldtype: "Data", reqd: 1, default: field.name },
-            { fieldname: "font_size", label: "Font Size", fieldtype: "Int", default: field.font_size },
-            { fieldname: "line_height", label: "Line Height", fieldtype: "Float", default: field.line_height }
-        ], function (vals) {
-            // update in temp store and DOM
-            const newName = vals.field_name.trim();
-            field.name = newName;
-            field.font_size = vals.font_size;
-            field.line_height = vals.line_height;
-            $el.find(".pdf-field-label").text(newName);
+	// edit
+	$el.find(".edit-field")
+		.off("click")
+		.on("click", function (e) {
+			e.stopPropagation();
+			frappe.prompt(
+				[
+					{
+						fieldname: "field_name",
+						label: "Field Name",
+						fieldtype: "Data",
+						reqd: 1,
+						default: field.name,
+					},
+					{
+						fieldname: "font_size",
+						label: "Font Size",
+						fieldtype: "Int",
+						default: field.font_size,
+					},
+					{
+						fieldname: "line_height",
+						label: "Line Height",
+						fieldtype: "Float",
+						default: field.line_height,
+					},
+				],
+				function (vals) {
+					// update in temp store and DOM
+					const newName = vals.field_name.trim();
+					field.name = newName;
+					field.font_size = vals.font_size;
+					field.line_height = vals.line_height;
+					$el.find(".pdf-field-label").text(newName);
 
-            update_temp_field(frm, field.field_id, { name: newName });
-        }, "Edit Field");
-    });
+					update_temp_field(frm, field.field_id, { name: newName });
+					frm.dirty();
+				},
+				"Edit Field",
+			);
+		});
 
-    // delete
-    $el.find(".delete-field").off("click").on("click", function (e) {
-        e.stopPropagation();
-        frappe.confirm(
-            "Delete this field?",
-            function () {
-                // remove from DOM and temp array
-                const fid = field.field_id;
-                $el.remove();
-                frm._temp_fields = (frm._temp_fields || []).filter(x => x.field_id !== fid);
-            }
-        );
-    });
+	// delete
+	$el.find(".delete-field")
+		.off("click")
+		.on("click", function (e) {
+			e.stopPropagation();
+			frappe.confirm("Delete this field?", function () {
+				// remove from DOM and temp array
+				const fid = field.field_id;
+				$el.remove();
+				frm._temp_fields = (frm._temp_fields || []).filter((x) => x.field_id !== fid);
+				frm.dirty();
+			});
+		});
 
-    // click on field focuses it (optional)
-    $el.on("click", function (e) {
-        e.stopPropagation();
-        // maybe show a property panel in sidebar later
-    });
+	// click on field focuses it (optional)
+	$el.on("click", function (e) {
+		e.stopPropagation();
+		// maybe show a property panel in sidebar later
+	});
 }
-
 
 // simple update helper
 function update_temp_field(frm, field_id, updates) {
-    frm._temp_fields = frm._temp_fields || [];
-    for (let i = 0; i < frm._temp_fields.length; i++) {
-        if (frm._temp_fields[i].field_id === field_id) {
-            Object.assign(frm._temp_fields[i], updates);
-            break;
-        }
-    }
+	frm._temp_fields = frm._temp_fields || [];
+	for (let i = 0; i < frm._temp_fields.length; i++) {
+		if (frm._temp_fields[i].field_id === field_id) {
+			Object.assign(frm._temp_fields[i], updates);
+			break;
+		}
+	}
 }
 
 // draggable implementation (mouse events) — $el is jQuery element
 function make_field_draggable($el, frm, field) {
-    let isDragging = false;
-    let startX = 0, startY = 0, origLeft = 0, origTop = 0;
-    const $container = $el.closest(".pdf-page-container");
-    const layer = $container.find(".fields-layer");
+	let isDragging = false;
+	let startX = 0,
+		startY = 0,
+		origLeft = 0,
+		origTop = 0;
+	const $container = $el.closest(".pdf-page-container");
+	const layer = $container.find(".fields-layer");
 
-    $el.on("mousedown", function (e) {
-        // only left button
-        if (e.which !== 1) return;
-        isDragging = true;
-        startX = e.pageX;
-        startY = e.pageY;
-        origLeft = parseInt($el.css("left"), 10) || 0;
-        origTop = parseInt($el.css("top"), 10) || 0;
-        $el.css("opacity", 0.85);
-        e.preventDefault();
-    });
+	$el.on("mousedown", function (e) {
+		// only left button
+		if (e.which !== 1) return;
+		isDragging = true;
+		startX = e.pageX;
+		startY = e.pageY;
+		origLeft = parseInt($el.css("left"), 10) || 0;
+		origTop = parseInt($el.css("top"), 10) || 0;
+		$el.css("opacity", 0.85);
+		e.preventDefault();
+	});
 
-    $(document).on("mousemove.pdffield." + field.field_id, function (e) {
-        if (!isDragging) return;
-        const dx = e.pageX - startX;
-        const dy = e.pageY - startY;
-        const newLeft = origLeft + dx;
-        const newTop = origTop + dy;
+	$(document).on("mousemove.pdffield." + field.field_id, function (e) {
+		if (!isDragging) return;
+		const dx = e.pageX - startX;
+		const dy = e.pageY - startY;
+		const newLeft = origLeft + dx;
+		const newTop = origTop + dy;
 
-        // clamp inside container
-        const maxLeft = layer.width() - $el.outerWidth();
-        const maxTop = layer.height() - $el.outerHeight();
-        const clampedLeft = Math.max(0, Math.min(newLeft, maxLeft));
-        const clampedTop = Math.max(0, Math.min(newTop, maxTop));
+		// clamp inside container
+		const maxLeft = layer.width() - $el.outerWidth();
+		const maxTop = layer.height() - $el.outerHeight();
+		const clampedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+		const clampedTop = Math.max(0, Math.min(newTop, maxTop));
 
-        $el.css({ left: clampedLeft + "px", top: clampedTop + "px" });
-    });
+		$el.css({ left: clampedLeft + "px", top: clampedTop + "px" });
+	});
 
-    $(document).on("mouseup.pdffield." + field.field_id, function (e) {
-        if (!isDragging) return;
-        isDragging = false;
-        $el.css("opacity", 1);
+	$(document).on("mouseup.pdffield." + field.field_id, function (e) {
+		if (!isDragging) return;
+		isDragging = false;
+		$el.css("opacity", 1);
 
-        // save new coords to frm._temp_fields
-        const left = parseInt($el.css("left"), 10) || 0;
-        const top = parseInt($el.css("top"), 10) || 0;
-        update_temp_field(frm, field.field_id, { x: Math.round(left), y: Math.round(top) });
-    });
+		// save new coords to frm._temp_fields
+		const left = parseInt($el.css("left"), 10) || 0;
+		const top = parseInt($el.css("top"), 10) || 0;
+		update_temp_field(frm, field.field_id, { x: Math.round(left), y: Math.round(top) });
+		frm.dirty();
+	});
 }
 
 // Escape helper for label text
 function escape_html(s) {
-    return String(s || "").replace(/[&<>"'`=\/]/g, function (c) {
-        return {
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
-            "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
-        }[c];
-    });
+	return String(s || "").replace(/[&<>"'`=\/]/g, function (c) {
+		return {
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			'"': "&quot;",
+			"'": "&#39;",
+			"/": "&#x2F;",
+			"`": "&#x60;",
+			"=": "&#x3D;",
+		}[c];
+	});
 }
 
-
 function Save_Template(frm) {
-    if (!frm) return;
+	if (!frm) return;
 
-    const names = (frm._temp_fields || []).map(f => f.name && f.name.trim()).filter(Boolean);
-    const dup = names.find((n, i) => names.indexOf(n) !== i);
-    if (dup) {
-        frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
-        return;
-    }
+	const names = (frm._temp_fields || []).map((f) => f.name && f.name.trim()).filter(Boolean);
+	const dup = names.find((n, i) => names.indexOf(n) !== i);
+	if (dup) {
+		frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
+		return;
+	}
 
-    // Attach real page sizes to any field missing them
-    frm._temp_fields = (frm._temp_fields || []).map(f => {
-        if (!f.page_width || !f.page_height) {
-            const page = f.page;
-            const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || null;
-            if (real) {
-                f.page_width = real.width;
-                f.page_height = real.height;
-            } else {
-                // fallback: use the page DOM size (less accurate)
-                const $pc = $(`.pdf-page-container[data-page="${page}"]`);
-                f.page_width = $pc.width() || f.page_width || 0;
-                f.page_height = $pc.height() || f.page_height || 0;
-            }
-        }
-        return f;
-    });
+	// Attach real page sizes to any field missing them
+	frm._temp_fields = (frm._temp_fields || []).map((f) => {
+		if (!f.page_width || !f.page_height) {
+			const page = f.page;
+			const real = (frm._pdf_page_sizes && frm._pdf_page_sizes[page]) || null;
+			if (real) {
+				f.page_width = real.width;
+				f.page_height = real.height;
+			} else {
+				// fallback: use the page DOM size (less accurate)
+				const $pc = $(`.pdf-page-container[data-page="${page}"]`);
+				f.page_width = $pc.width() || f.page_width || 0;
+				f.page_height = $pc.height() || f.page_height || 0;
+			}
+		}
+		return f;
+	});
 
-    // commit to doctype field and save
-    frm.set_value("fields_json", JSON.stringify(frm._temp_fields || []));
-    frm.save();
+	// commit to doctype field and save
+	frm.set_value("fields_json", JSON.stringify(frm._temp_fields || []));
+	frm.save();
 }
 
 function make_field_resizable($el, frm, field) {
-    let resizing = false;
-    let startX, startY, startW, startH;
-    let mode = null; // "se", "e", "s"
+	let resizing = false;
+	let startX, startY, startW, startH;
+	let mode = null; // "se", "e", "s"
 
-    $el.find(".resize-handle").on("mousedown", function (e) {
-        e.stopPropagation();
-        resizing = true;
+	$el.find(".resize-handle").on("mousedown", function (e) {
+		e.stopPropagation();
+		resizing = true;
 
-        mode = $(this).attr("class").includes("resize-se")
-            ? "se"
-            : $(this).attr("class").includes("resize-e")
-                ? "e"
-                : "s";
+		mode = $(this).attr("class").includes("resize-se")
+			? "se"
+			: $(this).attr("class").includes("resize-e")
+				? "e"
+				: "s";
 
-        startX = e.pageX;
-        startY = e.pageY;
-        startW = $el.width();
-        startH = $el.height();
-    });
+		startX = e.pageX;
+		startY = e.pageY;
+		startW = $el.width();
+		startH = $el.height();
+	});
 
-    $(document).on("mousemove.resize_" + field.field_id, function (e) {
-        if (!resizing) return;
+	$(document).on("mousemove.resize_" + field.field_id, function (e) {
+		if (!resizing) return;
 
-        let newW = startW;
-        let newH = startH;
+		let newW = startW;
+		let newH = startH;
 
-        if (mode === "se" || mode === "e")
-            newW = Math.max(40, startW + (e.pageX - startX)); // min width 40
+		if (mode === "se" || mode === "e") newW = Math.max(40, startW + (e.pageX - startX)); // min width 40
 
-        if (mode === "se" || mode === "s")
-            newH = Math.max(20, startH + (e.pageY - startY)); // min height 20
+		if (mode === "se" || mode === "s") newH = Math.max(20, startH + (e.pageY - startY)); // min height 20
 
-        $el.css({ width: newW + "px", height: newH + "px" });
-    });
+		$el.css({ width: newW + "px", height: newH + "px" });
+	});
 
-    $(document).on("mouseup.resize_" + field.field_id, function () {
-        if (!resizing) return;
+	$(document).on("mouseup.resize_" + field.field_id, function () {
+		if (!resizing) return;
 
-        resizing = false;
+		resizing = false;
 
-        // save to temp fields
-        update_temp_field(frm, field.field_id, {
-            width: Math.round($el.width()),
-            height: Math.round($el.height())
-        });
-    });
+		// save to temp fields
+		update_temp_field(frm, field.field_id, {
+			width: Math.round($el.width()),
+			height: Math.round($el.height()),
+		});
+
+		frm.dirty();
+	});
 }
