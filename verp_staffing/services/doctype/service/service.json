@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "autoname": "field:service_name",
  "creation": "2026-01-08 16:47:13.447613",
  "doctype": "DocType",
@@ -22,13 +23,18 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-21 12:01:10.203884",
+ "modified": "2026-04-17 16:10:56.520893",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Service",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -43,17 +49,12 @@
   },
   {
    "read": 1,
-   "role": "Sales Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Sales Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Master Manager",
    "select": 1
   },
   {

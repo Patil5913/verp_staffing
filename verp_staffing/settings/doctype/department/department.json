@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:department_name",
  "creation": "2025-11-14 15:11:57.541600",
@@ -68,7 +69,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-28 14:12:48.247087",
+ "modified": "2026-04-17 16:11:48.601418",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Department",

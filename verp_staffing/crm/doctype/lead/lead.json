@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "creation": "2025-11-14 15:24:45.052361",
  "doctype": "DocType",
@@ -117,7 +118,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 16:34:30.210421",
+ "modified": "2026-04-17 15:22:04.526904",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",

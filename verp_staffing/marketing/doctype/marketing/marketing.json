@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "creation": "2025-12-15 16:01:57.359022",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -149,7 +150,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-28 17:54:56.120286",
+ "modified": "2026-04-17 15:26:20.500292",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -166,13 +167,21 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Team Lead"
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Mentor",
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   },
@@ -192,21 +201,29 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Team Lead",
+   "role": "Recruiter",
    "select": 1,
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Manager",
+   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
   },
   {
    "create": 1,
@@ -218,22 +235,6 @@
    "role": "marketing Master Manager",
    "select": 1,
    "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
    "write": 1
   }
  ],

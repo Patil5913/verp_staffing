@@ -222,6 +222,14 @@ def on_sales_order_save(doc):
 def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     user = frappe.session.user
     employee = get_employee_name(user)
+    
+    if user == "Administrator":
+        return {
+            "is_owner": True,
+            "candidate_form_required": False,
+            "permission": "full_access",
+            "customer_name": customer_name,
+        }
 
     if not employee:
         return {
@@ -303,6 +311,9 @@ def _check_permission_status(ref_doctype, ref_name):
     employee = get_employee_name(user)
     if not employee:
         return {"status": "none"}
+    
+    if user == "Administrator":
+        return {"status": "approved"}
 
     comments = frappe.get_all(
         "Comment",
@@ -856,7 +867,7 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
     comment_doc = frappe.get_doc("Comment", comment_name)
     data = json.loads(comment_doc.content)
 
-    if data.get("status") != "Pending":
+    if frappe.session.user != "Administrator" and data.get("status") != "Pending":
         frappe.throw("This request has already been processed.")
 
     field_updates = data.get("field_updates", {})

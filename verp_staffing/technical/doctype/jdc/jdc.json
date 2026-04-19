@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "creation": "2026-01-27 14:57:16.567128",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -102,7 +103,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-30 15:05:14.977526",
+ "modified": "2026-04-17 15:54:09.655579",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
@@ -112,7 +113,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },
@@ -131,14 +132,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   },
