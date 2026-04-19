@@ -1,13 +1,8 @@
 frappe.ui.form.on("Lead Detail Form", {
 	refresh(frm) {
-		apply_lead_detail_readonly(frm);
 		update_parent_skills(frm);
 		frm.toggle_enable("reference_table", false);
 		check_candidate_form_required(frm);
-	},
-
-	onload(frm) {
-		apply_lead_detail_readonly(frm);
 	},
 
 	additional_skills(frm) {
@@ -66,74 +61,7 @@ function update_parent_skills(frm) {
 	frm.set_value("additional_skills", merged.join(", "));
 }
 
-// ── Lead department: lock email, first_name, surname for lead owner ──
-function apply_lead_detail_readonly(frm) {
-	if (!frm.doc.reference_table || !frm.doc.reference_table.length) return;
 
-	const lead_row = frm.doc.reference_table.find((row) => row.reference_doctype === "Lead");
-	if (!lead_row || !lead_row.reference_person) return;
-
-	const lead_name = lead_row.reference_person;
-
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Lead",
-			filters: { name: lead_name },
-			fieldname: ["status", "lead_owner"],
-		},
-		callback: function (r) {
-			if (!r.message) return;
-			const { status, lead_owner } = r.message;
-			if (status !== "Opportunity") return;
-
-			frappe.call({
-				method: "frappe.client.get_value",
-				args: {
-					doctype: "Employee",
-					filters: { user: frappe.session.user },
-					fieldname: "name",
-				},
-				callback: function (emp) {
-					if (!emp.message) return;
-					if (emp.message.name !== lead_owner) return;
-
-					// Lock name fields always
-					frm.set_df_property("first_name", "read_only", 1);
-					frm.set_df_property("surname", "read_only", 1);
-					frm.refresh_field("first_name");
-					frm.refresh_field("surname");
-
-					// Lock/unlock email based on Lead permission
-					frappe.call({
-						method: "verp_staffing.crm.api.permission_request._check_permission_status",
-						args: {
-							ref_doctype: "Lead",
-							ref_name: lead_name,
-						},
-						callback: function (res) {
-							const perm = res.message && res.message.status;
-							const lock = perm !== "approved";
-							frm.set_df_property("email", "read_only", lock ? 1 : 0);
-							frm.refresh_field("email");
-							if (!lock) {
-								frappe.show_alert(
-									{
-										message: __(
-											"Permission granted. You can now update the email field.",
-										),
-										indicator: "green",
-									},
-									5,
-								);
-							}
-						},
-					});
-				},
-			});
-		},
-	});
-}
 
 // ── Customer/Sales Order: lock whole form if Is Candidate Form Required ──
 function check_candidate_form_required(frm) {

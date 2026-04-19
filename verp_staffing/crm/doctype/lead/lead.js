@@ -40,6 +40,14 @@ frappe.ui.form.on("Lead", {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
 
+		window._ftbl_state = {};
+		window._temp_files = {};
+		window._ftbl_active_dialog = null;
+		frm.set_df_property("lead_detail", "options", ""); // ← ADD THIS HERE
+
+		let _lead_detail_dirty = false;
+		let _lead_form_locked = false;
+
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
@@ -49,9 +57,10 @@ frappe.ui.form.on("Lead", {
 			},
 			callback: function (r) {
 				if (r.message && r.message.length > 0) {
+					_lead_form_locked = true;
 					setTimeout(() => {
 						watchAndLockLeadDetail();
-					}, 200);
+					}, 300);
 
 					frm.disable_form();
 				}
@@ -188,6 +197,7 @@ frappe.ui.form.on("Lead", {
 		function buildDialogInput(col, currentVal, uid) {
 			const id = `dlg-${uid}-${col.fieldname}`;
 			const val = currentVal ?? "";
+			const label = col.label || frappe.model.unscrub(col.fieldname);
 
 			let noteHtml = col.description
 				? `<div style="font-size:11px;color:var(--color-text-secondary,#888);margin-top:3px;">NOTE: ${col.description}</div>`
@@ -199,48 +209,48 @@ frappe.ui.form.on("Lead", {
 
 			if (col.fieldtype === "Check") {
 				return `<div class="ftbl-dialog-field" data-fieldname="${col.fieldname}" style="width:100%;padding:0 8px;margin-bottom:10px;">
-					<label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-						<input id="${id}" type="checkbox" ${val ? "checked" : ""} style="width:14px;height:14px;accent-color:#378add;cursor:pointer;" />
-						${col.label || frappe.model.unscrub(col.fieldname)}
-					</label>${noteHtml}
-				</div>`;
+            <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                <input id="${id}" type="checkbox" ${val ? "checked" : ""} style="width:14px;height:14px;accent-color:#378add;cursor:pointer;" />
+                ${label}
+            </label>${noteHtml}
+        </div>`;
 			}
 
 			if (isEmailField(col.fieldname)) {
-				inputHtml = `<input id="${id}" type="email" value="${val}" data-override="email" style="${baseStyle}" placeholder="Exp: example@email.com" />`;
+				inputHtml = `<input id="${id}" type="email" value="${val}" data-override="email" style="${baseStyle}" placeholder="${label}" />`;
 			} else if (isPhoneField(col.fieldname)) {
-				inputHtml = `<input id="${id}" type="tel" value="${val}" data-override="phone" style="${baseStyle}" placeholder="+91-9876543210" />`;
+				inputHtml = `<input id="${id}" type="tel" value="${val}" data-override="phone" style="${baseStyle}" placeholder="${label} (e.g. Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx)" />`;
 			} else if (isMonthYearField(col.fieldname)) {
-				inputHtml = `<input id="${id}" type="text" value="${toMonthYear(val)}" data-override="month-year" maxlength="7" style="${baseStyle}" placeholder="MM-YYYY" />`;
+				inputHtml = `<input id="${id}" type="text" value="${toMonthYear(val)}" data-override="month-year" maxlength="7" style="${baseStyle}" placeholder="MM-YYYY (e.g. 01-2025)" />`;
 				noteHtml = `<div style="font-size:11px;color:var(--color-text-secondary,#888);margin-top:3px;">NOTE: Use date format: MM-YYYY</div>`;
 			} else if (col.fieldtype === "Select") {
 				const opts = (col.options || "").split("\n").filter(Boolean);
 				inputHtml = `<select id="${id}" style="${baseStyle}">
-					<option value="">Select…</option>
-					${opts.map((o) => `<option value="${o}"${o === val ? " selected" : ""}>${o}</option>`).join("")}
-				</select>`;
+            <option value="">Select ${label}…</option>
+            ${opts.map((o) => `<option value="${o}"${o === val ? " selected" : ""}>${o}</option>`).join("")}
+        </select>`;
 			} else if (["Text", "Small Text", "Long Text"].includes(col.fieldtype)) {
 				const minH = col.fieldname === "description" ? "150px" : "70px";
-				inputHtml = `<textarea id="${id}" style="width:100%;min-height:${minH};padding:8px 10px;border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.25));border-radius:6px;font-size:13px;font-family:inherit;background:var(--color-background-secondary,#F3F3F3);color:var(--color-text-primary);outline:none;resize:vertical;line-height:1.5;" placeholder="Exp: ${col.label || frappe.model.unscrub(col.fieldname)}">${val}</textarea>`;
+				inputHtml = `<textarea id="${id}" style="width:100%;min-height:${minH};padding:8px 10px;border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.25));border-radius:6px;font-size:13px;font-family:inherit;background:var(--color-background-secondary,#F3F3F3);color:var(--color-text-primary);outline:none;resize:vertical;line-height:1.5;" placeholder="${label}">${val}</textarea>`;
 				if (col.fieldname === "description")
 					noteHtml = `<div style="font-size:11px;color:var(--color-text-secondary,#888);margin-top:3px;">NOTE: Minimum length: 800 characters (excluding spaces).</div>`;
 			} else if (["Int", "Float", "Currency"].includes(col.fieldtype)) {
-				inputHtml = `<input id="${id}" type="number" value="${val}" style="${baseStyle}" />`;
+				inputHtml = `<input id="${id}" type="text" value="${val == 0 ? "" : val}" style="${baseStyle}" placeholder="${label}" />`;
 			} else if (col.fieldtype === "Date") {
-				inputHtml = `<input id="${id}" type="date" value="${(val || "").split(" ")[0] || ""}" style="${baseStyle}" />`;
+				inputHtml = `<input id="${id}" type="date" value="${(val || "").split(" ")[0] || ""}" style="${baseStyle}" placeholder="${label}" />`;
 			} else {
-				inputHtml = `<input id="${id}" type="text" value="${val}" style="${baseStyle}" placeholder="Exp: ${col.label || frappe.model.unscrub(col.fieldname)}" />`;
+				inputHtml = `<input id="${id}" type="text" value="${val}" style="${baseStyle}" placeholder="${label}" />`;
 			}
 
 			const isWide = ["Text", "Small Text", "Long Text"].includes(col.fieldtype);
 			const labelHtml = `<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary,#6b6b6b);margin-bottom:5px;">
-				${col.label || frappe.model.unscrub(col.fieldname)}${col.reqd ? '<span style="color:#e24b4a;margin-left:2px;">*</span>' : ""}
-			</div>`;
+        ${label}${col.reqd ? '<span style="color:#e24b4a;margin-left:2px;">*</span>' : ""}
+    </div>`;
 
 			return `<div class="ftbl-dialog-field" data-fieldname="${col.fieldname}"
-				style="width:${isWide ? "100%" : "calc(50% - 8px)"};min-width:${isWide ? "100%" : "200px"};padding:0 8px;margin-bottom:10px;">
-				${labelHtml}${inputHtml}${noteHtml}
-			</div>`;
+        style="width:${isWide ? "100%" : "calc(50% - 8px)"};min-width:${isWide ? "100%" : "200px"};padding:0 8px;margin-bottom:10px;">
+        ${labelHtml}${inputHtml}${noteHtml}
+    </div>`;
 		}
 
 		// ─── Open row edit dialog ─────────────────────────────────────────────────────
@@ -570,6 +580,8 @@ frappe.ui.form.on("Lead", {
 			};
 			state.rows.push(newRow);
 			rebuildFtblBody(field);
+			_lead_detail_dirty = true;
+			frm.dirty();
 			openRowDialog(field, state.rows.length - 1);
 		};
 
@@ -620,99 +632,218 @@ frappe.ui.form.on("Lead", {
 		// ─── Regular (non-table) input HTML ──────────────────────────────────────────
 		function getInputHTML(fieldtype, value, field, meta_field) {
 			value = value ?? "";
+			const label = meta_field.label || frappe.model.unscrub(field);
 			const cls = "form-control input-with-feedback dynamic-input";
-			const placeholder = `placeholder="Enter ${frappe.model.unscrub(field)}"`;
 
-			if (isEmailField(field))
-				return `<input type="email"  value="${value}" data-field="${field}" data-override="email"      class="${cls}" placeholder="Enter email address" />`;
-			if (isMonthYearField(field))
-				return `<input type="text"   value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
-			if (isPhoneField(field))
-				return `<input type="tel"    value="${value}" data-field="${field}" data-override="phone"      class="${cls}" placeholder="+91-9876543210" />`;
-			if (fieldtype === "Link") {
-				let current_display_html;
+			// ── READ-ONLY MODE (locked form) ──────────────────────────────────────────
+			if (_lead_form_locked) {
+				if (value === "" || value === null || value === undefined) return "__HIDE__";
 
-				if (value) {
-					current_display_html = `
-			<a href="/app/file/${encodeURIComponent(value)}" target="_blank"
-				style="color:#260fea; font-weight:500; text-decoration:none;">
-				📎 View Current File
-			</a>
-		`;
-				} else {
-					current_display_html = `
-			<span style="color:var(--color-text-tertiary); font-style:italic;">
-				No file
-			</span>
-		`;
+				// Frappe read-only style
+				const roBox = `
+        padding: 6px 10px;
+        min-height: 32px;
+        background: var(--color-background-secondary, #f3f3f3);
+        border: 0.5px solid var(--color-border-secondary, rgba(0,0,0,0.2));
+        border-radius: var(--border-radius-md, 6px);
+        font-size: 13px;
+        color: var(--color-text-primary);
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        word-break: break-word;
+    `;
+
+				const escape = (v) =>
+					frappe.utils?.escape_html ? frappe.utils.escape_html(String(v)) : String(v);
+
+				if (fieldtype === "Link") {
+					return `
+<div style="${roBox}">
+    <a href="/app/file/${value}" target="_blank"
+        style="color: var(--color-text-info, #1a73e8); text-decoration: none; font-size: 13px;">
+        📎 View File
+    </a>
+</div>`;
 				}
 
-				return `
-	<div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+				if (fieldtype === "Check") {
+					return `
+<div style="${roBox}">
+    <span style="color: var(--color-text-secondary); font-size: 13px;">
+        ${value ? "Yes" : "No"}
+    </span>
+</div>`;
+				}
 
-		<!-- LEFT: CURRENT -->
-		<div style="flex:1; min-width:180px;">
-			<div style="font-size:11px; color:#6b6b6b; margin-bottom:4px;">
-				Current
-			</div>
+				if (isMonthYearField(field)) {
+					return `<div style="${roBox}">${escape(toMonthYear(String(value)))}</div>`;
+				}
 
-			<div style="
-				padding:6px 8px;
-				border:1px solid #ddd;
-				border-radius:6px;
-				background:#f9fafb;
-				min-height:32px;
-				display:flex;
-				align-items:center;
-			">
-				${current_display_html}
-			</div>
-		</div>
+				if (fieldtype === "Date") {
+					return `<div style="${roBox}">${escape(value.split(" ")[0] || "")}</div>`;
+				}
 
-		<!-- RIGHT: UPLOAD -->
-		<div style="flex:1; min-width:180px;">
-			<div style="font-size:11px; color:#6b6b6b; margin-bottom:4px;">
-				Upload New
-			</div>
+				if (["Text", "Small Text", "Long Text"].includes(fieldtype)) {
+					return `
+<div style="
+    padding: 8px 10px;
+    background: var(--color-background-secondary, #f3f3f3);
+    border: 0.5px solid var(--color-border-secondary, rgba(0,0,0,0.2));
+    border-radius: var(--border-radius-md, 6px);
+    font-size: 13px;
+    color: var(--color-text-primary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 60px;
+">${escape(value)}</div>`;
+				}
 
-			<div style="display:flex; flex-direction:column; gap:6px;">
-				<input type="file"
-					class="dynamic-input fg-file-input"
-					data-field="${field}"
-					style="font-size:12px;" />
+				if (fieldtype === "Table") {
+					const child_doctype = meta_field.options;
+					if (!child_doctype) return "__HIDE__";
+					const child_meta = frappe.get_meta(child_doctype);
+					if (!child_meta?.fields) return "__HIDE__";
+					const allColumns = getTableColumns(child_meta);
+					const previewCols = allColumns.slice(0, 4);
+					const rows = Array.isArray(value) ? value : [];
+					if (!rows.length) return "__HIDE__";
 
-				<div class="fg-file-name"
-					data-field="${field}"
-					style="font-size:11px; color:#667085;">
-				</div>
+					const colHeaders = previewCols
+						.map(
+							(col) => `
+<div style="
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-right: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
+">${col.label || frappe.model.unscrub(col.fieldname)}</div>`,
+						)
+						.join("");
 
-				<input type="hidden"
-					class="dynamic-input fg-file-url"
-					data-field="${field}"
-					value="${frappe.utils.escape_html(value || "")}" />
-			</div>
-		</div>
+					const bodyRows = rows
+						.map((row, i) => {
+							const cells = previewCols
+								.map(
+									(col) => `
+<div style="
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    border-right: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.07));
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+">${formatCellDisplay(col, row[col.fieldname])}</div>`,
+								)
+								.join("");
 
-	</div>
-	`;
+							return `
+<div style="
+    display: grid;
+    grid-template-columns: 36px ${previewCols.map(() => "1fr").join(" ")};
+    border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08));
+    background: var(--color-background-primary);
+">
+    <div style="
+        padding: 6px 8px;
+        font-size: 12px;
+        color: var(--color-text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-right: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.07));
+    ">${i + 1}</div>
+    ${cells}
+</div>`;
+						})
+						.join("");
+
+					return `
+<div style="
+    border: 0.5px solid var(--color-border-secondary, rgba(0,0,0,0.2));
+    border-radius: var(--border-radius-md, 6px);
+    overflow: hidden;
+    margin-top: 4px;
+">
+    <div style="
+        display: grid;
+        grid-template-columns: 36px ${previewCols.map(() => "1fr").join(" ")};
+        background: var(--color-background-secondary, #f3f3f3);
+        border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12));
+    ">
+        <div style="
+            padding: 7px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-right: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
+        ">No.</div>
+        ${colHeaders}
+    </div>
+    ${bodyRows}
+</div>`;
+				}
+
+				// Default: plain text in Frappe-style read-only box
+				return `<div style="${roBox}">${escape(String(value))}</div>`;
 			}
+
+			// ── EDITABLE MODE ─────────────────────────────────────────────────────────
+			if (field.toLowerCase() === "availability_for_interview")
+				return `<input type="text" value="${value}" data-field="${field}" data-override="availability" class="${cls}" placeholder="Exp: Mon - Fri, 9:30 AM - 10:00 PM" />`;
+			if (isEmailField(field))
+				return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" placeholder=" ${label}" />`;
+			if (isMonthYearField(field))
+				return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
+			if (isPhoneField(field))
+				return `<input type="tel" value="${value}" data-field="${field}" data-override="phone" class="${cls}" placeholder="Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx" />`;
+
+			if (fieldtype === "Link") {
+				let current_display_html = value
+					? `<a href="/app/file/${value}" target="_blank"
+        style="color:#260fea;font-weight:500;text-decoration:none;">📎 View Current File</a>`
+					: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
+				return `
+<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+    <div style="flex:1;min-width:180px;">
+        <div style="font-size:11px;color:#6b6b6b;margin-bottom:4px;">Current</div>
+        <div style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;background:#f9fafb;min-height:32px;display:flex;align-items:center;">${current_display_html}</div>
+    </div>
+    <div style="flex:1;min-width:180px;">
+        <div style="font-size:11px;color:#6b6b6b;margin-bottom:4px;">Upload New</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <input type="file" class="dynamic-input fg-file-input" data-field="${field}" style="font-size:12px;" />
+            <div class="fg-file-name" data-field="${field}" style="font-size:11px;color:#667085;"></div>
+            <input type="hidden" class="dynamic-input fg-file-url" data-field="${field}" value="${frappe.utils.escape_html(value || "")}" />
+        </div>
+    </div>
+</div>`;
+			}
+
 			switch (fieldtype) {
 				case "Date":
 					return `<input type="date" value="${value.split(" ")[0] || ""}" data-field="${field}" class="${cls}" />`;
 				case "Int":
 				case "Float":
 				case "Currency":
-					return `<input type="number" value="${value}" data-field="${field}" class="${cls}" />`;
+					return `<input type="text" value="${value}" data-field="${field}" class="${cls}" placeholder="${label}" />`;
 				case "Check":
 					return `<div class="checkbox" style="margin-top:6px;"><input type="checkbox" data-field="${field}" class="dynamic-input" ${value ? "checked" : ""} /></div>`;
 				case "Email":
-					return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" ${placeholder} />`;
+					return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" placeholder="${label}" />`;
 				case "Select": {
 					const opts = (meta_field.options || "").split("\n").filter(Boolean);
 					return `<select data-field="${field}" class="form-control dynamic-input">
-						<option value="">Select</option>
-						${opts.map((o) => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
-					</select>`;
+                <option value="">Select ${label}</option>
+                ${opts.map((o) => `<option value="${o}" ${o === value ? "selected" : ""}>${o}</option>`).join("")}
+            </select>`;
 				}
 				case "Table": {
 					const child_doctype = meta_field.options;
@@ -721,22 +852,19 @@ frappe.ui.form.on("Lead", {
 					const child_meta = frappe.get_meta(child_doctype);
 					if (!child_meta?.fields)
 						return `<div style="color:orange;">Child meta not loaded for: ${child_doctype}</div>`;
-
 					const allColumns = getTableColumns(child_meta);
 					const previewCols = allColumns.slice(0, 4);
 					const rows = Array.isArray(value) ? value : [];
-
 					window._ftbl_state[field] = {
 						rows: [...rows],
 						columns: allColumns,
 						previewCols,
 						childDoctype: child_doctype,
 					};
-
 					return buildFtblHTML(field, rows, previewCols);
 				}
 				default:
-					return `<input type="text" value="${value}" data-field="${field}" class="${cls}" ${placeholder} />`;
+					return `<input type="text" value="${value}" data-field="${field}" class="${cls}" placeholder=" ${label}" />`;
 			}
 		}
 
@@ -760,6 +888,21 @@ frappe.ui.form.on("Lead", {
 				return markInvalid(input, `${label} must be a number`);
 			if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value)))
 				return markInvalid(input, `${label} must be a valid date`);
+			if (override === "ssn") {
+				if (value && !/^\d{4}$/.test(value)) {
+					return markInvalid(input, `${label} must be exactly 4 digits`);
+				}
+			}
+			if (override === "availability" && value && !isValidAvailability(value))
+				return markInvalid(input, `Must be in format: Mon - Fri, 9:30 AM - 10:00 PM`);
+		}
+
+		function isValidAvailability(value) {
+			// Accepts: Mon – Fri, 9:30 AM – 10:00 PM  or  Mon, 9:00 AM – 5:00 PM
+			// Accepts both – (en-dash) and - (hyphen) between days and times
+			const pattern =
+				/^[A-Za-z]{2,9}(\s*[–\-]\s*[A-Za-z]{2,9})?\s*,\s*\d{1,2}:\d{2}\s*(AM|PM)\s*[–\-]\s*\d{1,2}:\d{2}\s*(AM|PM)$/i;
+			return pattern.test(value.trim());
 		}
 
 		function validateWithMeta(field_map) {
@@ -797,6 +940,8 @@ frappe.ui.form.on("Lead", {
 					return fail(input, `${label} must be a number`);
 				if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value)))
 					return fail(input, `${label} must be a valid date`);
+				if (override === "availability" && value && !isValidAvailability(value))
+					return fail(input, `Must be in format: Mon - Fri, 9:30 AM - 10:00 PM`);
 			});
 
 			// Table: validate required fields from state
@@ -832,6 +977,13 @@ frappe.ui.form.on("Lead", {
 				const meta = field_map[input.dataset.field];
 				if (!meta || meta.fieldtype === "Table") return;
 				let val = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
+
+				const override = input.dataset.override;
+
+				// ✅ Convert SSN to number
+				if (override === "ssn" && val) {
+					val = parseInt(val, 10);
+				}
 				if (input.dataset.override === "month-year" && val) val = fromMonthYear(val);
 				data[input.dataset.field] = val;
 			});
@@ -868,6 +1020,8 @@ frappe.ui.form.on("Lead", {
 
 		// ─── Main entry point ─────────────────────────────────────────────────────────
 		getDepartmentFields("Lead").then(async (fields) => {
+			frm.set_df_property("lead_detail", "options", "");
+
 			const res = await frappe.call({
 				method: "frappe.client.get_list",
 				args: {
@@ -912,16 +1066,26 @@ frappe.ui.form.on("Lead", {
 						meta_field.fieldtype,
 					);
 
+					const inputHtml = getInputHTML(
+						meta_field.fieldtype,
+						doc[field],
+						field,
+						meta_field,
+					);
+
+					// In locked mode, skip empty fields entirely
+					if (inputHtml === "__HIDE__") return "";
+
 					return `
 <div style="width:${isFullWidth ? "100%" : "calc(50% - 8px)"};min-width:${isFullWidth ? "100%" : "250px"};">
-	<div class="frappe-control">
-		<div class="control-label" style="margin-bottom:6px;">
-			${label}${meta_field.reqd ? '<span style="color:red;">*</span>' : ""}
-		</div>
-		<div class="control-input">
-			${getInputHTML(meta_field.fieldtype, doc[field], field, meta_field)}
-		</div>
-	</div>
+    <div class="frappe-control">
+        <div class="control-label" style="margin-bottom:6px;">
+            ${label}${meta_field.reqd && !_lead_form_locked ? '<span style="color:red;">*</span>' : ""}
+        </div>
+        <div class="control-input">
+            ${inputHtml}
+        </div>
+    </div>
 </div>`;
 				})
 				.join("");
@@ -942,21 +1106,19 @@ frappe.ui.form.on("Lead", {
 			let isSaving = false;
 
 			async function saveLeadDetailForm() {
+				if (!_lead_detail_dirty) return { saved: false, valid: true };
+
 				if (!validateWithMeta(field_map)) {
-					frappe.msgprint(
-						"Please fix highlighted fields in Lead Detail Form before saving.",
-					);
-					return false;
+					frappe.msgprint("Enter Velid Values in Form");
+					return { saved: false, valid: false };
 				}
 				let data = collectFormData(field_map);
 
 				for (const field in window._temp_files || {}) {
 					const file = window._temp_files[field];
-
 					const formData = new FormData();
 					formData.append("file", file);
 					formData.append("is_private", 0);
-
 					try {
 						const res = await $.ajax({
 							url: "/api/method/upload_file",
@@ -964,29 +1126,21 @@ frappe.ui.form.on("Lead", {
 							data: formData,
 							processData: false,
 							contentType: false,
-							headers: {
-								"X-Frappe-CSRF-Token": frappe.csrf_token,
-							},
+							headers: { "X-Frappe-CSRF-Token": frappe.csrf_token },
 						});
-
 						if (res.message) {
 							const file_id = res.message.name;
-
-							// ✅ store in data (this gets saved in doctype)
 							data[field] = file_id;
-
-							// ✅ update hidden input (UI sync)
 							$(`.fg-file-url[data-field="${field}"]`).val(file_id);
 						}
 					} catch (err) {
 						console.error(err);
 						frappe.msgprint(`File upload failed for ${field}`);
-						return false;
+						return { saved: false, valid: false };
 					}
 				}
-
-				// clear temp files after upload
 				window._temp_files = {};
+
 				try {
 					const res = await frappe.call({
 						method: "frappe.client.get_list",
@@ -1003,7 +1157,7 @@ frappe.ui.form.on("Lead", {
 
 					if (!res.message || !res.message.length) {
 						frappe.msgprint("Lead Detail Form not found");
-						return false;
+						return { saved: false, valid: false };
 					}
 
 					const latest_doc = await frappe.db.get_doc(
@@ -1017,83 +1171,73 @@ frappe.ui.form.on("Lead", {
 						args: { doc: latest_doc },
 					});
 
-					return true;
+					_lead_detail_dirty = false;
+					return { saved: true, valid: true };
 				} catch (err) {
 					console.error("Save error:", err);
 					frappe.msgprint("An error occurred while saving. Please try again.");
-					return false;
+					return { saved: false, valid: false };
 				}
 			}
 
+			frm._lead_detail_hook = false;
 			if (!frm._lead_detail_hook) {
 				frm._lead_detail_hook = true;
 				frappe.ui.form.on(frm.doctype, {
 					before_save: async (f) => {
 						if (f.doc.name !== frm.doc.name) return;
-						if (isSaving) return;
+
 						isSaving = true;
+
 						try {
-							const success = await saveLeadDetailForm();
-							// ── If child saved OK but parent has no changes, cancel parent save ──
-							if (success) {
-								frappe.validated = false;
-							}
-						} finally {
-							isSaving = false;
-						}
-						
-						if (frm.doc.status === "Opportunity") {
-							try {
-								const res = await frappe.call({
-									method: "frappe.client.get_list",
-									args: {
-										doctype: "Opportunity",
-										filters: {
-											opportunity_from_lead: frm.doc.name,
-										},
-										limit_page_length: 1,
-									},
-								});
+							const result = await saveLeadDetailForm();
 
-								if (!res.message || res.message.length === 0) {
-									frappe.msgprint({
-										title: "Error",
-										message: "First make opportunity for this lead",
-										indicator: "red",
-									});
-
-									frappe.validated = false;
-									isSaving = false;
-									return;
-								}
-							} catch (err) {
-								console.error(err);
+							if (!result.valid) {
 								frappe.validated = false;
-								isSaving = false;
 								return;
 							}
+
+							// Opportunity validation
+							if (frm.doc.status === "Opportunity") {
+								const exists = await frappe.db.exists("Opportunity", {
+									opportunity_from_lead: frm.doc.name,
+								});
+								if (!exists) {
+									frappe.throw("First create an Opportunity for this Lead");
+								}
+							}
+						} catch (err) {
+							console.error(err);
+							frappe.validated = false;
+						} finally {
+							isSaving = false;
 						}
 					},
 				});
 			}
 
 			// ✅ FILE UPLOAD HANDLER (GLOBAL)
+			// ✅ FILE UPLOAD HANDLER (GLOBAL)
 			window._temp_files = window._temp_files || {};
 
 			// remove old bindings (VERY IMPORTANT)
 			$(document).off("change", ".fg-file-input");
+			$(document).off("input change", ".dynamic-input, .ftbl-chk");
+
+			// Mark dirty on any field edit
+			$(document).on("input change", ".dynamic-input, .ftbl-chk", function () {
+				_lead_detail_dirty = true;
+				frm.dirty();
+			});
 
 			// listen file select
 			$(document).on("change", ".fg-file-input", function () {
 				const file = this.files[0];
 				const field = $(this).data("field");
-
 				if (!file) return;
-
-				// ✅ store file TEMP only (NOT uploading)
 				window._temp_files[field] = file;
-
-				// ✅ update UI (show file name)
+				_lead_detail_dirty = true;
+				frm.dirty();
 				$(`.fg-file-name[data-field="${field}"]`).html(
 					`<span style="color:#260fea;">${file.name}</span>`,
 				);

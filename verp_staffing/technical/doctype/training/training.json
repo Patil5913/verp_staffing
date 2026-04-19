@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "creation": "2026-01-27 14:54:18.118402",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -94,13 +95,20 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 16:00:24.597261",
+ "modified": "2026-04-17 15:54:57.478892",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -116,21 +124,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Coordinator",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   },

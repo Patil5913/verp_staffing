@@ -15,7 +15,7 @@ from verp_staffing.crm.api.naming import generate_name_series
 
 class LeadDetailForm(Document):
 
-     def autoname(self):
+    def autoname(self):
         name = self.first_name
         
         if not name:

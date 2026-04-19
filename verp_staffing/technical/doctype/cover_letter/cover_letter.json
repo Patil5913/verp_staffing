@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "creation": "2026-01-27 14:58:56.425928",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -95,7 +96,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 16:02:03.275348",
+ "modified": "2026-04-17 15:54:40.240563",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Cover Letter",

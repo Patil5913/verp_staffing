@@ -55,6 +55,9 @@ frappe.ui.form.on("Customer", {
 					fieldname: "name",
 				},
 				callback: function (r) {
+					if (frappe.session.user === "Administrator") {
+						return;
+					}
 					const current_employee = r.message && r.message.name;
 					const is_customer_owner = current_employee === frm.doc.customer_owner;
 
@@ -107,7 +110,7 @@ frappe.ui.form.on("Customer", {
 			);
 		}
 
-		if (!frm.doc.name) return;		
+		if (!frm.doc.name) return;
 		frappe.call({
 			method: "verp_staffing.www.customer.get_customer_history",
 			args: {
