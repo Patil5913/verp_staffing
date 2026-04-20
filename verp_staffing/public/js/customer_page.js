@@ -11,13 +11,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
 async function start_otp_bootstrap() {
 	const root = await wait_for_root("#otp-root", 3000);
+	
+	if (!root) return;
+	
 	token = new URLSearchParams(window.location.search).get("t");
 
 	// ✅ otherwise load OTP UI
 	customerEmail = decode_token_email(token);
-
-	if (!root) return;
-
 	init_otp_ui(token);
 }
 
@@ -77,13 +77,13 @@ document.addEventListener("click", async function (e) {
 });
 
 async function handle_logout() {
-	try {
+	const t = new URLSearchParams(window.location.search).get("t")
 
-		await fetch(
-			"/api/method/verp_staffing.utils.customer_page.logout_otp_web?token=" + token
-		);
+	try {
 		
-		// document.getElementById("otp-box").style.display = "none";
+		await api_call("verp_staffing.utils.customer_page.logout_otp_web", {
+			token: t,
+		});
 		location.reload();
 	} catch (e) {
 		console.error("Logout failed", e);
@@ -158,19 +158,59 @@ function bind_otp_events() {
 	});
 }
 
-async function restore_otp_state() {
-	const data = await safe_frappe_call({
-		method: "verp_staffing.utils.customer_page.get_otp_status_web", // 🔧 update path
-		args: { token: token },
+async function api_call(method, args = {}) {
+	const url = new URL("/api/method/" + method, window.location.origin);
+
+	// attach params
+	Object.keys(args).forEach((key) => {
+		if (args[key] !== undefined && args[key] !== null) {
+			url.searchParams.append(key, args[key]);
+		}
 	});
+
+	let res, json;
+
+	try {
+		res = await fetch(url, {
+			method: "GET",
+			credentials: "include",
+		});
+
+		json = await res.json();
+	} catch (e) {
+		console.error("[API NETWORK ERROR]", method, e);
+		return null;
+	}
+
+	if (!res.ok || json.exc) {
+		console.error("[API ERROR]", method, json?.exc || res.statusText);
+		return null;
+	}
+
+	return json.message;
+}
+
+async function restore_otp_state() {
+	const res = await fetch(
+		"/api/method/verp_staffing.utils.customer_page.get_otp_status_web?token=" +
+			encodeURIComponent(token),
+		{
+			method: "GET",
+			credentials: "include",
+		},
+	);
+
+	const data = await res.json();
 
 	if (!data) {
 		apply_state("idle");
 		return;
 	}
 
-	const state = data.state;
-	const expiresIn = parseInt(data.expires_in, 10) || 0;
+	const payload = data?.message || {};
+
+	const state = payload.state;
+	const expiresIn = parseInt(payload.expires_in, 10) || 0;
 
 	if (state === "verified") {
 		apply_state("verified");
@@ -207,9 +247,9 @@ async function handle_send_otp() {
 
 	apply_state("sending");
 
-	const data = await safe_frappe_call({
-		method: "verp_staffing.utils.customer_page.send_otp_web", // 🔧 update path
-		args: { token: token, email: customerEmail },
+	const data = await api_call("verp_staffing.utils.customer_page.send_otp_web", {
+		token: token,
+		email: customerEmail,
 	});
 
 	if (!data) {
@@ -251,36 +291,27 @@ async function handle_verify_otp() {
 	}
 	set_status("", "");
 
-	const data = await safe_frappe_call({
-		method: "verp_staffing.utils.customer_page.verify_otp_web", // 🔧 update path
-		args: { token: token, otp: otp },
-		return_error: true,
-	});
+	let data;
 
-	if (data && data._error) {
+	try {
+		data = await api_call("verp_staffing.utils.customer_page.verify_otp_web", {
+			token: token,
+			otp: otp,
+		});
+	} catch (e) {
+		console.error("verify error", e);
+	}
+
+	if (!data) {
 		if (verifyBtn) {
 			verifyBtn.disabled = false;
 			verifyBtn.textContent = "Verify OTP";
 		}
-
-		const msg = (data.message || "").toLowerCase();
-		if (msg.includes("expired")) {
-			apply_state("expired");
-		} else if (msg.includes("invalid")) {
-			set_status("❌ Wrong OTP. Please try again.", "red");
-			if (otpInput) {
-				otpInput.style.borderColor = "#dc3545";
-				setTimeout(function () {
-					otpInput.style.borderColor = "#ddd";
-				}, 1500);
-			}
-		} else {
-			set_status("❌ Verification failed. Please try again.", "red");
-		}
+		set_status("❌ Verification failed. Please try again.", "red");
 		return;
 	}
 
-	if (data && data.status === "verified") {
+	if (data.status === "verified") {
 		apply_state("verified");
 		document.getElementById("otp-box").style.display = "none";
 		location.reload();
@@ -289,83 +320,8 @@ async function handle_verify_otp() {
 			verifyBtn.disabled = false;
 			verifyBtn.textContent = "Verify OTP";
 		}
-		set_status("❌ Unexpected response. Please try again.", "red");
+		set_status("❌ Invalid or expired OTP.", "red");
 	}
-}
-
-// Returns: the message object on success, null on error (or error object if return_error:true)
-async function safe_frappe_call(opts) {
-	const return_error = opts.return_error || false;
-	return _frappe_call_with_retry(opts, return_error, 0);
-}
-
-async function _frappe_call_with_retry(opts, return_error, attempt) {
-	let r;
-
-	try {
-		const response = await fetch("/api/method/" + opts.method, {
-			method: "POST",
-			credentials: "include",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(opts.args || {}),
-		});
-
-		r = await response.json();
-	} catch (ex) {
-		const isAbort = ex && typeof ex === "object" && ex.name === "AbortError";
-
-		if (isAbort && attempt < 2) {
-			console.warn("[OTP] fetch aborted, retrying attempt", attempt + 1, opts.method);
-
-			await new Promise((res) => setTimeout(res, 300));
-			return _frappe_call_with_retry(opts, return_error, attempt + 1);
-		}
-
-		console.error("[OTP] fetch failed:", opts.method, ex);
-
-		if (return_error) return { _error: true, message: "Network error. Please try again." };
-
-		return null;
-	}
-
-	// Frappe API returns { message: ..., exc: ... }
-	// If backend explicitly sends error
-	if (r && r.exc) {
-		const user_msg = parse_frappe_exc(r.exc);
-		console.error("[OTP] server error:", opts.method, r.exc);
-
-		if (return_error) return { _error: true, message: user_msg };
-
-		return null;
-	}
-
-	// Success response (direct JSON from Python)
-	if (r && typeof r === "object") {
-		return r.message || r;
-	}
-
-	console.error("[OTP] empty response:", opts.method, r);
-
-	if (return_error) return { _error: true, message: "Unexpected server response." };
-
-	return null;
-}
-
-// Extract the human-readable error from a Frappe exc traceback string
-function parse_frappe_exc(exc) {
-	if (!exc) return "server error";
-	const lines = String(exc)
-		.split("\n")
-		.map(function (l) {
-			return l.trim();
-		})
-		.filter(Boolean);
-	const last = lines[lines.length - 1] || "";
-	// Strip the exception class prefix if present
-	const colon = last.indexOf(":");
-	return colon >= 0 ? last.slice(colon + 1).trim() : last;
 }
 
 // ─── State machine (single point of all DOM writes) ───────────────────────────
@@ -538,5 +494,3 @@ function build_otp_html() {
 		"</style>",
 	].join("");
 }
-
-
