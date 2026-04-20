@@ -1,89 +1,84 @@
 import frappe
-from frappe.utils import nowdate, getdate
-import random
 import json
-from frappe.utils import nowdate, getdate, get_datetime
+from verp_staffing.utils.customer_page import get_otp_status_web
+
+import base64
+
+def safe_b64decode(data):
+    data += "=" * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data.encode()).decode()
+
+
+def verify_token_and_get_email(token):
+    import hmac
+    import hashlib
+    try:
+        decoded = safe_b64decode(token)
+        payload_str, signature = decoded.rsplit("|", 1)
+
+        expected_signature = hmac.new(
+            frappe.conf.get("encryption_key").encode(),
+            payload_str.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        if signature != expected_signature:
+            return None
+
+        return payload_str
+
+    except Exception as e:
+        frappe.log_error(f"Token decode failed: {str(e)}")
+        return None
 
 
 def get_context(context):
     context.no_cache = 1
 
-    # =====================================================
-    # HANDLE POST REQUEST
-    # =====================================================
-    if frappe.request.method == "POST":
+    raw_token = frappe.form_dict.get("t")
 
-        action = frappe.form_dict.get("action")
+    context.invalid_link = False
+    context.is_verified = False
+    context.otp_state = "idle"
+    context.otp_expires_in = 0
+    context.token = raw_token
 
-        # -------------------------------------------------
-        # SEND OTP
-        # -------------------------------------------------
-        if action == "send_otp":
+    if not raw_token:
+        context.invalid_link = True
+        return context
 
-            email = frappe.form_dict.get("email")
+    raw_token = str(raw_token)[:256]
 
-            lead = frappe.get_all(
-                "Lead Detail Form", filters={"email": email}, fields=["name"]
-            )
+    # ✅ ONLY VALIDATE SIGNATURE
+    email = verify_token_and_get_email(raw_token)
 
-            if not lead:
-                context.auth_error = "Email not found."
-                return
+    if not email:
+        context.invalid_link = True
+        return context
 
-            otp = random.randint(100000, 999999)
+    # ❗ DO NOT STOP HERE
+    # token is valid, OTP can still proceed
 
-            frappe.cache().set_value(f"email_otp:{email}", otp, expires_in_sec=2000)
+    status = get_otp_status_web(raw_token)
+    state = status.get("state")
 
-            frappe.sendmail(
-                recipients=email,
-                subject="Your OTP",
-                message=f"Your OTP is {otp}",
-                delayed=False,
-                now=True,
-            )
+    context.otp_email = email
 
-            context.otp_sent = True
-            context.email = email
-            return
+    if state == "verified":
+        context.is_verified = True
+        context.otp_state = "verified"
 
-        # -------------------------------------------------
-        # VERIFY OTP
-        # -------------------------------------------------
-        elif action == "verify_otp":
+    elif state == "otp_sent":
+        context.otp_state = "otp_sent"
+        context.otp_expires_in = status.get("expires_in", 0)
 
-            email = frappe.form_dict.get("email")
-            entered_otp = frappe.form_dict.get("otp")
+    else:
+        context.otp_state = "idle"
 
-            cached_otp = frappe.cache().get_value(f"email_otp:{email}")
-
-            if not cached_otp or str(cached_otp) != str(entered_otp):
-                context.auth_error = "Invalid or expired OTP."
-                context.otp_sent = True
-                context.email = email
-                return
-
-            frappe.session["lead_verified"] = True
-            frappe.session["lead_email"] = email
-            frappe.session.modified = True
-
-    # =====================================================
-    # SESSION CHECK
-    # =====================================================
-    context.is_verified = frappe.session.get("lead_verified")
-
-    # If session expired reset verification state
-    if not context.is_verified:
-        context.otp_sent = False
-        context.email = None
-        return
-
-    # =====================================================
-    # LOAD DASHBOARD DATA
-    # =====================================================
-    lead_email = frappe.session.get("lead_email")
+    # return context
 
     lead_doc = frappe.get_all(
-        "Lead Detail Form", filters={"email": lead_email}, fields=["name"]
+        "Lead Detail Form", filters={"email": email}, fields=["name"]
     )
 
     if not lead_doc:
@@ -297,6 +292,8 @@ def get_context(context):
                             "type": round.type_of_interview,
                         }
                     )
+                    
+    return context
 
 
 # ================================================================
@@ -512,28 +509,28 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
     # -------------------------------------------------
     # SALES ORDER
     # -------------------------------------------------
-    sales_orders = frappe.get_all(
-        "Sales Order",
-        filters={"customer": customer},
-        fields=["name", "status", "agreement"],
-    )
+    # sales_orders = frappe.get_all(
+    #     "Sales Order",
+    #     filters={"customer": customer},
+    #     fields=["name", "status", "agreement"],
+    # )
 
-    if sales_orders:
-        history["departments"]["Sales Order"] = []
-        for so in sales_orders:
-            agreements = frappe.get_all(
-                "Agreement",
-                filters={"sales_order": so.name},
-                pluck="name",
-            )
-            so_entry = {
-                "department": "Sales Order",
-                "docname": so.name,
-                "status": so.status,
-                "id": so.name,
-                "agreement": agreements,
-            }
-            history["departments"]["Sales Order"].append(so_entry)
+    # if sales_orders:
+    #     history["departments"]["Sales Order"] = []
+    #     for so in sales_orders:
+    #         agreements = frappe.get_all(
+    #             "Agreement",
+    #             filters={"sales_order": so.name},
+    #             pluck="name",
+    #         )
+    #         so_entry = {
+    #             "department": "Sales Order",
+    #             "docname": so.name,
+    #             "status": so.status,
+    #             "id": so.name,
+    #             "agreement": agreements,
+    #         }
+    #         history["departments"]["Sales Order"].append(so_entry)
 
     # -------------------------------------------------
     # INTERVIEWS

@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "field:title",
- "creation": "2026-04-08 16:08:12.603336",
+ "creation": "2026-04-08 14:02:09.169560",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -29,7 +29,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-08 16:10:52.362221",
+ "modified": "2026-04-08 14:03:48.984262",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Tax Category",
@@ -54,6 +54,5 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

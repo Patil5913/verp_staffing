@@ -14,13 +14,18 @@ frappe.ui.form.on("Customer", {
 			doctype: frm.doctype,
 			type: "Form",
 		};
+
 		frappe.breadcrumbs.update();
+
 		set_customer_owner(frm);
+
 		window.render_notes(frm);
 		window.render_activity_section(frm);
+
 		if (frappe.session.user != "Administrator") {
 			toggle_tab_view(frm);
 		}
+
 		frm.set_query("customer_owner", function () {
 			return {
 				filters: [["Employee Assignment Detail", "department", "=", "Sales"]],
@@ -146,6 +151,21 @@ frappe.ui.form.on("Customer", {
 			},
 		});
 		window.add_forward_button(frm);
+
+		frm.add_custom_button("Send Portal Link", function () {
+			frappe.call({
+				method: "verp_staffing.crm.doctype.customer.customer.send_portal_link",
+				args: {
+					customer: frm.doc.name,
+				},
+				freeze: true,
+				callback: function (r) {
+					if (r.message) {
+						frappe.msgprint("Portal link sent successfully");
+					}
+				},
+			});
+		});
 	},
 
 	sales_order: function (frm) {

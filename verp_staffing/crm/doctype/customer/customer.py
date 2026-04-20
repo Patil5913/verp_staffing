@@ -370,3 +370,70 @@ def update_company_percentage(lead_name, company_percentage):
     lead.save(ignore_permissions=True)
 
     return "updated"
+
+    
+def generate_token(email: str):
+    import hmac, hashlib, base64
+
+    payload = email.strip()
+
+    signature = hmac.new(
+        frappe.conf.get("encryption_key").encode(),
+        payload.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+    token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
+    return token
+
+@frappe.whitelist()
+def send_portal_link(customer):
+    if not customer:
+        frappe.throw("Customer is required")
+
+    # STEP 1: find Doctype Reference row
+    ref = frappe.get_all(
+        "Doctype Reference",
+        filters={
+            "reference_doctype": "Customer",
+            "reference_person": customer,
+        },
+        fields=["parent"],
+        limit=1,
+    )
+
+    if not ref:
+        frappe.throw("No reference found for this customer")
+
+    lead_name = ref[0].parent
+
+    # STEP 2: get email from Lead Detail Form
+    email = frappe.db.get_value("Lead Detail Form", lead_name, "email")
+
+    if not email:
+        frappe.throw(
+            title="Email Missing",
+            msg=f'Email is required to send agreement.<br><br>'
+                f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
+                f'➜ Open Lead Detail Form</a>'
+        )
+
+    # STEP 3: generate token
+    token = generate_token(email)
+
+    # STEP 4: build link
+    base_url = frappe.utils.get_url()
+    link = f"{base_url}/customer?t={token}"
+
+    # STEP 5: send email
+    frappe.sendmail(
+        recipients=[email],
+        subject="Your Portal Link",
+        message=f"""
+        Click below to access your portal:
+
+        {link}
+        """,
+    )
+
+    return True

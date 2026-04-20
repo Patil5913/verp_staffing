@@ -80,8 +80,6 @@ frappe.ready(async function () {
 	customerEmail = data.e;
 	customerValue = data.customer;
 
-	console.log("data.exp", data.exp);
-
 	// 🔥 EXPIRY CHECK (initial)
 	if (data.exp && isExpired(data.exp)) {
 		blockExpiredUI();
@@ -979,7 +977,7 @@ async function handle_send_otp() {
 		return;
 	}
 
-	const expiresIn = parseInt(data.expires_in, 10);
+	let expiresIn = parseInt(data.expires_in, 10);
 	if (!(expiresIn > 0)) expiresIn = 300;
 
 	const isResend = data.status === "already_sent";
