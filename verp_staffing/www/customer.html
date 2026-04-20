@@ -111,17 +111,22 @@
 </style>
 
 <!-- ============== VERIFICATION BLOCK ========================= -->
-{% if not is_verified %}
-<span style="color: #64748b">if</span><br />
-<span style="color: #0f172a; font-weight: 500">{{ is_verified }}</span>
+{% if invalid_link %}
 
+<!-- ❌ INVALID LINK UI -->
+<div style="text-align: center; padding: 60px">
+	<h2 style="color: #dc2626">Invalid or Expired Link</h2>
+	<p style="color: #64748b">This link is not valid. Please request a new one.</p>
+</div>
+
+{% elif not is_verified %}
+
+<!-- 🔐 OTP UI -->
 <div id="otp-section-wrapper">
 	<div id="otp-root"></div>
 </div>
 
 {% else %}
-<span style="color: #64748b">else</span><br />
-<span style="color: #0f172a; font-weight: 500">{{ is_verified }}</span>
 
 <!-- ================ CUSTOMER FEEDBACK DIALOG ======================== -->
 <div
@@ -622,7 +627,23 @@
 
 <!-- ================= CUSTOMER STAGE SECTION ================= -->
 <div id="stage-section" class="page-wrapper">
-	<h1 style="margin-bottom: 25px; font-weight: 600">History</h1>
+	<div style="display: flex; justify-content: space-between; align-items: center">
+		<h1 style="margin-bottom: 25px; font-weight: 600">History</h1>
+
+		<button
+			id="logout-btn"
+			style="
+				padding: 6px 12px;
+				background: #ef4444;
+				color: #fff;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+			"
+		>
+			Logout
+		</button>
+	</div>
 
 	{% if full_history %}
 

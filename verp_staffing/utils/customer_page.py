@@ -16,27 +16,12 @@ def _get_ttl(cache_key):
 
     return max(int(expires_at - frappe.utils.now_datetime().timestamp()), 0)
 
-
 @frappe.whitelist(allow_guest=True)
 def send_otp_web(token, email):
-    if not token:
-        frappe.throw("Missing token")
+    if not token or not email:
+        frappe.throw("Missing token or email")
 
-    if not email or "@" not in str(email):
-        frappe.throw("Invalid email")
-
-    # 🔴 VALIDATE EMAIL EXISTS
-    lead = frappe.get_all(
-        "Lead Detail Form",
-        filters={"email": email},
-        fields=["name"],
-        limit=1
-    )
-
-    if not lead:
-        frappe.throw("Email not found.")
-
-    token = str(token)[:128]
+    token = str(token)[:256]
     cache_key = f"otp_web:{token}"
 
     # Prevent spam resend
@@ -78,7 +63,7 @@ def verify_otp_web(token, otp):
     if not otp:
         frappe.throw("Missing OTP")
 
-    token = str(token)[:128]
+    token = str(token)[:256]
     otp = str(otp).strip()
 
     cache_key = f"otp_web:{token}"
@@ -140,3 +125,24 @@ def get_otp_status_web(token):
             frappe.cache().delete_value(cache_key)
 
     return {"state": "idle"}
+
+
+@frappe.whitelist(allow_guest=True)
+def logout_otp_web(token):
+    if not token:
+        return {"status": "ok"}
+
+    token = str(token)[:128]
+
+    verified_key = f"otp_verified_web:{token}"
+    cache_key = f"otp_web:{token}"
+
+    # 🔥 Remove verification
+    frappe.cache().delete_value(verified_key)
+
+    # optional: also clear pending OTP
+    frappe.cache().delete_value(cache_key)
+    
+    print("-------------------------------------------------logged_out")
+
+    return {"status": "logged_out"}

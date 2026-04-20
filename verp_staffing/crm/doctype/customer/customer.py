@@ -371,11 +371,10 @@ def update_company_percentage(lead_name, company_percentage):
 
     return "updated"
 
-import hmac
-import hashlib
-import base64
-
+    
 def generate_token(email: str):
+    import hmac, hashlib, base64
+
     payload = email.strip()
 
     signature = hmac.new(
@@ -385,7 +384,6 @@ def generate_token(email: str):
     ).hexdigest()
 
     token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
-
     return token
 
 @frappe.whitelist()

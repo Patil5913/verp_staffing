@@ -5,63 +5,47 @@ let _events_bound = false;
 let token = null;
 let customerEmail = null;
 
-console.log("------------------------------------------------------");
-
-// generate persistent token per browser session
-function get_or_create_token() {
-	let t = localStorage.getItem("otp_token");
-
-	if (!t) {
-		t = "tok_" + Math.random().toString(36).slice(2) + Date.now();
-		localStorage.setItem("otp_token", t);
-	}
-
-	// 🔥 ADD THIS LINE (this fixes your entire backend issue)
-	document.cookie = "otp_token=" + t + "; path=/";
-
-	return t;
-}
-
 document.addEventListener("DOMContentLoaded", function () {
 	start_otp_bootstrap();
 });
 
 async function start_otp_bootstrap() {
 	const root = await wait_for_root("#otp-root", 3000);
+	token = new URLSearchParams(window.location.search).get("t");
 
-	if (!root) {
-		console.warn("[OTP] root missing permanently, aborting OTP system");
-		return;
-	}
+	// ✅ otherwise load OTP UI
+	customerEmail = decode_token_email(token);
 
-	const token = get_or_create_token();
+	if (!root) return;
 
-	// STEP 1: CHECK STATUS FIRST
-	let state = "idle";
+	init_otp_ui(token);
+}
+
+function decode_token_email(token) {
+	if (!token) return null;
 
 	try {
-		const res = await fetch(
-			"/api/method/verp_staffing.otp.get_otp_status_web?token=" + token
-		);
+		const decoded = safe_atob(token);
+		const parts = decoded.split("|");
 
-		const data = await res.json();
-		state = data?.message?.state || "idle";
+		if (parts.length < 1) return null;
+
+		return parts[0]; // email
 	} catch (e) {
-		console.error("[OTP] status check failed", e);
+		console.error("Token decode failed:", e);
+		return null;
+	}
+}
+
+function safe_atob(base64) {
+	// fix url-safe base64 + padding
+	base64 = base64.replace(/-/g, "+").replace(/_/g, "/");
+
+	while (base64.length % 4) {
+		base64 += "=";
 	}
 
-	// STEP 2: HARD EXIT IF VERIFIED
-	if (state === "verified") {
-		console.log("[OTP] already verified, skipping UI init");
-
-		const box = document.getElementById("otp-box");
-		if (box) box.remove(); // or hide
-
-		return;
-	}
-
-	// STEP 3: INIT OTP FLOW
-	init_otp_ui(token);
+	return atob(base64);
 }
 
 function wait_for_root(selector, timeout = 3000) {
@@ -86,13 +70,31 @@ function wait_for_root(selector, timeout = 3000) {
 	});
 }
 
-function init_otp_ui(token) {
+document.addEventListener("click", async function (e) {
+	if (e.target && e.target.id === "logout-btn") {
+		await handle_logout();
+	}
+});
+
+async function handle_logout() {
+	try {
+
+		await fetch(
+			"/api/method/verp_staffing.utils.customer_page.logout_otp_web?token=" + token
+		);
+		
+		// document.getElementById("otp-box").style.display = "none";
+		location.reload();
+	} catch (e) {
+		console.error("Logout failed", e);
+	}
+}
+
+function init_otp_ui() {
 	inject_otp_html();
 
-	wait_for_otp_box().then(function () {
-		bind_otp_events();
-		restore_otp_state();
-	});
+	bind_otp_events();
+	restore_otp_state();
 }
 
 function inject_otp_html() {
@@ -198,11 +200,8 @@ async function handle_send_otp() {
 	// Block re-entry
 	if (_otp_state === "otp_sent" || _otp_state === "sending" || _otp_state === "verified") return;
 
-	const emailInput = document.getElementById("email-input");
-	const email = emailInput ? emailInput.value.trim() : "";
-
-	if (!email) {
-		set_status("⚠️ Please fill in your email address first.", "orange");
+	if (!customerEmail) {
+		set_status("⚠️ Unable to find your email address.", "orange");
 		return;
 	}
 
@@ -210,7 +209,7 @@ async function handle_send_otp() {
 
 	const data = await safe_frappe_call({
 		method: "verp_staffing.utils.customer_page.send_otp_web", // 🔧 update path
-		args: { token: token, email: email },
+		args: { token: token, email: customerEmail },
 	});
 
 	if (!data) {
@@ -499,9 +498,6 @@ function build_otp_html() {
 		'<p style="margin:0 0 4px 0;font-weight:700;font-size:17px;color:#1a1a2e;">',
 		"Email Verification</p>",
 
-		'<input type="email" id="email-input" placeholder="Enter your email" ',
-		'style="width:100%;padding:12px;margin-bottom:12px;border:2px solid #ddd;border-radius:6px;" />',
-
 		'<p id="otp-subtext" style="margin:0 0 12px 0;font-size:13px;color:#666;line-height:1.5;">',
 		"We'll send a 6-digit verification code to your email address.</p>",
 
@@ -542,3 +538,5 @@ function build_otp_html() {
 		"</style>",
 	].join("");
 }
+
+
