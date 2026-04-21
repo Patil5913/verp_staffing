@@ -337,6 +337,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "rounding_adjustment",
    "fieldtype": "Currency",
    "label": "Rounding Adjustment",
@@ -352,6 +353,7 @@
   },
   {
    "bold": 1,
+   "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "rounded_total",
    "fieldtype": "Currency",
    "label": "Rounded Total",
@@ -500,7 +502,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-18 14:13:18.536421",
+ "modified": "2026-04-21 11:25:52.269965",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",

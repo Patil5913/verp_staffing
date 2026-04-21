@@ -247,6 +247,10 @@ doc_events = {
     "Sales Invoice": {
         "on_submit": "verp_staffing.accounts.doctype.sales_invoice.gl.on_submit_sales_invoice",
         "on_cancel": "verp_staffing.accounts.doctype.sales_invoice.gl.on_cancel_sales_invoice"
+    },
+    "Purchase Invoice": {
+        "on_submit": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_submit_purchase_invoice",
+        "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice"
     }
 }
 

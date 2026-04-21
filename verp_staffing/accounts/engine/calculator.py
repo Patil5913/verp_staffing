@@ -81,7 +81,8 @@ def calculate_base(doc):
     doc.base_total_taxes_and_charges = doc.total_taxes_and_charges * rate
     doc.base_rounding_adjustment = doc.rounding_adjustment * rate
     doc.base_rounded_total = doc.rounded_total * rate
-    doc.base_discount_amount = doc.discount_amount * rate
+    if doc.discount_amount:
+        doc.base_discount_amount = doc.discount_amount * rate
 
 # Rounding
 def calculate_rounding(doc):
@@ -96,7 +97,7 @@ def calculate_rounding(doc):
 
 		doc.rounded_total = rounded
 		doc.rounding_adjustment = flt(rounded - doc.grand_total)
-		doc.outstanding_amount = doc.rounded_total
+		doc.outstanding_amount = rounded
 
 		# base currency
 		if doc.conversion_rate:

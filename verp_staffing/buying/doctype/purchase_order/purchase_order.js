@@ -5,7 +5,11 @@
 // verp_staffing.accounts.taxes.setup_tax_validations("Purchase Order");
 
 frappe.ui.form.on("Purchase Order", {
+	refresh: function (frm) {
+		update_company_currency_labels(frm);
+	},
 	company: function (frm) {
+		handle_currency_ui(frm);
 		update_company_currency_labels(frm);
 		set_account_queries(frm);
 		toggle_exchange_rate(frm);
@@ -13,8 +17,10 @@ frappe.ui.form.on("Purchase Order", {
 	},
 	onload: function (frm) {
 		set_account_queries(frm);
+		update_company_currency_labels(frm);
 	},
 	currency: function (frm) {
+		handle_currency_ui(frm);
 		update_items_currency_labels(frm);
 		handle_currency(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
@@ -170,6 +176,9 @@ function update_currency_labels(frm) {
 	frm.set_df_property("total", "label", `Total (${currency})`);
 	frm.set_df_property("net_total", "label", `Net Total (${currency})`);
 	frm.set_df_property("grand_total", "label", `Grand Total (${currency})`);
+	frm.set_df_property("rounding_adjustment", "label", `Rounding Adjustment (${currency})`);
+	frm.set_df_property("rounded_total", "label", `Rounded Total (${currency})`);
+	frm.set_df_property("discount_amount", "label", `Additional Discount Ammount (${currency})`);
 
 	frm.refresh_fields();
 }
@@ -187,12 +196,50 @@ function update_items_currency_labels(frm) {
 
 function update_company_currency_labels(frm) {
 	let company_currency = frm.doc.company_currency || "";
+	const fields = [
+		"total",
+		"net_total",
+		"grand_total",
+		"rounded_total",
+		"discount_amount",
+		"rounding_adjustment",
+		"total_taxes_and_charges",
+	];
+	fields.forEach((field) => {
+		frm.set_df_property(
+			field,
+			"label",
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${currency})`,
+		);
+	});
 
-	frm.set_df_property("base_total", "label", `Total (${company_currency})`);
-	frm.set_df_property("base_net_total", "label", `Net Total (${company_currency})`);
-	frm.set_df_property("base_grand_total", "label", `Grand Total (${company_currency})`);
+	const company_currency_field = [
+		"base_total",
+		"base_net_total",
+		"base_grand_total",
+		"base_rounded_total",
+		"base_rounding_adjustment",
+		"base_total_taxes_and_charges",
+		"base_in_words",
+		"base_discount_amount",
+	];
+	company_currency_field.forEach((field) => {
+		if (
+			currency &&
+			company_currency &&
+			currency !== company_currency.message.default_currency
+		) {
+			frm.set_df_property(field, "hidden", false);
+		} else {
+			frm.set_df_property(field, "hidden", true);
+		}
 
-	frm.refresh_fields();
+		frm.set_df_property(
+			field,
+			"label",
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency.message.default_currency})`,
+		);
+	});
 }
 
 function handle_discount_account(frm) {
@@ -207,8 +254,54 @@ function handle_discount_account(frm) {
 	}
 }
 
-function set_account_queries(frm) {
+function handle_currency_ui(frm) {
+	if (!frm.doc.company || !frm.doc.currency) return;
 
+	frappe.call({
+		method: "verp_staffing.accounts.doctype.company.company.get_company_currency",
+		args: { company: frm.doc.company },
+		callback(r) {
+			const company_currency = r.message;
+
+			if (!company_currency) return;
+
+			if (frm.doc.currency === company_currency) {
+				// Same currency
+				frm.set_value("conversion_rate", 1);
+
+				frm.set_df_property("conversion_rate", "hidden", 1);
+				frm.set_df_property("conversion_rate", "reqd", 0);
+
+				toggle_base_fields(frm, false);
+			} else {
+				// Different currency
+				frm.set_df_property("conversion_rate", "hidden", 0);
+				frm.set_df_property("conversion_rate", "reqd", 1);
+
+				toggle_base_fields(frm, true);
+			}
+		},
+	});
+}
+
+function toggle_base_fields(frm, show) {
+	const fields = [
+		"base_total",
+		"base_net_total",
+		"base_grand_total",
+		"base_rounded_total",
+		"base_discount_amount",
+	];
+
+	fields.forEach((f) => {
+		frm.set_df_property(f, "hidden", show ? 0 : 1);
+		if (show) {
+			frm.set_value(f, 0);
+		}
+	});
+}
+
+function set_account_queries(frm) {
 	frm.set_query("expense_account", "items", () => {
 		if (!frm.doc.company) {
 			return {

@@ -28,7 +28,6 @@
  "fields": [
   {
    "columns": 2,
-   "default": "On Net Total",
    "fieldname": "charge_type",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -168,7 +167,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-18 15:30:34.455812",
+ "modified": "2026-04-21 10:02:10.121871",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Taxes and Charges",

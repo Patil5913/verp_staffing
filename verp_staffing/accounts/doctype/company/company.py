@@ -216,7 +216,6 @@ def get_company_currency(company):
 		)
 	return frappe.flags.company_currency[company]
 
-
 @frappe.whitelist()
 def get_company_receivable_account(company):
     if not company:

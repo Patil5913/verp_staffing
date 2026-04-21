@@ -63,6 +63,7 @@
   "additional_discount_percentage",
   "column_break_awbw",
   "discount_amount",
+  "base_discount_amount",
   "more_info_tab",
   "tracking_section",
   "status",
@@ -529,13 +530,20 @@
    "print_hide": 1,
    "reqd": 1,
    "set_only_once": 1
+  },
+  {
+   "fieldname": "base_discount_amount",
+   "fieldtype": "Currency",
+   "label": "Additional Discount Amount (Company Currency)",
+   "options": "Company:company:default_currency",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-file-text",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-18 15:29:08.190027",
+ "modified": "2026-04-20 16:11:50.222387",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Purchase Order",

@@ -190,12 +190,6 @@ frappe.ui.form.on("Opportunity", {
 		}
 	},
 
-	name1: function (frm) {
-		if (frm.fields_dict.title) {
-			frm.set_value("title", frm.doc.name1);
-		}
-	},
-
 	fetch_source_details: function (frm) {
 		if (frm.doc.opportunity_from_lead) {
 			frappe.db.get_value("Lead", frm.doc.opportunity_from_lead, "source", function (r) {

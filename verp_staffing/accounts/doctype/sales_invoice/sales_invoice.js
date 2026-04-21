@@ -6,7 +6,17 @@ frappe.ui.form.on("Sales Invoice", {
 		set_currency_labels(frm);
 	},
 	onload(frm) {
+		set_currency_labels(frm);
 		set_account_queries(frm);
+	},
+	after_save(frm) {
+		console.log(
+			"Setting in words after save",
+			frm.doc.rounded_total,
+			frm.doc.base_rounded_total,
+		);
+		frm.set_value("in_words", frm.doc.in_words);
+		frm.set_value("base_in_words", frm.doc.base_in_words);
 	},
 	validate(frm) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
@@ -29,6 +39,17 @@ frappe.ui.form.on("Sales Invoice", {
 				}
 			},
 		});
+
+		if (frm.doc.items && frm.doc.items.length) {
+			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
+				if (r.message && r.message.default_income_account) {
+					frm.doc.items.forEach((item) => {
+						item.expense_account = r.message.default_income_account;
+					});
+					frm.refresh_field("items");
+				}
+			});
+		}
 	},
 	currency(frm) {
 		handle_currency_ui(frm);
@@ -49,6 +70,9 @@ frappe.ui.form.on("Sales Invoice", {
 	discount_amount(frm) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		handle_discount_account(frm);
+	},
+	disable_rounded_total(frm) {
+		verp_staffing.calculation_engine.calculate_rounding(frm);
 	},
 });
 
@@ -161,7 +185,13 @@ function handle_currency_ui(frm) {
 }
 
 function toggle_base_fields(frm, show) {
-	const fields = ["base_total", "base_net_total", "base_grand_total", "base_rounded_total"];
+	const fields = [
+		"base_total",
+		"base_net_total",
+		"base_grand_total",
+		"base_rounded_total",
+		"base_discount_amount",
+	];
 
 	fields.forEach((f) => {
 		frm.set_df_property(f, "hidden", show ? 0 : 1);
@@ -176,7 +206,7 @@ function set_account_queries(frm) {
 		if (!frm.doc.company) {
 			return {
 				filters: {
-					name: "__invalid__", // 🔥 returns nothing
+					name: "__invalid__", // returns nothing
 				},
 			};
 		}
@@ -274,7 +304,9 @@ async function set_currency_labels(frm) {
 		"base_rounding_adjustment",
 		"base_total_taxes_and_charges",
 		"base_in_words",
+		"base_discount_amount",
 	];
+	console.log("company_currency: ", company_currency);
 	company_currency_field.forEach((field) => {
 		if (
 			currency &&

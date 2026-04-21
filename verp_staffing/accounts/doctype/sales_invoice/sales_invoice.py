@@ -2,10 +2,8 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _, msgprint, throw
-from frappe.contacts.doctype.address.address import get_address_display
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import add_days, cint, cstr, flt, formatdate, get_link_to_form, getdate, nowdate,now_datetime
+from frappe import _, throw
+from frappe.utils import cint,flt, getdate, nowdate,now_datetime
 from frappe.model.document import Document
 from verp_staffing.accounts.doctype.company.company import get_company_currency
 from frappe.utils import money_in_words
@@ -50,6 +48,7 @@ class SalesInvoice(Document):
 		self.validate_tax_accounts()
 		self.validate_discount_account()
 		self.validate_mandatory_accounts()
+		self.validate_account_currencies()
 
 		self.set_against_income_account()
 		self.set_indicator()
@@ -191,6 +190,38 @@ class SalesInvoice(Document):
 				frappe.throw(
 					_("Row {0}: Income account is mandatory").format(item.idx)
 				)
+
+	def validate_account_currencies(self):
+		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+		doc_currency = self.currency
+
+		invalid_accounts = []
+
+		def check_account(account, label):
+			if not account:
+				return
+
+			acc_currency = frappe.get_cached_value("Account", account, "account_currency")
+
+			if acc_currency not in [company_currency, doc_currency]:
+				invalid_accounts.append(f"{label}: {account} ({acc_currency})")
+
+		# Check items
+		for row in self.items:
+			check_account(row.income_account, "Item Row")
+
+		# Check taxes
+		for tax in self.taxes:
+			check_account(tax.account_head, "Tax Row")
+
+		# Check party account
+		check_account(self.debit_to, "Party Account")
+
+		if invalid_accounts:
+			frappe.throw(
+				"Invalid account currency detected:<br>" + "<br>".join(invalid_accounts)
+			)
+
 	def handle_currency_logic(self):
 		default_currency = get_company_currency(self.company)
 		if not default_currency:
@@ -213,7 +244,7 @@ class SalesInvoice(Document):
 			validate_account(
 				account=item.income_account,
 				company=self.company,
-				expected_types=["Income", "Income Account"],
+				expected_types=[ "Income Account"],
 				label="Income Account",
 				row=item.idx
 			)
@@ -235,6 +266,7 @@ class SalesInvoice(Document):
 			validate_account(
 				account=self.additional_discount_account,
 				company=self.company,
+				expected_types=["Expense Account"],
 				label="Discount Account"
 			)
 
@@ -316,10 +348,10 @@ class SalesInvoice(Document):
 		if update:
 			self.db_set("status", self.status, update_modified=update_modified)
 	def set_in_words(self):
-		self.in_words = money_in_words(self.rounded_total or self.grand_total, self.currency)
+		self.in_words = money_in_words(self.rounded_total, self.currency)
 
 		self.base_in_words = money_in_words(
-			self.base_rounded_total or self.base_grand_total,
+			self.base_rounded_total ,
 			get_company_currency(self.company)
 		)
 
