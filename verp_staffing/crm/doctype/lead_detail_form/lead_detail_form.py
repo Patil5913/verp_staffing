@@ -1344,12 +1344,6 @@ def upsert_lead_detail_form(data, token, signature_method=None):
             continue
 
         value = data.get(fieldname)
-
-        # TABLE
-        # if field.fieldtype == "Table":
-        #     if value:
-        #         for row in value:
-        #             doc.append(fieldname, row)
         
         if field.fieldtype == "Table":
             doc.set(fieldname, [])  # reset table
