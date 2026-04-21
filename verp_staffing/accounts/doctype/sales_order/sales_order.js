@@ -14,12 +14,11 @@ frappe.ui.form.on("Sales Order", {
 			);
 		}
 
-		window.render_agreement_module({
-			frm,
-			wrapper: frm.get_field("agreement_html").$wrapper,
-			sales_order: frm.doc.name,
-			allow_create: true,
-		});
+		await update_agreement_module(frm);
+	},
+
+	services(frm) {
+		update_agreement_module(frm);
 	},
 
 	async validate(frm) {
@@ -31,7 +30,30 @@ frappe.ui.form.on("Sales Order", {
 			const draft = localStorage.getItem(key);
 
 			if (!draft) {
-				frappe.throw("Agreement template must be selected before saving.");
+				frappe.throw(
+					"Agreement template must be selected before saving for auto agreement send.",
+				);
+			}
+		}
+
+		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
+			let r = await frappe.call({
+				method: "verp_staffing.crm.api.agreement.get_customer_email",
+				args: { customer: frm.doc.customer },
+			});
+
+			const recipient = r.message;
+
+			const res = await frappe.db.get_value("Customer", frm.doc.customer, "lead_details");
+			const lead_name = res.message.lead_details;
+
+			if (!recipient) {
+				frappe.throw(`
+					Email is required to send agreement.<br><br>
+					<a href="/app/lead-detail-form/${lead_name}" target="_blank">
+						➜ Open Lead Detail Form
+					</a>
+				`);
 			}
 		}
 	},
@@ -87,6 +109,7 @@ frappe.ui.form.on("Sales Order", {
 					sales_order: frm.doc.name,
 					template: payload.template,
 					data: JSON.stringify(payload.data),
+					send_email: 1,
 				},
 			});
 
@@ -94,12 +117,26 @@ frappe.ui.form.on("Sales Order", {
 				frappe.throw("Agreement generation failed");
 			}
 
+			frappe.msgprint("Agreement send successfully.");
 			localStorage.removeItem(key);
 
 			await frm.reload_doc();
 		}
 	},
 });
+
+async function update_agreement_module(frm) {
+	const config = await load_erp_config(frm);
+	const requirements = get_requirements_from_config(frm, config);
+
+	window.render_agreement_module({
+		frm,
+		wrapper: frm.get_field("agreement_html").$wrapper,
+		sales_order: frm.doc.name,
+		allow_create: true,
+		auto_mode: config.sendAgreementImmediately && requirements.agreement_required && frm.is_new(),
+	});
+}
 
 async function load_erp_config(frm) {
 	if (frm._erp_config) {
@@ -151,7 +188,9 @@ async function load_erp_config(frm) {
 }
 
 function get_requirements_from_config(frm, config) {
-	const services = (frm.doc.services || []).map((row) => row.service).filter(Boolean);
+	const services = (frm.fields_dict.services.get_value() || [])
+		.map((row) => row.service)
+		.filter(Boolean);
 
 	let agreement_required = false;
 	let candidate_required = false;
@@ -179,7 +218,15 @@ async function send_details_form(frm) {
 	recipient = recipient.message;
 
 	if (!recipient) {
-		frappe.msgprint(`Email not found for Customer: ${frm.doc.customer}`);
+		const res = await frappe.db.get_value("Customer", frm.doc.customer, "lead_details");
+		const lead_name = res.message.lead_details;
+
+		frappe.throw(`
+					Email is required to send agreement.<br><br>
+					<a href="/app/lead-detail-form/${lead_name}" target="_blank">
+						➜ Open Lead Detail Form
+					</a>
+				`);
 		return;
 	}
 	frappe.call({

@@ -408,7 +408,7 @@ frappe.ready(async function () {
             please contact support.
         </p>
 
-        <a href="/customer" style="
+        <button id="go_to_dashboard_btn" style="
             display: inline-block;
             padding: 10px 18px;
             background: #d63031;
@@ -418,9 +418,34 @@ frappe.ready(async function () {
             font-weight: 500;
         ">
             Go to Dashboard
-        </a>
+        </button>
     </div>
 	`);
+		$("#go_to_dashboard_btn").on("click", async function () {
+			if (!customerEmail) {
+				return;
+			}
+
+			try {
+				const r = await frappe.call({
+					method: "verp_staffing.crm.doctype.customer.customer.generate_token",
+					args: { email: customerEmail },
+				});
+
+				const token = r.message;
+
+				if (!token) {
+					frappe.msgprint("Failed to generate token");
+					return;
+				}
+
+				window.location.href = `/customer?t=${encodeURIComponent(token)}`;
+			} catch (e) {
+				console.error(e);
+				frappe.msgprint("Error while redirecting to dashboard");
+			}
+		});
+
 		return;
 	}
 
@@ -454,11 +479,11 @@ function isExpired(exp) {
 }
 
 function blockExpiredUI() {
-    // ── Persist state across refreshes using localStorage ────────────────────
-    const STORAGE_KEY = "agreement_link_requested_" + (token);
-    const alreadyRequested = localStorage.getItem(STORAGE_KEY) === "true";
+	// ── Persist state across refreshes using localStorage ────────────────────
+	const STORAGE_KEY = "agreement_link_requested_" + token;
+	const alreadyRequested = localStorage.getItem(STORAGE_KEY) === "true";
 
-    const html = `
+	const html = `
     <div style="
         position: relative;
         width: 420px;
@@ -546,41 +571,41 @@ function blockExpiredUI() {
     </div>
     `;
 
-    frappe.web_form.set_df_property("form_token", "hidden", 1);
-    document.querySelector(".discard-btn")?.remove();
-    document.querySelector(".btn-next")?.remove();
-    document.querySelector(".submit-btn")?.remove();
+	frappe.web_form.set_df_property("form_token", "hidden", 1);
+	document.querySelector(".discard-btn")?.remove();
+	document.querySelector(".btn-next")?.remove();
+	document.querySelector(".submit-btn")?.remove();
 
-    const wrapper = frappe.web_form.fields_dict["authentication_html"]?.$wrapper;
-    if (wrapper) {
-        wrapper.html(html);
-    }
+	const wrapper = frappe.web_form.fields_dict["authentication_html"]?.$wrapper;
+	if (wrapper) {
+		wrapper.html(html);
+	}
 
-    // ── After DOM is injected, apply already-requested state immediately ─────
-    if (alreadyRequested) {
-        applyAlreadyRequestedState();
-    }
+	// ── After DOM is injected, apply already-requested state immediately ─────
+	if (alreadyRequested) {
+		applyAlreadyRequestedState();
+	}
 
-    // ── Spinner keyframe ──────────────────────────────────────────────────────
-    if (!document.getElementById("spin-keyframe")) {
-        const style = document.createElement("style");
-        style.id = "spin-keyframe";
-        style.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
-        document.head.appendChild(style);
-    }
+	// ── Spinner keyframe ──────────────────────────────────────────────────────
+	if (!document.getElementById("spin-keyframe")) {
+		const style = document.createElement("style");
+		style.id = "spin-keyframe";
+		style.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+		document.head.appendChild(style);
+	}
 
-    // ── Apply already-sent state on load (no button, just success message) ───
-    function applyAlreadyRequestedState() {
-        const btn = document.getElementById("request-new-link-btn");
-        const statusEl = document.getElementById("request-status-msg");
-        if (!btn || !statusEl) return;
+	// ── Apply already-sent state on load (no button, just success message) ───
+	function applyAlreadyRequestedState() {
+		const btn = document.getElementById("request-new-link-btn");
+		const statusEl = document.getElementById("request-status-msg");
+		if (!btn || !statusEl) return;
 
-        btn.disabled = true;
-        btn.style.cursor = "not-allowed";
-        btn.style.background = "#27ae60";
-        btn.style.borderColor = "#27ae60";
-        btn.style.opacity = "1";
-        btn.innerHTML = `
+		btn.disabled = true;
+		btn.style.cursor = "not-allowed";
+		btn.style.background = "#27ae60";
+		btn.style.borderColor = "#27ae60";
+		btn.style.opacity = "1";
+		btn.innerHTML = `
             <span style="display:inline-flex;align-items:center;gap:8px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.5"
@@ -590,33 +615,35 @@ function blockExpiredUI() {
                 Request Sent
             </span>
         `;
-        showStatus(
-            statusEl,
-            "✔ Your request has already been sent. You will receive a new agreement link shortly.",
-            "#f0faf4", "#27ae60", "#1e8449"
-        );
-    }
+		showStatus(
+			statusEl,
+			"✔ Your request has already been sent. You will receive a new agreement link shortly.",
+			"#f0faf4",
+			"#27ae60",
+			"#1e8449",
+		);
+	}
 
-    function showStatus(el, message, bgColor, borderColor, textColor) {
-        el.style.display = "block";
-        el.style.background = bgColor;
-        el.style.border = `1px solid ${borderColor}`;
-        el.style.color = textColor;
-        el.textContent = message;
-    }
+	function showStatus(el, message, bgColor, borderColor, textColor) {
+		el.style.display = "block";
+		el.style.background = bgColor;
+		el.style.border = `1px solid ${borderColor}`;
+		el.style.color = textColor;
+		el.textContent = message;
+	}
 
-    // ── Click handler ─────────────────────────────────────────────────────────
-    window.handleRequestNewLink = function (btn) {
-        if (localStorage.getItem(STORAGE_KEY) === "true") return; // ← double guard
+	// ── Click handler ─────────────────────────────────────────────────────────
+	window.handleRequestNewLink = function (btn) {
+		if (localStorage.getItem(STORAGE_KEY) === "true") return; // ← double guard
 
-        // Lock immediately
-        btn.disabled = true;
-        btn.style.cursor = "not-allowed";
-        btn.style.opacity = "0.6";
+		// Lock immediately
+		btn.disabled = true;
+		btn.style.cursor = "not-allowed";
+		btn.style.opacity = "0.6";
 
-        const statusEl = document.getElementById("request-status-msg");
+		const statusEl = document.getElementById("request-status-msg");
 
-        btn.innerHTML = `
+		btn.innerHTML = `
             <span style="display:inline-flex;align-items:center;gap:8px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
@@ -628,26 +655,24 @@ function blockExpiredUI() {
             </span>
         `;
 
-        frappe.call({
-            method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.request_new_agreement_link",
-            args: {
-                sales_order: salesOrder,
-                signer_email: customerEmail,
-                agreementValue: agreementValue,
-            },
-            callback: function (response) {
-                const success = response
-                    && response.message
-                    && response.message.status === "ok";
+		frappe.call({
+			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.request_new_agreement_link",
+			args: {
+				sales_order: salesOrder,
+				signer_email: customerEmail,
+				agreementValue: agreementValue,
+			},
+			callback: function (response) {
+				const success = response && response.message && response.message.status === "ok";
 
-                if (success) {
-                    // ✅ Persist to localStorage so refresh keeps it locked
-                    localStorage.setItem(STORAGE_KEY, "true");
+				if (success) {
+					// ✅ Persist to localStorage so refresh keeps it locked
+					localStorage.setItem(STORAGE_KEY, "true");
 
-                    btn.style.background = "#27ae60";
-                    btn.style.borderColor = "#27ae60";
-                    btn.style.opacity = "1";
-                    btn.innerHTML = `
+					btn.style.background = "#27ae60";
+					btn.style.borderColor = "#27ae60";
+					btn.style.opacity = "1";
+					btn.innerHTML = `
                         <span style="display:inline-flex;align-items:center;gap:8px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5"
@@ -657,36 +682,42 @@ function blockExpiredUI() {
                             Request Sent
                         </span>
                     `;
-                    showStatus(
-                        statusEl,
-                        "✔ Your request has been sent. You will receive a new agreement link shortly.",
-                        "#f0faf4", "#27ae60", "#1e8449"
-                    );
-                } else {
-                    btn.style.background = "#95a5a6";
-                    btn.style.borderColor = "#95a5a6";
-                    btn.style.opacity = "1";
-                    btn.innerHTML = "Request Unavailable";
-                    showStatus(
-                        statusEl,
-                        "⚠ Something went wrong. Please contact your agreement administrator directly.",
-                        "#fff8f0", "#e67e22", "#a04000"
-                    );
-                }
-            },
-            error: function () {
-                btn.style.background = "#95a5a6";
-                btn.style.borderColor = "#95a5a6";
-                btn.style.opacity = "1";
-                btn.innerHTML = "Request Unavailable";
-                showStatus(
-                    statusEl,
-                    "⚠ Unable to reach the server. Please contact your agreement administrator directly.",
-                    "#fff8f0", "#e67e22", "#a04000"
-                );
-            }
-        });
-    };
+					showStatus(
+						statusEl,
+						"✔ Your request has been sent. You will receive a new agreement link shortly.",
+						"#f0faf4",
+						"#27ae60",
+						"#1e8449",
+					);
+				} else {
+					btn.style.background = "#95a5a6";
+					btn.style.borderColor = "#95a5a6";
+					btn.style.opacity = "1";
+					btn.innerHTML = "Request Unavailable";
+					showStatus(
+						statusEl,
+						"⚠ Something went wrong. Please contact your agreement administrator directly.",
+						"#fff8f0",
+						"#e67e22",
+						"#a04000",
+					);
+				}
+			},
+			error: function () {
+				btn.style.background = "#95a5a6";
+				btn.style.borderColor = "#95a5a6";
+				btn.style.opacity = "1";
+				btn.innerHTML = "Request Unavailable";
+				showStatus(
+					statusEl,
+					"⚠ Unable to reach the server. Please contact your agreement administrator directly.",
+					"#fff8f0",
+					"#e67e22",
+					"#a04000",
+				);
+			},
+		});
+	};
 }
 
 function shouldValidate(fieldname, candidateFields) {
@@ -839,7 +870,7 @@ function handle_form_success() {
                 If any further action is required, our team will contact you.
             </p>
 
-            <a href="/customer" style="
+            <button id="go_to_dashboard_btn" style="
                 display: inline-block;
                 padding: 10px 18px;
                 background: #38a169;
@@ -849,9 +880,34 @@ function handle_form_success() {
                 font-weight: 500;
             ">
                 Go to Dashboard
-            </a>
+            </button>
         </div>
     `;
+
+	$("#go_to_dashboard_btn").on("click", async function () {
+		if (!customerEmail) {
+			return;
+		}
+
+		try {
+			const r = await frappe.call({
+				method: "verp_staffing.crm.doctype.customer.customer.generate_token",
+				args: { email: customerEmail },
+			});
+
+			const token = r.message;
+
+			if (!token) {
+				frappe.msgprint("Failed to generate token");
+				return;
+			}
+
+			window.location.href = `/customer?t=${encodeURIComponent(token)}`;
+		} catch (e) {
+			console.error(e);
+			frappe.msgprint("Error while redirecting to dashboard");
+		}
+	});
 }
 
 function inject_otp_html() {

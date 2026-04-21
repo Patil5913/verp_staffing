@@ -36,6 +36,7 @@ def check_candidate_form_required_from_sales_order(so_name):
     raw = frappe.db.get_single_value(
         "ERP Configuration", "candidate_details_form_fields"
     )
+    
     if not raw:
         return False
 

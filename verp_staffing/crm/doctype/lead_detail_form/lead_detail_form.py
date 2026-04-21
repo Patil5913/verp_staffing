@@ -1344,11 +1344,13 @@ def upsert_lead_detail_form(data, token, signature_method=None):
             continue
 
         value = data.get(fieldname)
-
-        # TABLE
+        
         if field.fieldtype == "Table":
+            doc.set(fieldname, [])  # reset table
+
             if value:
                 for row in value:
+                    row.pop("name", None)  # remove primary key
                     doc.append(fieldname, row)
 
         # NORMAL

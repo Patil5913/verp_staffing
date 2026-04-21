@@ -23,11 +23,11 @@ class SalesOrder(Document):
 
         self.name = generate_name_series("Sales Order", customer_name)
 
-    def after_insert(self):
-        on_sales_order_save(self)
+    # def after_insert(self):
+    #     on_sales_order_save(self)
 
-    def on_submit(self):
-        on_sales_order_save(self)
+    # def on_submit(self):
+    #     on_sales_order_save(self)
 
 
 def generate_token(data: dict):
