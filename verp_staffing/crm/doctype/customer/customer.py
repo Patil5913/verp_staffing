@@ -341,26 +341,6 @@ def update_route_status(route_name, status):
 
 
 @frappe.whitelist()
-def get_after_placement_details(customer):
-
-    customer_doc = frappe.get_doc("Customer", customer)
-
-    if not customer_doc.lead_details:
-        return {}
-
-    data = frappe.get_doc("Lead Detail Form", customer_doc.lead_details)
-
-    return {
-        "position": data.position,
-        "placement_company": data.placement_company,
-        "job_duration": data.job_duration,
-        "salary": data.salary,
-        "company_percentage": data.company_percentage,
-        "lead_name": data.name,
-    }
-
-
-@frappe.whitelist()
 def update_company_percentage(lead_name, company_percentage):
 
     lead = frappe.get_doc("Lead Detail Form", lead_name)

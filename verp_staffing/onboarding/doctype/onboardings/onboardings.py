@@ -14,3 +14,22 @@ class Onboardings(Document):
 		customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
 		self.name = generate_name_series("Onboardings", customer_name)   
+
+@frappe.whitelist()
+def get_after_placement_details(customer):
+
+    customer_doc = frappe.get_doc("Customer", customer)
+
+    if not customer_doc.lead_details:
+        return {}
+
+    data = frappe.get_doc("Lead Detail Form", customer_doc.lead_details)
+
+    return {
+        "position": data.position,
+        "placement_company": data.placement_company,
+        "job_duration": data.job_duration,
+        "salary": data.salary,
+        "company_percentage": data.company_percentage,
+        "lead_name": data.name,
+    }

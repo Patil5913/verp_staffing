@@ -702,7 +702,7 @@ function showOnboarding_tab(frm) {
 	if (!frm.doc.customer) return;
 
 	frappe.call({
-		method: "verp_staffing.crm.doctype.customer.customer.get_after_placement_details",
+		method: "verp_staffing.onboarding.doctype.onboardings.onboardings.get_after_placement_details",
 		args: {
 			customer: frm.doc.customer,
 		},

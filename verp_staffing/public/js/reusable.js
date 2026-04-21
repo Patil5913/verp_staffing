@@ -430,6 +430,7 @@ function open_forward_prompt(frm, services) {
 				options: services,
 				reqd: 1,
 				onchange() {
+					d.set_value("assign_employee", null);
 					toggle_fields(d, frm);
 				},
 			},
@@ -476,7 +477,6 @@ function open_forward_prompt(frm, services) {
 				fieldtype: "Data",
 				hidden: 1,
 			},
-
 			{
 				fieldname: "salary",
 				label: "Salary",
@@ -497,8 +497,12 @@ function open_forward_prompt(frm, services) {
 				options: "Employee",
 				hidden: 1,
 				get_query: function () {
+					const selected_service = d.get_value("service");
+
 					return {
-						filters: [["Employee Assignment Detail", "department", "=", "Onboarding"]],
+						filters: [
+							["Employee Assignment Detail", "department", "=", selected_service],
+						],
 					};
 				},
 			},

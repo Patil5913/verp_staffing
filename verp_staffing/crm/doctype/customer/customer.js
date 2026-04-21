@@ -32,10 +32,6 @@ frappe.ui.form.on("Customer", {
 			};
 		});
 
-		if (!frm.is_new()) {
-			showOnboarding_tab(frm);
-		}
-
 		frappe.call({
 			method: "frappe.client.get_value",
 			args: {
@@ -1139,82 +1135,6 @@ function render_interviews(data, append = false) {
 			$("#interview-load-more").html("");
 		}
 	}
-}
-
-function showOnboarding_tab(frm) {
-	if (!frm.doc.name) return;
-
-	frappe.call({
-		method: "verp_staffing.crm.doctype.customer.customer.get_after_placement_details",
-		args: {
-			customer: frm.doc.name,
-		},
-		callback(r) {
-			const data = r.message;
-
-			if (!data || !data.position) {
-				frm.fields_dict.after_placement_details.$wrapper.html(
-					"<div style='color:#888'>No placement details available</div>",
-				);
-				return;
-			}
-
-			const html = `
-				<div style="padding:10px">
-					<p><b>Position:</b> ${data.position}</p>
-					<p><b>Placement Company:</b> ${data.placement_company}</p>
-					<p><b>Job Duration:</b> ${data.job_duration}</p>
-					<p><b>Salary:</b> ${data.salary}</p>
-
-					<div style="margin-top:10px">
-						<label><b>Company Percentage</b></label>
-						<input 
-							type="number" 
-							id="company_percentage_input"
-							value="${data.company_percentage || 0}"
-							style="width:100%; padding:6px; margin-top:4px"
-						/>
-					</div>
-
-					<button 
-						class="btn btn-primary"
-						style="margin-top:10px"
-						id="save_company_percentage"
-					>
-						Save
-					</button>
-				</div>
-			`;
-
-			const wrapper = frm.fields_dict.after_placement_details.$wrapper;
-
-			wrapper.html(html);
-
-			// bind click
-			wrapper.off("click", "#save_company_percentage");
-
-			wrapper.on("click", "#save_company_percentage", function () {
-				const value = wrapper.find("#company_percentage_input").val();
-
-				if (!value) {
-					frappe.msgprint("Company Percentage is required");
-					return;
-				}
-
-				frappe.call({
-					method: "verp_staffing.crm.doctype.customer.customer.update_company_percentage",
-					args: {
-						lead_name: data.lead_name,
-						company_percentage: value,
-					},
-					callback() {
-						frappe.msgprint("Updated successfully");
-						frm.refresh();
-					},
-				});
-			});
-		},
-	});
 }
 
 function customer_owner_open_update_detail_dialog(frm) {
