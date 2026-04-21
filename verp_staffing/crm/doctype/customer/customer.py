@@ -352,6 +352,7 @@ def update_company_percentage(lead_name, company_percentage):
     return "updated"
 
     
+@frappe.whitelist(allow_guest=True)
 def generate_token(email: str):
     import hmac, hashlib, base64
 
