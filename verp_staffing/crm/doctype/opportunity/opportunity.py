@@ -94,3 +94,41 @@ class Opportunity(Document):
                 frappe.throw(
                     "You cannot manually mark this Opportunity as Converted. This happens automatically after meeting payment conditions."
                 )
+                
+    @frappe.whitelist()
+    def create_customer(self):
+
+        # existing_customer = frappe.db.get_value(
+        #     "Customer",
+        #     {
+        #         "customer_from": "Opportunity",
+        #         "party_name": self.name,
+        #     },
+        #     ["name", "name1"],
+        #     as_dict=True,
+        # )
+
+        # if existing_customer:
+        #     return {
+        #         "customer": existing_customer["name"],
+        #         "already_exists": 1
+        #     }
+
+        customer_doc = frappe.get_doc({
+            "doctype": "Customer",
+            "name1": self.name1,
+            "customer_from": "Opportunity",
+            "party_name": self.name,
+            "customer_owner": self.opportunity_owner or None,
+        })
+
+        customer_doc.insert(ignore_permissions=True)
+
+        self.db_set("status", "Converted")
+
+        if self.opportunity_from_lead:
+            frappe.db.set_value("Lead", self.opportunity_from_lead, "status", "Won")
+
+        return {
+            "customer": customer_doc.name
+        }

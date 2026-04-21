@@ -54,7 +54,7 @@ frappe.ui.form.on("Opportunity", {
 		});
 
 		frm.add_custom_button(__("Create Customer"), function () {
-			open_create_sales_order_dialog(frm);
+			handle_create_customer(frm);
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
@@ -209,126 +209,63 @@ frappe.ui.form.on("Opportunity", {
 	},
 });
 
-function open_create_sales_order_dialog(frm) {
+async function handle_create_customer(frm) {
 	if (frm.is_dirty()) {
-		frm.save().then(() => {
-			open_create_sales_order_dialog(frm);
-		});
-		return;
+		await frm.save();
 	}
 
-	// Dialog Fields
-	const dialog = new frappe.ui.Dialog({
-		title: "Create Sales Order",
-		fields: [
-			{
-				label: "Date",
-				fieldname: "date",
-				fieldtype: "Date",
-				default: frappe.datetime.get_today(),
-				reqd: 1,
+	// fetch existing customers
+	const r = await frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Customer",
+			filters: {
+				customer_from: "Opportunity",
+				party_name: frm.doc.name,
 			},
-
-			{
-				fieldtype: "Section Break",
-				label: "Services",
-			},
-			{
-				fieldname: "services",
-				fieldtype: "MultiSelectList",
-				label: "Services",
-				reqd: 1,
-				get_data: function (txt) {
-					return frappe.db
-						.get_list("Service", {
-							fields: ["name"],
-							filters: {
-								name: ["like", `%${txt}%`],
-							},
-							limit: 20,
-						})
-						.then((r) =>
-							r.map((d) => ({
-								value: d.name,
-								description: d.name,
-							})),
-						);
-				},
-			},
-
-			{
-				fieldtype: "Section Break",
-				label: "Payment Terms",
-			},
-			{
-				fieldname: "payment_terms",
-				fieldtype: "Table",
-				label: "Payment Terms",
-				reqd: 1,
-				options: "Customer Payment Terms",
-				fields: [
-					{
-						fieldtype: "Date",
-						fieldname: "date",
-						label: "Date",
-						reqd: 1,
-						in_list_view: 1,
-					},
-					{
-						fieldtype: "Currency",
-						fieldname: "amount",
-						label: "Amount",
-						reqd: 1,
-						in_list_view: 1,
-					},
-					{
-						fieldtype: "Select",
-						fieldname: "payment_condition",
-						label: "Payment Condition",
-						options: "Number of Days\nNumber of Interviews",
-						default: "Number of Days",
-						reqd: 1,
-						in_list_view: 1,
-					},
-					{
-						fieldtype: "Int",
-						fieldname: "counter",
-						label: "Counter",
-						default: 1,
-						non_negative: 1,
-						reqd: 1,
-						in_list_view: 1,
-					},
-					{
-						fieldtype: "Check",
-						fieldname: "is_received",
-						label: "Received?",
-						default: 0,
-						in_list_view: 1,
-					},
-				],
-			},
-		],
-
-		primary_action_label: "Create Sales Order",
-		primary_action(values) {
-			dialog.hide();
-
-			frappe.call({
-				method: "verp_staffing.crm.api.sales_order_api.create_sales_order",
-				args: {
-					opportunity: frm.doc.name,
-					opportunity_from_lead: frm.doc.opportunity_from_lead,
-					data: values,
-				},
-				callback: function (r) {
-					if (r.message?.customer) {
-						frappe.set_route("Form", "Customer", r.message.customer);
-					}
-				},
-			});
+			fields: ["name", "name1"],
 		},
 	});
 
-	dialog.show();
+	const customers = r.message || [];
+
+	let message = "";
+
+	if (customers.length) {
+		const links = customers
+			.map(
+				(c) =>
+					`<li>
+						<a href="/app/customer/${c.name}" target="_blank">
+							${c.name1} (${c.name})
+						</a>
+					</li>`,
+			)
+			.join("");
+
+		message += `
+			<p style="margin-bottom:8px;">
+				<strong>Existing Customer(s):</strong>
+			</p>
+			<ul style="margin-bottom:12px;">
+				${links}
+			</ul>
+		`;
+	}
+
+	message += `<p>Do you want to create a new customer?</p>`;
+
+	frappe.confirm(message, async () => {
+		const res = await frm.call("create_customer");
+
+		if (res.message && res.message.customer) {
+			frappe.show_alert({
+				message: __("New Customer {0} created", [res.message.customer]),
+				indicator: "green",
+			});
+
+			// Redirect to the new customer record
+			frappe.set_route("Form", "Customer", res.message.customer);
+		}
+	});
 }
