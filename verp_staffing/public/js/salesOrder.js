@@ -1,6 +1,12 @@
 const BRAND_COLOR = "#3b82f6";
 
-window.render_agreement_module = function ({ frm, wrapper, sales_order, allow_create = true }) {
+window.render_agreement_module = function ({
+	frm,
+	wrapper,
+	sales_order,
+	allow_create = true,
+	auto_mode = false,
+}) {
 	wrapper.empty();
 
 	wrapper.append(`
@@ -70,6 +76,7 @@ window.render_agreement_module = function ({ frm, wrapper, sales_order, allow_cr
               Save
             </button>
             <button id="ag_save_send" class="btn btn-sm" style="
+			  display: ${auto_mode ? "none" : "inline-block"};
               background: var(--gray-900);
               color: white;
               border: none;
@@ -92,7 +99,7 @@ window.render_agreement_module = function ({ frm, wrapper, sales_order, allow_cr
 
 	if (allow_create) {
 		load_templates(wrapper);
-		bind_builder_events(frm, wrapper, sales_order);
+		bind_builder_events(frm, wrapper, sales_order, auto_mode);
 	}
 };
 
@@ -279,9 +286,7 @@ function load_templates(wrapper) {
 // 	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
 // }
 
-
-function bind_builder_events(frm, wrapper, sales_order) {
-
+function bind_builder_events(frm, wrapper, sales_order, auto_mode) {
 	// remove old bindings first (IMPORTANT)
 	wrapper.off("change", "#ag_template");
 	wrapper.off("click", "#ag_preview");
@@ -301,12 +306,39 @@ function bind_builder_events(frm, wrapper, sales_order) {
 		});
 	});
 
-	wrapper.on("click", "#ag_save", () =>
-		submit(frm, wrapper, sales_order, false)
-	);
+	wrapper.on("click", "#ag_save", () => {
+		if (auto_mode) {
+			store_draft_locally(frm, wrapper);
+			frappe.show_alert({
+				message: "Agreement saved for auto processing, now can save sales order",
+				indicator: "green",
+			});
+			return;
+		}
 
-	wrapper.on("click", "#ag_save_send", () =>
-		submit(frm, wrapper, sales_order, true)
+		submit(frm, wrapper, sales_order, false);
+	});
+
+	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
+}
+
+function store_draft_locally(frm, wrapper) {
+	const template = wrapper.find("#ag_template").val();
+
+	if (!template) {
+		frappe.throw("Please select a template");
+	}
+
+	const data = collect_agreement_data(frm, wrapper);
+
+	const key = `so_agreement_draft_${frm.doc.name || "new"}`;
+
+	localStorage.setItem(
+		key,
+		JSON.stringify({
+			template,
+			data,
+		})
 	);
 }
 
