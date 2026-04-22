@@ -135,28 +135,10 @@ frappe.ui.form.on("Opportunity", {
 			$(frm.page.wrapper).on("shown.bs.dropdown", cleanMenu);
 
 			/* ----------------------------------------------------
-               SIDEBAR CLEANUP
-            ---------------------------------------------------- */
-			const SIDEBAR_KEYWORDS = ["Assigned", "Share"];
-
-			const cleanSidebar = () => {
-				hideElements({
-					selectors: [
-						".form-sidebar .assigned-to",
-						".form-sidebar .btn-share",
-						".form-sidebar .shared-with",
-					],
-					keywordSelectors: [".form-sidebar *"],
-					keywords: SIDEBAR_KEYWORDS,
-				});
-			};
-
-			/* ----------------------------------------------------
                RUN CLEANUP ONCE + SINGLE RETRY TIMER
             ---------------------------------------------------- */
 			const runCleanup = () => {
 				cleanMenu();
-				cleanSidebar();
 			};
 
 			// Run immediately

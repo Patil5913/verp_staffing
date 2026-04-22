@@ -16,16 +16,6 @@ frappe.listview_settings["Opportunity"] = {
 	},
 
 	refresh: function (listview) {
-		let sidebar = $("body .layout-side-section");
-		if (!sidebar.length) {
-			return;
-		}
-
-		// HIDE ALL ITEMS FIRST
-		sidebar.find(".group-by-field").hide();
-		sidebar.find(".add-group-by").hide();
-		sidebar.find(".save-filter-section").hide();
-
 		setTimeout(() => {
 			let primary_btn = listview.page.wrapper.find(".page-actions .btn-primary");
 
