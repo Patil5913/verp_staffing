@@ -185,13 +185,6 @@ def _check_candidate_form_required_for_customer(customer_name, lead_detail_doc=N
     """
     so_names_to_check = set()
 
-    if lead_detail_doc:
-        so_via_lead = frappe.db.get_value(
-            "Lead Detail Form", lead_detail_doc, "sales_order"
-        )
-        if so_via_lead:
-            so_names_to_check.add(so_via_lead)
-
     so_via_customer = frappe.db.get_all(
         "Sales Order",
         filters={"customer": customer_name},
@@ -304,71 +297,6 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
         "permission": "none",
         "customer_name": customer_name,
     }
-
-
-@frappe.whitelist()
-def _check_permission_status(ref_doctype, ref_name):
-    user = frappe.session.user
-    employee = get_employee_name(user)
-    if not employee:
-        return {"status": "none"}
-    
-    if user == "Administrator":
-        return {"status": "approved"}
-
-    comments = frappe.get_all(
-        "Comment",
-        filters={
-            "reference_doctype": ref_doctype,
-            "reference_name": ref_name,
-            "comment_type": "Info",
-        },
-        fields=["name", "content"],
-        order_by="creation desc",
-    )
-
-    for c in comments:
-        try:
-            data = json.loads(c.content)
-            if (
-                data.get("type") == "update_permission_request"
-                and data.get("requested_by_employee") == employee
-            ):
-
-                raw_status = data.get("status", "Pending")
-
-                if raw_status == "Approved":
-                    granted_at = data.get("granted_at")
-                    if is_permission_expired(granted_at):
-                        data["status"] = "Expired"
-                        frappe.db.set_value(
-                            "Comment", c.name, "content", json.dumps(data)
-                        )
-                        frappe.db.commit()
-                        return {"status": "expired"}
-
-                    granted_dt = datetime.fromisoformat(granted_at)
-                    if granted_dt.tzinfo is None:
-                        granted_dt = granted_dt.replace(tzinfo=timezone.utc)
-                    expiry_dt = granted_dt + timedelta(
-                        minutes=PERMISSION_EXPIRY_MINUTES
-                    )
-                    remaining_seconds = int(
-                        (expiry_dt - datetime.now(timezone.utc)).total_seconds()
-                    )
-                    return {
-                        "status": "approved",
-                        "remaining_seconds": max(remaining_seconds, 0),
-                    }
-
-                if raw_status == "Declined":
-                    return {"status": "declined"}
-
-                return {"status": raw_status.lower()}
-        except Exception:
-            continue
-
-    return {"status": "none"}
 
 
 @frappe.whitelist()
@@ -510,10 +438,37 @@ def get_lead_detail_field_values(customer_name):
     return values
 
 
+def get_department_from_service(service_name):
+    if not service_name:
+        return None
+
+    # Loop through all departments
+    departments = frappe.get_all("Department", fields=["name", "department_name"])
+
+    for dept in departments:
+        services = frappe.get_all(
+            "Department Service", filters={"parent": dept.name}, pluck="service"
+        )
+
+        # Match ignore case
+        for s in services:
+            if s and s.strip().lower() == service_name.strip().lower():
+                frappe.errprint(f"[DEPT] '{service_name}' → '{dept.department_name}'")
+                return dept.department_name
+
+    return None
+
+
 @frappe.whitelist()
 def request_field_update(
-    customer_name, reason, field_updates, service_doctype=None, service_name=None
+    customer_name,
+    reason,
+    field_updates,
+    service_doctype=None,
+    service_name=None,
+    extra_info=None,
 ):
+    # frappe.errprint(f"data {service_doctype}, {service_name} , {extra_info}")
     user = frappe.session.user
     employee = get_employee_name(user)
     if not employee:
@@ -522,9 +477,19 @@ def request_field_update(
     if not frappe.db.get_value("Customer", customer_name, "customer_owner"):
         frappe.throw("No customer owner found for this Customer.")
 
-    manager_employee = get_approver_by_department(employee)
+    department = None
+
+    if extra_info:
+        department = get_department_from_service(extra_info)
+
+    elif service_doctype:
+        department = get_department_from_service(service_doctype)
+        
+    manager_employee = get_approver_by_department(employee, service_doctype, extra_info)
     if not manager_employee:
-        frappe.throw("No suitable approver found in your hierarchy.")
+        frappe.throw(
+            f"Permission Request Configuration Is Not Set Up Properly For {department} Department. Please Contact Administrator."
+        )
 
     manager_user = get_user(manager_employee)
     if not manager_user:
@@ -638,7 +603,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
 
     manager_employee = get_approver_by_department(employee)
     if not manager_employee:
-        frappe.throw("No suitable approver found in your hierarchy.")
+        frappe.throw("Permission Request Configuration Is Not Set Up Properly For Sales Department. Please Contact Administrator.")
 
     manager_user = get_user(manager_employee)
     if not manager_user:

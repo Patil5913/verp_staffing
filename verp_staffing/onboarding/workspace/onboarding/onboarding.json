@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"AvK4xeuQEM\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Onboarding</span>\",\"col\":12}},{\"id\":\"Yt9zUPxa3e\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Onboarding\",\"col\":3}}]",
+ "content": "[{\"id\":\"AvK4xeuQEM\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Onboarding</span>\",\"col\":12}},{\"id\":\"B0Tb9BrpuB\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Onboarding\",\"col\":4}}]",
  "creation": "2026-03-21 13:54:10.253502",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,11 +13,16 @@
  "is_hidden": 0,
  "label": "Onboarding",
  "links": [],
- "modified": "2026-04-16 17:49:09.850823",
+ "modified": "2026-04-22 15:15:32.615796",
  "modified_by": "Administrator",
  "module": "Onboarding",
  "name": "Onboarding",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Onboarding",
+   "number_card_name": "Onboarding"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -28,15 +33,6 @@
   }
  ],
  "sequence_id": 27.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Onboarding",
-   "link_to": "Onboardings",
-   "stats_filter": "[]",
-   "type": "DocType"
-  }
- ],
+ "shortcuts": [],
  "title": "Onboarding"
 }

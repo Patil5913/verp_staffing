@@ -100,14 +100,13 @@ async function load_department_roles(frm) {
             name: frm.doc.department
         }
     });
+
     let roles = [];
 
-    try {
-        roles = res?.message?.roles_json
-            ? JSON.parse(res.message.roles_json)
-            : [];
-    } catch (e) {
-        roles = [];
+    if (res?.message?.role && Array.isArray(res.message.role)) {
+        roles = res.message.role
+            .map(row => row.role)
+            .filter(r => r); 
     }
 
     if (!roles.length) {

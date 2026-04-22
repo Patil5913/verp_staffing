@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"gA8t4u9sm0\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Customer Representative</span>\",\"col\":12}},{\"id\":\"soSH-nLEMT\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"CR\",\"col\":3}}]",
+ "content": "[{\"id\":\"gA8t4u9sm0\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Customer Representative</span>\",\"col\":12}},{\"id\":\"49Vk62XfnQ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"CR\",\"col\":4}}]",
  "creation": "2026-03-21 14:00:22.239739",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,11 +13,16 @@
  "is_hidden": 0,
  "label": "CR",
  "links": [],
- "modified": "2026-03-30 17:30:17.194327",
+ "modified": "2026-04-22 15:15:40.050042",
  "modified_by": "Administrator",
  "module": "CR",
  "name": "CR",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "CR",
+   "number_card_name": "CR"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -28,15 +33,6 @@
   }
  ],
  "sequence_id": 28.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "CR",
-   "link_to": "CR",
-   "stats_filter": "[]",
-   "type": "DocType"
-  }
- ],
+ "shortcuts": [],
  "title": "CR"
 }

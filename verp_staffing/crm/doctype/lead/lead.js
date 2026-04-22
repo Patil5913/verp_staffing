@@ -710,6 +710,11 @@ frappe.ui.form.on("Lead", {
 					const rows = Array.isArray(value) ? value : [];
 					if (!rows.length) return "__HIDE__";
 
+					// Store full rows/columns so the view dialog can access them
+					const safeField = field.replace(/[^a-zA-Z0-9_]/g, "_");
+					window._ro_table_state = window._ro_table_state || {};
+					window._ro_table_state[safeField] = { rows, allColumns };
+
 					const colHeaders = previewCols
 						.map(
 							(col) => `
@@ -743,12 +748,17 @@ frappe.ui.form.on("Lead", {
 								.join("");
 
 							return `
-<div style="
-    display: grid;
-    grid-template-columns: 36px ${previewCols.map(() => "1fr").join(" ")};
-    border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08));
-    background: var(--color-background-primary);
-">
+<div onclick="window._ftbl_ro_view_row('${safeField}', ${i})"
+    style="
+        display: grid;
+        grid-template-columns: 36px ${previewCols.map(() => "1fr").join(" ")} 38px;
+        border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08));
+        background: var(--color-background-primary);
+        cursor: pointer;
+        pointer-events: all !important;
+    "
+    onmouseenter="this.style.background='var(--color-background-secondary,#f3f3f3)'"
+    onmouseleave="this.style.background='var(--color-background-primary)'">
     <div style="
         padding: 6px 8px;
         font-size: 12px;
@@ -759,6 +769,7 @@ frappe.ui.form.on("Lead", {
         border-right: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.07));
     ">${i + 1}</div>
     ${cells}
+    <div style="padding:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--color-text-secondary);">👁</div>
 </div>`;
 						})
 						.join("");
@@ -772,7 +783,7 @@ frappe.ui.form.on("Lead", {
 ">
     <div style="
         display: grid;
-        grid-template-columns: 36px ${previewCols.map(() => "1fr").join(" ")};
+        grid-template-columns: 36px ${previewCols.map(() => "1fr").join(" ")} 38px;
         background: var(--color-background-secondary, #f3f3f3);
         border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12));
     ">
@@ -786,6 +797,7 @@ frappe.ui.form.on("Lead", {
             border-right: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
         ">No.</div>
         ${colHeaders}
+        <div style="padding: 7px 8px;"></div>
     </div>
     ${bodyRows}
 </div>`;
@@ -800,6 +812,15 @@ frappe.ui.form.on("Lead", {
 				return `<input type="text" value="${value}" data-field="${field}" data-override="availability" class="${cls}" placeholder="Exp: Mon - Fri, 9:30 AM - 10:00 PM" />`;
 			if (isEmailField(field))
 				return `<input type="email" value="${value}" data-field="${field}" data-override="email" class="${cls}" placeholder=" ${label}" />`;
+			if (field.toLowerCase().includes("ssn")) {
+				return `<input type="text"
+        value="${value}"
+        data-field="${field}"
+        data-override="ssn"
+        maxlength="4"
+        class="${cls}"
+        placeholder="Enter last 4 digits" />`;
+			}
 			if (isMonthYearField(field))
 				return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
 			if (isPhoneField(field))
@@ -898,10 +919,11 @@ frappe.ui.form.on("Lead", {
 		}
 
 		function isValidAvailability(value) {
-			// Accepts: Mon – Fri, 9:30 AM – 10:00 PM  or  Mon, 9:00 AM – 5:00 PM
-			// Accepts both – (en-dash) and - (hyphen) between days and times
+			if (!value) return false;
+
 			const pattern =
-				/^[A-Za-z]{2,9}(\s*[–\-]\s*[A-Za-z]{2,9})?\s*,\s*\d{1,2}:\d{2}\s*(AM|PM)\s*[–\-]\s*\d{1,2}:\d{2}\s*(AM|PM)$/i;
+				/^\s*[A-Za-z]{2,9}(\s*[–\-]\s*[A-Za-z]{2,9})?\s*,\s*\d{1,2}:\d{2}\s*(AM|PM)\s*[–\-]\s*\d{1,2}:\d{2}\s*(AM|PM)\s*$/i;
+
 			return pattern.test(value.trim());
 		}
 
@@ -940,6 +962,9 @@ frappe.ui.form.on("Lead", {
 					return fail(input, `${label} must be a number`);
 				if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value)))
 					return fail(input, `${label} must be a valid date`);
+				if (override === "ssn" && value && !/^\d{4}$/.test(value)) {
+					return fail(input, `${label} must be exactly 4 digits`);
+				}
 				if (override === "availability" && value && !isValidAvailability(value))
 					return fail(input, `Must be in format: Mon - Fri, 9:30 AM - 10:00 PM`);
 			});
@@ -1216,8 +1241,6 @@ frappe.ui.form.on("Lead", {
 				});
 			}
 
-			// ✅ FILE UPLOAD HANDLER (GLOBAL)
-			// ✅ FILE UPLOAD HANDLER (GLOBAL)
 			window._temp_files = window._temp_files || {};
 
 			// remove old bindings (VERY IMPORTANT)
@@ -1318,13 +1341,94 @@ function lockLeadDetailForm() {
 			el.disabled = true;
 		}
 
-		// Remove click events (table rows etc.)
-		el.style.pointerEvents = "none";
+		if (el.tagName !== "A" && !el.hasAttribute("onclick")) {
+			el.style.pointerEvents = "none";
+		} else {
+			el.style.pointerEvents = "all";
+		}
 	});
 
 	// Optional UI
 	wrapper.style.opacity = "0.8";
 }
+
+// ─── Read-only row viewer dialog ──────────────────────────────────────────────
+window._ftbl_ro_view_row = function (safeField, rowIdx) {
+	const state = window._ro_table_state && window._ro_table_state[safeField];
+	if (!state) return;
+	const row = state.rows[rowIdx];
+	const allColumns = state.allColumns;
+
+	// Build read-only field display for ALL columns
+	const fieldsHtml = allColumns
+		.map((col) => {
+			const val = row[col.fieldname];
+			const label = col.label || frappe.model.unscrub(col.fieldname);
+			const isWide = ["Text", "Small Text", "Long Text"].includes(col.fieldtype);
+
+			let displayVal;
+			if (val === null || val === undefined || val === "") {
+				displayVal = `<span style="color:var(--color-text-tertiary,#bbb);font-style:italic;">—</span>`;
+			} else if (col.fieldtype === "Check") {
+				displayVal = val ? "Yes" : "No";
+			} else if (["start_date", "end_date", "entry_date"].includes(col.fieldname)) {
+				// month-year fields
+				const parts = String(val).split("-");
+				displayVal = parts.length >= 2 ? `${parts[1]}-${parts[0]}` : String(val);
+			} else {
+				const escaped = frappe.utils?.escape_html
+					? frappe.utils.escape_html(String(val))
+					: String(val);
+				displayVal = escaped;
+			}
+
+			const valueHtml = ["Text", "Small Text", "Long Text"].includes(col.fieldtype)
+				? `<div style="padding:8px 10px;background:var(--color-background-secondary,#f3f3f3);border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.2));border-radius:6px;font-size:13px;color:var(--color-text-primary);line-height:1.6;white-space:pre-wrap;word-break:break-word;min-height:48px;">${displayVal}</div>`
+				: `<div style="padding:6px 10px;min-height:32px;background:var(--color-background-secondary,#f3f3f3);border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.2));border-radius:6px;font-size:13px;color:var(--color-text-primary);display:flex;align-items:center;">${displayVal}</div>`;
+
+			return `
+<div style="width:${isWide ? "100%" : "calc(50% - 8px)"};min-width:${isWide ? "100%" : "200px"};padding:0 8px;margin-bottom:12px;">
+    <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary,#6b6b6b);margin-bottom:5px;">${label}</div>
+    ${valueHtml}
+</div>`;
+		})
+		.join("");
+
+	const bodyHtml = `
+<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:600;color:var(--color-text-primary);">Row #${rowIdx + 1} — Details</div>
+        <button onclick="window._ftbl_ro_close_dialog()"
+            style="width:32px;height:32px;border:none;background:transparent;color:#667085;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"
+            onmouseenter="this.style.background='#f2f4f7'" onmouseleave="this.style.background='transparent'">×</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 -8px;">
+        ${fieldsHtml}
+    </div>
+</div>`;
+
+	const dialog = new frappe.ui.Dialog({
+		title: " ",
+		fields: [{ fieldtype: "HTML", fieldname: "ro_row_view", options: bodyHtml }],
+		size: "large",
+	});
+	dialog.$wrapper.find(".modal-header").hide();
+	dialog.$wrapper.find(".modal-body").css({ "padding-top": "20px", "padding-bottom": "10px" });
+	dialog.$wrapper.find(".modal-footer").hide();
+	dialog.$wrapper
+		.find(".modal-dialog")
+		.css({ display: "flex", alignItems: "center", minHeight: "100vh", margin: "0 auto" });
+
+	window._ftbl_ro_active_dialog = dialog;
+	dialog.show();
+};
+
+window._ftbl_ro_close_dialog = function () {
+	if (window._ftbl_ro_active_dialog) {
+		window._ftbl_ro_active_dialog.hide();
+		window._ftbl_ro_active_dialog = null;
+	}
+};
 
 function watchAndLockLeadDetail() {
 	const target = document.querySelector('[data-fieldname="lead_detail"]');

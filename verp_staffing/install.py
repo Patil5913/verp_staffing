@@ -1184,7 +1184,8 @@ def remove_default_workspaces():
         "CR",
         "Onboarding",
         "Email Inbox",
-        "ESign"
+        "ESign",
+        "Accounting"
     ]
 
     # Hide all others

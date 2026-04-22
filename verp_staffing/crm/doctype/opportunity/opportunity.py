@@ -73,27 +73,9 @@ class Opportunity(Document):
 
         self.name = generate_name_series("Opportunity", name)
 
-    def validate(self):
-        self.block_manual_conversion()
-
     def on_update(self):
         if self.opportunity_from_lead:
             update_status_based_on_opportunity(self.opportunity_from_lead, self.status)
-
-    def block_manual_conversion(self):
-        """Prevent users from manually changing status to Converted."""
-        # old doc = previous DB version
-        old_status = self.get_db_value("status")
-        if not old_status:
-            return  # first save, skip
-
-        # User tries to manually change to Converted
-        if old_status != "Converted" and self.status == "Converted":
-            # Allow only if your backend logic sets a special flag
-            if not getattr(self, "_auto_converted", False):
-                frappe.throw(
-                    "You cannot manually mark this Opportunity as Converted. This happens automatically after meeting payment conditions."
-                )
                 
     @frappe.whitelist()
     def create_customer(self):

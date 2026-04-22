@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"DYz4Nf9hwD\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Employees</span>\",\"col\":12}},{\"id\":\"sqWKYctAFS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Employee\",\"col\":3}},{\"id\":\"ECZLYHOtZ2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User\",\"col\":3}}]",
+ "content": "[{\"id\":\"DYz4Nf9hwD\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Employees</span>\",\"col\":12}},{\"id\":\"vhFIaDYnIw\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Employee\",\"col\":4}},{\"id\":\"NhR513Meir\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"User\",\"col\":4}}]",
  "creation": "2025-12-26 15:56:22.971413",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,11 +13,20 @@
  "is_hidden": 0,
  "label": "Employees",
  "links": [],
- "modified": "2026-04-17 14:33:42.241571",
+ "modified": "2026-04-22 15:22:16.424462",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employees",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Employee",
+   "number_card_name": "Employee"
+  },
+  {
+   "label": "User",
+   "number_card_name": "User"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -28,23 +37,6 @@
   }
  ],
  "sequence_id": 1.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Employee",
-   "link_to": "Employee",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "User",
-   "link_to": "User",
-   "stats_filter": "[]",
-   "type": "DocType"
-  }
- ],
+ "shortcuts": [],
  "title": "Employees"
 }
