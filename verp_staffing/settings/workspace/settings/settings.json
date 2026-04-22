@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"WGKPFIc5ki\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Settings</span>\",\"col\":12}},{\"id\":\"cm7nrIAzHm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Hierarchy\",\"col\":3}},{\"id\":\"IlwABZJslo\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Department\",\"col\":3}},{\"id\":\"57qzVPBS2X\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Agreement Template\",\"col\":3}},{\"id\":\"ZNGZ6g1NU4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Email Domain\",\"col\":3}},{\"id\":\"4vkzLjCgQc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Employee\",\"col\":3}},{\"id\":\"lDtzILYu0h\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ERP Configuration\",\"col\":3}}]",
+ "content": "[{\"id\":\"WGKPFIc5ki\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Settings</span>\",\"col\":12}},{\"id\":\"C0AnUqmQeb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Hierarchy\",\"col\":4}},{\"id\":\"YllsC78x8-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Department\",\"col\":4}},{\"id\":\"x7CAVSo0kK\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Agreement Template\",\"col\":4}},{\"id\":\"CH3VoNvXZM\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Email Domain\",\"col\":4}},{\"id\":\"DkQo8u21cp\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Employee\",\"col\":4}},{\"id\":\"p_NaVy7bCM\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"lDtzILYu0h\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ERP Configuration\",\"col\":3}}]",
  "creation": "2025-12-26 16:07:48.623280",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,11 +13,32 @@
  "is_hidden": 0,
  "label": "Settings",
  "links": [],
- "modified": "2026-03-24 15:10:37.313626",
+ "modified": "2026-04-22 15:22:00.667335",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Settings",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Hierarchy",
+   "number_card_name": "Hierarchy"
+  },
+  {
+   "label": "Employee",
+   "number_card_name": "Employee"
+  },
+  {
+   "label": "Department",
+   "number_card_name": "Department"
+  },
+  {
+   "label": "Agreement Template",
+   "number_card_name": "Agreement Template"
+  },
+  {
+   "label": "Email Domain",
+   "number_card_name": "Email Domain"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -32,48 +53,8 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Hierarchy",
-   "link_to": "Hierarchy",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
    "label": "ERP Configuration",
    "link_to": "ERP Configuration",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Department",
-   "link_to": "Department",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Agreement Template",
-   "link_to": "Pdf Agreement Template",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Email Domain",
-   "link_to": "Email Domain",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Employee",
-   "link_to": "Employee",
-   "stats_filter": "[]",
    "type": "DocType"
   }
  ],
