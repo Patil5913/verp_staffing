@@ -21,10 +21,6 @@
   "currency",
   "column_break_yvzt",
   "opportunity_amount",
-  "section_break_spxs",
-  "quotation",
-  "column_break_cxck",
-  "agreement",
   "section_break_yqzw",
   "call_details",
   "lead_details_section",
@@ -126,22 +122,11 @@
    "label": "Open Activities HTML"
   },
   {
-   "fieldname": "section_break_spxs",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "agreement",
-   "fieldtype": "Attach",
-   "label": "Agreement"
-  },
-  {
-   "fieldname": "quotation",
-   "fieldtype": "Attach",
-   "label": "Quotation"
-  },
-  {
-   "fieldname": "column_break_cxck",
-   "fieldtype": "Column Break"
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
   },
   {
    "fieldname": "name1",
@@ -196,7 +181,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-21 12:19:49.053245",
+ "modified": "2026-04-21 09:51:35.373715",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -237,10 +222,16 @@
   },
   {
    "create": 1,
-   "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Person",
+   "role": "Sales Person",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Team Lead",
    "write": 1
   },
   {
@@ -252,9 +243,18 @@
   },
   {
    "create": 1,
+   "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Person",
+   "role": "Lead Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lead Person",
    "write": 1
   },
   {

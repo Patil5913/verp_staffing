@@ -6,6 +6,11 @@ if (window.pdfjsLib) {
 
 frappe.ui.form.on("Pdf Agreement Template", {
 	refresh(frm) {
+		
+		if (frm._pdf_dialog_observer) {
+			frm._pdf_dialog_observer.disconnect();
+			frm._pdf_dialog_observer = null;
+		}
 		frm._pdf_save_hook = false;
 		if (frm.doc.upload_pdf_template) {
 			frm.trigger("render_builder");
@@ -52,9 +57,34 @@ frappe.ui.form.on("Pdf Agreement Template", {
 		});
 
 		setTimeout(() => {
-			frm.fields_dict["upload_pdf_template"].$wrapper
-				.find("input[type='file']")
-				.attr("accept", ".pdf,application/pdf");
+			const file_field = frm.fields_dict["upload_pdf_template"];
+			if (!file_field) return;
+
+			file_field.$wrapper
+				.find(".btn-attach")
+				.off("click.pdf_only")
+				.on("click.pdf_only", function (e) {
+					e.stopImmediatePropagation();
+					e.preventDefault();
+
+					new frappe.ui.FileUploader({
+						restrictions: {
+							allowed_file_types: [".pdf"],
+						},
+						on_success(file_doc) {
+							const url = file_doc.file_url || "";
+							if (!url.toLowerCase().endsWith(".pdf")) {
+								frappe.call({
+									method: "frappe.client.delete",
+									args: { doctype: "File", name: file_doc.name },
+								});
+								frappe.throw("Only PDF files are allowed.");
+								return;
+							}
+							frm.set_value("upload_pdf_template", url);
+						},
+					});
+				});
 		}, 500);
 	},
 

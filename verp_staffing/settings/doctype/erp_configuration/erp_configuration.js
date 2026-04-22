@@ -1,15 +1,13 @@
-// Copyright (c) 2026, Vrugle and contributors
-// For license information, please see license.txt
-
 frappe.ui.form.on("ERP Configuration", {
 	refresh(frm) {
 		set_department_role_filters(frm);
+		setup_permission_table_filters(frm);
 		frappe.call({
 			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_services",
 			callback(r) {
 				const services = r.message || [];
-				const servicesPlus = [...services, "Lead" , "Customer"];
-				const servicesPlusFordisplay = [...services , "Customer" , "Opportunity"];
+				const servicesPlus = [...services, "Lead", "Customer"];
+				const servicesPlusFordisplay = [...services, "Customer", "Opportunity"];
 
 				render_field_selector_widget(
 					frm,
@@ -39,6 +37,85 @@ frappe.ui.form.on("ERP Configuration", {
 	},
 });
 
+// ── Department roles cache ────────────────────────────────────────────────────
+const DEPT_ROLES_CACHE = {};
+
+function fetch_department_roles(dept_name, callback) {
+	if (DEPT_ROLES_CACHE[dept_name]) {
+		callback(DEPT_ROLES_CACHE[dept_name]);
+		return;
+	}
+	frappe.call({
+		method: "frappe.client.get",
+		args: { doctype: "Department", name: dept_name },
+		callback: function (r) {
+			let roles = [];
+			if (r?.message?.role && Array.isArray(r.message.role)) {
+				roles = r.message.role.map((row) => row.role).filter(Boolean);
+			}
+			DEPT_ROLES_CACHE[dept_name] = roles;
+			callback(roles);
+		},
+	});
+}
+
+// ── Child table filters ───────────────────────────────────────────────────────
+function setup_permission_table_filters(frm) {
+
+	frm.set_query("department", "table_tpxt", function (doc, cdt, cdn) {
+		const already_selected = (doc.table_tpxt || [])
+			.filter((row) => row.name !== cdn && row.department)
+			.map((row) => row.department);
+
+		const filters = [];
+
+		if (already_selected.length) {
+			filters.push(["Department", "name", "not in", already_selected]);
+		}
+
+		// Exclude the three departments that should never appear
+		filters.push(["Department", "name", "not in", ["HR", "Lead", "Resume"]]);
+
+		return { filters };
+	});
+
+	// Filter role field — only show roles belonging to selected department
+	frm.set_query("role", "table_tpxt", function (doc, cdt, cdn) {
+		const row = frappe.get_doc(cdt, cdn);
+		const selected_dept = row && row.department;
+
+		if (!selected_dept) {
+			// No department chosen yet — show nothing
+			return {
+				filters: [["Role", "name", "in", []]],
+			};
+		}
+
+		const roles = DEPT_ROLES_CACHE[selected_dept] || [];
+		return {
+			filters: [["Role", "name", "in", roles]],
+		};
+	});
+}
+
+// ── Clear role when department changes in child table ─────────────────────────
+frappe.ui.form.on("Permission Request Configuration", {
+	department(frm, cdt, cdn) {
+		const row = frappe.get_doc(cdt, cdn);
+
+		// Clear the role whenever department changes
+		frappe.model.set_value(cdt, cdn, "role", null);
+
+		// Trigger role fetch so cache is warm for instant filter
+		if (row.department) {
+			fetch_department_roles(row.department, () => {
+				// Refresh role field query after cache is ready
+				frm.refresh_field("table_tpxt");
+			});
+		}
+	},
+});
+
 function set_department_role_filters(frm) {
 	const dept_field_map = {
 		sales_department: "Sales",
@@ -47,25 +124,25 @@ function set_department_role_filters(frm) {
 	};
 
 	Object.entries(dept_field_map).forEach(([field, dept_name]) => {
-		// Fetch roles for this department from Department doctype
-		frappe.db.get_value("Department", dept_name, "roles_json").then((r) => {
-			if (!r || !r.message || !r.message.roles_json) return;
+		frappe.call({
+			method: "frappe.client.get",
+			args: {
+				doctype: "Department",
+				name: dept_name,
+			},
+			callback: function (r) {
+				let roles = [];
+				if (r?.message?.role && Array.isArray(r.message.role)) {
+					roles = r.message.role.map((row) => row.role).filter((role) => role);
+				}
+				if (!roles.length) return;
 
-			let roles = [];
-			try {
-				roles = JSON.parse(r.message.roles_json);
-			} catch (e) {
-				return;
-			}
-
-			if (!roles.length) return;
-
-			// Set filter on the link field to show only these roles
-			frm.set_query(field, function () {
-				return {
-					filters: [["Role", "name", "in", roles]],
-				};
-			});
+				frm.set_query(field, function () {
+					return {
+						filters: [["Role", "name", "in", roles]],
+					};
+				});
+			},
 		});
 	});
 }

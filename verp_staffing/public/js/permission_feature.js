@@ -794,6 +794,18 @@ ${tableWidgetHtml}
 					missing = true;
 					return false;
 				}
+				if (isPhoneField(fn)) {
+					const phone_regex = /^\+[1-9]\d{9,14}$/;
+					if (!phone_regex.test((nv || "").trim())) {
+						frappe.msgprint(
+							__(
+								`${label} must be in format +countrycode followed by numbers (e.g. +91xxxxxxxxxx or +1xxxxxxxxxx)`,
+							),
+						);
+						missing = true;
+						return false;
+					}
+				}
 				field_updates[fn] = { old: inp.data("old") || "", new: nv };
 				has_selection = true;
 			});
@@ -822,6 +834,7 @@ ${tableWidgetHtml}
 					field_updates: JSON.stringify(field_updates),
 					service_doctype: mode === "service" ? frm.doctype : null,
 					service_name: mode === "service" ? frm.doc.name : null,
+					extra_info: frm.doctype === "Other Services" ? frm.doc.service : null,
 				},
 				callback(res) {
 					if (res.message?.status === "success") {
@@ -1139,6 +1152,8 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 				</div>
 			</div>`);
 			return;
+		} else if (fieldtype === "Date") {
+			inp_html = `<input class="fg-new-input" type="date" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
 		} else {
 			inp_html = `<input class="fg-new-input" type="text" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" placeholder="${__("Enter new value for")} ${frappe.utils.escape_html(label)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
 		}
@@ -1153,4 +1168,16 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 			</div>
 		</div>`);
 	});
+}
+
+function validate_phone(phone, label) {
+	phone = (phone || "").trim();
+	if (!phone) {
+		frappe.throw(`${label} is required`);
+	}
+	const phone_regex = /^\+[1-9]\d{9,14}$/;
+	if (!phone_regex.test(phone)) {
+		frappe.throw(`${label} must be in format +countrycode followed by numbers`);
+	}
+	return true;
 }

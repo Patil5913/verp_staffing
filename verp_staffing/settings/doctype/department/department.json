@@ -11,8 +11,7 @@
   "department_name",
   "section_break_cbtl",
   "column_break_xwuo",
-  "roles_html",
-  "roles_json",
+  "role",
   "column_break_zerj",
   "head_of_department",
   "services"
@@ -39,17 +38,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "roles_html",
-   "fieldtype": "HTML",
-   "label": "Roles"
-  },
-  {
-   "fieldname": "roles_json",
-   "fieldtype": "Small Text",
-   "hidden": 1,
-   "label": "Roles JSON"
-  },
-  {
    "fieldname": "column_break_zerj",
    "fieldtype": "Column Break"
   },
@@ -64,12 +52,18 @@
    "fieldtype": "Table MultiSelect",
    "label": "Services",
    "options": "Department Service"
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Table MultiSelect",
+   "label": "Role",
+   "options": "Department Role"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 16:11:48.601418",
+ "modified": "2026-04-21 14:26:24.206459",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Department",

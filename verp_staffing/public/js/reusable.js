@@ -1224,6 +1224,23 @@ function open_new_event_dialog(frm) {
 				fieldtype: "Select",
 				options: "Event\nMeeting\nCall\nFollow Up\nOther",
 				reqd: 1,
+				onchange: function () {
+					let value = d.get_value("category");
+
+					if (value === "Other") {
+						d.set_df_property("custom_title", "hidden", 0);
+						d.set_df_property("custom_title", "reqd", 1);
+					} else {
+						d.set_df_property("custom_title", "hidden", 1);
+						d.set_df_property("custom_title", "reqd", 0);
+					}
+				},
+			},
+			{
+				label: "Title (Enter Name of Event)",
+				fieldname: "custom_title",
+				fieldtype: "Data",
+				hidden: 1,
 			},
 			{
 				label: "Date",
@@ -1282,6 +1299,23 @@ function open_edit_event_dialog(event_name, frm) {
 					options: "Event\nMeeting\nCall\nFollow Up\nOther",
 					default: doc.category,
 					reqd: 1,
+					onchange: function () {
+						let value = d.get_value("category");
+
+						if (value === "Other") {
+							d.set_df_property("custom_title", "hidden", 0);
+							d.set_df_property("custom_title", "reqd", 1);
+						} else {
+							d.set_df_property("custom_title", "hidden", 1);
+							d.set_df_property("custom_title", "reqd", 0);
+						}
+					},
+				},
+				{
+					label: "Title (Enter Name of Event)",
+					fieldname: "custom_title",
+					fieldtype: "Data",
+					hidden: 1,
 				},
 				{
 					label: "Date",
