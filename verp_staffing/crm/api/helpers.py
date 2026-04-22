@@ -152,6 +152,7 @@ def get_all_superiors_with_roles(employee: str, department: str | None = None):
 
     return result
 
+
 SERVICE_DEPARTMENT_MAP = {
     "resume": "Technical",
     "jdc": "Technical",
@@ -170,11 +171,9 @@ def _resolve_department_from_service(extra_info):
 
     mapped = SERVICE_DEPARTMENT_MAP.get(extra_info.strip().lower())
     if mapped:
-        frappe.errprint(f"[DEPT] '{extra_info}' → '{mapped}' (hardcoded map)")
         return mapped
 
     dept = frappe.db.get_value("Other Services", {"service": extra_info}, "department")
-    frappe.errprint(f"[DEPT] '{extra_info}' → '{dept}' (Other Services doc)")
     return dept
 
 
@@ -182,14 +181,12 @@ def _get_employee_roles(employee_name):
     """Get Frappe system roles for an employee via their linked User."""
     user = frappe.db.get_value("Employee", employee_name, "user")
     if not user:
-        frappe.errprint(f"[ROLES] No user linked to '{employee_name}'")
         return []
     roles = frappe.db.get_all(
         "Has Role",
         filters={"parent": user, "parenttype": "User"},
         pluck="role",
     )
-    frappe.errprint(f"[ROLES] '{employee_name}' → user='{user}' roles={roles}")
     return roles or []
 
 
@@ -209,20 +206,13 @@ def _find_employee_with_role_in_dept(required_role, target_dept):
         order_by="idx asc",
     )
 
-    frappe.errprint(
-        f"[FIND] Looking for role='{required_role}' in dept='{target_dept}' "
-        f"→ candidates={[r.get('parent') for r in dept_employees]}"
-    )
-
     for row in dept_employees:
         emp = row.get("parent")
         if not emp:
             continue
         emp_roles = _get_employee_roles(emp)
         if required_role in emp_roles:
-            frappe.errprint(
-                f"[FIND]  Found '{emp}' with role '{required_role}' in dept '{target_dept}'"
-            )
+
             return emp
 
     return None
@@ -243,12 +233,6 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
         if row.department and row.role:
             dept_role_map[row.department] = row.role
 
-    frappe.errprint(f"[APPROVER] dept_role_map={dept_role_map}")
-    frappe.errprint(
-        f"[APPROVER] employee='{employee_name}' "
-        f"service_doctype='{service_doctype}' extra_info='{extra_info}'"
-    )
-
     # Get ALL assignment rows for this employee
     assignment_rows = frappe.db.get_all(
         "Employee Assignment Detail",
@@ -256,8 +240,6 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
         fields=["department", "designation", "assigned_to"],
         order_by="idx asc",
     )
-
-    frappe.errprint(f"[APPROVER] assignment_rows={assignment_rows}")
 
     if not assignment_rows:
         return None
@@ -271,13 +253,7 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
     if service_doctype == "Other Services" and extra_info:
         target_dept = _resolve_department_from_service(extra_info)
 
-        frappe.errprint(
-            f"[APPROVER] Other Services → extra_info='{extra_info}' "
-            f"→ target_dept='{target_dept}'"
-        )
-
         if not target_dept:
-            frappe.errprint("[APPROVER] No dept resolved → direct_manager fallback")
             return direct_manager
 
         # Get required role for this department from ERP Config
@@ -291,12 +267,7 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
         )
         required_role = dept_role_map.get(dept_key) if dept_key else None
 
-        frappe.errprint(
-            f"[APPROVER] dept_key='{dept_key}' required_role='{required_role}'"
-        )
-
         if not required_role:
-            frappe.errprint("[APPROVER] No role configured → direct_manager fallback")
             return direct_manager
 
         # Override direct_manager from matching dept row
@@ -311,34 +282,23 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
         )
         if matching_row and matching_row.get("assigned_to"):
             direct_manager = matching_row.get("assigned_to")
-            frappe.errprint(f"[APPROVER] direct_manager overridden='{direct_manager}'")
 
         approver = _find_employee_with_role_in_dept(
             required_role, dept_key or target_dept
         )
         if approver and approver != employee_name:
-            frappe.errprint(f"[APPROVER]  Approver='{approver}' (role search in dept)")
             return approver
 
         if direct_manager:
             starting_roles = _get_employee_roles(direct_manager)
             if required_role in starting_roles:
-                frappe.errprint(
-                    f"[APPROVER]  Approver='{direct_manager}' (direct manager has role)"
-                )
                 return direct_manager
 
             superiors = get_all_superiors_with_roles(direct_manager)
             for superior in superiors:
                 if required_role in superior.get("roles", []):
-                    frappe.errprint(
-                        f"[APPROVER]  Approver='{superior.get('employee')}' (hierarchy walk)"
-                    )
                     return superior.get("employee")
 
-        frappe.errprint(
-            f"[APPROVER] No approver found → direct_manager='{direct_manager}'"
-        )
         return direct_manager
 
     else:
@@ -358,8 +318,6 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
                     required_roles.append(role)
                     dept_keys.append(dept_key)
 
-        frappe.errprint(f"[APPROVER] Customer form required_roles={required_roles}")
-
         if not required_roles:
             return direct_manager
 
@@ -368,9 +326,6 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
             if dept_key:
                 approver = _find_employee_with_role_in_dept(role, dept_key)
                 if approver and approver != employee_name:
-                    frappe.errprint(
-                        f"[APPROVER]  Approver='{approver}' via role='{role}'"
-                    )
                     return approver
 
         superiors = get_all_superiors_with_roles(employee_name)
@@ -378,9 +333,6 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
             sup_roles = superior.get("roles", [])
             matched = next((r for r in required_roles if r in sup_roles), None)
             if matched:
-                frappe.errprint(
-                    f"[APPROVER]  Approver='{superior.get('employee')}' via '{matched}' (hierarchy)"
-                )
                 return superior.get("employee")
 
         return direct_manager
