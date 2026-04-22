@@ -1,9 +1,9 @@
 /* ===== Disable text selection globally ===== */
 body.verp-protected * {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 }
 
 /* Allow selection in inputs & code if needed */
@@ -11,192 +11,190 @@ body.verp-protected input,
 body.verp-protected textarea,
 body.verp-protected pre,
 body.verp-protected code {
-  -webkit-user-select: text;
-  user-select: text;
+	-webkit-user-select: text;
+	user-select: text;
 }
 
 /* Blur when window loses focus */
 body.verp-blur .main-section,
 body.verp-blur .layout-main-section {
-  filter: blur(10px);
-  pointer-events: none;
+	filter: blur(10px);
+	pointer-events: none;
 }
 
 body.verp-protected::after {
-  content: "CONFIDENTIAL – VERP STAFFING";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  font-size: 64px;
-  color: rgba(255, 255, 255, 0.08);
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 9999;
+	content: "CONFIDENTIAL – VERP STAFFING";
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%) rotate(-30deg);
+	font-size: 64px;
+	color: rgba(255, 255, 255, 0.08);
+	white-space: nowrap;
+	pointer-events: none;
+	z-index: 9999;
 }
-
 
 /* Frappe-style Custom Multiselect */
 .custom-multiselect {
-    border: 1px solid #d1d8dd;
-    border-radius: 4px;
-    padding: 4px 8px;
-    background: #fff;
-    position: relative;
-    min-height: 36px;
-    cursor: text;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+	border: 1px solid #d1d8dd;
+	border-radius: 4px;
+	padding: 4px 8px;
+	background: #fff;
+	position: relative;
+	min-height: 36px;
+	cursor: text;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 
 .custom-multiselect:focus-within {
-    border-color: #2490ef;
-    box-shadow: 0 0 0 3px rgba(36, 144, 239, 0.1);
+	border-color: #2490ef;
+	box-shadow: 0 0 0 3px rgba(36, 144, 239, 0.1);
 }
 
 .selected-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	align-items: center;
 }
 
 .chip {
-    background: #f4f5f6;
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 13px;
-    color: #36414c;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    line-height: 1.6;
-    font-weight: 400;
+	background: #f4f5f6;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 13px;
+	color: #36414c;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	line-height: 1.6;
+	font-weight: 400;
 }
 
 .chip .remove {
-    cursor: pointer;
-    color: #6c757d;
-    font-size: 16px;
-    line-height: 1;
-    font-weight: 300;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
+	cursor: pointer;
+	color: #6c757d;
+	font-size: 16px;
+	line-height: 1;
+	font-weight: 300;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
 }
 
 .chip .remove:hover {
-    color: #000;
+	color: #000;
 }
 
 .multiselect-input {
-    border: none;
-    outline: none;
-    padding: 4px 0;
-    font-size: 13px;
-    color: #36414c;
-    flex: 1;
-    min-width: 120px;
-    background: transparent;
+	border: none;
+	outline: none;
+	padding: 4px 0;
+	font-size: 13px;
+	color: #36414c;
+	flex: 1;
+	min-width: 120px;
+	background: transparent;
 }
 
 .multiselect-input::placeholder {
-    color: #a8b3bf;
-    font-weight: 400;
+	color: #a8b3bf;
+	font-weight: 400;
 }
 
 .multiselect-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    max-height: 280px;
-    overflow-y: auto;
-    background: #fff;
-    border: 1px solid #d1d8dd;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    margin: 0;
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	max-height: 280px;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid #d1d8dd;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	z-index: 1000;
+	margin: 0;
 }
 
 .multiselect-dropdown .item {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #36414c;
-    transition: background-color 0.1s ease;
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 13px;
+	color: #36414c;
+	transition: background-color 0.1s ease;
 }
 
 .multiselect-dropdown .item:hover {
-    background: #f4f5f6;
+	background: #f4f5f6;
 }
 
 .multiselect-dropdown .item:active {
-    background: #e8eaed;
+	background: #e8eaed;
 }
 
 .hidden {
-    display: none !important;
+	display: none !important;
 }
 
 /* Role table styling to match Frappe */
 #role-table {
-    width: 100%;
-    border-collapse: collapse;
+	width: 100%;
+	border-collapse: collapse;
 }
 
 #role-table th,
 #role-table td {
-    padding: 8px 12px;
-    border: 1px solid #e8e9ea;
+	padding: 8px 12px;
+	border: 1px solid #e8e9ea;
 }
 
 #role-table th {
-    background: #f4f5f6;
-    font-weight: 600;
-    font-size: 13px;
-    color: #36414c;
-    text-align: left;
+	background: #f4f5f6;
+	font-weight: 600;
+	font-size: 13px;
+	color: #36414c;
+	text-align: left;
 }
 
 .role-row {
-    background: #fff;
+	background: #fff;
 }
 
 .role-row:hover {
-    background: #fafbfc;
+	background: #fafbfc;
 }
 
 /* Scrollbar styling for dropdown */
 .multiselect-dropdown::-webkit-scrollbar {
-    width: 8px;
+	width: 8px;
 }
 
 .multiselect-dropdown::-webkit-scrollbar-track {
-    background: #f4f5f6;
-    border-radius: 4px;
+	background: #f4f5f6;
+	border-radius: 4px;
 }
 
 .multiselect-dropdown::-webkit-scrollbar-thumb {
-    background: #d1d8dd;
-    border-radius: 4px;
+	background: #d1d8dd;
+	border-radius: 4px;
 }
 
 .multiselect-dropdown::-webkit-scrollbar-thumb:hover {
-    background: #a8b3bf;
+	background: #a8b3bf;
 }
 
 /* Hide Frappe promotional sidebar footer globally */
 .layout-side-section .sidebar-section a[href*="frappe.io"] {
-    display: none !important;
+	display: none !important;
 }
 
-
-:root {
+/* :root {
     --primary: #2563eb;        
     --primary-color: #2563eb;
 
@@ -234,4 +232,4 @@ body.verp-protected::after {
 
 .navbar .navbar-brand {
     color: #ffffff;
-}
+} */
