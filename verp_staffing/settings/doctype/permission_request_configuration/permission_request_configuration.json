@@ -13,21 +13,24 @@
   {
    "fieldname": "department",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Department",
-   "options": "Department"
+   "options": "Department",
+   "reqd": 1
   },
   {
    "fieldname": "role",
    "fieldtype": "Link",
    "label": "Role",
-   "options": "Role"
+   "options": "Role",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-21 15:41:07.251747",
+ "modified": "2026-04-22 14:28:06.229647",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Permission Request Configuration",
