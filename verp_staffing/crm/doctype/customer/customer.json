@@ -2,6 +2,7 @@
  "actions": [],
  "allow_import": 1,
  "creation": "2025-11-14 20:59:35.429623",
+ "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -149,10 +150,11 @@
    "read_only": 1
   }
  ],
+ "force_re_route_to_default_view": 1,
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-21 10:10:13.976216",
+ "modified": "2026-04-22 17:24:45.459665",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -170,20 +172,20 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Manager",
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Manager",
+   "role": "Sales Team Lead",
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
   },
   {
    "create": 1,
@@ -198,6 +200,21 @@
    "write": 1
   },
   {
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
    "create": 1,
    "read": 1,
    "report": 1,
@@ -206,27 +223,12 @@
   },
   {
    "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
    "role": "Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Resume Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
    "select": 1
   },
   {
@@ -236,7 +238,17 @@
   },
   {
    "read": 1,
-   "role": "Marketing Team Lead",
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
    "select": 1
   },
   {
@@ -251,12 +263,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "JDC",
+   "role": "Technical Master Manager",
    "select": 1
   },
   {
@@ -266,12 +273,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Technical Coordinator",
+   "role": "JDC",
    "select": 1
   },
   {

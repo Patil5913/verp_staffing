@@ -2,6 +2,7 @@
  "actions": [],
  "allow_import": 1,
  "creation": "2025-11-14 20:51:03.722071",
+ "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -29,7 +30,8 @@
   "notes_html",
   "updates_html",
   "activities_tab",
-  "open_activities_html"
+  "open_activities_html",
+  "title"
  ],
  "fields": [
   {
@@ -178,10 +180,11 @@
    "fieldtype": "HTML"
   }
  ],
+ "force_re_route_to_default_view": 1,
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-21 09:51:35.373715",
+ "modified": "2026-04-22 17:20:54.023668",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -193,7 +196,7 @@
    "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Master Manager",
+   "role": "Lead Person",
    "write": 1
   },
   {
@@ -203,6 +206,18 @@
    "report": 1,
    "role": "Lead Manager",
    "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lead Team Lead",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "role": "Lead Employee"
   },
   {
    "create": 1,
@@ -218,13 +233,10 @@
   },
   {
    "create": 1,
-   "role": "Lead Employee"
-  },
-  {
-   "create": 1,
+   "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Person",
+   "role": "Lead Master Manager",
    "write": 1
   },
   {
@@ -243,18 +255,9 @@
   },
   {
    "create": 1,
-   "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "if_owner": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Lead Person",
+   "role": "Sales Person",
    "write": 1
   },
   {

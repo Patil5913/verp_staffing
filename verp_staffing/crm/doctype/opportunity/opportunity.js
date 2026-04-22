@@ -172,8 +172,26 @@ frappe.ui.form.on("Opportunity", {
 	},
 
 	status(frm) {
-		// store safe previous value
-		frm.doc.__last_sync_status = frm.doc.status;
+		const prev_status = frm.doc._previous_status;
+		const current_status = frm.doc.status;
+
+		if (current_status === "Converted" && prev_status !== "Converted") {
+			handle_create_customer(frm)
+				.then(() => {
+					frm.doc._previous_status = "Converted";
+				})
+				.catch(() => {
+					// User clicked No — revert status back
+					frm.doc._previous_status = prev_status || "Open";
+					frm.set_value("status", prev_status || "Open");
+					frappe.show_alert({
+						message: "Status change cancelled",
+						indicator: "orange",
+					});
+				});
+		} else {
+			frm.doc._previous_status = current_status;
+		}
 	},
 
 	opportunity_from_lead: function (frm) {
@@ -204,9 +222,9 @@ frappe.ui.form.on("Opportunity", {
 });
 
 async function handle_create_customer(frm) {
-	if (frm.is_dirty()) {
-		await frm.save();
-	}
+	// if (frm.is_dirty()) {
+	// 	await frm.save();
+	// }
 
 	// fetch existing customers
 	const r = await frappe.call({
@@ -249,17 +267,23 @@ async function handle_create_customer(frm) {
 
 	message += `<p>Do you want to create a new customer?</p>`;
 
-	frappe.confirm(message, async () => {
-		const res = await frm.call("create_customer");
-
-		if (res.message && res.message.customer) {
-			frappe.show_alert({
-				message: __("New Customer {0} created", [res.message.customer]),
-				indicator: "green",
-			});
-
-			// Redirect to the new customer record
-			frappe.set_route("Form", "Customer", res.message.customer);
-		}
+	return new Promise((resolve, reject) => {
+		frappe.confirm(
+			message,
+			async () => {
+				const res = await frm.call("create_customer");
+				if (res.message && res.message.customer) {
+					frappe.show_alert({
+						message: __("New Customer {0} created", [res.message.customer]),
+						indicator: "green",
+					});
+					frappe.set_route("Form", "Customer", res.message.customer);
+				}
+				resolve();
+			},
+			() => {
+				reject(); // user clicked No
+			},
+		);
 	});
 }
