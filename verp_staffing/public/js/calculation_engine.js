@@ -168,15 +168,7 @@ verp_staffing.calculation_engine.calculate_rounding = function (frm) {
 		frm.set_value("rounding_adjustment", 0);
 		frm.set_value("base_rounded_total", frm.doc.base_grand_total);
 		frm.set_value("outstanding_amount", frm.doc.grand_total);
-		frm.set_value(
-			"in_words",
-			frappe.utils.money_in_words(frm.doc.grand_total, frm.doc.currency),
-		);
 
-		// frm.set_value(
-		// 	"base_in_words",
-		// 	frappe.utils.money_in_words(frm.doc.base_grand_total, frm.doc.company_currency),
-		// );
 		return;
 	}
 
@@ -187,10 +179,4 @@ verp_staffing.calculation_engine.calculate_rounding = function (frm) {
 	frm.set_value("rounding_adjustment", adjustment);
 	frm.set_value("base_rounded_total", rounded * rate);
 	frm.set_value("outstanding_amount", rounded);
-	frm.set_value("in_words", frappe.utils.money_in_words(rounded, frm.doc.currency));
-
-	// frm.set_value(
-	// 	"base_in_words",
-	// 	frappe.utils.money_in_words(frm.doc.base_rounded_total, frm.doc.company_currency),
-	// );
 };
