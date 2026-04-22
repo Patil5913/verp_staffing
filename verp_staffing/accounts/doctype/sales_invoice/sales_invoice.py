@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _, msgprint, throw
-from frappe.contacts.doctype.address.address import get_address_display
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import add_days, cint, cstr, flt, formatdate, get_link_to_form, getdate, nowdate,now_datetime
+from frappe import _, throw
+from frappe.utils import cint,flt, getdate, nowdate,now_datetime
 from frappe.model.document import Document
 from verp_staffing.accounts.doctype.company.company import get_company_currency
 from frappe.utils import money_in_words
+from verp_staffing.accounts.engine.calculator import run_calculation
+from verp_staffing.accounts.api.get_defaults import validate_account
 
 class UOMMustBeIntegerError(frappe.ValidationError):
 	pass
@@ -43,18 +43,12 @@ class SalesInvoice(Document):
 		self.validate_debit_to_acc()
 		self.handle_currency_logic()
 		# Calculations
-		self.calculate_items()
-		self.calculate_totals()
-		self.calculate_taxes()
-		self.apply_discount_on_components()
-		self.calculate_base_totals()
-		self.calculate_rounding()	
+		run_calculation(self)
 		self.validate_accounts()
 		self.validate_tax_accounts()
 		self.validate_discount_account()
 		self.validate_mandatory_accounts()
-		# Backend validation to calculate item amount to avoid manipulation from frontend
-		self.calculate_items()
+		self.validate_account_currencies()
 
 		self.set_against_income_account()
 		self.set_indicator()
@@ -196,6 +190,38 @@ class SalesInvoice(Document):
 				frappe.throw(
 					_("Row {0}: Income account is mandatory").format(item.idx)
 				)
+
+	def validate_account_currencies(self):
+		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+		doc_currency = self.currency
+
+		invalid_accounts = []
+
+		def check_account(account, label):
+			if not account:
+				return
+
+			acc_currency = frappe.get_cached_value("Account", account, "account_currency")
+
+			if acc_currency not in [company_currency, doc_currency]:
+				invalid_accounts.append(f"{label}: {account} ({acc_currency})")
+
+		# Check items
+		for row in self.items:
+			check_account(row.income_account, "Item Row")
+
+		# Check taxes
+		for tax in self.taxes:
+			check_account(tax.account_head, "Tax Row")
+
+		# Check party account
+		check_account(self.debit_to, "Party Account")
+
+		if invalid_accounts:
+			frappe.throw(
+				"Invalid account currency detected:<br>" + "<br>".join(invalid_accounts)
+			)
+
 	def handle_currency_logic(self):
 		default_currency = get_company_currency(self.company)
 		if not default_currency:
@@ -212,86 +238,13 @@ class SalesInvoice(Document):
 				_("Conversion rate is 1.00, but document currency is different from company currency")
 			)
 
-	def calculate_totals(self):
-		self.total = 0
-
-		for item in self.items:
-			self.total += flt(item.amount)
-
-		self.net_total = self.total
-
-	def calculate_taxes(self):
-		net_total = flt(self.net_total)
-		cumulative_total = net_total
-
-		if not self.taxes:
-			self.total_taxes_and_charges = 0
-			return
-
-		for i, tax in enumerate(self.taxes):
-			tax_amount = 0
-
-			# CASE 1: Actual
-			if tax.charge_type == "Actual":
-				tax_amount = flt(tax.tax_amount or 0)
-
-			# CASE 2: On Net Total
-			elif tax.charge_type == "On Net Total":
-				tax_amount = (net_total * flt(tax.rate)) / 100
-
-			# CASE 3: On Previous Row Amount
-			elif tax.charge_type == "On Previous Row Amount":
-				if i == 0:
-					frappe.throw("Row 1 cannot use 'On Previous Row Amount'")
-				prev = self.taxes[i - 1]
-				tax_amount = (flt(prev.tax_amount) * flt(tax.rate)) / 100
-
-			# CASE 4: On Previous Row Total
-			elif tax.charge_type == "On Previous Row Total":
-				if i == 0:
-					frappe.throw("Row 1 cannot use 'On Previous Row Total'")
-				prev = self.taxes[i - 1]
-				tax_amount = (flt(prev.total) * flt(tax.rate)) / 100
-
-			# CASE 5: On Item Quantity
-			elif tax.charge_type == "On Item Quantity":
-				total_qty = sum(flt(item.qty) for item in self.items)
-				tax_amount = total_qty * flt(tax.rate)
-
-			else:
-				frappe.throw(f"Unsupported tax type: {tax.charge_type}")
-
-			tax.tax_amount = flt(tax_amount)
-
-			# cumulative total (same as JS)
-			cumulative_total += tax.tax_amount
-			tax.total = cumulative_total
-
-		self.total_taxes_and_charges = cumulative_total - net_total
-
-		# base currency
-		self.base_total_taxes_and_charges = (
-			flt(self.total_taxes_and_charges) * flt(self.conversion_rate)
-		)
-
-		# also set grand total here (to match JS flow)
-		self.grand_total = cumulative_total
-
-	def calculate_base_totals(self):
-		if not self.conversion_rate:
-			frappe.throw(_("Conversion rate required"))
-
-		self.base_total = flt(self.total) * flt(self.conversion_rate)
-		self.base_net_total = flt(self.net_total) * flt(self.conversion_rate)
-		self.base_grand_total = flt(self.grand_total) * flt(self.conversion_rate)
-
 	def validate_accounts(self):
 		# validate_income_account
 		for item in self.get("items"):
 			validate_account(
 				account=item.income_account,
 				company=self.company,
-				expected_types=["Income", "Income Account"],
+				expected_types=[ "Income Account"],
 				label="Income Account",
 				row=item.idx
 			)
@@ -313,6 +266,7 @@ class SalesInvoice(Document):
 			validate_account(
 				account=self.additional_discount_account,
 				company=self.company,
+				expected_types=["Expense Account"],
 				label="Discount Account"
 			)
 
@@ -348,59 +302,6 @@ class SalesInvoice(Document):
 			self.base_rounded_total = flt(self.rounded_total) * flt(self.conversion_rate)
 		else:
 			self.base_rounded_total = self.rounded_total
-
-	def calculate_items(self):
-		if not self.items:
-			frappe.throw(_("At least one item is required"))
-
-		for item in self.items:
-			self.calculate_item_amount(item)
-
-	def apply_discount_on_components(self):
-		discount = flt(self.discount_amount or 0)
-		if not discount:
-			return
-
-		grand_total = flt(self.net_total + self.total_taxes_and_charges)
-
-		# Identify non-distributable taxes
-		actual_tax_total = 0
-		for tax in self.taxes:
-			if tax.charge_type in ["Actual", "On Item Quantity"]:
-				actual_tax_total += flt(tax.tax_amount)
-
-		distributable_total = grand_total - actual_tax_total
-		if not distributable_total:
-			return
-
-		ratio = discount / distributable_total
-
-		# Adjust items
-		new_net_total = 0
-		for item in self.items:
-			reduction = flt(item.amount) * ratio
-			item.net_amount = flt(item.amount - reduction)
-			new_net_total += item.net_amount
-
-		self.net_total = new_net_total
-
-		# Adjust taxes
-		total_tax = 0
-		for tax in self.taxes:
-			if tax.charge_type in ["Actual", "On Item Quantity"]:
-				tax.tax_amount_after_discount_amount = tax.tax_amount
-			else:
-				reduction = flt(tax.tax_amount) * ratio
-				tax.tax_amount_after_discount_amount = flt(
-					tax.tax_amount - reduction
-				)
-
-			total_tax += flt(tax.tax_amount_after_discount_amount)
-
-		self.total_taxes_and_charges = total_tax
-
-		# Final grand total
-		self.grand_total = new_net_total + total_tax
 
 	def set_against_income_account(self):
 		"""Set against account for debit to account"""
@@ -447,10 +348,10 @@ class SalesInvoice(Document):
 		if update:
 			self.db_set("status", self.status, update_modified=update_modified)
 	def set_in_words(self):
-		self.in_words = money_in_words(self.rounded_total or self.grand_total, self.currency)
+		self.in_words = money_in_words(self.rounded_total, self.currency)
 
 		self.base_in_words = money_in_words(
-			self.base_rounded_total or self.base_grand_total,
+			self.base_rounded_total ,
 			get_company_currency(self.company)
 		)
 
@@ -471,51 +372,6 @@ def get_total_in_party_account_currency(doc):
 
 	return flt(doc.get(total_fieldname), doc.precision(total_fieldname))
 
-def validate_account(
-    account,
-    company,
-    expected_types=None,
-    label="Account",
-    row=None
-):
-    if not account:
-        frappe.throw(_("{0} is required").format(label))
-
-    acc = frappe.get_cached_value(
-        "Account",
-        account,
-        ["account_type", "is_group", "company", "report_type"],
-        as_dict=True
-    )
-
-    if not acc:
-        frappe.throw(_("Invalid {0}: {1}").format(label, frappe.bold(account)))
-
-    if acc.is_group:
-        frappe.throw(
-            _("Row {0}: {1} {2} cannot be a group account")
-            .format(row or "-", label, frappe.bold(account))
-        )
-
-    if acc.company != company:
-        frappe.throw(
-            _("Row {0}: {1} {2} does not belong to Company {3}")
-            .format(row or "-", label, frappe.bold(account), frappe.bold(company))
-        )
-
-    if expected_types and acc.account_type not in expected_types:
-        frappe.throw(
-            _("Row {0}: {1} {2} must be of type {3}, but found {4}")
-            .format(
-                row or "-",
-                label,
-                frappe.bold(account),
-                ", ".join(expected_types),
-                acc.account_type
-            )
-        )
-
-    return acc
 
 from verp_staffing.accounts.doctype.gl_entry.gl_entry import build_gl_entry
 def get_sales_invoice_gl_map(doc):

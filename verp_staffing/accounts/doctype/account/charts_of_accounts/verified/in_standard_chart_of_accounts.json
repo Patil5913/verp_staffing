@@ -25,25 +25,22 @@
 
     "Expenses": {
       "Direct Expenses": {
-        "Purchase": {
-          "account_type": "Expense"
-        },
-        "Cost of Service": {
-          "account_type": "Expense"
+        "Cost of Goods and Service Sales": {
+          "account_type": "Cost of Goods Sold"
         }
       },
       "Indirect Expenses": {
         "Salary": {
-          "account_type": "Expense"
+          "account_type": "Expense Account"
         },
         "Office Expenses": {
-          "account_type": "Expense"
+          "account_type": "Expense Account"
         },
         "Marketing Expenses": {
-          "account_type": "Expense"
+          "account_type": "Expense Account"
         },
         "Discount": {
-          "account_type": "Expense"
+          "account_type": "Expense Account"
         },
         "Rounded Off": {
           "account_type": "Round Off"
@@ -73,6 +70,9 @@
           }
         },
         "Duties and Taxes": {
+          "GST": {
+            "account_type": "Tax"
+          },
           "TDS": {
             "account_type": "Tax"
           }

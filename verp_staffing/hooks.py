@@ -39,6 +39,7 @@ app_include_js = [
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/about_override.js",
+    "/assets/verp_staffing/js/calculation_engine.js",
     # "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
@@ -246,6 +247,10 @@ doc_events = {
     "Sales Invoice": {
         "on_submit": "verp_staffing.accounts.doctype.sales_invoice.gl.on_submit_sales_invoice",
         "on_cancel": "verp_staffing.accounts.doctype.sales_invoice.gl.on_cancel_sales_invoice"
+    },
+    "Purchase Invoice": {
+        "on_submit": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_submit_purchase_invoice",
+        "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice"
     }
 }
 

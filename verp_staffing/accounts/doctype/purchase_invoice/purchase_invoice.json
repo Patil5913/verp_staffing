@@ -1,14 +1,18 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2026-04-09 17:15:42.364826",
  "doctype": "DocType",
+ "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
   "section_break_e785",
+  "naming_series",
   "supplier",
   "tax_id",
   "company",
+  "supplier_name",
   "column_break_xfwo",
   "posting_date",
   "posting_time",
@@ -22,8 +26,6 @@
   "update_billed_amount_in_purchase_order",
   "update_billed_amount_in_purchase_receipt",
   "amended_from",
-  "apply_tds",
-  "tax_withholding_category",
   "supplier_invoice_details",
   "bill_no",
   "column_break_nspf",
@@ -44,15 +46,14 @@
   "total",
   "net_total",
   "tax_withholding_net_total",
-  "base_tax_withholding_net_total",
   "taxes_section",
   "tax_category",
-  "base_taxes_and_charges_added",
-  "base_taxes_and_charges_deducted",
-  "base_total_taxes_and_charges",
   "column_break_yefs",
-  "taxes_and_charges_added",
-  "taxes_and_charges_deducted",
+  "section_break_yyvx",
+  "taxes",
+  "section_break_fpmf",
+  "base_total_taxes_and_charges",
+  "column_break_qhbb",
   "total_taxes_and_charges",
   "totals_section",
   "base_grand_total",
@@ -62,15 +63,14 @@
   "column_break_pzrv",
   "grand_total",
   "rounding_adjustment",
-  "use_company_roundoff_cost_center",
   "rounded_total",
   "in_words",
   "total_advance",
   "outstanding_amount",
   "disable_rounded_total",
   "additional_discount_section",
-  "apply_discount_on",
   "base_discount_amount",
+  "additional_discount_account",
   "column_break_nwxf",
   "additional_discount_percentage",
   "discount_amount",
@@ -89,7 +89,6 @@
   "per_received",
   "accounting_details_section",
   "credit_to",
-  "party_account_currency",
   "is_opening",
   "column_break_cplu",
   "against_expense_account",
@@ -113,7 +112,6 @@
   {
    "fieldname": "supplier",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Supplier",
    "options": "Supplier",
@@ -215,18 +213,6 @@
    "fieldname": "update_billed_amount_in_purchase_receipt",
    "fieldtype": "Check",
    "label": "Update Billed Amount in Purchase Receipt"
-  },
-  {
-   "default": "0",
-   "fieldname": "apply_tds",
-   "fieldtype": "Check",
-   "label": "Apply Tax Withholding Amount"
-  },
-  {
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "label": "Tax Withholding Category",
-   "options": "Tax Withholding Category"
   },
   {
    "collapsible": 1,
@@ -348,32 +334,10 @@
    "read_only": 1
   },
   {
-   "fieldname": "base_tax_withholding_net_total",
-   "fieldtype": "Currency",
-   "label": "Base Tax Withholding Net Total",
-   "no_copy": 1,
-   "options": "Company:company:default_currency",
-   "read_only": 1
-  },
-  {
    "fieldname": "tax_category",
    "fieldtype": "Link",
    "label": "Tax Category",
    "options": "Tax Category"
-  },
-  {
-   "fieldname": "base_taxes_and_charges_added",
-   "fieldtype": "Currency",
-   "label": "Taxes and Charges Added (Company Currency)",
-   "options": "Company:company:default_currency",
-   "read_only": 1
-  },
-  {
-   "fieldname": "base_taxes_and_charges_deducted",
-   "fieldtype": "Currency",
-   "label": "Taxes and Charges Deducted (Company Currency)",
-   "options": "Company:company:default_currency",
-   "read_only": 1
   },
   {
    "fieldname": "base_total_taxes_and_charges",
@@ -385,20 +349,6 @@
   {
    "fieldname": "column_break_yefs",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "taxes_and_charges_added",
-   "fieldtype": "Currency",
-   "label": "Taxes and Charges Added",
-   "options": "currency",
-   "read_only": 1
-  },
-  {
-   "fieldname": "taxes_and_charges_deducted",
-   "fieldtype": "Currency",
-   "label": "Taxes and Charges Deducted",
-   "options": "currency",
-   "read_only": 1
   },
   {
    "fieldname": "total_taxes_and_charges",
@@ -444,7 +394,7 @@
   },
   {
    "fieldname": "base_in_words",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "In Words (Company Currency)",
    "length": 240,
    "read_only": 1
@@ -470,12 +420,6 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "use_company_roundoff_cost_center",
-   "fieldtype": "Check",
-   "label": "Use Company Default Round Off Cost Center"
-  },
-  {
    "depends_on": "eval:!doc.disable_rounded_total",
    "fieldname": "rounded_total",
    "fieldtype": "Currency",
@@ -485,7 +429,7 @@
   },
   {
    "fieldname": "in_words",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "In Words",
    "length": 240,
    "read_only": 1
@@ -540,13 +484,6 @@
    "fieldtype": "Currency",
    "label": "Additional Discount Amount",
    "options": "currency"
-  },
-  {
-   "default": "Grand Total",
-   "fieldname": "apply_discount_on",
-   "fieldtype": "Select",
-   "label": "Apply Additional Discount On",
-   "options": "\nGrand Total\nNet Total"
   },
   {
    "fieldname": "payments_tab",
@@ -645,14 +582,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "party_account_currency",
-   "fieldtype": "Link",
-   "label": "Party Account Currency",
-   "no_copy": 1,
-   "options": "Currency",
-   "read_only": 1
-  },
-  {
    "allow_on_submit": 1,
    "default": "No",
    "fieldname": "is_opening",
@@ -667,8 +596,11 @@
   {
    "fieldname": "against_expense_account",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Against Expense Account",
-   "no_copy": 1
+   "no_copy": 1,
+   "print_hide": 1,
+   "report_hide": 1
   },
   {
    "allow_on_submit": 1,
@@ -678,16 +610,56 @@
    "fieldtype": "Link",
    "label": "Unrealized Profit / Loss Account",
    "options": "Account"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "ACC-PINV-.YYYY.-\nACC-PINV-RET-.YYYY.-",
+   "print_hide": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "label": "Supplier Name"
+  },
+  {
+   "fieldname": "section_break_yyvx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "label": "Purchase Taxes and Charges",
+   "options": "Purchase Taxes and Charges"
+  },
+  {
+   "fieldname": "section_break_fpmf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_qhbb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "additional_discount_account",
+   "fieldtype": "Link",
+   "label": "Discount Account",
+   "options": "Account"
   }
  ],
  "grid_page_length": 50,
+ "icon": "fa fa-file-text",
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-10 15:16:51.521149",
+ "modified": "2026-04-21 18:20:31.742284",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Purchase Invoice",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -706,7 +678,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "posting_date, supplier, bill_no, base_grand_total, outstanding_amount",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "supplier_name"
 }

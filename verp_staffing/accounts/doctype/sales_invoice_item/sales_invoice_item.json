@@ -21,7 +21,7 @@
   "stock_uom_rate",
   "section_break_iqyo",
   "net_rate",
-  "net_acount",
+  "net_amount",
   "column_break_cwtx",
   "accounting",
   "income_account",
@@ -145,14 +145,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "net_acount",
-   "fieldtype": "Currency",
-   "label": "Net Acount",
-   "options": "currency",
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
    "collapsible": 1,
    "fieldname": "accounting",
    "fieldtype": "Section Break",
@@ -200,13 +192,21 @@
    "label": "Sales Order",
    "options": "Sales Order",
    "search_index": 1
+  },
+  {
+   "fieldname": "net_amount",
+   "fieldtype": "Currency",
+   "label": "Net Amount",
+   "options": "currency",
+   "print_hide": 1,
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-14 15:43:29.290488",
+ "modified": "2026-04-18 12:02:22.895305",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice Item",

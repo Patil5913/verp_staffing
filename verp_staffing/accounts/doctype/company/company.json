@@ -46,6 +46,7 @@
   "allow_account_creation_against_child_company",
   "default_income_account",
   "default_discount_account",
+  "default_expense_account",
   "round_off_section",
   "round_off_account",
   "column_break_ofqx",
@@ -467,6 +468,14 @@
    "fieldtype": "Link",
    "label": "Asset Received But Not Billed",
    "options": "Account"
+  },
+  {
+   "fieldname": "default_expense_account",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Default Expense Account",
+   "no_copy": 1,
+   "options": "Account"
   }
  ],
  "grid_page_length": 50,
@@ -475,7 +484,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-04-05 17:05:28.931985",
+ "modified": "2026-04-18 17:31:10.896220",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",
