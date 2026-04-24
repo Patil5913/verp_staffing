@@ -121,7 +121,8 @@
    "fieldname": "credit_in_account_currency",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Credit"
+   "label": "Credit",
+   "options": "account_currency"
   },
   {
    "fieldname": "credit",
@@ -197,7 +198,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-14 14:19:59.725401",
+ "modified": "2026-04-21 17:14:53.872373",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry Account",

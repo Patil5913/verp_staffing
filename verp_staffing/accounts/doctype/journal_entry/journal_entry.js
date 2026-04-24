@@ -46,6 +46,7 @@ frappe.ui.form.on("Journal Entry", {
 	// point : create custom code to handle multi currency and exchange logic becuse erpnext multi currency have issue and deeply connected 
 	// issue : when we deal with multi currency exchange rate make issue in calculation so debit and credit difference is not properly calculated and also we have to set exchange rate manually in each row which is not good user experience so we need to handle this issue in our code and make it more user friendly and also we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
 
+
 	refresh: function (frm) {
 		// erpnext.toggle_naming_series();
 
@@ -103,7 +104,7 @@ frappe.ui.form.on("Journal Entry", {
 		// 	);
 		// }
 
-		verp_staffing.accounts.unreconcile_payment.add_unreconcile_btn(frm);
+		// verp_staffing.accounts.unreconcile_payment.add_unreconcile_btn(frm);
 		// check this function if not exist then check erp.accounts.unreconcile_payment.add_unreconcile_btn(frm)
 	},
 	before_save: function (frm) {
@@ -121,7 +122,6 @@ frappe.ui.form.on("Journal Entry", {
 			}
 		}
 	},
-
 	//this feture is not useful for our product 
 	// make_inter_company_journal_entry: function (frm) {
 	// 	var d = new frappe.ui.Dialog({
@@ -190,7 +190,7 @@ frappe.ui.form.on("Journal Entry", {
 			if (["Bank Entry", "Cash Entry"].includes(frm.doc.voucher_type)) {
 				return frappe.call({
 					type: "GET",
-					method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_default_bank_cash_account",
+					method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_default_bank_cash_account",
 					args: {
 						account_type:
 							frm.doc.voucher_type == "Bank Entry"
@@ -203,6 +203,8 @@ frappe.ui.form.on("Journal Entry", {
 					callback: function (r) {
 						if (r.message) {
 							// If default company bank account not set
+							console.log("res", r.message);
+
 
 							if (!$.isEmptyObject(r.message)) {
 								update_jv_details(frm.doc, [r.message]);
@@ -301,10 +303,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 
 			if (["Sales Invoice", "Purchase Invoice"].includes(jvd.reference_type)) {
 				out.filters.push([jvd.reference_type, "outstanding_amount", "!=", 0]);
-				// Filter by cost center
-				if (jvd.cost_center) {
-					out.filters.push([jvd.reference_type, "cost_center", "in", ["", jvd.cost_center]]);
-				}
+
 				// account filter
 				frappe.model.validate_missing(jvd, "account");
 				var party_account_field = jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
@@ -361,7 +360,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 		};
 
 		return frappe.call({
-			method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_outstanding",
+			method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_outstanding",
 			args: { args: args },
 			callback: function (r) {
 				if (r.message) {
@@ -373,49 +372,24 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 		});
 	}
 
-	accounts_add(doc, cdt, cdn) {
-		var row = frappe.get_doc(cdt, cdn);
-		row.exchange_rate = 1;
-		$.each(doc.accounts, function (i, d) {
-			if (d.account && d.party && d.party_type) {
-				row.account = d.account;
-				row.party = d.party;
-				row.party_type = d.party_type;
-				row.exchange_rate = d.exchange_rate;
-			}
-		});
+	accounts_add(frm, cdt, cdn) {
 
-		// set difference
-		if (doc.difference) {
-			if (doc.difference > 0) {
-				row.credit_in_account_currency = doc.difference / row.exchange_rate;
-				row.credit = doc.difference;
-			} else {
-				row.debit_in_account_currency = -doc.difference / row.exchange_rate;
-				row.debit = -doc.difference;
-			}
+		if (!frm.doc.company) {
+			show_company_warning(frm);
+			return;
 		}
-		cur_frm.cscript.update_totals(doc);
 
-		erpnext.accounts.dimensions.copy_dimension_from_first_row(this.frm, cdt, cdn, "accounts");
+		auto_balance(frm);
+		calculate_totals(frm);
 	}
 };
 
 cur_frm.script_manager.make(verp_staffing.accounts.JournalEntry);
 
+
 cur_frm.cscript.update_totals = function (doc) {
-	var td = 0.0;
-	var tc = 0.0;
-	var accounts = doc.accounts || [];
-	for (var i in accounts) {
-		td += flt(accounts[i].debit, precision("debit", accounts[i]));
-		tc += flt(accounts[i].credit, precision("credit", accounts[i]));
-	}
-	doc = locals[doc.doctype][doc.name];
-	doc.total_debit = td;
-	doc.total_credit = tc;
-	doc.difference = flt(td - tc, precision("difference"));
-	refresh_many(["total_debit", "total_credit", "difference"]);
+	let frm = cur_frm;   // bridge old → new
+	calculate_totals(frm);
 };
 
 cur_frm.cscript.get_balance = function (doc, dt, dn) {
@@ -429,13 +403,83 @@ cur_frm.cscript.validate = function (doc, cdt, cdn) {
 	cur_frm.cscript.update_totals(doc);
 };
 
+function calculate_totals(frm) {
+	let total_debit = 0;
+	let total_credit = 0;
+
+	(frm.doc.accounts || []).forEach(row => {
+		total_debit += flt(row.debit);
+		total_credit += flt(row.credit);
+	});
+
+	let difference = total_debit - total_credit;
+
+	frm.set_value("total_debit", total_debit);
+	frm.set_value("total_credit", total_credit);
+	frm.set_value("difference", difference);
+}
+
+// function require_company(frm) {
+// 	if (!frm.doc.company) {
+// 		frappe.msgprint("Please select Company first");
+// 		frm.scroll_to_field("company");
+// 		return false;
+// 	}
+// 	return true;
+// }
+function show_company_warning(frm) {
+	frappe.show_alert({
+		message: "Select Company first",
+		indicator: "orange"
+	}, 3);
+
+	frm.scroll_to_field("company");
+}
+
+function get_company_currency(frm, callback) {
+	if (!frm.doc.company) {
+		console.warn("Company not selected");
+		return;
+	}
+
+	frappe.db.get_value("Company", frm.doc.company, "default_currency")
+		.then(r => {
+			if (r && r.message) {
+				callback(r.message.default_currency);
+			}
+		});
+}
+function auto_balance(frm) {
+	let accounts = frm.doc.accounts || [];
+
+	if (accounts.length < 2) return;
+
+	let total = 0;
+
+	for (let i = 0; i < accounts.length - 1; i++) {
+		total += flt(accounts[i].debit) - flt(accounts[i].credit);
+	}
+
+	let last = accounts[accounts.length - 1];
+
+	if (total > 0) {
+		last.credit = total;
+		last.debit = 0;
+	} else {
+		last.debit = -total;
+		last.credit = 0;
+	}
+
+	refresh_field("accounts");
+}
+
 frappe.ui.form.on("Journal Entry Account", {
 	party: function (frm, cdt, cdn) {
 		var d = frappe.get_doc(cdt, cdn);
 		if (!d.account && d.party_type && d.party) {
 			if (!frm.doc.company) frappe.throw(__("Please select Company"));
 			return frm.call({
-				method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_party_account_and_currency",
+				method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_party_account_and_currency",
 				child: d,
 				args: {
 					company: frm.doc.company,
@@ -447,35 +491,63 @@ frappe.ui.form.on("Journal Entry Account", {
 	},
 
 	account: function (frm, dt, dn) {
-		erpnext.journal_entry.set_account_details(frm, dt, dn);
+
+		if (!frm.doc.company) {
+			show_company_warning(frm);
+			frappe.model.set_value(dt, dn, "account", "");
+			return;
+		}
+
+
+		verp_staffing.journal_entry.set_account_details(frm, dt, dn);
 	},
 
 	debit_in_account_currency: function (frm, cdt, cdn) {
-		erpnext.journal_entry.set_exchange_rate(frm, cdt, cdn);
+		if (!frm.doc.company) {
+			show_company_warning(frm);
+			frappe.model.set_value(cdt, cdn, "debit_in_account_currency", 0);
+			return;
+		}
+		verp_staffing.journal_entry.set_exchange_rate(frm, cdt, cdn);
 	},
 
 	credit_in_account_currency: function (frm, cdt, cdn) {
-		erpnext.journal_entry.set_exchange_rate(frm, cdt, cdn);
+		if (!frm.doc.company) {
+			show_company_warning(frm);
+			frappe.model.set_value(cdt, cdn, "credit_in_account_currency", 0);
+			return;
+		}
+
+		verp_staffing.journal_entry.set_exchange_rate(frm, cdt, cdn);
+	},
+	debit: function (frm, cdt, cdn) {
+		auto_balance(frm);
 	},
 
-	debit: function (frm, dt, dn) {
-		cur_frm.cscript.update_totals(frm.doc);
+	credit: function (frm, cdt, cdn) {
+		auto_balance(frm);
 	},
-
-	credit: function (frm, dt, dn) {
-		cur_frm.cscript.update_totals(frm.doc);
-	},
-
 	exchange_rate: function (frm, cdt, cdn) {
-		var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
-		var row = locals[cdt][cdn];
+		let row = locals[cdt][cdn];
 
-		if (row.account_currency == company_currency || !frm.doc.multi_currency) {
+		if (!frm.doc.company) {
+			show_company_warning(frm);
+			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
+			return;
+		}
+		// ✅ Use row currency, not frm.doc
+		if (row.account_currency === frm.doc.base_currency && row.exchange_rate != 1) {
 			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
 
-		erpnext.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
-	},
+
+		if (!row.exchange_rate || row.exchange_rate <= 0) {
+			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
+		}
+
+		verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
+		auto_balance(frm);
+	}
 });
 
 frappe.ui.form.on("Journal Entry Account", "accounts_remove", function (frm) {
@@ -505,57 +577,77 @@ $.extend(verp_staffing.journal_entry, {
 	},
 
 	set_debit_credit_in_company_currency: function (frm, cdt, cdn) {
-		var row = locals[cdt][cdn];
+		let row = locals[cdt][cdn];
+
+		let rate = flt(row.exchange_rate) || 1;
 
 		frappe.model.set_value(
 			cdt,
 			cdn,
 			"debit",
-			flt(flt(row.debit_in_account_currency) * row.exchange_rate, precision("debit", row))
+			flt(row.debit_in_account_currency || 0) * rate
 		);
 
 		frappe.model.set_value(
 			cdt,
 			cdn,
 			"credit",
-			flt(flt(row.credit_in_account_currency) * row.exchange_rate, precision("credit", row))
+			flt(row.credit_in_account_currency || 0) * rate
 		);
 
-		cur_frm.cscript.update_totals(frm.doc);
+		calculate_totals(frm);
 	},
 
-	set_exchange_rate: function (frm, cdt, cdn) {
-		var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
-		var row = locals[cdt][cdn];
+	// set_exchange_rate: function (frm, cdt, cdn) {
+	// 	let company_currency = get_company_currency(frm);
+	// 	if (!company_currency) return;
+	// 	// var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 
-		if (row.account_currency == company_currency || !frm.doc.multi_currency) {
-			row.exchange_rate = 1;
-			erpnext.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
-		} else if (!row.exchange_rate || row.exchange_rate == 1 || row.account_type == "Bank") {
-			frappe.call({
-				method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_exchange_rate",
-				args: {
-					posting_date: frm.doc.posting_date,
-					account: row.account,
-					account_currency: row.account_currency,
-					company: frm.doc.company,
-					reference_type: cstr(row.reference_type),
-					reference_name: cstr(row.reference_name),
-					debit: flt(row.debit_in_account_currency),
-					credit: flt(row.credit_in_account_currency),
-					exchange_rate: row.exchange_rate,
-				},
-				callback: function (r) {
-					if (r.message) {
-						row.exchange_rate = r.message;
-						erpnext.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
-					}
-				},
-			});
-		} else {
-			erpnext.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
+
+	// 	var row = locals[cdt][cdn];
+
+	// 	if (row.account_currency == company_currency || !frm.doc.multi_currency) {
+	// 		row.exchange_rate = 1;
+	// 		verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
+	// 	} else if (!row.exchange_rate || row.exchange_rate == 1 || row.account_type == "Bank") {
+	// 		frappe.call({
+	// 			method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_exchange_rate",
+	// 			args: {
+	// 				posting_date: frm.doc.posting_date,
+	// 				account: row.account,
+	// 				account_currency: row.account_currency,
+	// 				company: frm.doc.company,
+	// 				reference_type: cstr(row.reference_type),
+	// 				reference_name: cstr(row.reference_name),
+	// 				debit: flt(row.debit_in_account_currency),
+	// 				credit: flt(row.credit_in_account_currency),
+	// 				exchange_rate: row.exchange_rate,
+	// 			},
+	// 			callback: function (r) {
+	// 				if (r.message) {
+	// 					row.exchange_rate = r.message;
+	// 					verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
+	// 				}
+	// 			},
+	// 		});
+	// 	} else {
+	// 		verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
+	// 	}
+	// 	refresh_field("exchange_rate", cdn, "accounts");
+	// },
+
+	set_exchange_rate: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+
+		if (row.account_currency === frm.doc.base_currency && row.exchange_rate != 1) {
+			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
-		refresh_field("exchange_rate", cdn, "accounts");
+
+		if (!row.exchange_rate || row.exchange_rate <= 0) {
+			row.exchange_rate = 1;
+		}
+
+		verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
 	},
 
 	quick_entry: function (frm) {
@@ -574,7 +666,7 @@ $.extend(verp_staffing.journal_entry, {
 					reqd: 1,
 					options: "Account",
 					get_query: function () {
-						return erpnext.journal_entry.account_query(frm);
+						return verp_staffing.journal_entry.account_query(frm);
 					},
 				},
 				{
@@ -584,7 +676,7 @@ $.extend(verp_staffing.journal_entry, {
 					reqd: 1,
 					options: "Account",
 					get_query: function () {
-						return erpnext.journal_entry.account_query(frm);
+						return verp_staffing.journal_entry.account_query(frm);
 					},
 				},
 				{
@@ -677,6 +769,8 @@ $.extend(verp_staffing.journal_entry, {
 			filters.company = frm.doc.company;
 		}
 
+		let company_currency = get_company_currency(frm);
+
 		// apply currency filter safely
 		if (!frm.doc.multi_currency && frm.doc.company) {
 			let company = frappe.get_doc(":Company", frm.doc.company);
@@ -685,7 +779,7 @@ $.extend(verp_staffing.journal_entry, {
 				$.extend(filters, {
 					account_currency: [
 						"in",
-						[company.default_currency, null],
+						[company_currency, null],
 					],
 				});
 			}
@@ -697,7 +791,7 @@ $.extend(verp_staffing.journal_entry, {
 
 	reverse_journal_entry: function () {
 		frappe.model.open_mapped_doc({
-			method: "erpnext.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry",
+			method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry",
 			frm: cur_frm,
 		});
 	},
@@ -711,46 +805,21 @@ $.extend(verp_staffing.journal_entry, {
 			if (!frm.doc.posting_date) frappe.throw(__("Please select Posting Date first"));
 
 			return frappe.call({
-				method: "erpnext.accounts.doctype.journal_entry.journal_entry.get_account_details_and_party_type",
+				method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_account_details_and_party_type",
 				args: {
 					account: d.account,
-					date: frm.doc.posting_date,
-					company: frm.doc.company,
-					debit: flt(d.debit_in_account_currency),
-					credit: flt(d.credit_in_account_currency),
-					exchange_rate: d.exchange_rate,
+					company: frm.doc.company
 				},
 				callback: function (r) {
 					if (r.message) {
-						$.extend(d, r.message);
-						erpnext.journal_entry.set_amount_on_last_row(frm, dt, dn);
-						erpnext.journal_entry.set_debit_credit_in_company_currency(frm, dt, dn);
+						Object.assign(d, r.message);
+
+						// 🔥 IMPORTANT: always run conversion + balance
+						verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, dt, dn);
 						refresh_field("accounts");
 					}
 				},
 			});
 		}
-	},
-	set_amount_on_last_row: function (frm, dt, dn) {
-		let row = locals[dt][dn];
-		let length = frm.doc.accounts.length;
-		if (row.idx != length) return;
-
-		let difference = frm.doc.accounts.reduce((total, row) => {
-			if (row.idx == length) return total;
-
-			return total + row.debit - row.credit;
-		}, 0);
-
-		if (difference) {
-			if (difference > 0) {
-				row.credit_in_account_currency = difference / row.exchange_rate;
-				row.credit = difference;
-			} else {
-				row.debit_in_account_currency = -difference / row.exchange_rate;
-				row.debit = -difference;
-			}
-		}
-		refresh_field("accounts");
 	},
 });

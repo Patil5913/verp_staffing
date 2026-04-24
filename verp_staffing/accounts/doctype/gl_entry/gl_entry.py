@@ -144,10 +144,22 @@ def get_fiscal_year(posting_date):
 
 # adds additional fields to the gl entry based on the doc (like exchange rate, fiscal year, etc.)
 def enrich_gl_entry(entry, doc):
-    exchange_rate = flt(doc.conversion_rate or 1)
+    # exchange_rate = flt(doc.conversion_rate or 1)
+
+    exchange_rate = (
+    flt(entry.get("exchange_rate")) 
+    or flt(getattr(doc, "conversion_rate", 0)) 
+    or 1
+    )
+    
 
     # 🔹 Transaction currency
-    entry["transaction_currency"] = doc.currency
+    # entry["transaction_currency"] = doc.currency
+
+    entry["transaction_currency"] = (
+        entry.get("account_currency")
+        or getattr(doc, "currency", None)
+    )
 
     # 🔹 Exchange rate
     entry["exchange_rate"] = exchange_rate

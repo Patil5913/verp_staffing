@@ -22,6 +22,7 @@
   "cheque_no",
   "cheque_date",
   "user_remark",
+  "base_currency",
   "column_break_gewk",
   "total_debit",
   "total_credit",
@@ -40,7 +41,10 @@
   "column_break_zkzz",
   "bill_no",
   "bill_date",
-  "due_date"
+  "due_date",
+  "addtional_info",
+  "is_opening",
+  "party_not_required"
  ],
  "fields": [
   {
@@ -133,8 +137,9 @@
   {
    "fieldname": "total_debit",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Total Debit",
-   "options": "Company:company:default_currency"
+   "options": "base_currency"
   },
   {
    "fieldname": "column_break_gewk",
@@ -143,14 +148,15 @@
   {
    "fieldname": "total_credit",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Total Credit",
-   "options": "Company:company:default_currency"
+   "options": "base_currency"
   },
   {
    "fieldname": "difference",
    "fieldtype": "Currency",
    "label": "Difference (Dr - Cr)",
-   "options": "Company:company:default_currency"
+   "options": "base_currency"
   },
   {
    "fieldname": "get_balance",
@@ -241,13 +247,38 @@
    "fieldname": "due_date",
    "fieldtype": "Data",
    "label": "Due Date"
+  },
+  {
+   "fieldname": "addtional_info",
+   "fieldtype": "Section Break",
+   "label": "More Information"
+  },
+  {
+   "fieldname": "is_opening",
+   "fieldtype": "Select",
+   "label": "Is Opening",
+   "options": "No\nYes",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "party_not_required",
+   "fieldtype": "Check",
+   "label": "Party Not Required"
+  },
+  {
+   "fetch_from": "company.default_currency",
+   "fieldname": "base_currency",
+   "fieldtype": "Link",
+   "label": "Company Currency",
+   "options": "Currency"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-17 15:59:14.314390",
+ "modified": "2026-04-22 10:27:31.676858",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry",
