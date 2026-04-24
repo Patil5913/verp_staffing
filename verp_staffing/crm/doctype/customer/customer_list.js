@@ -6,16 +6,6 @@ frappe.listview_settings["Customer"] = {
 		return [doc.overall_status || "Unknown", color, "overall_status,=," + doc.overall_status];
 	},
 	refresh: function (listview) {
-		let sidebar = $("body .layout-side-section");
-		if (!sidebar.length) {
-			return;
-		}
-
-		// HIDE ALL ITEMS FIRST
-		sidebar.find(".group-by-field").hide();
-		sidebar.find(".add-group-by").hide();
-		sidebar.find(".save-filter-section").hide();
-
 		setTimeout(() => {
 			let primary_btn = listview.page.wrapper.find(".page-actions .btn-primary");
 

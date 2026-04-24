@@ -10,14 +10,15 @@
   "section_break_e785",
   "naming_series",
   "supplier",
-  "tax_id",
-  "company",
   "supplier_name",
+  "tax_id",
+  "purchase_order",
   "column_break_xfwo",
   "posting_date",
   "posting_time",
-  "set_posting_time",
   "due_date",
+  "company",
+  "company_currency",
   "column_break_azkr",
   "is_paid",
   "is_return",
@@ -134,6 +135,14 @@
    "remember_last_selected_value": 1
   },
   {
+   "fetch_from": "company.default_currency",
+   "fetch_if_empty": 1,
+   "fieldname": "company_currency",
+   "fieldtype": "Data",
+   "label": "Company Currency",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_xfwo",
    "fieldtype": "Column Break"
   },
@@ -152,14 +161,6 @@
    "fieldtype": "Time",
    "label": "Posting Time",
    "no_copy": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.docstatus==0",
-   "fieldname": "set_posting_time",
-   "fieldtype": "Check",
-   "label": "Edit Posting Date and Time",
-   "print_hide": 1
   },
   {
    "fieldname": "due_date",
@@ -247,12 +248,16 @@
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
-   "options": "Currency"
+   "options": "Currency",
+   "reqd": 1
   },
   {
+   "default": "1",
+   "depends_on": "eval:doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "conversion_rate",
    "fieldtype": "Float",
    "label": "Exchange Rate",
+   "mandatory_depends_on": "eval:doc.company && (doc.currency !== doc.company_currency)",
    "precision": "9"
   },
   {
@@ -293,17 +298,19 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "base_total",
    "fieldtype": "Currency",
    "label": "Total (Company Currency)",
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "base_net_total",
    "fieldtype": "Currency",
    "label": "Net Total (Company Currency)",
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -343,7 +350,7 @@
    "fieldname": "base_total_taxes_and_charges",
    "fieldtype": "Currency",
    "label": "Total Taxes and Charges (Company Currency)",
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -354,6 +361,7 @@
    "fieldname": "total_taxes_and_charges",
    "fieldtype": "Currency",
    "label": "Total Taxes and Charges",
+   "options": "currency",
    "read_only": 1
   },
   {
@@ -368,28 +376,29 @@
    "label": "Totals"
   },
   {
+   "depends_on": "eval:doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
    "label": "Grand Total (Company Currency)",
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
-   "depends_on": "eval:!doc.disable_rounded_total",
+   "depends_on": "eval:!doc.disable_rounded_total && doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "base_rounding_adjustment",
    "fieldtype": "Currency",
    "label": "Rounding Adjustment (Company Currency)",
    "no_copy": 1,
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
-   "depends_on": "eval:!doc.disable_rounded_total",
+   "depends_on": "eval:!doc.disable_rounded_total && doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "base_rounded_total",
    "fieldtype": "Currency",
    "label": "Rounded Total (Company Currency)",
    "no_copy": 1,
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -467,7 +476,7 @@
    "fieldname": "base_discount_amount",
    "fieldtype": "Currency",
    "label": "Additional Discount Amount (Company Currency)",
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -503,7 +512,7 @@
    "fieldtype": "Currency",
    "label": "Paid Amount (Company Currency)",
    "no_copy": 1,
-   "options": "Company:company:default_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -620,9 +629,12 @@
    "reqd": 1
   },
   {
+   "fetch_from": "supplier.supplier_name",
+   "fetch_if_empty": 1,
    "fieldname": "supplier_name",
    "fieldtype": "Data",
-   "label": "Supplier Name"
+   "label": "Supplier Name",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_yyvx",
@@ -648,6 +660,12 @@
    "fieldtype": "Link",
    "label": "Discount Account",
    "options": "Account"
+  },
+  {
+   "fieldname": "purchase_order",
+   "fieldtype": "Link",
+   "label": "Purchase Order",
+   "options": "Purchase Order"
   }
  ],
  "grid_page_length": 50,
@@ -655,7 +673,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-21 18:20:31.742284",
+ "modified": "2026-04-24 14:15:07.873657",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Purchase Invoice",

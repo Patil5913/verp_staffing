@@ -7,7 +7,6 @@ from frappe.utils import flt,now_datetime, money_in_words
 from frappe.model.document import Document
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.accounts.api.get_defaults import validate_account
-from verp_staffing.accounts.doctype.company.company import get_company_currency
 
 
 class PurchaseInvoice(Document):
@@ -103,9 +102,15 @@ class PurchaseInvoice(Document):
 				frappe.throw(
 					_("Row {0}: Expense account is mandatory").format(item.idx)
 				)
+    
+		if self.currency == self.company_currency:
+			self.conversion_rate = 1
+		else:
+			if not self.conversion_rate or self.conversion_rate <= 0:
+				frappe.throw("Valid Conversion Rate required")
 
 	def validate_account_currencies(self):
-		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+		company_currency = self.company_currency
 		doc_currency = self.currency
 
 		invalid_accounts = []
@@ -136,7 +141,7 @@ class PurchaseInvoice(Document):
 			)
 
 	def handle_currency_logic(self):
-		default_currency = get_company_currency(self.company)
+		default_currency = self.company_currency
 		if not default_currency:
 			throw(_("Please enter default currency in Company Master"))
 
@@ -164,7 +169,7 @@ class PurchaseInvoice(Document):
 
 		self.base_in_words = money_in_words(
 			self.base_rounded_total ,
-			get_company_currency(self.company)
+			self.company_currency
 		)
 
 
@@ -275,3 +280,36 @@ def get_purchase_invoice_gl_map(doc):
 
 
     return gl_map
+
+
+@frappe.whitelist()
+def make_purchase_invoice(source_name):
+	from frappe.model.mapper import get_mapped_doc
+
+	def set_missing_values(source, target):
+		target.run_method("set_missing_values")
+		target.run_method("calculate_taxes_and_totals")
+
+	doc = get_mapped_doc(
+		"Purchase Order",
+		source_name,
+		{
+			"Purchase Order": {
+				"doctype": "Purchase Invoice",
+			},
+			"Purchase Order Item": {
+				"doctype": "Purchase Invoice Item",
+				"field_map": {
+					"name": "po_detail",
+					"parent": "purchase_order"
+				}
+			},
+			"Purchase Taxes and Charges": {
+				"doctype": "Purchase Taxes and Charges"
+			}
+		},
+		None,
+		set_missing_values
+	)
+
+	return doc
