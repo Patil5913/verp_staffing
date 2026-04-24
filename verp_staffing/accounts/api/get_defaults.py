@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 @frappe.whitelist()
 def get_default_income_account(company):
     if not company:

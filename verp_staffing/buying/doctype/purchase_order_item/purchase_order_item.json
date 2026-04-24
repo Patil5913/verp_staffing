@@ -6,7 +6,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "item_code",
+  "item",
   "item_name",
   "column_break_szyy",
   "schedule_date",
@@ -58,7 +58,7 @@
   {
    "bold": 1,
    "columns": 2,
-   "fieldname": "item_code",
+   "fieldname": "item",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Item Code",
