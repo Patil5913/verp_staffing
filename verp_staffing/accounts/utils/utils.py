@@ -193,10 +193,10 @@ def get_balance_on(
 	party_type=None,
 	party=None,
 	company=None,
-	in_account_currency=True,
 	ignore_account_permission=False,
 	account_type=None,
 	start_date=None,
+	currency_mode="company"
 ):
 	if not account and frappe.form_dict.get("account"):
 		account = frappe.form_dict.get("account")
@@ -243,11 +243,6 @@ def get_balance_on(
 				and ac.lft >= {acc.lft} and ac.rgt <= {acc.rgt}
 			)"""
 			)
-
-			# If group and currency same as company,
-			# always return balance based on debit and credit in company currency
-			if acc.account_currency == frappe.get_cached_value("Company", acc.company, "default_currency"):
-				in_account_currency = False
 		else:
 			cond.append(f"""gle.account = {frappe.db.escape(account)} """)
 
@@ -276,12 +271,18 @@ def get_balance_on(
 
 	if account or (party_type and party) or account_type:
 		precision = get_currency_precision()
-		if in_account_currency:
-			select_field = (
-				"sum(round(debit_in_account_currency, %s)) - sum(round(credit_in_account_currency, %s))"
-			)
-		else:
+		company_currency = frappe.get_cached_value("Company", company, "default_currency")
+
+		acc_currency = None
+		if account:
+			acc_currency = acc.account_currency
+
+		if currency_mode == "account" and acc_currency and acc_currency != company_currency:
+			# transaction currency
 			select_field = "sum(round(debit, %s)) - sum(round(credit, %s))"
+		else:
+			# company currency
+			select_field = "sum(round(debit_in_company_currency, %s)) - sum(round(credit_in_company_currency, %s))"
 
 		bal = frappe.db.sql(
 			"""
@@ -307,9 +308,10 @@ def get_account_balances(accounts, company):
 
 	for account in accounts:
 		account["company_currency"] = company_currency
-		account["balance"] = flt(get_balance_on(account["value"], in_account_currency=False, company=company))
+		account["balance"] = flt(get_balance_on(account["value"], company=company,currency_mode="company"))
+		# Foreign currency account balance
 		if account["account_currency"] and account["account_currency"] != company_currency:
-			account["balance_in_account_currency"] = flt(get_balance_on(account["value"], company=company))
+			account["balance_in_account_currency"] = flt(get_balance_on(account["value"], company=company,currency_mode="account"))
 
 	return accounts
 
