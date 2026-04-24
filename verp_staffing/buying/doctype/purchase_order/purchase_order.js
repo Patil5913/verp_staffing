@@ -1,9 +1,6 @@
 // Copyright (c) 2026, Vrugle and contributors
 // For license information, please see license.txt
 
-// verp_staffing.accounts.taxes.setup_tax_filters("Purchase Taxes and Charges");
-// verp_staffing.accounts.taxes.setup_tax_validations("Purchase Order");
-
 frappe.ui.form.on("Purchase Order", {
 	refresh: function (frm) {
 		verp_staffing.purchase.items.update_items_currency_labels(frm);
