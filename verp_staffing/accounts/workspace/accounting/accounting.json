@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"Ws2JRbq8rq\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Accounting</span>\",\"col\":12}},{\"id\":\"_iP7gv_jDG\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Charts Of Account\",\"col\":3}},{\"id\":\"I-HdRUYLz7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Company\",\"col\":3}},{\"id\":\"plSEIWElUM\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Account\",\"col\":3}}]",
+ "content": "[{\"id\":\"Ws2JRbq8rq\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Accounting</span>\",\"col\":12}},{\"id\":\"_iP7gv_jDG\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Charts Of Account\",\"col\":3}},{\"id\":\"50Pq0xKCuB\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Accounts Settings\",\"col\":3}},{\"id\":\"I-HdRUYLz7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Company\",\"col\":3}},{\"id\":\"plSEIWElUM\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Account\",\"col\":3}},{\"id\":\"gbMl4vkD4S\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\",\"col\":3}},{\"id\":\"NvT8zcXXMH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Invoice\",\"col\":3}},{\"id\":\"OEVrG9vVvU\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Order\",\"col\":3}}]",
  "creation": "2026-04-05 17:29:03.147779",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Accounting",
  "links": [],
- "modified": "2026-04-22 16:06:32.619711",
+ "modified": "2026-04-25 10:26:15.448902",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounting",
@@ -36,6 +36,21 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Accounts Settings",
+   "link_to": "Accounts Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Bank Account",
    "link_to": "Bank Account",
    "stats_filter": "[]",
@@ -44,8 +59,24 @@
   {
    "color": "Grey",
    "doc_view": "List",
+   "label": "Purchase Invoice",
+   "link_to": "Purchase Invoice",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
    "label": "Company",
    "link_to": "Company",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Order",
+   "link_to": "Purchase Order",
    "stats_filter": "[]",
    "type": "DocType"
   }
