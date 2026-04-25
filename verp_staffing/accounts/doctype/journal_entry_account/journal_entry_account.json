@@ -1,0 +1,212 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-14 11:45:25.318343",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "account",
+  "account_type",
+  "column_break_oumy",
+  "bank_account",
+  "party_type",
+  "party",
+  "currency_section",
+  "account_currency",
+  "column_break_ankw",
+  "exchange_rate",
+  "sec_break1",
+  "debit_in_account_currency",
+  "debit",
+  "column_break_ftdi",
+  "credit_in_account_currency",
+  "credit",
+  "reference_section",
+  "reference_type",
+  "reference_name",
+  "reference_due_date",
+  "reference_detail_no",
+  "advance_voucher_type",
+  "advance_voucher_no",
+  "column_break_dweh",
+  "is_advance",
+  "user_remark",
+  "against_account"
+ ],
+ "fields": [
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account",
+   "options": "Account",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "account_type",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Account Type"
+  },
+  {
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "label": "Bank Account",
+   "options": "Bank Account"
+  },
+  {
+   "fieldname": "column_break_oumy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Party Type",
+   "options": "DocType",
+   "search_index": 1
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Party",
+   "options": "party_type"
+  },
+  {
+   "fieldname": "currency_section",
+   "fieldtype": "Section Break",
+   "label": "Currency"
+  },
+  {
+   "fieldname": "account_currency",
+   "fieldtype": "Link",
+   "label": "Account Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "column_break_ankw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate"
+  },
+  {
+   "fieldname": "sec_break1",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "debit_in_account_currency",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Debit",
+   "options": "account_currency"
+  },
+  {
+   "fieldname": "debit",
+   "fieldtype": "Currency",
+   "label": "Debit in Company Currency",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "column_break_ftdi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "credit_in_account_currency",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Credit",
+   "options": "account_currency"
+  },
+  {
+   "fieldname": "credit",
+   "fieldtype": "Currency",
+   "label": "Credit in Company Currency",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "Reference"
+  },
+  {
+   "fieldname": "reference_type",
+   "fieldtype": "Select",
+   "label": "Reference Type",
+   "options": "\nSales Invoice\nPurchase Invoice\nJournal Entry\nSales Order\nPurchase Order",
+   "search_index": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Reference Name",
+   "options": "reference_type",
+   "search_index": 1
+  },
+  {
+   "fieldname": "reference_due_date",
+   "fieldtype": "Date",
+   "label": "Reference Due Date"
+  },
+  {
+   "fieldname": "reference_detail_no",
+   "fieldtype": "Data",
+   "label": "Reference Detail No",
+   "search_index": 1
+  },
+  {
+   "fieldname": "advance_voucher_type",
+   "fieldtype": "Link",
+   "label": "Advance Voucher Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "advance_voucher_no",
+   "fieldtype": "Dynamic Link",
+   "label": "Advance Voucher No",
+   "options": "advance_voucher_type"
+  },
+  {
+   "fieldname": "is_advance",
+   "fieldtype": "Select",
+   "label": "Is Advance",
+   "options": "No\nYes"
+  },
+  {
+   "fieldname": "column_break_dweh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_remark",
+   "fieldtype": "Small Text",
+   "label": "User Remark"
+  },
+  {
+   "fieldname": "against_account",
+   "fieldtype": "Text",
+   "label": "Against Account"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-24 15:55:18.546756",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Journal Entry Account",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

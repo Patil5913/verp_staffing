@@ -1,0 +1,101 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-04-14 14:01:50.692170",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "template_title",
+  "voucher_type",
+  "naming_series",
+  "column_break_ynfh",
+  "company",
+  "is_opening",
+  "multi_currency",
+  "section_break_pbpe",
+  "accounting_entries"
+ ],
+ "fields": [
+  {
+   "fieldname": "template_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Template Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "voucher_type",
+   "fieldtype": "Select",
+   "label": "Journal Entry Type",
+   "options": "Journal Entry\nInter Company Journal Entry\nBank Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ynfh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_opening",
+   "fieldtype": "Select",
+   "label": "Is Opening",
+   "options": "No\nYes"
+  },
+  {
+   "default": "0",
+   "fieldname": "multi_currency",
+   "fieldtype": "Check",
+   "label": "Multi Currency"
+  },
+  {
+   "fieldname": "section_break_pbpe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "accounting_entries",
+   "fieldtype": "Table",
+   "label": "Accounting Entries",
+   "options": "Journal Entry Template Account"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-17 14:33:08.388349",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Journal Entry Template",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

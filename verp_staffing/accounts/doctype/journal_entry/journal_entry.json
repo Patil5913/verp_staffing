@@ -1,0 +1,316 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-04-13 17:20:24.856175",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_9hfe",
+  "title",
+  "voucher_type",
+  "naming_series",
+  "finance_book",
+  "reversal_of",
+  "column_break_fjjx",
+  "from_template",
+  "company",
+  "posting_date",
+  "section_break_qfnx",
+  "accounts",
+  "section_break_boki",
+  "cheque_no",
+  "cheque_date",
+  "user_remark",
+  "base_currency",
+  "column_break_gewk",
+  "total_debit",
+  "total_credit",
+  "difference",
+  "get_balance",
+  "multi_currency",
+  "total_amount_currency",
+  "total_amount",
+  "total_amount_in_words",
+  "amended_from",
+  "reference_section",
+  "clearance_date",
+  "remark",
+  "paid_loan",
+  "inter_company_journal_entry_reference",
+  "column_break_zkzz",
+  "bill_no",
+  "bill_date",
+  "due_date",
+  "addtional_info",
+  "is_opening",
+  "party_not_required",
+  "mode_of_payment"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_9hfe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title"
+  },
+  {
+   "fieldname": "voucher_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Entry Type",
+   "options": "Journal Entry\nInter Company Journal Entry\nBank Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation\nExchange Gain Or Loss\nDeferred Revenue\nDeferred Expense",
+   "reqd": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "ACC-JV-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "finance_book",
+   "fieldtype": "Link",
+   "label": "Finance Book",
+   "options": "Finance Book"
+  },
+  {
+   "fieldname": "reversal_of",
+   "fieldtype": "Link",
+   "label": "Reversal Of",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "remember_last_selected_value": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_fjjx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_qfnx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "accounts",
+   "fieldtype": "Table",
+   "label": "Accounting Entries",
+   "options": "Journal Entry Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_boki",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "cheque_no",
+   "fieldtype": "Data",
+   "label": "Reference Number",
+   "mandatory_depends_on": "eval:doc.voucher_type == \"Bank Entry\""
+  },
+  {
+   "fieldname": "cheque_date",
+   "fieldtype": "Date",
+   "label": "Reference Date",
+   "mandatory_depends_on": "eval:doc.voucher_type == \"Bank Entry\""
+  },
+  {
+   "fieldname": "user_remark",
+   "fieldtype": "Small Text",
+   "label": "User Remark"
+  },
+  {
+   "fieldname": "total_debit",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Debit",
+   "options": "base_currency"
+  },
+  {
+   "fieldname": "column_break_gewk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_credit",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Credit",
+   "options": "base_currency"
+  },
+  {
+   "fieldname": "difference",
+   "fieldtype": "Currency",
+   "label": "Difference (Dr - Cr)",
+   "options": "base_currency"
+  },
+  {
+   "fieldname": "get_balance",
+   "fieldtype": "Button",
+   "label": "Make Difference Entry"
+  },
+  {
+   "default": "0",
+   "fieldname": "multi_currency",
+   "fieldtype": "Check",
+   "label": "Multi Currency"
+  },
+  {
+   "fieldname": "total_amount_currency",
+   "fieldtype": "Link",
+   "label": "Total Amount Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "options": "total_amount_currency"
+  },
+  {
+   "fieldname": "total_amount_in_words",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Total Amount in Words"
+  },
+  {
+   "fieldname": "from_template",
+   "fieldtype": "Link",
+   "label": "From Template",
+   "options": "Journal Entry Template"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "Reference"
+  },
+  {
+   "fieldname": "clearance_date",
+   "fieldtype": "Date",
+   "label": "Clearance Date"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  },
+  {
+   "fieldname": "paid_loan",
+   "fieldtype": "Data",
+   "label": "Paid Loan"
+  },
+  {
+   "fieldname": "inter_company_journal_entry_reference",
+   "fieldtype": "Link",
+   "label": "Inter Company Journal Entry Reference",
+   "options": "Journal Entry"
+  },
+  {
+   "fieldname": "column_break_zkzz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bill_no",
+   "fieldtype": "Data",
+   "label": "Bill No"
+  },
+  {
+   "fieldname": "bill_date",
+   "fieldtype": "Data",
+   "label": "Bill Date"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Data",
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "addtional_info",
+   "fieldtype": "Section Break",
+   "label": "More Information"
+  },
+  {
+   "fieldname": "is_opening",
+   "fieldtype": "Select",
+   "label": "Is Opening",
+   "options": "No\nYes",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "party_not_required",
+   "fieldtype": "Check",
+   "label": "Party Not Required"
+  },
+  {
+   "fetch_from": "company.default_currency",
+   "fieldname": "base_currency",
+   "fieldtype": "Link",
+   "label": "Company Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Mode of Payment",
+   "options": "Mode of Payment"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-25 10:53:17.393021",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Journal Entry",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
