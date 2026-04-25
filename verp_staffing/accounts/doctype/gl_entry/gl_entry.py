@@ -32,7 +32,8 @@ def build_gl_entry(
     transaction_currency=None,
     exchange_rate=1,
     against_voucher_type=None,
-    against_voucher=None
+    against_voucher=None,
+    is_opening=None
 ):
     if debit and credit:
         frappe.throw(f"Both debit and credit cannot be set for account {account}")
@@ -58,6 +59,7 @@ def build_gl_entry(
         "exchange_rate": exchange_rate,
         "against_voucher_type": against_voucher_type,
         "against_voucher": against_voucher,
+        "is_opening": is_opening
     }
 
     # transaction currency amounts
@@ -79,10 +81,23 @@ def make_gl_entries(gl_map,doc):
     for entry in gl_map:
         entry = enrich_gl_entry(entry, doc)
 
-        total_debit += flt(entry.get("debit"))
-        total_credit += flt(entry.get("credit"))
+        exchange_rate = (
+            flt(entry.get("exchange_rate")) 
+            or flt(getattr(doc, "conversion_rate", 0)) 
+            or 1
+            )
+
+        debit = flt(entry.get("debit")) * exchange_rate
+        credit = flt(entry.get("credit")) * exchange_rate
+
+        total_debit += debit
+        total_credit += credit
         frappe.errprint(f"Prepared GL Entry: debit: {entry.get('debit')}, credit: {entry.get('credit')}, account: {entry.get('account')}")
         enriched_entries.append(entry)
+
+        # 🔥 Opening Entry Handling
+    is_opening = "Yes" if doc.is_opening else "No"
+    account_cache = {}
 
     if round(total_debit, 2) != round(total_credit, 2):
         frappe.throw(
@@ -90,6 +105,21 @@ def make_gl_entries(gl_map,doc):
         )
 
     for entry in enriched_entries:
+
+        entry["is_opening"] = is_opening
+
+        # ✅ validate opening
+        if is_opening == "Yes":
+            acc = entry.get("account")
+
+            if acc not in account_cache:
+                account_cache[acc] = frappe.get_cached_value("Account", acc, "report_type")
+
+            if account_cache[acc] == "Profit and Loss":
+                frappe.throw(
+                    f"Opening Entry cannot be made for P&L account: {acc}"
+                )
+
         frappe.get_doc({
             "doctype": "GL Entry",
             **entry
@@ -157,7 +187,7 @@ def enrich_gl_entry(entry, doc):
     # entry["transaction_currency"] = doc.currency
 
     entry["transaction_currency"] = (
-        entry.get("account_currency")
+        entry.get("transaction_currency")
         or getattr(doc, "currency", None)
     )
 

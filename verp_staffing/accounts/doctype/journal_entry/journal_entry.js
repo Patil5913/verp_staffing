@@ -1,10 +1,6 @@
-// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
-// License: GNU General Public License v3. See license.txt
+// Copyright (c) 2026, Vrugle and contributors
+// For license information, please see license.txt
 
-
-frappe.provide("erpnext.accounts");
-frappe.provide("erpnext.journal_entry");
-// this is custom provide for our custom app verp_staffing, we can remove erpnext.journal_entry and erpnext.accounts if not used in our code and use verp_staffing.journal_entry and verp_staffing.accounts instead
 frappe.provide("verp_staffing.accounts");
 frappe.provide("verp_staffing.journal_entry");
 
@@ -124,7 +120,7 @@ frappe.ui.form.on("Journal Entry", {
 	},
 	//this feture is not useful for our product 
 	// make_inter_company_journal_entry: function (frm) {
-	// 	var d = new frappe.ui.Dialog({
+	// 	let d = new frappe.ui.Dialog({
 	// 		title: __("Select Company"),
 	// 		fields: [
 	// 			{
@@ -143,7 +139,7 @@ frappe.ui.form.on("Journal Entry", {
 	// 	});
 	// 	d.set_primary_action(__("Create"), function () {
 	// 		d.hide();
-	// 		var args = d.get_values();
+	// 		let args = d.get_values();
 	// 		frappe.call({
 	// 			args: {
 	// 				name: frm.doc.name,
@@ -153,7 +149,7 @@ frappe.ui.form.on("Journal Entry", {
 	// 			method: "erpnext.accounts.doctype.journal_entry.journal_entry.make_inter_company_journal_entry",
 	// 			callback: function (r) {
 	// 				if (r.message) {
-	// 					var doc = frappe.model.sync(r.message)[0];
+	// 					let doc = frappe.model.sync(r.message)[0];
 	// 					frappe.set_route("Form", doc.doctype, doc.name);
 	// 				}
 	// 			},
@@ -203,8 +199,6 @@ frappe.ui.form.on("Journal Entry", {
 					callback: function (r) {
 						if (r.message) {
 							// If default company bank account not set
-							console.log("res", r.message);
-
 
 							if (!$.isEmptyObject(r.message)) {
 								update_jv_details(frm.doc, [r.message]);
@@ -227,17 +221,15 @@ frappe.ui.form.on("Journal Entry", {
 					is_opening: doc.is_opening,
 					multi_currency: doc.multi_currency,
 				});
-				console.log("this is child table ", doc);
-
 				update_jv_details(frm.doc, doc.accounting_entries);
 			});
 		}
 	},
 });
 
-var update_jv_details = function (doc, r) {
+let update_jv_details = function (doc, r) {
 	$.each(r, function (i, d) {
-		var row = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
+		let row = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
 		frappe.model.set_value(row.doctype, row.name, "account", d.account);
 	});
 	refresh_field("accounts");
@@ -258,14 +250,14 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 
 		//this.frm.show_print_first = true;
 		if (this.frm.doc.__islocal) {
-			var posting_date = this.frm.doc.posting_date;
+			let posting_date = this.frm.doc.posting_date;
 			if (!this.frm.doc.amended_from)
 				this.frm.set_value("posting_date", posting_date || frappe.datetime.get_today());
 		}
 	}
 
 	setup_queries() {
-		var me = this;
+		let me = this;
 
 		this.frm.set_query("account", "accounts", function (doc, cdt, cdn) {
 			return verp_staffing.journal_entry.account_query(me.frm);
@@ -283,7 +275,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 		});
 
 		me.frm.set_query("reference_name", "accounts", function (doc, cdt, cdn) {
-			var jvd = frappe.get_doc(cdt, cdn);
+			let jvd = frappe.get_doc(cdt, cdn);
 
 			// journal entry
 			if (jvd.reference_type === "Journal Entry") {
@@ -297,7 +289,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 				};
 			}
 
-			var out = {
+			let out = {
 				filters: [[jvd.reference_type, "docstatus", "=", 1]],
 			};
 
@@ -306,7 +298,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 
 				// account filter
 				frappe.model.validate_missing(jvd, "account");
-				var party_account_field = jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
+				let party_account_field = jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
 				out.filters.push([jvd.reference_type, party_account_field, "=", jvd.account]);
 			}
 
@@ -336,7 +328,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 	}
 
 	reference_name(doc, cdt, cdn) {
-		var d = frappe.get_doc(cdt, cdn);
+		let d = frappe.get_doc(cdt, cdn);
 
 		if (d.reference_name) {
 			if (d.reference_type === "Purchase Invoice" && !flt(d.debit)) {
@@ -350,13 +342,14 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 	}
 
 	get_outstanding(doctype, docname, company, child) {
-		var args = {
+		let args = {
 			doctype: doctype,
 			docname: docname,
 			party: child.party,
 			account: child.account,
 			account_currency: child.account_currency,
 			company: company,
+			company_currency: this.frm.doc.base_currency,
 		};
 
 		return frappe.call({
@@ -392,13 +385,102 @@ cur_frm.cscript.update_totals = function (doc) {
 	calculate_totals(frm);
 };
 
-cur_frm.cscript.get_balance = function (doc, dt, dn) {
-	cur_frm.cscript.update_totals(doc);
-	cur_frm.call("get_balance", null, () => {
-		cur_frm.refresh();
-	});
-};
+// cur_frm.cscript.get_balance = function (doc, dt, dn) {
+// 	cur_frm.cscript.update_totals(doc);
+// 	cur_frm.call("get_balance", null, () => {
+// 		cur_frm.refresh();
+// 	});
+// };
 
+
+cur_frm.cscript.get_balance = function (doc) {
+	let frm = cur_frm;
+	let accounts = frm.doc.accounts || [];
+
+	if (!accounts.length) {
+		frappe.throw("Entries cannot be empty");
+		return;
+	}
+
+	let company_currency = frm.doc.base_currency;
+
+	// Step 1: calculate totals (company currency)
+	let total_debit = 0;
+	let total_credit = 0;
+
+	accounts.forEach(row => {
+		total_debit += flt(row.debit || 0);
+		total_credit += flt(row.credit || 0);
+	});
+
+	let diff = flt(total_debit - total_credit);
+
+	if (diff !== 0) {
+
+		let blank_row = null;
+
+		// Step 2: find empty row
+		for (let row of accounts) {
+			if (!flt(row.debit) && !flt(row.credit)) {
+				blank_row = row;
+				break;
+			}
+		}
+
+		// Step 3: create row if needed
+		if (!blank_row) {
+			blank_row = frm.add_child("accounts");
+		}
+
+		let rate = flt(blank_row.exchange_rate) || 1;
+		let account_currency = blank_row.account_currency || company_currency;
+
+		// Step 4: apply balance (BOTH currencies)
+		if (diff > 0) {
+			// CREDIT needed
+
+			// company currency
+			frappe.model.set_value(blank_row.doctype, blank_row.name, "credit", diff);
+			frappe.model.set_value(blank_row.doctype, blank_row.name, "debit", 0);
+
+			// account currency
+			frappe.model.set_value(
+				blank_row.doctype,
+				blank_row.name,
+				"credit_in_account_currency",
+				diff / rate
+			);
+			frappe.model.set_value(blank_row.doctype, blank_row.name, "debit_in_account_currency", 0);
+
+		} else {
+			// DEBIT needed
+			let abs_diff = Math.abs(diff);
+
+			// company currency
+			frappe.model.set_value(blank_row.doctype, blank_row.name, "debit", abs_diff);
+			frappe.model.set_value(blank_row.doctype, blank_row.name, "credit", 0);
+
+			// account currency
+			frappe.model.set_value(
+				blank_row.doctype,
+				blank_row.name,
+				"debit_in_account_currency",
+				abs_diff / rate
+			);
+			frappe.model.set_value(blank_row.doctype, blank_row.name, "credit_in_account_currency", 0);
+		}
+	}
+
+	// Step 5: recalc totals
+	calculate_totals(frm);
+
+	frm.refresh_fields([
+		"accounts",
+		"total_debit",
+		"total_credit",
+		"difference"
+	]);
+};
 cur_frm.cscript.validate = function (doc, cdt, cdn) {
 	cur_frm.cscript.update_totals(doc);
 };
@@ -462,30 +544,42 @@ function auto_balance(frm) {
 
 	let last = accounts[accounts.length - 1];
 
-	if (total > 0) {
-		last.credit = total;
-		last.debit = 0;
-	} else {
-		last.debit = -total;
-		last.credit = 0;
+	// only auto-fill if empty
+	if (!last.debit && !last.credit) {
+		if (total > 0) {
+			last.credit = total;
+		} else {
+			last.debit = -total;
+		}
 	}
 
 	refresh_field("accounts");
 }
 
+
 frappe.ui.form.on("Journal Entry Account", {
 	party: function (frm, cdt, cdn) {
-		var d = frappe.get_doc(cdt, cdn);
+		let d = frappe.get_doc(cdt, cdn);
+
 		if (!d.account && d.party_type && d.party) {
-			if (!frm.doc.company) frappe.throw(__("Please select Company"));
-			return frm.call({
+
+			if (!frm.doc.company) {
+				frappe.throw(__("Please select Company"));
+			}
+
+			frm.call({
 				method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_party_account_and_currency",
-				child: d,
 				args: {
 					company: frm.doc.company,
 					party_type: d.party_type,
 					party: d.party,
 				},
+				callback: function (r) {
+					if (r.message) {
+						frappe.model.set_value(cdt, cdn, "account", r.message.account);
+						frappe.model.set_value(cdt, cdn, "account_currency", r.message.account_currency);
+					}
+				}
 			});
 		}
 	},
@@ -556,13 +650,13 @@ frappe.ui.form.on("Journal Entry Account", "accounts_remove", function (frm) {
 
 $.extend(verp_staffing.journal_entry, {
 	toggle_fields_based_on_currency: function (frm) {
-		var fields = ["currency_section", "account_currency", "exchange_rate", "debit", "credit"];
+		let fields = ["currency_section", "account_currency", "exchange_rate", "debit", "credit"];
 
-		var grid = frm.get_field("accounts").grid;
+		let grid = frm.get_field("accounts").grid;
 		if (grid) grid.set_column_disp(fields, frm.doc.multi_currency);
 
 		// dynamic label
-		var field_label_map = {
+		let field_label_map = {
 			debit_in_account_currency: "Debit",
 			credit_in_account_currency: "Credit",
 		};
@@ -601,10 +695,10 @@ $.extend(verp_staffing.journal_entry, {
 	// set_exchange_rate: function (frm, cdt, cdn) {
 	// 	let company_currency = get_company_currency(frm);
 	// 	if (!company_currency) return;
-	// 	// var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
+	// 	// let company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 
 
-	// 	var row = locals[cdt][cdn];
+	// 	let row = locals[cdt][cdn];
 
 	// 	if (row.account_currency == company_currency || !frm.doc.multi_currency) {
 	// 		row.exchange_rate = 1;
@@ -651,11 +745,11 @@ $.extend(verp_staffing.journal_entry, {
 	},
 
 	quick_entry: function (frm) {
-		var naming_series_options = frm.fields_dict.naming_series.df.options;
-		var naming_series_default =
+		let naming_series_options = frm.fields_dict.naming_series.df.options;
+		let naming_series_default =
 			frm.fields_dict.naming_series.df.default || naming_series_options.split("\n")[0];
 
-		var dialog = new frappe.ui.Dialog({
+		let dialog = new frappe.ui.Dialog({
 			title: __("Quick Journal Entry"),
 			fields: [
 				{ fieldtype: "Currency", fieldname: "debit", label: __("Amount"), reqd: 1 },
@@ -699,8 +793,8 @@ $.extend(verp_staffing.journal_entry, {
 		});
 
 		dialog.set_primary_action(__("Save"), function () {
-			var btn = this;
-			var values = dialog.get_values();
+			let btn = this;
+			let values = dialog.get_values();
 
 			frm.set_value("posting_date", values.posting_date);
 			frm.set_value("user_remark", values.user_remark);
@@ -713,7 +807,7 @@ $.extend(verp_staffing.journal_entry, {
 			// using grid.add_new_row() to add a row in UI as well as locals
 			// this is required because triggers try to refresh the grid
 
-			var debit_row = frm.fields_dict.accounts.grid.add_new_row();
+			let debit_row = frm.fields_dict.accounts.grid.add_new_row();
 			frappe.model.set_value(debit_row.doctype, debit_row.name, "account", values.debit_account);
 			frappe.model.set_value(
 				debit_row.doctype,
@@ -722,7 +816,7 @@ $.extend(verp_staffing.journal_entry, {
 				values.debit
 			);
 
-			var credit_row = frm.fields_dict.accounts.grid.add_new_row();
+			let credit_row = frm.fields_dict.accounts.grid.add_new_row();
 			frappe.model.set_value(credit_row.doctype, credit_row.name, "account", values.credit_account);
 			frappe.model.set_value(
 				credit_row.doctype,
@@ -740,7 +834,7 @@ $.extend(verp_staffing.journal_entry, {
 	},
 
 	// account_query: function (frm) {
-	// 	var filters = {
+	// 	let filters = {
 	// 		company: frm.doc.company,
 	// 		is_group: 0,
 	// 	};
@@ -758,11 +852,9 @@ $.extend(verp_staffing.journal_entry, {
 	// },
 
 	account_query: function (frm) {
-		var filters = {
+		let filters = {
 			is_group: 0,
 		};
-		console.log("first filters: ", filters);
-
 
 		// apply company filter only if exists
 		if (frm.doc.company) {
@@ -784,7 +876,6 @@ $.extend(verp_staffing.journal_entry, {
 				});
 			}
 		}
-		console.log("last  filters: ", filters);
 
 		return { filters: filters };
 	},
@@ -799,7 +890,7 @@ $.extend(verp_staffing.journal_entry, {
 
 $.extend(verp_staffing.journal_entry, {
 	set_account_details: function (frm, dt, dn) {
-		var d = locals[dt][dn];
+		let d = locals[dt][dn];
 		if (d.account) {
 			if (!frm.doc.company) frappe.throw(__("Please select Company first"));
 			if (!frm.doc.posting_date) frappe.throw(__("Please select Posting Date first"));
