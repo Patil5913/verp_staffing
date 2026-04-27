@@ -1,9 +1,60 @@
 # Copyright (c) 2026, Vrugle and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
 from frappe.model.document import Document
 
 
 class FiscalYear(Document):
 	pass
+
+ 
+@frappe.whitelist()
+def get_available_companies(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Returns companies eligible to be added to a Fiscal Year's included_companies.
+ 
+    A company is eligible if ANY of the following is true:
+      (a) It has no entry in any Fiscal Year's included_companies at all.
+      (b) Every Fiscal Year it appears in is disabled (disabled = 1).
+      (c) It is already present in the CURRENT fiscal year being edited
+          (so existing rows remain valid and don't disappear from the list).
+ 
+    Args passed by Frappe Link search:
+        doctype   – "Company"
+        txt       – search string typed by user
+        filters   – dict with key "current_fiscal_year"
+    """
+    
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    current_fiscal_year = (filters or {}).get("current_fiscal_year", "")
+ 
+    results = frappe.db.sql("""
+		SELECT
+			c.name,
+			c.abbr
+		FROM `tabCompany` c
+		WHERE
+			c.name LIKE %(txt)s
+			AND NOT EXISTS (
+				SELECT 1
+				FROM `tabFiscal Year Company` fyc
+				INNER JOIN `tabFiscal Year` fy ON fy.name = fyc.parent
+				WHERE fyc.company = c.name
+				AND fy.disabled = 0
+				AND fy.name != %(current_fiscal_year)s
+			)
+		ORDER BY c.name
+		LIMIT %(start)s, %(page_len)s
+	""", {
+		"txt": "%%%s%%" % (txt or ""),
+		"current_fiscal_year": current_fiscal_year,
+		"start": int(start),
+		"page_len": int(page_len)
+	})
+    
+    frappe.throw(f"++++++++++++++++++++++++++++++{str(results)}")
+ 
+    return results
+ 
+

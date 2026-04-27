@@ -9,7 +9,8 @@
   "disabled",
   "is_short_year",
   "year_start_date",
-  "year_end_date"
+  "year_end_date",
+  "included_companies"
  ],
  "fields": [
   {
@@ -52,12 +53,19 @@
    "no_copy": 1,
    "reqd": 1,
    "set_only_once": 1
+  },
+  {
+   "fieldname": "included_companies",
+   "fieldtype": "Table MultiSelect",
+   "label": "Included Companies ",
+   "options": "Fiscal Year Company",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-15 18:21:37.404335",
+ "modified": "2026-04-25 10:52:22.830205",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Fiscal Year",
