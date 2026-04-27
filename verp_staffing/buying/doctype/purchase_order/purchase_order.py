@@ -131,7 +131,6 @@ class PurchaseOrder(Document):
 			)
 
 	def set_in_words(self):
-		frappe.errprint(f"rounded total{self.rounded_total} {self.grand_total}")
 		self.in_words = money_in_words(self.rounded_total, self.currency)
 
 		self.base_in_words = money_in_words(

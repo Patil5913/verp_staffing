@@ -3,12 +3,58 @@
 
 import frappe
 from frappe.model.document import Document
-
+from frappe import _
 
 class FiscalYear(Document):
-	pass
 
- 
+    def validate(self):
+        self.validate_dates()
+        self.validate_company_overlap()
+
+    def validate_dates(self):
+        if self.year_start_date >= self.year_end_date:
+            frappe.throw(
+                _("Fiscal Year End Date must be after Start Date"),
+                title=_("Invalid Date Range")
+            )
+
+    def validate_company_overlap(self):
+        """
+        A company cannot exist in more than one non-disabled fiscal year.
+        Skip check if current fiscal year itself is disabled.
+        """
+        if self.disabled:
+            return
+
+        for row in self.get("included_companies", []):
+            if not row.company:
+                continue
+
+            # Check if this company exists in any OTHER active fiscal year
+            conflicting = frappe.db.get_value(
+                "Fiscal Year Company",
+                filters={
+                    "company": row.company,
+                    "parent": ("!=", self.name or ""),
+                    "parentfield": "included_companies",
+                },
+                fieldname="parent",
+            )
+
+            if conflicting:
+                # Make sure that conflicting FY is not disabled
+                is_disabled = frappe.db.get_value("Fiscal Year", conflicting, "disabled")
+                if not is_disabled:
+                    frappe.throw(
+                        _("Company {0} is already assigned to active Fiscal Year {1}. "
+                          "A company cannot belong to more than one active Fiscal Year.").format(
+                            frappe.bold(row.company),
+                            frappe.bold(conflicting)
+                        ),
+                        title=_("Duplicate Fiscal Year Assignment")
+                    )
+
+
 @frappe.whitelist()
 def get_available_companies(doctype, txt, searchfield, start, page_len, filters):
     """
@@ -26,16 +72,12 @@ def get_available_companies(doctype, txt, searchfield, start, page_len, filters)
         filters   – dict with key "current_fiscal_year"
     """
     
-    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     current_fiscal_year = (filters or {}).get("current_fiscal_year", "")
  
     results = frappe.db.sql("""
-		SELECT
-			c.name,
-			c.abbr
+		SELECT c.name, c.abbr
 		FROM `tabCompany` c
-		WHERE
-			c.name LIKE %(txt)s
+		WHERE c.name LIKE %(txt)s
 			AND NOT EXISTS (
 				SELECT 1
 				FROM `tabFiscal Year Company` fyc
@@ -52,8 +94,6 @@ def get_available_companies(doctype, txt, searchfield, start, page_len, filters)
 		"start": int(start),
 		"page_len": int(page_len)
 	})
-    
-    frappe.throw(f"++++++++++++++++++++++++++++++{str(results)}")
  
     return results
  

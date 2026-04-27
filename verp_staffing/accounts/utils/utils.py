@@ -21,8 +21,9 @@ from json import loads
 from pypika import Order
 from pypika.terms import ExistsCriterion
 
-class FiscalYearError(frappe.ValidationError):
-	pass
+class FiscalYearNotFoundError(frappe.ValidationError):
+    """Raised when no active Fiscal Year matches the given date/company"""
+    pass
 
 def get_autoname_with_number(number_value, doc_title, company):
 	"""append title with prefix as number and suffix as company's abbreviation separated by '-'"""
@@ -85,97 +86,103 @@ def sort_accounts(accounts, is_root=False, key="name"):
 
 @frappe.whitelist()
 def get_fiscal_year(
-	date=None, fiscal_year=None, label="Date", verbose=1, company=None, as_dict=False, boolean=False
+    date=None, fiscal_year=None, label="Date", verbose=1, company=None, as_dict=False, boolean=False
 ):
-	if isinstance(boolean, str):
-		boolean = loads(boolean)
+    if isinstance(boolean, str):
+        boolean = loads(boolean)
+    fiscal_years = get_fiscal_years(
+        date, fiscal_year, label, verbose, company, as_dict=as_dict, boolean=boolean
+    )
+    if boolean:
+        return fiscal_years
+    else:
+        return fiscal_years[0]
 
-	fiscal_years = get_fiscal_years(
-		date, fiscal_year, label, verbose, company, as_dict=as_dict, boolean=boolean
-	)
-	if boolean:
-		return fiscal_years
-	else:
-		return fiscal_years[0]
-
-
+@frappe.whitelist()
 def get_fiscal_years(
-	transaction_date=None,
-	fiscal_year=None,
-	label="Date",
-	verbose=1,
-	company=None,
-	as_dict=False,
-	boolean=False,
+    transaction_date=None,
+    fiscal_year=None,
+    label="Date",
+    verbose=1,
+    company=None,
+    as_dict=False,
+    boolean=False,
 ):
-	fiscal_years = frappe.cache().hget("fiscal_years", company) or []
+    fiscal_years = frappe.cache().hget("fiscal_years", company) or []
 
-	if not fiscal_years:
-		# if year start date is 2012-04-01, year end date should be 2013-03-31 (hence subdate)
-		FY = DocType("Fiscal Year")
+    if not fiscal_years:
+        FY = DocType("Fiscal Year")
+        query = (
+            frappe.qb.from_(FY)
+            .select(FY.name, FY.year_start_date, FY.year_end_date)
+            .where(FY.disabled == 0)
+        )
 
-		query = (
-			frappe.qb.from_(FY).select(FY.name, FY.year_start_date, FY.year_end_date).where(FY.disabled == 0)
-		)
+        if fiscal_year:
+            query = query.where(FY.name == fiscal_year)
 
-		if fiscal_year:
-			query = query.where(FY.name == fiscal_year)
+        if company:
+            FYC = DocType("Fiscal Year Company")
+            # Include fiscal year if:
+            # - No companies are linked to it (global fiscal year)
+            # - OR this specific company is linked to it
+            query = query.where(
+                ExistsCriterion(
+                    frappe.qb.from_(FYC)
+                    .select(FYC.name)
+                    .where(FYC.parent == FY.name)
+                    .where(FYC.parentfield == "included_companies")  # ← your fieldname
+                ).negate()
+                | ExistsCriterion(
+                    frappe.qb.from_(FYC)
+                    .select(FYC.company)
+                    .where(FYC.parent == FY.name)
+                    .where(FYC.parentfield == "included_companies")  # ← your fieldname
+                    .where(FYC.company == company)
+                )
+            )
 
-		if company:
-			FYC = DocType("Fiscal Year Company")
-			query = query.where(
-				ExistsCriterion(frappe.qb.from_(FYC).select(FYC.name).where(FYC.parent == FY.name)).negate()
-				| ExistsCriterion(
-					frappe.qb.from_(FYC)
-					.select(FYC.company)
-					.where(FYC.parent == FY.name)
-					.where(FYC.company == company)
-				)
-			)
+        query = query.orderby(FY.year_start_date, order=Order.desc)
+        fiscal_years = query.run(as_dict=True)
+        frappe.cache().hset("fiscal_years", company, fiscal_years)
 
-		query = query.orderby(FY.year_start_date, order=Order.desc)
-		fiscal_years = query.run(as_dict=True)
+    if not transaction_date and not fiscal_year:
+        return fiscal_years
 
-		frappe.cache().hset("fiscal_years", company, fiscal_years)
+    if transaction_date:
+        transaction_date = getdate(transaction_date)
 
-	if not transaction_date and not fiscal_year:
-		return fiscal_years
+    for fy in fiscal_years:
+        matched = False
+        if fiscal_year and fy.name == fiscal_year:
+            matched = True
+        if (
+            transaction_date
+            and getdate(fy.year_start_date) <= transaction_date
+            and getdate(fy.year_end_date) >= transaction_date
+        ):
+            matched = True
 
-	if transaction_date:
-		transaction_date = getdate(transaction_date)
+        if matched:
+            if as_dict:
+                return (fy,)
+            else:
+                return ((fy.name, fy.year_start_date, fy.year_end_date),)
 
-	for fy in fiscal_years:
-		matched = False
-		if fiscal_year and fy.name == fiscal_year:
-			matched = True
+    # Build error message
+    error_msg = _("{0} {1} is not in any active Fiscal Year").format(
+        _(label), formatdate(transaction_date)
+    )
+    if company:
+        error_msg = _("{0} for company {1}").format(error_msg, frappe.bold(company))
 
-		if (
-			transaction_date
-			and getdate(fy.year_start_date) <= transaction_date
-			and getdate(fy.year_end_date) >= transaction_date
-		):
-			matched = True
+    if boolean:
+        return False
 
-		if matched:
-			if as_dict:
-				return (fy,)
-			else:
-				return ((fy.name, fy.year_start_date, fy.year_end_date),)
+    if verbose == 1:
+        frappe.msgprint(error_msg, title=_("Fiscal Year Not Found"), indicator="orange")
 
-	error_msg = _("""{0} {1} is not in any active Fiscal Year""").format(
-		_(label), formatdate(transaction_date)
-	)
-	if company:
-		error_msg = _("""{0} for {1}""").format(error_msg, frappe.bold(company))
-
-	if boolean:
-		return False
-
-	if verbose == 1:
-		frappe.msgprint(error_msg)
-
-	raise FiscalYearError(error_msg)
-
+    raise FiscalYearNotFoundError(error_msg)
 
 def get_currency_precision():
 	precision = cint(frappe.db.get_default("currency_precision"))
@@ -221,7 +228,7 @@ def get_balance_on(
 
 	try:
 		get_fiscal_year(date, company=company, verbose=0)[1]
-	except FiscalYearError:
+	except FiscalYearNotFoundError:
 		if getdate(date) > getdate(nowdate()):
 			# if fiscal year not found and the date is greater than today
 			# get fiscal year for today's date and its corresponding year start date

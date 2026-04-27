@@ -453,7 +453,6 @@ def get_department_from_service(service_name):
         # Match ignore case
         for s in services:
             if s and s.strip().lower() == service_name.strip().lower():
-                frappe.errprint(f"[DEPT] '{service_name}' → '{dept.department_name}'")
                 return dept.department_name
 
     return None
@@ -468,7 +467,6 @@ def request_field_update(
     service_name=None,
     extra_info=None,
 ):
-    # frappe.errprint(f"data {service_doctype}, {service_name} , {extra_info}")
     user = frappe.session.user
     employee = get_employee_name(user)
     if not employee:

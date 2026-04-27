@@ -14,6 +14,7 @@
   "company",
   "account_details_section",
   "account",
+  "account_currency",
   "column_break_fsen",
   "against",
   "party_type",
@@ -255,13 +256,23 @@
    "label": "Credit Amount in Company Currency",
    "options": "Company:company:default_currency",
    "set_only_once": 1
+  },
+  {
+   "fieldname": "account_currency",
+   "fieldtype": "Link",
+   "label": "Account Currency",
+   "options": "Currency",
+   "print_hide": 1,
+   "read_only": 1,
+   "reqd": 1,
+   "set_only_once": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-list",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 15:42:54.158840",
+ "modified": "2026-04-27 10:58:51.793995",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "GL Entry",
