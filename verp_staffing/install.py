@@ -1185,7 +1185,10 @@ def remove_default_workspaces():
         "Onboarding",
         "Email Inbox",
         "ESign",
-        "Accounting"
+        "Accounting",
+        "Financial Reports",
+        "Receivables",
+        "Payables"
     ]
 
     # Hide all others
