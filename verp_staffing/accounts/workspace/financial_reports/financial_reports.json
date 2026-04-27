@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Financial Reports\"}}]",
+ "content": "[{\"id\":\"QhnNZiSCDU\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Financial Reports</span>\",\"col\":12}},{\"id\":\"0vfZS-4W8E\",\"type\":\"card\",\"data\":{\"card_name\":\"Ledger\",\"col\":4}}]",
  "creation": "2026-04-25 15:19:47.459808",
  "custom_blocks": [],
  "docstatus": 0,
@@ -12,8 +12,50 @@
  "indicator_color": "",
  "is_hidden": 0,
  "label": "Financial Reports",
- "links": [],
- "modified": "2026-04-25 16:53:32.755553",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Ledger",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Balance Sheet",
+   "link_count": 0,
+   "link_to": "Balance Sheet",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "General Ledger",
+   "link_count": 0,
+   "link_to": "General Ledger",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "GL Entry",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "PL Statement",
+   "link_count": 0,
+   "link_to": "Profit and Loss Statement",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "GL Entry",
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-04-27 14:53:24.533693",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Financial Reports",

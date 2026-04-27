@@ -5,16 +5,18 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
+from verp_staffing.accounts.doctype.account.account import get_account_currency
 
 class GLEntry(Document):
-	def autoname(self):
-		"""
-		Temporarily name doc for fast insertion
-		name will be changed using autoname options (in a scheduled job)
-		"""
-		self.name = frappe.generate_hash(txt="", length=10)
-		if self.meta.autoname == "hash":
-			self.to_rename = 0
+    pass
+	# def autoname(self):
+	# 	"""
+	# 	Temporarily name doc for fast insertion
+	# 	name will be changed using autoname options (in a scheduled job)
+	# 	"""
+	# 	self.name = frappe.generate_hash(txt="", length=10)
+	# 	if self.meta.autoname == "hash":
+	# 		self.to_rename = 0
 
 
 def build_gl_entry(
@@ -43,8 +45,14 @@ def build_gl_entry(
     if not account:
         frappe.throw("Account is required for GL Entry")
 
+    # Account Currency
+    if not account:
+        frappe.throw("Account missing in GL Entry")
+    account_currency = get_account_currency(account)
+
     entry = {
         "account": account,
+        "account_currency": account_currency,
         "debit": flt(debit),
         "credit": flt(credit),
         "company": company,
@@ -92,11 +100,10 @@ def make_gl_entries(gl_map,doc):
 
         total_debit += debit
         total_credit += credit
-        frappe.errprint(f"Prepared GL Entry: debit: {entry.get('debit')}, credit: {entry.get('credit')}, account: {entry.get('account')}")
         enriched_entries.append(entry)
 
         # 🔥 Opening Entry Handling
-    is_opening = "Yes" if doc.is_opening else "No"
+    is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes"  else "No"
     account_cache = {}
 
     if round(total_debit, 2) != round(total_credit, 2):
@@ -143,13 +150,18 @@ def cancel_gl_entries(doc, method=None):
             account=original.account,
             debit=original.credit,
             credit=original.debit,
+            transaction_currency=original.transaction_currency,
+            exchange_rate=original.exchange_rate,
             company=doc.company,
             posting_date=doc.posting_date,
             voucher_type=doc.doctype,
             voucher_no=doc.name,
             remarks="Reversal Entry"
         )
-
+        reverse["fiscal_year"] = original.fiscal_year
+        reverse["debit_in_company_currency"] = original.credit_in_company_currency
+        reverse["credit_in_company_currency"] = original.debit_in_company_currency
+        reverse["finance_book"] = original.finance_book
         frappe.get_doc({
             "doctype": "GL Entry",
             **reverse,

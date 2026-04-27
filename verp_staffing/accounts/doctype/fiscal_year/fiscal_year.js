@@ -104,7 +104,7 @@ function _enforce_disabled_state(frm) {
 	if (!frm._disabled_banner_shown) {
 		frm.dashboard.add_comment(
 			__(
-				"⚠️ This Fiscal Year is <b>permanently disabled</b> and is read-only. No changes can be made.",
+				"This Fiscal Year is <b>permanently disabled</b> and is read-only. No changes can be made.",
 			),
 			"red",
 			true, // persistent — not dismissible
