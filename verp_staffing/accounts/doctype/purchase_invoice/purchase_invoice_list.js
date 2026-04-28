@@ -1,10 +1,10 @@
-frappe.listview_settings["Sales Invoice"] = {
+frappe.listview_settings["Purchase Invoice"] = {
 	get_indicator: function (doc) {
 
 		let today = frappe.datetime.get_today();
 
 		if (doc.outstanding_amount < 0) {
-			return ["Credit Note Issued", "gray"];
+			return ["Debit Note Issued", "gray"];
 
 		} else if (doc.outstanding_amount == 0) {
 			return ["Paid", "green"];

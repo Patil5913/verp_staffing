@@ -23,6 +23,7 @@ frappe.ui.form.on("Journal Entry", {
 		// frm.trigger("set_queries");
 	},
 
+
 	// set_queries(frm) {
 	// 	frm.set_query("project", "accounts", function (doc, cdt, cdn) {
 	// 		let row = frappe.get_doc(cdt, cdn);
@@ -117,6 +118,10 @@ frappe.ui.form.on("Journal Entry", {
 				);
 			}
 		}
+	},
+
+	get_outstanding_invoices: function (frm) {
+		open_outstanding_dialog(frm);
 	},
 	//this feture is not useful for our product 
 	// make_inter_company_journal_entry: function (frm) {
@@ -501,14 +506,6 @@ function calculate_totals(frm) {
 	frm.set_value("difference", difference);
 }
 
-// function require_company(frm) {
-// 	if (!frm.doc.company) {
-// 		frappe.msgprint("Please select Company first");
-// 		frm.scroll_to_field("company");
-// 		return false;
-// 	}
-// 	return true;
-// }
 function show_company_warning(frm) {
 	frappe.show_alert({
 		message: "Select Company first",
@@ -516,6 +513,165 @@ function show_company_warning(frm) {
 	}, 3);
 
 	frm.scroll_to_field("company");
+}
+
+function open_outstanding_dialog(frm) {
+
+	let based_on = frm.doc.write_off_based_on;
+
+	let doctype = "";
+	let party_field = "";
+
+
+	if (!frm.doc.company) {
+			show_company_warning(frm);
+			return;
+		}
+
+	if (based_on === "Accounts Receivable") {
+		doctype = "Sales Invoice";
+		party_field = "customer";
+	} else if (based_on === "Accounts Payable") {
+		doctype = "Purchase Invoice";
+		party_field = "supplier";
+	} else {
+		frappe.msgprint("Please select Write Off Based On");
+		return;
+	}
+
+	let account_field = based_on === "Accounts Receivable" ? "debit_to" : "credit_to";
+
+	let dialog = new frappe.ui.Dialog({
+		title: "Outstanding Invoices",
+		size: "large",
+		fields: [
+			{
+				fieldname: "invoices",
+				fieldtype: "Table",
+				label: "Invoices",
+				cannot_add_rows: true,
+				cannot_delete_rows: true,   // ✅ remove delete button
+				in_place_edit: false,
+				fields: [
+					{ fieldname: "name", label: "Invoice", fieldtype: "Data", in_list_view: 1 },
+					{ fieldname: party_field, label: "Party", fieldtype: "Data", in_list_view: 1 },
+					{ fieldname: account_field, label: "Account", fieldtype: "Data", in_list_view: 1 },
+					{ fieldname: "posting_date", label: "Date", fieldtype: "Date", in_list_view: 1 },
+					{ fieldname: "outstanding_amount", label: "Outstanding", fieldtype: "Currency", in_list_view: 1 }
+				]
+			}
+		],
+
+		primary_action_label: "Select",
+		primary_action() {
+
+			let selected = dialog.fields_dict.invoices.grid.get_selected_children();
+
+			if (!selected.length) {
+				frappe.msgprint("Please select at least one invoice");
+				return;
+			}
+
+			add_invoices_to_jv(frm, selected, based_on);
+			dialog.hide();
+		}
+	});
+
+	dialog.show();
+
+	// 🔥 Clean UI after render
+	setTimeout(() => {
+		let grid = dialog.fields_dict.invoices.grid;
+
+		grid.wrapper.find('.grid-footer').hide();        // remove small grey button
+		grid.wrapper.find('.grid-remove-rows').hide();   // remove delete button
+		grid.wrapper.find('.row-actions').hide();        // remove edit icon
+	}, 100);
+
+	// 🔥 Fetch invoices
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: doctype,
+			fields: [
+				"name",
+				party_field,
+				"posting_date",
+				"outstanding_amount",
+				account_field
+			],
+			filters: {
+				docstatus: 1,
+				outstanding_amount: [">", 0],
+				company: frm.doc.company
+			}
+
+		},
+		callback: function (r) {
+			if (r.message) {
+				dialog.fields_dict.invoices.df.data = r.message;
+				dialog.fields_dict.invoices.grid.refresh();
+			}
+		}
+	});
+}
+
+function add_invoices_to_jv(frm, invoices, based_on) {
+
+	let total = 0;
+
+	console.log("invoice ", invoices);
+
+	frm.clear_table("accounts");
+
+
+	invoices.forEach(inv => {
+
+		let row = frm.add_child("accounts");
+
+		let amt = flt(inv.outstanding_amount);
+		total += amt;
+
+		// ✅ Common fields (same as Python)
+		frappe.model.set_value(row.doctype, row.name, "account", inv.debit_to || inv.credit_to);
+		frappe.model.set_value(row.doctype, row.name, "party", inv.customer || inv.supplier);
+
+		if (based_on === "Accounts Receivable") {
+
+			frappe.model.set_value(row.doctype, row.name, "party_type", "Customer");
+
+			// 🔥 IMPORTANT: use account currency field
+			frappe.model.set_value(row.doctype, row.name, "credit_in_account_currency", amt);
+
+			frappe.model.set_value(row.doctype, row.name, "reference_type", "Sales Invoice");
+			frappe.model.set_value(row.doctype, row.name, "reference_name", inv.name);
+
+		} else {
+
+			frappe.model.set_value(row.doctype, row.name, "party_type", "Supplier");
+
+			frappe.model.set_value(row.doctype, row.name, "debit_in_account_currency", amt);
+
+			frappe.model.set_value(row.doctype, row.name, "reference_type", "Purchase Invoice");
+			frappe.model.set_value(row.doctype, row.name, "reference_name", inv.name);
+		}
+
+	});
+
+	// 🔥 ADD BALANCING ROW (same as jd2)
+	let balancing_row = frm.add_child("accounts");
+
+	if (based_on === "Accounts Receivable") {
+		frappe.model.set_value(balancing_row.doctype, balancing_row.name, "debit_in_account_currency", total);
+	} else {
+		frappe.model.set_value(balancing_row.doctype, balancing_row.name, "credit_in_account_currency", total);
+	}
+
+	frm.refresh_field("accounts");
+
+	// 🔥 Trigger ERP logic (conversion + validation)
+	frm.trigger("multi_currency");
+	cur_frm.cscript.get_balance(frm.doc);
 }
 
 function get_company_currency(frm, callback) {
