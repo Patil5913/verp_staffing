@@ -18,6 +18,10 @@
   "posting_date",
   "section_break_qfnx",
   "accounts",
+  "write_off_section",
+  "write_off_based_on",
+  "get_outstanding_invoices",
+  "column_break_srit",
   "section_break_boki",
   "cheque_no",
   "cheque_date",
@@ -36,15 +40,12 @@
   "reference_section",
   "clearance_date",
   "remark",
-  "paid_loan",
-  "inter_company_journal_entry_reference",
   "column_break_zkzz",
   "bill_no",
   "bill_date",
   "due_date",
   "addtional_info",
   "is_opening",
-  "party_not_required",
   "mode_of_payment"
  ],
  "fields": [
@@ -64,7 +65,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Entry Type",
-   "options": "Journal Entry\nInter Company Journal Entry\nBank Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation\nExchange Gain Or Loss\nDeferred Revenue\nDeferred Expense",
+   "options": "Journal Entry\nInter Company Journal Entry\nBank Entry\nCash Entry\nDebit Note\nCredit Note\nWrite Off Entry",
    "reqd": 1
   },
   {
@@ -142,7 +143,9 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Total Debit",
-   "options": "base_currency"
+   "no_copy": 1,
+   "options": "base_currency",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_gewk",
@@ -153,15 +156,20 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Total Credit",
-   "options": "base_currency"
+   "options": "base_currency",
+   "read_only": 1
   },
   {
+   "depends_on": "difference",
    "fieldname": "difference",
    "fieldtype": "Currency",
    "label": "Difference (Dr - Cr)",
-   "options": "base_currency"
+   "no_copy": 1,
+   "options": "base_currency",
+   "read_only": 1
   },
   {
+   "depends_on": "difference",
    "fieldname": "get_balance",
    "fieldtype": "Button",
    "label": "Make Difference Entry"
@@ -176,19 +184,25 @@
    "fieldname": "total_amount_currency",
    "fieldtype": "Link",
    "label": "Total Amount Currency",
-   "options": "Currency"
+   "options": "Currency",
+   "read_only": 1
   },
   {
+   "bold": 1,
    "fieldname": "total_amount",
    "fieldtype": "Currency",
+   "hidden": 1,
    "label": "Total Amount",
-   "options": "total_amount_currency"
+   "options": "total_amount_currency",
+   "read_only": 1
   },
   {
+   "bold": 1,
    "fieldname": "total_amount_in_words",
    "fieldtype": "Data",
    "hidden": 1,
-   "label": "Total Amount in Words"
+   "label": "Total Amount in Words",
+   "read_only": 1
   },
   {
    "fieldname": "from_template",
@@ -219,18 +233,8 @@
   {
    "fieldname": "remark",
    "fieldtype": "Small Text",
-   "label": "Remark"
-  },
-  {
-   "fieldname": "paid_loan",
-   "fieldtype": "Data",
-   "label": "Paid Loan"
-  },
-  {
-   "fieldname": "inter_company_journal_entry_reference",
-   "fieldtype": "Link",
-   "label": "Inter Company Journal Entry Reference",
-   "options": "Journal Entry"
+   "label": "Remark",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_zkzz",
@@ -248,7 +252,7 @@
   },
   {
    "fieldname": "due_date",
-   "fieldtype": "Data",
+   "fieldtype": "Date",
    "label": "Due Date"
   },
   {
@@ -264,30 +268,49 @@
    "search_index": 1
   },
   {
-   "default": "0",
-   "fieldname": "party_not_required",
-   "fieldtype": "Check",
-   "label": "Party Not Required"
-  },
-  {
    "fetch_from": "company.default_currency",
    "fieldname": "base_currency",
    "fieldtype": "Link",
    "label": "Company Currency",
-   "options": "Currency"
+   "options": "Currency",
+   "read_only": 1
   },
   {
    "fieldname": "mode_of_payment",
    "fieldtype": "Link",
    "label": "Mode of Payment",
    "options": "Mode of Payment"
+  },
+  {
+   "depends_on": "eval:doc.voucher_type == 'Write Off Entry'",
+   "fieldname": "write_off_section",
+   "fieldtype": "Section Break",
+   "label": "Write Off"
+  },
+  {
+   "default": "Accounts Receivable",
+   "depends_on": "eval:doc.voucher_type == 'Write Off Entry'",
+   "fieldname": "write_off_based_on",
+   "fieldtype": "Select",
+   "label": "Write Off Based On",
+   "options": "Accounts Receivable\nAccounts Payable"
+  },
+  {
+   "depends_on": "eval:doc.voucher_type == 'Write Off Entry'",
+   "fieldname": "get_outstanding_invoices",
+   "fieldtype": "Button",
+   "label": "Get Outstanding Invoices"
+  },
+  {
+   "fieldname": "column_break_srit",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-25 10:53:17.393021",
+ "modified": "2026-04-28 10:25:10.973338",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry",
