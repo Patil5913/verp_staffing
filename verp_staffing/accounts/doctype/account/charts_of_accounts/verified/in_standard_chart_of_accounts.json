@@ -26,7 +26,7 @@
     "Expenses": {
       "Direct Expenses": {
         "Cost of Goods and Service Sales": {
-          "account_type": "Cost of Goods Sold"
+          "account_type": "Expense Account"
         }
       },
       "Indirect Expenses": {

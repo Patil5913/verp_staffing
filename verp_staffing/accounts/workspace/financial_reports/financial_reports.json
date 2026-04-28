@@ -34,28 +34,26 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "General Ledger",
    "link_count": 0,
    "link_to": "General Ledger",
    "link_type": "Report",
    "onboard": 0,
-   "report_ref_doctype": "GL Entry",
    "type": "Link"
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "PL Statement",
    "link_count": 0,
    "link_to": "Profit and Loss Statement",
    "link_type": "Report",
    "onboard": 0,
-   "report_ref_doctype": "GL Entry",
    "type": "Link"
   }
  ],
- "modified": "2026-04-27 14:53:24.533693",
+ "modified": "2026-04-28 10:37:19.327885",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Financial Reports",
