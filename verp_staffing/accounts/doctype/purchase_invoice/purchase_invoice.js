@@ -4,6 +4,16 @@
 frappe.ui.form.on("Purchase Invoice", {
 	refresh(frm) {
 		set_currency_labels(frm);
+		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
+			frm.add_custom_button(
+				__("Payment Entry"),
+				function () {
+					verp_staffing.payment_utils.open_payment_entry(frm);
+				},
+				__("Create"),
+			);
+		}
+		console.log("Refreshing form and setting currency labels");
 		verp_staffing.purchase.exchange.update_description(frm);
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),

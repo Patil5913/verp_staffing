@@ -456,7 +456,7 @@
    "fieldtype": "Currency",
    "label": "Outstanding Amount",
    "no_copy": 1,
-   "options": "party_account_currency",
+   "options": "currency",
    "read_only": 1
   },
   {
@@ -673,7 +673,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-24 14:15:07.873657",
+ "modified": "2026-04-28 13:58:48.953977",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Purchase Invoice",

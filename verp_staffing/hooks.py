@@ -44,7 +44,8 @@ app_include_js = [
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/global_hide.js",
-    "/assets/verp_staffing/js/purchase_common.js"
+    "/assets/verp_staffing/js/purchase_common.js",
+    "/assets/verp_staffing/js/make_payment_entry.js",
 ]
 
 # include js, css files in header of web template
@@ -80,12 +81,27 @@ validation_docs = [
     "Agreement",
 ]
 doctype_js = {
-    doc: ["public/js/reusable.js", "public/js/salesOrder.js" , "public/js/permission_feature.js"] for doc in validation_docs
+    doc: [
+        "public/js/reusable.js",
+        "public/js/salesOrder.js",
+        "public/js/permission_feature.js",
+    ]
+    for doc in validation_docs
 }
+
+doctype_js["Sales Invoice"] = [
+    "public/js/make_payment_entry.js",
+    "public/js/sales_invoice.js",
+]
+doctype_js["Purchase Invoice"] = [
+    "public/js/make_payment_entry.js",
+    "public/js/purchase_invoice.js",
+]
+
 
 doctype_list_js = {"Lead": "public/js/lead_list.js"}
 treeviews = [
-	"Account",
+    "Account",
 ]
 
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -132,7 +148,7 @@ after_migrate = [
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
     # "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.utils.test.seed_email_template"
+    "verp_staffing.utils.test.seed_email_template",
 ]
 
 # Uninstallation
@@ -182,9 +198,8 @@ after_migrate = [
 override_doctype_class = {
     "User": "verp_staffing.overrides.override_user.CustomUser",
     "Personal Data Download Request": "verp_staffing.overrides.email_template.CustomPersonalDataDownloadRequest",
-        "Personal Data Deletion Request": "verp_staffing.overrides.email_template.CustomPersonalDataDeletionRequest",
-
-    }
+    "Personal Data Deletion Request": "verp_staffing.overrides.email_template.CustomPersonalDataDeletionRequest",
+}
 
 # Document Events
 # ---------------
@@ -248,12 +263,12 @@ doc_events = {
     },
     "Sales Invoice": {
         "on_submit": "verp_staffing.accounts.doctype.sales_invoice.gl.on_submit_sales_invoice",
-        "on_cancel": "verp_staffing.accounts.doctype.sales_invoice.gl.on_cancel_sales_invoice"
+        "on_cancel": "verp_staffing.accounts.doctype.sales_invoice.gl.on_cancel_sales_invoice",
     },
     "Purchase Invoice": {
         "on_submit": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_submit_purchase_invoice",
-        "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice"
-    }
+        "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice",
+    },
 }
 
 # Scheduled Tasks
@@ -273,13 +288,9 @@ scheduler_events = {
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
         ],
-        "0 */12 * * *": [
-            "verp_staffing.crm.api.agreement.send_agreement_reminders"
-        ]
-    }
-   
+        "0 */12 * * *": ["verp_staffing.crm.api.agreement.send_agreement_reminders"],
+    },
 }
-
 
 
 # Testing
@@ -330,7 +341,7 @@ permission_query_conditions = {
 before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
     "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
-     "verp_staffing.overrides.email_template.patch"
+    "verp_staffing.overrides.email_template.patch",
 ]
 
 # after_request = ["verp_staffing.utils.after_request"]

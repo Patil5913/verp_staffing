@@ -4,6 +4,16 @@
 frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {
 		set_currency_labels(frm);
+		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
+			frm.add_custom_button(
+				__("Payment Entry"),
+				function () {
+					verp_staffing.payment_utils.open_payment_entry(frm);
+				},
+				__("Create"),
+			);
+		}
+		console.log("Adding payment button on refresh");
 	},
 	onload(frm) {
 		set_currency_labels(frm);
