@@ -42,6 +42,7 @@ def get_journal_entry_gl_map(doc):
             exchange_rate=row.exchange_rate,
             transaction_currency=row.account_currency,
             is_opening=doc.is_opening,
+            finance_book=doc.finance_book
         ))
 
     return gl_map

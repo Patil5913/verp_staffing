@@ -4,6 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
+from frappe.utils import cint
 
 class FiscalYear(Document):
 
@@ -98,3 +99,35 @@ def get_available_companies(doctype, txt, searchfield, start, page_len, filters)
     return results
  
 
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_fiscal_years_for_company(doctype, txt, searchfield, start, page_len, filters):
+    company = (filters or {}).get("company", "")
+
+    return frappe.db.sql(
+        """
+        SELECT fy.name, fy.year_start_date, fy.year_end_date
+        FROM `tabFiscal Year` fy
+        LEFT JOIN `tabFiscal Year Company` fyc
+               ON fyc.parent     = fy.name
+              AND fyc.parentfield = 'included_companies'
+        WHERE fy.name LIKE %(txt)s
+          AND (
+                fyc.company = %(company)s
+                OR NOT EXISTS (
+                    SELECT 1 FROM `tabFiscal Year Company` fyc2
+                    WHERE fyc2.parent     = fy.name
+                      AND fyc2.parentfield = 'included_companies'
+                )
+              )
+        ORDER BY fy.year_start_date DESC
+        LIMIT %(start)s, %(page_len)s
+        """,
+        {
+            "txt":      f"%{txt or ''}%",
+            "company":  company,
+            "start":    cint(start),
+            "page_len": cint(page_len),
+        },
+    )

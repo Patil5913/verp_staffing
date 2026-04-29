@@ -36,7 +36,9 @@ def build_gl_entry(
     exchange_rate=1,
     against_voucher_type=None,
     against_voucher=None,
-    is_opening=None
+    is_opening=None,
+    is_advance=None,
+    finance_book=None
 ):
     if debit and credit:
         frappe.throw(f"Both debit and credit cannot be set for account {account}")
@@ -69,7 +71,9 @@ def build_gl_entry(
         "exchange_rate": exchange_rate,
         "against_voucher_type": against_voucher_type,
         "against_voucher": against_voucher,
-        "is_opening": is_opening
+        "is_opening": is_opening,
+        "is_advance": is_advance,
+        "finance_book": finance_book
     }
 
     # transaction currency amounts
@@ -104,7 +108,7 @@ def make_gl_entries(gl_map,doc):
         total_credit += credit
         enriched_entries.append(entry)
 
-        # 🔥 Opening Entry Handling
+        # Opening Entry Handling
     is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes"  else "No"
     account_cache = {}
 
@@ -117,7 +121,7 @@ def make_gl_entries(gl_map,doc):
 
         entry["is_opening"] = is_opening
 
-        # ✅ validate opening
+        # validate opening
         if is_opening == "Yes":
             acc = entry.get("account")
 
