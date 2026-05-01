@@ -237,6 +237,15 @@ def make_gl_entries(gl_map,doc):
 
 
 def cancel_gl_entries(doc, method=None):
+    if frappe.db.exists(
+        "GL Entry",
+        {
+            "voucher_type": doc.doctype,
+            "voucher_no": doc.name,
+            "is_cancelled": 1
+        }
+    ):
+        frappe.throw("GL Entries already cancelled for {0} {1}".format(doc.doctype, doc.name))
     entries = frappe.get_all(
         "GL Entry",
         filters={
@@ -324,7 +333,7 @@ def enrich_gl_entry(entry, doc):
     )
     
 
-    # 🔹 Transaction currency
+    # Transaction currency
     # entry["transaction_currency"] = doc.currency
 
     entry["transaction_currency"] = (
@@ -332,13 +341,13 @@ def enrich_gl_entry(entry, doc):
         or getattr(doc, "currency", None)
     )
 
-    # 🔹 Exchange rate
+    # Exchange rate
     entry["exchange_rate"] = exchange_rate
 
-    # 🔹 Fiscal year
+    # Fiscal year
     entry["fiscal_year"] = get_fiscal_year(doc.posting_date,doc.company)
 
-    # 🔹 Transaction currency amounts
+    # Transaction currency amounts
     debit = flt(entry.get("debit"))
     credit = flt(entry.get("credit"))
 
