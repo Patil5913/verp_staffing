@@ -26,34 +26,47 @@ class FiscalYear(Document):
         """
         if self.disabled:
             return
+        companies = list({row.company for row in self.get("included_companies", []) if row.company})
+        if not companies:
+            return
+        conflicts = frappe.get_all(
+            "Fiscal Year Company",
+            filters={
+                "company": ["in", companies],
+                "parent": ["!=", self.name or ""],
+                "parentfield": "included_companies",
+            },
+            fields=["company", "parent"]
+        )
+        parent_fys = list({c.parent for c in conflicts})
 
-        for row in self.get("included_companies", []):
-            if not row.company:
-                continue
+        active_fys = frappe.get_all(
+            "Fiscal Year",
+            filters={
+                "name": ["in", parent_fys],
+                "disabled": 0
+            },
+            pluck="name"
+        )
 
-            # Check if this company exists in any OTHER active fiscal year
-            conflicting = frappe.db.get_value(
-                "Fiscal Year Company",
-                filters={
-                    "company": row.company,
-                    "parent": ("!=", self.name or ""),
-                    "parentfield": "included_companies",
-                },
-                fieldname="parent",
+        if not active_fys:
+            return
+
+        active_conflicts = {
+            c.company: c.parent
+            for c in conflicts
+            if c.parent in active_fys
+        }
+
+        for company, fy in active_conflicts.items():
+            frappe.throw(
+                _("Company {0} is already assigned to active Fiscal Year {1}. "
+                "A company cannot belong to more than one active Fiscal Year.").format(
+                    frappe.bold(company),
+                    frappe.bold(fy)
+                ),
+                title=_("Duplicate Fiscal Year Assignment")
             )
-
-            if conflicting:
-                # Make sure that conflicting FY is not disabled
-                is_disabled = frappe.db.get_value("Fiscal Year", conflicting, "disabled")
-                if not is_disabled:
-                    frappe.throw(
-                        _("Company {0} is already assigned to active Fiscal Year {1}. "
-                          "A company cannot belong to more than one active Fiscal Year.").format(
-                            frappe.bold(row.company),
-                            frappe.bold(conflicting)
-                        ),
-                        title=_("Duplicate Fiscal Year Assignment")
-                    )
 
 
 @frappe.whitelist()
