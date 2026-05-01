@@ -48,6 +48,7 @@ frappe.ui.form.on("Journal Entry", {
 
 		// hide /unhide fields based on currency
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
+
 	},
 	before_save: function (frm) {
 		if (frm.doc.docstatus == 0 && !frm.doc.is_system_generated) {

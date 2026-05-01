@@ -159,7 +159,10 @@ class SalesInvoice(Document):
 
         # Validate account deeply
         acc = frappe.get_cached_value(
-            "Account", account, ["account_type", "is_group", "company"], as_dict=True
+            "Account",
+            account,
+            ["account_type", "is_group", "company"],
+            as_dict=True
         )
 
         if not acc:

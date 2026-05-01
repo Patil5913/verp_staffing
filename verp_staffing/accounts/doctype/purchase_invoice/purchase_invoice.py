@@ -123,7 +123,12 @@ class PurchaseInvoice(Document):
 
             if acc_currency not in [company_currency, doc_currency]:
                 invalid_accounts.append(f"{label}: {account} ({acc_currency})")
+            if acc_currency not in [company_currency, doc_currency]:
+                invalid_accounts.append(f"{label}: {account} ({acc_currency})")
 
+        # Check items
+        for row in self.items:
+            check_account(row.expense_account, "Item Row")
         # Check items
         for row in self.items:
             check_account(row.expense_account, "Item Row")
