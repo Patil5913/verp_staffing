@@ -9,12 +9,7 @@ frappe.ui.form.on("Journal Entry", {
 		frm.add_fetch("bank_account", "account", "account");
 	},
 
-	// point : create custom code to handle multi currency and exchange logic becuse erpnext multi currency have issue and deeply connected 
-	// issue : when we deal with multi currency exchange rate make issue in calculation so debit and credit difference is not properly calculated and also we have to set exchange rate manually in each row which is not good user experience so we need to handle this issue in our code and make it more user friendly and also we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
-
-
 	refresh: function (frm) {
-		// erpnext.toggle_naming_series();
 
 		if (frm.doc.docstatus > 0) {
 			frm.add_custom_button(

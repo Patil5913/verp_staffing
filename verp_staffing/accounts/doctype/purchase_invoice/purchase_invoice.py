@@ -46,11 +46,13 @@ class PurchaseInvoice(Document):
             account=self.credit_to,
             company=self.company,
             expected_types=["Payable"],
-            label="Payable Account",
+            label="Payable Account"
         )
 
         if acc.report_type != "Balance Sheet":
-            frappe.throw(_("Payable Account must be a Balance Sheet account"))
+            frappe.throw(
+                _("Payable Account must be a Balance Sheet account")
+            )
 
         self.party_account_currency = frappe.db.get_value(
             "Account", self.credit_to, "account_currency"
@@ -63,7 +65,7 @@ class PurchaseInvoice(Document):
                 company=self.company,
                 expected_types=["Expense Account", "Cost of Goods Sold"],
                 label="Expense Account",
-                row=item.idx,
+                row=item.idx
             )
 
     def validate_tax_accounts(self):
@@ -73,7 +75,7 @@ class PurchaseInvoice(Document):
                 company=self.company,
                 expected_types=["Tax", "Chargeable", "Expense"],
                 label="Tax Account",
-                row=tax.idx,
+                row=tax.idx
             )
 
     def validate_discount_account(self):
@@ -85,7 +87,7 @@ class PurchaseInvoice(Document):
                 account=self.additional_discount_account,
                 company=self.company,
                 expected_types=["Expense Account"],
-                label="Discount Account",
+                label="Discount Account"
             )
 
     def validate_mandatory(self):
@@ -100,7 +102,7 @@ class PurchaseInvoice(Document):
                 frappe.throw(
                     _("Row {0}: Expense account is mandatory").format(item.idx)
                 )
-
+    
         if self.currency == self.company_currency:
             self.conversion_rate = 1
         else:
@@ -117,9 +119,7 @@ class PurchaseInvoice(Document):
             if not account:
                 return
 
-            acc_currency = frappe.get_cached_value(
-                "Account", account, "account_currency"
-            )
+            acc_currency = frappe.get_cached_value("Account", account, "account_currency")
 
             if acc_currency not in [company_currency, doc_currency]:
                 invalid_accounts.append(f"{label}: {account} ({acc_currency})")
@@ -331,3 +331,74 @@ def make_purchase_invoice(source_name):
     )
 
     return doc
+
+
+def get_supplier_email(doc):
+    if not doc.supplier:
+        return None
+
+    # Try supplier primary email
+    email = frappe.db.get_value("Supplier", doc.supplier, "email_id")
+
+    if email:
+        return email
+
+    # Fallback: Contact
+    contact_name = frappe.db.get_value("Supplier", doc.supplier, "supplier_primary_contact")
+    if contact_name:
+        return frappe.db.get_value("Contact", contact_name, "email_id")
+
+    return None
+
+def send_purchase_invoice_reminders():
+    today = nowdate()
+
+    companies = frappe.get_all("Company", fields=["name", "reminder_days_before"])
+
+    for company in companies:
+        days_before = company.reminder_days_before or 0
+        target_date = add_days(today, days_before)
+
+        print(f"Company: {company.name}, Target Date: {target_date}")
+
+        invoices = frappe.get_all(
+            "Purchase Invoice",
+            filters={
+                "docstatus": 1,
+                "company": company.name,
+                "outstanding_amount": [">", 0],
+                "due_date": target_date
+            },
+            fields=["name"]
+        )
+
+        print(f"Purchase Invoices found: {len(invoices)}")
+
+        for inv in invoices:
+            doc = frappe.get_doc("Purchase Invoice", inv.name)
+            send_purchase_reminder_email(doc)
+
+def send_purchase_reminder_email(doc):
+    try:
+        template = frappe.get_doc("Email Template", "Payment Due Reminder - Purchase Invoice")
+
+        context = {"doc": doc}
+
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response, context)
+
+        recipient = get_supplier_email(doc)
+
+        if not recipient:
+            frappe.log_error(f"No supplier email for {doc.name}", "Purchase Reminder")
+            return
+
+        frappe.sendmail(
+            recipients=[recipient],
+            subject=subject,
+            message=message,
+            delayed=False
+        )
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Purchase Invoice Reminder Failed")

@@ -527,3 +527,112 @@ def get_sales_invoice_gl_map(doc):
             )
 
     return gl_map
+
+
+@frappe.whitelist()
+def send_sales_invoice_email(doc):
+    try:
+        print("Sending Sales Invoice Email")
+        doc = frappe.get_doc("Sales Invoice", doc)
+        template_name = "Send Sales Invoice via Email"
+
+        if not frappe.db.exists("Email Template", template_name):
+            frappe.log_error("Email Template not found", "Sales Invoice Email")
+            return
+
+        template = frappe.get_doc("Email Template", template_name)
+        print(f"Using Email Template: {template}")
+        context = {"doc": doc}
+        print(f"Email Context: {context}")
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response, context)
+        print(f"Rendered Email Subject: {subject}")
+        print(f"Rendered Email Message: {message}")
+        recipient = get_customer_email(doc)
+        print(f"Customer Email: {recipient}")
+        if not recipient:
+            frappe.log_error(f"No email for {doc.name}", "Sales Invoice Email")
+            return
+
+        # attachments = [
+        #     frappe.attach_print(
+        #         doctype=doc.doctype,
+        #         name=doc.name,
+        #         file_name=f"{doc.name}.pdf",
+        #         print_format="Standard",   # or your custom print format
+        #     )
+        # ]
+
+        print(f"Email Subject: {subject}")
+        frappe.sendmail(
+            recipients=[recipient],
+            subject=subject,
+            message=message,
+            # attachments=attachments,
+            delayed=False
+        )
+        print("Email Sent")
+        return "Email Sent Successfully"
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Sales Invoice Email Failed")
+        return "Failed to send email"
+
+def get_customer_email(doc):
+    if not doc.customer:
+        return None
+
+    # Get Lead Detail from Customer
+    lead_name = frappe.db.get_value("Customer", doc.customer, "lead_details")
+
+    if lead_name:
+        return frappe.db.get_value("Lead Detail Form", lead_name, "email")
+
+    return None
+
+
+def send_dynamic_payment_reminders():
+    today = nowdate()
+
+    companies = frappe.get_all("Company" ,fields=["name"])
+
+    for company in companies:
+        days_before = 0
+
+        # Target date = today + days_before
+        target_date = add_days(today, days_before)
+
+        invoices = frappe.get_all(
+            "Sales Invoice",
+            filters={
+                "docstatus": 1,
+                "company": company.name,
+                "outstanding_amount": [">", 0],
+                "due_date": target_date
+            },
+            fields=["name"]
+        )
+
+        for inv in invoices:
+            doc = frappe.get_doc("Sales Invoice", inv.name)
+            send_reminder_email(doc)
+
+def send_reminder_email(doc):
+    template = frappe.get_doc("Email Template", "Payment Reminder - Sales Invoice")
+    context = {"doc": doc}
+
+    subject = frappe.render_template(template.subject, context)
+    message = frappe.render_template(template.response_html or template.response, context)
+
+    recipient = get_customer_email(doc)
+
+    if not recipient:
+        frappe.log_error(f"No email for {doc.name}", "Sales Invoice Email")
+        return
+
+    frappe.sendmail(
+        recipients=[recipient],
+        subject=subject,
+        message=message,
+        delayed=False
+    )

@@ -2673,6 +2673,483 @@ def seed_email_template():
 
 """ + Common_Footer,
 },
+
+        {
+    "name": "Sales Invoice - Send to Customer",
+    "subject": "Invoice {{ doc.name }} from {{ doc.company }} | Due {{ doc.due_date }}",
+    "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #00aef7;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Invoice from {{ doc.company }}
+                  </div>
+                  <div style="font-size:13px;color:#6b7280;margin-top:4px;">
+                    Invoice No: {{ doc.name }}
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:28px;">
+
+                  <!-- Greeting -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear {{ doc.customer_name }},
+                  </p>
+
+                  <!-- Intro -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    Thank you for your business! Please find your invoice details
+                    below. We kindly request you to review and complete the payment
+                    before the due date mentioned.
+                  </p>
+
+                  <!-- ── Invoice Summary Box ── -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #00aef7;
+                                border-radius:6px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:18px 20px;">
+
+                        <!-- Row 1: Invoice No + Date -->
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-bottom:14px;">
+                          <tr>
+                            <td style="width:50%;font-size:13px;color:#6b7280;
+                                       vertical-align:top;">
+                              Invoice Number<br/>
+                              <strong style="font-size:14px;color:#0D1B2A;">
+                                {{ doc.name }}
+                              </strong>
+                            </td>
+                            <td style="width:50%;font-size:13px;color:#6b7280;
+                                       vertical-align:top;text-align:right;">
+                              Invoice Date<br/>
+                              <strong style="font-size:14px;color:#0D1B2A;">
+                                {{ doc.posting_date }}
+                              </strong>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Divider -->
+                        <hr style="border:none;border-top:1px solid #dbeafe;margin:0 0 14px 0;" />
+
+                        <!-- Row 2: Due Date + Total -->
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="margin-bottom:14px;">
+                          <tr>
+                            <td style="width:50%;font-size:13px;color:#6b7280;
+                                       vertical-align:top;">
+                              Payment Due Date<br/>
+                              <strong style="font-size:14px;color:#0D1B2A;">
+                                {{ doc.due_date }}
+                              </strong>
+                            </td>
+                            <td style="width:50%;font-size:13px;color:#6b7280;
+                                       vertical-align:top;text-align:right;">
+                              Invoice Total<br/>
+                              <strong style="font-size:15px;color:#0D1B2A;">
+                                {{ doc.currency }} {{ "{:,.2f}".format(doc.grand_total) }}
+                              </strong>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Divider -->
+                        <hr style="border:none;border-top:1px solid #dbeafe;margin:0 0 14px 0;" />
+
+                        <!-- Row 3: Outstanding Amount (full width highlight) -->
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-size:13px;color:#6b7280;vertical-align:top;">
+                              Outstanding Amount
+                            </td>
+                            <td style="font-size:17px;font-weight:700;color:#00aef7;
+                                       text-align:right;vertical-align:top;">
+                              {{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}
+                            </td>
+                          </tr>
+                        </table>
+
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Items Table -->
+                  <p style="font-size:14px;font-weight:700;color:#0D1B2A;margin:0 0 10px;">
+                    Invoice Items:
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="border:1px solid #e5e7eb;border-radius:6px;
+                                overflow:hidden;margin-bottom:24px;font-size:13px;">
+
+                    <!-- Table Header -->
+                    <tr style="background:#0D1B2A;">
+                      <td style="padding:10px 14px;color:#ffffff;font-weight:700;width:50%;">
+                        Item
+                      </td>
+                      <td style="padding:10px 14px;color:#ffffff;font-weight:700;
+                                 text-align:center;width:15%;">
+                        Qty
+                      </td>
+                      <td style="padding:10px 14px;color:#ffffff;font-weight:700;
+                                 text-align:right;width:20%;">
+                        Rate
+                      </td>
+                      <td style="padding:10px 14px;color:#ffffff;font-weight:700;
+                                 text-align:right;width:15%;">
+                        Amount
+                      </td>
+                    </tr>
+
+                    <!-- Table Rows (Jinja loop) -->
+                    {% for item in doc.items %}
+                    <tr style="border-top:1px solid #f3f4f6;
+                               background:{{ '#f9fafb' if loop.index is odd else '#ffffff' }};">
+                      <td style="padding:10px 14px;color:#334B5C;vertical-align:top;">
+                        {{ item.item_name }}
+                        {% if item.description and item.description != item.item_name %}
+                        <div style="font-size:12px;color:#9ca3af;margin-top:2px;">
+                          {{ item.description[:80] }}{% if item.description|length > 80 %}…{% endif %}
+                        </div>
+                        {% endif %}
+                      </td>
+                      <td style="padding:10px 14px;color:#334B5C;
+                                 text-align:center;vertical-align:top;">
+                        {{ item.qty | int if item.qty == item.qty | int else item.qty }}
+                        {{ item.uom or '' }}
+                      </td>
+                      <td style="padding:10px 14px;color:#334B5C;
+                                 text-align:right;vertical-align:top;">
+                        {{ doc.currency }} {{ "{:,.2f}".format(item.rate) }}
+                      </td>
+                      <td style="padding:10px 14px;color:#334B5C;
+                                 text-align:right;vertical-align:top;font-weight:600;">
+                        {{ doc.currency }} {{ "{:,.2f}".format(item.amount) }}
+                      </td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Subtotal Row -->
+                    {% if doc.total_taxes_and_charges %}
+                    <tr style="border-top:1px solid #e5e7eb;background:#f9fafb;">
+                      <td colspan="3"
+                          style="padding:10px 14px;color:#6b7280;text-align:right;">
+                        Subtotal
+                      </td>
+                      <td style="padding:10px 14px;color:#334B5C;
+                                 text-align:right;font-weight:600;">
+                        {{ doc.currency }} {{ "{:,.2f}".format(doc.net_total) }}
+                      </td>
+                    </tr>
+
+                    <!-- Tax Row -->
+                    <tr style="border-top:1px solid #f3f4f6;background:#f9fafb;">
+                      <td colspan="3"
+                          style="padding:10px 14px;color:#6b7280;text-align:right;">
+                        Taxes &amp; Charges
+                      </td>
+                      <td style="padding:10px 14px;color:#334B5C;
+                                 text-align:right;font-weight:600;">
+                        {{ doc.currency }} {{ "{:,.2f}".format(doc.total_taxes_and_charges) }}
+                      </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Grand Total Row -->
+                    <tr style="border-top:2px solid #00aef7;background:#f0f7ff;">
+                      <td colspan="3"
+                          style="padding:12px 14px;color:#0D1B2A;
+                                 text-align:right;font-weight:700;font-size:14px;">
+                        Grand Total
+                      </td>
+                      <td style="padding:12px 14px;color:#00aef7;
+                                 text-align:right;font-weight:700;font-size:15px;">
+                        {{ doc.currency }} {{ "{:,.2f}".format(doc.grand_total) }}
+                      </td>
+                    </tr>
+
+                  </table>
+
+                  <!-- Warning Notice (only if outstanding) -->
+                  {% if doc.outstanding_amount > 0 %}
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#fff8f0;border-left:4px solid #f59e0b;
+                                border-radius:6px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#92400e;line-height:1.6;">
+                        ⚠️ &nbsp;A payment of
+                        <strong>{{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}</strong>
+                        is pending. Please complete the payment by
+                        <strong>{{ doc.due_date }}</strong> to avoid any delays.
+                      </td>
+                    </tr>
+                  </table>
+                  {% endif %}
+
+                  <!-- CTA Button -->
+                  <div style="text-align:center;margin:24px 0;">
+                    <a href="{{ frappe.utils.get_url_to_form('Sales Invoice', doc.name) }}"
+                       style="background:#00aef7;color:#ffffff;text-decoration:none;
+                              padding:13px 36px;border-radius:8px;font-size:15px;
+                              font-weight:700;display:inline-block;letter-spacing:0.2px;">
+                      View Invoice Online
+                    </a>
+                  </div>
+
+                  <!-- Divider -->
+                  <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px 0;" />
+
+                  <!-- Payment Methods -->
+                  <p style="font-size:14px;font-weight:700;color:#0D1B2A;margin:0 0 10px;">
+                    Payment Methods Accepted:
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f9fafb;border:1px solid #e5e7eb;
+                                border-radius:6px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:14px 18px;font-size:13px;
+                                 color:#334B5C;line-height:2.0;">
+                        🏦 &nbsp;<strong>Bank Transfer / NEFT / RTGS</strong><br/>
+                        💳 &nbsp;<strong>UPI / Online Payment</strong><br/>
+                        📄 &nbsp;<strong>Cheque</strong> (payable to {{ doc.company }})
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Closing -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    If you have any questions about this invoice or need any
+                    clarification, please feel free to reach out to us. We are
+                    always happy to help.
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    Thank you for choosing <strong>{{ doc.company }}</strong>.
+                    We truly appreciate your trust and look forward to continuing
+                    to serve you.
+                  </p>
+
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
+# ──────────────────────────────────────────────────────────────
+        # ADD THIS BLOCK inside the `templates = [ ... ]` list
+        # in your seed_email_template.py file
+        # ──────────────────────────────────────────────────────────────
+        {
+    "name": "Payment Due Reminder - Purchase Invoice",
+    "subject": "Action Required: Supplier Payment Due – {{ doc.name }} | Due {{ doc.due_date }}",
+    "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #00aef7;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Supplier Payment Due Reminder
+                  </div>
+                  <div style="font-size:13px;color:#6b7280;margin-top:4px;">
+                    Purchase Invoice: {{ doc.name }}
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:28px;">
+
+                  <!-- Greeting -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear Accounts Team,
+                  </p>
+
+                  <!-- Intro -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    This is an automated reminder to inform you that a supplier
+                    payment is due shortly. Please review the invoice details below
+                    and initiate the payment at the earliest to maintain a good
+                    vendor relationship and avoid any late charges.
+                  </p>
+
+                  <!-- Invoice Details -->
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Invoice Number:</strong> {{ doc.name }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Supplier:</strong> {{ doc.supplier_name }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Invoice Date:</strong> {{ doc.posting_date }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Payment Due Date:</strong> {{ doc.due_date }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Invoice Total:</strong>
+                    {{ doc.currency }} {{ "{:,.2f}".format(doc.grand_total) }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 20px;">
+                    <strong>Outstanding Amount:</strong>
+                    {{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}
+                  </p>
+
+                  <!-- Divider -->
+                  <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px 0;" />
+
+                  <!-- Payment Summary Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #00aef7;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:16px 18px;">
+
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:8px;width:50%;">
+                              <span style="color:#6b7280;">Supplier</span><br/>
+                              <strong style="color:#0D1B2A;font-size:14px;">
+                                {{ doc.supplier_name }}
+                              </strong>
+                            </td>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:8px;width:50%;text-align:right;">
+                              <span style="color:#6b7280;">Amount Due</span><br/>
+                              <strong style="color:#0D1B2A;font-size:16px;">
+                                {{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}
+                              </strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;" colspan="2">
+                              <span style="color:#6b7280;">Due Date</span><br/>
+                              <strong style="color:#0D1B2A;font-size:14px;">
+                                {{ doc.due_date }}
+                              </strong>
+                            </td>
+                          </tr>
+                        </table>
+
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Warning Notice -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#fff8f0;border-left:4px solid #f59e0b;
+                                border-radius:6px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#92400e;line-height:1.6;">
+                        ⚠️ Please ensure payment is processed before the due date to
+                        avoid penalties, maintain supplier trust, and prevent any
+                        disruption to future purchase orders.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- CTA Button -->
+                  <div style="text-align:center;margin:24px 0;">
+                    <a href="{{ frappe.utils.get_url_to_form('Purchase Invoice', doc.name) }}"
+                       style="background:#00aef7;color:#ffffff;text-decoration:none;
+                              padding:13px 36px;border-radius:8px;font-size:15px;
+                              font-weight:700;display:inline-block;letter-spacing:0.2px;">
+                      View Purchase Invoice
+                    </a>
+                  </div>
+
+                  <!-- Action Checklist -->
+                  <p style="font-size:14px;font-weight:700;color:#0D1B2A;margin:0 0 10px;">
+                    Suggested Actions:
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0fdf4;border-left:4px solid #22c55e;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:14px 18px;font-size:13px;
+                                 color:#166534;line-height:2.0;">
+                        ✅ &nbsp;Review the Purchase Invoice and verify the outstanding amount.<br/>
+                        ✅ &nbsp;Initiate payment entry or bank transfer to the supplier.<br/>
+                        ✅ &nbsp;Record the Payment Entry in ERPNext against this invoice.<br/>
+                        ✅ &nbsp;Confirm payment with the supplier and collect acknowledgment.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Closing -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    If the payment has already been processed, please ensure the
+                    Payment Entry is recorded in ERPNext so the outstanding balance
+                    is updated accordingly.
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    For any queries regarding this invoice, please reach out to
+                    the respective purchase or accounts manager.
+                  </p>
+
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
     ]
 
     for t in templates:
