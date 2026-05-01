@@ -177,8 +177,10 @@ class PurchaseInvoice(Document):
         self.in_words = money_in_words(self.rounded_total, self.currency)
 
         self.base_in_words = money_in_words(
-            self.base_rounded_total, self.company_currency
+            self.base_rounded_total ,
+            self.company_currency
         )
+
 
     @frappe.whitelist()
     def set_credit_to_account(self):
@@ -189,14 +191,15 @@ class PurchaseInvoice(Document):
             frappe.throw(_("Company is required"))
 
         account = frappe.db.get_value(
-            "Company", self.company, "default_payable_account"
+            "Company",
+            self.company,
+            "default_payable_account"
         )
 
         if not account:
             frappe.throw(
-                _("No Default Payable Account found for Company {0}").format(
-                    self.company
-                )
+                _("No Default Payable Account found for Company {0}")
+                .format(self.company)
             )
 
         self.credit_to = account
