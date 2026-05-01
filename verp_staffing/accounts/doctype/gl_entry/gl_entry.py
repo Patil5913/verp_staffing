@@ -8,15 +8,112 @@ from frappe.utils import flt
 from verp_staffing.accounts.doctype.account.account import get_account_currency
 
 class GLEntry(Document):
-    pass
-	# def autoname(self):
-	# 	"""
-	# 	Temporarily name doc for fast insertion
-	# 	name will be changed using autoname options (in a scheduled job)
-	# 	"""
-	# 	self.name = frappe.generate_hash(txt="", length=10)
-	# 	if self.meta.autoname == "hash":
-	# 		self.to_rename = 0
+    def validate(self):
+            self.validate_mandatory_fields()
+            self.validate_amounts()
+            self.validate_account()
+            self.validate_company()
+            self.validate_party()
+            self.validate_currency()
+            self.validate_fiscal_year()
+            self.validate_voucher()
+    
+    def validate_mandatory_fields(self):
+        if not self.account:
+            frappe.throw(_("Account is required"))
+
+        if not self.company:
+            frappe.throw(_("Company is required"))
+
+        if not self.posting_date:
+            frappe.throw(_("Posting Date is required"))
+
+    def validate_amounts(self):
+        debit = flt(self.debit)
+        credit = flt(self.credit)
+
+        if debit and credit:
+            frappe.throw(_("Both Debit and Credit cannot be set"))
+
+        if not debit and not credit:
+            frappe.throw(_("Either Debit or Credit must be set"))
+
+    # ACCOUNT VALIDATION
+    def validate_account(self):
+        if not frappe.db.exists("Account", self.account):
+            frappe.throw(_("Account {0} does not exist").format(self.account))
+
+        account_company = frappe.db.get_value("Account", self.account, "company")
+
+        if account_company != self.company:
+            frappe.throw(
+                _("Account {0} does not belong to Company {1}").format(
+                    self.account, self.company
+                )
+            )
+
+    # COMPANY VALIDATION
+    def validate_company(self):
+        if not frappe.db.exists("Company", self.company):
+            frappe.throw(_("Company {0} does not exist").format(self.company))
+
+    # PARTY VALIDATION
+    def validate_party(self):
+        account_type = frappe.db.get_value("Account", self.account, "account_type")
+
+        if account_type in ["Receivable", "Payable"]:
+            if not self.party:
+                frappe.throw(
+                    _("Party is required for Receivable/Payable account {0}").format(self.account)
+                )
+
+        if self.party and not self.party_type:
+            frappe.throw(_("Party Type is required if Party is set"))
+
+    # CURRENCY VALIDATION
+    def validate_currency(self):
+        exchange_rate = flt(self.exchange_rate or 1)
+
+        if exchange_rate <= 0:
+            frappe.throw(_("Exchange Rate must be greater than 0"))
+
+        company_currency = frappe.db.get_value("Company", self.company, "default_currency")
+
+        if self.transaction_currency and self.transaction_currency != company_currency:
+            if not self.exchange_rate:
+                frappe.throw(_("Exchange Rate is required for foreign currency transactions"))
+
+    # FISCAL YEAR VALIDATION
+    def validate_fiscal_year(self):
+        fy = get_fiscal_year(self.posting_date, self.company)
+
+        if not fy:
+            frappe.throw(_("No Fiscal Year found for date {0}").format(self.posting_date))
+
+        if not self.fiscal_year:
+            self.fiscal_year = fy
+        elif self.fiscal_year != fy:
+            frappe.throw(
+                _("Fiscal Year {0} does not match Posting Date {1}").format(
+                    self.fiscal_year, self.posting_date
+                )
+            )
+        
+    # VOUCHER VALIDATION
+    def validate_voucher(self):
+        if self.voucher_type and not self.voucher_no:
+            frappe.throw(_("Voucher Number is required if Voucher Type is set"))
+
+        if self.voucher_no and not self.voucher_type:
+            frappe.throw(_("Voucher Type is required if Voucher Number is set"))
+
+        if self.voucher_type and self.voucher_no:
+            if not frappe.db.exists(self.voucher_type, self.voucher_no):
+                frappe.throw(
+                    _("Voucher {0} does not exist in {1}").format(
+                        self.voucher_no, self.voucher_type
+                    )
+                )
 
 
 def build_gl_entry(
@@ -174,21 +271,47 @@ def cancel_gl_entries(doc, method=None):
             "is_cancelled": 1
         }).insert(ignore_permissions=True)
 
-def get_fiscal_year(posting_date):
-    fy = frappe.get_all(
+def get_fiscal_year(posting_date, company=None):
+    if not posting_date:
+        frappe.throw("Posting Date is required to determine Fiscal Year")
+
+    # Find all FYs matching date
+    fys = frappe.get_all(
         "Fiscal Year",
         filters={
             "year_start_date": ["<=", posting_date],
-            "year_end_date": [">=", posting_date]
+            "year_end_date": [">=", posting_date],
+            "disabled": 0
         },
-        fields=["name"],
-        limit=1
+        fields=["name"]
     )
 
-    if not fy:
+    if not fys:
         frappe.throw(f"No Fiscal Year found for date {posting_date}")
 
-    return fy[0].name
+    fy_names = [fy.name for fy in fys]
+
+    # Filter for company if provided
+    if company:
+        valid_fy = frappe.get_all(
+            "Fiscal Year Company",
+            filters={
+                "parent": ["in", fy_names],
+                "company": company
+            },
+            pluck="parent",
+            limit=1
+        )
+
+        if not valid_fy:
+            frappe.throw(
+                f"No Fiscal Year found for company {company} for date {posting_date}"
+            )
+
+        return valid_fy[0]
+
+    # fallback
+    return fy_names[0]
 
 # adds additional fields to the gl entry based on the doc (like exchange rate, fiscal year, etc.)
 def enrich_gl_entry(entry, doc):
@@ -213,7 +336,7 @@ def enrich_gl_entry(entry, doc):
     entry["exchange_rate"] = exchange_rate
 
     # 🔹 Fiscal year
-    entry["fiscal_year"] = get_fiscal_year(doc.posting_date)
+    entry["fiscal_year"] = get_fiscal_year(doc.posting_date,doc.company)
 
     # 🔹 Transaction currency amounts
     debit = flt(entry.get("debit"))
