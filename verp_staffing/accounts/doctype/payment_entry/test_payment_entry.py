@@ -5,71 +5,29 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import flt, nowdate, add_days
 
-
-def get_company():
-    company = frappe.db.get_value("Company", filters={}, fieldname="name")
-    if not company:
-        frappe.throw("No company found. Please create a company first.")
-    return company
-
-
-def get_company_currency(company):
-    return frappe.get_cached_value("Company", company, "default_currency")
-
-
-def get_default_receivable_account(company):
-    return frappe.get_cached_value("Company", company, "default_receivable_account")
-
-
-def get_default_payable_account(company):
-    return frappe.get_cached_value("Company", company, "default_payable_account")
+from verp_staffing.accounts.utils.test_utils import (
+    create_company_if_not_exists,
+    create_fiscal_year_if_not_exists,
+    get_or_create_income_account,
+    get_or_create_cash_account,
+    get_or_create_write_off_account,
+    create_party_types_if_not_exists,
+    get_company_currency,
+    get_default_receivable_account,
+    get_default_payable_account,
+    create_uom_if_not_exists,
+    get_or_create_test_customer,
+    get_or_create_test_supplier,
+)
 
 
-def get_cash_account(company):
-    return frappe.db.get_value(
-        "Account",
-        {"company": company, "account_type": "Cash", "is_group": 0},
-        "name",
-    )
-
-
-def get_income_account(company):
-    return frappe.db.get_value(
-        "Account",
-        {"company": company, "account_type": "Income Account", "is_group": 0},
-        "name",
-    )
-
-
-def get_default_uom():
-    return frappe.db.get_value("UOM", {}, "name")
-
-
-def make_sales_invoice(
-    company=None,
-    customer=None,
-    amount=1000,
-    do_not_submit=False,
-):
-    company = company or get_company()
+def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=False):
+    company = company or create_company_if_not_exists("vrugle").name
     currency = get_company_currency(company)
     debit_to = get_default_receivable_account(company)
-    income_account = get_income_account(company)
-
-    if not customer:
-        customer = _get_or_create_customer(company, currency)
-
-    if not debit_to:
-        frappe.throw(
-            f"No default receivable account configured for company '{company}'. "
-            "Please set it in Company master."
-        )
-    if not income_account:
-        frappe.throw(f"No income account found for company '{company}'.")
-
-    uom = frappe.db.get_value("UOM", {}, "name")
-    if not uom:
-        frappe.throw("No UOM found. Please create at least one Unit of Measurement.")
+    income_account = get_or_create_income_account(company)
+    customer = customer or get_or_create_test_customer(company)
+    uom = create_uom_if_not_exists("kg")
 
     si = frappe.new_doc("Sales Invoice")
     si.company = company
@@ -83,7 +41,6 @@ def make_sales_invoice(
     if frappe.get_meta("Sales Invoice").has_field("naming_series"):
         si.naming_series = "ACC-SINV-.YYYY.-"
 
-    # ── No "item" link field — only item_name, description, qty, rate ──
     si.append(
         "items",
         {
@@ -97,10 +54,8 @@ def make_sales_invoice(
     )
 
     si.insert(ignore_permissions=True)
-
     if not do_not_submit:
         si.submit()
-
     return si
 
 
@@ -114,9 +69,9 @@ def make_payment_entry(
     paid_amount=1000,
     references=None,
 ):
-    company = company or get_company()
+    company = company or create_company_if_not_exists("vrugle").name
     currency = get_company_currency(company)
-    cash = get_cash_account(company)
+    cash = get_or_create_cash_account(company)
     receivable = get_default_receivable_account(company)
     payable = get_default_payable_account(company)
 
@@ -129,9 +84,9 @@ def make_payment_entry(
 
     if not party:
         if party_type == "Customer":
-            party = _get_or_create_customer(company, currency)
+            party = get_or_create_test_customer(company)
         else:
-            party = _get_or_create_supplier(company, currency)
+            party = get_or_create_test_supplier(company)
 
     pe = frappe.new_doc("Payment Entry")
     pe.company = company
@@ -183,62 +138,29 @@ def make_payment_entry(
     return pe
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _get_or_create_customer(company, currency):
-    name = f"_Test Customer {company}"
-
-    existing = frappe.db.get_value("Customer", {"name1": name}, "name")
-    if existing:
-        return existing
-
-    try:
-        customer = frappe.new_doc("Customer")
-        customer.name1 = name
-        customer.insert(ignore_permissions=True)
-        return customer.name
-    except frappe.DuplicateEntryError:
-        existing = frappe.db.get_value("Customer", {"name1": name}, "name")
-        if existing:
-            return existing
-        raise
-
-
-def _get_or_create_supplier(company, currency):
-    name = f"_Test Supplier {company}"
-
-    existing = frappe.db.get_value("Supplier", {"supplier_name": name}, "name")
-    if existing:
-        return existing
-
-    try:
-        supplier = frappe.new_doc("Supplier")
-        supplier.supplier_name = name
-        supplier.supplier_type = "Individual"
-        supplier.insert(ignore_permissions=True)
-        return supplier.name
-    except frappe.DuplicateEntryError:
-        existing = frappe.db.get_value("Supplier", {"supplier_name": name}, "name")
-        if existing:
-            return existing
-        raise
-
-
 class PaymentEntry(FrappeTestCase):
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         super().setUpClass()
+        company = create_company_if_not_exists("vrugle").name
+
+        get_or_create_cash_account(company)
+        get_or_create_income_account(company)
+        get_or_create_write_off_account(company)
+        create_party_types_if_not_exists()
+        create_fiscal_year_if_not_exists(
+            fiscal_year="2026",
+            companies=[company],
+            start_date="2026-01-01",
+            end_date="2026-12-31",
+        )
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         frappe.db.rollback()
 
 
 class TestPaymentEntry(PaymentEntry):
-    
     # 1 Full payment → outstanding becomes 0
 
     def test_full_payment_updates_outstanding(self):
@@ -308,13 +230,10 @@ class TestPaymentEntry(PaymentEntry):
             frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
         )
         self.assertEqual(
-            outstanding,
-            600,
-            "outstanding_amount should be 600 after partial payment",
+            outstanding, 600, "outstanding_amount should be 600 after partial payment"
         )
 
     # 3 Cancel payment → outstanding restored
-
     def test_cancel_payment_restores_outstanding(self):
         """
         Cancelling a Payment Entry must add back the allocated amount
@@ -351,9 +270,7 @@ class TestPaymentEntry(PaymentEntry):
             frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
         )
         self.assertEqual(
-            outstanding,
-            300,
-            "outstanding_amount must be restored to 300 after cancel",
+            outstanding, 300, "outstanding_amount must be restored to 300 after cancel"
         )
 
     # 4 Nonzero difference_amount blocks submit
@@ -384,17 +301,15 @@ class TestPaymentEntry(PaymentEntry):
         with self.assertRaises(frappe.ValidationError):
             pe.submit()
 
-    # 5 Zero paid_amount is rejected on insert
+    # 5. Zero paid_amount is rejected on insert
 
     def test_zero_paid_amount_is_rejected(self):
         """
         A Payment Entry with paid_amount = 0 must raise ValidationError on insert.
         """
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
-        cash = get_cash_account(company)
-        receivable = get_default_receivable_account(company)
-        customer = _get_or_create_customer(company, currency)
+        customer = get_or_create_test_customer(company)
 
         pe = frappe.new_doc("Payment Entry")
         pe.company = company
@@ -402,8 +317,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = customer
-        pe.paid_from = receivable
-        pe.paid_to = cash
+        pe.paid_from = get_default_receivable_account(company)
+        pe.paid_to = get_or_create_cash_account(company)
         pe.paid_amount = 0
         pe.received_amount = 0
         pe.currency = currency
@@ -413,7 +328,7 @@ class TestPaymentEntry(PaymentEntry):
         with self.assertRaises(frappe.ValidationError):
             pe.insert(ignore_permissions=True)
 
-    # 6 Unallocated payment does not effect any invoice outstanding
+    # 6. Unallocated payment does not affect any invoice outstanding
 
     def test_unallocated_payment_does_not_touch_invoice(self):
         """
@@ -443,7 +358,7 @@ class TestPaymentEntry(PaymentEntry):
             "Invoice outstanding must not change for an unallocated payment",
         )
 
-    # 7 Currency mismatch between invoice and payment entry
+    # 7. Currency mismatch between invoice and payment entry
 
     def test_currency_mismatch_raises_error(self):
         """
@@ -451,17 +366,12 @@ class TestPaymentEntry(PaymentEntry):
         differs from the Payment Entry currency, a ValidationError must
         be raised.
         """
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         company_currency = get_company_currency(company)
-        currency = get_company_currency(company)
-        receivable = get_default_receivable_account(company)
-        cash = get_cash_account(company)
-        customer = _get_or_create_customer(company, currency)
+        customer = get_or_create_test_customer(company)
 
-        # ── Create invoice in company currency (e.g. INR) ──
         si = make_sales_invoice(amount=500, customer=customer)
 
-        # ── Find a different currency to use for the Payment Entry ──
         different_currency = frappe.db.get_value(
             "Currency",
             {"name": ["!=", company_currency], "enabled": 1},
@@ -470,29 +380,25 @@ class TestPaymentEntry(PaymentEntry):
         if not different_currency:
             self.skipTest("No second enabled currency found to test mismatch")
 
-        # ── Build a Payment Entry manually with a different currency ──
         pe = frappe.new_doc("Payment Entry")
         pe.company = company
         pe.payment_type = "Receive"
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = customer
-        pe.paid_from = receivable
-        pe.paid_to = cash
+        pe.paid_from = get_default_receivable_account(company)
+        pe.paid_to = get_or_create_cash_account(company)
         pe.paid_amount = 500
         pe.received_amount = 500
         pe.base_paid_amount = 500
         pe.base_received_amount = 500
-        pe.paid_from_account_currency = currency
-        pe.paid_to_account_currency = currency
-        pe.currency = (
-            different_currency  # ← intentionally different from invoice currency
-        )
+        pe.paid_from_account_currency = company_currency
+        pe.paid_to_account_currency = company_currency
+        pe.currency = different_currency
         pe.conversion_rate = 80
         pe.difference_amount = 0
         pe.base_difference_amount = 0
 
-        # ── Reference the invoice whose currency differs from PE currency ──
         pe.append(
             "references",
             {
@@ -502,7 +408,7 @@ class TestPaymentEntry(PaymentEntry):
                 "outstanding_amount": 500,
                 "allocated_amount": 500,
                 "exchange_rate": 1,
-                "invoice_currency": company_currency,  # ← invoice is in company_currency
+                "invoice_currency": company_currency,
             },
         )
 
@@ -514,7 +420,7 @@ class TestPaymentEntry(PaymentEntry):
         with self.assertRaises(frappe.ValidationError):
             pe.insert(ignore_permissions=True)
 
-    # # 8. Two partial payments sum to full payment
+    # 8. Two partial payments sum to full payment
 
     def test_two_partial_payments_sum_to_full_payment(self):
         """
@@ -579,8 +485,7 @@ class TestPaymentEntry(PaymentEntry):
         a ValidationError.
         """
         si = make_sales_invoice(amount=100)
-
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
 
         pe = frappe.new_doc("Payment Entry")
@@ -590,7 +495,7 @@ class TestPaymentEntry(PaymentEntry):
         pe.party_type = "Customer"
         pe.party = si.customer
         pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_cash_account(company)
+        pe.paid_to = get_or_create_cash_account(company)
         pe.paid_amount = 150
         pe.received_amount = 150
         pe.base_paid_amount = 150
@@ -617,17 +522,15 @@ class TestPaymentEntry(PaymentEntry):
         with self.assertRaises(frappe.ValidationError):
             pe.insert(ignore_permissions=True)
 
-    # 10 Difference amount should be zero when paid amount and allocated amount are same
+    # 10. difference_amount is 0 when paid = allocated
 
     def test_difference_amount_zero_when_amounts_match(self):
         """
         If paid_amount and allocated_amount are equal,
         difference_amount should be 0.
         """
-
         si = make_sales_invoice(amount=100)
-
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
 
         pe = frappe.new_doc("Payment Entry")
@@ -636,15 +539,12 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-
         pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_cash_account(company)
-
+        pe.paid_to = get_or_create_cash_account(company)
         pe.paid_amount = 100
         pe.received_amount = 100
         pe.base_paid_amount = 100
         pe.base_received_amount = 100
-
         pe.paid_from_account_currency = currency
         pe.paid_to_account_currency = currency
         pe.currency = currency
@@ -671,18 +571,15 @@ class TestPaymentEntry(PaymentEntry):
             "Difference amount should be 0 when paid amount equals allocated amount",
         )
 
-    # 11 Difference amount should be calculated when allocated amount is greater than paid amount
+    # 11. difference_amount = allocated − paid when allocated > paid
 
     def test_difference_amount_when_allocated_greater_than_paid(self):
         """
-        If allocated_amount is greater than paid_amount,
-        difference_amount should be:
-        allocated_amount - paid_amount
+        If allocated_amount > paid_amount, difference_amount should equal
+        allocated_amount − paid_amount.
         """
-
         si = make_sales_invoice(amount=150)
-
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
 
         pe = frappe.new_doc("Payment Entry")
@@ -691,15 +588,12 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-
         pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_cash_account(company)
-
+        pe.paid_to = get_or_create_cash_account(company)
         pe.paid_amount = 100
         pe.received_amount = 100
         pe.base_paid_amount = 100
         pe.base_received_amount = 100
-
         pe.paid_from_account_currency = currency
         pe.paid_to_account_currency = currency
         pe.currency = currency
@@ -726,7 +620,7 @@ class TestPaymentEntry(PaymentEntry):
             "Difference amount should be allocated_amount - paid_amount",
         )
 
-    # 12 GL entries are created on submit
+    # 12. GL entries are created on submit
 
     def test_gl_entries_created_on_submit(self):
         """
@@ -764,12 +658,11 @@ class TestPaymentEntry(PaymentEntry):
             gl_count, 0, "GL entries must be created on Payment Entry submit"
         )
 
-    # 13 GL entries are reversed on cancel
+    # 13. GL entries are reversed on cancel
 
     def test_gl_entries_reversed_on_cancel(self):
         """
-        Cancelling a Payment Entry must mark original GL entries
-        as cancelled.
+        Cancelling a Payment Entry must mark original GL entries as cancelled.
         """
         si = make_sales_invoice(amount=150)
 
@@ -805,146 +698,100 @@ class TestPaymentEntry(PaymentEntry):
             "Original GL entries should be marked cancelled after cancel",
         )
 
-    # 14 Check is Currecy if currecy is diffrent
+    # 14. base_* fields are correct with a non-1 exchange rate
 
     def test_base_currency_fields_with_exchange_rate(self):
         """
         When Payment Entry currency differs from company currency,
-        all base_* fields should be calculated using conversion_rate.
+        all base_* fields must be calculated using conversion_rate.
         """
-
-        company = get_company()
-        company_currency = get_company_currency(company)
-
-        customer = _get_or_create_customer(company, company_currency)
+        company = create_company_if_not_exists("vrugle").name
+        customer = get_or_create_test_customer(company)
 
         exchange_rate = 100
 
         pe = frappe.new_doc("Payment Entry")
-
         pe.company = company
         pe.payment_type = "Receive"
         pe.posting_date = nowdate()
-
         pe.party_type = "Customer"
         pe.party = customer
-
         pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_cash_account(company)
-
+        pe.paid_to = get_or_create_cash_account(company)
         pe.company_currency = "INR"
         pe.currency = "USD"
-
         pe.conversion_rate = exchange_rate
 
-        # Payment currency amounts
         pe.paid_amount = 100
         pe.total_allocated_amount = 70
         pe.unallocated_amount = 20
         pe.difference_amount = 10
         pe.total_taxes_and_charges = 5
 
-        # Base currency calculations
         pe.base_paid_amount = pe.paid_amount * exchange_rate
-
         pe.base_total_allocated_amount = pe.total_allocated_amount * pe.conversion_rate
-
         pe.base_unallocated_amount = pe.unallocated_amount * pe.conversion_rate
-
         pe.base_difference_amount = pe.difference_amount * pe.conversion_rate
-
         pe.base_total_taxes_and_charges = (
             pe.total_taxes_and_charges * pe.conversion_rate
         )
-
-        # Assertions
 
         self.assertEqual(
             pe.base_paid_amount,
             10000,
             "Base paid amount should be converted using exchange rate",
         )
-
         self.assertEqual(
             pe.base_total_allocated_amount,
             7000,
             "Base allocated amount should be converted using exchange rate",
         )
-
         self.assertEqual(
             pe.base_unallocated_amount,
             2000,
             "Base unallocated amount should be converted using exchange rate",
         )
-
         self.assertEqual(
             pe.base_difference_amount,
             1000,
             "Base difference amount should be converted using exchange rate",
         )
-
         self.assertEqual(
             pe.base_total_taxes_and_charges,
             500,
             "Base taxes amount should be converted using exchange rate",
         )
 
-    # 16. Write off should create deduction/loss entry
-
-    # 16. Write off should create deduction/loss entry
+    # 16. Write-off → deduction row created
 
     def test_write_off_difference_amount_creates_deduction(self):
         """
-        When user writes off the difference amount,
-        that amount should be reflected in Payment Deductions or Loss table.
+        When the user writes off the difference amount, that amount must
+        be reflected in the Payment Deductions / Loss table.
         """
-
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
-
-        # Create invoice
         si = make_sales_invoice(amount=150)
-
-        # Get write off account from Company
-        write_off_account = frappe.get_cached_value(
-            "Company",
-            company,
-            "write_off_account",
-        )
-
-        self.assertTrue(
-            write_off_account,
-            "Company must have a write_off_account configured",
-        )
+        write_off_account = get_or_create_write_off_account(company)
 
         pe = frappe.new_doc("Payment Entry")
-
         pe.company = company
         pe.payment_type = "Receive"
         pe.posting_date = nowdate()
-
         pe.party_type = "Customer"
         pe.party = si.customer
-
         pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_cash_account(company)
-
+        pe.paid_to = get_or_create_cash_account(company)
         pe.currency = currency
         pe.company_currency = currency
-
         pe.paid_from_account_currency = currency
         pe.paid_to_account_currency = currency
-
         pe.conversion_rate = 1
-
-        # Customer paid only 100
         pe.paid_amount = 100
         pe.received_amount = 100
-
         pe.base_paid_amount = 100
         pe.base_received_amount = 100
 
-        # Invoice allocated amount = 150
         pe.append(
             "references",
             {
@@ -957,94 +804,51 @@ class TestPaymentEntry(PaymentEntry):
                 "invoice_currency": currency,
             },
         )
-
-        # Write off entry
-        pe.append(
-            "deductions",
-            {
-                "account": write_off_account,
-                "amount": 50,
-            },
-        )
-
+        pe.append("deductions", {"account": write_off_account, "amount": 50})
         pe.insert(ignore_permissions=True)
 
-        # Validate deduction row created
-        self.assertEqual(
-            len(pe.deductions),
-            1,
-            "One deduction row should be created",
-        )
-
-        # Validate account
+        self.assertEqual(len(pe.deductions), 1, "One deduction row should be created")
         self.assertEqual(
             pe.deductions[0].account,
             write_off_account,
-            "Deduction account should match company write off account",
+            "Deduction account should match write_off_account",
         )
-
-        # Validate amount
         self.assertEqual(
             flt(pe.deductions[0].amount),
             50,
             "Deduction amount should match difference amount",
         )
 
-        # 17. Write off should create GL Entry
+    # 17. Write-off → GL Entry created
 
     def test_write_off_creates_gl_entry(self):
         """
-        When difference amount is written off,
-        corresponding GL Entry should be created
-        against company write off account.
+        When the difference amount is written off, a corresponding GL Entry
+        must be created against the company write-off account.
         """
-
-        company = get_company()
+        company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
-
-        # Create invoice
         si = make_sales_invoice(amount=150)
-
-        # Company write off account
-        write_off_account = frappe.get_cached_value(
-            "Company",
-            company,
-            "write_off_account",
-        )
-
-        self.assertTrue(
-            write_off_account,
-            "Company must have write_off_account configured",
-        )
+        write_off_account = get_or_create_write_off_account(company)
 
         pe = frappe.new_doc("Payment Entry")
-
         pe.company = company
         pe.payment_type = "Receive"
         pe.posting_date = nowdate()
-
         pe.party_type = "Customer"
         pe.party = si.customer
-
         pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_cash_account(company)
-
+        pe.paid_to = get_or_create_cash_account(company)
         pe.currency = currency
         pe.company_currency = currency
-
         pe.paid_from_account_currency = currency
         pe.paid_to_account_currency = currency
-
         pe.conversion_rate = 1
-
-        # Customer paid only 100
         pe.paid_amount = 100
         pe.received_amount = 100
-
         pe.base_paid_amount = 100
         pe.base_received_amount = 100
 
-        # Allocate full invoice
         pe.append(
             "references",
             {
@@ -1057,20 +861,10 @@ class TestPaymentEntry(PaymentEntry):
                 "invoice_currency": currency,
             },
         )
-
-        # Write off row
-        pe.append(
-            "deductions",
-            {
-                "account": write_off_account,
-                "amount": 50,
-            },
-        )
-
+        pe.append("deductions", {"account": write_off_account, "amount": 50})
         pe.insert(ignore_permissions=True)
         pe.submit()
 
-        # Find GL Entries created for write off account
         gl_entries = frappe.get_all(
             "GL Entry",
             filters={
@@ -1079,26 +873,10 @@ class TestPaymentEntry(PaymentEntry):
                 "account": write_off_account,
                 "is_cancelled": 0,
             },
-            fields=[
-                "name",
-                "account",
-                "debit",
-                "credit",
-            ],
+            fields=["name", "account", "debit", "credit"],
         )
 
-        # GL Entry must exist
-        self.assertGreater(
-            len(gl_entries),
-            0,
-            "Write off GL Entry should be created",
-        )
-
-        # Validate GL amount
-        write_off_gl = gl_entries[0]
-
+        self.assertGreater(len(gl_entries), 0, "Write off GL Entry should be created")
         self.assertEqual(
-            flt(write_off_gl.debit),
-            50,
-            "Write off GL debit should be 50",
+            flt(gl_entries[0].debit), 50, "Write off GL debit should be 50"
         )
