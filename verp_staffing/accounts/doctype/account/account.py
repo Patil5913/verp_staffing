@@ -334,9 +334,6 @@ def get_company_default_account_fields():
 		"round_off_account": "Round Off Account",
 		"default_deferred_revenue_account": "Default Deferred Revenue Account",
 		"default_deferred_expense_account": "Default Deferred Expense Account",
-		"accumulated_depreciation_account": "Accumulated Depreciation Account",
-		"depreciation_expense_account": "Depreciation Expense Account",
-		"disposal_account": "Gain/Loss Account on Asset Disposal",
 	}
 
 

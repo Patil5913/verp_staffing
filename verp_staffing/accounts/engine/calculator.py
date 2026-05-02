@@ -9,8 +9,8 @@ def run_calculation(doc):
     calculate_totals(doc)
     apply_discount(doc)
     calculate_taxes(doc)
-    calculate_base(doc)
     calculate_rounding(doc)
+    calculate_base(doc)
 
 # items
 def calculate_items(doc):

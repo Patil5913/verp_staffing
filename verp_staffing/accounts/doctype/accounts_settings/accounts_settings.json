@@ -7,9 +7,6 @@
   "charts_of_accounts_tab",
   "show_balance_in_coa",
   "default_company",
-  "banking_tab",
-  "enable_party_matching",
-  "enable_fuzzy_matching",
   "payment_request_tab",
   "create_pr_in_draft_status",
   "column_break_apea",
@@ -38,18 +35,6 @@
    "label": "Show Balances in Chart Of Accounts"
   },
   {
-   "fieldname": "banking_tab",
-   "fieldtype": "Tab Break",
-   "label": "Banking"
-  },
-  {
-   "default": "0",
-   "description": "Auto match and set the Party in Bank Transactions",
-   "fieldname": "enable_party_matching",
-   "fieldtype": "Check",
-   "label": "Enable Automatic Party Matching"
-  },
-  {
    "default": "1",
    "fieldname": "allow_stale",
    "fieldtype": "Check",
@@ -70,13 +55,6 @@
    "fieldname": "allow_pegged_currencies_exchange_rates",
    "fieldtype": "Check",
    "label": "Allow Implicit Pegged Currency Conversion"
-  },
-  {
-   "default": "0",
-   "description": "Approximately match the description/party name against parties",
-   "fieldname": "enable_fuzzy_matching",
-   "fieldtype": "Check",
-   "label": "Enable Fuzzy Matching"
   },
   {
    "fieldname": "payment_request_tab",
@@ -147,7 +125,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-11 11:35:31.113990",
+ "modified": "2026-04-29 09:56:18.657899",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",

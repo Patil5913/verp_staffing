@@ -64,15 +64,7 @@
   "exchange_rate_revaluation_settings_section",
   "auto_exchange_rate_revaluation",
   "auto_err_frequency",
-  "submit_err_jv",
-  "fixed_asset_defaults",
-  "accumulated_depreciation_account",
-  "depreciation_expense_account",
-  "series_for_depreciation_entry",
-  "expenses_included_in_asset_valuation",
-  "column_break_amae",
-  "disposal_account",
-  "asset_received_but_not_billed"
+  "submit_err_jv"
  ],
  "fields": [
   {
@@ -423,53 +415,6 @@
    "label": "Submit ERR Journals?"
   },
   {
-   "fieldname": "fixed_asset_defaults",
-   "fieldtype": "Section Break",
-   "label": "Fixed Asset Defaults"
-  },
-  {
-   "fieldname": "accumulated_depreciation_account",
-   "fieldtype": "Link",
-   "label": "Accumulated Depreciation Account",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "depreciation_expense_account",
-   "fieldtype": "Link",
-   "label": "Depreciation Expense Account",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "series_for_depreciation_entry",
-   "fieldtype": "Data",
-   "label": "Series for Asset Depreciation Entry (Journal Entry)"
-  },
-  {
-   "fieldname": "expenses_included_in_asset_valuation",
-   "fieldtype": "Link",
-   "label": "Expenses Included In Asset Valuation",
-   "options": "Account"
-  },
-  {
-   "fieldname": "column_break_amae",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "disposal_account",
-   "fieldtype": "Link",
-   "label": "Gain/Loss Account on Asset Disposal",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "asset_received_but_not_billed",
-   "fieldtype": "Link",
-   "label": "Asset Received But Not Billed",
-   "options": "Account"
-  },
-  {
    "fieldname": "default_expense_account",
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
@@ -484,7 +429,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-04-18 17:31:10.896220",
+ "modified": "2026-04-29 10:01:24.010101",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",

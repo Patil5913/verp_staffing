@@ -12,16 +12,34 @@ class PartyType(Document):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_party_type(doctype, txt, searchfield, start, page_len, filters):
+
     cond = ""
     account_type = None
 
-    if filters and filters.get("account_type"):
-        account_type = filters.get("account_type")
+    if filters:
+        # NEW SUPPORT
+        if filters.get("account_type"):
+            account_type = filters.get("account_type")
 
-        if account_type in ["Receivable", "Payable"]:
-            cond = "and (account_type = %(account_type)s or name = 'Employee')"
-        else:
-            cond = "and account_type = %(account_type)s"
+        # OLD SUPPORT
+        elif filters.get("account"):
+            account_type = frappe.db.get_value(
+                "Account",
+                filters.get("account"),
+                "account_type",
+            )
+
+        if account_type:
+            if account_type in ["Receivable", "Payable"]:
+                cond = """
+					and (
+						account_type = %(account_type)s
+						or name = 'Employee'
+					)
+				"""
+
+            else:
+                cond = "and account_type = %(account_type)s"
 
     params = {
         "txt": "%" + txt + "%",

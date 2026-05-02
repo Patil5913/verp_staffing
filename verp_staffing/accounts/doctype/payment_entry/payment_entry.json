@@ -44,10 +44,6 @@
   "base_paid_amount_after_tax",
   "column_break_21",
   "paid_amount",
-  "received_amount",
-  "received_amount_after_tax",
-  "base_received_amount",
-  "base_received_amount_after_tax",
   "section_break_14",
   "get_outstanding_invoices",
   "get_outstanding_orders",
@@ -305,7 +301,6 @@
   },
   {
    "default": "1",
-   "depends_on": "eval:doc.company && (doc.currency !== doc.company_currency)",
    "fieldname": "conversion_rate",
    "fieldtype": "Float",
    "label": "Exchange Rate",
@@ -354,43 +349,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "bold": 1,
-   "fieldname": "received_amount",
-   "fieldtype": "Currency",
-   "label": "Received Amount",
-   "options": "paid_to_account_currency",
-   "print_hide": 1,
-   "reqd": 1
-  },
-  {
-   "depends_on": "doc.received_amount",
-   "fieldname": "base_received_amount",
-   "fieldtype": "Currency",
-   "label": "Received Amount (Company Currency)",
-   "options": "Company:company:default_currency",
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:doc.received_amount && doc.payment_type != 'Internal Transfer'",
-   "fieldname": "received_amount_after_tax",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Received Amount After Tax",
-   "options": "paid_to_account_currency",
-   "read_only": 1
-  },
-  {
-   "depends_on": "doc.received_amount",
-   "fieldname": "base_received_amount_after_tax",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Received Amount After Tax (Company Currency)",
-   "options": "Company:company:default_currency",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:(doc.party && doc.paid_from && doc.paid_to && doc.paid_amount && doc.received_amount)",
+   "depends_on": "eval:(doc.party && doc.paid_from && doc.paid_to && doc.paid_amount)",
    "fieldname": "section_break_14",
    "fieldtype": "Section Break",
    "label": "Outstanding References"
@@ -420,7 +379,7 @@
   },
   {
    "bold": 1,
-   "depends_on": "eval:(doc.paid_amount && doc.received_amount && doc.references)",
+   "depends_on": "eval:(doc.paid_amount && doc.references)",
    "fieldname": "total_allocated_amount",
    "fieldtype": "Currency",
    "label": "Total Allocated Amount",
@@ -442,7 +401,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:(doc.paid_amount && doc.received_amount && doc.references)",
+   "depends_on": "eval:(doc.paid_amount && doc.references)",
    "fieldname": "unallocated_amount",
    "fieldtype": "Currency",
    "label": "Unallocated Amount",
@@ -484,7 +443,6 @@
   {
    "collapsible": 1,
    "collapsible_depends_on": "deductions",
-   "depends_on": "eval:(doc.paid_amount && doc.received_amount)",
    "fieldname": "deductions_or_loss_section",
    "fieldtype": "Section Break",
    "label": "Deductions or Loss"
@@ -587,7 +545,7 @@
   },
   {
    "collapsible": 1,
-   "depends_on": "eval:(doc.paid_from && doc.paid_to && doc.paid_amount && doc.received_amount)",
+   "depends_on": "eval:(doc.paid_from && doc.paid_to && doc.paid_amount)",
    "fieldname": "section_break_12",
    "fieldtype": "Section Break",
    "label": "More Information"
@@ -741,7 +699,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-28 11:59:06.794241",
+ "modified": "2026-05-02 12:26:49.970286",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",
