@@ -1,7 +1,18 @@
+let email_config_rows = [];
+
 frappe.ui.form.on("ERP Configuration", {
 	refresh(frm) {
 		set_department_role_filters(frm);
 		setup_permission_table_filters(frm);
+
+		// Load from doc into memory, then render
+		try {
+			email_config_rows = JSON.parse(frm.doc.email_configuration_detail || "[]");
+		} catch {
+			email_config_rows = [];
+		}
+		render_email_configurator(frm);
+
 		frappe.call({
 			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_services",
 			callback(r) {
@@ -35,6 +46,376 @@ frappe.ui.form.on("ERP Configuration", {
 			},
 		});
 	},
+
+	before_save(frm) {
+		// Capture any manually typed email values
+		let wrapper = frm.get_field("email_configuration").$wrapper;
+		wrapper.find(".email-account").each(function (i) {
+			if (email_config_rows[i] !== undefined) {
+				email_config_rows[i].email_account = $(this).val();
+			}
+		});
+
+		// Write to doc AND mark form dirty so Frappe actually saves it
+		frm.doc.email_configuration_detail = JSON.stringify(email_config_rows);
+		frm.dirty();
+	},
+});
+
+// ================================
+// TYPE OPTIONS
+// ================================
+const TYPE_OPTIONS = [
+	"HR",
+	"Contact",
+	"Notification",
+	"Support",
+	"Sales",
+	"Finance",
+	"Marketing",
+	"Operations",
+];
+
+// ================================
+// RENDER FUNCTION
+// ================================
+function render_email_configurator(frm) {
+	// Use module-level email_config_rows (already loaded in refresh)
+	let data = email_config_rows;
+
+	// Collect all used types across ALL rows
+	let all_used_types = new Set();
+	data.forEach((row) => {
+		(row.types || []).forEach((t) => all_used_types.add(t));
+	});
+
+	let html = `
+	<style>
+	.custom-grid {
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		background: var(--fg-color);
+		margin-bottom: 0;
+		overflow: hidden;
+	}
+	.custom-grid table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+	.custom-grid thead {
+		background: var(--subtle-accent);
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.custom-grid th {
+		padding: 8px 10px;
+		font-weight: 600;
+		border-bottom: 1px solid var(--border-color);
+		text-align: left;
+	}
+	.custom-grid td {
+		padding: 6px 10px;
+		border-bottom: 1px solid var(--border-color-light);
+		vertical-align: middle;
+	}
+	.custom-grid tbody tr:last-child td {
+		border-bottom: none;
+	}
+	.custom-grid tr:hover td {
+		background: var(--highlight-color);
+	}
+	.custom-grid .form-control {
+		border: none;
+		background: transparent;
+		height: 26px;
+		padding: 2px 4px;
+		color: var(--text-color);
+		width: 100%;
+		outline: none;
+	}
+	.custom-grid .form-control:focus {
+		background: var(--fg-color);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+	}
+	.grid-footer {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 0;
+		margin-top: 2px;
+	}
+	.grid-footer .btn-delete {
+		background: #e24c4c;
+		color: #fff;
+		border: 1px solid #e24c4c;
+		padding: 3px 10px;
+		font-size: 12px;
+		border-radius: 5px;
+		line-height: 1.5;
+		cursor: pointer;
+	}
+	.grid-footer .btn-delete:hover {
+		background: #c0392b;
+		border-color: #c0392b;
+	}
+	.grid-footer .btn-add-row {
+		background: var(--fg-color);
+		color: var(--text-color);
+		border: 1px solid var(--border-color);
+		padding: 3px 10px;
+		font-size: 12px;
+		border-radius: 5px;
+		line-height: 1.5;
+		cursor: pointer;
+	}
+	.grid-footer .btn-add-row:hover {
+		background: var(--subtle-accent);
+	}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		background: var(--gray-200);
+		color: var(--text-color);
+		padding: 2px 8px;
+		margin: 2px 2px 2px 0;
+		border-radius: 999px;
+		font-size: 11px;
+		gap: 4px;
+	}
+	.chip .remove-type {
+		cursor: pointer;
+		color: var(--text-muted);
+		font-size: 13px;
+		line-height: 1;
+	}
+	.chip .remove-type:hover {
+		color: var(--red-500);
+	}
+	.types-cell {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 2px;
+	}
+	.type-select {
+		border: none !important;
+		background: transparent !important;
+		font-size: 12px;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 2px 4px;
+		outline: none;
+		max-width: 130px;
+	}
+	.custom-grid input[type="checkbox"] {
+		transform: scale(0.9);
+		cursor: pointer;
+	}
+	.custom-grid td:first-child,
+	.custom-grid th:first-child {
+		padding-left: 10px;
+		width: 30px;
+	}
+	.custom-grid th:nth-child(2),
+	.custom-grid td:nth-child(2) {
+		width: 50px;
+	}
+	</style>
+
+	<div class="custom-grid">
+		<table>
+			<thead>
+				<tr>
+					<th><input type="checkbox" class="select-all"></th>
+					<th>No.</th>
+					<th>Email Account</th>
+					<th>Types</th>
+				</tr>
+			</thead>
+			<tbody>
+				${data
+					.map((row, i) => {
+						let row_types = row.types || [];
+						// Exclude types used in other rows; allow types already in this row
+						let selectable_types = TYPE_OPTIONS.filter(
+							(t) => !all_used_types.has(t) || row_types.includes(t),
+						).filter((t) => !row_types.includes(t));
+
+						return `
+					<tr data-idx="${i}">
+						<td><input type="checkbox" class="row-check"></td>
+						<td>${i + 1}</td>
+						<td>
+							<input type="text"
+								class="form-control email-account link-field"
+								data-doctype="Email Account"
+								value="${frappe.utils.escape_html(row.email_account || "")}"
+								placeholder="Select Email Account">
+						</td>
+						<td>
+							<div class="types-cell">
+								${row_types
+									.map(
+										(t) => `
+									<span class="chip">
+										${frappe.utils.escape_html(t)}
+										<span class="remove-type" data-type="${t}">×</span>
+									</span>
+								`,
+									)
+									.join("")}
+								${
+									selectable_types.length > 0
+										? `<select class="type-select">
+										<option value="">Select Type</option>
+										${selectable_types.map((opt) => `<option value="${opt}">${opt}</option>`).join("")}
+									</select>`
+										: `<span style="font-size:11px;color:var(--text-muted)">All types used</span>`
+								}
+							</div>
+						</td>
+					</tr>`;
+					})
+					.join("")}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="grid-footer">
+		<button class="btn-delete delete-selected">Delete</button>
+		<button class="btn-add-row add-row">+ Add Row</button>
+	</div>
+	`;
+
+	let wrapper = frm.get_field("email_configuration").$wrapper;
+	wrapper.html(html);
+
+	init_link_fields(wrapper, frm);
+	init_multi_select(wrapper, frm);
+	init_select_all(wrapper);
+}
+
+// ================================
+// LINK FIELD WITH FRAPPE SEARCH
+// ================================
+function init_link_fields(wrapper, frm) {
+	wrapper.find(".link-field").each(function () {
+		let input = this;
+		let doctype = $(this).data("doctype");
+
+		let awesomplete = new Awesomplete(input, {
+			minChars: 0,
+			maxItems: 20,
+			autoFirst: true,
+			list: [],
+		});
+
+		input.awesomplete = awesomplete;
+
+		$(input).on("focus input", function () {
+			frappe.call({
+				method: "frappe.desk.search.search_link",
+				args: {
+					doctype: doctype,
+					txt: input.value || "",
+					ignore_user_permissions: 0,
+					reference_doctype: frm.doctype,
+				},
+				callback: function (r) {
+					if (r.message) {
+						awesomplete.list = r.message.map((d) => d.value);
+						awesomplete.evaluate();
+					}
+				},
+			});
+		});
+
+		// On awesomplete selection — update in-memory only
+		$(input).on("awesomplete-selectcomplete", function () {
+			let idx = $(input).closest("tr").data("idx");
+			if (email_config_rows[idx] !== undefined) {
+				email_config_rows[idx].email_account = input.value;
+			}
+		});
+	});
+}
+
+// ================================
+// MULTI SELECT (type dropdown)
+// ================================
+function init_multi_select(wrapper, frm) {
+	wrapper.find(".type-select").on("change", function () {
+		let value = $(this).val();
+		if (!value) return;
+
+		let idx = $(this).closest("tr").data("idx");
+		if (!email_config_rows[idx]) return;
+		if (!email_config_rows[idx].types) email_config_rows[idx].types = [];
+
+		if (!email_config_rows[idx].types.includes(value)) {
+			email_config_rows[idx].types.push(value);
+		}
+
+		render_email_configurator(frm);
+	});
+}
+
+// ================================
+// SELECT ALL CHECKBOX
+// ================================
+function init_select_all(wrapper) {
+	wrapper.find(".select-all").on("change", function () {
+		let checked = $(this).is(":checked");
+		wrapper.find(".row-check").prop("checked", checked);
+	});
+}
+
+// ================================
+// EVENT HANDLERS (delegated)
+// ================================
+
+// ADD ROW — in-memory only
+$(document).on("click", ".add-row", function () {
+	email_config_rows.push({ email_account: "", types: [] });
+	render_email_configurator(cur_frm);
+});
+
+// DELETE SELECTED ROWS — in-memory only
+$(document).on("click", ".delete-selected", function () {
+	let frm = cur_frm;
+	let wrapper = frm.get_field("email_configuration").$wrapper;
+
+	let remaining = [];
+	wrapper.find(".row-check").each(function (i) {
+		if (!$(this).is(":checked")) {
+			remaining.push(email_config_rows[i]);
+		}
+	});
+
+	email_config_rows = remaining;
+	render_email_configurator(frm);
+});
+
+// EMAIL INPUT — update in-memory only (no save, no re-render)
+$(document).on("input", ".email-account", function () {
+	let idx = $(this).closest("tr").data("idx");
+	if (email_config_rows[idx] !== undefined) {
+		email_config_rows[idx].email_account = $(this).val();
+	}
+});
+
+// REMOVE TYPE CHIP — in-memory only
+$(document).on("click", ".remove-type", function () {
+	let type = $(this).data("type");
+	let idx = $(this).closest("tr").data("idx");
+
+	if (email_config_rows[idx]) {
+		email_config_rows[idx].types = (email_config_rows[idx].types || []).filter(
+			(t) => t !== type,
+		);
+		render_email_configurator(cur_frm);
+	}
 });
 
 // ── Department roles cache ────────────────────────────────────────────────────
@@ -61,7 +442,6 @@ function fetch_department_roles(dept_name, callback) {
 
 // ── Child table filters ───────────────────────────────────────────────────────
 function setup_permission_table_filters(frm) {
-
 	frm.set_query("department", "table_tpxt", function (doc, cdt, cdn) {
 		const already_selected = (doc.table_tpxt || [])
 			.filter((row) => row.name !== cdn && row.department)

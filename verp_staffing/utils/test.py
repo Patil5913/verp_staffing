@@ -2673,10 +2673,165 @@ def seed_email_template():
 
 """ + Common_Footer,
 },
+  {
+    "name": "Payment Reminder - Sales Invoice (Customer)",
+    "subject": "Friendly Reminder: Invoice {{ doc.name or 'N/A' }} Payment Due on {{ doc.due_date or 'N/A' }}",
+    "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
 
+        <!-- TOP BAR: Logo only -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="200"
+                 height="52"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- CARD -->
+        <tr>
+          <td>
+            <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0"
+              style="border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+              <!-- Header -->
+              <tr>
+                <td style="padding:24px 28px;border-bottom:2px solid #00aef7;">
+                  <div style="font-size:20px;font-weight:700;color:#0D1B2A;">
+                    Payment Reminder
+                  </div>
+                  <div style="font-size:13px;color:#6b7280;margin-top:4px;">
+                    Invoice No: {{ doc.name or 'N/A' }}
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:28px;">
+
+                  <!-- Greeting -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    Dear {{ frappe.db.get_value("Customer", doc.customer, "name1") or 'N/A' }},
+                  </p>
+
+                  <!-- Intro -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
+                    This is a friendly reminder that your payment for the invoice
+                    below is due soon. Kindly arrange the payment before the due
+                    date to avoid any inconvenience.
+                  </p>
+
+                  <!-- Invoice Details -->
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Invoice Number:</strong> {{ doc.name or 'N/A' }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Invoice Date:</strong> {{ doc.posting_date or 'N/A' }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 8px;">
+                    <strong>Payment Due Date:</strong> {{ doc.due_date or 'N/A' }}
+                  </p>
+                  <p style="font-size:14px;color:#334B5C;margin:0 0 20px;">
+                    <strong>Outstanding Amount:</strong>
+                    {{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) or 'N/A' }}
+                  </p>
+
+                  <!-- Payment Summary Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#f0f7ff;border-left:4px solid #00aef7;
+                                border-radius:6px;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:16px 18px;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:8px;width:50%;">
+                              <span style="color:#6b7280;">Billed To</span><br/>
+                              <strong style="color:#0D1B2A;font-size:14px;">
+                                {{ frappe.db.get_value("Customer", doc.customer, "name1") or 'N/A' }},
+                              </strong>
+                            </td>
+                            <td style="font-size:13px;color:#334B5C;
+                                       padding-bottom:8px;width:50%;text-align:right;">
+                              <span style="color:#6b7280;">Amount Due</span><br/>
+                              <strong style="color:#00aef7;font-size:17px;">
+                                {{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) or 'N/A' }}
+                              </strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="font-size:13px;color:#334B5C;" colspan="2">
+                              <span style="color:#6b7280;">Due Date</span><br/>
+                              <strong style="color:#0D1B2A;font-size:14px;">
+                                {{ doc.due_date or 'N/A' }}
+                              </strong>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Warning Notice -->
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="background:#fff8f0;border-left:4px solid #f59e0b;
+                                border-radius:6px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:12px 16px;font-size:13px;
+                                 color:#92400e;line-height:1.6;">
+                        ⚠️ &nbsp;A payment of
+                        <strong>{{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}</strong>
+                        is due on <strong>{{ doc.due_date or 'N/A' }}</strong>.
+                        Please ensure timely payment to avoid any service disruption.
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- CTA Button -->
+                  <div style="text-align:center;margin:24px 0;">
+                    <a href="{{ frappe.utils.get_url_to_form('Sales Invoice', doc.name) }}"
+                       style="background:#00aef7;color:#ffffff;text-decoration:none;
+                              padding:13px 36px;border-radius:8px;font-size:15px;
+                              font-weight:700;display:inline-block;letter-spacing:0.2px;">
+                      View Invoice
+                    </a>
+                  </div>
+
+                  <!-- Closing -->
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
+                    If you have already made the payment, kindly disregard this
+                    reminder and share the payment confirmation so we may update
+                    our records accordingly.
+                  </p>
+
+                  <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0;">
+                    For any questions or assistance, please feel free to reach
+                    out to us. Thank you for your continued trust and partnership.
+                  </p>
+
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+""" + Common_Footer,
+},
+
+        # ══════════════════════════════════════════════════════════════
+        # TEMPLATE 2 — Sales Invoice Created — Send Invoice to Customer
+        # Trigger: On Submit of Sales Invoice (with PDF attachment)
+        # ══════════════════════════════════════════════════════════════
         {
     "name": "Sales Invoice - Send to Customer",
-    "subject": "Invoice {{ doc.name }} from {{ doc.company }} | Due {{ doc.due_date }}",
+    "subject": "Invoice {{ doc.name }} from {{ doc.company }} | Due {{ doc.due_date or 'N/A' }}",
     "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
@@ -2718,17 +2873,17 @@ def seed_email_template():
 
                   <!-- Greeting -->
                   <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 16px;">
-                    Dear {{ doc.customer_name }},
+                    Dear {{ frappe.db.get_value("Customer", doc.customer, "name1") }},
                   </p>
 
                   <!-- Intro -->
                   <p style="font-size:14px;color:#334B5C;line-height:1.7;margin:0 0 20px;">
-                    Thank you for your business! Please find your invoice details
-                    below. We kindly request you to review and complete the payment
-                    before the due date mentioned.
+                    Thank you for your business! Please find your invoice attached
+                    to this email. A summary of the invoice details is provided
+                    below for your reference.
                   </p>
 
-                  <!-- ── Invoice Summary Box ── -->
+                  <!-- Invoice Summary Box -->
                   <table width="100%" cellpadding="0" cellspacing="0"
                          style="background:#f0f7ff;border-left:4px solid #00aef7;
                                 border-radius:6px;margin-bottom:24px;">
@@ -2767,7 +2922,7 @@ def seed_email_template():
                                        vertical-align:top;">
                               Payment Due Date<br/>
                               <strong style="font-size:14px;color:#0D1B2A;">
-                                {{ doc.due_date }}
+                                {{ doc.due_date or "N/A" }}
                               </strong>
                             </td>
                             <td style="width:50%;font-size:13px;color:#6b7280;
@@ -2783,7 +2938,7 @@ def seed_email_template():
                         <!-- Divider -->
                         <hr style="border:none;border-top:1px solid #dbeafe;margin:0 0 14px 0;" />
 
-                        <!-- Row 3: Outstanding Amount (full width highlight) -->
+                        <!-- Row 3: Outstanding Amount -->
                         <table width="100%" cellpadding="0" cellspacing="0">
                           <tr>
                             <td style="font-size:13px;color:#6b7280;vertical-align:top;">
@@ -2827,7 +2982,7 @@ def seed_email_template():
                       </td>
                     </tr>
 
-                    <!-- Table Rows (Jinja loop) -->
+                    <!-- Jinja loop for items -->
                     {% for item in doc.items %}
                     <tr style="border-top:1px solid #f3f4f6;
                                background:{{ '#f9fafb' if loop.index is odd else '#ffffff' }};">
@@ -2855,7 +3010,7 @@ def seed_email_template():
                     </tr>
                     {% endfor %}
 
-                    <!-- Subtotal Row -->
+                    <!-- Subtotal + Tax rows (only if tax exists) -->
                     {% if doc.total_taxes_and_charges %}
                     <tr style="border-top:1px solid #e5e7eb;background:#f9fafb;">
                       <td colspan="3"
@@ -2867,8 +3022,6 @@ def seed_email_template():
                         {{ doc.currency }} {{ "{:,.2f}".format(doc.net_total) }}
                       </td>
                     </tr>
-
-                    <!-- Tax Row -->
                     <tr style="border-top:1px solid #f3f4f6;background:#f9fafb;">
                       <td colspan="3"
                           style="padding:10px 14px;color:#6b7280;text-align:right;">
@@ -2881,7 +3034,7 @@ def seed_email_template():
                     </tr>
                     {% endif %}
 
-                    <!-- Grand Total Row -->
+                    <!-- Grand Total -->
                     <tr style="border-top:2px solid #00aef7;background:#f0f7ff;">
                       <td colspan="3"
                           style="padding:12px 14px;color:#0D1B2A;
@@ -2895,36 +3048,6 @@ def seed_email_template():
                     </tr>
 
                   </table>
-
-                  <!-- Warning Notice (only if outstanding) -->
-                  {% if doc.outstanding_amount > 0 %}
-                  <table width="100%" cellpadding="0" cellspacing="0"
-                         style="background:#fff8f0;border-left:4px solid #f59e0b;
-                                border-radius:6px;margin-bottom:24px;">
-                    <tr>
-                      <td style="padding:12px 16px;font-size:13px;
-                                 color:#92400e;line-height:1.6;">
-                        ⚠️ &nbsp;A payment of
-                        <strong>{{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}</strong>
-                        is pending. Please complete the payment by
-                        <strong>{{ doc.due_date }}</strong> to avoid any delays.
-                      </td>
-                    </tr>
-                  </table>
-                  {% endif %}
-
-                  <!-- CTA Button -->
-                  <div style="text-align:center;margin:24px 0;">
-                    <a href="{{ frappe.utils.get_url_to_form('Sales Invoice', doc.name) }}"
-                       style="background:#00aef7;color:#ffffff;text-decoration:none;
-                              padding:13px 36px;border-radius:8px;font-size:15px;
-                              font-weight:700;display:inline-block;letter-spacing:0.2px;">
-                      View Invoice Online
-                    </a>
-                  </div>
-
-                  <!-- Divider -->
-                  <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px 0;" />
 
                   <!-- Payment Methods -->
                   <p style="font-size:14px;font-weight:700;color:#0D1B2A;margin:0 0 10px;">
@@ -2965,10 +3088,12 @@ def seed_email_template():
 
 """ + Common_Footer,
 },
-# ──────────────────────────────────────────────────────────────
-        # ADD THIS BLOCK inside the `templates = [ ... ]` list
-        # in your seed_email_template.py file
-        # ──────────────────────────────────────────────────────────────
+
+        # ══════════════════════════════════════════════════════════════
+        # TEMPLATE 3 — Purchase Invoice Due Date Reminder (Internal)
+        # Trigger: Notification on Purchase Invoice → due_date is near
+        # Recipient: Company accounts team email (set in Notification)
+        # ══════════════════════════════════════════════════════════════
         {
     "name": "Payment Due Reminder - Purchase Invoice",
     "subject": "Action Required: Supplier Payment Due – {{ doc.name }} | Due {{ doc.due_date }}",
@@ -3055,7 +3180,6 @@ def seed_email_template():
                                 border-radius:6px;margin-bottom:20px;">
                     <tr>
                       <td style="padding:16px 18px;">
-
                         <table width="100%" cellpadding="0" cellspacing="0">
                           <tr>
                             <td style="font-size:13px;color:#334B5C;
@@ -3068,7 +3192,7 @@ def seed_email_template():
                             <td style="font-size:13px;color:#334B5C;
                                        padding-bottom:8px;width:50%;text-align:right;">
                               <span style="color:#6b7280;">Amount Due</span><br/>
-                              <strong style="color:#0D1B2A;font-size:16px;">
+                              <strong style="color:#00aef7;font-size:17px;">
                                 {{ doc.currency }} {{ "{:,.2f}".format(doc.outstanding_amount) }}
                               </strong>
                             </td>
@@ -3082,7 +3206,6 @@ def seed_email_template():
                             </td>
                           </tr>
                         </table>
-
                       </td>
                     </tr>
                   </table>
@@ -3150,7 +3273,7 @@ def seed_email_template():
 
 """ + Common_Footer,
 },
-    ]
+   ]
 
     for t in templates:
         if frappe.db.exists("Email Template", t["name"]):

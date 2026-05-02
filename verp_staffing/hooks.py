@@ -24,7 +24,10 @@ app_license = "mit"
 #     "cron": {
 #         "* * * * *": [
 #             "verp_staffing.crm.api.agreement.send_agreement_reminders"
-#         ]
+#         ],
+    # "0 8 * * *": [  # This cron expression runs daily at midnight
+    #         "verp_staffing.accounts.doctype.sales_invoice.send_dynamic_payment_reminders"
+    #     ],
 #     }
 # }
 # Includes in <head>
@@ -278,9 +281,16 @@ scheduler_events = {
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
         ],
-        "0 */12 * * *": ["verp_staffing.crm.api.agreement.send_agreement_reminders"],
-    },
+        "0 */12 * * *": [
+            "verp_staffing.crm.api.agreement.send_agreement_reminders"
+        ],
+        "0 9 * * *": [  # This cron expression runs daily at 8 am
+            "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.corn_job_send_payment_reminders"
+        ],
+    }
+   
 }
+
 
 
 # Testing
