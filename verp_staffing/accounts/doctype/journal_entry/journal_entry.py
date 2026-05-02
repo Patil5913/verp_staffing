@@ -111,8 +111,6 @@ class JournalEntry(Document):
                 invoice_map.setdefault(key, 0)
                 invoice_map[key] += amount
 
-        print(f"Invoice Map: {invoice_map}")  # Debug log
-
         # 🔹 Step 2: Update invoices
         for (ref_type, ref_name), paid_amount in invoice_map.items():
 
