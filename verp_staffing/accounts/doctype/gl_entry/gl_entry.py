@@ -31,7 +31,8 @@ class GLEntry(Document):
     def validate_amounts(self):
         debit = flt(self.debit)
         credit = flt(self.credit)
-
+        if debit < 0 or credit < 0:
+            frappe.throw(_("Negative values are not allowed in Debit/Credit"))
         if debit and credit:
             frappe.throw(_("Both Debit and Credit cannot be set"))
 
@@ -137,6 +138,9 @@ def build_gl_entry(
     is_advance=None,
     finance_book=None
 ):
+    if exchange_rate <= 0:
+        frappe.throw("Exchange rate must be greater than 0")
+
     if debit and credit:
         frappe.throw(f"Both debit and credit cannot be set for account {account}")
 
@@ -146,8 +150,6 @@ def build_gl_entry(
         frappe.throw("Account is required for GL Entry")
 
     # Account Currency
-    if not account:
-        frappe.throw("Account missing in GL Entry")
     account_currency = get_account_currency(account)
 
     entry = {
@@ -172,11 +174,6 @@ def build_gl_entry(
         "is_advance": is_advance,
         "finance_book": finance_book
     }
-
-    # transaction currency amounts
-    if transaction_currency and exchange_rate:
-        entry["debit_in_transaction_currency"] = flt(debit) / flt(exchange_rate)
-        entry["credit_in_transaction_currency"] = flt(credit) / flt(exchange_rate)
 
     return entry
 

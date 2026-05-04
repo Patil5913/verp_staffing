@@ -26,7 +26,7 @@
   "cheque_no",
   "cheque_date",
   "user_remark",
-  "base_currency",
+  "company_currency",
   "column_break_gewk",
   "total_debit",
   "total_credit",
@@ -144,7 +144,7 @@
    "in_list_view": 1,
    "label": "Total Debit",
    "no_copy": 1,
-   "options": "base_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -156,7 +156,7 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Total Credit",
-   "options": "base_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -165,7 +165,7 @@
    "fieldtype": "Currency",
    "label": "Difference (Dr - Cr)",
    "no_copy": 1,
-   "options": "base_currency",
+   "options": "company_currency",
    "read_only": 1
   },
   {
@@ -268,14 +268,6 @@
    "search_index": 1
   },
   {
-   "fetch_from": "company.default_currency",
-   "fieldname": "base_currency",
-   "fieldtype": "Link",
-   "label": "Company Currency",
-   "options": "Currency",
-   "read_only": 1
-  },
-  {
    "fieldname": "mode_of_payment",
    "fieldtype": "Link",
    "label": "Mode of Payment",
@@ -304,13 +296,21 @@
   {
    "fieldname": "column_break_srit",
    "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "company.default_currency",
+   "fieldname": "company_currency",
+   "fieldtype": "Link",
+   "label": "Company Currency",
+   "options": "Currency",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-28 10:25:10.973338",
+ "modified": "2026-05-04 10:08:59.379437",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry",

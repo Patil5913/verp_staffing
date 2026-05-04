@@ -354,7 +354,7 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 			account: child.account,
 			account_currency: child.account_currency,
 			company: company,
-			company_currency: this.frm.doc.base_currency,
+			company_currency: this.frm.doc.company_currency,
 		};
 
 		return frappe.call({
@@ -407,7 +407,7 @@ cur_frm.cscript.get_balance = function (doc) {
 		return;
 	}
 
-	let company_currency = frm.doc.base_currency;
+	let company_currency = frm.doc.company_currency;
 
 	// Step 1: calculate totals (company currency)
 	let total_debit = 0;
@@ -786,7 +786,7 @@ frappe.ui.form.on("Journal Entry Account", {
 			return;
 		}
 		// ✅ Use row currency, not frm.doc
-		if (row.account_currency === frm.doc.base_currency && row.exchange_rate != 1) {
+		if (row.account_currency === frm.doc.company_currency && row.exchange_rate != 1) {
 			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
 
@@ -889,7 +889,7 @@ $.extend(verp_staffing.journal_entry, {
 	set_exchange_rate: function (frm, cdt, cdn) {
 		let row = locals[cdt][cdn];
 
-		if (row.account_currency === frm.doc.base_currency && row.exchange_rate != 1) {
+		if (row.account_currency === frm.doc.company_currency && row.exchange_rate != 1) {
 			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
 

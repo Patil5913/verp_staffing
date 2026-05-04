@@ -11,7 +11,6 @@ from verp_staffing.accounts.doctype.gl_entry.gl_entry import (
     build_gl_entry,
     enrich_gl_entry,
     make_gl_entries,
-    cancel_gl_entries,
     merge_gl_entries,
     get_fiscal_year,
 )
@@ -74,8 +73,16 @@ class TestMakeGLEntries(TestGLEntry):
 
         # Simple GL entry data
         gl_map = [
-            make_gl_doc(account=self.expense_account.name),
-            make_gl_doc(account=self.sales_account.name, debit=0, credit=1000),
+            make_gl_doc(
+                account=self.expense_account.name,
+                voucher_no=self.doc.name,
+            ),
+            make_gl_doc(
+                account=self.sales_account.name,
+                debit=0,
+                credit=1000,
+                voucher_no=self.doc.name,
+            ),
         ]
         make_gl_entries(gl_map, self.doc)
         # Verify GL entries created with correct fiscal year
@@ -126,17 +133,26 @@ class TestMakeGLEntries(TestGLEntry):
         and also verify a valid exchange rate
         Fiscal year auto populated or not
         """
+        # remove existing gl entry if any
+        existing = frappe.get_all(
+            "GL Entry", filters={"voucher_no": self.doc.name}, pluck="name"
+        )
+
+        for name in existing:
+            frappe.delete_doc("GL Entry", name)
         gl_map = [
             make_gl_doc(
                 account=self.expense_account.name,
                 account_currency="USD",
                 exchange_rate=95,
+                voucher_no=self.doc.name,
             ),
             make_gl_doc(
                 account=self.sales_account.name,
                 debit=0,
                 credit=1000,
                 account_currency="USD",
+                voucher_no=self.doc.name,
             ),
         ]
         self.doc.conversion_rate = 95
@@ -151,6 +167,7 @@ class TestMakeGLEntries(TestGLEntry):
                 "credit_in_company_currency",
                 "debit_in_company_currency",
                 "fiscal_year",
+                "voucher_no",
             ],
         )
         for entry in entries:
@@ -165,6 +182,13 @@ class TestMakeGLEntries(TestGLEntry):
             self.assertEqual(entry.fiscal_year, self.fiscal_year.name)
 
     def test_is_opening_gl_entry(self):
+        # remove existing gl entry if any
+        existing = frappe.get_all(
+            "GL Entry", filters={"voucher_no": self.doc.name}, pluck="name"
+        )
+
+        for name in existing:
+            frappe.delete_doc("GL Entry", name)
         # Clear existing entries
         existing = frappe.get_all(
             "GL Entry", filters={"voucher_no": self.doc.name}, pluck="name"
@@ -174,8 +198,16 @@ class TestMakeGLEntries(TestGLEntry):
 
         # Test is_opening gl entries
         gl_map = [
-            make_gl_doc(account=self.cash_account.name),
-            make_gl_doc(account=self.gst_account.name, credit=1000, debit=0),
+            make_gl_doc(
+                account=self.cash_account.name,
+                voucher_no=self.doc.name,
+            ),
+            make_gl_doc(
+                account=self.gst_account.name,
+                credit=1000,
+                debit=0,
+                voucher_no=self.doc.name,
+            ),
         ]
         self.doc.is_opening = "Yes"
         make_gl_entries(gl_map, self.doc)
@@ -187,6 +219,49 @@ class TestMakeGLEntries(TestGLEntry):
         for entry in entries:
             self.assertEqual(entry.is_opening, "Yes")
 
+    def test_enrich_entry(self):
+        gl_doc = make_gl_doc(
+            account=self.expense_account.name,
+            debit=1500,
+            transaction_currency="USD",
+            exchange_rate=95,
+        )
+        enriched_gl_doc = enrich_gl_entry(gl_doc, self.doc)
+        self.assertEqual(enriched_gl_doc["exchange_rate"], 95)
+        self.assertEqual(enriched_gl_doc["transaction_currency"], "USD")
+        self.assertEqual(enriched_gl_doc["fiscal_year"], self.fiscal_year.name)
+        self.assertEqual(enriched_gl_doc["debit_in_company_currency"], 1500 * 95)
+
+    def test_merge_gl_entries(self):
+        gl_map = [
+            make_gl_doc(account=self.expense_account.name, debit=1500, credit=0),
+            make_gl_doc(account=self.expense_account.name, debit=1000, credit=0),
+            make_gl_doc(account=self.sales_account.name, debit=0, credit=2500),
+        ]
+        merged_entries = merge_gl_entries(gl_map)
+        self.assertEqual(len(merged_entries), 2)
+        for entry in merged_entries:
+            if entry["account"] == self.expense_account.name:
+                self.assertEqual(entry["debit"], 2500)
+                self.assertEqual(entry["credit"], 0)
+            else:
+                self.assertEqual(entry["credit"], 2500)
+                self.assertEqual(entry["debit"], 0)
+
+
+class TestBuildGlEntry(TestGLEntry):
+    def setUp(self):
+        super().setUp()
+
+    def test_debit_and_credit_both(self):
+        with self.assertRaises(frappe.ValidationError):
+            build_gl_entry(self.expense_account.name, debit=1500, credit=1500)
+        with self.assertRaises(frappe.ValidationError):
+            build_gl_entry(self.expense_account.name, debit=0, credit=0)
+        with self.assertRaises(frappe.ValidationError):
+            build_gl_entry(None, debit=1500, credit=0)
+        with self.assertRaises(frappe.ValidationError):
+            build_gl_entry(self.expense_account.name, debit=-100)
 
 # Fiscal Year funtion test
 class TestFiscalYear(TestGLEntry):
