@@ -8,25 +8,22 @@ from frappe.utils import flt, nowdate, add_days
 from verp_staffing.accounts.utils.test_utils import (
     create_company_if_not_exists,
     create_fiscal_year_if_not_exists,
-    get_or_create_income_account,
-    get_or_create_cash_account,
-    get_or_create_write_off_account,
+    create_account_if_not_exists,
     create_party_types_if_not_exists,
     get_company_currency,
-    get_default_receivable_account,
-    get_default_payable_account,
+    get_default_company_account,
     create_uom_if_not_exists,
-    get_or_create_test_customer,
-    get_or_create_test_supplier,
+    create_customer_if_not_exists,
+    create_supplier_if_not_exists,
 )
 
 
 def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=False):
     company = company or create_company_if_not_exists("vrugle").name
     currency = get_company_currency(company)
-    debit_to = get_default_receivable_account(company)
-    income_account = get_or_create_income_account(company)
-    customer = customer or get_or_create_test_customer(company)
+    debit_to = get_default_company_account(company, "Receivable")
+    income_account = create_account_if_not_exists("Sales", company).name
+    customer = customer or create_customer_if_not_exists(f"_Test Customer {company}")
     uom = create_uom_if_not_exists("kg")
 
     si = frappe.new_doc("Sales Invoice")
@@ -37,9 +34,6 @@ def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=F
     si.currency = currency
     si.conversion_rate = 1
     si.debit_to = debit_to
-
-    if frappe.get_meta("Sales Invoice").has_field("naming_series"):
-        si.naming_series = "ACC-SINV-.YYYY.-"
 
     si.append(
         "items",
@@ -71,9 +65,9 @@ def make_payment_entry(
 ):
     company = company or create_company_if_not_exists("vrugle").name
     currency = get_company_currency(company)
-    cash = get_or_create_cash_account(company)
-    receivable = get_default_receivable_account(company)
-    payable = get_default_payable_account(company)
+    cash = create_account_if_not_exists("Cash", company).name
+    receivable = get_default_company_account(company, "Receivable")
+    payable = get_default_company_account(company, "Payable")
 
     if payment_type == "Receive":
         paid_from = paid_from or receivable
@@ -84,9 +78,9 @@ def make_payment_entry(
 
     if not party:
         if party_type == "Customer":
-            party = get_or_create_test_customer(company)
+            party = create_customer_if_not_exists(f"_Test Customer {company}")
         else:
-            party = get_or_create_test_supplier(company)
+            party = create_supplier_if_not_exists(f"_Test Supplier {company}")
 
     pe = frappe.new_doc("Payment Entry")
     pe.company = company
@@ -143,10 +137,6 @@ class PaymentEntry(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
         company = create_company_if_not_exists("vrugle").name
-
-        get_or_create_cash_account(company)
-        get_or_create_income_account(company)
-        get_or_create_write_off_account(company)
         create_party_types_if_not_exists()
         create_fiscal_year_if_not_exists(
             fiscal_year="2026",
@@ -309,7 +299,7 @@ class TestPaymentEntry(PaymentEntry):
         """
         company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
-        customer = get_or_create_test_customer(company)
+        customer = create_customer_if_not_exists(f"_Test Customer {company}")
 
         pe = frappe.new_doc("Payment Entry")
         pe.company = company
@@ -317,8 +307,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.paid_amount = 0
         pe.received_amount = 0
         pe.currency = currency
@@ -368,7 +358,7 @@ class TestPaymentEntry(PaymentEntry):
         """
         company = create_company_if_not_exists("vrugle").name
         company_currency = get_company_currency(company)
-        customer = get_or_create_test_customer(company)
+        customer = create_customer_if_not_exists(f"_Test Customer {company}")
 
         si = make_sales_invoice(amount=500, customer=customer)
 
@@ -386,8 +376,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.paid_amount = 500
         pe.received_amount = 500
         pe.base_paid_amount = 500
@@ -494,8 +484,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.paid_amount = 150
         pe.received_amount = 150
         pe.base_paid_amount = 150
@@ -539,8 +529,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.paid_amount = 100
         pe.received_amount = 100
         pe.base_paid_amount = 100
@@ -588,8 +578,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.paid_amount = 100
         pe.received_amount = 100
         pe.base_paid_amount = 100
@@ -706,8 +696,7 @@ class TestPaymentEntry(PaymentEntry):
         all base_* fields must be calculated using conversion_rate.
         """
         company = create_company_if_not_exists("vrugle").name
-        customer = get_or_create_test_customer(company)
-
+        customer = create_customer_if_not_exists(f"_Test Customer {company}")
         exchange_rate = 100
 
         pe = frappe.new_doc("Payment Entry")
@@ -716,8 +705,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.company_currency = "INR"
         pe.currency = "USD"
         pe.conversion_rate = exchange_rate
@@ -772,7 +761,7 @@ class TestPaymentEntry(PaymentEntry):
         company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
         si = make_sales_invoice(amount=150)
-        write_off_account = get_or_create_write_off_account(company)
+        write_off_account = create_account_if_not_exists("Write Off", company).name
 
         pe = frappe.new_doc("Payment Entry")
         pe.company = company
@@ -780,8 +769,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.currency = currency
         pe.company_currency = currency
         pe.paid_from_account_currency = currency
@@ -829,7 +818,7 @@ class TestPaymentEntry(PaymentEntry):
         company = create_company_if_not_exists("vrugle").name
         currency = get_company_currency(company)
         si = make_sales_invoice(amount=150)
-        write_off_account = get_or_create_write_off_account(company)
+        write_off_account = create_account_if_not_exists("Write Off", company).name
 
         pe = frappe.new_doc("Payment Entry")
         pe.company = company
@@ -837,8 +826,8 @@ class TestPaymentEntry(PaymentEntry):
         pe.posting_date = nowdate()
         pe.party_type = "Customer"
         pe.party = si.customer
-        pe.paid_from = get_default_receivable_account(company)
-        pe.paid_to = get_or_create_cash_account(company)
+        pe.paid_from = get_default_company_account(company, "Receivable")
+        pe.paid_to = create_account_if_not_exists("Cash", company).name
         pe.currency = currency
         pe.company_currency = currency
         pe.paid_from_account_currency = currency

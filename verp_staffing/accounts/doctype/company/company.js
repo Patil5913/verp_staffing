@@ -10,12 +10,6 @@ frappe.ui.form.on("Company", {
 				}
 			});
 		}
-		// uncomment this when creating sales and purchase invoice
-		// if (!frm.doc.__islocal) {
-		// 	frm.call("check_if_transactions_exist").then((r) => {
-		// 		frm.toggle_enable("default_currency", !r.message);
-		// 	});
-		// }
 	},
 	setup: function (frm) {
 		frm.__rename_queue = "long";
@@ -113,16 +107,10 @@ const setup_queries = function (frm) {
 			["default_cash_account", { account_type: "Cash" }],
 			["default_receivable_account", { root_type: "Asset", account_type: "Receivable" }],
 			["default_payable_account", { root_type: "Liability", account_type: "Payable" }],
-			["default_expense_account", { root_type: "Expense" }],
-			["default_income_account", { root_type: "Income" }],
+			["default_expense_account", { root_type: "Expense" , account_type: "Expense Account" }],
+			["default_income_account", { root_type: "Income" , account_type: "Income Account" }],
 			["round_off_account", { root_type: "Expense" }],
-			[
-				"round_off_for_opening",
-				{ root_type: "Liability", account_type: "Round Off for Opening" },
-			],
 			["write_off_account", { root_type: "Expense" }],
-			["default_deferred_expense_account", {}],
-			["default_deferred_revenue_account", {}],
 			["default_discount_account", {}],
 			["discount_allowed_account", { root_type: "Expense" }],
 			["discount_received_account", { root_type: "Income" }],
@@ -141,13 +129,7 @@ const setup_queries = function (frm) {
 			],
 			["capital_work_in_progress_account", { account_type: "Capital Work in Progress" }],
 			["asset_received_but_not_billed", { account_type: "Asset Received But Not Billed" }],
-			["unrealized_profit_loss_account", { root_type: ["in", ["Liability", "Asset"]] }],
 			["default_provisional_account", { root_type: ["in", ["Liability", "Asset"]] }],
-			[
-				"default_advance_received_account",
-				{ root_type: "Liability", account_type: "Receivable" },
-			],
-			["default_advance_paid_account", { root_type: "Asset", account_type: "Payable" }],
 		],
 		function (i, v) {
 			set_custom_query(frm, v);

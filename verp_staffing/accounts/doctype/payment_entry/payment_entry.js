@@ -39,9 +39,10 @@ frappe.ui.form.on("Payment Entry", {
 
 		frm.set_query("paid_from", function () {
 			validate_company(frm);
+			const party_account_type = frm.party_account_type || "Receivable";
 			const account_types = ["Pay", "Internal Transfer"].includes(frm.doc.payment_type)
 				? ["Bank", "Cash"]
-				: [get_party_account_type(frm.doc.party_type)].concat(
+				: [party_account_type].concat(
 						frm.doc.party_type === "Shareholder" ? ["Equity"] : [],
 					);
 			return {
@@ -55,9 +56,10 @@ frappe.ui.form.on("Payment Entry", {
 
 		frm.set_query("paid_to", function () {
 			validate_company(frm);
+			const party_account_type = frm.party_account_type || "Receivable";
 			const account_types = ["Receive", "Internal Transfer"].includes(frm.doc.payment_type)
 				? ["Bank", "Cash"]
-				: [get_party_account_type(frm.doc.party_type)].concat(
+				: [party_account_type].concat(
 						frm.doc.party_type === "Shareholder" ? ["Equity"] : [],
 					);
 			return {
@@ -83,24 +85,15 @@ frappe.ui.form.on("Payment Entry", {
 			return { filters: { is_company_account: 1, company: frm.doc.company } };
 		});
 
-		frm.set_query("party", function () {
-			validate_company(frm);
-			return {};
-		});
-
 		frm.set_query("account", "deductions", function () {
 			return { filters: { is_group: 0, company: frm.doc.company } };
 		});
 
 		frm.set_query("reference_doctype", "references", function () {
 			let doctypes = [];
-			if (frm.party_account_type === "Receivable") {
+			if (frm.party_account_type === "Receivable" || frm.doc.party_type === "Customer") {
 				doctypes = ["Sales Invoice", "Journal Entry"];
-			} else if (frm.party_account_type === "Payable") {
-				doctypes = ["Purchase Order", "Purchase Invoice", "Journal Entry"];
-			} else if (frm.doc.party_type === "Customer") {
-				doctypes = ["Sales Invoice", "Journal Entry"];
-			} else if (frm.doc.party_type === "Supplier") {
+			} else if (frm.party_account_type === "Payable" || frm.doc.party_type === "Supplier") {
 				doctypes = ["Purchase Order", "Purchase Invoice", "Journal Entry"];
 			}
 			return { filters: [["DocType", "name", "in", doctypes]] };
@@ -128,10 +121,6 @@ frappe.ui.form.on("Payment Entry", {
 
 		frm.set_query("account_head", "taxes", function () {
 			return { filters: { is_group: 0, company: frm.doc.company } };
-		});
-
-		frm.set_query("cost_center", "taxes", function () {
-			return { filters: { company: frm.doc.company, is_group: 0 } };
 		});
 	},
 
@@ -211,6 +200,11 @@ frappe.ui.form.on("Payment Entry", {
 	},
 
 	party: function (frm) {
+		if (!frm.doc.company) {
+			frappe.msgprint("Please select Company first");
+			frm.set_value("party", "");
+			return;
+		}
 		on_party_change(frm);
 	},
 
@@ -223,6 +217,9 @@ frappe.ui.form.on("Payment Entry", {
 	},
 
 	paid_from: function (frm) {
+		if (frm.doc.paid_from && frm.doc.paid_to && frm.doc.paid_from === frm.doc.paid_to) {
+			frappe.throw(__("Paid From and Paid To accounts cannot be the same."));
+		}
 		if (frm.set_party_account_based_on_party) return;
 		set_account_currency_and_balance(
 			frm,
@@ -237,6 +234,9 @@ frappe.ui.form.on("Payment Entry", {
 	},
 
 	paid_to: function (frm) {
+		if (frm.doc.paid_from && frm.doc.paid_to && frm.doc.paid_from === frm.doc.paid_to) {
+			frappe.throw(__("Paid From and Paid To accounts cannot be the same."));
+		}
 		if (frm.set_party_account_based_on_party) return;
 		set_account_currency_and_balance(
 			frm,
@@ -472,7 +472,6 @@ function on_paid_amount_change(frm) {
 	const rate = flt(frm.doc.conversion_rate) || 1;
 	frm.set_value("base_paid_amount", flt(frm.doc.paid_amount) * rate);
 
-
 	apply_taxes(frm);
 	set_total_allocated_amount(frm);
 	hide_unhide_fields(frm);
@@ -503,7 +502,6 @@ function on_party_change(frm) {
 				party_type: frm.doc.party_type,
 				party: frm.doc.party,
 				date: frm.doc.posting_date,
-				cost_center: frm.doc.cost_center,
 			},
 			callback: function (r) {
 				if (!r.message) return;
@@ -570,8 +568,6 @@ function set_write_off_deduction(frm) {
 				row = frm.add_child("deductions");
 
 				row.account = write_off_account;
-
-				row.cost_center = response.message?.cost_center;
 			}
 
 			row.amount = flt(row.amount) + difference_amount;
@@ -587,7 +583,7 @@ function set_account_currency_and_balance(frm, account, currency_field, balance_
 	if (!frm.doc.posting_date || !account) return;
 	frappe.call({
 		method: "verp_staffing.accounts.doctype.payment_entry.payment_entry.get_account_details",
-		args: { account, date: frm.doc.posting_date, cost_center: frm.doc.cost_center },
+		args: { account, date: frm.doc.posting_date },
 		callback: function (r) {
 			if (!r.message) return;
 			frappe.run_serially([
@@ -952,10 +948,8 @@ async function hide_unhide_fields(frm) {
 		"base_total_taxes_and_charges",
 	].forEach((f) => frm.toggle_display(f, is_multi));
 
-
-	const party_amount =
-		frm.doc.payment_type === "Receive"
-			flt(frm.doc.paid_amount)
+	const party_amount = frm.doc.payment_type === "Receive";
+	flt(frm.doc.paid_amount);
 	frm.toggle_display(
 		"write_off_difference_amount",
 		!!(

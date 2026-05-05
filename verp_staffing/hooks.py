@@ -45,7 +45,6 @@ app_include_js = [
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/global_hide.js",
     "/assets/verp_staffing/js/purchase_common.js",
-    "/assets/verp_staffing/js/make_payment_entry.js",
 ]
 
 # include js, css files in header of web template

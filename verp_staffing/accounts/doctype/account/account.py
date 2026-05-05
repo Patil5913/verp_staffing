@@ -328,12 +328,9 @@ def get_company_default_account_fields():
 		"stock_adjustment_account": "Stock Adjustment Account",
 		"write_off_account": "Write Off Account",
 		"default_discount_account": "Default Payment Discount Account",
-		"unrealized_profit_loss_account": "Unrealized Profit / Loss Account",
 		"exchange_gain_loss_account": "Exchange Gain / Loss Account",
 		"unrealized_exchange_gain_loss_account": "Unrealized Exchange Gain / Loss Account",
 		"round_off_account": "Round Off Account",
-		"default_deferred_revenue_account": "Default Deferred Revenue Account",
-		"default_deferred_expense_account": "Default Deferred Expense Account",
 	}
 
 

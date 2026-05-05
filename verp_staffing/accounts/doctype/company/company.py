@@ -11,30 +11,7 @@ from verp_staffing.accounts.doctype.account.account import get_account_currency
 class Company(NestedSet):
     def onload(self):
         load_address_and_contact(self, "company")
-
-    # @frappe.whitelist()
-    # def check_if_transactions_exist(self):
-    # 	exists = False
-    # 	# add futher doctypes for sales invoice when sales and purchase are created
-    # 	for doctype in [
-    # 		"Sales Invoice",
-    # 		"Delivery Note",
-    # 		"Sales Order",
-    # 		"Quotation",
-    # 		"Purchase Invoice",
-    # 		"Purchase Receipt",
-    # 		"Purchase Order",
-    # 		"Supplier Quotation",
-    # 	]:
-    # 		if frappe.db.sql(
-    # 			"""select name from `tab{}` where company={} and docstatus=1
-    # 				limit 1""".format(doctype, "%s"),
-    # 			self.name,
-    # 		):
-    # 			exists = True
-    # 			break
-
-    # 	return exists
+ 
     def on_update(self):
         NestedSet.on_update(self)
         if not frappe.db.sql(
@@ -83,10 +60,7 @@ class Company(NestedSet):
             ["Default Income Account", "default_income_account"],
             ["Write Off Account", "write_off_account"],
             ["Default Payment Discount Account", "default_discount_account"],
-            ["Unrealized Profit / Loss Account", "unrealized_profit_loss_account"],
             ["Round Off Account", "round_off_account"],
-            ["Default Deferred Revenue Account", "default_deferred_revenue_account"],
-            ["Default Deferred Expense Account", "default_deferred_expense_account"],
         ]
 
         for account in accounts:

@@ -8,23 +8,20 @@ frappe.ui.form.on("Sales Invoice", {
 			frm.add_custom_button(
 				__("Payment Entry"),
 				function () {
-					verp_staffing.payment_utils.open_payment_entry(frm);
+					frappe.model.open_mapped_doc({
+						method: "verp_staffing.accounts.doctype.payment_entry.payment_entry.make_payment_entry",
+						frm: frm,
+					});
 				},
 				__("Create"),
 			);
 		}
-		console.log("Adding payment button on refresh");
 	},
 	onload(frm) {
 		set_currency_labels(frm);
 		set_account_queries(frm);
 	},
 	after_save(frm) {
-		console.log(
-			"Setting in words after save",
-			frm.doc.rounded_total,
-			frm.doc.base_rounded_total,
-		);
 		frm.set_value("in_words", frm.doc.in_words);
 		frm.set_value("base_in_words", frm.doc.base_in_words);
 	},
@@ -316,18 +313,12 @@ async function set_currency_labels(frm) {
 		"base_in_words",
 		"base_discount_amount",
 	];
-	console.log("company_currency: ", company_currency);
 	company_currency_field.forEach((field) => {
 		if (
 			currency &&
 			company_currency &&
 			currency !== company_currency.message.default_currency
 		) {
-			console.log(
-				"Different currency, showing conversion rate and company currency fields",
-				currency,
-				company_currency.message.default_currency,
-			);
 			frm.set_df_property(field, "hidden", false);
 		} else {
 			frm.set_df_property(field, "hidden", true);
