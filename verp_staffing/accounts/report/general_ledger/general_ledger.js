@@ -9,6 +9,8 @@ frappe.query_reports["General Ledger"] = {
 			}
 		});
 	},
+	_setting_fiscal_year_dates: false,
+	_fiscal_year_range: null, // to store range of fiscal year to reduce validation db queries { start_date: "2024-01-01", end_date: "2024-12-31" }
 	filters: [
 		// mandatory
 		{
@@ -25,7 +27,8 @@ frappe.query_reports["General Ledger"] = {
 			reqd: 1,
 			default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
 			on_change: function () {
-				frappe.query_report.set_filter_value("fiscal_year", "");
+				if (frappe.query_reports["General Ledger"]._setting_fiscal_year_dates) return;
+				_validate_fiscal_year_against_dates();
 			},
 		},
 		{
@@ -67,17 +70,33 @@ frappe.query_reports["General Ledger"] = {
 			},
 			on_change: function () {
 				const fiscal_year = frappe.query_report.get_filter_value("fiscal_year");
-				if (!fiscal_year) return;
+				const report_def = frappe.query_reports["General Ledger"];
 
+				if (!fiscal_year) {
+					// clear cached range when FY is deselected
+					report_def._fiscal_year_range = null;
+					return;
+				}
+				// DB call per FY selection — result cached in memory
 				frappe.db.get_value(
 					"Fiscal Year",
 					fiscal_year,
 					["year_start_date", "year_end_date"],
 					(r) => {
-						if (r) {
-							frappe.query_report.set_filter_value("from_date", r.year_start_date);
-							frappe.query_report.set_filter_value("to_date", r.year_end_date);
-						}
+						if (!r) return;
+
+						// cache dates — all subsequent validations read from here
+						report_def._fiscal_year_range = {
+							start: r.year_start_date,
+							end: r.year_end_date,
+						};
+
+						report_def._setting_fiscal_year_dates = true;
+						frappe.query_report.set_filter_value("from_date", r.year_start_date);
+						frappe.query_report.set_filter_value("to_date", r.year_end_date);
+						setTimeout(() => {
+							report_def._setting_fiscal_year_dates = false;
+						}, 0);
 					},
 				);
 			},
@@ -241,3 +260,25 @@ frappe.query_reports["General Ledger"] = {
 		return value;
 	},
 };
+
+function _validate_fiscal_year_against_dates() {
+	const report_def = frappe.query_reports["General Ledger"];
+	const cached_range = report_def._fiscal_year_range;
+
+	// no FY selected or not cached yet — nothing to validate
+	if (!cached_range) return;
+
+	const from_date = frappe.query_report.get_filter_value("from_date");
+	const to_date = frappe.query_report.get_filter_value("to_date");
+	if (!from_date || !to_date) return;
+
+	const fy_start = frappe.datetime.str_to_obj(cached_range.start);
+	const fy_end = frappe.datetime.str_to_obj(cached_range.end);
+	const f_from = frappe.datetime.str_to_obj(from_date);
+	const f_to = frappe.datetime.str_to_obj(to_date);
+
+	if (f_from < fy_start || f_to > fy_end) {
+		report_def._fiscal_year_range = null; // clear cache
+		frappe.query_report.set_filter_value("fiscal_year", "");
+	}
+}
