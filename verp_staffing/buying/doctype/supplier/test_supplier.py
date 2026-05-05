@@ -7,3 +7,23 @@ from frappe.tests.utils import FrappeTestCase
 
 class TestSupplier(FrappeTestCase):
 	pass
+
+
+
+def create_supplier_if_not_exists(supplier_name, supplier_type="Individual"):
+    """Return an existing Supplier or create and return a new one."""
+    if not supplier_name:
+        frappe.throw("Supplier name is required") 
+    
+    if frappe.db.exists("Supplier", {"supplier_name": supplier_name}):
+        return get_doc("Supplier", {"supplier_name": supplier_name}).name
+
+    supplier = get_doc(
+        {
+            "doctype": "Supplier",
+            "supplier_name": supplier_name,
+            "supplier_type": supplier_type,
+        }
+    )
+    supplier.insert(ignore_permissions=True)
+    return supplier.name
