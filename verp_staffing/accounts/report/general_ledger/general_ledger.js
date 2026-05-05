@@ -4,7 +4,9 @@
 frappe.query_reports["General Ledger"] = {
 	onload: function (report) {
 		frappe.db.get_single_value("Accounts Settings", "default_company").then((company) => {
-			if (company) {
+			const current_company = report.get_filter_value("company");
+
+			if (!current_company && company) {
 				report.set_filter_value("company", company);
 			}
 		});
