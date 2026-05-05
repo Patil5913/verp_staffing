@@ -11,7 +11,7 @@ from verp_staffing.accounts.doctype.account.account import get_account_currency
 class Company(NestedSet):
     def onload(self):
         load_address_and_contact(self, "company")
- 
+
     def on_update(self):
         NestedSet.on_update(self)
         if not frappe.db.sql(
@@ -163,15 +163,16 @@ class Company(NestedSet):
             ),
         )
 
-	def on_trash(self):
-		"""
-		Trash accounts and cost centers for this company if no gl entry exists
-		"""
-		NestedSet.validate_if_child_exists(self)
-		frappe.utils.nestedset.update_nsm(self)
-		rec = frappe.db.sql(f"SELECT name from `tabGL Entry` where company = %s", self.name)
-		if not rec:
-
+    def on_trash(self):
+        """
+        Trash accounts and cost centers for this company if no gl entry exists
+        """
+        NestedSet.validate_if_child_exists(self)
+        frappe.utils.nestedset.update_nsm(self)
+        rec = frappe.db.sql(
+            f"SELECT name from `tabGL Entry` where company = %s", self.name
+        )
+        if not rec:
             for doctype in ["Account"]:
                 frappe.db.sql(
                     f"delete from `tab{doctype}` where company = %s", self.name
@@ -182,16 +183,16 @@ class Company(NestedSet):
         # reset default company
         frappe.db.sql(
             """update `tabSingles` set value=''
-			where doctype='Global Defaults' and field='default_company'
-			and value=%s""",
+                where doctype='Global Defaults' and field='default_company'
+                and value=%s""",
             self.name,
         )
 
         # reset default company
         frappe.db.sql(
             """update `tabSingles` set value=''
-			where doctype='Chart of Accounts Importer' and field='company'
-			and value=%s""",
+                where doctype='Chart of Accounts Importer' and field='company'
+                and value=%s""",
             self.name,
         )
 
