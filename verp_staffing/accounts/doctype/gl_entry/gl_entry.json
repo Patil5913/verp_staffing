@@ -119,6 +119,7 @@
    "in_filter": 1,
    "in_standard_filter": 1,
    "label": "Vouncher Number",
+   "mandatory_depends_on": "eval:doc.voucher_type",
    "options": "voucher_type",
    "search_index": 1,
    "set_only_once": 1
@@ -240,6 +241,7 @@
    "fieldname": "exchange_rate",
    "fieldtype": "Float",
    "label": "Exchange Rate",
+   "non_negative": 1,
    "precision": "9",
    "set_only_once": 1
   },
@@ -272,7 +274,7 @@
  "icon": "fa fa-list",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-27 10:58:51.793995",
+ "modified": "2026-05-04 18:04:35.273813",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "GL Entry",

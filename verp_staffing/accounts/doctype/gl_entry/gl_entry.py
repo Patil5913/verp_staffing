@@ -82,7 +82,7 @@ class GLEntry(Document):
 
         if self.transaction_currency and self.transaction_currency != company_currency:
             if not self.exchange_rate:
-                frappe.throw(_("Exchange Rate is required for foreign currency transactions"))
+                frappe.throw(_("Exchange Rate is required when transaction currency is different from company currency"))
 
     # FISCAL YEAR VALIDATION
     def validate_fiscal_year(self):
@@ -204,7 +204,6 @@ def make_gl_entries(gl_map,doc):
 
         # Opening Entry Handling
     is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes"  else "No"
-    account_cache = {}
 
     if round(total_debit, 2) != round(total_credit, 2):
         frappe.throw(
@@ -219,10 +218,9 @@ def make_gl_entries(gl_map,doc):
         if is_opening == "Yes":
             acc = entry.get("account")
 
-            if acc not in account_cache:
-                account_cache[acc] = frappe.get_cached_value("Account", acc, "report_type")
+            account_report_type = frappe.get_cached_value("Account", acc, "report_type")
 
-            if account_cache[acc] == "Profit and Loss":
+            if account_report_type == "Profit and Loss":
                 frappe.throw(
                     f"Opening Entry cannot be made for P&L account: {acc}"
                 )
@@ -321,7 +319,6 @@ def get_fiscal_year(posting_date, company=None):
 
 # adds additional fields to the gl entry based on the doc (like exchange rate, fiscal year, etc.)
 def enrich_gl_entry(entry, doc):
-    # exchange_rate = flt(doc.conversion_rate or 1)
 
     exchange_rate = (
     flt(entry.get("exchange_rate")) 
@@ -331,8 +328,6 @@ def enrich_gl_entry(entry, doc):
     
 
     # Transaction currency
-    # entry["transaction_currency"] = doc.currency
-
     entry["transaction_currency"] = (
         entry.get("transaction_currency")
         or getattr(doc, "currency", None)
