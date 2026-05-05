@@ -995,14 +995,3 @@ function get_included_taxes(frm) {
 	return total;
 }
 
-async function get_party_account_type(party_type) {
-	if (!party_type) {
-		return "Receivable";
-	}
-	const r = await frappe.db.get_value("Party Type", party_type, "account_type");
-	const account_type = r.message?.account_type;
-	if (account_type) {
-		return account_type;
-	}
-	return "Receivable";
-}
