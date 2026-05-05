@@ -50,7 +50,8 @@ class SalesInvoice(Document):
 
         self.validate_uom_is_integer("stock_uom", "stock_qty")
         self.validate_uom_is_integer("uom", "qty")
-        self.check_sales_order_close("sales_order")
+        # for future
+        # self.check_sales_order_close("sales_order")
         self.set_debit_to_account()
         self.validate_debit_to_acc()
         self.handle_currency_logic()
@@ -123,16 +124,17 @@ class SalesInvoice(Document):
                                 UOMMustBeIntegerError,
                             )
 
-    def check_sales_order_close(self, ref_fieldname):
-        for d in self.get("items"):
-            if d.get(ref_fieldname):
-                status = frappe.db.get_value(
-                    "Sales Order", d.get(ref_fieldname), "status"
-                )
-                if status == "Closed" and not self.is_return:
-                    frappe.throw(
-                        _("Sales Order {0} is {1}").format(d.get(ref_fieldname), status)
-                    )
+    # for future
+    # def check_sales_order_close(self, ref_fieldname):
+    #     for d in self.get("items"):
+    #         if d.get(ref_fieldname):
+    #             status = frappe.db.get_value(
+    #                 "Sales Order", d.get(ref_fieldname), "status"
+    #             )
+    #             if status == "Closed" and not self.is_return:
+    #                 frappe.throw(
+    #                     _("Sales Order {0} is {1}").format(d.get(ref_fieldname), status)
+    #                 )
 
     @frappe.whitelist()
     def set_debit_to_account(self):

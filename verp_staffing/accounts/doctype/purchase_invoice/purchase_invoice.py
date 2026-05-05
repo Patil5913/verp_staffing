@@ -164,7 +164,7 @@ class PurchaseInvoice(Document):
                     "Conversion rate is 1.00, but document currency is different from company currency"
                 )
             )
-
+            
     def set_against_expense_account(self):
         """Set against account for debit to account"""
         against_acc = []
