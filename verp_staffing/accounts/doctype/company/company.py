@@ -180,7 +180,6 @@ class Company(NestedSet):
 		"""
 		NestedSet.validate_if_child_exists(self)
 		frappe.utils.nestedset.update_nsm(self)
-		frappe.errprint(f"self: {self.name}")
 		rec = frappe.db.sql(f"SELECT name from `tabGL Entry` where company = %s", self.name)
 		if not rec:
 

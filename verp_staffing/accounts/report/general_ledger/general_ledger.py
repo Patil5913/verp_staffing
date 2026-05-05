@@ -8,14 +8,15 @@ from itertools import groupby
 #  Entry point
 # ─────────────────────────────────────────────────────────────
 
+
 def execute(filters=None):
     if not filters:
         return [], []
 
     validate_filters(filters)
 
-    columns  = get_columns(filters)
-    data     = get_data(filters)
+    columns = get_columns(filters)
+    data = get_data(filters)
 
     return columns, data
 
@@ -23,6 +24,7 @@ def execute(filters=None):
 # ─────────────────────────────────────────────────────────────
 #  Validation
 # ─────────────────────────────────────────────────────────────
+
 
 def validate_filters(filters):
     if not filters.get("company"):
@@ -32,7 +34,9 @@ def validate_filters(filters):
         frappe.throw(_("From Date and To Date are required"), title=_("Missing Filter"))
 
     if getdate(filters.from_date) > getdate(filters.to_date):
-        frappe.throw(_("From Date cannot be after To Date"), title=_("Invalid Date Range"))
+        frappe.throw(
+            _("From Date cannot be after To Date"), title=_("Invalid Date Range")
+        )
 
     if filters.get("show_in_account_currency") and not filters.get("account"):
         frappe.throw(
@@ -40,67 +44,115 @@ def validate_filters(filters):
             title=_("Missing Filter"),
         )
 
-    if filters.get("min_amount") and filters.get("max_amount"):
-        if flt(filters.min_amount) > flt(filters.max_amount):
-            frappe.throw(
-                _("Min Amount cannot be greater than Max Amount"),
-                title=_("Invalid Range"),
-            )
-
 
 # ─────────────────────────────────────────────────────────────
 #  Columns
 # ─────────────────────────────────────────────────────────────
 
+
 def get_columns(filters):
-    company_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
-    in_acc_currency  = filters.get("show_in_account_currency")
+    company_currency = frappe.get_cached_value(
+        "Company", filters.company, "default_currency"
+    )
+    in_acc_currency = filters.get("show_in_account_currency")
 
     if in_acc_currency and filters.get("account"):
-        display_currency = frappe.db.get_value("Account", filters.account, "account_currency")
+        display_currency = frappe.db.get_value(
+            "Account", filters.account, "account_currency"
+        )
     else:
         display_currency = company_currency
 
     columns = [
-        {"fieldname": "posting_date", "label": _("Posting Date"), "fieldtype": "Date",        "width": 110},
-        {"fieldname": "account",      "label": _("Account"),      "fieldtype": "Link",         "options": "Account", "width": 200},
+        {
+            "fieldname": "posting_date",
+            "label": _("Posting Date"),
+            "fieldtype": "Date",
+            "width": 110,
+        },
+        {
+            "fieldname": "account",
+            "label": _("Account"),
+            "fieldtype": "Link",
+            "options": "Account",
+            "width": 200,
+        },
         {
             "fieldname": "debit",
-            "label":     _("Debit ({0})").format(display_currency),
+            "label": _("Debit ({0})").format(display_currency),
             "fieldtype": "Currency",
-            "options":   "currency",
-            "width":     140,
+            "options": "currency",
+            "width": 140,
         },
         {
             "fieldname": "credit",
-            "label":     _("Credit ({0})").format(display_currency),
+            "label": _("Credit ({0})").format(display_currency),
             "fieldtype": "Currency",
-            "options":   "currency",
-            "width":     140,
+            "options": "currency",
+            "width": 140,
         },
         {
             "fieldname": "balance",
-            "label":     _("Balance ({0})").format(display_currency),
+            "label": _("Balance ({0})").format(display_currency),
             "fieldtype": "Currency",
-            "options":   "currency",
-            "width":     150,
+            "options": "currency",
+            "width": 150,
         },
-        {"fieldname": "voucher_type", "label": _("Voucher Type"), "fieldtype": "Data",         "width": 130},
-        {"fieldname": "voucher_no",   "label": _("Voucher No"),   "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 160},
-        {"fieldname": "against",      "label": _("Against"),      "fieldtype": "Data",         "width": 140},
-        {"fieldname": "party_type",   "label": _("Party Type"),   "fieldtype": "Data",         "width": 100},
-        {"fieldname": "party",        "label": _("Party"),        "fieldtype": "Data",         "width": 140},
-        {"fieldname": "is_opening",  "label": _("Is Opening"),  "fieldtype": "Data", "width": 80},
-        {"fieldname": "fiscal_year", "label": _("Fiscal Year"), "fieldtype": "Link", "options": "Fiscal Year", "width": 100},
+        {
+            "fieldname": "voucher_type",
+            "label": _("Voucher Type"),
+            "fieldtype": "Data",
+            "width": 130,
+        },
+        {
+            "fieldname": "voucher_no",
+            "label": _("Voucher No"),
+            "fieldtype": "Dynamic Link",
+            "options": "voucher_type",
+            "width": 160,
+        },
+        {
+            "fieldname": "against",
+            "label": _("Against"),
+            "fieldtype": "Data",
+            "width": 140,
+        },
+        {
+            "fieldname": "party_type",
+            "label": _("Party Type"),
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {"fieldname": "party", "label": _("Party"), "fieldtype": "Data", "width": 140},
+        {
+            "fieldname": "is_opening",
+            "label": _("Is Opening"),
+            "fieldtype": "Data",
+            "width": 80,
+        },
+        {
+            "fieldname": "fiscal_year",
+            "label": _("Fiscal Year"),
+            "fieldtype": "Link",
+            "options": "Fiscal Year",
+            "width": 100,
+        },
     ]
 
     if filters.get("show_remarks"):
-        columns.append({"fieldname": "remarks", "label": _("Remarks"), "fieldtype": "Data", "width": 200})
+        columns.append(
+            {
+                "fieldname": "remarks",
+                "label": _("Remarks"),
+                "fieldtype": "Data",
+                "width": 200,
+            }
+        )
 
     columns += [
-        {"fieldname": "currency",         "fieldtype": "Data", "hidden": 1},
-        {"fieldname": "company_currency",  "fieldtype": "Data", "hidden": 1},
-        {"fieldname": "account_currency",  "fieldtype": "Data", "hidden": 1},
+        {"fieldname": "currency", "fieldtype": "Data", "hidden": 1},
+        {"fieldname": "company_currency", "fieldtype": "Data", "hidden": 1},
+        {"fieldname": "account_currency", "fieldtype": "Data", "hidden": 1},
     ]
 
     return columns
@@ -110,13 +162,18 @@ def get_columns(filters):
 #  Data — main orchestrator
 # ─────────────────────────────────────────────────────────────
 
+
 def get_data(filters):
-    company_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
-    in_acc_currency  = filters.get("show_in_account_currency")
+    company_currency = frappe.get_cached_value(
+        "Company", filters.company, "default_currency"
+    )
+    in_acc_currency = filters.get("show_in_account_currency")
 
     display_currency = company_currency
     if in_acc_currency and filters.get("account"):
-        display_currency = frappe.db.get_value("Account", filters.account, "account_currency")
+        display_currency = frappe.db.get_value(
+            "Account", filters.account, "account_currency"
+        )
 
     # ── 1. Opening ──────────────────────────────────────────────
     opening_balance = get_opening_balance(filters, in_acc_currency)
@@ -125,8 +182,8 @@ def get_data(filters):
     ]
 
     # ── 2. GL entries ───────────────────────────────────────────
-    gl_entries   = get_gl_entries(filters, in_acc_currency)
-    group_by     = filters.get("group_by") or ""
+    gl_entries = get_gl_entries(filters, in_acc_currency)
+    group_by = filters.get("group_by") or ""
     running_balance = opening_balance
 
     # For "Group by Party" — only party-linked entries are shown,
@@ -138,18 +195,26 @@ def get_data(filters):
 
     if active_entries:
         if group_by == "Group by Voucher":
-            gl_rows = build_by_voucher(active_entries, running_balance, display_currency, filters)
+            gl_rows = build_by_voucher(
+                active_entries, running_balance, display_currency, filters
+            )
         elif group_by == "Group by Account":
-            gl_rows = build_by_account(active_entries, running_balance, display_currency, filters)
+            gl_rows = build_by_account(
+                active_entries, running_balance, display_currency, filters
+            )
         elif group_by == "Group by Party":
-            gl_rows = build_by_party(active_entries, running_balance, display_currency, filters)
+            gl_rows = build_by_party(
+                active_entries, running_balance, display_currency, filters
+            )
         else:
-            gl_rows = build_flat(active_entries, running_balance, display_currency, filters)
+            gl_rows = build_flat(
+                active_entries, running_balance, display_currency, filters
+            )
 
         data += gl_rows
 
-	# ── 3. Period totals ────────────────────────────────────────
-    period_debit  = sum(flt(r.debit)  for r in active_entries)
+    # ── 3. Period totals ────────────────────────────────────────
+    period_debit = sum(flt(r.debit) for r in active_entries)
     period_credit = sum(flt(r.credit) for r in active_entries)
 
     # ── 4. Total row ────────────────────────────────────────────
@@ -157,7 +222,9 @@ def get_data(filters):
 
     # ── 5. Closing row ──────────────────────────────────────────
     closing_balance = opening_balance + (period_debit - period_credit)
-    data.append(make_closing_row(period_debit, period_credit, closing_balance, display_currency))
+    data.append(
+        make_closing_row(period_debit, period_credit, closing_balance, display_currency)
+    )
 
     return data
 
@@ -165,6 +232,7 @@ def get_data(filters):
 # ─────────────────────────────────────────────────────────────
 #  Opening balance
 # ─────────────────────────────────────────────────────────────
+
 
 def get_opening_balance(filters, in_acc_currency):
     """
@@ -182,7 +250,7 @@ def get_opening_balance(filters, in_acc_currency):
     if filters.get("account"):
         root_type = frappe.db.get_value("Account", filters.account, "root_type")
 
-    conds  = ["gle.is_cancelled = 0"]
+    conds = ["gle.is_cancelled = 0"]
     values = {"company": filters.company}
     conds.append("gle.company = %(company)s")
 
@@ -201,7 +269,10 @@ def get_opening_balance(filters, in_acc_currency):
     if in_acc_currency:
         debit_field, credit_field = "debit", "credit"
     else:
-        debit_field, credit_field = "debit_in_company_currency", "credit_in_company_currency"
+        debit_field, credit_field = (
+            "debit_in_company_currency",
+            "credit_in_company_currency",
+        )
 
     result = frappe.db.sql(
         f"""
@@ -239,13 +310,17 @@ def get_fiscal_year_start(filters):
 #  Main GL Entry query
 # ─────────────────────────────────────────────────────────────
 
+
 def get_gl_entries(filters, in_acc_currency=False):
     if in_acc_currency:
         debit_field, credit_field = "debit", "credit"
     else:
-        debit_field, credit_field = "debit_in_company_currency", "credit_in_company_currency"
+        debit_field, credit_field = (
+            "debit_in_company_currency",
+            "credit_in_company_currency",
+        )
 
-    conds  = []
+    conds = []
     values = {}
 
     if not filters.get("include_cancelled"):
@@ -256,23 +331,9 @@ def get_gl_entries(filters, in_acc_currency=False):
 
     conds.append("gle.posting_date BETWEEN %(from_date)s AND %(to_date)s")
     values["from_date"] = filters.from_date
-    values["to_date"]   = filters.to_date
+    values["to_date"] = filters.to_date
 
     conds, values = apply_scope_filters(filters, conds, values)
-
-    if filters.get("min_amount"):
-        conds.append(
-            "(gle.debit_in_company_currency >= %(min_amount)s"
-            " OR gle.credit_in_company_currency >= %(min_amount)s)"
-        )
-        values["min_amount"] = flt(filters.min_amount)
-
-    if filters.get("max_amount"):
-        conds.append(
-            "(gle.debit_in_company_currency <= %(max_amount)s"
-            " OR gle.credit_in_company_currency <= %(max_amount)s)"
-        )
-        values["max_amount"] = flt(filters.max_amount)
 
     return frappe.db.sql(
         f"""
@@ -307,6 +368,7 @@ def get_gl_entries(filters, in_acc_currency=False):
 # ─────────────────────────────────────────────────────────────
 #  Shared scope filters
 # ─────────────────────────────────────────────────────────────
+
 
 def apply_scope_filters(filters, conds, values):
     """Account/party/voucher filters shared between opening + main query."""
@@ -377,22 +439,23 @@ def apply_scope_filters(filters, conds, values):
 #  Row builders
 # ─────────────────────────────────────────────────────────────
 
+
 def make_gl_row(gle, running_balance, currency, filters):
     return {
-        "posting_date":    gle.posting_date,
-        "account":         gle.account,
-        "party_type":      gle.party_type,
-        "party":           gle.party,
-        "against":         gle.against,
-        "voucher_type":    gle.voucher_type,
-        "voucher_no":      gle.voucher_no,
-        "debit":           flt(gle.debit),
-        "credit":          flt(gle.credit),
-        "balance":         running_balance,   # "" for detail lines inside groups
-        "is_opening":      gle.is_opening,
-        "fiscal_year":     gle.fiscal_year,
-        "remarks":         gle.remarks if filters.get("show_remarks") else "",
-        "currency":        currency,
+        "posting_date": gle.posting_date,
+        "account": gle.account,
+        "party_type": gle.party_type,
+        "party": gle.party,
+        "against": gle.against,
+        "voucher_type": gle.voucher_type,
+        "voucher_no": gle.voucher_no,
+        "debit": flt(gle.debit),
+        "credit": flt(gle.credit),
+        "balance": running_balance,  # "" for detail lines inside groups
+        "is_opening": gle.is_opening,
+        "fiscal_year": gle.fiscal_year,
+        "remarks": gle.remarks if filters.get("show_remarks") else "",
+        "currency": currency,
         "account_currency": gle.account_currency,
     }
 
@@ -405,25 +468,27 @@ def make_balance_row(label, balance, currency, row_type):
     Balance column always carries the net figure.
     """
     return {
-        "account":        label,
-        "debit":          "",       # blank — no debit/credit on opening
-        "credit":         "",       # blank — no debit/credit on opening
-        "balance":        flt(balance),
-        "currency":       currency,
+        "account": label,
+        "debit": flt(balance) if balance > 0 else 0.0,
+        "credit": abs(flt(balance)) if balance < 0 else 0.0,
+        "balance": flt(balance),
+        "currency": currency,
         "is_opening_row": row_type == "opening",
         "is_closing_row": row_type == "closing",
     }
 
+
 def make_closing_row(period_debit, period_credit, closing_balance, currency):
     """Closing → period debit/credit AND closing balance, all three filled"""
     return {
-        "account":        _("Closing (Opening + Total)"),
-        "debit":          flt(period_debit),
-        "credit":         flt(period_credit),
-        "balance":        flt(closing_balance),
-        "currency":       currency,
+        "account": _("Closing (Opening + Total)"),
+        "debit": flt(period_debit),
+        "credit": flt(period_credit),
+        "balance": flt(closing_balance),
+        "currency": currency,
         "is_closing_row": True,
     }
+
 
 def make_total_row(period_debit, period_credit, currency):
     """
@@ -431,16 +496,19 @@ def make_total_row(period_debit, period_credit, currency):
     Balance is intentionally blank; Closing row carries the actual net.
     """
     return {
-        "account":      _("Total"),
-        "debit":        flt(period_debit),
-        "credit":       flt(period_credit),
-        "balance":      "",         # blank — closing row carries the net
-        "currency":     currency,
+        "account": _("Total"),
+        "debit": flt(period_debit),
+        "credit": flt(period_credit),
+        "balance": "",  # blank — closing row carries the net
+        "currency": currency,
         "is_total_row": True,
     }
+
+
 # ─────────────────────────────────────────────────────────────
 #  Grouping strategies
 # ─────────────────────────────────────────────────────────────
+
 
 def build_flat(gl_entries, running_balance, currency, filters):
     rows = []
@@ -453,8 +521,8 @@ def build_flat(gl_entries, running_balance, currency, filters):
 def build_by_voucher(gl_entries, running_balance, currency, filters):
     rows = []
     for voucher_no, group in groupby(gl_entries, key=lambda x: x.voucher_no):
-        group    = list(group)
-        v_debit  = sum(flt(r.debit)  for r in group)
+        group = list(group)
+        v_debit = sum(flt(r.debit) for r in group)
         v_credit = sum(flt(r.credit) for r in group)
         minus = v_debit - v_credit
         running_balance += minus
@@ -465,18 +533,20 @@ def build_by_voucher(gl_entries, running_balance, currency, filters):
             gle_balance += flt(gle.debit) - flt(gle.credit)
             rows.append(make_gl_row(gle, gle_balance, currency, filters))
         # subtotal header
-        rows.append({
-            "posting_date":  "",
-            "account":       "Net Total",
-            "voucher_type":  group[0].voucher_type,
-            "voucher_no":    voucher_no,
-            "against":       group[0].against,
-            "debit":         v_debit,
-            "credit":        v_credit,
-            "balance":       running_balance,
-            "currency":      currency,
-            "is_group_row":  True,
-        })
+        rows.append(
+            {
+                "posting_date": "",
+                "account": "Net Total",
+                "voucher_type": group[0].voucher_type,
+                "voucher_no": voucher_no,
+                "against": group[0].against,
+                "debit": v_debit,
+                "credit": v_credit,
+                "balance": running_balance,
+                "currency": currency,
+                "is_group_row": True,
+            }
+        )
 
     return rows
 
@@ -486,23 +556,26 @@ def build_by_account(gl_entries, running_balance, currency, filters):
     sorted_entries = sorted(gl_entries, key=lambda x: x.account)
 
     for account, group in groupby(sorted_entries, key=lambda x: x.account):
-        group    = list(group)
-        a_debit  = sum(flt(r.debit)  for r in group)
+        group = list(group)
+        a_debit = sum(flt(r.debit) for r in group)
         a_credit = sum(flt(r.credit) for r in group)
         running_balance += a_debit - a_credit
 
         for gle in group:
             rows.append(make_gl_row(gle, "", currency, filters))
-        rows.append({
-            "account":      "Net Total",
-            "debit":        a_debit,
-            "credit":       a_credit,
-            "balance":      running_balance,
-            "currency":     currency,
-            "is_group_row": True,
-        })
+        rows.append(
+            {
+                "account": "Net Total",
+                "debit": a_debit,
+                "credit": a_credit,
+                "balance": running_balance,
+                "currency": currency,
+                "is_group_row": True,
+            }
+        )
 
     return rows
+
 
 def build_by_party(gl_entries, running_balance, currency, filters):
     # gl_entries here are already filtered to party-only entries by get_data
@@ -512,22 +585,24 @@ def build_by_party(gl_entries, running_balance, currency, filters):
     for (party_type, party), group in groupby(
         sorted_entries, key=lambda x: (x.party_type, x.party)
     ):
-        group    = list(group)
-        p_debit  = sum(flt(r.debit)  for r in group)
+        group = list(group)
+        p_debit = sum(flt(r.debit) for r in group)
         p_credit = sum(flt(r.credit) for r in group)
         running_balance += p_debit - p_credit
 
         for gle in group:
             rows.append(make_gl_row(gle, "", currency, filters))
-        rows.append({
-            "account":      f"{party_type} - {party}",
-            "party_type":   party_type,
-            "party":        party,
-            "debit":        p_debit,
-            "credit":       p_credit,
-            "balance":      running_balance,
-            "currency":     currency,           # ← was missing, caused 0.0
-            "is_group_row": True,
-        })
+        rows.append(
+            {
+                "account": f"{party_type} - {party}",
+                "party_type": party_type,
+                "party": party,
+                "debit": p_debit,
+                "credit": p_credit,
+                "balance": running_balance,
+                "currency": currency,  # ← was missing, caused 0.0
+                "is_group_row": True,
+            }
+        )
 
     return rows
