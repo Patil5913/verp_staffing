@@ -1,29 +1,29 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:plan_name",
- "creation": "2018-02-24 11:31:23.066506",
+ "creation": "2026-04-28 11:22:55.174910",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "plan_name",
-  "currency",
-  "column_break_3",
+  "basic_plan_details_section",
   "item",
-  "section_break_5",
-  "price_determination",
-  "column_break_7",
-  "cost",
-  "section_break_11",
+  "plan_name",
+  "column_break_1",
+  "rate",
+  "currency",
+  "column_break_tsga",
+  "is_active",
+  "billing_interval_settings_section",
   "billing_interval",
-  "column_break_13",
+  "column_break_mzno",
   "billing_interval_count",
-  "payment_plan_section",
-  "product_price_id"
+  "amended_from"
  ],
  "fields": [
   {
+   "fetch_from": "item.item_name",
+   "fetch_if_empty": 1,
    "fieldname": "plan_name",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -32,14 +32,15 @@
    "unique": 1
   },
   {
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency",
-   "reqd": 1
+   "allow_on_submit": 1,
+   "default": "1",
+   "description": "Inactive plans cannot be added to new subscriptions",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   },
   {
-   "fieldname": "column_break_3",
+   "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
@@ -51,70 +52,74 @@
    "reqd": 1
   },
   {
-   "fieldname": "section_break_5",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "price_determination",
-   "fieldtype": "Select",
-   "label": "Subscription Price Based On",
-   "options": "\nFixed Rate\nBased On Price List\nMonthly Rate",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_7",
+   "fieldname": "column_break_tsga",
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:['Fixed Rate', 'Monthly Rate'].includes(doc.price_determination)",
-   "fieldname": "cost",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Cost",
-   "options": "currency"
-  },
-  {
-   "fieldname": "section_break_11",
-   "fieldtype": "Section Break"
-  },
-  {
-   "default": "Day",
+   "default": "Month",
    "fieldname": "billing_interval",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "Billing Interval",
    "options": "Day\nWeek\nMonth\nYear",
    "reqd": 1
   },
   {
-   "fieldname": "column_break_13",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "1",
-   "description": "Number of intervals for the interval field e.g if Interval is 'Days' and Billing Interval Count is 3, invoices will be generated every 3 days",
+   "description": "e.g. interval=Month, count=3 \u2192 invoice every 3 months",
    "fieldname": "billing_interval_count",
    "fieldtype": "Int",
    "label": "Billing Interval Count",
    "reqd": 1
   },
   {
-   "fieldname": "payment_plan_section",
+   "fieldname": "billing_interval_settings_section",
    "fieldtype": "Section Break",
-   "label": "Payment Plan"
+   "label": "Billing Interval Settings"
   },
   {
-   "fieldname": "product_price_id",
-   "fieldtype": "Data",
-   "label": "Product Price ID"
+   "fieldname": "column_break_mzno",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "basic_plan_details_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Plan Details"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Subscription Plan",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate",
+   "options": "currency",
+   "reqd": 1
   }
  ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-04-24 15:07:12.611546",
+ "modified": "2026-05-01 10:53:11.517029",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Subscription Plan",
- "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -128,35 +133,11 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Accounts Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Accounts User",
-   "share": 1,
-   "write": 1
   }
  ],
  "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

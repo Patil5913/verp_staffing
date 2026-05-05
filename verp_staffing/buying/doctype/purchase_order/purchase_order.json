@@ -174,7 +174,7 @@
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "Purchase Order Item",
+   "options": "Items Table",
    "reqd": 1
   },
   {
@@ -231,7 +231,7 @@
    "fieldname": "taxes",
    "fieldtype": "Table",
    "label": "Purchase Taxes and Charges",
-   "options": "Purchase Taxes and Charges"
+   "options": "Taxes and Charges"
   },
   {
    "fieldname": "section_break_pslv",

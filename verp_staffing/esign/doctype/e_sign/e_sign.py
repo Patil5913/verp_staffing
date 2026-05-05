@@ -54,7 +54,6 @@ class ESign(Document):
 def generate_pdf_pages(docname):
 
     doc = frappe.get_doc("E Sign", docname)
-    print(f"Generating PDF pages for {docname} with original PDF: {doc.original_pdf}")
 
     if not doc.original_pdf:
         return []
@@ -674,8 +673,6 @@ def generate_certificate_page(agreement_name):
                 draw_rounded_rect(c, act_x - 2, log_y - 3,
                                   COL_W - 200 - 14, 14,
                                   r=3, fill=row_bg)
-
-                print(f"Activity for {email}: {act.visited_at}, IP: {act.ip_address}, Browser: {act.browser}, OS: {act.os}, Device: {act.device}")
 
                 c.setFont("Helvetica", 7.5)
                 set_rgb(c, NAVY)

@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 from verp_staffing.accounts.doctype.account.account import get_account_currency
@@ -212,7 +211,6 @@ def make_gl_entries(gl_map,doc):
         )
 
     for entry in enriched_entries:
-
         entry["is_opening"] = is_opening
 
         # validate opening

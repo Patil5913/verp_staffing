@@ -72,7 +72,7 @@ frappe.ui.form.on("Sales Invoice", {
 			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
 				if (r.message && r.message.default_income_account) {
 					frm.doc.items.forEach((item) => {
-						item.expense_account = r.message.default_income_account;
+						item.income_account = r.message.default_income_account;
 					});
 					frm.refresh_field("items");
 				}
@@ -132,6 +132,7 @@ frappe.ui.form.on("Sales Invoice Item", {
 		}
 	},
 	items_add: function (frm) {
+		frappe.model.set_value(cdt, cdn, "type", "Sales");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	items_remove: function (frm) {
@@ -145,7 +146,7 @@ frappe.ui.form.on("Sales Invoice Item", {
 	},
 });
 
-frappe.ui.form.on("Sales Taxes and Charges", {
+frappe.ui.form.on("Taxes and Charges", {
 	charge_type(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 
@@ -230,6 +231,9 @@ function toggle_base_fields(frm, show) {
 }
 
 function set_account_queries(frm) {
+	// store previous company
+	let previous_company = frm.doc.company;
+
 	frm.set_query("debit_to", () => {
 		if (!frm.doc.company) {
 			return {
@@ -301,6 +305,30 @@ function set_account_queries(frm) {
 			},
 		};
 	});
+
+	// handle company change
+	frm.fields_dict.company.df.onchange = function () {
+		const current_company = frm.doc.company;
+
+		// do nothing if same company
+		if (current_company === previous_company) return;
+
+		// update tracker
+		previous_company = current_company;
+
+		// clear child tables
+		(frm.doc.items || []).forEach(row => {
+			frappe.model.set_value(row.doctype, row.name, "income_account", null);
+		});
+
+		(frm.doc.taxes || []).forEach(row => {
+			frappe.model.set_value(row.doctype, row.name, "account_head", null);
+		});
+
+		// clear main field
+		frm.set_value("additional_discount_account", null);
+		frm.set_value("debit_to", null);
+	};
 }
 
 async function set_currency_labels(frm) {

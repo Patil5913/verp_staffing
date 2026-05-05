@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class SalesTaxesandCharges(Document):
+class ItemsTable(Document):
 	pass

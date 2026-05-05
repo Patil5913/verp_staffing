@@ -1,0 +1,197 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-09 17:32:15.756634",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item",
+  "column_break_shrq",
+  "type",
+  "quantity_and_uom_section",
+  "received_qty",
+  "qty",
+  "rejected_qty",
+  "column_break_mmze",
+  "uom",
+  "item_uom",
+  "stock_uom_qty",
+  "section_break_oxks",
+  "rate",
+  "column_break_awjv",
+  "amount",
+  "section_break_yavh",
+  "expense_account",
+  "column_break_wkkp",
+  "income_account",
+  "section_break_ewex",
+  "weight_per_unit",
+  "total_weight",
+  "column_break_qkue",
+  "weight_uom"
+ ],
+ "fields": [
+  {
+   "fieldname": "column_break_shrq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "received_qty",
+   "fieldtype": "Float",
+   "label": "Received Qty",
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rejected_qty",
+   "fieldtype": "Float",
+   "label": "Rejected Qty"
+  },
+  {
+   "fieldname": "column_break_mmze",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "label": "UOM",
+   "options": "UOM",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_oxks",
+   "fieldtype": "Section Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate",
+   "options": "currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_yavh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "eval:doc.type === \"Purchase\"",
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "label": "Expense Account",
+   "mandatory_depends_on": "eval:doc.type === \"Purchase\"",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_wkkp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ewex",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "weight_per_unit",
+   "fieldtype": "Float",
+   "label": "Weight Per Unit"
+  },
+  {
+   "fieldname": "total_weight",
+   "fieldtype": "Float",
+   "label": "Total Weight"
+  },
+  {
+   "fieldname": "column_break_qkue",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "weight_uom",
+   "fieldtype": "Link",
+   "label": "Weight UOM",
+   "options": "UOM"
+  },
+  {
+   "bold": 1,
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item",
+   "print_hide": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "item.stock_uom",
+   "fieldname": "item_uom",
+   "fieldtype": "Link",
+   "label": "Item UOM",
+   "options": "UOM",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.uom != doc.item_uom",
+   "fieldname": "stock_uom_qty",
+   "fieldtype": "Float",
+   "label": "Qty as per Stock UOM"
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "\nSales\nPurchase",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_awjv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.type === \"Sales\"",
+   "fieldname": "income_account",
+   "fieldtype": "Link",
+   "label": "Income Account",
+   "mandatory_depends_on": "eval:doc.type === \"Sales\"",
+   "options": "Account"
+  },
+  {
+   "fieldname": "quantity_and_uom_section",
+   "fieldtype": "Section Break",
+   "label": "Quantity and UOM"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-01 13:50:58.834441",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Items Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-04-08 13:31:37.862779",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -136,10 +135,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-21 18:17:14.250383",
+ "modified": "2026-05-05 14:56:52.416483",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {

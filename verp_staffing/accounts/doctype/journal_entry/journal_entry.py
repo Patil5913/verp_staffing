@@ -6,7 +6,7 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe import _, msgprint, scrub
+from frappe import _, scrub
 from frappe.core.doctype.submission_queue.submission_queue import queue_submission
 from frappe.utils import comma_and, cstr, flt, fmt_money, formatdate, get_link_to_form, nowdate
 

@@ -538,7 +538,6 @@ def request_field_update(
 
     # 📧 SEND EMAIL
     template_name = "Field Update Request - permission request"
-    print(f"-----template in field update request: {template_name}, exists: {frappe.db.exists('Email Template', template_name)}")
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
         context = {
@@ -570,7 +569,6 @@ def request_field_update(
         send_email=1,
         send_system=1,
     )
-    print(f"---------------------send notification: {send_notification}")
 
     activity_message = (
         f"<b> requested field update for: <b>{', '.join(field_labels)}</b>.<br>"

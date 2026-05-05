@@ -618,7 +618,6 @@ class calculate_taxes_and_totals:
 		# Round off to nearest integer based on regional settings
 		if tax.account_head in frappe.flags.round_off_applicable_accounts:
 			tax.base_tax_amount = round(tax.base_tax_amount, 0)
-			tax.base_tax_amount_after_discount_amount = round(tax.base_tax_amount_after_discount_amount, 0)
 
 	@deprecated
 	def manipulate_grand_total_for_inclusive_tax(self):
@@ -1504,9 +1503,7 @@ def validate_taxes_and_charges(tax):
 
 
 def is_rounded_total_disabled(self):
-    print(f"+++++++++++++++++++++++++++++++++++++++++++++++++++++++self: {self}")
     if self.meta.get_field("disable_rounded_total"):
-        print(f"+++++++++++++++++++++++++++++++++++++++++++++++++++++++self.disable_rounded_total: {self.disable_rounded_total}")
         return self.disable_rounded_total
     else:
         return frappe.db.get_single_value("Global Defaults", "disable_rounded_total")
