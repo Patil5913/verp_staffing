@@ -930,7 +930,7 @@ def get_account_details(account, date):
 
 @frappe.whitelist()
 def get_company_defaults(company):
-    fields = ["write_off_account", "exchange_gain_loss_account"]
+    fields = ["write_off_account"]
     return frappe.get_cached_value("Company", company, fields, as_dict=True)
 
 
