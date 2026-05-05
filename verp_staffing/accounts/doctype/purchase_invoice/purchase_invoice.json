@@ -625,6 +625,7 @@
    "options": "Purchase Order"
   },
   {
+   "depends_on": "eval:doc.is_paid==1",
    "fieldname": "cashbank_account",
    "fieldtype": "Link",
    "label": "Cash/Bank Account",
@@ -637,7 +638,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-05 14:44:54.506958",
+ "modified": "2026-05-05 17:46:17.207489",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Purchase Invoice",
