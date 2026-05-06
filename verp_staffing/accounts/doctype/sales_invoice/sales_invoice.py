@@ -45,6 +45,7 @@ class SalesInvoice(Document):
 
     def validate(self):
         self.validate_auto_set_posting_date()
+        self.validate_fiscal_year_configuration()
 
         self.validate_uom_is_integer("stock_uom", "stock_qty")
         self.validate_uom_is_integer("uom", "qty")
@@ -72,6 +73,19 @@ class SalesInvoice(Document):
             self.set_posting_date = 1
 
         self.validate_posting_date()
+        
+    def validate_fiscal_year_configuration(self):
+        result = validate_fiscal_year(self.company, self.posting_date)
+
+        if not result.get("valid"):
+            if result.get("code") == "NO_FISCAL_YEAR":
+                frappe.throw(f"Company setup issue: {result.get('message')}")
+
+            elif result.get("code") == "DATE_OUTSIDE_RANGE":
+                frappe.throw(f"Date validation failed: {result.get('message')}")
+
+            else:
+                frappe.throw("Invalid Fiscal Year configuration")
 
     def validate_posting_date(self):
         # set Edit Posting Date and Time to 1 while data import
@@ -411,6 +425,46 @@ def is_overdue(doc, total):
         < payable_amount
     )
 
+@frappe.whitelist()
+def validate_fiscal_year(company, posting_date):
+
+    fy = frappe.db.sql("""
+        SELECT fy.name, fy.year_start_date, fy.year_end_date
+        FROM `tabFiscal Year` fy
+        INNER JOIN `tabFiscal Year Company` fyc
+            ON fy.name = fyc.parent
+        WHERE fyc.company = %s
+        LIMIT 1
+    """, (company,), as_dict=True)
+
+    # ❌ No fiscal year for company
+    if not fy:
+        return {
+            "valid": False,
+            "code": "NO_FISCAL_YEAR",
+            "message": f"No Fiscal Year mapped for company {company}"
+        }
+
+    fy = fy[0]
+    posting_date = getdate(posting_date)
+
+    # ❌ Date outside range
+    if not (fy.year_start_date <= posting_date <= fy.year_end_date):
+        return {
+            "valid": False,
+            "code": "DATE_OUTSIDE_RANGE",
+            "message": (
+                f"Posting Date must be between {fy.year_start_date} "
+                f"and {fy.year_end_date}"
+            )
+        }
+
+    # ✅ valid case
+    return {
+        "valid": True,
+        "code": "OK",
+        "message": "Valid posting date"
+    }
 
 def get_total_in_party_account_currency(doc):
     total_fieldname = "grand_total" if doc.disable_rounded_total else "rounded_total"
