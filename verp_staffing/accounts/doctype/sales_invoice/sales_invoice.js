@@ -9,14 +9,11 @@ frappe.ui.form.on("Sales Invoice", {
 			frm.add_custom_button(__("Send Invoice"), function () {
 				frappe.confirm(
 					"Send Sales Invoice email to customer?",
-					function () {
-						console.log("function called successfully");
-						
+					function () {						
 						frappe.call({
 							method: "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_sales_invoice_email",
 							args: { doc: frm.doc.name },
 							callback(r) {
-								console.log("sdfsddffsdf",r);
 								if (!r.exc) {
 									
 									frappe.msgprint("Invoice sent successfully.");

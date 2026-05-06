@@ -11,6 +11,8 @@ from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.accounts.api.get_defaults import validate_account
 from frappe.utils import nowdate, add_days
 import json
+from verp_staffing.crm.doctype.customer.customer import get_customer_email
+
 
 
 
@@ -549,7 +551,7 @@ def send_sales_invoice_email(doc):
         context = {"doc": doc}
         subject = frappe.render_template(template.subject, context)
         message = frappe.render_template(template.response_html or template.response or "", context)
-        recipient = get_customer_email(doc)
+        recipient = get_customer_email(doc.customer)
         if not recipient:
             frappe.log_error(f"No email for {doc.name}", "Sales Invoice Email")
             return
@@ -565,21 +567,6 @@ def send_sales_invoice_email(doc):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Sales Invoice Email Failed")
         return "Failed to send email"
-
-@frappe.whitelist()
-def get_customer_email(doc):
-    if not doc.customer:
-        return None
-
-    # Get Lead Detail from Customer
-    lead_name = frappe.db.get_value("Customer", doc.customer, "lead_details")
-
-    if lead_name:
-        return frappe.db.get_value("Lead Detail Form", lead_name, "email")
-
-    return None
-
-
 
 @frappe.whitelist()
 def corn_job_send_payment_reminders():
@@ -660,7 +647,7 @@ def send_reminder_email(doc, invoice_type="Sales Invoice"):
 
     # Get recipient based on invoice type
     if invoice_type == "Sales Invoice":
-        recipient = get_customer_email(doc)
+        recipient = get_customer_email(doc.customer)
     else:
         recipient = get_notification_email()
 

@@ -38,7 +38,7 @@ frappe.ui.form.on("Sales Order", {
 
 		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
 			let r = await frappe.call({
-				method: "verp_staffing.crm.api.agreement.get_customer_email",
+				method: "verp_staffing.crm.doctype.customer.get_customer_email",
 				args: { customer: frm.doc.customer },
 			});
 
@@ -212,7 +212,7 @@ function get_requirements_from_config(frm, config) {
 
 async function send_details_form(frm) {
 	let recipient = await frappe.call({
-		method: "verp_staffing.crm.api.agreement.get_customer_email",
+		method: "verp_staffing.crm.doctype.customer.get_customer_email",
 		args: { customer: frm.doc.customer },
 	});
 	recipient = recipient.message;

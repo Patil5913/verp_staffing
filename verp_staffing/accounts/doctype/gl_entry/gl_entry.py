@@ -202,8 +202,10 @@ def make_gl_entries(gl_map,doc):
         total_credit += credit
         enriched_entries.append(entry)
 
-        # Opening Entry Handling
-    is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes"  else "No"
+        # 🔥 Opening Entry Handling
+    is_opening = "Yes" if doc.is_opening == "Yes" else "No"
+
+    account_cache = {}
 
     if round(total_debit, 2) != round(total_credit, 2):
         frappe.throw(

@@ -170,6 +170,7 @@
   },
   {
    "depends_on": "difference",
+   "depends_on": "difference",
    "fieldname": "get_balance",
    "fieldtype": "Button",
    "label": "Make Difference Entry"

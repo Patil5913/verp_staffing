@@ -7,7 +7,42 @@ frappe.provide("verp_staffing.journal_entry");
 frappe.ui.form.on("Journal Entry", {
 	setup: function (frm) {
 		frm.add_fetch("bank_account", "account", "account");
+		// frm.ignore_doctypes_on_cancel_all = [
+		// 	"Sales Invoice",
+		// 	"Purchase Invoice",
+		// 	"Journal Entry",
+		// 	"Repost Payment Ledger",
+		// 	"Asset",
+		// 	"Asset Movement",
+		// 	"Asset Depreciation Schedule",
+		// 	"Repost Accounting Ledger",
+		// 	"Unreconcile Payment",
+		// 	"Unreconcile Payment Entries",
+		// 	"Bank Transaction",
+		// ];
+		// frm.trigger("set_queries");
 	},
+
+
+	// set_queries(frm) {
+	// 	frm.set_query("project", "accounts", function (doc, cdt, cdn) {
+	// 		let row = frappe.get_doc(cdt, cdn);
+	// 		let filters = {
+	// 			company: doc.company,
+	// 		};
+	// 		if (row.party_type == "Customer") {
+	// 			filters.customer = row.party;
+	// 		}
+	// 		return {
+	// 			query: "erpnext.controllers.queries.get_project_name",
+	// 			filters,
+	// 		};
+	// 	});
+	// },
+
+	// point : create custom code to handle multi currency and exchange logic becuse erpnext multi currency have issue and deeply connected 
+	// issue : when we deal with multi currency exchange rate make issue in calculation so debit and credit difference is not properly calculated and also we have to set exchange rate manually in each row which is not good user experience so we need to handle this issue in our code and make it more user friendly and also we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
+
 
 	refresh: function (frm) {
 
@@ -69,6 +104,45 @@ frappe.ui.form.on("Journal Entry", {
 	get_outstanding_invoices: function (frm) {
 		open_outstanding_dialog(frm);
 	},
+	//this feture is not useful for our product 
+	// make_inter_company_journal_entry: function (frm) {
+	// 	let d = new frappe.ui.Dialog({
+	// 		title: __("Select Company"),
+	// 		fields: [
+	// 			{
+	// 				fieldname: "company",
+	// 				fieldtype: "Link",
+	// 				label: __("Company"),
+	// 				options: "Company",
+	// 				get_query: function () {
+	// 					return {
+	// 						filters: [["Company", "name", "!=", frm.doc.company]],
+	// 					};
+	// 				},
+	// 				reqd: 1,make_inter_company_journal_entry
+	// 			},
+	// 		],
+	// 	});
+	// 	d.set_primary_action(__("Create"), function () {
+	// 		d.hide();
+	// 		let args = d.get_values();
+	// 		frappe.call({
+	// 			args: {
+	// 				name: frm.doc.name,
+	// 				voucher_type: frm.doc.voucher_type,
+	// 				company: args.company,
+	// 			},
+	// 			method: "erpnext.accounts.doctype.journal_entry.journal_entry.make_inter_company_journal_entry",
+	// 			callback: function (r) {
+	// 				if (r.message) {
+	// 					let doc = frappe.model.sync(r.message)[0];
+	// 					frappe.set_route("Form", doc.doctype, doc.name);
+	// 				}
+	// 			},
+	// 		});
+	// 	});
+	// 	d.show();
+	// },
 
 	//erp.next multi currency have many issue so we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
 	multi_currency: function (frm) {
