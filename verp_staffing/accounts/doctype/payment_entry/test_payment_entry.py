@@ -150,6 +150,7 @@ class PaymentEntry(FrappeTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        frappe.db.commit = cls._original_commit
         frappe.db.rollback()
 
 
