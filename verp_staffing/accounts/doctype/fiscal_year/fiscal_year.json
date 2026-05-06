@@ -10,7 +10,11 @@
   "is_short_year",
   "year_start_date",
   "year_end_date",
-  "included_companies"
+  "included_companies",
+  "opening_balances",
+  "opening_balance_status",
+  "opening_balance_calculated_at",
+  "opening_balance_dirty"
  ],
  "fields": [
   {
@@ -60,12 +64,50 @@
    "label": "Included Companies ",
    "options": "Fiscal Year Company",
    "reqd": 1
+  },
+  {
+   "fieldname": "opening_balances",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Opening balances",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "opening_balance_status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Opening Balance Status",
+   "options": "Pending Not Due\nPending\nCompleted\nFailed",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "opening_balance_calculated_at",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Opening Balance Calculated At",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "opening_balance_dirty",
+   "fieldtype": "Check",
+   "label": "Opening Balance Dirty",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-25 10:52:22.830205",
+ "modified": "2026-05-06 14:54:10.781100",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Fiscal Year",
