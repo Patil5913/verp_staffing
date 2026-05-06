@@ -12,7 +12,6 @@ frappe.ui.form.on("Journal Entry", {
 
 
 	refresh: function (frm) {
-
 		if (frm.doc.docstatus > 0) {
 			frm.add_custom_button(
 				__("Ledger"),
@@ -28,7 +27,7 @@ frappe.ui.form.on("Journal Entry", {
 					};
 					frappe.set_route("query-report", "General Ledger");
 				},
-				__("View")
+				__("View"),
 			);
 		}
 
@@ -38,7 +37,7 @@ frappe.ui.form.on("Journal Entry", {
 				function () {
 					return verp_staffing.journal_entry.reverse_journal_entry(frm);
 				},
-				__("Actions")
+				__("Actions"),
 			);
 		}
 
@@ -50,19 +49,19 @@ frappe.ui.form.on("Journal Entry", {
 
 		// hide /unhide fields based on currency
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
-
 	},
 	before_save: function (frm) {
 		if (frm.doc.docstatus == 0 && !frm.doc.is_system_generated) {
 			let payment_entry_references = frm.doc.accounts.filter(
-				(elem) => elem.reference_type == "Payment Entry"
+				(elem) => elem.reference_type == "Payment Entry",
 			);
 			if (payment_entry_references.length > 0) {
 				let rows = payment_entry_references.map((x) => "#" + x.idx);
 				frappe.throw(
-					__("Rows: {0} have 'Payment Entry' as reference_type. This should not be set manually.", [
-						frappe.utils.comma_and(rows),
-					])
+					__(
+						"Rows: {0} have 'Payment Entry' as reference_type. This should not be set manually.",
+						[frappe.utils.comma_and(rows)],
+					),
 				);
 			}
 		}
@@ -154,7 +153,6 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 	}
 
 	load_defaults() {
-
 		//this.frm.show_print_first = true;
 		if (this.frm.doc.__islocal) {
 			let posting_date = this.frm.doc.posting_date;
@@ -205,7 +203,8 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 
 				// account filter
 				frappe.model.validate_missing(jvd, "account");
-				let party_account_field = jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
+				let party_account_field =
+					jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
 				out.filters.push([jvd.reference_type, party_account_field, "=", jvd.account]);
 			}
 
@@ -273,7 +272,6 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 	}
 
 	accounts_add(frm, cdt, cdn) {
-
 		if (!frm.doc.company) {
 			show_company_warning(frm);
 			return;
@@ -286,9 +284,8 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 
 cur_frm.script_manager.make(verp_staffing.accounts.JournalEntry);
 
-
 cur_frm.cscript.update_totals = function (doc) {
-	let frm = cur_frm;   // bridge old → new
+	let frm = cur_frm; // bridge old → new
 	calculate_totals(frm);
 };
 
@@ -307,7 +304,7 @@ cur_frm.cscript.get_balance = function (doc) {
 	let total_debit = 0;
 	let total_credit = 0;
 
-	accounts.forEach(row => {
+	accounts.forEach((row) => {
 		total_debit += flt(row.debit || 0);
 		total_credit += flt(row.credit || 0);
 	});
@@ -315,7 +312,6 @@ cur_frm.cscript.get_balance = function (doc) {
 	let diff = flt(total_debit - total_credit);
 
 	if (diff !== 0) {
-
 		let blank_row = null;
 
 		// Step 2: find empty row
@@ -347,10 +343,14 @@ cur_frm.cscript.get_balance = function (doc) {
 				blank_row.doctype,
 				blank_row.name,
 				"credit_in_account_currency",
-				diff / rate
+				diff / rate,
 			);
-			frappe.model.set_value(blank_row.doctype, blank_row.name, "debit_in_account_currency", 0);
-
+			frappe.model.set_value(
+				blank_row.doctype,
+				blank_row.name,
+				"debit_in_account_currency",
+				0,
+			);
 		} else {
 			// DEBIT needed
 			let abs_diff = Math.abs(diff);
@@ -364,21 +364,21 @@ cur_frm.cscript.get_balance = function (doc) {
 				blank_row.doctype,
 				blank_row.name,
 				"debit_in_account_currency",
-				abs_diff / rate
+				abs_diff / rate,
 			);
-			frappe.model.set_value(blank_row.doctype, blank_row.name, "credit_in_account_currency", 0);
+			frappe.model.set_value(
+				blank_row.doctype,
+				blank_row.name,
+				"credit_in_account_currency",
+				0,
+			);
 		}
 	}
 
 	// Step 5: recalc totals
 	calculate_totals(frm);
 
-	frm.refresh_fields([
-		"accounts",
-		"total_debit",
-		"total_credit",
-		"difference"
-	]);
+	frm.refresh_fields(["accounts", "total_debit", "total_credit", "difference"]);
 };
 cur_frm.cscript.validate = function (doc, cdt, cdn) {
 	cur_frm.cscript.update_totals(doc);
@@ -388,7 +388,7 @@ function calculate_totals(frm) {
 	let total_debit = 0;
 	let total_credit = 0;
 
-	(frm.doc.accounts || []).forEach(row => {
+	(frm.doc.accounts || []).forEach((row) => {
 		total_debit += flt(row.debit);
 		total_credit += flt(row.credit);
 	});
@@ -401,26 +401,27 @@ function calculate_totals(frm) {
 }
 
 function show_company_warning(frm) {
-	frappe.show_alert({
-		message: "Select Company first",
-		indicator: "orange"
-	}, 3);
+	frappe.show_alert(
+		{
+			message: "Select Company first",
+			indicator: "orange",
+		},
+		3,
+	);
 
 	frm.scroll_to_field("company");
 }
 
 function open_outstanding_dialog(frm) {
-
 	let based_on = frm.doc.write_off_based_on;
 
 	let doctype = "";
 	let party_field = "";
 
-
 	if (!frm.doc.company) {
-			show_company_warning(frm);
-			return;
-		}
+		show_company_warning(frm);
+		return;
+	}
 
 	if (based_on === "Accounts Receivable") {
 		doctype = "Sales Invoice";
@@ -444,21 +445,35 @@ function open_outstanding_dialog(frm) {
 				fieldtype: "Table",
 				label: "Invoices",
 				cannot_add_rows: true,
-				cannot_delete_rows: true,   // ✅ remove delete button
+				cannot_delete_rows: true, // ✅ remove delete button
 				in_place_edit: false,
 				fields: [
 					{ fieldname: "name", label: "Invoice", fieldtype: "Data", in_list_view: 1 },
 					{ fieldname: party_field, label: "Party", fieldtype: "Data", in_list_view: 1 },
-					{ fieldname: account_field, label: "Account", fieldtype: "Data", in_list_view: 1 },
-					{ fieldname: "posting_date", label: "Date", fieldtype: "Date", in_list_view: 1 },
-					{ fieldname: "outstanding_amount", label: "Outstanding", fieldtype: "Currency", in_list_view: 1 }
-				]
-			}
+					{
+						fieldname: account_field,
+						label: "Account",
+						fieldtype: "Data",
+						in_list_view: 1,
+					},
+					{
+						fieldname: "posting_date",
+						label: "Date",
+						fieldtype: "Date",
+						in_list_view: 1,
+					},
+					{
+						fieldname: "outstanding_amount",
+						label: "Outstanding",
+						fieldtype: "Currency",
+						in_list_view: 1,
+					},
+				],
+			},
 		],
 
 		primary_action_label: "Select",
 		primary_action() {
-
 			let selected = dialog.fields_dict.invoices.grid.get_selected_children();
 
 			if (!selected.length) {
@@ -468,7 +483,7 @@ function open_outstanding_dialog(frm) {
 
 			add_invoices_to_jv(frm, selected, based_on);
 			dialog.hide();
-		}
+		},
 	});
 
 	dialog.show();
@@ -477,9 +492,9 @@ function open_outstanding_dialog(frm) {
 	setTimeout(() => {
 		let grid = dialog.fields_dict.invoices.grid;
 
-		grid.wrapper.find('.grid-footer').hide();        // remove small grey button
-		grid.wrapper.find('.grid-remove-rows').hide();   // remove delete button
-		grid.wrapper.find('.row-actions').hide();        // remove edit icon
+		grid.wrapper.find(".grid-footer").hide(); // remove small grey button
+		grid.wrapper.find(".grid-remove-rows").hide(); // remove delete button
+		grid.wrapper.find(".row-actions").hide(); // remove edit icon
 	}, 100);
 
 	// 🔥 Fetch invoices
@@ -487,39 +502,29 @@ function open_outstanding_dialog(frm) {
 		method: "frappe.client.get_list",
 		args: {
 			doctype: doctype,
-			fields: [
-				"name",
-				party_field,
-				"posting_date",
-				"outstanding_amount",
-				account_field
-			],
+			fields: ["name", party_field, "posting_date", "outstanding_amount", account_field],
 			filters: {
 				docstatus: 1,
 				outstanding_amount: [">", 0],
-				company: frm.doc.company
-			}
-
+				company: frm.doc.company,
+			},
 		},
 		callback: function (r) {
 			if (r.message) {
 				dialog.fields_dict.invoices.df.data = r.message;
 				dialog.fields_dict.invoices.grid.refresh();
 			}
-		}
+		},
 	});
 }
 
 function add_invoices_to_jv(frm, invoices, based_on) {
-
 	let total = 0;
 
 
 	frm.clear_table("accounts");
 
-
-	invoices.forEach(inv => {
-
+	invoices.forEach((inv) => {
 		let row = frm.add_child("accounts");
 
 		let amt = flt(inv.outstanding_amount);
@@ -530,7 +535,6 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 		frappe.model.set_value(row.doctype, row.name, "party", inv.customer || inv.supplier);
 
 		if (based_on === "Accounts Receivable") {
-
 			frappe.model.set_value(row.doctype, row.name, "party_type", "Customer");
 
 			// 🔥 IMPORTANT: use account currency field
@@ -538,9 +542,7 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 
 			frappe.model.set_value(row.doctype, row.name, "reference_type", "Sales Invoice");
 			frappe.model.set_value(row.doctype, row.name, "reference_name", inv.name);
-
 		} else {
-
 			frappe.model.set_value(row.doctype, row.name, "party_type", "Supplier");
 
 			frappe.model.set_value(row.doctype, row.name, "debit_in_account_currency", amt);
@@ -548,16 +550,25 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 			frappe.model.set_value(row.doctype, row.name, "reference_type", "Purchase Invoice");
 			frappe.model.set_value(row.doctype, row.name, "reference_name", inv.name);
 		}
-
 	});
 
 	// 🔥 ADD BALANCING ROW (same as jd2)
 	let balancing_row = frm.add_child("accounts");
 
 	if (based_on === "Accounts Receivable") {
-		frappe.model.set_value(balancing_row.doctype, balancing_row.name, "debit_in_account_currency", total);
+		frappe.model.set_value(
+			balancing_row.doctype,
+			balancing_row.name,
+			"debit_in_account_currency",
+			total,
+		);
 	} else {
-		frappe.model.set_value(balancing_row.doctype, balancing_row.name, "credit_in_account_currency", total);
+		frappe.model.set_value(
+			balancing_row.doctype,
+			balancing_row.name,
+			"credit_in_account_currency",
+			total,
+		);
 	}
 
 	frm.refresh_field("accounts");
@@ -572,12 +583,11 @@ function get_company_currency(frm, callback) {
 		return;
 	}
 
-	frappe.db.get_value("Company", frm.doc.company, "default_currency")
-		.then(r => {
-			if (r && r.message) {
-				callback(r.message.default_currency);
-			}
-		});
+	frappe.db.get_value("Company", frm.doc.company, "default_currency").then((r) => {
+		if (r && r.message) {
+			callback(r.message.default_currency);
+		}
+	});
 }
 function auto_balance(frm) {
 	let accounts = frm.doc.accounts || [];
@@ -604,13 +614,11 @@ function auto_balance(frm) {
 	refresh_field("accounts");
 }
 
-
 frappe.ui.form.on("Journal Entry Account", {
 	party: function (frm, cdt, cdn) {
 		let d = frappe.get_doc(cdt, cdn);
 
 		if (!d.account && d.party_type && d.party) {
-
 			if (!frm.doc.company) {
 				frappe.throw(__("Please select Company"));
 			}
@@ -625,22 +633,27 @@ frappe.ui.form.on("Journal Entry Account", {
 				callback: function (r) {
 					if (r.message) {
 						frappe.model.set_value(cdt, cdn, "account", r.message.account);
-						frappe.model.set_value(cdt, cdn, "account_currency", r.message.account_currency);
+						frappe.model.set_value(
+							cdt,
+							cdn,
+							"account_currency",
+							r.message.account_currency,
+						);
 					}
-				}
+				},
 			});
 		}
 	},
 
 	account: function (frm, dt, dn) {
-
 		if (!frm.doc.company) {
 			show_company_warning(frm);
 			frappe.model.set_value(dt, dn, "account", "");
 			return;
 		}
 
-
+		frappe.model.set_value(dt, dn, "party_type", "");
+		frappe.model.set_value(dt, dn, "party", "");
 		verp_staffing.journal_entry.set_account_details(frm, dt, dn);
 	},
 
@@ -682,14 +695,13 @@ frappe.ui.form.on("Journal Entry Account", {
 			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
 
-
 		if (!row.exchange_rate || row.exchange_rate <= 0) {
 			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
 
 		verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
 		auto_balance(frm);
-	}
+	},
 });
 
 frappe.ui.form.on("Journal Entry Account", "accounts_remove", function (frm) {
@@ -713,7 +725,7 @@ $.extend(verp_staffing.journal_entry, {
 			frm.fields_dict.accounts.grid.update_docfield_property(
 				fieldname,
 				"label",
-				frm.doc.multi_currency ? label + " in Account Currency" : label
+				frm.doc.multi_currency ? label + " in Account Currency" : label,
 			);
 		});
 	},
@@ -723,18 +735,13 @@ $.extend(verp_staffing.journal_entry, {
 
 		let rate = flt(row.exchange_rate) || 1;
 
-		frappe.model.set_value(
-			cdt,
-			cdn,
-			"debit",
-			flt(row.debit_in_account_currency || 0) * rate
-		);
+		frappe.model.set_value(cdt, cdn, "debit", flt(row.debit_in_account_currency || 0) * rate);
 
 		frappe.model.set_value(
 			cdt,
 			cdn,
 			"credit",
-			flt(row.credit_in_account_currency || 0) * rate
+			flt(row.credit_in_account_currency || 0) * rate,
 		);
 
 		calculate_totals(frm);
@@ -818,21 +825,31 @@ $.extend(verp_staffing.journal_entry, {
 			// this is required because triggers try to refresh the grid
 
 			let debit_row = frm.fields_dict.accounts.grid.add_new_row();
-			frappe.model.set_value(debit_row.doctype, debit_row.name, "account", values.debit_account);
+			frappe.model.set_value(
+				debit_row.doctype,
+				debit_row.name,
+				"account",
+				values.debit_account,
+			);
 			frappe.model.set_value(
 				debit_row.doctype,
 				debit_row.name,
 				"debit_in_account_currency",
-				values.debit
+				values.debit,
 			);
 
 			let credit_row = frm.fields_dict.accounts.grid.add_new_row();
-			frappe.model.set_value(credit_row.doctype, credit_row.name, "account", values.credit_account);
+			frappe.model.set_value(
+				credit_row.doctype,
+				credit_row.name,
+				"account",
+				values.credit_account,
+			);
 			frappe.model.set_value(
 				credit_row.doctype,
 				credit_row.name,
 				"credit_in_account_currency",
-				values.debit
+				values.debit,
 			);
 
 			frm.save();
@@ -861,10 +878,7 @@ $.extend(verp_staffing.journal_entry, {
 
 			if (company) {
 				$.extend(filters, {
-					account_currency: [
-						"in",
-						[company_currency, null],
-					],
+					account_currency: ["in", [company_currency, null]],
 				});
 			}
 		}
@@ -891,14 +905,18 @@ $.extend(verp_staffing.journal_entry, {
 				method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_account_details_and_party_type",
 				args: {
 					account: d.account,
-					company: frm.doc.company
+					company: frm.doc.company,
 				},
 				callback: function (r) {
 					if (r.message) {
 						Object.assign(d, r.message);
 
-						// IMPORTANT: always run conversion + balance
-						verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, dt, dn);
+						// 🔥 IMPORTANT: always run conversion + balance
+						verp_staffing.journal_entry.set_debit_credit_in_company_currency(
+							frm,
+							dt,
+							dn,
+						);
 						refresh_field("accounts");
 					}
 				},

@@ -62,9 +62,6 @@ frappe.ui.form.on("ERP Configuration", {
 	},
 });
 
-// ================================
-// TYPE OPTIONS
-// ================================
 const TYPE_OPTIONS = [
 	"HR",
 	"Contact",
@@ -76,9 +73,7 @@ const TYPE_OPTIONS = [
 	"Operations",
 ];
 
-// ================================
-// RENDER FUNCTION
-// ================================
+
 function render_email_configurator(frm) {
 	// Use module-level email_config_rows (already loaded in refresh)
 	let data = email_config_rows;
@@ -296,9 +291,7 @@ function render_email_configurator(frm) {
 	init_select_all(wrapper);
 }
 
-// ================================
-// LINK FIELD WITH FRAPPE SEARCH
-// ================================
+
 function init_link_fields(wrapper, frm) {
 	wrapper.find(".link-field").each(function () {
 		let input = this;
@@ -341,9 +334,6 @@ function init_link_fields(wrapper, frm) {
 	});
 }
 
-// ================================
-// MULTI SELECT (type dropdown)
-// ================================
 function init_multi_select(wrapper, frm) {
 	wrapper.find(".type-select").on("change", function () {
 		let value = $(this).val();
@@ -361,19 +351,12 @@ function init_multi_select(wrapper, frm) {
 	});
 }
 
-// ================================
-// SELECT ALL CHECKBOX
-// ================================
 function init_select_all(wrapper) {
 	wrapper.find(".select-all").on("change", function () {
 		let checked = $(this).is(":checked");
 		wrapper.find(".row-check").prop("checked", checked);
 	});
 }
-
-// ================================
-// EVENT HANDLERS (delegated)
-// ================================
 
 // ADD ROW — in-memory only
 $(document).on("click", ".add-row", function () {
