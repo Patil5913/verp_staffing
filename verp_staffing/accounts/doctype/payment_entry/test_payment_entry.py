@@ -144,6 +144,9 @@ class PaymentEntry(FrappeTestCase):
             start_date="2026-01-01",
             end_date="2026-12-31",
         )
+        
+        cls._original_commit = frappe.db.commit
+        frappe.db.commit = lambda *a, **kw: None
 
     @classmethod
     def tearDownClass(cls):

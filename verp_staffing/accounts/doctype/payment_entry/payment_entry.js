@@ -225,7 +225,6 @@ frappe.ui.form.on("Payment Entry", {
 			frm,
 			frm.doc.paid_from,
 			"paid_from_account_currency",
-			null,
 			function (frm) {
 				if (frm.doc.payment_type === "Pay") on_paid_amount_change(frm);
 				on_paid_from_currency_change(frm);
@@ -242,7 +241,6 @@ frappe.ui.form.on("Payment Entry", {
 			frm,
 			frm.doc.paid_to,
 			"paid_to_account_currency",
-			"paid_to_account_balance",
 			function (frm) {
 				on_paid_to_currency_change(frm);
 			},
@@ -579,7 +577,7 @@ function set_write_off_deduction(frm) {
 	});
 }
 
-function set_account_currency_and_balance(frm, account, currency_field, balance_field, callback) {
+function set_account_currency_and_balance(frm, account, currency_field, callback) {
 	if (!frm.doc.posting_date || !account) return;
 	frappe.call({
 		method: "verp_staffing.accounts.doctype.payment_entry.payment_entry.get_account_details",
@@ -588,9 +586,6 @@ function set_account_currency_and_balance(frm, account, currency_field, balance_
 			if (!r.message) return;
 			frappe.run_serially([
 				() => frm.set_value(currency_field, r.message["account_currency"]),
-				() => {
-					if (balance_field) frm.set_value(balance_field, r.message["account_balance"]);
-				},
 				() => {
 					if (callback) callback(frm);
 					set_currency_labels(frm);

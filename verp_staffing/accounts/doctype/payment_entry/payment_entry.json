@@ -31,7 +31,6 @@
   "paid_to",
   "paid_to_account_type",
   "paid_to_account_currency",
-  "paid_to_account_balance",
   "currency_and_price_list",
   "currency",
   "column_break_fvms",
@@ -271,16 +270,6 @@
    "print_hide": 1,
    "read_only": 1,
    "reqd": 1
-  },
-  {
-   "allow_on_submit": 1,
-   "depends_on": "paid_to",
-   "fieldname": "paid_to_account_balance",
-   "fieldtype": "Currency",
-   "label": "Account Balance (To)",
-   "options": "paid_to_account_currency",
-   "print_hide": 1,
-   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -692,7 +681,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-05 15:13:55.733849",
+ "modified": "2026-05-06 11:59:45.779249",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",

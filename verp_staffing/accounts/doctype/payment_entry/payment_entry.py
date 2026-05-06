@@ -7,8 +7,10 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import cint, flt, nowdate
 from verp_staffing.accounts.doctype.gl_entry.gl_entry import (
+    build_gl_entry,
     make_gl_entries as _post_gl_entries_to_db,
     cancel_gl_entries,
+    merge_gl_entries,
 )
 
 
@@ -31,8 +33,8 @@ class PaymentEntry(Document):
     def validate_same_account_not_allowed(self):
         if self.paid_from and self.paid_to and self.paid_from == self.paid_to:
             frappe.throw(
-                ("Paid From and Paid To accounts cannot be the same."),
-                title=("Invalid Account Selection"),
+                _("Paid From and Paid To accounts cannot be the same."),
+                title=_("Invalid Account Selection"),
             )
 
     def on_submit(self):
@@ -256,31 +258,16 @@ class PaymentEntry(Document):
         self._add_bank_gl_entries(gl_entries)
         self._add_deduction_gl_entries(gl_entries)
         self._add_tax_gl_entries(gl_entries)
-        return gl_entries
+        return merge_gl_entries(gl_entries)
 
-    def _gl_dict(self, args):
-        account_currency = args.get("account_currency")
-        if not account_currency and args.get("account"):
-            account_currency = frappe.get_cached_value(
-                "Account", args["account"], "account_currency"
-            )
-
-        gl = frappe._dict(
-            {
-                "doctype": "GL Entry",
-                "posting_date": self.posting_date,
-                "voucher_type": "Payment Entry",
-                "voucher_no": self.name,
-                "remarks": self.remarks or "",
-                "company": self.company,
-                "is_cancelled": 0,
-                "account_currency": account_currency or "",
-                "debit": 0.0,
-                "credit": 0.0,
-            }
+    def _base_gl_args(self):
+        return dict(
+            company=self.company,
+            posting_date=self.posting_date,
+            voucher_type="Payment Entry",
+            voucher_no=self.name,
+            remarks=self.remarks or "",
         )
-        gl.update(args)
-        return gl
 
     def _add_party_gl_entries(self, gl_entries):
         if (
@@ -293,96 +280,74 @@ class PaymentEntry(Document):
         party_account = (
             self.paid_from if self.payment_type == "Receive" else self.paid_to
         )
-        party_account_currency = (
-            self.paid_from_account_currency
-            if self.payment_type == "Receive"
-            else self.paid_to_account_currency
-        ) or frappe.get_cached_value("Account", party_account, "account_currency")
-
         against_account = (
             self.paid_to if self.payment_type == "Receive" else self.paid_from
         )
         side = "credit" if self.payment_type == "Receive" else "debit"
+        base = self._base_gl_args()
 
         for ref in self.get("references") or []:
             if not flt(ref.allocated_amount):
                 continue
 
             gl_entries.append(
-                self._gl_dict(
-                    {
-                        "account": party_account,
-                        "account_currency": party_account_currency,
-                        "party_type": self.party_type,
-                        "party": self.party,
-                        "against": against_account,
-                        side: flt(
-                            ref.allocated_amount
-                        ),  # transaction currency — enrich handles conversion
-                        "against_voucher_type": ref.reference_doctype,
-                        "against_voucher": ref.reference_name,
-                    }
+                build_gl_entry(
+                    account=party_account,
+                    party_type=self.party_type,
+                    party=self.party,
+                    against=against_account,
+                    against_voucher_type=ref.reference_doctype,
+                    against_voucher=ref.reference_name,
+                    **{side: flt(ref.allocated_amount)},
+                    **base,
                 )
             )
 
         if flt(self.unallocated_amount):
             gl_entries.append(
-                self._gl_dict(
-                    {
-                        "account": party_account,
-                        "account_currency": party_account_currency,
-                        "party_type": self.party_type,
-                        "party": self.party,
-                        "against": against_account,
-                        side: flt(self.unallocated_amount),
-                        "against_voucher_type": "Payment Entry",
-                        "against_voucher": self.name,
-                    }
+                build_gl_entry(
+                    account=party_account,
+                    party_type=self.party_type,
+                    party=self.party,
+                    against=against_account,
+                    against_voucher_type="Payment Entry",
+                    against_voucher=self.name,
+                    **{side: flt(self.unallocated_amount)},
+                    **base,
                 )
             )
 
     def _add_bank_gl_entries(self, gl_entries):
-        paid_from_currency = self.paid_from_account_currency or (
-            frappe.get_cached_value("Account", self.paid_from, "account_currency")
-            if self.paid_from
-            else None
-        )
-        paid_to_currency = self.paid_to_account_currency or (
-            frappe.get_cached_value("Account", self.paid_to, "account_currency")
-            if self.paid_to
-            else None
-        )
+        base = self._base_gl_args()
 
         if self.payment_type in ("Pay", "Internal Transfer"):
             gl_entries.append(
-                self._gl_dict(
-                    {
-                        "account": self.paid_from,
-                        "account_currency": paid_from_currency,
-                        "against": self.party
-                        if self.payment_type == "Pay"
-                        else self.paid_to,
-                        "credit": flt(self.paid_amount),  # transaction currency
-                    }
+                build_gl_entry(
+                    account=self.paid_from,
+                    against=(
+                        self.party if self.payment_type == "Pay" else self.paid_to
+                    ),
+                    credit=flt(self.paid_amount),
+                    **base,
                 )
             )
 
         if self.payment_type in ("Receive", "Internal Transfer"):
             gl_entries.append(
-                self._gl_dict(
-                    {
-                        "account": self.paid_to,
-                        "account_currency": paid_to_currency,
-                        "against": self.party
-                        if self.payment_type == "Receive"
-                        else self.paid_from,
-                        "debit": flt(self.paid_amount),  # transaction currency
-                    }
+                build_gl_entry(
+                    account=self.paid_to,
+                    against=(
+                        self.party if self.payment_type == "Receive" else self.paid_from
+                    ),
+                    debit=flt(self.paid_amount),
+                    **base,
                 )
             )
 
     def _add_deduction_gl_entries(self, gl_entries):
         company_currency = self._get_company_currency()
+        base = self._base_gl_args()
+
         for d in self.get("deductions") or []:
             if not flt(d.amount):
                 continue
@@ -398,19 +363,17 @@ class PaymentEntry(Document):
                 )
 
             gl_entries.append(
-                self._gl_dict(
-                    {
-                        "account": d.account,
-                        "account_currency": account_currency,
-                        "against": self.party or self.paid_from,
-                        "debit_in_company_currency": flt(d.amount),
-                        "debit": flt(d.amount),
-                    }
+                build_gl_entry(
+                    account=d.account,
+                    against=self.party or self.paid_from,
+                    debit=flt(d.amount),
+                    **base,
                 )
             )
 
     def _add_tax_gl_entries(self, gl_entries):
         company_currency = self._get_company_currency()
+        base = self._base_gl_args()
 
         for d in self.get("taxes") or []:
             if not flt(d.tax_amount):
@@ -438,32 +401,27 @@ class PaymentEntry(Document):
                 else self.paid_to
             )
 
+            # Entry on the tax account itself
             gl_entries.append(
-                self._gl_dict(
-                    {
-                        "account": d.account_head,
-                        "account_currency": account_currency,
-                        "against": against,
-                        dr_or_cr: flt(d.tax_amount),
-                        "exchange_rate": 1,  # taxes are in company currency — no conversion
-                    }
+                build_gl_entry(
+                    account=d.account_head,
+                    against=against,
+                    exchange_rate=1,  # taxes are always in company currency
+                    **{dr_or_cr: flt(d.tax_amount)},
+                    **base,
                 )
             )
 
+            # Corresponding counter-entry on the payment account (exclusive taxes only)
             if not cint(d.included_in_paid_amount):
                 payment_account = self._get_payment_account_for_taxes()
-                payment_account_currency = frappe.get_cached_value(
-                    "Account", payment_account, "account_currency"
-                )
                 gl_entries.append(
-                    self._gl_dict(
-                        {
-                            "account": payment_account,
-                            "account_currency": payment_account_currency,
-                            "against": against,
-                            rev_dr_or_cr: flt(d.tax_amount),
-                            "exchange_rate": 1,  # company currency — no conversion
-                        }
+                    build_gl_entry(
+                        account=payment_account,
+                        against=against,
+                        exchange_rate=1,  # company currency
+                        **{rev_dr_or_cr: flt(d.tax_amount)},
+                        **base,
                     )
                 )
 
@@ -538,11 +496,6 @@ class PaymentEntry(Document):
         elif tax.charge_type == "On Previous Row Total":
             return flt((rate / 100.0) * self.get("taxes")[cint(tax.row_id) - 1].total)
         return 0.0
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Validation helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def _validate_taxes_and_charges(tax):
@@ -874,17 +827,11 @@ def validate_amounts_are_positive(doc):
                 _("{0} must be greater than zero.").format(label),
                 title=_("Invalid Amount"),
             )
-
         elif rule == "non_negative" and value < 0:
             frappe.throw(
                 _("{0} cannot be negative.").format(label),
                 title=_("Invalid Amount"),
             )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Whitelisted API methods
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 @frappe.whitelist()
@@ -1239,11 +1186,6 @@ def make_payment_entry(source_name, target_doc=None):
     return pe
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Outstanding update helpers
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 def update_invoice_outstanding(payment_doc, cancel=False):
     supported = {"Sales Invoice", "Purchase Invoice"}
     for ref in payment_doc.get("references") or []:
@@ -1298,11 +1240,6 @@ def update_order_outstanding(payment_doc, cancel=False):
             new_outstanding,
         )
     frappe.db.commit()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Private helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def _get_party_account(party_type, party, company):
