@@ -263,6 +263,8 @@ def cancel_gl_entries(doc, method=None):
             posting_date=doc.posting_date,
             voucher_type=doc.doctype,
             voucher_no=doc.name,
+            party_type=original.party_type,
+            party=original.party,
             remarks="Reversal Entry"
         )
         reverse["fiscal_year"] = original.fiscal_year

@@ -15,7 +15,6 @@ def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=No
 		transaction_date = nowdate()
 
 	currency_settings = frappe.get_cached_doc("Accounts Settings")
-	allow_stale_rates = currency_settings.get("allow_stale")
 
 	filters = [
 		["date", "<=", get_datetime_str(transaction_date)],
@@ -28,10 +27,6 @@ def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=No
 	elif args == "for_selling":
 		filters.append(["for_selling", "=", "1"])
 
-	if not allow_stale_rates:
-		stale_days = currency_settings.get("stale_days")
-		checkpoint_date = add_days(transaction_date, -stale_days)
-		filters.append(["date", ">", get_datetime_str(checkpoint_date)])
 
 	# cksgb 19/09/2016: get last entry in Currency Exchange with from_currency and to_currency.
 	entries = frappe.get_all(
@@ -44,11 +39,6 @@ def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=No
 		return 0.00
 
 	pegged_currencies = {}
-
-	if currency_settings.allow_pegged_currencies_exchange_rates:
-		pegged_currencies = get_pegged_currencies()
-		if rate := get_pegged_rate(pegged_currencies, from_currency, to_currency, transaction_date):
-			return rate
 
 	try:
 		cache = frappe.cache()
@@ -82,10 +72,6 @@ def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=No
 		# Support multiple pegged currencies
 		value = flt(value)
 
-		if currency_settings.allow_pegged_currencies_exchange_rates and to_currency in pegged_currencies:
-			value *= flt(pegged_currencies[to_currency]["ratio"])
-		if currency_settings.allow_pegged_currencies_exchange_rates and from_currency in pegged_currencies:
-			value /= flt(pegged_currencies[from_currency]["ratio"])
 
 		return flt(value)
 	except Exception:
@@ -105,54 +91,6 @@ def format_ces_api(data, param):
 		from_currency=param.get("from_currency"),
 	)
  
-
-def get_pegged_currencies():
-	pegged_currencies = frappe.get_all(
-		"Pegged Currency Details",
-		filters={"parent": "Pegged Currencies"},
-		fields=["source_currency", "pegged_against", "pegged_exchange_rate"],
-	)
-
-	pegged_map = {
-		currency.source_currency: {
-			"pegged_against": currency.pegged_against,
-			"ratio": flt(currency.pegged_exchange_rate),
-		}
-		for currency in pegged_currencies
-	}
-	return pegged_map
-
-
-def get_pegged_rate(pegged_map, from_currency, to_currency, transaction_date=None):
-	from_entry = pegged_map.get(from_currency)
-	to_entry = pegged_map.get(to_currency)
-
-	if from_currency in pegged_map and to_currency in pegged_map:
-		# Case 1: Both are present and pegged to same bases
-		if from_entry["pegged_against"] == to_entry["pegged_against"]:
-			return (1 / from_entry["ratio"]) * to_entry["ratio"]
-
-		# Case 2: Both are present but pegged to different bases
-		base_from = from_entry["pegged_against"]
-		base_to = to_entry["pegged_against"]
-		base_rate = get_exchange_rate(base_from, base_to, transaction_date)
-
-		if not base_rate:
-			return None
-
-		return (1 / from_entry["ratio"]) * base_rate * to_entry["ratio"]
-
-	# Case 3: from_currency is pegged to to_currency
-	if from_entry and from_entry["pegged_against"] == to_currency:
-		return flt(from_entry["ratio"])
-
-	# Case 4: to_currency is pegged to from_currency
-	if to_entry and to_entry["pegged_against"] == from_currency:
-		return 1 / flt(to_entry["ratio"])
-
-	""" If only one entry exists but doesn’t match pegged currency logic, return None """
-	return None
-
 
 @frappe.whitelist()
 def get_tax_rate(account_head):

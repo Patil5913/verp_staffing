@@ -4,6 +4,18 @@
 frappe.ui.form.on("Purchase Invoice", {
 	refresh(frm) {
 		set_currency_labels(frm);
+		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
+			frm.add_custom_button(
+				__("Payment Entry"),
+				function () {
+					frappe.model.open_mapped_doc({
+						method: "verp_staffing.accounts.doctype.payment_entry.payment_entry.make_payment_entry",
+						frm: frm,
+					});
+				},
+				__("Create"),
+			);
+		}
 		verp_staffing.purchase.exchange.update_description(frm);
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),

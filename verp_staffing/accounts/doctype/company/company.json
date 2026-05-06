@@ -41,38 +41,12 @@
   "default_receivable_account",
   "default_payable_account",
   "write_off_account",
-  "unrealized_profit_loss_account",
   "column_break_yksv",
   "allow_account_creation_against_child_company",
   "default_income_account",
   "default_discount_account",
   "default_expense_account",
-  "round_off_section",
-  "round_off_account",
-  "column_break_ofqx",
-  "round_off_for_opening",
-  "deferred_accounting_section",
-  "default_deferred_revenue_account",
-  "column_break_phgg",
-  "default_deferred_expense_account",
-  "advance_payments_section",
-  "book_advance_payments_in_separate_party_account",
-  "reconcile_on_advance_payment_date",
-  "column_break_apsh",
-  "default_advance_received_account",
-  "default_advance_paid_account",
-  "exchange_rate_revaluation_settings_section",
-  "auto_exchange_rate_revaluation",
-  "auto_err_frequency",
-  "submit_err_jv",
-  "fixed_asset_defaults",
-  "accumulated_depreciation_account",
-  "depreciation_expense_account",
-  "series_for_depreciation_entry",
-  "expenses_included_in_asset_valuation",
-  "column_break_amae",
-  "disposal_account",
-  "asset_received_but_not_billed"
+  "round_off_account"
  ],
  "fields": [
   {
@@ -291,12 +265,6 @@
    "options": "Account"
   },
   {
-   "fieldname": "unrealized_profit_loss_account",
-   "fieldtype": "Link",
-   "label": "Unrealized Profit / Loss Account",
-   "options": "Account"
-  },
-  {
    "depends_on": "eval:!doc.__islocal",
    "fieldname": "default_income_account",
    "fieldtype": "Link",
@@ -312,161 +280,9 @@
    "options": "Account"
   },
   {
-   "fieldname": "round_off_section",
-   "fieldtype": "Section Break",
-   "label": "Round Off"
-  },
-  {
    "fieldname": "round_off_account",
    "fieldtype": "Link",
    "label": "Round Off account",
-   "options": "Account"
-  },
-  {
-   "fieldname": "column_break_ofqx",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "round_off_for_opening",
-   "fieldtype": "Link",
-   "label": "Round Off for Opening",
-   "options": "Account"
-  },
-  {
-   "fieldname": "deferred_accounting_section",
-   "fieldtype": "Section Break",
-   "label": "Deferred Accounting"
-  },
-  {
-   "depends_on": "eval:!doc.__islocal",
-   "fieldname": "default_deferred_revenue_account",
-   "fieldtype": "Link",
-   "ignore_user_permissions": 1,
-   "label": "Default Deferred Revenue Account",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "column_break_phgg",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "default_deferred_expense_account",
-   "fieldtype": "Link",
-   "ignore_user_permissions": 1,
-   "label": "Default Deferred Expense Account",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "advance_payments_section",
-   "fieldtype": "Section Break",
-   "label": "Advance Payments"
-  },
-  {
-   "default": "0",
-   "description": "Enabling this option will allow you to record - <br><br> 1. Advances Received in a <b>Liability Account</b> instead of the <b>Asset Account</b><br><br>2. Advances Paid in an <b>Asset Account</b> instead of the <b> Liability Account</b>",
-   "fieldname": "book_advance_payments_in_separate_party_account",
-   "fieldtype": "Check",
-   "label": "Book Advance Payments in Separate Party Account"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval: doc.book_advance_payments_in_separate_party_account",
-   "description": "If <b>Enabled</b> - Reconciliation happens on the <b>Advance Payment posting date</b><br>\nIf <b>Disabled</b> - Reconciliation happens on oldest of 2 Dates: <b>Invoice Date</b> or the <b>Advance Payment posting date</b><br>\n",
-   "fieldname": "reconcile_on_advance_payment_date",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Reconcile on Advance Payment Date"
-  },
-  {
-   "fieldname": "column_break_apsh",
-   "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "eval:doc.book_advance_payments_in_separate_party_account",
-   "description": "Only 'Payment Entries' made against this advance account are supported.",
-   "fieldname": "default_advance_received_account",
-   "fieldtype": "Link",
-   "label": "Default Advance Received Account",
-   "mandatory_depends_on": "book_advance_payments_as_liability",
-   "options": "Account"
-  },
-  {
-   "fieldname": "default_advance_paid_account",
-   "fieldtype": "Link",
-   "label": "Default Advance Paid Account",
-   "options": "Account"
-  },
-  {
-   "fieldname": "exchange_rate_revaluation_settings_section",
-   "fieldtype": "Section Break",
-   "label": "Exchange Rate Revaluation Settings"
-  },
-  {
-   "default": "0",
-   "fieldname": "auto_exchange_rate_revaluation",
-   "fieldtype": "Check",
-   "label": "Auto Create Exchange Rate Revaluation"
-  },
-  {
-   "fieldname": "auto_err_frequency",
-   "fieldtype": "Select",
-   "label": "Frequency",
-   "options": "Daily\nWeekly\nMonthly"
-  },
-  {
-   "default": "0",
-   "description": "Upon enabling this, the JV will be submitted for a different exchange rate.",
-   "fieldname": "submit_err_jv",
-   "fieldtype": "Check",
-   "label": "Submit ERR Journals?"
-  },
-  {
-   "fieldname": "fixed_asset_defaults",
-   "fieldtype": "Section Break",
-   "label": "Fixed Asset Defaults"
-  },
-  {
-   "fieldname": "accumulated_depreciation_account",
-   "fieldtype": "Link",
-   "label": "Accumulated Depreciation Account",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "depreciation_expense_account",
-   "fieldtype": "Link",
-   "label": "Depreciation Expense Account",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "series_for_depreciation_entry",
-   "fieldtype": "Data",
-   "label": "Series for Asset Depreciation Entry (Journal Entry)"
-  },
-  {
-   "fieldname": "expenses_included_in_asset_valuation",
-   "fieldtype": "Link",
-   "label": "Expenses Included In Asset Valuation",
-   "options": "Account"
-  },
-  {
-   "fieldname": "column_break_amae",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "disposal_account",
-   "fieldtype": "Link",
-   "label": "Gain/Loss Account on Asset Disposal",
-   "no_copy": 1,
-   "options": "Account"
-  },
-  {
-   "fieldname": "asset_received_but_not_billed",
-   "fieldtype": "Link",
-   "label": "Asset Received But Not Billed",
    "options": "Account"
   },
   {
@@ -484,7 +300,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-04-18 17:31:10.896220",
+ "modified": "2026-05-05 14:44:29.947567",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",
