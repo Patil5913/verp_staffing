@@ -88,15 +88,6 @@ doctype_js = {
     for doc in validation_docs
 }
 
-doctype_js["Sales Invoice"] = [
-    "public/js/make_payment_entry.js",
-    "public/js/sales_invoice.js",
-]
-doctype_js["Purchase Invoice"] = [
-    "public/js/make_payment_entry.js",
-    "public/js/purchase_invoice.js",
-]
-
 
 doctype_list_js = {"Lead": "public/js/lead_list.js"}
 treeviews = [
