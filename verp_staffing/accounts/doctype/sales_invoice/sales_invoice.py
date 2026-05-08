@@ -3,13 +3,13 @@
 
 import frappe
 from frappe import _, throw
-from frappe.utils import cint, flt, getdate, nowdate, now_datetime
+from frappe.utils import cint, flt, getdate, nowdate, now_datetime, today
 from frappe.model.document import Document
 from verp_staffing.accounts.doctype.company.company import get_company_currency
 from frappe.utils import money_in_words
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.accounts.api.get_defaults import validate_account
-from frappe.utils import nowdate, add_days
+from frappe.utils import add_days
 import json
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
 
@@ -36,43 +36,55 @@ class SalesInvoice(Document):
         ):
             self.indicator_color = "red"
             self.indicator_title = _("Overdue")
-        elif cint(self.is_return) == 1:
-            self.indicator_title = _("Return")
-            self.indicator_color = "gray"
         else:
             self.indicator_color = "green"
             self.indicator_title = _("Paid")
 
     def validate(self):
+        self.validate_mandatory_fields()
         self.validate_auto_set_posting_date()
         self.validate_fiscal_year_configuration()
-
+        self.validate_due_date()
+ 
         self.validate_uom_is_integer("stock_uom", "stock_qty")
         self.validate_uom_is_integer("uom", "qty")
-        # for future
-        # self.check_sales_order_close("sales_order")
+        self.validate_item_rates()
+        self.validate_duplicate_items()
+ 
+        self.validate_tax_rate_bounds()
+        self.validate_tax_row_id()
+ 
+        self.check_sales_order_close("sales_order")
         self.set_debit_to_account()
         self.validate_debit_to_acc()
         self.handle_currency_logic()
         # Calculations
         run_calculation(self)
+        self.validate_grand_total()
+        self.validate_discount_not_exceeds_total()
+ 
         self.validate_accounts()
         self.validate_tax_accounts()
         self.validate_discount_account()
         self.validate_mandatory_accounts()
         self.validate_account_currencies()
-
+        self.validate_cash_bank_account_currency()
+ 
         self.set_against_income_account()
         self.set_indicator()
         self.set_in_words()
         self.set_status()
 
-    def validate_auto_set_posting_date(self):
-        # Don't auto set the posting date and time if invoice is amended
-        if self.is_new() and self.amended_from:
-            self.set_posting_date = 1
+    def validate_mandatory_fields(self):
+        if not self.customer:
+            frappe.throw("Customer is required", frappe.MandatoryError)
+            
+        if not self.company:
+            frappe.throw("Company is required", frappe.MandatoryError)
 
-        self.validate_posting_date()
+    def validate_auto_set_posting_date(self):
+        if not self.posting_date:
+            self.posting_date = now_datetime().date()
         
     def validate_fiscal_year_configuration(self):
         result = validate_fiscal_year(self.company, self.posting_date)
@@ -86,15 +98,6 @@ class SalesInvoice(Document):
 
             else:
                 frappe.throw("Invalid Fiscal Year configuration")
-
-    def validate_posting_date(self):
-        # set Edit Posting Date and Time to 1 while data import
-        if frappe.flags.in_import and self.posting_date:
-            self.set_posting_date = 1
-
-        if not getattr(self, "set_posting_date", None):
-            now = now_datetime()
-            self.posting_date = now.strftime("%Y-%m-%d")
 
     def validate_uom_is_integer(doc, uom_field, qty_fields, child_dt=None):
         if isinstance(qty_fields, str):
@@ -136,17 +139,16 @@ class SalesInvoice(Document):
                                 UOMMustBeIntegerError,
                             )
 
-    # for future
-    # def check_sales_order_close(self, ref_fieldname):
-    #     for d in self.get("items"):
-    #         if d.get(ref_fieldname):
-    #             status = frappe.db.get_value(
-    #                 "Sales Order", d.get(ref_fieldname), "status"
-    #             )
-    #             if status == "Closed" and not self.is_return:
-    #                 frappe.throw(
-    #                     _("Sales Order {0} is {1}").format(d.get(ref_fieldname), status)
-    #                 )
+    def check_sales_order_close(self, ref_fieldname):
+        for d in self.get("items"):
+            if d.get(ref_fieldname):
+                status = frappe.db.get_value(
+                    "Sales Order", d.get(ref_fieldname), "status"
+                )
+                if status == "Closed":
+                    frappe.throw(
+                        _("Sales Order {0} is {1}").format(d.get(ref_fieldname), status)
+                    )
 
     @frappe.whitelist()
     def set_debit_to_account(self):
@@ -266,28 +268,6 @@ class SalesInvoice(Document):
                 "Invalid account currency detected:<br>" + "<br>".join(invalid_accounts)
             )
 
-    def handle_currency_logic(self):
-        default_currency = get_company_currency(self.company)
-        if not default_currency:
-            throw(_("Please enter default currency in Company Master"))
-
-        if not self.conversion_rate:
-            throw(_("Conversion rate cannot be 0"))
-
-        if self.currency == default_currency and flt(self.conversion_rate) != 1.00:
-            throw(
-                _(
-                    "Conversion rate must be 1.00 if document currency is same as company currency"
-                )
-            )
-
-        if self.currency != default_currency and flt(self.conversion_rate) == 1.00:
-            frappe.msgprint(
-                _(
-                    "Conversion rate is 1.00, but document currency is different from company currency"
-                )
-            )
-
     def validate_accounts(self):
         # validate_income_account
         for item in self.get("items"):
@@ -319,6 +299,251 @@ class SalesInvoice(Document):
                 expected_types=["Expense Account"],
                 label="Discount Account"
             )
+             
+    def validate_due_date(self):
+        """Due Date cannot be earlier than Posting Date."""
+        if self.due_date and self.posting_date:
+            if getdate(self.due_date) < getdate(self.posting_date):
+                frappe.throw(
+                    _("Due Date ({0}) cannot be before Posting Date ({1})").format(
+                        self.due_date, self.posting_date
+                    )
+                )
+ 
+    def validate_item_rates(self):
+        """Reject None or negative rates on invoices."""
+
+        for item in self.get("items"):
+            # Reject None
+            if item.rate is None:
+                frappe.throw(
+                    _("Row {0}: Rate cannot be empty").format(item.idx)
+                )
+
+            # Reject negative
+            if flt(item.rate) < 0:
+                frappe.throw(
+                    _("Row {0}: Rate cannot be negative for a invoice").format(item.idx)
+                )
+ 
+    def validate_duplicate_items(self):
+        """Warn on duplicates, but fail if item is missing."""
+        seen = {}
+
+        for item in self.get("items"):
+            # HARD FAIL instead of skipping
+            if not item.item:
+                frappe.throw(
+                    _("Row {0}: Item is required").format(item.idx)
+                )
+
+            if item.item in seen:
+                frappe.msgprint(
+                    _(
+                        "Row {0}: Item {1} also appears in Row {2}. Consider merging."
+                    ).format(item.idx, frappe.bold(item.item), seen[item.item]),
+                    indicator="orange",
+                    alert=True,
+                )
+            else:
+                seen[item.item] = item.idx
+ 
+    def validate_tax_rate_bounds(self):
+        """Validate tax rate and amount based on charge type."""
+
+        for tax in self.get("taxes"):
+
+            # Handle Actual type → validate tax_amount
+            if tax.charge_type == "Actual":
+                if tax.tax_amount is None:
+                    frappe.throw(
+                        _("Row {0}: Tax Amount cannot be empty for Actual type").format(tax.idx)
+                    )
+
+                if flt(tax.tax_amount) < 0:
+                    frappe.throw(
+                        _("Row {0}: Tax Amount cannot be negative").format(tax.idx)
+                    )
+
+                continue
+
+            # Handle percentage-based taxes → validate rate
+            if tax.rate is None:
+                frappe.throw(
+                    _("Row {0}: Tax Rate cannot be empty").format(tax.idx)
+                )
+
+            rate = flt(tax.rate)
+
+            if rate < 0:
+                frappe.throw(
+                    _("Row {0}: Tax Rate cannot be negative").format(tax.idx)
+                )
+
+            if rate > 100:
+                frappe.throw(
+                    _("Row {0}: Tax Rate ({1}%) cannot exceed 100%").format(
+                        tax.idx, rate
+                    )
+                )
+ 
+    def validate_tax_row_id(self):
+        """Validate row_id when charge_type references a previous tax row."""
+        prev_row_types = ("On Previous Row Amount", "On Previous Row Total")
+        for tax in self.get("taxes"):
+            if tax.charge_type not in prev_row_types:
+                continue
+ 
+            if not tax.row_id:
+                frappe.throw(
+                    _("Row {0}: Row ID is required for charge type '{1}'").format(
+                        tax.idx, tax.charge_type
+                    )
+                )
+ 
+            try:
+                ref_idx = cint(tax.row_id)
+            except (TypeError, ValueError):
+                frappe.throw(
+                    _("Row {0}: Row ID must be a valid integer").format(tax.idx)
+                )
+ 
+            if ref_idx < 1:
+                frappe.throw(
+                    _("Row {0}: Row ID must be greater than 0").format(tax.idx)
+                )
+ 
+            if ref_idx >= tax.idx:
+                frappe.throw(
+                    _(
+                        "Row {0}: Row ID ({1}) must reference an earlier tax row"
+                    ).format(tax.idx, ref_idx)
+                )
+ 
+    def validate_grand_total(self):
+        """Block submission of zero/negative grand total on invoices."""
+        if flt(self.grand_total) <= 0:
+            frappe.throw(
+                _(
+                    "Grand Total must be greater than 0 for a invoice. "
+                    "Current Grand Total: {0}"
+                ).format(self.grand_total)
+            )
+ 
+    def validate_discount_not_exceeds_total(self):
+        """Discount can't be larger than the total it's applied against."""
+        if flt(self.additional_discount_percentage) < 0:
+            frappe.throw(_("Additional Discount Percentage cannot be negative"))
+ 
+        if flt(self.additional_discount_percentage) > 100:
+            frappe.throw(_("Additional Discount Percentage cannot exceed 100%"))
+ 
+        if flt(self.discount_amount) < 0:
+            frappe.throw(_("Discount Amount cannot be negative"))
+ 
+        if flt(self.discount_amount) > flt(self.total):
+            frappe.throw(
+                _(
+                    "Discount Amount ({0}) cannot exceed Total ({1})"
+                ).format(self.discount_amount, self.total)
+            )
+ 
+    def validate_cash_bank_account_currency(self):
+        """When is_paid, the cash/bank account currency must match company or doc currency."""
+        if not (cint(self.is_paid) and self.cash_bank_account):
+            return
+ 
+        company_currency = frappe.db.get_value(
+            "Company", self.company, "default_currency"
+        )
+        acc_currency = frappe.db.get_value(
+            "Account", self.cash_bank_account, "account_currency"
+        )
+ 
+        if acc_currency not in [company_currency, self.currency]:
+            frappe.throw(
+                _(
+                    "Cash/Bank Account {0} currency ({1}) must match either "
+                    "company currency ({2}) or document currency ({3})"
+                ).format(
+                    self.cash_bank_account,
+                    acc_currency,
+                    company_currency,
+                    self.currency,
+                )
+            )
+ 
+    @frappe.whitelist()
+    def set_debit_to_account(self):
+        """Auto set receivable account with strict fallback and validation"""
+
+        if self.debit_to:
+            return
+
+        if not self.customer:
+            frappe.throw(_("Customer is required to determine receivable account"))
+
+        # 2. Try Company Default
+        company_account = frappe.db.get_value(
+            "Company", self.company, "default_receivable_account"
+        )
+
+        account = company_account
+
+        if not account:
+            frappe.throw(
+                _("No Default Receivable Account found for Company {1}").format(
+                    frappe.bold(self.customer), frappe.bold(self.company)
+                ),
+                title=_("Missing Account Configuration"),
+            )
+
+        # Validate account deeply
+        acc = frappe.get_cached_value(
+            "Account", account, ["account_type", "is_group", "company"], as_dict=True
+        )
+
+        if not acc:
+            frappe.throw(_("Invalid Receivable Account: {0}").format(account))
+
+        if acc.is_group:
+            frappe.throw(
+                _("Receivable account {0} cannot be a group account").format(account)
+            )
+
+        if acc.company != self.company:
+            frappe.throw(
+                _("Receivable account {0} does not belong to company {1}").format(
+                    account, self.company
+                )
+            )
+
+        if acc.account_type != "Receivable":
+            frappe.throw(_("Account {0} must be of type Receivable").format(account))
+
+        self.debit_to = account
+        
+    def handle_currency_logic(self):
+        default_currency = get_company_currency(self.company)
+        if not default_currency:
+            throw(_("Please enter default currency in Company Master"))
+
+        if not self.conversion_rate:
+            throw(_("Conversion rate cannot be 0"))
+
+        if self.currency == default_currency and flt(self.conversion_rate) != 1.00:
+            throw(
+                _(
+                    "Conversion rate must be 1.00 if document currency is same as company currency"
+                )
+            )
+
+        if self.currency != default_currency and flt(self.conversion_rate) == 1.00:
+            frappe.msgprint(
+                _(
+                    "Conversion rate is 1.00, but document currency is different from company currency"
+                )
+            )
 
     def calculate_item_amount(self, item):
         if item.qty is None or item.rate is None:
@@ -327,9 +552,9 @@ class SalesInvoice(Document):
                 .format(item.idx)
             )
 
-        if item.qty < 0 and not self.is_return:
+        if item.qty < 0 :
             frappe.throw(
-                _("Row {0}: Quantity cannot be negative for non-return invoice").format(
+                _("Row {0}: Quantity cannot be negative for invoice").format(
                     item.idx
                 )
             )
@@ -364,43 +589,32 @@ class SalesInvoice(Document):
                 against_acc.append(d.income_account)
         self.against_income_account = ",".join(against_acc)
 
-    def set_status(self, update=False, status=None, update_modified=True):
-        if self.is_new():
-            if self.get("amended_from"):
-                self.status = "Draft"
-            return
+    def set_status(self, update=False):
+        if self.docstatus == 2:
+            self.status = "Cancelled"
+        
+        elif self.docstatus == 0:
+            self.status = "Draft"
 
-        outstanding_amount = flt(
-            self.outstanding_amount, self.precision("outstanding_amount")
-        )
-        total = get_total_in_party_account_currency(self)
-        if not status:
-            if self.docstatus == 2:
-                status = "Cancelled"
-            elif self.docstatus == 1:
-                if is_overdue(self, total):
-                    self.status = "Overdue"
-                elif 0 < outstanding_amount < total:
-                    self.status = "Partially Paid"
-                elif outstanding_amount > 0 and getdate(self.due_date) >= getdate():
-                    self.status = "Unpaid"
-                # Check if outstanding amount is 0 due to credit note issued against invoice
-                elif self.is_return == 0 and frappe.db.get_value(
-                    "Sales Invoice",
-                    {"is_return": 1, "return_against": self.name, "docstatus": 1},
-                ):
-                    self.status = "Credit Note Issued"
-                elif self.is_return == 1:
-                    self.status = "Return"
-                elif outstanding_amount <= 0:
-                    self.status = "Paid"
-                else:
-                    self.status = "Submitted"
+        else:
+            # submitted
+            outstanding_amount = flt(self.outstanding_amount, self.precision("outstanding_amount"))
+            total = get_total_in_party_account_currency(self)
+
+            if is_overdue(self):
+                self.status = "Overdue"
+
+            elif outstanding_amount <= 0:
+                self.status = "Paid"
+
+            elif 0 < outstanding_amount < total:
+                self.status = "Partly Paid"
 
             else:
-                self.status = "Draft"
+                self.status = "Unpaid"
+
         if update:
-            self.db_set("status", self.status, update_modified=update_modified)
+            self.db_set("status", self.status, update_modified=True)
 
     def set_in_words(self):
         self.in_words = money_in_words(self.rounded_total, self.currency)
@@ -411,22 +625,22 @@ class SalesInvoice(Document):
         )
 
 
-def is_overdue(doc, total):
-    outstanding_amount = flt(
-        doc.outstanding_amount, doc.precision("outstanding_amount")
-    )
-    if outstanding_amount <= 0:
-        return
+def is_overdue(doc):
+
+    if doc.docstatus != 1:
+        return False
+
+    if flt(doc.outstanding_amount, doc.precision("outstanding_amount")) <= 0:
+        return False
+
     if not doc.due_date:
         return False
-    payable_amount = 0  # sample for now need to be updated when adding payment logic
-    return (
-        flt(total - outstanding_amount, doc.precision("outstanding_amount"))
-        < payable_amount
-    )
+
+    return getdate(doc.due_date) < getdate(today())
 
 @frappe.whitelist()
 def validate_fiscal_year(company, posting_date):
+    
 
     fy = frappe.db.sql("""
         SELECT fy.name, fy.year_start_date, fy.year_end_date
@@ -434,8 +648,9 @@ def validate_fiscal_year(company, posting_date):
         INNER JOIN `tabFiscal Year Company` fyc
             ON fy.name = fyc.parent
         WHERE fyc.company = %s
+        ORDER BY fy.year_start_date DESC
         LIMIT 1
-    """, (company,), as_dict=True)
+    """, company, as_dict=True)
 
     # ❌ No fiscal year for company
     if not fy:
@@ -447,15 +662,16 @@ def validate_fiscal_year(company, posting_date):
 
     fy = fy[0]
     posting_date = getdate(posting_date)
+    start = getdate(fy.year_start_date)
+    end = getdate(fy.year_end_date)
 
     # ❌ Date outside range
-    if not (fy.year_start_date <= posting_date <= fy.year_end_date):
+    if not (start <= posting_date <= end):
         return {
             "valid": False,
             "code": "DATE_OUTSIDE_RANGE",
             "message": (
-                f"Posting Date must be between {fy.year_start_date} "
-                f"and {fy.year_end_date}"
+                f"Posting Date must be between {start} and {end}"
             )
         }
 

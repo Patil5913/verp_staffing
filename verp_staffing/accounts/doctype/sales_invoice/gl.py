@@ -59,6 +59,13 @@ def on_submit_sales_invoice(doc, method=None):
         
     frappe.db.set_value("Sales Invoice", doc.name, "outstanding_amount", outstanding)
     doc.outstanding_amount = outstanding
+    
+    # CRITICAL FIX: recompute status
+    if hasattr(doc, "set_status"):
+        doc.set_status()
+    else:
+        doc.status = "Paid" if flt(outstanding) == 0 else "Unpaid"
+        frappe.db.set_value("Sales Invoice", doc.name, "status", doc.status)
 
 
 # MAIN CANCEL HANDLER
@@ -66,8 +73,10 @@ def on_cancel_sales_invoice(doc, method=None):
     cancel_gl_entries(doc)
     
     # Clear outstanding amount on cancel
-    frappe.db.set_value("Sales Invoice", doc.name, "outstanding_amount", 0)
+    # frappe.db.set_value("Sales Invoice", doc.name, "outstanding_amount", 0)
     doc.outstanding_amount = 0
+    
+    doc.status = "Cancelled"
 
 def delete_existing_gl_entries(doc):
     existing = frappe.get_all(
