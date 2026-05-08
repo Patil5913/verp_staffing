@@ -5,7 +5,7 @@ Allow updating customer address directly from Customer form instead of navigatin
 
 ---
 
-## Current Behaviour Before PR
+## Current Behavior Before PR
 
 - User must manually open Address doctype
 - Search for linked address
@@ -15,7 +15,7 @@ Allow updating customer address directly from Customer form instead of navigatin
 
 ---
 
-## Behaviour After PR Is Merged
+## Behavior After PR Is Merged
 
 - Address section added inside Customer form
 - User can view and edit primary address directly
