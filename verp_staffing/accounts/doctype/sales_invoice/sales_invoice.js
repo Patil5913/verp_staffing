@@ -119,7 +119,7 @@ frappe.ui.form.on("Sales Invoice", {
 	disable_rounded_total(frm) {
 		verp_staffing.calculation_engine.calculate_rounding(frm);
 	},
-});
+}); 
 
 frappe.ui.form.on("Items Table", {
 	item(frm, cdt, cdn) {
