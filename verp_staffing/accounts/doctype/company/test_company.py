@@ -7,25 +7,39 @@ from frappe import get_doc
 
 
 class TestCompany(FrappeTestCase):
-	pass
+    pass
 
 
 # utils for test cases
 
-def create_company_if_not_exists(company_name, default_currency="INR"):
-    if not frappe.db.exists("Company", company_name):
-        company = get_doc(
-            {
-                "doctype": "Company",
-                "company_name": company_name,
-                "country": "India",
-                "default_currency": default_currency,
-            }
-        )
-        company.insert()
-        return company
-    else:
-        return get_doc("Company", company_name)
+
+def create_company_if_not_exists(company_name, abbr="VC"):
+    if not company_name:
+        frappe.throw("Company name is required")
+
+    # 1. Check by company name
+    existing = frappe.db.exists("Company", {"company_name": company_name})
+    if existing:
+        return existing
+
+    # 2. Check by abbr (IMPORTANT FIX)
+    existing_abbr = frappe.db.exists("Company", {"abbr": abbr})
+    if existing_abbr:
+        return existing_abbr
+
+    doc = frappe.get_doc(
+        {
+            "doctype": "Company",
+            "company_name": company_name,
+            "abbr": abbr,
+            "default_currency": "INR",
+            "country": "India",
+        }
+    )
+
+    doc.insert(ignore_permissions=True)
+    return doc.name
+
 
 def get_company_currency(company):
     """Return the default currency configured for a company."""

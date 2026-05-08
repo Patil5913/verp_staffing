@@ -158,24 +158,24 @@ frappe.ui.form.on("Purchase Invoice", {
 });
 
 frappe.ui.form.on("Items Table", {
-    item: function (frm, cdt, cdn) {
-        verp_staffing.purchase.item_handler(frm, cdt, cdn);
-    },
-    items_add: function (frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-        row.type = "Purchase";
-        frm.refresh_field("items");
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
-    items_remove: function (frm) {
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
-    qty(frm, cdt, cdn) {
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
-    rate(frm, cdt, cdn) {
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
+	item: function (frm, cdt, cdn) {
+		verp_staffing.purchase.item_handler(frm, cdt, cdn);
+	},
+	items_add: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		row.type = "Purchase";
+		frm.refresh_field("items");
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	items_remove: function (frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	qty(frm, cdt, cdn) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	rate(frm, cdt, cdn) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
 });
 
 frappe.ui.form.on("Taxes and Charges", {
@@ -278,6 +278,22 @@ function set_purchase_account_queries(frm) {
 				account_type: ["in", ["Expense Account", "Cost of Goods Sold"]],
 				is_group: 0,
 				company: frm.doc.company,
+			},
+		};
+	});
+
+	// CASH/BANK ACCOUNT
+	frm.set_query("cashbank_account", () => {
+		if (!frm.doc.company) {
+			return { filters: { name: "__invalid__" } };
+		}
+
+		return {
+			filters: {
+				account_type: ["in", ["Cash", "Bank"]],
+				is_group: 0,
+				company: frm.doc.company,
+				report_type: "Balance Sheet",
 			},
 		};
 	});

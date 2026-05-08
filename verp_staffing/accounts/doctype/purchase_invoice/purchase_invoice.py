@@ -211,64 +211,70 @@ def get_purchase_invoice_gl_map(doc):
     base_amount = doc.rounded_total or doc.grand_total
 
     # 1. Creditors (CR)
-    gl_map.append(build_gl_entry(
-        account=doc.credit_to,
-        credit=base_amount,
-        company=doc.company,
-        posting_date=doc.posting_date,
-        voucher_type=doc.doctype,
-        voucher_no=doc.name,
-        party_type="Supplier",
-        party=doc.supplier,
-        against=doc.against_expense_account,
-        remarks="Purchase Invoice",
-		against_voucher_type=doc.doctype,
-    	against_voucher=doc.name
-    ))
+    gl_map.append(
+        build_gl_entry(
+            account=doc.credit_to,
+            credit=base_amount,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            party_type="Supplier",
+            party=doc.supplier,
+            against=doc.against_expense_account,
+            remarks="Purchase Invoice",
+            against_voucher_type=doc.doctype,
+            against_voucher=doc.name,
+        )
+    )
 
     # 2. Expense (DR)
     for item in doc.items:
-        gl_map.append(build_gl_entry(
-            account=item.expense_account,
-            debit=item.amount,
-            company=doc.company,
-            posting_date=doc.posting_date,
-            voucher_type=doc.doctype,
-            voucher_no=doc.name,
-            against=doc.supplier,
-            remarks="Expense"
-        ))
+        gl_map.append(
+            build_gl_entry(
+                account=item.expense_account,
+                debit=item.amount,
+                company=doc.company,
+                posting_date=doc.posting_date,
+                voucher_type=doc.doctype,
+                voucher_no=doc.name,
+                against=doc.supplier,
+                remarks="Expense",
+            )
+        )
 
     # 3. Taxes (DR)
     for tax in doc.taxes:
-        gl_map.append(build_gl_entry(
-            account=tax.account_head,
-            debit=tax.tax_amount,
-            company=doc.company,
-            posting_date=doc.posting_date,
-            voucher_type=doc.doctype,
-            voucher_no=doc.name,
-            against=doc.supplier,
-            remarks="Tax"
-        ))
+        gl_map.append(
+            build_gl_entry(
+                account=tax.account_head,
+                debit=tax.tax_amount,
+                company=doc.company,
+                posting_date=doc.posting_date,
+                voucher_type=doc.doctype,
+                voucher_no=doc.name,
+                against=doc.supplier,
+                remarks="Tax",
+            )
+        )
 
     # 4. Discount (DR)
     if doc.discount_amount and doc.additional_discount_account:
-        gl_map.append(build_gl_entry(
-            account=doc.additional_discount_account,
-            credit=doc.discount_amount,
-            company=doc.company,
-            posting_date=doc.posting_date,
-            voucher_type=doc.doctype,
-            voucher_no=doc.name,
-            remarks="Discount"
-        ))
+        gl_map.append(
+            build_gl_entry(
+                account=doc.additional_discount_account,
+                credit=doc.discount_amount,
+                company=doc.company,
+                posting_date=doc.posting_date,
+                voucher_type=doc.doctype,
+                voucher_no=doc.name,
+                remarks="Discount",
+            )
+        )
 
     # 5. Rounding
     if doc.rounding_adjustment:
-        account = frappe.db.get_value(
-            "Company", doc.company, "round_off_account"
-        )
+        account = frappe.db.get_value("Company", doc.company, "round_off_account")
         if not account:
             frappe.throw(
                 _("Please set Round Off Account in Company {0}").format(
@@ -277,16 +283,17 @@ def get_purchase_invoice_gl_map(doc):
             )
 
         if doc.rounding_adjustment < 0:
-            gl_map.append(build_gl_entry(
-                account=account,
-                credit=abs(doc.rounding_adjustment),
-                company=doc.company,
-                posting_date=doc.posting_date,
-                voucher_type=doc.doctype,
-                voucher_no=doc.name,
-                remarks="Rounding Adjustment"
-            ))
-
+            gl_map.append(
+                build_gl_entry(
+                    account=account,
+                    credit=abs(doc.rounding_adjustment),
+                    company=doc.company,
+                    posting_date=doc.posting_date,
+                    voucher_type=doc.doctype,
+                    voucher_no=doc.name,
+                    remarks="Rounding Adjustment",
+                )
+            )
 
     return gl_map
 

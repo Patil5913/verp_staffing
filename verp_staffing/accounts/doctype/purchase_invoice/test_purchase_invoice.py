@@ -26,7 +26,6 @@ from verp_staffing.accounts.doctype.fiscal_year.test_fiscal_year import (
 from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
 
 
-# Sentinel: distinguishes "caller did not pass this arg" from "caller passed ''"
 _UNSET = object()
 
 
@@ -46,11 +45,10 @@ def make_purchase_invoice(
     skip_insert=False,
 ):
 
-    company = company or create_company_if_not_exists("vrugle").name
+    company = company or create_company_if_not_exists("vrugle")
     company_currency = get_company_currency(company)
     currency = currency or company_currency
 
-    # Use real defaults only when the caller did NOT supply the argument at all.
     if credit_to is _UNSET:
         credit_to = get_default_company_account(company, "Payable")
     if expense_account is _UNSET:
@@ -98,7 +96,6 @@ def make_purchase_invoice(
             },
         )
 
-    # Optional tax rows
     if taxes:
         for tax_row in taxes:
             pi.append("taxes", tax_row)
@@ -118,7 +115,7 @@ class PurchaseInvoiceBase(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         create_party_types_if_not_exists()
         create_account_if_not_exists("Cash", company)
@@ -154,7 +151,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_auto_fetch_credit_to_from_company(self):
         """set_credit_to_account() must populate blank credit_to from company default."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         expected = get_default_company_account(company, "Payable")
 
         pi = make_purchase_invoice(company=company, skip_insert=True)
@@ -170,7 +167,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_item_without_expense_account_raises_validation_error(self):
         """Item row with blank expense_account must raise ValidationError."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         item_row = {
             "item": create_item_if_not_exists(
                 "_Test Purchase Item", "Item Category 1", "NOS"
@@ -192,7 +189,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_invalid_expense_account_type_raises_validation_error(self):
         """Receivable account used as expense_account must raise ValidationError."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         wrong_account = get_default_company_account(company, "Receivable")
         item_row = {
             "item": create_item_if_not_exists(
@@ -215,7 +212,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_invalid_tax_account_raises_validation_error(self):
         """Receivable account used as tax account_head must raise ValidationError."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         wrong_tax_account = get_default_company_account(company, "Receivable")
 
         with self.assertRaises(frappe.ValidationError):
@@ -245,7 +242,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_non_balance_sheet_credit_to_raises_validation_error(self):
         """P&L account used as credit_to must raise ValidationError."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         non_bs_account = create_account_if_not_exists(
             "_Test Expense Account",
             company,
@@ -268,7 +265,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_same_currency_non_unit_conversion_rate_raises_validation_error(self):
         """Same currency invoice with conversion_rate != 1 must raise ValidationError."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         company_currency = get_company_currency(company)
 
         with self.assertRaises(frappe.ValidationError):
@@ -282,7 +279,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_different_currency_without_conversion_rate_raises_error(self):
         """Foreign currency invoice with conversion_rate = 0 must raise ValidationError."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         foreign_currency = frappe.db.get_value(
             "Currency",
             {"name": ["!=", get_company_currency(company)], "enabled": 1},
@@ -305,7 +302,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
         Foreign currency invoice with conversion_rate = 1 should be accepted
         (warn-only -- implementation issues a msgprint but does not throw).
         """
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         foreign_currency = frappe.db.get_value(
             "Currency",
             {"name": ["!=", get_company_currency(company)], "enabled": 1},
@@ -335,7 +332,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
             that is neither the company currency nor the invoice currency
         → validate_account_currencies() must detect the mismatch and throw.
         """
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         company_currency = get_company_currency(company)
 
         third_currency = frappe.db.get_value(
@@ -395,7 +392,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_posting_date_auto_set_when_not_provided(self):
         """posting_date must default to today when not explicitly set."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         pi = make_purchase_invoice(
             company=company,
@@ -407,7 +404,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
 
     def test_import_mode_preserves_posting_date(self):
         """Historic posting_date must not be mutated when frappe.flags.in_import is True."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         historic_date = add_days(nowdate(), -30)
 
         pi = frappe.new_doc("Purchase Invoice")
@@ -449,7 +446,7 @@ class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
         When an invoice is amended, validate_auto_set_posting_date() must set
         set_posting_date = 1 so the posting date can be edited on the amendment.
         """
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         original = make_purchase_invoice(company=company, amount=500)
 
@@ -484,7 +481,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
 
     def test_basic_single_item_gl_entries(self):
         """One item: one CR to payable, one DR to expense account."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         expense_account = create_account_if_not_exists(
             "_Test Expense Account",
             company,
@@ -518,7 +515,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
 
     def test_multiple_items_produce_multiple_debit_entries(self):
         """Two items at different rates: two DR entries, one CR entry."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         expense_account = create_account_if_not_exists(
             "_Test Expense Account",
             company,
@@ -571,7 +568,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
 
     def test_taxes_produce_additional_debit_entries(self):
         """A tax row must generate a DR entry for the tax account."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
         expense_account = create_account_if_not_exists(
             "_Test Expense Account",
             company,
@@ -616,7 +613,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
     def test_discount_produces_credit_entry(self):
         """A discount_amount must generate a CR entry for the discount account."""
 
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         # with the item expense account.
         discount_account = create_account_if_not_exists(
@@ -663,7 +660,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
 
     def test_rounding_adjustment_produces_gl_entry(self):
         """Non-zero rounding_adjustment must produce a round-off account entry."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         round_off_account = frappe.db.get_value("Company", company, "round_off_account")
         if not round_off_account:
@@ -690,7 +687,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
         Non-zero rounding_adjustment with no round_off_account on the company
         must raise ValidationError from get_purchase_invoice_gl_map().
         """
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         pi = make_purchase_invoice(
             company=company,
@@ -713,7 +710,7 @@ class TestPurchaseInvoiceGLMap(PurchaseInvoiceBase):
 
     def test_total_debit_equals_total_credit(self):
         """Sum of all debit entries must equal sum of all credit entries."""
-        company = create_company_if_not_exists("vrugle").name
+        company = create_company_if_not_exists("vrugle")
 
         tax_account = frappe.db.get_value(
             "Account",

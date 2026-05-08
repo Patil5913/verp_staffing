@@ -47,6 +47,17 @@ frappe.ui.form.on("Sales Invoice", {
 	onload(frm) {
 		set_currency_labels(frm);
 		set_account_queries(frm);
+
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
 	},
 	after_save(frm) {
 		frm.set_value("in_words", frm.doc.in_words);
@@ -111,24 +122,38 @@ frappe.ui.form.on("Sales Invoice", {
 });
 
 frappe.ui.form.on("Items Table", {
-    item: function (frm, cdt, cdn) {
-        verp_staffing.sales.item_handler(frm, cdt, cdn);
-    },
-    items_add: function (frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-        row.type = "Sales";
-        frm.refresh_field("items");
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
-    items_remove: function (frm) {
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
-    qty(frm, cdt, cdn) {
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
-    rate(frm, cdt, cdn) {
-        verp_staffing.calculation_engine.calculate_invoice(frm);
-    },
+	item(frm, cdt, cdn) {
+		if (frm.doc.doctype !== "Sales Invoice") return;
+
+		const row = locals[cdt][cdn];
+
+		if (!row.item) return;
+
+		row.type = "Sales";
+
+		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
+			console.log(r);
+
+			if (r.message && r.message.stock_uom) {
+				row.uom = r.message.stock_uom;
+				row.qty = 1;
+
+				frm.refresh_field("items");
+			}
+		});
+
+		if (frm.doc.company) {
+			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
+				if (r.message?.default_income_account) {
+					row.income_account = r.message.default_income_account;
+
+					frm.refresh_field("items");
+				}
+			});
+		}
+
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
 });
 
 frappe.ui.form.on("Taxes and Charges", {

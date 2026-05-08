@@ -253,10 +253,8 @@ class calculate_taxes_and_totals:
 					"Quotation Item",
 					"Sales Order Item",
 					"Delivery Note Item",
-					"Sales Invoice Item",
 					"POS Invoice Item",
 					"Purchase Invoice Item",
-					"Purchase Order Item",
 					"Purchase Receipt Item",
 					"Items Table"
 				]:
