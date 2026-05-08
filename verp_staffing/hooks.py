@@ -141,7 +141,7 @@ after_migrate = [
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
     # "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.utils.test.seed_email_template",
+    "verp_staffing.utils.email_template.seed_email_template"
 ]
 
 # Uninstallation
