@@ -13,6 +13,18 @@ def create_company_if_not_exists(company_name, default_currency="INR"):
             }
         )
         company.insert()
+        abbr = frappe.db.get_value("Company", company.name, "abbr")
+
+        # 🔥 Set default expense account like: "Legal Expenses - V"
+        expense_account = f"Legal Expenses - {abbr}"
+
+        frappe.db.set_value(
+            "Company",
+            company.name,
+            "default_expense_account",
+            expense_account,
+        )
+        
         return company
     else:
         return get_doc("Company", company_name)

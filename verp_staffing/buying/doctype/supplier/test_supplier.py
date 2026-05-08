@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Vrugle and Contributors
 # See license.txt
 
-# import frappe
+import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe import get_doc
 
 
 class TestSupplier(FrappeTestCase):
@@ -25,5 +26,5 @@ def create_supplier_if_not_exists(supplier_name, supplier_type="Individual"):
             "supplier_type": supplier_type,
         }
     )
-    supplier.insert(ignore_permissions=True)
+    supplier.insert(ignore_permissions=True , ignore_if_duplicate=True)
     return supplier.name

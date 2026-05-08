@@ -4,6 +4,17 @@
 frappe.ui.form.on("Purchase Invoice", {
 	refresh(frm) {
 		set_currency_labels(frm);
+		(frm.doc.items || []).forEach((row) => {
+			if (!row.type) {
+				const type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
+				(frm.doc.items || []).forEach((row) => {
+					if (!row.type) {
+						row.type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
+					}
+				});
+				frm.refresh_field("items");
+			}
+		});
 		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
 			frm.add_custom_button(
 				__("Payment Entry"),
@@ -24,6 +35,17 @@ frappe.ui.form.on("Purchase Invoice", {
 
 	onload(frm) {
 		set_purchase_account_queries(frm);
+
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
 	},
 
 	validate(frm) {
@@ -105,11 +127,11 @@ frappe.ui.form.on("Purchase Invoice", {
 		(po.items || []).forEach((row) => {
 			let child = frm.add_child("items");
 
+			child.type = "Purchase";
 			child.item = row.item;
 			child.qty = row.qty;
 			child.uom = row.uom;
 			child.rate = row.rate;
-			// child.amount = row.qty * row.rate;
 			child.expense_account = row.expense_account;
 		});
 
@@ -135,22 +157,25 @@ frappe.ui.form.on("Purchase Invoice", {
 	},
 });
 
-frappe.ui.form.on("Purchase Invoice Item", {
-	item: verp_staffing.purchase.item_handler,
-
-	items_add: function (frm) {
-		frappe.model.set_value(cdt, cdn, "type", "Purchase");
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	items_remove: function (frm) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	qty(frm, cdt, cdn) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	rate(frm, cdt, cdn) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
+frappe.ui.form.on("Items Table", {
+    item: function (frm, cdt, cdn) {
+        verp_staffing.purchase.item_handler(frm, cdt, cdn);
+    },
+    items_add: function (frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        row.type = "Purchase";
+        frm.refresh_field("items");
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
+    items_remove: function (frm) {
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
+    qty(frm, cdt, cdn) {
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
+    rate(frm, cdt, cdn) {
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
 });
 
 frappe.ui.form.on("Taxes and Charges", {
@@ -192,6 +217,7 @@ async function set_currency_labels(frm) {
 		"discount_amount",
 		"rounding_adjustment",
 		"total_taxes_and_charges",
+		"outstanding_amount",
 	];
 
 	fields.forEach((field) => {

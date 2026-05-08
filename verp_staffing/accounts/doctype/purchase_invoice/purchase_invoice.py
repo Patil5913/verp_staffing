@@ -7,16 +7,17 @@ from frappe.utils import flt, now_datetime, money_in_words
 from frappe.model.document import Document
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.accounts.api.get_defaults import validate_account
+from verp_staffing.accounts.doctype.gl_entry.gl_entry import get_fiscal_year
 
 
 class PurchaseInvoice(Document):
     def validate(self):
         self.validate_auto_set_posting_date()
 
+        self.validate_mandatory()
         self.set_credit_to_account()
         self.validate_credit_to_acc()
 
-        self.validate_mandatory()
         self.validate_expense_accounts()
         self.validate_tax_accounts()
         self.validate_discount_account()
@@ -37,9 +38,8 @@ class PurchaseInvoice(Document):
         if frappe.flags.in_import and self.posting_date:
             self.set_posting_date = 1
 
-        if not getattr(self, "set_posting_date", None):
-            now = now_datetime()
-            self.posting_date = now.strftime("%Y-%m-%d")
+        if self.posting_date:
+            get_fiscal_year(self.posting_date, company=self.company)
 
     def validate_credit_to_acc(self):
         acc = validate_account(
@@ -102,12 +102,10 @@ class PurchaseInvoice(Document):
                 frappe.throw(
                     _("Row {0}: Expense account is mandatory").format(item.idx)
                 )
-    
-        if self.currency == self.company_currency:
-            self.conversion_rate = 1
-        else:
+
+        if self.currency != self.company_currency:
             if not self.conversion_rate or self.conversion_rate <= 0:
-                frappe.throw("Valid Conversion Rate required")
+                frappe.throw(_("Valid Conversion Rate required"))
 
     def validate_account_currencies(self):
         company_currency = self.company_currency
@@ -213,78 +211,64 @@ def get_purchase_invoice_gl_map(doc):
     base_amount = doc.rounded_total or doc.grand_total
 
     # 1. Creditors (CR)
-    gl_map.append(
-        build_gl_entry(
-            account=doc.credit_to,
-            credit=base_amount,
+    gl_map.append(build_gl_entry(
+        account=doc.credit_to,
+        credit=base_amount,
+        company=doc.company,
+        posting_date=doc.posting_date,
+        voucher_type=doc.doctype,
+        voucher_no=doc.name,
+        party_type="Supplier",
+        party=doc.supplier,
+        against=doc.against_expense_account,
+        remarks="Purchase Invoice",
+		against_voucher_type=doc.doctype,
+    	against_voucher=doc.name
+    ))
+
+    # 2. Expense (DR)
+    for item in doc.items:
+        gl_map.append(build_gl_entry(
+            account=item.expense_account,
+            debit=item.amount,
             company=doc.company,
             posting_date=doc.posting_date,
             voucher_type=doc.doctype,
             voucher_no=doc.name,
-            transaction_currency=doc.currency,
-            exchange_rate=doc.conversion_rate,
-            party_type="Supplier",
-            party=doc.supplier,
-            against=doc.against_expense_account,
-            remarks="Purchase Invoice",
-            against_voucher_type=doc.doctype,
-            against_voucher=doc.name,
-        )
-    )
-
-    # 2. Expense (DR)
-    for item in doc.items:
-        gl_map.append(
-            build_gl_entry(
-                account=item.expense_account,
-                debit=item.amount,
-                company=doc.company,
-                posting_date=doc.posting_date,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
-                voucher_type=doc.doctype,
-                voucher_no=doc.name,
-                against=doc.supplier,
-                remarks="Expense",
-            )
-        )
+            against=doc.supplier,
+            remarks="Expense"
+        ))
 
     # 3. Taxes (DR)
     for tax in doc.taxes:
-        gl_map.append(
-            build_gl_entry(
-                account=tax.account_head,
-                debit=tax.tax_amount,
-                company=doc.company,
-                posting_date=doc.posting_date,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
-                voucher_type=doc.doctype,
-                voucher_no=doc.name,
-                against=doc.supplier,
-                remarks="Tax",
-            )
-        )
+        gl_map.append(build_gl_entry(
+            account=tax.account_head,
+            debit=tax.tax_amount,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            against=doc.supplier,
+            remarks="Tax"
+        ))
 
     # 4. Discount (DR)
     if doc.discount_amount and doc.additional_discount_account:
-        gl_map.append(
-            build_gl_entry(
-                account=doc.additional_discount_account,
-                credit=doc.discount_amount,
-                company=doc.company,
-                posting_date=doc.posting_date,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
-                voucher_type=doc.doctype,
-                voucher_no=doc.name,
-                remarks="Discount",
-            )
-        )
+        gl_map.append(build_gl_entry(
+            account=doc.additional_discount_account,
+            credit=doc.discount_amount,
+            company=doc.company,
+            posting_date=doc.posting_date,
+            voucher_type=doc.doctype,
+            voucher_no=doc.name,
+            remarks="Discount"
+        ))
 
     # 5. Rounding
     if doc.rounding_adjustment:
-        account = frappe.db.get_value("Company", doc.company, "round_off_account")
+        account = frappe.db.get_value(
+            "Company", doc.company, "round_off_account"
+        )
         if not account:
             frappe.throw(
                 _("Please set Round Off Account in Company {0}").format(
@@ -293,19 +277,16 @@ def get_purchase_invoice_gl_map(doc):
             )
 
         if doc.rounding_adjustment < 0:
-            gl_map.append(
-                build_gl_entry(
-                    account=account,
-                    credit=abs(doc.rounding_adjustment),
-                    company=doc.company,
-                    posting_date=doc.posting_date,
-                    transaction_currency=doc.currency,
-                    exchange_rate=doc.conversion_rate,
-                    voucher_type=doc.doctype,
-                    voucher_no=doc.name,
-                    remarks="Rounding Adjustment",
-                )
-            )
+            gl_map.append(build_gl_entry(
+                account=account,
+                credit=abs(doc.rounding_adjustment),
+                company=doc.company,
+                posting_date=doc.posting_date,
+                voucher_type=doc.doctype,
+                voucher_no=doc.name,
+                remarks="Rounding Adjustment"
+            ))
+
 
     return gl_map
 

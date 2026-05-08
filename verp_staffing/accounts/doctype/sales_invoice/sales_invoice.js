@@ -25,6 +25,12 @@ frappe.ui.form.on("Sales Invoice", {
 			}, __("Email"));
 
 		}
+		(frm.doc.items || []).forEach((row) => {
+			if (!row.type) {
+				const type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
+				frappe.model.set_value(row.doctype, row.name, "type", type);
+			}
+		});
 		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
 			frm.add_custom_button(
 				__("Payment Entry"),
@@ -104,46 +110,25 @@ frappe.ui.form.on("Sales Invoice", {
 	},
 });
 
-frappe.ui.form.on("Sales Invoice Item", {
-	item: async function (frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-
-		// Fetch item_name directly
-		const item = await frappe.db.get_doc("Item", row.item);
-
-		if (item) {
-			frappe.model.set_value(cdt, cdn, "item_name", item.item_name);
-			frappe.model.set_value(cdt, cdn, "uom", item.stock_uom);
-			frappe.model.set_value(cdt, cdn, "qty", 1);
-		}
-
-		if (frm.doc.company) {
-			frappe.call({
-				method: "verp_staffing.accounts.api.get_defaults.get_default_income_account",
-				args: {
-					company: frm.doc.company,
-				},
-				callback(r) {
-					if (r.message) {
-						frappe.model.set_value(cdt, cdn, "income_account", r.message);
-					}
-				},
-			});
-		}
-	},
-	items_add: function (frm) {
-		frappe.model.set_value(cdt, cdn, "type", "Sales");
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	items_remove: function (frm) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	qty(frm, cdt, cdn) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	rate(frm, cdt, cdn) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
+frappe.ui.form.on("Items Table", {
+    item: function (frm, cdt, cdn) {
+        verp_staffing.sales.item_handler(frm, cdt, cdn);
+    },
+    items_add: function (frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        row.type = "Sales";
+        frm.refresh_field("items");
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
+    items_remove: function (frm) {
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
+    qty(frm, cdt, cdn) {
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
+    rate(frm, cdt, cdn) {
+        verp_staffing.calculation_engine.calculate_invoice(frm);
+    },
 });
 
 frappe.ui.form.on("Taxes and Charges", {
@@ -317,11 +302,11 @@ function set_account_queries(frm) {
 		previous_company = current_company;
 
 		// clear child tables
-		(frm.doc.items || []).forEach(row => {
+		(frm.doc.items || []).forEach((row) => {
 			frappe.model.set_value(row.doctype, row.name, "income_account", null);
 		});
 
-		(frm.doc.taxes || []).forEach(row => {
+		(frm.doc.taxes || []).forEach((row) => {
 			frappe.model.set_value(row.doctype, row.name, "account_head", null);
 		});
 

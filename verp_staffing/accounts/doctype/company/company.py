@@ -234,3 +234,13 @@ def get_company_receivable_account(company):
         frappe.throw(_("Account must be of type Receivable"))
 
     return account
+
+
+@frappe.whitelist()
+def fetch_default_company():
+    default_company = frappe.db.get_single_value("Accounts Settings", "default_company")
+
+    if not default_company:
+        frappe.throw(_("Please set Default Company in Accounts Settings"))
+
+    return default_company

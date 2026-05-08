@@ -1,5 +1,7 @@
 {
  "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:supplier_name",
  "creation": "2026-04-08 13:31:37.862779",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -32,7 +34,8 @@
    "in_list_view": 1,
    "label": "Supplier Name",
    "no_copy": 1,
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "country",
@@ -135,11 +138,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-05 14:56:52.416483",
+ "modified": "2026-05-04 09:47:55.758223",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier",
- "naming_rule": "By script",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

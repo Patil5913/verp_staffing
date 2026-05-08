@@ -258,6 +258,7 @@ class calculate_taxes_and_totals:
 					"Purchase Invoice Item",
 					"Purchase Order Item",
 					"Purchase Receipt Item",
+					"Items Table"
 				]:
 					item.rate_with_margin, item.base_rate_with_margin = self.calculate_margin(item)
 					if flt(item.rate_with_margin) > 0:

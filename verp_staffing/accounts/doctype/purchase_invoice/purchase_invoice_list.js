@@ -12,7 +12,7 @@ frappe.listview_settings["Purchase Invoice"] = {
 		} else if (doc.outstanding_amount > 0 && doc.due_date && doc.due_date < today) {
 			return ["Overdue", "red"];
 
-		} else if (doc.outstanding_amount > 0 && doc.outstanding_amount < doc.grand_total) {
+		} else if (doc.outstanding_amount > 0 && doc.outstanding_amount < doc.rounded_total) {
 			return ["Partly Paid", "blue"];
 
 		} else {
