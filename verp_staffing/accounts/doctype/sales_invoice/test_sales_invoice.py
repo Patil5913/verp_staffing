@@ -16,13 +16,13 @@ from verp_staffing.accounts.doctype.account.test_account import (
     create_account_if_not_exists,
 )
 from verp_staffing.crm.doctype.customer.test_customer import (
-	create_customer_if_not_exists,
+    create_customer_if_not_exists,
 )
 from verp_staffing.stock.doctype.uom.test_uom import create_uom_if_not_exists
 
-class TestSalesInvoice(FrappeTestCase):
-	pass
 
+class TestSalesInvoice(FrappeTestCase):
+    pass
 
 
 def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=False):
