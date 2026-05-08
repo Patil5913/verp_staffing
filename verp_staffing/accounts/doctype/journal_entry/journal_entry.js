@@ -72,7 +72,6 @@ frappe.ui.form.on("Journal Entry", {
 		open_outstanding_dialog(frm);set_purchase_account_queries
 	},
 
-	//erp.next multi currency have many issue so we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
 	multi_currency: function (frm) {
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
 	},
