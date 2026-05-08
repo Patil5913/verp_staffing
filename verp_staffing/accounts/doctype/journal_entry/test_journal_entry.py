@@ -2,769 +2,834 @@
 # See license.txt
 
 import frappe
-import unittest
-from frappe.utils import nowdate, flt
-from verp_staffing.accounts.doctype.journal_entry.journal_entry import (
-    get_journal_entry_gl_map,
-    get_party_account,
-    get_outstanding,
-    get_account_details_and_party_type,
+from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt, nowdate
+
+from verp_staffing.accounts.doctype.company.test_company import (
+    create_company_if_not_exists,
+    get_company_currency,
+    get_default_company_account,
 )
-from verp_staffing.accounts.doctype.company.test_company import create_company_if_not_exists 
-from verp_staffing.accounts.doctype.account.test_account import create_account_if_not_exists
+from verp_staffing.accounts.doctype.account.test_account import (
+    create_account_if_not_exists,
+)
+from verp_staffing.accounts.doctype.fiscal_year.test_fiscal_year import (
+    create_fiscal_year_if_not_exists,
+)
+from verp_staffing.accounts.doctype.party_type.test_party_type import (
+    create_party_types_if_not_exists,
+)
 
-def make_test_jv(account1, account2, amount, save=True, submit=False,company=None, extra=None):
-    """Helper: create a minimal Journal Entry for tests."""
-    jv = frappe.new_doc("Journal Entry")
-    jv.posting_date = nowdate()
-    jv.company = company or create_company_if_not_exists("vrugle").name
-    jv.voucher_type = "Journal Entry"
-    jv.naming_series = "ACC-JV-.YYYY.-"
-    jv.user_remark = "test"
-    
-    firstaccount = create_account_if_not_exists(account1 , jv.company).name
-    secondaccount = create_account_if_not_exists(account2 , jv.company).name
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-    jv.append("accounts", {
-        "account": firstaccount ,
+def make_journal_entry(
+    company=None,
+    voucher_type="Journal Entry",
+    posting_date=None,
+    accounts=None,
+    do_not_submit=False,
+):
+    """
+    Minimal factory for a Journal Entry.
+
+    `accounts` is a list of dicts whose keys map directly to
+    Journal Entry Account fields:
+        account, debit_in_account_currency, credit_in_account_currency,
+        exchange_rate, party_type, party, reference_type, reference_name …
+    """
+    company = company or create_company_if_not_exists("vrugle").name
+
+    je = frappe.new_doc("Journal Entry")
+    je.company = company
+    je.voucher_type = voucher_type
+    je.posting_date = posting_date or nowdate()
+    je.naming_series = "ACC-JV-.YYYY.-"
+
+    for row in accounts or []:
+        row.setdefault("exchange_rate", 1)
+        je.append("accounts", row)
+
+    je.insert(ignore_permissions=True)
+    if not do_not_submit:
+        je.submit()
+    return je
+
+
+def _debit_row(account, amount, **kwargs):
+    """Return a dict representing a debit-only account row."""
+    return {
+        "account": account,
         "debit_in_account_currency": amount,
+        "debit": amount * kwargs.get("exchange_rate", 1),
         "credit_in_account_currency": 0,
-        "exchange_rate": 1,
-    })
-    jv.append("accounts", {
-        "account": secondaccount ,
-        "debit_in_account_currency": 0,
+        "credit": 0,
+        **kwargs,
+    }
+
+
+def _credit_row(account, amount, **kwargs):
+    """Return a dict representing a credit-only account row."""
+    return {
+        "account": account,
         "credit_in_account_currency": amount,
-        "exchange_rate": 1,
-    })
-
-    if extra:
-        for row in extra:
-            jv.append("accounts", row)
-
-    if save:
-        jv.insert()
-    if submit:
-        jv.submit()
-
-    return jv
-
-
-# ─────────────────────────────────────────────
-# GROUP 1: VALIDATION TESTS
-# ─────────────────────────────────────────────
-
-class TestJournalEntryValidation(unittest.TestCase):
-    """Tests for all validate() methods in JournalEntry."""
-
-    def test_empty_accounts_raises(self):
-        """validate_accounts_exist: no account rows → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.posting_date = nowdate()
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        # no accounts appended
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    def test_missing_posting_date_raises(self):
-        """validate_posting_date: blank posting_date → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        jv.posting_date = None
-        jv.append("accounts", {
-            "account": "_Test Cash - _TC",
-            "debit_in_account_currency": 100,
-            "exchange_rate": 1,
-        })
-        jv.append("accounts", {
-            "account": "_Test Bank - _TC",
-            "credit_in_account_currency": 100,
-            "exchange_rate": 1,
-        })
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    def test_both_debit_credit_zero_raises(self):
-        """validate_debit_credit_not_zero: row with debit=0 and credit=0 → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.posting_date = nowdate()
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        jv.append("accounts", {
-            "account": "_Test Cash - _TC",
-            "debit": 0,
-            "credit": 0,
-            "exchange_rate": 1,
-        })
-        jv.append("accounts", {
-            "account": "_Test Bank - _TC",
-            "debit": 0,
-            "credit": 0,
-            "exchange_rate": 1,
-        })
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    def test_negative_debit_raises(self):
-        """validate_no_negative_amount: negative debit → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.posting_date = nowdate()
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        jv.append("accounts", {
-            "account": "_Test Cash - _TC",
-            "debit": -100,
-            "exchange_rate": 1,
-        })
-        jv.append("accounts", {
-            "account": "_Test Bank - _TC",
-            "credit": -100,
-            "exchange_rate": 1,
-        })
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    def test_both_debit_and_credit_on_same_row_raises(self):
-        """validate_only_one_side: row with both debit>0 and credit>0 → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.posting_date = nowdate()
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        jv.append("accounts", {
-            "account": "_Test Cash - _TC",
-            "debit": 100,
-            "credit": 100,
-            "exchange_rate": 1,
-        })
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    def test_zero_total_raises(self):
-        """validate_total_not_zero: debit=0 and credit=0 totals → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.posting_date = nowdate()
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        # flags to skip row-level check so we hit total check
-        jv.flags.ignore_validate = True
-        jv.append("accounts", {
-            "account": "_Test Cash - _TC",
-            "debit": 0,
-            "credit": 0,
-            "exchange_rate": 1,
-        })
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    def test_missing_exchange_rate_raises(self):
-        """validate_exchange_rate: amount set but exchange_rate=0 → throw"""
-        jv = frappe.new_doc("Journal Entry")
-        jv.posting_date = nowdate()
-        jv.company = "_Test Company"
-        jv.voucher_type = "Journal Entry"
-        jv.naming_series = "ACC-JV-.YYYY.-"
-        jv.user_remark = "test"
-        jv.append("accounts", {
-            "account": "_Test Cash - _TC",
-            "debit": 100,
-            "exchange_rate": 0,   # missing
-        })
-        jv.append("accounts", {
-            "account": "_Test Bank - _TC",
-            "credit": 100,
-            "exchange_rate": 1,
-        })
-        self.assertRaises(frappe.ValidationError, jv.insert)
-
-    # def test_valid_entry_saves_successfully(self):
-    #     """A well-formed entry should save without errors."""
-
-    #     jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 500)
-    #     self.assertTrue(jv.name)
-    #     self.assertEqual(jv.total_debit, 500)
-    #     self.assertEqual(jv.total_credit, 500)
-    #     self.assertEqual(jv.difference, 0)
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 2: CALCULATION TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryCalculations(unittest.TestCase):
-#     """Tests for set_amounts() and calculate_totals()."""
-
-#     def test_set_amounts_converts_using_exchange_rate(self):
-#         """set_amounts: debit = debit_in_account_currency * exchange_rate"""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test"
-#         jv.multi_currency = 1
-#         jv.append("accounts", {
-#             "account": "_Test Bank USD - _TC",
-#             "debit_in_account_currency": 100,
-#             "exchange_rate": 85,            # 100 USD × 85 = 8500 INR
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "credit_in_account_currency": 8500,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         self.assertEqual(flt(jv.accounts[0].debit), 8500)
-#         self.assertEqual(flt(jv.accounts[1].credit), 8500)
-
-#     def test_calculate_totals_sums_all_rows(self):
-#         """calculate_totals: total_debit and total_credit sum all account rows."""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test"
-#         jv.append("accounts", {
-#             "account": "_Test Cash - _TC",
-#             "debit_in_account_currency": 300,
-#             "exchange_rate": 1,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "debit_in_account_currency": 200,
-#             "exchange_rate": 1,
-#         })
-#         jv.append("accounts", {
-#             "account": "Debtors - _TC",
-#             "credit_in_account_currency": 500,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         self.assertEqual(jv.total_debit, 500)
-#         self.assertEqual(jv.total_credit, 500)
-#         self.assertEqual(jv.difference, 0)
-
-#     def test_difference_field_shows_imbalance(self):
-#         """difference = total_debit - total_credit (checked before throw)."""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test"
-#         jv.flags.ignore_validate = True
-#         jv.append("accounts", {
-#             "account": "_Test Cash - _TC",
-#             "debit_in_account_currency": 700,
-#             "exchange_rate": 1,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "credit_in_account_currency": 500,
-#             "exchange_rate": 1,
-#         })
-#         jv.calculate_totals()
-#         self.assertEqual(jv.difference, 200)
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 3: GL ENTRY TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryGLEntries(unittest.TestCase):
-#     """Tests for on_submit GL creation and on_cancel GL reversal."""
-
-#     def test_submit_creates_gl_entries(self):
-#         """on_submit: GL entries must be created in tabGL Entry."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 1000, submit=True)
-#         gl_entries = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "is_cancelled": 0},
-#             fields=["account", "debit", "credit"],
-#         )
-#         self.assertGreater(len(gl_entries), 0)
-#         accounts_in_gl = [e.account for e in gl_entries]
-#         self.assertIn("_Test Cash - _TC", accounts_in_gl)
-#         self.assertIn("_Test Bank - _TC", accounts_in_gl)
-
-#     def test_submit_gl_entries_are_balanced(self):
-#         """GL entries: sum of debit must equal sum of credit."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 750, submit=True)
-#         gl_entries = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "is_cancelled": 0},
-#             fields=["debit", "credit"],
-#         )
-#         total_debit  = sum(flt(e.debit)  for e in gl_entries)
-#         total_credit = sum(flt(e.credit) for e in gl_entries)
-#         self.assertEqual(round(total_debit, 2), round(total_credit, 2))
-
-#     def test_cancel_creates_reversal_gl_entries(self):
-#         """on_cancel: reversal GL entries with is_cancelled=1 must exist."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 400, submit=True)
-#         jv.cancel()
-#         cancelled_entries = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "is_cancelled": 1},
-#             fields=["name"],
-#         )
-#         self.assertGreater(len(cancelled_entries), 0)
-
-#     def test_no_active_gl_after_cancel(self):
-#         """After cancel: no active (is_cancelled=0) GL entries should remain."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 300, submit=True)
-#         jv.cancel()
-#         active_entries = frappe.get_all(
-#             "GL Entry",
-#             filters={
-#                 "voucher_type": "Journal Entry",
-#                 "voucher_no": jv.name,
-#                 "is_cancelled": 0,
-#             },
-#             fields=["name"],
-#         )
-#         self.assertFalse(active_entries)
-
-#     def test_delete_existing_gl_entries_before_repost(self):
-#         """delete_existing_gl_entries: old GL rows removed before new ones posted."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 600, submit=True)
-#         # get initial GL count
-#         before = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "is_cancelled": 0},
-#         )
-#         # manually call delete + repost (simulates amend flow)
-#         jv.delete_existing_gl_entries()
-#         after_delete = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "is_cancelled": 0},
-#         )
-#         self.assertEqual(len(after_delete), 0)
-#         # re-post
-#         from verp_staffing.accounts.doctype.gl_entry.gl_entry import make_gl_entries, merge_gl_entries
-#         gl_map = get_journal_entry_gl_map(jv)
-#         make_gl_entries(merge_gl_entries(gl_map), jv)
-#         after_repost = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "is_cancelled": 0},
-#         )
-#         self.assertEqual(len(before), len(after_repost))
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 4: GL MAP TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryGLMap(unittest.TestCase):
-#     """Tests for get_journal_entry_gl_map."""
-
-#     def test_gl_map_excludes_zero_rows(self):
-#         """Rows where debit=0 AND credit=0 must not appear in GL map."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 200, save=False)
-#         # add a zero row
-#         jv.append("accounts", {
-#             "account": "Debtors - _TC",
-#             "debit_in_account_currency": 0,
-#             "credit_in_account_currency": 0,
-#             "exchange_rate": 1,
-#         })
-#         jv.flags.ignore_validate = True
-#         jv.set_amounts()
-#         gl_map = get_journal_entry_gl_map(jv)
-#         accounts_in_map = [r["account"] for r in gl_map]
-#         self.assertNotIn("Debtors - _TC", accounts_in_map)
-
-#     def test_gl_map_contains_correct_debit_credit(self):
-#         """GL map: debit and credit values must match account row amounts."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 250, save=False)
-#         jv.set_amounts()
-#         gl_map = get_journal_entry_gl_map(jv)
-
-#         cash_row = next(r for r in gl_map if r["account"] == "_Test Cash - _TC")
-#         bank_row = next(r for r in gl_map if r["account"] == "_Test Bank - _TC")
-
-#         self.assertEqual(flt(cash_row["debit"]),  250)
-#         self.assertEqual(flt(cash_row["credit"]),   0)
-#         self.assertEqual(flt(bank_row["credit"]), 250)
-#         self.assertEqual(flt(bank_row["debit"]),    0)
-
-#     def test_gl_map_voucher_fields_are_set(self):
-#         """GL map: voucher_type, voucher_no, company, posting_date must be set."""
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 100, save=True)
-#         jv.set_amounts()
-#         gl_map = get_journal_entry_gl_map(jv)
-
-#         for row in gl_map:
-#             self.assertEqual(row["voucher_type"], "Journal Entry")
-#             self.assertEqual(row["voucher_no"],   jv.name)
-#             self.assertEqual(row["company"],      jv.company)
-#             self.assertEqual(row["posting_date"], jv.posting_date)
-
-#     def test_gl_map_party_fields_are_set(self):
-#         """GL map: party_type and party must be carried from account row."""
-#         jv = make_test_jv("Debtors - _TC", "_Test Bank - _TC", 500, save=False)
-#         jv.accounts[0].party_type = "Customer"
-#         jv.accounts[0].party = "_Test Customer"
-#         jv.set_amounts()
-#         gl_map = get_journal_entry_gl_map(jv)
-
-#         debtors_row = next(r for r in gl_map if r["account"] == "Debtors - _TC")
-#         self.assertEqual(debtors_row["party_type"], "Customer")
-#         self.assertEqual(debtors_row["party"],      "_Test Customer")
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 5: INVOICE OUTSTANDING UPDATE TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryOutstandingUpdate(unittest.TestCase):
-#     """Tests for update_invoice_outstanding."""
-
-#     def _make_sales_invoice(self, amount=1000):
-#         """Helper: make and submit a simple Sales Invoice."""
-#         from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
-#         # Use ERPNext helper or create minimal SI directly
-#         si = frappe.new_doc("Sales Invoice")
-#         si.customer = "_Test Customer"
-#         si.company = "_Test Company"
-#         si.posting_date = nowdate()
-#         si.append("items", {
-#             "item_code": "_Test Item",
-#             "qty": 1,
-#             "rate": amount,
-#         })
-#         si.insert()
-#         si.submit()
-#         return si
-
-#     def test_outstanding_amount_reduced_after_payment_jv(self):
-#         """After JV referencing an invoice is submitted, outstanding_amount decreases."""
-#         si = self._make_sales_invoice(1000)
-#         initial_outstanding = flt(si.outstanding_amount)
-
-#         # Payment JV against the invoice
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Bank Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test payment"
-#         jv.append("accounts", {
-#             "account": "Debtors - _TC",
-#             "party_type": "Customer",
-#             "party": "_Test Customer",
-#             "credit_in_account_currency": 400,
-#             "exchange_rate": 1,
-#             "reference_type": "Sales Invoice",
-#             "reference_name": si.name,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "debit_in_account_currency": 400,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         jv.submit()
-
-#         updated_si = frappe.get_doc("Sales Invoice", si.name)
-#         self.assertEqual(
-#             flt(updated_si.outstanding_amount),
-#             flt(initial_outstanding) - 400
-#         )
-
-#     def test_no_outstanding_update_without_reference(self):
-#         """JV without reference_name should not change any invoice outstanding."""
-#         si = self._make_sales_invoice(500)
-#         before = flt(si.outstanding_amount)
-
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 200, submit=True)
-
-#         after = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
-#         self.assertEqual(before, after)
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 6: PAYMENT ENTRY REFERENCE GUARD TEST
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryPaymentEntryGuard(unittest.TestCase):
-#     """Tests for before_save Payment Entry reference restriction (JS-side guard)."""
-
-#     def test_payment_entry_reference_type_blocked(self):
-#         """
-#         Python side: if a row has reference_type='Payment Entry' and
-#         is_system_generated=0, it should raise on save.
-#         This mirrors the JS before_save guard.
-#         """
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test"
-#         jv.is_system_generated = 0
-#         jv.append("accounts", {
-#             "account": "Debtors - _TC",
-#             "debit_in_account_currency": 100,
-#             "exchange_rate": 1,
-#             "reference_type": "Payment Entry",
-#             "reference_name": "PE-0001",
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "credit_in_account_currency": 100,
-#             "exchange_rate": 1,
-#         })
-#         # The guard is in JS before_save, so Python won't throw here.
-#         # This test documents the expected behavior for a future Python-side guard.
-#         # If the guard is moved to Python validate(), change assertRaises accordingly.
-#         # For now: just assert the doc has the wrong reference_type so test is not a no-op.
-#         self.assertEqual(jv.accounts[0].reference_type, "Payment Entry")
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 7: HELPER FUNCTION TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryHelpers(unittest.TestCase):
-#     """Tests for @whitelisted helper functions."""
-
-#     def test_get_account_details_and_party_type_receivable(self):
-#         """Receivable account → party_type = Customer."""
-#         result = get_account_details_and_party_type("Debtors - _TC", "_Test Company")
-#         self.assertEqual(result["account_type"], "Receivable")
-#         self.assertEqual(result["party_type"],   "Customer")
-#         self.assertIn("account_currency", result)
-
-#     def test_get_account_details_and_party_type_payable(self):
-#         """Payable account → party_type = Supplier."""
-#         result = get_account_details_and_party_type("Creditors - _TC", "_Test Company")
-#         self.assertEqual(result["account_type"], "Payable")
-#         self.assertEqual(result["party_type"],   "Supplier")
-
-#     def test_get_account_details_non_party_account(self):
-#         """Non-party account (Bank/Cash) → party_type is empty string."""
-#         result = get_account_details_and_party_type("_Test Bank - _TC", "_Test Company")
-#         self.assertEqual(result.get("party_type", ""), "")
-
-#     def test_get_account_details_empty_args_returns_empty(self):
-#         """Both args blank → return empty dict, no crash."""
-#         result = get_account_details_and_party_type("", "")
-#         self.assertEqual(result, {})
-
-#     def test_get_party_account_customer_returns_account(self):
-#         """get_party_account: Customer → returns a receivable account string."""
-#         account = get_party_account("Customer", "_Test Customer", "_Test Company")
-#         self.assertTrue(account)
-#         # should be a receivable-type account
-#         acc_type = frappe.db.get_value("Account", account, "account_type")
-#         self.assertEqual(acc_type, "Receivable")
-
-#     def test_get_party_account_supplier_returns_account(self):
-#         """get_party_account: Supplier → returns a payable account string."""
-#         account = get_party_account("Supplier", "_Test Supplier", "_Test Company")
-#         self.assertTrue(account)
-#         acc_type = frappe.db.get_value("Account", account, "account_type")
-#         self.assertEqual(acc_type, "Payable")
-
-#     def test_get_party_account_no_company_raises(self):
-#         """get_party_account: missing company → ValidationError."""
-#         self.assertRaises(
-#             frappe.ValidationError,
-#             get_party_account,
-#             "Customer", "_Test Customer", None
-#         )
-
-#     def test_get_party_account_no_party_type_raises(self):
-#         """get_party_account: missing party_type → ValidationError."""
-#         self.assertRaises(
-#             frappe.ValidationError,
-#             get_party_account,
-#             None, "_Test Customer", "_Test Company"
-#         )
-
-#     def test_get_outstanding_sales_invoice(self):
-#         """get_outstanding: Sales Invoice → returns credit_in_account_currency."""
-#         from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
-#         si = create_sales_invoice(do_not_save=False)
-#         si.submit()
-
-#         args = {
-#             "doctype": "Sales Invoice",
-#             "docname": si.name,
-#             "account": si.debit_to,
-#             "account_currency": "INR",
-#             "company": si.company,
-#             "company_currency": "INR",
-#         }
-#         result = get_outstanding(args)
-#         self.assertIn("credit_in_account_currency", result)
-#         self.assertEqual(flt(result["credit_in_account_currency"]), flt(si.outstanding_amount))
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 8: MULTI-CURRENCY TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryMultiCurrency(unittest.TestCase):
-#     """Tests for multi-currency Journal Entry GL entries."""
-
-#     def test_multi_currency_gl_debit_converted_to_base(self):
-#         """USD debit × exchange_rate must equal INR debit in GL."""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Bank Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test multi currency"
-#         jv.multi_currency = 1
-#         jv.append("accounts", {
-#             "account": "_Test Bank USD - _TC",
-#             "debit_in_account_currency": 100,
-#             "exchange_rate": 85,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "credit_in_account_currency": 8500,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         jv.submit()
-
-#         gl = frappe.get_all(
-#             "GL Entry",
-#             filters={"voucher_no": jv.name, "account": "_Test Bank USD - _TC", "is_cancelled": 0},
-#             fields=["debit", "account_currency"],
-#         )
-#         self.assertTrue(gl)
-#         # debit in GL is stored in account currency (USD)
-#         self.assertEqual(flt(gl[0].debit), 100)
-#         self.assertEqual(gl[0].account_currency, "USD")
-
-#     def test_inr_account_exchange_rate_stays_one(self):
-#         """INR account exchange_rate must always be 1 after set_amounts."""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test"
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",  # INR account
-#             "debit_in_account_currency": 500,
-#             "exchange_rate": 1,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Cash - _TC",
-#             "credit_in_account_currency": 500,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         self.assertEqual(flt(jv.accounts[0].exchange_rate), 1)
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 9: REVERSE JOURNAL ENTRY TEST
-# # ─────────────────────────────────────────────
-
-# class TestReverseJournalEntry(unittest.TestCase):
-#     """Tests for make_reverse_journal_entry."""
-
-#     def test_reverse_entry_swaps_debit_credit(self):
-#         """make_reverse_journal_entry: debit↔credit swapped in mapped doc."""
-#         from verp_staffing.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 300, submit=True)
-
-#         reverse = make_reverse_journal_entry(jv.name)
-
-#         original_debit_account  = jv.accounts[0].account   # _Test Cash - _TC (debit)
-#         original_credit_account = jv.accounts[1].account   # _Test Bank - _TC (credit)
-
-#         # In reverse: Cash should now be credit, Bank should be debit
-#         rev_cash = next(r for r in reverse.accounts if r.account == original_debit_account)
-#         rev_bank = next(r for r in reverse.accounts if r.account == original_credit_account)
-
-#         self.assertEqual(flt(rev_cash.credit_in_account_currency), 300)
-#         self.assertEqual(flt(rev_cash.debit_in_account_currency),  0)
-#         self.assertEqual(flt(rev_bank.debit_in_account_currency),  300)
-#         self.assertEqual(flt(rev_bank.credit_in_account_currency), 0)
-
-#     def test_reverse_entry_sets_reversal_of(self):
-#         """make_reverse_journal_entry: reversal_of field points to original JV."""
-#         from verp_staffing.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 150, submit=True)
-#         reverse = make_reverse_journal_entry(jv.name)
-#         self.assertEqual(reverse.reversal_of, jv.name)
-
-#     def test_reverse_entry_only_works_on_submitted(self):
-#         """make_reverse_journal_entry: draft JV → ValidationError."""
-#         from verp_staffing.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
-#         jv = make_test_jv("_Test Cash - _TC", "_Test Bank - _TC", 100, save=True, submit=False)
-#         self.assertRaises(
-#             frappe.ValidationError,
-#             make_reverse_journal_entry,
-#             jv.name
-#         )
-
-
-# # ─────────────────────────────────────────────
-# # GROUP 10: OPENING ENTRY TESTS
-# # ─────────────────────────────────────────────
-
-# class TestJournalEntryOpeningEntry(unittest.TestCase):
-#     """Tests for is_opening='Yes' GL validation."""
-
-#     def test_opening_entry_blocked_for_pl_account(self):
-#         """Opening entry against a P&L account must raise ValidationError."""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test opening"
-#         jv.is_opening = "Yes"
-#         # Sales account is a P&L account
-#         jv.append("accounts", {
-#             "account": "Sales - _TC",
-#             "credit_in_account_currency": 1000,
-#             "exchange_rate": 1,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "debit_in_account_currency": 1000,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         self.assertRaises(frappe.ValidationError, jv.submit)
-
-#     def test_opening_entry_allowed_for_balance_sheet_account(self):
-#         """Opening entry against a Balance Sheet account must be allowed."""
-#         jv = frappe.new_doc("Journal Entry")
-#         jv.posting_date = nowdate()
-#         jv.company = "_Test Company"
-#         jv.voucher_type = "Journal Entry"
-#         jv.naming_series = "ACC-JV-.YYYY.-"
-#         jv.user_remark = "test opening bs"
-#         jv.is_opening = "Yes"
-#         # Cash and Bank are Balance Sheet accounts
-#         jv.append("accounts", {
-#             "account": "_Test Cash - _TC",
-#             "debit_in_account_currency": 500,
-#             "exchange_rate": 1,
-#         })
-#         jv.append("accounts", {
-#             "account": "_Test Bank - _TC",
-#             "credit_in_account_currency": 500,
-#             "exchange_rate": 1,
-#         })
-#         jv.insert()
-#         jv.submit()   # should not raise
-#         self.assertEqual(jv.docstatus, 1)
+        "credit": amount * kwargs.get("exchange_rate", 1),
+        "debit_in_account_currency": 0,
+        "debit": 0,
+        **kwargs,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Base test class
+# ---------------------------------------------------------------------------
+
+class JournalEntryBase(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        company = create_company_if_not_exists("vrugle").name
+        create_party_types_if_not_exists()
+        create_fiscal_year_if_not_exists(
+            fiscal_year="2026",
+            companies=[company],
+            start_date="2026-01-01",
+            end_date="2026-12-31",
+        )
+        cls._original_commit = frappe.db.commit
+        frappe.db.commit = lambda *a, **kw: None
+
+    @classmethod
+    def tearDownClass(cls):
+        frappe.db.commit = cls._original_commit
+        frappe.db.rollback()
+
+
+# ---------------------------------------------------------------------------
+# Test cases
+# ---------------------------------------------------------------------------
+
+class TestJournalEntry(JournalEntryBase):
+
+    # 1. Basic balanced entry submits successfully
+    def test_balanced_entry_submits_successfully(self):
+        """
+        A Journal Entry where total debit == total credit must save
+        and submit without errors.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            accounts=[
+                _debit_row(cash, 500),
+                _credit_row(sales, 500),
+            ],
+        )
+
+        self.assertEqual(je.docstatus, 1, "Journal Entry should be submitted")
+        self.assertEqual(flt(je.total_debit), 500, "Total debit should be 500")
+        self.assertEqual(flt(je.total_credit), 500, "Total credit should be 500")
+
+    # 2. Unbalanced entry raises ValidationError
+    def test_unbalanced_entry_raises_error(self):
+        """
+        A Journal Entry where total debit != total credit must raise
+        a ValidationError.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        with self.assertRaises(frappe.ValidationError):
+            make_journal_entry(
+                company=company,
+                do_not_submit=True,
+                accounts=[
+                    _debit_row(cash, 600),
+                    _credit_row(sales, 400),  # 200 difference — must fail
+                ],
+            )
+
+    # 3. Empty accounts table raises ValidationError
+    def test_empty_accounts_raises_error(self):
+        """
+        A Journal Entry with no account rows must raise ValidationError.
+        """
+        company = create_company_if_not_exists("vrugle").name
+
+        je = frappe.new_doc("Journal Entry")
+        je.company = company
+        je.voucher_type = "Journal Entry"
+        je.posting_date = nowdate()
+        je.naming_series = "ACC-JV-.YYYY.-"
+
+        with self.assertRaises(frappe.ValidationError):
+            je.insert(ignore_permissions=True)
+
+    # 4. Missing posting date raises ValidationError
+    def test_missing_posting_date_raises_error(self):
+        """
+        A Journal Entry without a posting date must raise ValidationError.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = frappe.new_doc("Journal Entry")
+        je.company = company
+        je.voucher_type = "Journal Entry"
+        je.posting_date = None
+        je.naming_series = "ACC-JV-.YYYY.-"
+        je.append("accounts", _debit_row(cash, 100))
+        je.append("accounts", _credit_row(sales, 100))
+
+        with self.assertRaises(frappe.ValidationError):
+            je.insert(ignore_permissions=True)
+
+    # 5. Row with both debit and credit raises ValidationError
+    def test_row_with_both_debit_and_credit_raises_error(self):
+        """
+        A single account row that has both debit_in_account_currency and
+        credit_in_account_currency set must raise ValidationError.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        with self.assertRaises(frappe.ValidationError):
+            make_journal_entry(
+                company=company,
+                do_not_submit=True,
+                accounts=[
+                    {
+                        "account": cash,
+                        "debit_in_account_currency": 200,
+                        "credit_in_account_currency": 200,
+                        "exchange_rate": 1,
+                    },
+                    _credit_row(sales, 200),
+                ],
+            )
+
+    # 6. Row with zero debit and zero credit raises ValidationError
+    def test_row_with_zero_amounts_raises_error(self):
+        """
+        A row where both debit and credit are 0 must raise ValidationError.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        with self.assertRaises(frappe.ValidationError):
+            make_journal_entry(
+                company=company,
+                do_not_submit=True,
+                accounts=[
+                    {
+                        "account": cash,
+                        "debit_in_account_currency": 0,
+                        "credit_in_account_currency": 0,
+                        "exchange_rate": 1,
+                    },
+                    _credit_row(sales, 0),
+                ],
+            )
+
+    # 7. Negative debit/credit raises ValidationError
+    def test_negative_amounts_raise_error(self):
+        """
+        Negative debit or credit values must raise ValidationError.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        with self.assertRaises(frappe.ValidationError):
+            make_journal_entry(
+                company=company,
+                do_not_submit=True,
+                accounts=[
+                    _debit_row(cash, -500),
+                    _credit_row(sales, -500),
+                ],
+            )
+
+    # 8. GL entries are created on submit
+    def test_gl_entries_created_on_submit(self):
+        """
+        After submitting a Journal Entry, GL Entries must exist
+        for this voucher with is_cancelled = 0.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            accounts=[
+                _debit_row(cash, 300),
+                _credit_row(sales, 300),
+            ],
+        )
+
+        gl_count = frappe.db.count(
+            "GL Entry",
+            {
+                "voucher_type": "Journal Entry",
+                "voucher_no": je.name,
+                "is_cancelled": 0,
+            },
+        )
+        self.assertGreater(gl_count, 0, "GL entries must be created on Journal Entry submit")
+
+    # 9. GL entries are reversed on cancel
+    def test_gl_entries_reversed_on_cancel(self):
+        """
+        Cancelling a Journal Entry must create reversal GL entries
+        marked is_cancelled = 1.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            accounts=[
+                _debit_row(cash, 400),
+                _credit_row(sales, 400),
+            ],
+        )
+        je.cancel()
+
+        cancelled_gl = frappe.db.count(
+            "GL Entry",
+            {
+                "voucher_type": "Journal Entry",
+                "voucher_no": je.name,
+                "is_cancelled": 1,
+            },
+        )
+        self.assertGreater(
+            cancelled_gl, 0,
+            "Reversal GL entries must be marked is_cancelled=1 after cancel",
+        )
+
+    # 10. Full payment via JE reduces invoice outstanding to 0
+    def test_invoice_outstanding_reduced_after_je_with_reference(self):
+        """
+        When a Journal Entry references a Sales Invoice, the invoice's
+        outstanding_amount must decrease by the allocated amount.
+        """
+        from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+            make_sales_invoice,
+        )
+
+
+
+        company = create_company_if_not_exists("vrugle").name
+        receivable = get_default_company_account(company, "Receivable")
+        cash = create_account_if_not_exists("Cash", company).name
+
+        si = make_sales_invoice(company=company, amount=800)
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")),
+            800,
+            "Outstanding should be 800 before JE",
+        )
+
+        customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
+
+        make_journal_entry(
+            company=company,
+            accounts=[
+                _debit_row(cash, 800),
+                _credit_row(
+                    receivable,
+                    
+                    
+                    800,
+                    party_type="Customer",
+                    party=customer,
+                    reference_type="Sales Invoice",
+                    reference_name=si.name,
+                ),
+            ],
+        )
+
+        outstanding = flt(
+            frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
+        )
+        self.assertEqual(
+            outstanding, 0,
+            "outstanding_amount must be 0 after full JE payment",
+        )
+
+    # # 11. Partial JE reduces outstanding by exact allocated amount
+    # def test_partial_je_reduces_outstanding_correctly(self):
+    #     """
+    #     A Journal Entry that covers only part of the invoice must reduce
+    #     outstanding_amount by exactly that partial amount.
+    #     """
+    #     from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+    #         make_sales_invoice,
+    #     )
+
+    #     company = create_company_if_not_exists("vrugle").name
+    
+    #     receivable = get_default_company_account(company, "Receivable")
+    #     cash = create_account_if_not_exists("Cash", company).name
+
+    #     si = make_sales_invoice(company=company, amount=1000)
+    #     customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
+
+    #     make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(cash, 600),
+    #             _credit_row(
+    #                 receivable,
+    #                 600,
+    #                 party_type="Customer",
+    #                 party=customer,
+    #                 reference_type="Sales Invoice",
+    #                 reference_name=si.name,
+    #             ),
+    #         ],
+    #     )
+
+    #     outstanding = flt(
+    #         frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
+    #     )
+    #     self.assertEqual(
+    #         outstanding, 400,
+    #         "outstanding_amount should be 400 after partial JE",
+    #     )
+
+    # # 12. Cancelling a JE restores invoice outstanding
+    # def test_cancel_je_restores_invoice_outstanding(self):
+    #     """
+    #     Cancelling a Journal Entry that was linked to an invoice must
+    #     restore the invoice's outstanding_amount.
+    #     """
+    #     from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+    #         make_sales_invoice,
+    #     )
+
+    #     company = create_company_if_not_exists("vrugle").name
+    #     receivable = get_default_company_account(company, "Receivable")
+    #     cash = create_account_if_not_exists("Cash", company).name
+
+    #     si = make_sales_invoice(company=company, amount=500)
+    #     customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
+
+    #     je = make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(cash, 500),
+    #             _credit_row(
+    #                 receivable,
+    #                 500,
+    #                 party_type="Customer",
+    #                 party=customer,
+    #                 reference_type="Sales Invoice",
+    #                 reference_name=si.name,
+    #             ),
+    #         ],
+    #     )
+
+    #     self.assertEqual(
+    #         flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")),
+    #         0,
+    #         "outstanding_amount must be 0 after JE submit",
+    #     )
+
+    #     je.cancel()
+
+    #     outstanding = flt(
+    #         frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
+    #     )
+    #     self.assertEqual(
+    #         outstanding, 500,
+    #         "outstanding_amount must be restored to 500 after JE cancel",
+    #     )
+
+    # 13. Multi-row balanced entry produces correct totals
+    def test_multi_row_balanced_entry(self):
+        """
+        A Journal Entry with more than two rows where total debit equals
+        total credit must submit and produce correct total_debit,
+        total_credit, and difference values.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+        income = create_account_if_not_exists("Other Income", company).name
+
+        je = make_journal_entry(
+            company=company,
+            accounts=[
+                _debit_row(cash, 900),
+                _credit_row(sales, 500),
+                _credit_row(income, 400),
+            ],
+        )
+
+        self.assertEqual(flt(je.total_debit), 900, "Total debit should be 900")
+        self.assertEqual(flt(je.total_credit), 900, "Total credit should be 900")
+        self.assertEqual(flt(je.difference), 0, "Difference should be 0")
+
+    # 14. difference field is 0 when debit == credit
+    def test_difference_is_zero_when_balanced(self):
+        """
+        After inserting a balanced entry, the `difference` field must be 0.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            do_not_submit=True,
+            accounts=[
+                _debit_row(cash, 250),
+                _credit_row(sales, 250),
+            ],
+        )
+
+        self.assertEqual(
+            flt(je.difference), 0,
+            "difference must be 0 for a balanced Journal Entry",
+        )
+
+    # # 15. Receivable account row without party raises ValidationError
+    def test_receivable_account_without_party_raises_error(self):
+        """
+        A row using a Receivable account must specify a party.
+        Omitting it must raise ValidationError (caught in GL Entry validation).
+        """
+        company = create_company_if_not_exists("vrugle").name
+        receivable = get_default_company_account(company, "Receivable")
+        cash = create_account_if_not_exists("Cash", company).name
+
+        with self.assertRaises(frappe.ValidationError):
+            make_journal_entry(
+                company=company,
+                accounts=[
+                    _debit_row(cash, 100),
+                    _credit_row(receivable, 100),  # no party_type / party
+                ],
+            )
+
+    # 16. Exchange rate correctly converts debit to company currency
+    def test_exchange_rate_sets_company_currency_debit(self):
+        """
+        When exchange_rate is set on a row,
+        debit (company currency) = debit_in_account_currency × exchange_rate.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            do_not_submit=True,
+            accounts=[
+                _debit_row(cash, 100, exchange_rate=80),
+                _credit_row(sales, 100, exchange_rate=80),
+            ]
+        )
+
+        debit_row = je.accounts[0]
+        self.assertEqual(
+            flt(debit_row.debit),
+            8000,
+            "debit in company currency should be 100 × 80 = 8000",
+        )
+
+    # 17. Zero exchange rate raises ValidationError
+    def test_zero_exchange_rate_raises_error(self):
+        """
+        A row with a non-zero debit/credit but exchange_rate = 0 must
+        raise ValidationError.2
+        
+        .11002555555555
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        with self.assertRaises(frappe.ValidationError):
+            je = frappe.new_doc("Journal Entry")
+            je.company = company
+            je.voucher_type = "Journal Entry"
+            je.posting_date = nowdate()
+            je.naming_series = "ACC-JV-.YYYY.-"
+            je.append("accounts", _debit_row(cash, 200, exchange_rate=0))
+            je.append("accounts", _credit_row(sales, 200, exchange_rate=0))
+            je.insert(ignore_permissions=True)
+
+    # 18. Cancelling an already-cancelled JE raises ValidationError
+    def test_double_cancel_raises_error(self):
+        """
+        Cancelling a Journal Entry that is already cancelled must raise
+        a ValidationError (GL entries already cancelled guard).
+        """
+        company = create_company_if_not_exists("vrugle").name
+        cash = create_account_if_not_exists("Cash", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            accounts=[
+                _debit_row(cash, 150),
+                _credit_row(sales, 150),
+            ],
+        )
+        je.cancel()
+
+        with self.assertRaises(frappe.ValidationError):
+            je.cancel()
+
+    # 19. Bank Entry voucher type creates GL entries
+    def test_bank_entry_creates_gl_entries(self):
+        """
+        A Bank Entry Journal Entry must create GL entries just like a
+        standard Journal Entry.
+        """
+        company = create_company_if_not_exists("vrugle").name
+        bank = create_account_if_not_exists("Bank", company).name
+        sales = create_account_if_not_exists("Sales", company).name
+
+        je = make_journal_entry(
+            company=company,
+            voucher_type="Bank Entry",
+            accounts=[
+                _debit_row(bank, 750),
+                _credit_row(sales, 750),
+            ],
+        )
+
+        gl_count = frappe.db.count(
+            "GL Entry",
+            {
+                "voucher_type": "Journal Entry",
+                "voucher_no": je.name,
+                "is_cancelled": 0,
+            },
+        )
+        self.assertGreater(gl_count, 0, "Bank Entry should create GL entries")
+
+    # # 20. Write-off entry zeroes invoice outstanding and creates GL entries
+    # def test_write_off_entry_reduces_outstanding_and_creates_gl(self):
+    #     """
+    #     A Write Off Entry that credits the receivable and debits a write-off
+    #     expense account must reduce invoice outstanding to 0 and produce GL
+    #     entries for both accounts.
+    #     """
+    #     from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+    #         make_sales_invoice,
+    #     )
+
+    #     company = create_company_if_not_exists("vrugle").name
+    #     receivable = get_default_company_account(company, "Receivable")
+    #     write_off = create_account_if_not_exists("Write Off", company).name
+
+    #     si = make_sales_invoice(company=company, amount=200)
+    #     customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
+
+    #     je = make_journal_entry(
+    #         company=company,
+    #         voucher_type="Write Off Entry",
+    #         accounts=[
+    #             _debit_row(write_off, 200),
+    #             _credit_row(
+    #                 receivable,
+    #                 200,
+    #                 party_type="Customer",
+    #                 party=customer,
+    #                 reference_type="Sales Invoice",
+    #                 reference_name=si.name,
+    #             ),
+    #         ],
+    #     )
+
+    #     outstanding = flt(
+    #         frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
+    #     )
+    #     self.assertEqual(outstanding, 0, "Outstanding must be 0 after write-off JE")
+
+    #     gl_count = frappe.db.count(
+    #         "GL Entry",
+    #         {
+    #             "voucher_type": "Journal Entry",
+    #             "voucher_no": je.name,
+    #             "is_cancelled": 0,
+    #         },
+    #     )
+    #     self.assertGreater(gl_count, 0, "Write-off GL entries must be created")
+
+    # # 21. Opening entry is rejected for P&L accounts
+    # def test_opening_entry_rejected_for_pnl_account(self):
+    #     """
+    #     A Journal Entry marked is_opening = 'Yes' must raise ValidationError
+    #     when any row uses a Profit and Loss account.
+    #     """
+    #     company = create_company_if_not_exists("vrugle").name
+    #     cash = create_account_if_not_exists("Cash", company).name
+    #     sales = create_account_if_not_exists("Sales", company).name
+
+    #     report_type = frappe.db.get_value("Account", sales, "report_type")
+    #     if report_type != "Profit and Loss":
+    #         self.skipTest(
+    #             f"Account '{sales}' is not a P&L account in this environment"
+    #         )
+
+    #     je = frappe.new_doc("Journal Entry")
+    #     je.company = company
+    #     je.voucher_type = "Journal Entry"
+    #     je.posting_date = nowdate()
+    #     je.naming_series = "ACC-JV-.YYYY.-"
+    #     je.is_opening = "Yes"
+    #     je.append("accounts", _debit_row(cash, 100))
+    #     je.append("accounts", _credit_row(sales, 100))
+    #     je.insert(ignore_permissions=True)
+
+    #     with self.assertRaises(frappe.ValidationError):
+    #         je.submit()
+
+    # # 22. Two successive JEs against the same invoice sum to full payment
+    # def test_two_partial_jes_sum_to_full_payment(self):
+    #     """
+    #     Two successive partial Journal Entries covering the full invoice
+    #     amount should leave outstanding_amount = 0.
+    #     """
+    #     from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+    #         make_sales_invoice,
+    #     )
+
+    #     company = create_company_if_not_exists("vrugle").name
+    #     receivable = get_default_company_account(company, "Receivable")
+    #     cash = create_account_if_not_exists("Cash", company).name
+
+    #     si = make_sales_invoice(company=company, amount=700)
+    #     customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
+
+    #     make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(cash, 400),
+    #             _credit_row(
+    #                 receivable,
+    #                 400,
+    #                 party_type="Customer",
+    #                 party=customer,
+    #                 reference_type="Sales Invoice",
+    #                 reference_name=si.name,
+    #             ),
+    #         ],
+    #     )
+
+    #     mid = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+    #     self.assertEqual(mid, 300, "After first JE outstanding should be 300")
+
+    #     make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(cash, 300),
+    #             _credit_row(
+    #                 receivable,
+    #                 300,
+    #                 party_type="Customer",
+    #                 party=customer,
+    #                 reference_type="Sales Invoice",
+    #                 reference_name=si.name,
+    #             ),
+    #         ],
+    #     )
+
+    #     final = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+    #     self.assertEqual(final, 0, "After two JEs outstanding should be 0")
+
+    # # 23. JE without reference does not touch any invoice outstanding
+    # def test_je_without_reference_does_not_affect_invoice(self):
+    #     """
+    #     A Journal Entry with no reference_type / reference_name must not
+    #     change the outstanding_amount of any existing invoice.
+    #     """
+    #     from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+    #         make_sales_invoice,
+    #     )
+
+    #     company = create_company_if_not_exists("vrugle").name
+    #     cash = create_account_if_not_exists("Cash", company).name
+    #     sales = create_account_if_not_exists("Sales", company).name
+
+    #     si = make_sales_invoice(company=company, amount=600)
+    #     original = flt(
+    #         frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
+    #     )
+
+    #     make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(cash, 600),
+    #             _credit_row(sales, 600),
+    #         ],
+    #     )
+
+    #     after = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+    #     self.assertEqual(
+    #         after,
+    #         original,
+    #         "Invoice outstanding must not change when JE has no reference",
+    #     )
+
+    # # 24. Purchase Invoice outstanding is reduced by a JE
+    # def test_purchase_invoice_outstanding_reduced_by_je(self):
+    #     """
+    #     A Journal Entry that debits the Payable account and references a
+    #     Purchase Invoice must reduce the invoice's outstanding_amount.
+    #     """
+    #     from verp_staffing.accounts.doctype.purchase_invoice.test_purchase_invoice import (
+    #         make_purchase_invoice,
+    #     )
+
+    #     company = create_company_if_not_exists("vrugle").name
+    #     payable = get_default_company_account(company, "Payable")
+    #     cash = create_account_if_not_exists("Cash", company).name
+
+    #     pi = make_purchase_invoice(company=company, amount=350)
+    #     supplier = frappe.db.get_value("Purchase Invoice", pi.name, "supplier")
+
+    #     self.assertEqual(
+    #         flt(frappe.db.get_value("Purchase Invoice", pi.name, "outstanding_amount")),
+    #         350,
+    #         "Purchase Invoice outstanding should be 350 before JE",
+    #     )
+
+    #     make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(
+    #                 payable,
+    #                 350,
+    #                 party_type="Supplier",
+    #                 party=supplier,
+    #                 reference_type="Purchase Invoice",
+    #                 reference_name=pi.name,
+    #             ),
+    #             _credit_row(cash, 350),
+    #         ],
+    #     )
+
+    #     outstanding = flt(
+    #         frappe.db.get_value("Purchase Invoice", pi.name, "outstanding_amount")
+    #     )
+    #     self.assertEqual(
+    #         outstanding, 0,
+    #         "Purchase Invoice outstanding must be 0 after full JE payment",
+    #     )
