@@ -9,12 +9,9 @@ frappe.ui.form.on("Journal Entry", {
 		frm.add_fetch("bank_account", "account", "account");
 	},
 
-	// point : create custom code to handle multi currency and exchange logic becuse erpnext multi currency have issue and deeply connected 
-	// issue : when we deal with multi currency exchange rate make issue in calculation so debit and credit difference is not properly calculated and also we have to set exchange rate manually in each row which is not good user experience so we need to handle this issue in our code and make it more user friendly and also we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
 
 
 	refresh: function (frm) {
-		// erpnext.toggle_naming_series();
 
 		if (frm.doc.docstatus > 0) {
 			frm.add_custom_button(
@@ -53,6 +50,7 @@ frappe.ui.form.on("Journal Entry", {
 
 		// hide /unhide fields based on currency
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
+
 	},
 	before_save: function (frm) {
 		if (frm.doc.docstatus == 0 && !frm.doc.is_system_generated) {
@@ -71,10 +69,9 @@ frappe.ui.form.on("Journal Entry", {
 	},
 
 	get_outstanding_invoices: function (frm) {
-		open_outstanding_dialog(frm);
+		open_outstanding_dialog(frm);set_purchase_account_queries
 	},
 
-	//erp.next multi currency have many issue so we need to check all the function related to multi currency and check if we need to use them or not in our product and then remove the unwanted code
 	multi_currency: function (frm) {
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
 	},
@@ -138,7 +135,7 @@ frappe.ui.form.on("Journal Entry", {
 	},
 });
 
-let update_jv_details = function (doc, r) {
+function update_jv_details(doc, r) {
 	$.each(r, function (i, d) {
 		let row = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
 		frappe.model.set_value(row.doctype, row.name, "account", d.account);

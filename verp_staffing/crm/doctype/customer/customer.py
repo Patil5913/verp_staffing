@@ -418,3 +418,27 @@ def send_portal_link(customer):
     )
 
     return True
+
+@frappe.whitelist()
+def get_customer_email(customer):
+    """
+    Fetch email for a Customer from Lead Detail Form using raw SQL.
+    """
+    email = frappe.db.sql(
+        """
+        SELECT ldf.email
+        FROM `tabLead Detail Form` ldf
+        INNER JOIN `tabDoctype Reference` dr
+            ON dr.parent = ldf.name
+        WHERE dr.reference_doctype = 'Customer'
+          AND dr.reference_person = %s
+        LIMIT 1
+    """,
+        (customer,),
+        as_dict=True,
+    )
+
+    if not email:
+        frappe.throw(f"No email found in Lead Details for Customer {customer}")
+
+    return email[0].email

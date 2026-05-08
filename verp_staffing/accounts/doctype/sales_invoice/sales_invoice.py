@@ -9,6 +9,11 @@ from verp_staffing.accounts.doctype.company.company import get_company_currency
 from frappe.utils import money_in_words
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.accounts.api.get_defaults import validate_account
+from frappe.utils import nowdate, add_days
+import json
+from verp_staffing.crm.doctype.customer.customer import get_customer_email
+
+
 
 
 class UOMMustBeIntegerError(frappe.ValidationError):
@@ -156,7 +161,10 @@ class SalesInvoice(Document):
 
         # Validate account deeply
         acc = frappe.get_cached_value(
-            "Account", account, ["account_type", "is_group", "company"], as_dict=True
+            "Account",
+            account,
+            ["account_type", "is_group", "company"],
+            as_dict=True
         )
 
         if not acc:
@@ -527,3 +535,186 @@ def get_sales_invoice_gl_map(doc):
             )
 
     return gl_map
+
+
+@frappe.whitelist()
+def send_sales_invoice_email(doc):
+    try:
+        doc = frappe.get_doc("Sales Invoice", doc)
+        template_name = "Sales Invoice - Send to Customer"
+
+        if not frappe.db.exists("Email Template", template_name):
+            frappe.log_error("Email Template not found", "Sales Invoice Email")
+            return
+
+        template = frappe.get_doc("Email Template", template_name)
+        context = {"doc": doc}
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response or "", context)
+        recipient = get_customer_email(doc.customer)
+        if not recipient:
+            frappe.log_error(f"No email for {doc.name}", "Sales Invoice Email")
+            return
+
+        frappe.sendmail(
+            recipients=[recipient],
+            subject=subject,
+            message=message,
+            delayed=False
+        )
+        return "Email Sent Successfully"
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Sales Invoice Email Failed")
+        return "Failed to send email"
+
+@frappe.whitelist()
+def corn_job_send_payment_reminders():
+    days_before = frappe.db.get_single_value("Accounts Settings", "invoice_reminder_days")
+    if not days_before:
+        return
+    send_dynamic_payment_reminders()
+    
+def send_dynamic_payment_reminders():
+    today = nowdate()
+    days_before = int(frappe.db.get_single_value("Accounts Settings", "invoice_reminder_days") or 0)
+    target_date = add_days(today, days_before)
+    companies = frappe.get_all("Company", fields=["name"])
+
+    for company in companies:
+        # Sales Invoice Reminders (to Customers)
+        sales_invoices = frappe.get_all(
+            "Sales Invoice",
+            filters={
+                "docstatus": 1,
+                "company": company.name,
+                "outstanding_amount": [">", 0],
+                "due_date": target_date,
+            },
+            fields=["name"],
+        )
+        for inv in sales_invoices:
+            try:
+                doc = frappe.get_doc("Sales Invoice", inv.name)
+                send_reminder_email(doc, "Sales Invoice")
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"Sales Invoice Reminder Failed: {inv.name}")
+
+        # Purchase Invoice Reminders (to Suppliers)
+        purchase_invoices = frappe.get_all(
+            "Purchase Invoice",
+            filters={
+                "docstatus": 1,
+                "company": company.name,
+                "outstanding_amount": [">", 0],
+                "due_date": target_date,
+            },
+            fields=["name"],
+        )
+        for inv in purchase_invoices:
+            try:
+                doc = frappe.get_doc("Purchase Invoice", inv.name)
+                send_reminder_email(doc, "Purchase Invoice")
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"Purchase Invoice Reminder Failed: {inv.name}")
+
+
+def send_reminder_email(doc, invoice_type="Sales Invoice"):
+    # Select template based on invoice type
+    template_name = (
+        "Payment Reminder - Sales Invoice (Customer)"
+        if invoice_type == "Sales Invoice"
+        else "Payment Due Reminder - Purchase Invoice"
+    )
+
+
+    try:
+        template = frappe.get_doc("Email Template", template_name)
+    except frappe.DoesNotExistError:
+        frappe.log_error(
+            f"Email template '{template_name}' not found.",
+            "Payment Reminder: Missing Template"
+        )
+        return
+
+
+    context = {"doc": doc}
+    subject = frappe.render_template(template.subject, context)
+
+    message = frappe.render_template(
+        template.response_html or template.response or "", context
+    )
+
+    # Get recipient based on invoice type
+    if invoice_type == "Sales Invoice":
+        recipient = get_customer_email(doc.customer)
+    else:
+        recipient = get_notification_email()
+
+    if not recipient:
+        frappe.log_error(
+            f"No email found for {'customer' if invoice_type == 'Sales Invoice' else 'supplier'} on invoice {doc.name}",
+            "Payment Reminder: Missing Email"
+        )
+        return
+
+    frappe.sendmail(
+        recipients=[recipient],
+        subject=subject,
+        message=message,
+        delayed=False,
+    )
+
+
+def get_notification_email():
+    # Get JSON from your custom field
+    json_data = frappe.db.get_single_value(
+        "ERP Configuration", "email_configuration_detail"
+    )
+
+    if not json_data:
+        return get_default_email()
+
+    try:
+        data = json.loads(json_data)
+    except Exception:
+        frappe.log_error("Invalid JSON", "Email Config Error")
+        return get_default_email()
+
+    for row in data:
+        types = row.get("types", [])
+
+        # handle string or list
+        if isinstance(types, str):
+            types = [types]
+
+        if "Notification" in types:
+            account_name = row.get("email_account")
+
+            if account_name:
+                # 🔥 Fetch actual email ID
+                email = frappe.db.get_value(
+                    "Email Account",
+                    account_name,
+                    "email_id"
+                )
+
+                if email:
+                    return email
+
+    # fallback
+    return get_default_email()
+
+def get_default_email():
+    default = frappe.get_all(
+        "Email Account",
+        filters={"default_outgoing": 1},
+        fields=["email_id"],
+        limit=1
+    )
+
+    if default:
+        return default[0].email_id
+
+    frappe.log_error("No default email found", "Email Error")
+    return None

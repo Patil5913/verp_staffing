@@ -6,7 +6,26 @@
  "field_order": [
   "charts_of_accounts_tab",
   "show_balance_in_coa",
-  "default_company"
+  "default_company",
+  "banking_tab",
+  "enable_party_matching",
+  "enable_fuzzy_matching",
+  "payment_request_tab",
+  "create_pr_in_draft_status",
+  "column_break_apea",
+  "auto_send_sales_invoice_after_submission",
+  "invoice_reminder_days",
+  "assets_tab",
+  "asset_settings_section",
+  "calculate_depr_using_total_days",
+  "column_break_rzzt",
+  "book_asset_depreciation_entry_automatically",
+  "invoice_and_billing_tab",
+  "currency_exchange_section",
+  "allow_stale",
+  "stale_days",
+  "column_break_hhmf",
+  "allow_pegged_currencies_exchange_rates"
  ],
  "fields": [
   {
@@ -26,13 +45,38 @@
    "fieldtype": "Link",
    "label": "Default Company",
    "options": "Company"
+  },
+  {
+   "fieldname": "invoice_and_billing_tab",
+   "fieldtype": "Tab Break",
+   "label": "Invoice & Billing"
+  },
+  {
+   "fieldname": "column_break_hhmf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency_exchange_section",
+   "fieldtype": "Section Break",
+   "label": "Currency Exchange Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_send_sales_invoice_after_submission",
+   "fieldtype": "Check",
+   "label": "Auto send Sales Invoice after Submission"
+  },
+  {
+   "fieldname": "invoice_reminder_days",
+   "fieldtype": "Int",
+   "label": "Invoice Reminder Days"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-04 18:16:13.923465",
+ "modified": "2026-05-06 12:07:29.507474",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",

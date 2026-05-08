@@ -46,11 +46,13 @@ class PurchaseInvoice(Document):
             account=self.credit_to,
             company=self.company,
             expected_types=["Payable"],
-            label="Payable Account",
+            label="Payable Account"
         )
 
         if acc.report_type != "Balance Sheet":
-            frappe.throw(_("Payable Account must be a Balance Sheet account"))
+            frappe.throw(
+                _("Payable Account must be a Balance Sheet account")
+            )
 
         self.party_account_currency = frappe.db.get_value(
             "Account", self.credit_to, "account_currency"
@@ -63,7 +65,7 @@ class PurchaseInvoice(Document):
                 company=self.company,
                 expected_types=["Expense Account", "Cost of Goods Sold"],
                 label="Expense Account",
-                row=item.idx,
+                row=item.idx
             )
 
     def validate_tax_accounts(self):
@@ -73,7 +75,7 @@ class PurchaseInvoice(Document):
                 company=self.company,
                 expected_types=["Tax", "Chargeable", "Expense"],
                 label="Tax Account",
-                row=tax.idx,
+                row=tax.idx
             )
 
     def validate_discount_account(self):
@@ -85,7 +87,7 @@ class PurchaseInvoice(Document):
                 account=self.additional_discount_account,
                 company=self.company,
                 expected_types=["Expense Account"],
-                label="Discount Account",
+                label="Discount Account"
             )
 
     def validate_mandatory(self):
@@ -100,7 +102,7 @@ class PurchaseInvoice(Document):
                 frappe.throw(
                     _("Row {0}: Expense account is mandatory").format(item.idx)
                 )
-
+    
         if self.currency == self.company_currency:
             self.conversion_rate = 1
         else:
@@ -117,13 +119,16 @@ class PurchaseInvoice(Document):
             if not account:
                 return
 
-            acc_currency = frappe.get_cached_value(
-                "Account", account, "account_currency"
-            )
+            acc_currency = frappe.get_cached_value("Account", account, "account_currency")
 
             if acc_currency not in [company_currency, doc_currency]:
                 invalid_accounts.append(f"{label}: {account} ({acc_currency})")
+            if acc_currency not in [company_currency, doc_currency]:
+                invalid_accounts.append(f"{label}: {account} ({acc_currency})")
 
+        # Check items
+        for row in self.items:
+            check_account(row.expense_account, "Item Row")
         # Check items
         for row in self.items:
             check_account(row.expense_account, "Item Row")
@@ -331,3 +336,4 @@ def make_purchase_invoice(source_name):
     )
 
     return doc
+

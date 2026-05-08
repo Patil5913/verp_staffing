@@ -4,6 +4,7 @@ from verp_staffing.crm.api.helpers import send_notification
 from frappe.utils import get_url
 from urllib.parse import quote
 from frappe.utils import now_datetime
+from verp_staffing.crm.doctype.customer.customer import get_customer_email
 
 @frappe.whitelist()
 def download_agreement(agreement):
@@ -673,26 +674,3 @@ def render_payment_terms_table(canvas, rect, terms):
         y -= row_height
 
 
-@frappe.whitelist()
-def get_customer_email(customer):
-    """
-    Fetch email for a Customer from Lead Detail Form using raw SQL.
-    """
-    email = frappe.db.sql(
-        """
-        SELECT ldf.email
-        FROM `tabLead Detail Form` ldf
-        INNER JOIN `tabDoctype Reference` dr
-            ON dr.parent = ldf.name
-        WHERE dr.reference_doctype = 'Customer'
-          AND dr.reference_person = %s
-        LIMIT 1
-    """,
-        (customer,),
-        as_dict=True,
-    )
-
-    if not email:
-        frappe.throw(f"No email found in Lead Details for Customer {customer}")
-
-    return email[0].email
