@@ -29,9 +29,13 @@ def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=F
     company = company or create_company_if_not_exists("vrugle").name
     currency = get_company_currency(company)
     debit_to = get_default_company_account(company, "Receivable")
-    income_account = create_account_if_not_exists("Sales", company).name
     customer = customer or create_customer_if_not_exists(f"_Test Customer {company}")
-    uom = create_uom_if_not_exists("kg")
+    uom = create_uom_if_not_exists("NOS")  # must match Item's stock_uom
+
+    # Items Table requires: item (Link), qty, rate, amount, uom, type
+    # income_account is mandatory when type == "Sales"
+    income_account = create_account_if_not_exists("Sales", company).name
+    item = create_item_if_not_exists("_Test Sales Item", "Item Category 1", "NOS")
 
     si = frappe.new_doc("Sales Invoice")
     si.company = company
@@ -45,12 +49,13 @@ def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=F
     si.append(
         "items",
         {
-            "item_name": "Test Item",
-            "description": "Test Item",
+            "item": item,  # Link to Item (required)
             "qty": 1,
             "rate": flt(amount),
-            "income_account": income_account,
+            "amount": flt(amount),  # qty × rate (required)
             "uom": uom,
+            "type": "Sales",  # required — was missing, caused MandatoryError
+            "income_account": income_account,  # mandatory when type == "Sales"
         },
     )
 

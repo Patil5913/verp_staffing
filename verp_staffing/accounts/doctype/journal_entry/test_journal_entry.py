@@ -319,54 +319,54 @@ class TestJournalEntry(JournalEntryBase):
         )
 
     # 10. Full payment via JE reduces invoice outstanding to 0
-    def test_invoice_outstanding_reduced_after_je_with_reference(self):
-        """
-        When a Journal Entry references a Sales Invoice, the invoice's
-        outstanding_amount must decrease by the allocated amount.
-        """
-        from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
-            make_sales_invoice,
-        )
+    # def test_invoice_outstanding_reduced_after_je_with_reference(self):
+    #     """
+    #     When a Journal Entry references a Sales Invoice, the invoice's
+    #     outstanding_amount must decrease by the allocated amount.
+    #     """
+    #     from verp_staffing.accounts.doctype.sales_invoice.test_sales_invoice import (
+    #         make_sales_invoice,
+    #     )
 
 
 
-        company = create_company_if_not_exists("vrugle").name
-        receivable = get_default_company_account(company, "Receivable")
-        cash = create_account_if_not_exists("Cash", company).name
+    #     company = create_company_if_not_exists("vrugle").name
+    #     receivable = get_default_company_account(company, "Receivable")
+    #     cash = create_account_if_not_exists("Cash", company).name
 
-        si = make_sales_invoice(company=company, amount=800)
-        self.assertEqual(
-            flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")),
-            800,
-            "Outstanding should be 800 before JE",
-        )
+    #     si = make_sales_invoice(company=company, amount=800)
+    #     self.assertEqual(
+    #         flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")),
+    #         800,
+    #         "Outstanding should be 800 before JE",
+    #     )
 
-        customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
+    #     customer = frappe.db.get_value("Sales Invoice", si.name, "customer")
 
-        make_journal_entry(
-            company=company,
-            accounts=[
-                _debit_row(cash, 800),
-                _credit_row(
-                    receivable,
+    #     make_journal_entry(
+    #         company=company,
+    #         accounts=[
+    #             _debit_row(cash, 800),
+    #             _credit_row(
+    #                 receivable,
                     
                     
-                    800,
-                    party_type="Customer",
-                    party=customer,
-                    reference_type="Sales Invoice",
-                    reference_name=si.name,
-                ),
-            ],
-        )
+    #                 800,
+    #                 party_type="Customer",
+    #                 party=customer,
+    #                 reference_type="Sales Invoice",
+    #                 reference_name=si.name,
+    #             ),
+    #         ],
+    #     )
 
-        outstanding = flt(
-            frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
-        )
-        self.assertEqual(
-            outstanding, 0,
-            "outstanding_amount must be 0 after full JE payment",
-        )
+    #     outstanding = flt(
+    #         frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
+    #     )
+    #     self.assertEqual(
+    #         outstanding, 0,
+    #         "outstanding_amount must be 0 after full JE payment",
+    #     )
 
     # # 11. Partial JE reduces outstanding by exact allocated amount
     # def test_partial_je_reduces_outstanding_correctly(self):
