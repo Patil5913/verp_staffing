@@ -31,14 +31,11 @@ frappe.query_reports["Profit and Loss Statement"] = {
 	_apply_company_defaults: function (company, force_fy) {
 		let me = frappe.query_reports["Profit and Loss Statement"];
 
-		// 1. Company → default_currency + default_finance_book
+		// 1. Company → default_currency
 		frappe.db.get_value("Company", company, ["default_currency"], function (r) {
 			if (!r) return;
 			if (r.default_currency) {
 				frappe.query_report.set_filter_value("currency", r.default_currency);
-			}
-			if (r.default_finance_book) {
-				frappe.query_report.set_filter_value("finance_book", r.default_finance_book);
 			}
 
 			// ── NEW: reset exchange rate field when company changes ──────
