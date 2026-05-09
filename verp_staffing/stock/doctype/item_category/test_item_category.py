@@ -39,4 +39,4 @@ def create_item_category_if_not_exists(
 
 
 class TestItemCategory(FrappeTestCase):
-    pass
+	pass
