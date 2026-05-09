@@ -5,7 +5,7 @@
 from frappe.tests.utils import FrappeTestCase
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import flt, nowdate
+from frappe.utils import flt, nowdate ,add_days
 
 from verp_staffing.accounts.doctype.company.test_company import (
     create_company_if_not_exists,

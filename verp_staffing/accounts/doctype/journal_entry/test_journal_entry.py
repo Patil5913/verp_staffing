@@ -24,6 +24,7 @@ from verp_staffing.accounts.doctype.party_type.test_party_type import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_journal_entry(
     company=None,
     voucher_type="Journal Entry",
@@ -84,7 +85,6 @@ def _credit_row(account, amount, **kwargs):
 # ---------------------------------------------------------------------------
 # Base test class
 # ---------------------------------------------------------------------------
-
 class JournalEntryBase(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
@@ -110,8 +110,8 @@ class JournalEntryBase(FrappeTestCase):
 # Test cases
 # ---------------------------------------------------------------------------
 
-class TestJournalEntry(JournalEntryBase):
 
+class TestJournalEntry(JournalEntryBase):
     # 1. Basic balanced entry submits successfully
     def test_balanced_entry_submits_successfully(self):
         """
@@ -284,7 +284,9 @@ class TestJournalEntry(JournalEntryBase):
                 "is_cancelled": 0,
             },
         )
-        self.assertGreater(gl_count, 0, "GL entries must be created on Journal Entry submit")
+        self.assertGreater(
+            gl_count, 0, "GL entries must be created on Journal Entry submit"
+        )
 
     # 9. GL entries are reversed on cancel
     def test_gl_entries_reversed_on_cancel(self):
@@ -314,7 +316,8 @@ class TestJournalEntry(JournalEntryBase):
             },
         )
         self.assertGreater(
-            cancelled_gl, 0,
+            cancelled_gl,
+            0,
             "Reversal GL entries must be marked is_cancelled=1 after cancel",
         )
 
@@ -379,7 +382,7 @@ class TestJournalEntry(JournalEntryBase):
     #     )
 
     #     company = create_company_if_not_exists("vrugle").name
-    
+
     #     receivable = get_default_company_account(company, "Receivable")
     #     cash = create_account_if_not_exists("Cash", company).name
 
@@ -501,7 +504,8 @@ class TestJournalEntry(JournalEntryBase):
         )
 
         self.assertEqual(
-            flt(je.difference), 0,
+            flt(je.difference),
+            0,
             "difference must be 0 for a balanced Journal Entry",
         )
 
@@ -511,6 +515,7 @@ class TestJournalEntry(JournalEntryBase):
         A row using a Receivable account must specify a party.
         Omitting it must raise ValidationError (caught in GL Entry validation).
         """
+
         company = create_company_if_not_exists("vrugle").name
         receivable = get_default_company_account(company, "Receivable")
         cash = create_account_if_not_exists("Cash", company).name
@@ -540,7 +545,7 @@ class TestJournalEntry(JournalEntryBase):
             accounts=[
                 _debit_row(cash, 100, exchange_rate=80),
                 _credit_row(sales, 100, exchange_rate=80),
-            ]
+            ],
         )
 
         debit_row = je.accounts[0]
@@ -555,7 +560,7 @@ class TestJournalEntry(JournalEntryBase):
         """
         A row with a non-zero debit/credit but exchange_rate = 0 must
         raise ValidationError.2
-        
+
         .11002555555555
         """
         company = create_company_if_not_exists("vrugle").name
