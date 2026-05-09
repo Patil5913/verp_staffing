@@ -117,7 +117,7 @@ def _seed_all():
     _resolved["supplier"]       = create_supplier_if_not_exists(TEST_SUPPLIER, "Individual", "All Supplier Groups")
 
     # Item
-    _resolved["item"] = create_item_if_not_exists(TEST_ITEM)
+    _resolved["item"] = create_item_if_not_exists(TEST_ITEM, stock_uom="Nos", must_be_whole_number=0)
 
     # Accounts — util returns a Document, so grab .name
     _resolved["income_account"]   = create_account_if_not_exists("Test Income",   _resolved["company"], root_type="Income", account_type= "Income Account").name

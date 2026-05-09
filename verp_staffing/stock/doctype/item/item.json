@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "disabled",
   "naming_series",
   "item_name",
   "item_category",
@@ -48,6 +49,12 @@
    "label": "Unit Of Measurement",
    "options": "UOM",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
   }
  ],
  "grid_page_length": 50,

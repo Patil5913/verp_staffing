@@ -286,6 +286,7 @@ scheduler_events = {
         "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry",
         "verp_staffing.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
         "verp_staffing.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
+        "verp_staffing.accounts.doctype.subscription.subscription.process_due_subscriptions", 
     ],
     "cron": {
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],

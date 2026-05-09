@@ -125,6 +125,11 @@ frappe.ui.form.on("Items Table", {
 	item(frm, cdt, cdn) {
 		if (frm.doc.doctype !== "Sales Invoice") return;
 
+<<<<<<< HEAD
+=======
+frappe.ui.form.on("Items Table", {
+	item: async function (frm, cdt, cdn) {
+>>>>>>> 9d8ab11 (fix: complete subscription cron working)
 		const row = locals[cdt][cdn];
 
 		if (!row.item) return;
@@ -322,20 +327,40 @@ function set_account_queries(frm) {
 		// do nothing if same company
 		if (current_company === previous_company) return;
 
-		// update tracker
 		previous_company = current_company;
 
+<<<<<<< HEAD
 		// clear child tables
 		(frm.doc.items || []).forEach((row) => {
 			frappe.model.set_value(row.doctype, row.name, "income_account", null);
 		});
 
+=======
+		// get company defaults from cache (or fallback null-safe)
+		const company_doc = frappe.get_cached_doc("Company", current_company);
+
+		const default_income_account = company_doc?.default_income_account || null;
+
+		const default_discount_account = company_doc?.default_discount_account || null;
+
+		// update items table
+		(frm.doc.items || []).forEach((row) => {
+			frappe.model.set_value(
+				row.doctype,
+				row.name,
+				"income_account",
+				default_income_account,
+			);
+		});
+
+		// update taxes table
+>>>>>>> 9d8ab11 (fix: complete subscription cron working)
 		(frm.doc.taxes || []).forEach((row) => {
 			frappe.model.set_value(row.doctype, row.name, "account_head", null);
 		});
 
-		// clear main field
-		frm.set_value("additional_discount_account", null);
+		// update main field
+		frm.set_value("additional_discount_account", default_discount_account);
 		frm.set_value("debit_to", null);
 	};
 }

@@ -4,61 +4,36 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
 
 
 class SubscriptionPlan(Document):
     def validate(self):
-        self.validate_cost()
+        self.validate_rate()
+        self.validate_billing_interval_count()
         self.validate_item()
         self.validate_currency()
 
-    # -- validations ------------------------------------------------------
+    def validate_rate(self):
+        if self.rate is None or self.rate <= 0:
+            frappe.throw(_("Rate must be greater than zero"))
 
-    def validate_cost(self):
-        if flt(self.rate) < 0:
-            frappe.throw(_("Cost cannot be negative"))
+    def validate_billing_interval_count(self):
+        if not self.billing_interval_count or self.billing_interval_count <= 0:
+            frappe.throw(_("Billing Interval Count must be a positive integer"))
 
     def validate_item(self):
-        if not self.item:
-            return
+        if not frappe.db.exists("Item", self.item):
+            frappe.throw(_("Item {0} does not exist").format(self.item))
 
-        # item = frappe.db.get_value(
-        #     "Item", self.item, ["disabled", "is_sales_item", "is_purchase_item"], as_dict=True
-        # )
-        # if not item:
-        #     frappe.throw(_("Item {0} does not exist").format(self.item))
-        # if item.disabled:
-        #     frappe.throw(_("Item {0} is disabled and cannot be used in a Subscription Plan").format(self.item))
+        if frappe.db.get_value("Item", self.item, "disabled"):
+            frappe.throw(_("Cannot create a plan for disabled Item {0}").format(self.item))
 
     def validate_currency(self):
+        if not self.currency:
+            frappe.throw(_("Currency is required"))
+
         if not frappe.db.exists("Currency", self.currency):
+            frappe.throw(_("Currency {0} does not exist").format(self.currency))
+
+        if not frappe.db.get_value("Currency", self.currency, "enabled"):
             frappe.throw(_("Currency {0} is not enabled").format(self.currency))
-
-    # -- guard rails on edit ---------------------------------------------
-
-
-	# update as per new schema 
-  
-    # def on_trash(self):
-    #     # Block deletion if the plan is referenced by any non-cancelled subscription.
-    #     used_in = frappe.db.sql(
-    #         """
-    #         SELECT DISTINCT si.parent
-    #         FROM `tabSubscription Item` si
-    #         INNER JOIN `tabSubscription` s ON s.name = si.parent
-    #         WHERE si.plan = %s
-    #           AND s.docstatus < 2
-    #           AND IFNULL(s.status, '') NOT IN ('Cancelled', 'Completed')
-    #         LIMIT 5
-    #         """,
-    #         (self.name,),
-    #         as_dict=True,
-    #     )
-    #     if used_in:
-    #         names = ", ".join(d.parent for d in used_in)
-    #         frappe.throw(
-    #             _("Cannot delete plan {0}; it is used in active subscriptions: {1}").format(
-    #                 self.name, names
-    #             )
-    #         )

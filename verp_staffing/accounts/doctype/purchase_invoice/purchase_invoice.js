@@ -335,21 +335,32 @@ function set_purchase_account_queries(frm) {
 		// do nothing if same company
 		if (current_company === previous_company) return;
 
-		// update tracker
 		previous_company = current_company;
 
-		// clear child tables
+		// get company defaults from cache (or fallback null-safe)
+		const company_doc = frappe.get_cached_doc("Company", current_company);
+
+		const default_expense_account = company_doc?.default_expense_account || null;
+
+		const default_discount_account = company_doc?.default_discount_account || null;
+
+		// update items table
 		(frm.doc.items || []).forEach((row) => {
-			frappe.model.set_value(row.doctype, row.name, "expense_account", null);
+			frappe.model.set_value(
+				row.doctype,
+				row.name,
+				"expense_account",
+				default_expense_account,
+			);
 		});
 
+		// update taxes table
 		(frm.doc.taxes || []).forEach((row) => {
 			frappe.model.set_value(row.doctype, row.name, "account_head", null);
 		});
 
-		// clear main field
-		frm.set_value("additional_discount_account", null);
-		frm.set_value("debit_to", null);
+		// update main field
+		frm.set_value("additional_discount_account", default_discount_account);
 	};
 }
 
