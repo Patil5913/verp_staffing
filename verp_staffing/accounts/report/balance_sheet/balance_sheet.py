@@ -307,30 +307,33 @@ def get_gl_balances(filters, from_date, to_date, account_names):
 
 def merge_opening_with_gl(opening_map, current_gl):
     """
-    Merges cached opening balances with current fiscal year GL entries.
+    opening_map : { account: net_float }  (debit - credit, pre-FY history)
+    current_gl  : { account: {"debit": x, "credit": y} }  (current FY only)
 
-    opening_map : { account: {"debit": x, "credit": y} }
-    current_gl  : { account: {"debit": x, "credit": y} }
+    Strategy: convert opening net back into debit/credit side,
+    then add current year on top. compute_net stays unchanged.
 
-    Returns merged dict in same format.
+    Positive net = net debit balance  → add to debit side
+    Negative net = net credit balance → add to credit side
     """
     merged = {}
 
-    for account, ob in opening_map.items():
+    # Seed with current year GL first
+    for account, gl in current_gl.items():
         merged[account] = {
-            "debit": float(ob.get("debit", 0)),
-            "credit": float(ob.get("credit", 0)),
+            "debit": float(gl.get("debit", 0)),
+            "credit": float(gl.get("credit", 0)),
         }
 
-    for account, gl in current_gl.items():
-        if account in merged:
-            merged[account]["debit"] += float(gl.get("debit", 0))
-            merged[account]["credit"] += float(gl.get("credit", 0))
+    # Add opening net on top
+    for account, opening_net in opening_map.items():
+        if account not in merged:
+            merged[account] = {"debit": 0.0, "credit": 0.0}
+
+        if opening_net >= 0:
+            merged[account]["debit"] += opening_net
         else:
-            merged[account] = {
-                "debit": float(gl.get("debit", 0)),
-                "credit": float(gl.get("credit", 0)),
-            }
+            merged[account]["credit"] += abs(opening_net)
 
     return merged
 
@@ -374,11 +377,13 @@ def get_group_total(account_name, gl_map, children_map, acc_map):
 # ─────────────────────────────────────────────
 
 
-def get_report_summary(period_gl, accounts, filters):
+def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
     if not period_gl:
         return []
 
-    _label, _pf, _pt, gl = period_gl[-1]
+    # Always use accumulated GL for summary regardless of period movement toggle
+    # If accumulated_gl is provided use it, otherwise fall back to last period_gl
+    _label, _pf, _pt, gl = accumulated_gl if accumulated_gl else period_gl[-1]
     leaf_accounts = [a for a in accounts if not a.is_group]
 
     total_assets = sum(
@@ -398,6 +403,13 @@ def get_report_summary(period_gl, accounts, filters):
     )
 
     balance_check = total_assets - total_liab - total_equity
+    # Apply exchange rate if presentation currency differs from company currency
+    exchange_rate = flt(filters.get("exchange_rate") or 1)
+    if exchange_rate and exchange_rate != 1:
+        total_assets *= exchange_rate
+        total_liab *= exchange_rate
+        total_equity *= exchange_rate
+        balance_check *= exchange_rate
 
     currency = filters.get("currency") or frappe.get_cached_value(
         "Company", filters.company, "default_currency"
@@ -455,19 +467,13 @@ def get_data(filters):
         children_map.setdefault(a.parent_account, []).append(a.name)
 
     all_account_names = [a.name for a in accounts]
-
-    # ── Task 2f: Try cached opening balance ───────────────────────
-    # Conditions to use cache:
-    #   1. accumulated mode must be ON
-    #   2. filter must be Fiscal Year (we need a FY name)
-    #   3. cache must exist and be Completed
-    # If any of these fail, silently fall back to full history scan (query_from=None)
+    # ── STEP 1: Load cache FIRST before anything else ─────────────
     opening_map = {}
     use_cache = False
 
     if accumulated and filters.filter_based_on == "Fiscal Year":
         try:
-            from vrugle.accounts.utils.fiscal_year_opening_balance import (
+            from verp_staffing.accounts.utils.fiscal_year_opening_balance import (
                 get_opening_balances_for_company,
             )
 
@@ -476,21 +482,35 @@ def get_data(filters):
             )
             use_cache = bool(opening_map)
         except Exception:
-            use_cache = False  # graceful degradation — full scan fallback
+            use_cache = False
 
-    # ── Fetch GL for each period ──────────────────────────────────
+    # ── STEP 2: Build summary GL using same cache logic ───────────
+    # Summary ALWAYS shows accumulated totals regardless of period movement toggle
+    # Must be built after cache is loaded so it uses same path as period GL
+    summary_to_date = period_list[-1][2]
+
+    summary_gl_raw = get_gl_balances(
+        filters,
+        fy_start if use_cache else None,  # fast path or full scan
+        summary_to_date,
+        all_account_names,
+    )
+
+    summary_gl = (
+        merge_opening_with_gl(opening_map, summary_gl_raw)
+        if use_cache
+        else summary_gl_raw
+    )
+
+    summary_accumulated_gl = ("summary", None, summary_to_date, summary_gl)
+
+    # ── STEP 3: Build period GL ───────────────────────────────────
     period_gl = []
-
     for label, p_from, p_to in period_list:
         if accumulated:
-            if use_cache:
-                # FAST PATH: cache covers pre-FY history, only read current FY
-                query_from = fy_start
-            else:
-                # FALLBACK: no cache, scan all GL history from day one
-                query_from = None
+            query_from = fy_start if use_cache else None
         else:
-            query_from = p_from  # period movement mode
+            query_from = p_from
 
         gl = get_gl_balances(filters, query_from, p_to, all_account_names)
 
@@ -612,12 +632,14 @@ def get_data(filters):
         "bold": 1,
         "currency": filters.get("currency"),
     }
-    for label, _pf, _pt, _gl in period_gl:
+    for label, _pf, _pt, gl in period_gl:
         fn = frappe.scrub(label)
         le_row[fn] = flt(t_liab.get(fn, 0)) + flt(t_equity.get(fn, 0))
     data.append(le_row)
 
-    report_summary = get_report_summary(period_gl, accounts, filters)
+    report_summary = get_report_summary(
+        period_gl, accounts, filters, summary_accumulated_gl
+    )
     chart = get_chart_data(t_assets, t_liab, t_equity, period_list)
 
     return data, chart, report_summary

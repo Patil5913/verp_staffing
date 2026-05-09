@@ -139,7 +139,7 @@ def calculate_opening_balances(fiscal_year_name):
         fy = frappe.get_doc("Fiscal Year", fiscal_year_name)
         cutoff_date = add_days(getdate(fy.year_start_date), -1)
 
-        companies = [row.company for row in fy.get("companies", [])]
+        companies = [row.company for row in fy.get("included_companies", [])]
 
         if not companies:
             # No companies linked — store empty and mark complete
@@ -151,28 +151,21 @@ def calculate_opening_balances(fiscal_year_name):
         for company in companies:
             rows = frappe.db.sql(
                 """
-                SELECT
-                    account,
-                    SUM(debit_in_company_currency)  AS debit,
-                    SUM(credit_in_company_currency) AS credit
-                FROM `tabGL Entry`
-                WHERE company      = %s
-                  AND posting_date <= %s
-                  AND is_cancelled  = 0
-                GROUP BY account
-                HAVING (SUM(debit_in_company_currency) != 0
-                     OR SUM(credit_in_company_currency) != 0)
-            """,
+                    SELECT
+                        account,
+                        SUM(debit_in_company_currency) - SUM(credit_in_company_currency) AS net
+                    FROM `tabGL Entry`
+                    WHERE company      = %s
+                    AND posting_date <= %s
+                    GROUP BY account
+                    HAVING (SUM(debit_in_company_currency) - SUM(credit_in_company_currency)) != 0
+                """,
                 (company, cutoff_date),
                 as_dict=True,
             )
 
             opening_balances[company] = {
-                row.account: {
-                    "debit": float(row.debit or 0),
-                    "credit": float(row.credit or 0),
-                }
-                for row in rows
+                row.account: float(row.net or 0) for row in rows
             }
 
         _save_result(fiscal_year_name, opening_balances)
@@ -256,7 +249,7 @@ def _trigger_or_schedule(fiscal_year_name, year_start_date):
 
 def _enqueue_calculation(fiscal_year_name):
     frappe.enqueue(
-        "vrugle.accounts.utils.fiscal_year_opening_balance.calculate_opening_balances",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.calculate_opening_balances",
         fiscal_year_name=fiscal_year_name,
         queue="long",
         timeout=3600,
@@ -278,3 +271,20 @@ def _save_result(fiscal_year_name, opening_balances):
         update_modified=False,
     )
     frappe.db.commit()
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_fiscal_years_for_company(doctype, txt, searchfield, start, page_len, filters):
+    """Function fetches all fiscal years for a given company"""
+    company = filters.get("company") if filters else None
+    if not company:
+        return []
+    return frappe.db.sql("""
+        SELECT fy.name
+        FROM `tabFiscal Year` fy
+        INNER JOIN `tabFiscal Year Company` fyc ON fyc.parent = fy.name
+        WHERE fyc.company = %s
+          AND fy.name LIKE %s
+        ORDER BY fy.year_start_date DESC
+        LIMIT %s OFFSET %s
+    """, (company, "%%%s%%" % txt, page_len, start))

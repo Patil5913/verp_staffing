@@ -3,50 +3,65 @@
 
 frappe.query_reports["Balance Sheet"] = {
 	// ─────────────────────────────────────────────────────────────
-	// INTERNAL: restrict fiscal year dropdowns to company's years
+	// INTERNAL STATE
 	// ─────────────────────────────────────────────────────────────
-	_set_fiscal_year_query: function (fy_names) {
-		["from_fiscal_year", "to_fiscal_year"].forEach(function (fname) {
-			let filter = frappe.query_report.get_filter(fname);
-			if (!filter) return;
-			filter.df.get_query = function () {
-				return { filters: [["Fiscal Year", "name", "in", fy_names]] };
-			};
-			if (filter.df && filter.df.$input) {
-				let ctrl = filter.df.$input.data("fieldobj");
-				if (ctrl) ctrl.get_query = filter.df.get_query;
-			}
-		});
+	_company_default_currency: null, // cached after company is resolved
+
+	// ─────────────────────────────────────────────────────────────
+	// INTERNAL: show / hide exchange_rate filter based on whether
+	// selected currency differs from company default currency
+	// ─────────────────────────────────────────────────────────────
+	_toggle_exchange_rate: function () {
+		let me = frappe.query_reports["Balance Sheet"];
+		let currency = frappe.query_report.get_filter_value("currency");
+		let show =
+			currency && me._company_default_currency && currency !== me._company_default_currency;
+
+		frappe.query_report.toggle_filter_display("exchange_rate", !show);
+
+		if (!show) {
+			// Reset to 1 when hidden so it never silently distorts numbers
+			frappe.query_report.set_filter_value("exchange_rate", 1);
+		}
 	},
 
 	// ─────────────────────────────────────────────────────────────
-	// INTERNAL: cascade company → currency, finance_book, fiscal years
+	// INTERNAL: cascade company → currency + fiscal years
+	// force_fy = true  → always overwrite fiscal year values
+	// force_fy = false → only overwrite if current value is invalid
 	// ─────────────────────────────────────────────────────────────
 	_apply_company_defaults: function (company, force_fy) {
 		let me = frappe.query_reports["Balance Sheet"];
 
+		// 1. Fetch company default currency
 		frappe.db.get_value("Company", company, ["default_currency"], function (r) {
 			if (!r) return;
+
 			if (r.default_currency) {
+				me._company_default_currency = r.default_currency;
 				frappe.query_report.set_filter_value("currency", r.default_currency);
+				// Currency just reset to default → exchange rate should hide
+				me._toggle_exchange_rate();
 			}
 		});
 
+		// 2. Fetch all fiscal years that include this company.
+		//    Include disabled fiscal years so old years are still selectable
+		//    for historical balance sheet reports.
 		frappe.db
 			.get_list("Fiscal Year", {
-				fields: ["name"],
+				fields: ["name", "year"],
 				filters: [["Fiscal Year Company", "company", "=", company]],
 				order_by: "year_start_date asc",
 				limit: 500,
 			})
 			.then(function (rows) {
 				if (!rows || !rows.length) return;
+
 				let fy_names = rows.map(function (r) {
-					return r.name;
+					return r.year;
 				});
 				let last_fy = fy_names[fy_names.length - 1];
-
-				me._set_fiscal_year_query(fy_names);
 
 				if (force_fy) {
 					frappe.query_report.set_filter_value("from_fiscal_year", last_fy);
@@ -69,6 +84,9 @@ frappe.query_reports["Balance Sheet"] = {
 	// ─────────────────────────────────────────────────────────────
 	onload: function (report) {
 		let me = frappe.query_reports["Balance Sheet"];
+
+		// Hide exchange_rate on load — it only appears when needed
+		frappe.query_report.toggle_filter_display("exchange_rate", true);
 
 		frappe.db.get_value(
 			"Accounts Settings",
@@ -112,6 +130,7 @@ frappe.query_reports["Balance Sheet"] = {
 			fieldtype: "Link",
 			options: "Finance Book",
 		},
+
 		// ── Row 2 ──────────────────────────────────────────────────
 		{
 			fieldname: "filter_based_on",
@@ -138,6 +157,14 @@ frappe.query_reports["Balance Sheet"] = {
 			options: "Fiscal Year",
 			depends_on: "eval:doc.filter_based_on=='Fiscal Year'",
 			reqd: 0,
+			get_query: function () {
+				return {
+					query: "verp_staffing.accounts.utils.fiscal_year_opening_balance.get_fiscal_years_for_company",
+					filters: {
+						company: frappe.query_report.get_filter_value("company"),
+					},
+				};
+			},
 		},
 		{
 			fieldname: "to_fiscal_year",
@@ -146,6 +173,15 @@ frappe.query_reports["Balance Sheet"] = {
 			options: "Fiscal Year",
 			depends_on: "eval:doc.filter_based_on=='Fiscal Year'",
 			reqd: 0,
+			get_query: function () {
+				let company = frappe.query_report.get_filter_value("company");
+				return {
+					query: "verp_staffing.accounts.utils.fiscal_year_opening_balance.get_fiscal_years_for_company",
+					filters: {
+						company: company,
+					},
+				};
+			},
 		},
 		{
 			fieldname: "from_date",
@@ -161,6 +197,7 @@ frappe.query_reports["Balance Sheet"] = {
 			depends_on: "eval:doc.filter_based_on=='Date Range'",
 			reqd: 0,
 		},
+
 		// ── Row 3 ──────────────────────────────────────────────────
 		{
 			fieldname: "periodicity",
@@ -172,9 +209,14 @@ frappe.query_reports["Balance Sheet"] = {
 		},
 		{
 			fieldname: "currency",
-			label: __("Currency"),
+			label: __("Presentation Currency"),
 			fieldtype: "Link",
 			options: "Currency",
+			on_change: function () {
+				frappe.query_reports["Balance Sheet"]._toggle_exchange_rate();
+				format_currency(frappe.query_report.get_filter_value("exchange_rate"));
+				frappe.query_report.refresh();
+			},
 		},
 		{
 			fieldname: "view",
@@ -183,6 +225,38 @@ frappe.query_reports["Balance Sheet"] = {
 			options: "Report View\nGrowth View",
 			default: "Report View",
 		},
+
+		// ── Exchange Rate — hidden unless presentation currency ≠ company currency ──
+		{
+			fieldname: "exchange_rate",
+			label: __("Exchange Rate"),
+			fieldtype: "Float",
+			default: 1,
+			// Shown only when a different presentation currency is selected.
+			// All amounts in the report will be multiplied by this rate.
+			// Example: if company currency is INR and you select USD,
+			// enter today's INR → USD rate (e.g. 0.012).
+			// The report will display every amount converted to USD.
+			description: __(
+				"Enter the conversion rate from company currency to the selected presentation currency. " +
+					"All report amounts will be multiplied by this rate. " +
+					"Example: company currency is INR, presentation currency is USD → enter INR-to-USD rate (e.g. 0.012).",
+			),
+			hidden: 1, // starts hidden; _toggle_exchange_rate() controls visibility
+			on_change: function () {
+				let rate = frappe.query_report.get_filter_value("exchange_rate");
+				if (rate < 1) {
+					frappe.msgprint({
+						title: __("Invalid Exchange Rate"),
+						message: __("Exchange rate must be greater than 1."),
+						indicator: "red",
+					});
+					frappe.query_report.set_filter_value("exchange_rate", 1);
+				}
+				frappe.query_report.refresh();
+			},
+		},
+
 		// ── Checkboxes ─────────────────────────────────────────────
 		{
 			fieldname: "show_period_movement",
@@ -209,23 +283,6 @@ frappe.query_reports["Balance Sheet"] = {
 
 	// ─────────────────────────────────────────────────────────────
 	// FORMATTER
-	//
-	// Color rules (standard accounting convention):
-	//
-	//   ASSET accounts
-	//     positive value  → Blue   (normal debit balance)
-	//     negative value  → Red    (abnormal / credit balance)
-	//
-	//   LIABILITY / EQUITY accounts
-	//     positive value  → Green  (normal credit balance)
-	//     negative value  → Red    (abnormal / debit balance)
-	//
-	//   TOTAL rows (bold)
-	//     positive value  → Green
-	//     negative value  → Red
-	//
-	//   SECTION HEADERS (ASSETS / LIABILITIES / EQUITY)
-	//     uppercase, larger weight, no color on amounts
 	// ─────────────────────────────────────────────────────────────
 	formatter: function (value, row, column, data, default_formatter) {
 		if (!data) return default_formatter(value, row, column, data);
@@ -245,13 +302,12 @@ frappe.query_reports["Balance Sheet"] = {
 		if (column.fieldname === "account") {
 			let label = frappe.utils.escape_html(data.account || "");
 			if (data.bold) {
-				// Total rows
 				return `<strong style="color: var(--text-color)">${label}</strong>`;
 			}
 			return default_formatter(value, row, column, data);
 		}
 
-		// ── Growth % columns — no accounting colors ───────────────
+		// ── Growth % columns — directional color only ─────────────
 		if (column.fieldname && column.fieldname.endsWith("_growth")) {
 			let formatted = default_formatter(value, row, column, data);
 			let num = flt(value);
@@ -261,13 +317,21 @@ frappe.query_reports["Balance Sheet"] = {
 		}
 
 		// ── Amount columns ────────────────────────────────────────
-		let formatted = default_formatter(value, row, column, data);
-		let num = flt(value);
+		// Apply exchange rate if a presentation currency is selected
+		let exchange_rate = flt(frappe.query_report.get_filter_value("exchange_rate") || 1);
+		let raw_num = flt(value);
+		let display_num = raw_num * exchange_rate;
 
-		// Zero values — no color
-		if (num === 0) return formatted;
+		// Re-format with converted value
+		let display_value = exchange_rate !== 1 ? display_num : raw_num;
+		let formatted =
+			exchange_rate !== 1
+				? format_currency(display_value, frappe.query_report.get_filter_value("currency"))
+				: default_formatter(value, row, column, data);
 
-		let color = _get_amount_color(num, data);
+		if (display_num === 0) return formatted;
+
+		let color = _get_amount_color(display_num, data);
 		if (color) {
 			let weight = data.bold ? "font-weight:600;" : "";
 			return `<span style="color:${color};${weight}">${formatted}</span>`;
@@ -292,22 +356,17 @@ frappe.query_reports["Balance Sheet"] = {
 };
 
 // ─────────────────────────────────────────────
-// COLOR HELPER  (module-level, not inside the report object)
+// COLOR HELPER
 // ─────────────────────────────────────────────
 
 /**
- * Returns a CSS color string for an amount cell.
- *
- * Accounting color convention:
- *   Asset        → positive = Blue  (normal debit balance)
- *                  negative = Red   (abnormal)
- *   Liability /
- *   Equity       → positive = Green (normal credit balance)
- *                  negative = Red   (abnormal)
- *   Total rows   → positive = Green, negative = Red
+ * Asset      → positive = Blue (normal debit balance), negative = Red
+ * Liability /
+ * Equity     → positive shown normally (no green for debts),
+ *               negative = Red (abnormal debit balance)
+ * Total rows → positive = neutral bold, negative = Red
  */
 function _get_amount_color(num, data) {
-	// Total / summary rows
 	let root_type = data.root_type;
 
 	if (root_type === "Asset") {
@@ -315,9 +374,15 @@ function _get_amount_color(num, data) {
 	}
 
 	if (root_type === "Liability" || root_type === "Equity") {
+		// Positive = normal credit balance → no special color (neutral)
+		// Negative = abnormal → red
 		return num > 0 ? "var(--red-500)" : "var(--blue-500)";
 	}
 
-	// Fallback: positive green, negative red
-	return num > 0 ? "var(--green-500)" : "var(--red-500)";
+	// Total / summary bold rows
+	if (data.bold) {
+		return num < 0 ? "var(--red-500)" : null;
+	}
+
+	return null;
 }

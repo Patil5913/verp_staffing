@@ -263,12 +263,11 @@ doc_events = {
         "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice",
     },
     "Fiscal Year": {
-        "after_insert": "vrugle.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
-        "on_update": "vrugle.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
+        "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
+        "on_update": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
     },
     "GL Entry": {
-        "on_submit": "vrugle.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
-        "on_cancel": "vrugle.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
+        "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
     },
 }
 
@@ -285,8 +284,8 @@ scheduler_events = {
     ],
     "daily": [
         "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry",
-        "vrugle.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
-        "vrugle.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
     ],
     "cron": {
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
