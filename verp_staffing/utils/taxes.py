@@ -250,7 +250,6 @@ class calculate_taxes_and_totals:
 						item.rate = item.price_list_rate - item.discount_amount
 
 				if item.doctype in [
-					"Quotation Item",
 					"Sales Order Item",
 					"Delivery Note Item",
 					"POS Invoice Item",

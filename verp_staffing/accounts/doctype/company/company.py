@@ -24,9 +24,6 @@ class Company(NestedSet):
                 self.create_default_accounts()
 
     def validate(self):
-        self.update_default_account = False
-        if self.is_new():
-            self.update_default_account = True
 
         self.validate_abbr()
         self.validate_default_accounts()

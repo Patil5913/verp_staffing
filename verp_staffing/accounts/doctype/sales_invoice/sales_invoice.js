@@ -132,7 +132,6 @@ frappe.ui.form.on("Items Table", {
 		row.type = "Sales";
 
 		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
-			console.log(r);
 
 			if (r.message && r.message.stock_uom) {
 				row.uom = r.message.stock_uom;
