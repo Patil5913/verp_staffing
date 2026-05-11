@@ -296,32 +296,3 @@ def get_purchase_invoice_gl_map(doc):
             )
 
     return gl_map
-
-
-@frappe.whitelist()
-def make_purchase_invoice(source_name):
-    from frappe.model.mapper import get_mapped_doc
-
-    def set_missing_values(source, target):
-        target.run_method("set_missing_values")
-        target.run_method("calculate_taxes_and_totals")
-
-    doc = get_mapped_doc(
-        "Purchase Order",
-        source_name,
-        {
-            "Purchase Order": {
-                "doctype": "Purchase Invoice",
-            },
-            "Purchase Order Item": {
-                "doctype": "Purchase Invoice Item",
-                "field_map": {"name": "po_detail", "parent": "purchase_order"},
-            },
-            "Purchase Taxes and Charges": {"doctype": "Purchase Taxes and Charges"},
-        },
-        None,
-        set_missing_values,
-    )
-
-    return doc
-

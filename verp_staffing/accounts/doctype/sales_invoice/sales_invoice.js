@@ -122,14 +122,7 @@ frappe.ui.form.on("Sales Invoice", {
 }); 
 
 frappe.ui.form.on("Items Table", {
-	item(frm, cdt, cdn) {
-		if (frm.doc.doctype !== "Sales Invoice") return;
-
-<<<<<<< HEAD
-=======
-frappe.ui.form.on("Items Table", {
 	item: async function (frm, cdt, cdn) {
->>>>>>> 9d8ab11 (fix: complete subscription cron working)
 		const row = locals[cdt][cdn];
 
 		if (!row.item) return;
@@ -329,13 +322,6 @@ function set_account_queries(frm) {
 
 		previous_company = current_company;
 
-<<<<<<< HEAD
-		// clear child tables
-		(frm.doc.items || []).forEach((row) => {
-			frappe.model.set_value(row.doctype, row.name, "income_account", null);
-		});
-
-=======
 		// get company defaults from cache (or fallback null-safe)
 		const company_doc = frappe.get_cached_doc("Company", current_company);
 
@@ -354,7 +340,6 @@ function set_account_queries(frm) {
 		});
 
 		// update taxes table
->>>>>>> 9d8ab11 (fix: complete subscription cron working)
 		(frm.doc.taxes || []).forEach((row) => {
 			frappe.model.set_value(row.doctype, row.name, "account_head", null);
 		});

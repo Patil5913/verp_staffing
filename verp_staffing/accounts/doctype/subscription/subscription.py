@@ -530,14 +530,15 @@ class Subscription(Document):
 		invoice.company = self.company
 		invoice.currency = self.billing_currency
 
+		# ---- Plan line item ----
+		plan = frappe.get_cached_doc("Subscription Plan", self.plan)
+		item_doc = frappe.get_cached_doc("Item", plan.item)
+  
 		if is_sales:
 			invoice.customer = self.party
 		else:
 			invoice.supplier = self.party
-
-		# ---- Plan line item ----
-		plan = frappe.get_cached_doc("Subscription Plan", self.plan)
-		item_doc = frappe.get_cached_doc("Item", plan.item)
+			invoice.credit_to = self._resolve_account(item_doc, is_sales, True)
   
 		invoice.append(
 			"items",
@@ -548,9 +549,9 @@ class Subscription(Document):
 				"rate": flt(plan.rate),
 				"amount": flt(self.qty) * flt(plan.rate),
 				"type": SUBSCRIPTION_TYPE_SALES if is_sales else SUBSCRIPTION_TYPE_PURCHASE,
-				"income_account": self._resolve_account(item_doc, is_sales) if is_sales else None,
+				"income_account": self._resolve_account(item_doc, is_sales, False) if is_sales else None,
 				"expense_account": (
-					None if is_sales else self._resolve_account(item_doc, is_sales)
+					None if is_sales else self._resolve_account(item_doc, is_sales, False)
 				),
 			},
 		)
@@ -634,13 +635,15 @@ class Subscription(Document):
 
 		return invoice
 
-	def _resolve_account(self, item_doc, is_sales) -> Optional[str]:
+	def _resolve_account(self, item_doc, is_sales, is_credit_to) -> Optional[str]:
 		"""Pick an default income or expense account from company for the line item based on type."""
 		if not item_doc:
 			return None
 
 		if is_sales:
 			return frappe.get_cached_value("Company", self.company, "default_income_account")
+		elif is_credit_to:
+			return frappe.get_cached_value("Company", self.company, "default_payable_account")
 		else:
 			return frappe.get_cached_value("Company", self.company, "default_expense_account")
 
@@ -875,11 +878,10 @@ def _send_admin_report(stats: dict) -> None:
 	if not (has_failures or has_abort or has_activity):
 		return
 
-	# recipients = _get_admin_recipients()
-	recipients = ["uday.sde@vrugle.com"]
-	if not recipients:
+	recipient = _get_admin_recipient()
+	if not recipient:
 		frappe.logger().warning(
-			f"[Subscription cron {stats['run_id']}] no admin recipients "
+			f"[Subscription cron {stats['run_id']}] no admin recipient "
 			f"configured; report not sent"
 		)
 		return
@@ -887,7 +889,7 @@ def _send_admin_report(stats: dict) -> None:
 	subject, message = _build_admin_email(stats, has_failures, has_abort)
 
 	frappe.sendmail(
-		recipients=recipients,
+		recipients=recipient,
 		subject=subject,
 		message=message,
 		header=[
@@ -898,46 +900,28 @@ def _send_admin_report(stats: dict) -> None:
 	)
 
 
-def _get_admin_recipients() -> list:
-	"""Resolve admin email recipients.
+def _get_admin_recipient() -> str | None:
+	"""Get recipient from Administrator's first linked Email Account."""
 
-	Priority:
-	  1. `Subscription Settings.cron_notification_email` (single doctype, optional)
-	     — comma-separated list of explicit addresses.
-	  2. Enabled System Managers with email.
-	"""
-	# 1. Explicit configuration (optional)
 	try:
-		if frappe.db.exists("DocType", "Subscription Settings"):
-			configured = frappe.db.get_single_value(
-				"Subscription Settings", "cron_notification_email"
-			)
-			if configured:
-				return [e.strip() for e in configured.split(",") if e.strip()]
+		admin_doc = frappe.get_doc("User", "Administrator")
+
+		if not admin_doc.user_emails:
+			return None
+
+		first_row = admin_doc.user_emails[0]
+
+		if not first_row.email_account:
+			return None
+
+		return frappe.db.get_value(
+			"Email Account",
+			first_row.email_account,
+			"email_id",
+		)
+
 	except Exception:
-		# Don't let config lookup break the email path.
-		pass
-
-	# 2. System Managers fallback
-	manager_users = frappe.get_all(
-		"Has Role",
-		filters={"role": "System Manager", "parenttype": "User"},
-		pluck="parent",
-	)
-	if not manager_users:
-		return []
-
-	emails = frappe.get_all(
-		"User",
-		filters={
-			"name": ["in", manager_users],
-			"enabled": 1,
-			"user_type": "System User",
-		},
-		pluck="email",
-	)
-	return [e for e in emails if e]
-
+		return None
 
 def _build_admin_email(stats: dict, has_failures: bool, has_abort: bool):
 	"""Compose subject + HTML body for the admin report."""

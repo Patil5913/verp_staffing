@@ -123,12 +123,14 @@ def _seed_all():
     _resolved["income_account"]   = create_account_if_not_exists("Test Income",   _resolved["company"], root_type="Income", account_type= "Income Account").name
     _resolved["expense_account"]  = create_account_if_not_exists("Test Expense",  _resolved["company"], root_type="Expense", account_type= "Expense Account").name
     _resolved["discount_account"] = create_account_if_not_exists("Test Discount", _resolved["company"], root_type="Expense", account_type= "Expense Account").name
+    _resolved["payable_account"] = create_account_if_not_exists("Test Payable", _resolved["company"], root_type="Liability", account_type= "Payable").name
 
     # Company defaults
     frappe.db.set_value("Company", _resolved["company"], {
         "default_income_account":   _resolved["income_account"],
         "default_expense_account":  _resolved["expense_account"],
         "default_discount_account": _resolved["discount_account"],
+        "default_payable_account": _resolved["payable_account"],
     })
 
     # Plans
