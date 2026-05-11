@@ -201,11 +201,10 @@ def make_gl_entries(gl_map,doc):
         total_debit += debit
         total_credit += credit
         enriched_entries.append(entry)
-
-        # 🔥 Opening Entry Handling
-    is_opening = "Yes" if doc.is_opening == "Yes" else "No"
-
-    account_cache = {}
+        
+        
+    #this is final is_opening codiation do not change it without understanding the impact is_opening entries in financial reports like balance sheet and profit and loss statement.
+    is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes"  else "No"
 
     if round(total_debit, 2) != round(total_credit, 2):
         frappe.throw(
