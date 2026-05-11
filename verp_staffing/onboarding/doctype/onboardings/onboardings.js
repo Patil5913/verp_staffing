@@ -363,7 +363,6 @@ function render_customer_history(frm, data, append_interviews = false) {
 				frappe.msgprint("From Date cannot be greater than To Date");
 				return;
 			}
-			console.log("cur_frm.doc.customer: ", cur_frm.doc.customer);
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {

@@ -177,7 +177,6 @@ frappe.ui.form.on("Lead", {
 					try {
 						return JSON.parse(data)[doctype_name] || [];
 					} catch (e) {
-						console.error("Invalid JSON in department_access_form_fields", e);
 						return [];
 					}
 				});
@@ -1061,7 +1060,6 @@ frappe.ui.form.on("Lead", {
 			});
 
 			if (!res.message.length) {
-				console.log("No Lead Detail Form found");
 				return;
 			}
 
@@ -1159,7 +1157,6 @@ frappe.ui.form.on("Lead", {
 							$(`.fg-file-url[data-field="${field}"]`).val(file_id);
 						}
 					} catch (err) {
-						console.error(err);
 						frappe.msgprint(`File upload failed for ${field}`);
 						return { saved: false, valid: false };
 					}
@@ -1199,7 +1196,6 @@ frappe.ui.form.on("Lead", {
 					_lead_detail_dirty = false;
 					return { saved: true, valid: true };
 				} catch (err) {
-					console.error("Save error:", err);
 					frappe.msgprint("An error occurred while saving. Please try again.");
 					return { saved: false, valid: false };
 				}
@@ -1232,7 +1228,6 @@ frappe.ui.form.on("Lead", {
 								}
 							}
 						} catch (err) {
-							console.error(err);
 							frappe.validated = false;
 						} finally {
 							isSaving = false;
