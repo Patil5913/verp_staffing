@@ -68,29 +68,36 @@
   {
    "fieldname": "opening_balances",
    "fieldtype": "Long Text",
+   "hidden": 1,
    "label": "Opening balances",
    "print_hide": 1,
+   "read_only": 1,
    "report_hide": 1
   },
   {
    "fieldname": "opening_balance_status",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Opening Balance Status",
    "options": "Pending Not Due\nPending\nCompleted\nFailed",
    "print_hide": 1,
+   "read_only": 1,
    "report_hide": 1
   },
   {
    "fieldname": "opening_balance_calculated_at",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "Opening Balance Calculated At",
    "print_hide": 1,
+   "read_only": 1,
    "report_hide": 1
   },
   {
    "default": "0",
    "fieldname": "opening_balance_dirty",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Opening Balance Dirty",
    "print_hide": 1,
    "read_only": 1,
@@ -100,7 +107,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-08 15:42:31.468489",
+ "modified": "2026-05-11 11:41:38.804810",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Fiscal Year",
