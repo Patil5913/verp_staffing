@@ -15,6 +15,65 @@ class Employee(Document):
 
         self.name = generate_name_series("Employee", name)
 
+    def validate(self):
+        self._validate_assignment_details()
+        self._validate_unique_departments()
+        self._validate_assigned_to_required()
+
+    def _validate_assignment_details(self):
+        for row in self.employee_assignment_details_table or []:
+            if row.department and not row.designation:
+                frappe.throw(
+                    f"Row {row.idx}: Designation is required when Department is set.",
+                    title="Missing Designation"
+                )
+
+    def _validate_unique_departments(self):
+        seen = {}
+        for row in self.employee_assignment_details_table or []:
+            if not row.department:
+                continue
+            if row.department in seen:
+                frappe.throw(
+                    f"Row {row.idx}: Department <b>{row.department}</b> is already selected "
+                    f"in Row {seen[row.department]}. Each department must be unique.",
+                    title="Duplicate Department"
+                )
+            seen[row.department] = row.idx
+
+    def _validate_assigned_to_required(self):
+        for row in self.employee_assignment_details_table or []:
+            if not row.department or not row.designation:
+                continue
+
+            hierarchy_doc = frappe.db.get_value(
+                "Hierarchy",
+                row.department,
+                "role_hierarchy_json"
+            )
+            if not hierarchy_doc:
+                continue
+
+            try:
+                hierarchy = frappe.parse_json(hierarchy_doc)
+            except Exception:
+                continue
+
+            # Collect all child roles across the hierarchy
+            all_child_roles = set()
+            for entry in hierarchy:
+                for cr in entry.get("child_roles") or []:
+                    all_child_roles.add(cr)
+
+            is_top_role = row.designation not in all_child_roles
+
+            if not is_top_role and not row.assigned_to:
+                frappe.throw(
+                    f"Row {row.idx}: <b>Assigned To</b> is required for designation "
+                    f"<b>{row.designation}</b> in department <b>{row.department}</b>.",
+                    title="Assigned To Required"
+                )
+    
 @frappe.whitelist()
 def get_users_not_linked_to_employee(doctype, txt, searchfield, start, page_len, filters):
     # Get users already mapped in Employee

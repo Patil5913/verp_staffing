@@ -8,6 +8,22 @@ frappe.ui.form.on("Employee", {
 			};
 		});
 
+		const has_sales_department = (frm.doc.employee_assignment_details_table || []).some(
+			(row) => row.department === "Sales",
+		);
+
+		if (has_sales_department) {
+			frm.add_custom_button("Revenue Report", () => {
+				if (!frm.doc.name) {
+					frappe.msgprint("Please save the Employee first");
+					return;
+				}
+
+				frappe.set_route("query-report", "Revenue Of Employee", {
+					employee: frm.doc.name,
+				});
+			});
+		}
 		toggle_linkedin_section(frm);
 		toggle_revenue_target_section(frm);
 
@@ -211,7 +227,6 @@ frappe.ui.form.on("Employee Assignment Detail", {
 
 		frm.refresh_field("employee_assignment_details_table");
 	},
-
 	designation(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 
@@ -220,11 +235,19 @@ frappe.ui.form.on("Employee Assignment Detail", {
 		const hierarchy = frm._department_hierarchy?.[row.department];
 		if (!hierarchy) return;
 
+		let validRoles = new Set();
 		let all_child_roles = new Set();
 
 		hierarchy.forEach((r) => {
+			if (r.parent_role) {
+				validRoles.add(r.parent_role);
+			}
+
 			if (Array.isArray(r.child_roles)) {
-				r.child_roles.forEach((cr) => all_child_roles.add(cr));
+				r.child_roles.forEach((cr) => {
+					validRoles.add(cr);
+					all_child_roles.add(cr);
+				});
 			}
 		});
 
@@ -236,8 +259,9 @@ frappe.ui.form.on("Employee Assignment Detail", {
 		frappe.model.set_value(cdt, cdn, "assigned_to", null);
 
 		frm.refresh_field("employee_assignment_details_table");
-	},
+		}
 });
+
 
 // --------------------------------
 // UI HELPERS
