@@ -1,5 +1,3 @@
-from unittest import result
-
 import frappe
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -125,11 +123,7 @@ def get_data(filters):
     employee_filter = filters.get("employee")
 
     allowed_employees = get_visible_employee_names(user)
-    frappe.errprint({
-        "STEP": "allowed_employees",
-        "user": user,
-        "allowed_employees": allowed_employees
-    })
+
     
     if employee_filter:
         if employee_filter not in allowed_employees and user != "Administrator":
@@ -157,15 +151,9 @@ def get_data(filters):
             # Non-admin — own hierarchy only
             allowed_employees = get_visible_employee_names(user)
             valid_employees = filter_sales_employees(allowed_employees)
-            frappe.errprint({
-                "STEP": "valid_sales_employees",
-                "valid_employees": valid_employees
-            })
+
             users = employees_to_users(valid_employees)
-            frappe.errprint({
-                "STEP": "users",
-                "users": users
-            })
+
     if not users:
         return []
 
@@ -176,12 +164,6 @@ def get_data(filters):
         values[f"user_{i}"] = u
 
     where_clause = " AND ".join(["so.owner IS NOT NULL"] + conditions)
-    frappe.errprint({
-        "STEP": "query_data",
-        "conditions": conditions,
-        "values": values,
-        "where_clause": where_clause
-    })
 
     query = f"""
     SELECT
@@ -200,14 +182,7 @@ def get_data(filters):
     ORDER BY total_revenue DESC
 """
 
-    result = frappe.db.sql(query, values, as_dict=True)
-
-    frappe.errprint({
-        "STEP": "final_result",
-        "result": result
-    })
-
-    return result
+    return frappe.db.sql(query, values, as_dict=True)
 
 
 
