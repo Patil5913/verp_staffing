@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.model.document import Document
-from verp_staffing.crm.api.naming import generate_name_series
 
 
 class Supplier(Document):

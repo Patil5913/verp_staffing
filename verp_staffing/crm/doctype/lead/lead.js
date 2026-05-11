@@ -1061,8 +1061,7 @@ frappe.ui.form.on("Lead", {
 			});
 
 			if (!res.message.length) {
-				console.log("No Lead Detail Form found");
-				return;
+git 				return;
 			}
 
 			const docname = res.message[0].name;
