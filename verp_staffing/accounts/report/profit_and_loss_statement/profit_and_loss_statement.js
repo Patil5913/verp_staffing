@@ -199,7 +199,6 @@ frappe.query_reports["Profit and Loss Statement"] = {
 			fieldtype: "Link",
 			options: "Currency",
 			on_change: function () {
-				// ← add this block
 				let me = frappe.query_reports["Profit and Loss Statement"];
 				let selected = frappe.query_report.get_filter_value("currency");
 				let company = frappe.query_report.get_filter_value("company");
@@ -235,16 +234,10 @@ frappe.query_reports["Profit and Loss Statement"] = {
 			fieldtype: "Select",
 			options: "Report View\nGrowth View\nMargin View",
 			default: "Report View",
-			// Report View  → currency amounts per period
-			// Growth View  → % change vs previous period (needs 2+ periods)
-			// Margin View  → each row as % of Total Income for that period
 		},
 
 		// ── Checkboxes ─────────────────────────────────────────────
 		{
-			// P&L is always period-based (each period = that period's income/expense).
-			// "Show Period Movement" here means: show cumulative YTD instead of per-period.
-			// Default OFF = per-period (natural for P&L), ON = cumulative YTD.
 			fieldname: "show_accumulated_values",
 			label: __("Show Accumulated Values (YTD)"),
 			fieldtype: "Check",

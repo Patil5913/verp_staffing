@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Vrugle and contributors
 # For license information, please see license.txt
 
+from warnings import filters
+
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate, get_last_day
@@ -116,8 +118,8 @@ def validate_filters(filters):
 
 def get_from_to_dates(filters):
     if filters.filter_based_on == "Fiscal Year":
-        from_fy = frappe.get_doc("Fiscal Year", filters.from_fiscal_year)
-        to_fy = frappe.get_doc("Fiscal Year", filters.to_fiscal_year)
+        from_fy = frappe.get_cached_doc("Fiscal Year", filters.from_fiscal_year)
+        to_fy = frappe.get_cached_doc("Fiscal Year", filters.to_fiscal_year)
         return getdate(from_fy.year_start_date), getdate(to_fy.year_end_date)
     else:
         return getdate(filters.from_date), getdate(filters.to_date)
