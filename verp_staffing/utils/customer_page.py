@@ -143,6 +143,4 @@ def logout_otp_web(token):
     # optional: also clear pending OTP
     frappe.cache().delete_value(cache_key)
     
-    print("-------------------------------------------------logged_out")
-
     return {"status": "logged_out"}

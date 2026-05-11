@@ -7,16 +7,17 @@ from frappe.utils import flt, now_datetime, money_in_words
 from frappe.model.document import Document
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.accounts.api.get_defaults import validate_account
+from verp_staffing.accounts.doctype.gl_entry.gl_entry import get_fiscal_year
 
 
 class PurchaseInvoice(Document):
     def validate(self):
         self.validate_auto_set_posting_date()
 
+        self.validate_mandatory()
         self.set_credit_to_account()
         self.validate_credit_to_acc()
 
-        self.validate_mandatory()
         self.validate_expense_accounts()
         self.validate_tax_accounts()
         self.validate_discount_account()
@@ -37,9 +38,8 @@ class PurchaseInvoice(Document):
         if frappe.flags.in_import and self.posting_date:
             self.set_posting_date = 1
 
-        if not getattr(self, "set_posting_date", None):
-            now = now_datetime()
-            self.posting_date = now.strftime("%Y-%m-%d")
+        if self.posting_date:
+            get_fiscal_year(self.posting_date, company=self.company)
 
     def validate_credit_to_acc(self):
         acc = validate_account(
@@ -102,12 +102,10 @@ class PurchaseInvoice(Document):
                 frappe.throw(
                     _("Row {0}: Expense account is mandatory").format(item.idx)
                 )
-    
-        if self.currency == self.company_currency:
-            self.conversion_rate = 1
-        else:
+
+        if self.currency != self.company_currency:
             if not self.conversion_rate or self.conversion_rate <= 0:
-                frappe.throw("Valid Conversion Rate required")
+                frappe.throw(_("Valid Conversion Rate required"))
 
     def validate_account_currencies(self):
         company_currency = self.company_currency
@@ -221,8 +219,6 @@ def get_purchase_invoice_gl_map(doc):
             posting_date=doc.posting_date,
             voucher_type=doc.doctype,
             voucher_no=doc.name,
-            transaction_currency=doc.currency,
-            exchange_rate=doc.conversion_rate,
             party_type="Supplier",
             party=doc.supplier,
             against=doc.against_expense_account,
@@ -240,8 +236,6 @@ def get_purchase_invoice_gl_map(doc):
                 debit=item.amount,
                 company=doc.company,
                 posting_date=doc.posting_date,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
                 voucher_type=doc.doctype,
                 voucher_no=doc.name,
                 against=doc.supplier,
@@ -257,8 +251,6 @@ def get_purchase_invoice_gl_map(doc):
                 debit=tax.tax_amount,
                 company=doc.company,
                 posting_date=doc.posting_date,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
                 voucher_type=doc.doctype,
                 voucher_no=doc.name,
                 against=doc.supplier,
@@ -274,8 +266,6 @@ def get_purchase_invoice_gl_map(doc):
                 credit=doc.discount_amount,
                 company=doc.company,
                 posting_date=doc.posting_date,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
                 voucher_type=doc.doctype,
                 voucher_no=doc.name,
                 remarks="Discount",
@@ -299,8 +289,6 @@ def get_purchase_invoice_gl_map(doc):
                     credit=abs(doc.rounding_adjustment),
                     company=doc.company,
                     posting_date=doc.posting_date,
-                    transaction_currency=doc.currency,
-                    exchange_rate=doc.conversion_rate,
                     voucher_type=doc.doctype,
                     voucher_no=doc.name,
                     remarks="Rounding Adjustment",

@@ -39,7 +39,6 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
     designation = filters.get("designation")
 
     if not department or not designation:
-        print("Department or Designation filter missing")
         return []
 
     return frappe.db.sql(

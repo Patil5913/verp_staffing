@@ -38,14 +38,11 @@ def process_drawn_signature_and_apply(doc, token):
             try:
                 if attempt > 0:
                     time.sleep(0.2 * attempt)
-                    # print(f"RETRY {label} attempt {attempt} for agr {agr}")
                 frappe.db.sql(query, values)
                 frappe.db.commit()
-                # print(f"{label} SUCCESS on attempt {attempt + 1}")
                 return
             except Exception as e:
                 if "1020" in str(e) and attempt < max_retries - 1:
-                    # print(f"1020 on {label} attempt {attempt + 1}, retrying...")
                     frappe.db.rollback()
                     continue
                 else:
@@ -59,7 +56,6 @@ def process_drawn_signature_and_apply(doc, token):
             apply_pdf_signature(doc, signature_image_file=signature_image)
             return
         else:
-            # print(f"File {signature_image} not found in DB, clearing stale reference")
             sql_with_retry(
                 "UPDATE `tabAgreement` SET signature_image = NULL WHERE name = %s",
                 (agr,),
@@ -130,7 +126,6 @@ def apply_pdf_signature(doc, signature_image_file):
             import time
             if attempt > 0:
                 time.sleep(0.2 * attempt)  # 0.2s, 0.4s, 0.6s backoff
-                # print(f"RETRY attempt {attempt} for agr {agr}")
 
             # Always read fresh on every attempt
             agr_data = frappe.db.get_value(
@@ -177,13 +172,11 @@ def apply_pdf_signature(doc, signature_image_file):
                 agreement=agreement,
                 certificate_id=certificate_id,
             )
-            # print(f"apply_pdf_signature SUCCESS on attempt {attempt + 1}")
             return  # ✅ success — exit retry loop
 
         except Exception as e:
             error_str = str(e)
             if "1020" in error_str and attempt < max_retries - 1:
-                # print(f"1020 conflict on attempt {attempt + 1}, retrying...")
                 frappe.db.rollback()
                 continue  # retry
             else:

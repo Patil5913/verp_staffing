@@ -75,14 +75,15 @@ def apply_discount(doc):
 def calculate_base(doc):
     rate = flt(doc.conversion_rate or 1)
 
-    doc.base_total = doc.total * rate
-    doc.base_net_total = doc.net_total * rate
-    doc.base_grand_total = doc.grand_total * rate
-    doc.base_total_taxes_and_charges = doc.total_taxes_and_charges * rate
-    doc.base_rounding_adjustment = doc.rounding_adjustment * rate
-    doc.base_rounded_total = doc.rounded_total * rate
+    doc.base_total = flt(doc.total) * rate
+    doc.base_net_total = flt(doc.net_total) * rate
+    doc.base_grand_total = flt(doc.grand_total) * rate
+    doc.base_total_taxes_and_charges = flt(doc.total_taxes_and_charges) * rate
+    doc.base_rounding_adjustment = flt(doc.rounding_adjustment) * rate
+    doc.base_rounded_total = flt(doc.rounded_total) * rate
+
     if doc.discount_amount:
-        doc.base_discount_amount = doc.discount_amount * rate
+        doc.base_discount_amount = flt(doc.discount_amount) * rate
 
 # Rounding
 def calculate_rounding(doc):

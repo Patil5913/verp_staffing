@@ -8,12 +8,10 @@ from verp_staffing.crm.api.helpers import send_notification
 def validate_required_lead_documents_config():
     quota = frappe.get_site_config().get("quota", {})
     if not isinstance(quota, dict):
-        frappe.throw(
-            'Missing "quota" object in site_config.json'
-        )
-        
+        frappe.throw('Missing "quota" object in site_config.json')
 
-# user limit validate 
+
+# user limit validate
 def user_limit(doc=None, method=None):
     quota = frappe.get_site_config().get("quota", {})
     users_limit = quota.get("users_limit")
@@ -25,16 +23,18 @@ def user_limit(doc=None, method=None):
     # count current users
     total_users = frappe.db.count("User", filters={"enabled": 1})
     if total_users >= users_limit:
-         template_name = "User Limit Exceeded"
-         if frappe.db.exists("Email Template", template_name):
+        template_name = "User Limit Exceeded"
+        if frappe.db.exists("Email Template", template_name):
             template = frappe.get_doc("Email Template", template_name)
             context = {
                 "users_limit": users_limit,
                 "total_users": total_users,
             }
             subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html or template.response, context)
-         else:
+            message = frappe.render_template(
+                template.response_html or template.response, context
+            )
+        else:
             subject = "User Limit Exceeded"
             message = (
                 f"Your site has exceeded the allowed user limit.\n\n"
@@ -43,7 +43,7 @@ def user_limit(doc=None, method=None):
                 f"Please upgrade your plan or remove inactive users."
             )
 
-         send_notification(
+        send_notification(
             recipients=["Administrator"],
             subject=subject,
             message=message,
@@ -51,7 +51,9 @@ def user_limit(doc=None, method=None):
             send_email=1,
             send_system=1,
         )
-         frappe.throw(f"User limit exceeded. Limit = {users_limit}, Current = {total_users}")
+        frappe.throw(
+            f"User limit exceeded. Limit = {users_limit}, Current = {total_users}"
+        )
 
 
 # fetch site storage usage in GB
@@ -74,13 +76,15 @@ def get_site_storage_usage():
                 fp = os.path.join(dirpath, f)
                 total_size += os.path.getsize(fp)
         return total_size
-    
+
     # Get files size
     private_files = folder_size(f"{site}/private/files")
-    public_files  = folder_size(f"{site}/public/files")
-    backups       = folder_size(f"{site}/private/backups")
+    public_files = folder_size(f"{site}/public/files")
+    backups = folder_size(f"{site}/private/backups")
 
-    file_total_gb = round((private_files + public_files + backups) / 1024 / 1024 / 1024, 2)
+    file_total_gb = round(
+        (private_files + public_files + backups) / 1024 / 1024 / 1024, 2
+    )
     return round(db_size_gb + file_total_gb, 2)
 
 
@@ -104,7 +108,9 @@ def site_space_limit(doc=None, method=None):
                 "total_space": total_space,
             }
             subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html or template.response, context)
+            message = frappe.render_template(
+                template.response_html or template.response, context
+            )
         else:
             subject = "Site Storage Limit Exceeded"
             message = (
@@ -122,12 +128,15 @@ def site_space_limit(doc=None, method=None):
             send_system=1,
         )
 
-        frappe.throw(f"Site used space {total_space}GB exceed the limit of {site_space_limit_gb}GB")
+        frappe.throw(
+            f"Site used space {total_space}GB exceed the limit of {site_space_limit_gb}GB"
+        )
+
 
 # site expiery check
 def site_expiry_check():
     quota = frappe.get_site_config().get("quota", {})
-    expiry_date = quota.get('expiry_date')
+    expiry_date = quota.get("expiry_date")
 
     if expiry_date:
         today = datetime.today().date()
@@ -136,7 +145,7 @@ def site_expiry_check():
         if today > expiry:
             enable_archive_mode()
 
-            if frappe.session.user and frappe.session.user != "Administrator":
+            if frappe.session.user:
                 frappe.msgprint(
                     "This site has expired. Please contact the Administrator."
                 )
@@ -184,7 +193,9 @@ def check_site_expiry():
                     "expiry_date": expiry_date,
                 }
                 subject = frappe.render_template(template.subject, context)
-                message = frappe.render_template(template.response_html or template.response, context)
+                message = frappe.render_template(
+                    template.response_html or template.response, context
+                )
             else:
                 subject = f"Site Expiring in {days_left} Day(s)"
                 message = f"Your site will expire in {days_left} day(s). Expiry Date: {expiry_date}"
@@ -202,6 +213,7 @@ def check_site_expiry():
                 message={"type": "Alert", "message": message},
                 user=admin_user,
             )
+
 
 # block non admin login in archive mode
 def block_non_admin():

@@ -28,7 +28,6 @@ def send_message(sender, message, subject="Website Query"):
                 internal_content  = frappe.render_template(
                     internal_template.response_html or internal_template.response, context
                 )
-                print(f"---------------------Using internal template: {forward_to_email}")
             else:
                 # Fallback
                 internal_subject = subject
@@ -132,7 +131,6 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
          "message": "request personal data",
         "template": template_name,
         "template in database":frappe.db.exists("Email Template", template_name)})
-        print(f"-----template in personal data download: {template_name}, exists: {frappe.db.exists('Email Template', template_name)}")
 
         if frappe.db.exists("Email Template", template_name):
             email_template = frappe.get_doc("Email Template", template_name)
@@ -284,9 +282,7 @@ from frappe.utils import cint, split_emails
 
 
 def send_email(success, service_name, doctype, email_field, error_status=None):
-    print("-------------from backup successful")
     recipients = get_recipients(doctype, email_field)
-    print(f"--------recipients: {recipients}")
     if not recipients:
         frappe.log_error(
             f"No Email Recipient found for {service_name}",
@@ -304,7 +300,6 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
             "error_status": None,
         }
         rendered = get_rendered_template("Backup Upload Successful", context)
-        print(f"--------backup successful:{rendered}")
 
         if rendered:
             frappe.sendmail(
@@ -312,10 +307,8 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
                 subject=rendered["subject"],
                 content=rendered["content"],
             )
-            print(f"---------------------Using template for backup successful")
         else:
             # Fallback to original
-            print("template not used")
             frappe.sendmail(
                 recipients=recipients,
                 subject="Backup Upload Successful",
@@ -358,7 +351,6 @@ def get_recipients(doctype, email_field):
 def patch():
     import frappe.integrations.offsite_backup_utils as backup_utils
     backup_utils.send_email = send_email
-    print("Patched send_email in offsite_backup_utils")
 
 
 

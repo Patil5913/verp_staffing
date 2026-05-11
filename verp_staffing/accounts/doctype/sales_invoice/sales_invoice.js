@@ -25,6 +25,12 @@ frappe.ui.form.on("Sales Invoice", {
 			}, __("Email"));
 
 		}
+		(frm.doc.items || []).forEach((row) => {
+			if (!row.type) {
+				const type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
+				frappe.model.set_value(row.doctype, row.name, "type", type);
+			}
+		});
 		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
 			frm.add_custom_button(
 				__("Payment Entry"),
@@ -41,6 +47,17 @@ frappe.ui.form.on("Sales Invoice", {
 	onload(frm) {
 		set_currency_labels(frm);
 		set_account_queries(frm);
+
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
 	},
 	after_save(frm) {
 		frm.set_value("in_words", frm.doc.in_words);
@@ -72,7 +89,7 @@ frappe.ui.form.on("Sales Invoice", {
 			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
 				if (r.message && r.message.default_income_account) {
 					frm.doc.items.forEach((item) => {
-						item.expense_account = r.message.default_income_account;
+						item.income_account = r.message.default_income_account;
 					});
 					frm.refresh_field("items");
 				}
@@ -102,50 +119,43 @@ frappe.ui.form.on("Sales Invoice", {
 	disable_rounded_total(frm) {
 		verp_staffing.calculation_engine.calculate_rounding(frm);
 	},
-});
+}); 
 
-frappe.ui.form.on("Sales Invoice Item", {
-	item: async function (frm, cdt, cdn) {
+frappe.ui.form.on("Items Table", {
+	item(frm, cdt, cdn) {
+		if (frm.doc.doctype !== "Sales Invoice") return;
+
 		const row = locals[cdt][cdn];
 
-		// Fetch item_name directly
-		const item = await frappe.db.get_doc("Item", row.item);
+		if (!row.item) return;
 
-		if (item) {
-			frappe.model.set_value(cdt, cdn, "item_name", item.item_name);
-			frappe.model.set_value(cdt, cdn, "uom", item.stock_uom);
-			frappe.model.set_value(cdt, cdn, "qty", 1);
-		}
+		row.type = "Sales";
+
+		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
+
+			if (r.message && r.message.stock_uom) {
+				row.uom = r.message.stock_uom;
+				row.qty = 1;
+
+				frm.refresh_field("items");
+			}
+		});
 
 		if (frm.doc.company) {
-			frappe.call({
-				method: "verp_staffing.accounts.api.get_defaults.get_default_income_account",
-				args: {
-					company: frm.doc.company,
-				},
-				callback(r) {
-					if (r.message) {
-						frappe.model.set_value(cdt, cdn, "income_account", r.message);
-					}
-				},
+			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
+				if (r.message?.default_income_account) {
+					row.income_account = r.message.default_income_account;
+
+					frm.refresh_field("items");
+				}
 			});
 		}
-	},
-	items_add: function (frm) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	items_remove: function (frm) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	qty(frm, cdt, cdn) {
-		verp_staffing.calculation_engine.calculate_invoice(frm);
-	},
-	rate(frm, cdt, cdn) {
+
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
 
-frappe.ui.form.on("Sales Taxes and Charges", {
+frappe.ui.form.on("Taxes and Charges", {
 	charge_type(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 
@@ -230,6 +240,9 @@ function toggle_base_fields(frm, show) {
 }
 
 function set_account_queries(frm) {
+	// store previous company
+	let previous_company = frm.doc.company;
+
 	frm.set_query("debit_to", () => {
 		if (!frm.doc.company) {
 			return {
@@ -301,6 +314,30 @@ function set_account_queries(frm) {
 			},
 		};
 	});
+
+	// handle company change
+	frm.fields_dict.company.df.onchange = function () {
+		const current_company = frm.doc.company;
+
+		// do nothing if same company
+		if (current_company === previous_company) return;
+
+		// update tracker
+		previous_company = current_company;
+
+		// clear child tables
+		(frm.doc.items || []).forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "income_account", null);
+		});
+
+		(frm.doc.taxes || []).forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "account_head", null);
+		});
+
+		// clear main field
+		frm.set_value("additional_discount_account", null);
+		frm.set_value("debit_to", null);
+	};
 }
 
 async function set_currency_labels(frm) {

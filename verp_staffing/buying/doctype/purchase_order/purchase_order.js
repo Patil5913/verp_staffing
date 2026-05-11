@@ -104,6 +104,7 @@ frappe.ui.form.on("Purchase Order Item", {
 
 
 	items_add: function (frm) {
+		frappe.model.set_value(cdt, cdn, "type", "Purchase");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 
@@ -120,7 +121,7 @@ frappe.ui.form.on("Purchase Order Item", {
 	},
 });
 
-frappe.ui.form.on("Purchase Taxes and Charges", {
+frappe.ui.form.on("Taxes and Charges", {
 	refresh(frm) {
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),

@@ -182,6 +182,7 @@
    "reqd": 1
   },
   {
+   "default": "1",
    "description": "Rate at which Customer Currency is converted to customer's base currency",
    "fieldname": "conversion_rate",
    "fieldtype": "Float",
@@ -201,7 +202,7 @@
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "Sales Invoice Item",
+   "options": "Items Table",
    "reqd": 1
   },
   {
@@ -258,7 +259,7 @@
    "fieldname": "taxes",
    "fieldtype": "Table",
    "label": "Sales Taxes and Charges",
-   "options": "Sales Taxes and Charges"
+   "options": "Taxes and Charges"
   },
   {
    "fieldname": "tax_category",
@@ -502,7 +503,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-21 11:25:52.269965",
+ "modified": "2026-05-04 09:48:59.678147",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",

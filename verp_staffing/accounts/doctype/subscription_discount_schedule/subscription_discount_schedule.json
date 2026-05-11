@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-04-28 10:18:41.606291",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "from_invoice_number",
+  "discount_type",
+  "discount_value",
+  "column_break_dikw",
+  "to_invoice_number",
+  "applies_on",
+  "description"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "default": "1",
+   "description": "1 = first generated invoice. Trial-period invoices are not counted.",
+   "fieldname": "from_invoice_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "From Invoice #",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "description": "Leave blank to apply through end of subscription",
+   "fieldname": "to_invoice_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "To Invoice #",
+   "non_negative": 1
+  },
+  {
+   "columns": 2,
+   "default": "Percentage",
+   "fieldname": "discount_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "Percentage\nFixed Amount",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "description": "Percentage (0-100) or fixed amount in billing currency. Always applied on net total (before tax).",
+   "fieldname": "discount_value",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Value",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "description": "Internal note, e.g. 'Launch promo - 50% off first 3 months'",
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description"
+  },
+  {
+   "columns": 2,
+   "default": "Net Amount",
+   "fieldname": "applies_on",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Applies on",
+   "options": "Net Amount\nPlan Rate",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_dikw",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-02 16:37:36.114919",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Subscription Discount Schedule",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

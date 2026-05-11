@@ -4,6 +4,17 @@
 frappe.ui.form.on("Purchase Invoice", {
 	refresh(frm) {
 		set_currency_labels(frm);
+		(frm.doc.items || []).forEach((row) => {
+			if (!row.type) {
+				const type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
+				(frm.doc.items || []).forEach((row) => {
+					if (!row.type) {
+						row.type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
+					}
+				});
+				frm.refresh_field("items");
+			}
+		});
 		if (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0) {
 			frm.add_custom_button(
 				__("Payment Entry"),
@@ -24,6 +35,17 @@ frappe.ui.form.on("Purchase Invoice", {
 
 	onload(frm) {
 		set_purchase_account_queries(frm);
+
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
 	},
 
 	validate(frm) {
@@ -105,12 +127,11 @@ frappe.ui.form.on("Purchase Invoice", {
 		(po.items || []).forEach((row) => {
 			let child = frm.add_child("items");
 
+			child.type = "Purchase";
 			child.item = row.item;
-			child.item_name = row.item_name;
 			child.qty = row.qty;
 			child.uom = row.uom;
 			child.rate = row.rate;
-			// child.amount = row.qty * row.rate;
 			child.expense_account = row.expense_account;
 		});
 
@@ -136,10 +157,14 @@ frappe.ui.form.on("Purchase Invoice", {
 	},
 });
 
-frappe.ui.form.on("Purchase Invoice Item", {
-	item: verp_staffing.purchase.item_handler,
-
-	items_add: function (frm) {
+frappe.ui.form.on("Items Table", {
+	item: function (frm, cdt, cdn) {
+		verp_staffing.purchase.item_handler(frm, cdt, cdn);
+	},
+	items_add: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		row.type = "Purchase";
+		frm.refresh_field("items");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	items_remove: function (frm) {
@@ -153,7 +178,7 @@ frappe.ui.form.on("Purchase Invoice Item", {
 	},
 });
 
-frappe.ui.form.on("Purchase Taxes and Charges", {
+frappe.ui.form.on("Taxes and Charges", {
 	refresh(frm) {
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
@@ -192,6 +217,7 @@ async function set_currency_labels(frm) {
 		"discount_amount",
 		"rounding_adjustment",
 		"total_taxes_and_charges",
+		"outstanding_amount",
 	];
 
 	fields.forEach((field) => {
@@ -223,6 +249,9 @@ async function set_currency_labels(frm) {
 }
 
 function set_purchase_account_queries(frm) {
+	// store previous company
+	let previous_company = frm.doc.company;
+
 	// CREDIT TO (Payable)
 	frm.set_query("credit_to", () => {
 		if (!frm.doc.company) {
@@ -249,6 +278,22 @@ function set_purchase_account_queries(frm) {
 				account_type: ["in", ["Expense Account", "Cost of Goods Sold"]],
 				is_group: 0,
 				company: frm.doc.company,
+			},
+		};
+	});
+
+	// CASH/BANK ACCOUNT
+	frm.set_query("cashbank_account", () => {
+		if (!frm.doc.company) {
+			return { filters: { name: "__invalid__" } };
+		}
+
+		return {
+			filters: {
+				account_type: ["in", ["Cash", "Bank"]],
+				is_group: 0,
+				company: frm.doc.company,
+				report_type: "Balance Sheet",
 			},
 		};
 	});
@@ -282,6 +327,30 @@ function set_purchase_account_queries(frm) {
 			},
 		};
 	});
+
+	// handle company change
+	frm.fields_dict.company.df.onchange = function () {
+		const current_company = frm.doc.company;
+
+		// do nothing if same company
+		if (current_company === previous_company) return;
+
+		// update tracker
+		previous_company = current_company;
+
+		// clear child tables
+		(frm.doc.items || []).forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "expense_account", null);
+		});
+
+		(frm.doc.taxes || []).forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "account_head", null);
+		});
+
+		// clear main field
+		frm.set_value("additional_discount_account", null);
+		frm.set_value("debit_to", null);
+	};
 }
 
 function handle_discount_account(frm) {
