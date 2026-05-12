@@ -40,7 +40,7 @@ _resolved: dict = {}
 
 
 def _ensure_company():
-    name = create_company_if_not_exists(TEST_COMPANY)
+    name = create_company_if_not_exists(TEST_COMPANY, "v")
     _resolved["company"] = name
     return name
 

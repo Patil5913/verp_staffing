@@ -88,7 +88,7 @@ class JournalEntry(Document):
     # -----------------------------
     def on_cancel(self):
         cancel_gl_entries(self)
-
+        self.restore_invoice_outstanding()
 
     def update_invoice_outstanding(self):
         invoice_map = {}
@@ -121,11 +121,33 @@ class JournalEntry(Document):
             # 🔹 Update DB directly (fast)
             invoice.db_set("outstanding_amount", new_outstanding)
 
-            # # 🔹 Status update
-            # if new_outstanding == 0:
-            #     invoice.db_set("status", "Paid")
-            # else:
-            #     invoice.db_set("status", "Partly Paid")
+    def restore_invoice_outstanding(self):
+        invoice_map = {}
+
+        for row in self.accounts:
+
+            if (
+                row.reference_type in ["Sales Invoice", "Purchase Invoice"]
+                and row.reference_name
+            ):
+
+                key = (row.reference_type, row.reference_name)
+
+                amount = abs(flt(row.debit) - flt(row.credit))
+
+                if not amount:
+                    continue
+
+                invoice_map.setdefault(key, 0)
+                invoice_map[key] += amount
+
+        for (ref_type, ref_name), paid_amount in invoice_map.items():
+
+            invoice = frappe.get_doc(ref_type, ref_name)
+
+            new_outstanding = flt(invoice.outstanding_amount) + paid_amount
+
+            invoice.db_set("outstanding_amount", new_outstanding)
 
     # -----------------------------
     # 🔹 DELETE OLD GL

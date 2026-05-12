@@ -39,3 +39,4 @@ def create_item_if_not_exists(
 
 class TestItem(FrappeTestCase):
 	pass
+

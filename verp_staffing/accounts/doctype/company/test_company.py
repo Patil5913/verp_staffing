@@ -37,7 +37,6 @@ def create_company_if_not_exists(company_name, abbr = None, **overrides):
     return doc.name
 
 
-
 def get_company_currency(company):
     """Return the default currency configured for a company."""
 
@@ -50,7 +49,6 @@ def get_company_currency(company):
         frappe.throw(f"Default currency not set for company: {company}")
 
     return currency
-
 
 ACCOUNT_TYPE_TO_FIELD = {
     "receivable": "default_receivable_account",
