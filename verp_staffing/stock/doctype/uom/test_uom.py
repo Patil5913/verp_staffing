@@ -32,4 +32,4 @@ def create_uom_if_not_exists(uom_name, **overrides):
 
     uom = frappe.get_doc(defaults)
     uom.insert(ignore_permissions=True)
-    return uom
+    return uom.name
