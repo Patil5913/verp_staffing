@@ -2,8 +2,9 @@
 # See license.txt
 
 import frappe
+import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe import get_doc
+from verp_staffing.buying.doctype.supplier_group.test_supplier_group import create_supplier_group_if_not_exists
 
 
 class TestSupplier(FrappeTestCase):
@@ -11,35 +12,29 @@ class TestSupplier(FrappeTestCase):
 
 
 def create_supplier_if_not_exists(
-    supplier_name=None,
-    supplier_type="Company",
+    supplier_name,
+    supplier_type="Individual",
+    supplier_group="All Supplier Groups",
     **overrides,
 ):
+    """Return an existing Supplier or create and return a new one."""
 
     if not supplier_name:
         frappe.throw("Supplier name is required")
 
-    existing = frappe.db.get_value(
-        "Supplier",
-        {"supplier_name": supplier_name},
-        "name",
-    )
+    supplier_group = create_supplier_group_if_not_exists(supplier_group)
 
-    if existing:
-        return existing
+    if frappe.db.exists("Supplier", {"supplier_name": supplier_name}):
+        return frappe.get_doc("Supplier", {"supplier_name": supplier_name}).name
 
-    overrides.pop("supplier_name", None)
-    overrides.pop("supplier_type", None)
+    defaults = {
+        "doctype": "Supplier",
+        "supplier_name": supplier_name,
+        "supplier_type": supplier_type,
+        "supplier_group": supplier_group,
+        **overrides
+    }
 
-    doc = frappe.get_doc(
-        {
-            "doctype": "Supplier",
-            "supplier_name": supplier_name,
-            "supplier_type": supplier_type,
-            **overrides,
-        }
-    )
-
-    doc.insert(ignore_permissions=True, ignore_if_duplicate=True)
-
-    return doc.name
+    supplier = frappe.get_doc(defaults)
+    supplier.insert(ignore_permissions=True)
+    return supplier.name

@@ -3,47 +3,36 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe import get_doc
 
 
 class TestCompany(FrappeTestCase):
     pass
 
 
-def create_company_if_not_exists(
-    company_name=None,
-    abbr = None,
-    default_currency= "INR",
-    country= "India",
-    **overrides,
-):
+# utils for test cases
+def create_company_if_not_exists(company_name, abbr, **overrides):
+    if not company_name:
+        frappe.throw("Company name is required")
 
-    existing = frappe.db.exists(
-        "Company",
-        {"company_name": company_name},
-    )
-
-    if existing:
+    # 1. Check by company name
+    if existing := frappe.db.exists("Company", {"company_name": company_name}):
         return existing
 
-    overrides.pop("company_name", None)
-    overrides.pop("abbr", None)
-    overrides.pop("default_currency", None)
-    overrides.pop("country", None)
+    # 2. Check by abbr
+    if existing_abbr := frappe.db.exists("Company", {"abbr": abbr}):
+        return existing_abbr
 
-    doc = frappe.get_doc(
-        {
-            "doctype": "Company",
-            "company_name": company_name,
-            "abbr": abbr,
-            "default_currency": default_currency,
-            "country": country,
-            **overrides,
-        }
-    )
+    defaults = {
+        "doctype": "Company",
+        "company_name": company_name,
+        "abbr": abbr,
+        "default_currency": "INR",
+        "country": "India",
+        **overrides
+    }
 
+    doc = frappe.get_doc(defaults)
     doc.insert(ignore_permissions=True)
-
     return doc.name
 
 
@@ -59,7 +48,6 @@ def get_company_currency(company):
         frappe.throw(f"Default currency not set for company: {company}")
 
     return currency
-
 
 ACCOUNT_TYPE_TO_FIELD = {
     "receivable": "default_receivable_account",
@@ -117,4 +105,3 @@ def get_default_company_account(company, account_type, throw=True):
         return None
 
     return account
-

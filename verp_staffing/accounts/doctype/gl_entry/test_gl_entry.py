@@ -23,7 +23,7 @@ from verp_staffing.accounts.doctype.fiscal_year.test_fiscal_year import create_f
 
 
 # Make GL doc helper
-def make_gl_doc(**kwargs):
+def make_gl_doc(**overrides):
     # return a minimal GL entry doc with default values, updated with any provided kwargs
     gl_doc = {
         "posting_date": today(),
@@ -32,8 +32,8 @@ def make_gl_doc(**kwargs):
         "debit": 1000,
         "credit": 0,
         "account_currency": "INR",
+        **overrides
     }
-    gl_doc.update(kwargs)
     return gl_doc
 
 

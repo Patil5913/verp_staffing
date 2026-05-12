@@ -14,11 +14,16 @@ def create_customer_if_not_exists(
     customer_name,
     **overrides,
 ):
+    """
+    Ensure Customer exists by name1.
+
+    Flow:
+    1. Return existing customer if found
+    2. Else create new customer using overrides
+    """
 
     if not customer_name:
         frappe.throw("Customer name is required")
-
-    overrides.pop("name1", None)
 
     existing = frappe.db.get_value(
         "Customer",
@@ -29,13 +34,13 @@ def create_customer_if_not_exists(
     if existing:
         return existing
 
-    doc = frappe.get_doc(
-        {
-            "doctype": "Customer",
-            "name1": customer_name,
-            **overrides,
-        }
-    )
+    customer_data = {
+        "doctype": "Customer",
+        **overrides,
+        "name1": customer_name,
+    }
+
+    doc = frappe.get_doc(customer_data)
 
     doc.insert(ignore_permissions=True)
 

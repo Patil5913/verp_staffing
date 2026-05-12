@@ -145,12 +145,12 @@ def make_purchase_invoice(
     """
     Create a reusable Purchase Invoice document.
 
-    Features:
-    - Works with or without seed data
-    - Uses sensible defaults
-    - Allows full custom items/taxes
-    - Can return draft doc without insert
-    - Can insert without submit
+    Flow:
+    1. Resolve company, supplier, currency, and accounts
+    2. Use provided items or generate default item row
+    3. Append taxes if provided
+    4. Create Purchase Invoice using overrides
+    5. Optionally insert and submit
     """
 
     company = company or _resolved.get("company")
@@ -168,27 +168,41 @@ def make_purchase_invoice(
     currency = currency or company_currency
 
     if conversion_rate is None:
-        conversion_rate = 1 if currency == company_currency else 0
+        conversion_rate = 1
 
-    credit_to = credit_to or get_default_company_account(company, "Payable")
+    credit_to = credit_to or get_default_company_account(
+        company,
+        "Payable",
+    )
 
-    expense_account = expense_account or _resolved.get("expense_account")
+    expense_account = expense_account or _resolved.get(
+        "expense_account"
+    )
 
-    pi = frappe.new_doc("Purchase Invoice")
-    pi.company = company
-    pi.supplier = supplier
-    pi.posting_date = posting_date or nowdate()
-    pi.due_date = due_date or add_days(pi.posting_date, 30)
-
-    pi.currency = currency
-    pi.conversion_rate = conversion_rate
-    pi.credit_to = credit_to
+    pi_data = {
+        "doctype": "Purchase Invoice",
+        **overrides,
+        "company": company,
+        "supplier": supplier,
+        "posting_date": posting_date or nowdate(),
+        "due_date": due_date or add_days(
+            posting_date or nowdate(),
+            30,
+        ),
+        "currency": currency,
+        "conversion_rate": conversion_rate,
+        "credit_to": credit_to,
+    }
 
     if discount_amount:
-        pi.discount_amount = flt(discount_amount)
+        pi_data["discount_amount"] = flt(discount_amount)
 
     if additional_discount_account:
-        pi.additional_discount_account = additional_discount_account
+        pi_data[
+            "additional_discount_account"
+        ] = additional_discount_account
+
+    pi = frappe.get_doc(pi_data)
 
     if items is not None:
         for item in items:
@@ -199,7 +213,9 @@ def make_purchase_invoice(
         default_uom = _resolved.get("uom")
 
         if not default_item:
-            frappe.throw("Items are required when no default item exists")
+            frappe.throw(
+                "Items are required when no default item exists"
+            )
 
         pi.append(
             "items",
@@ -217,25 +233,6 @@ def make_purchase_invoice(
     if taxes:
         for tax in taxes:
             pi.append("taxes", tax)
-
-    for key in (
-        "company",
-        "supplier",
-        "items",
-        "amount",
-        "currency",
-        "conversion_rate",
-        "posting_date",
-        "due_date",
-        "credit_to",
-        "expense_account",
-        "discount_amount",
-        "additional_discount_account",
-        "taxes",
-    ):
-        overrides.pop(key, None)
-
-    pi.update(overrides)
 
     pi.set_against_expense_account()
 

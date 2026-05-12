@@ -4,59 +4,39 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-def create_uom_if_not_exists(uom_name, return_doc=True):
+
+def create_item_category_if_not_exists(
+    category_name="Item Category 1",
+    is_group=0,
+    **overrides,
+):
     """
-    Ensure UOM exists.
-
-    Args:
-        uom_name (str)
-        return_doc (bool): return Document or name
-
-    Returns:
-        Document | str
+    Return existing Item Category or create a new one.
     """
-
-    if not uom_name:
-        frappe.throw("UOM name is required")
-
-    # Normalize (avoid duplicates like kg/KG)
-    uom_name = uom_name.strip().upper()
-
-    existing = frappe.db.exists("UOM", uom_name)
-
-    if existing:
-        return frappe.get_doc("UOM", existing) 
-
-    uom = frappe.get_doc({
-        "doctype": "UOM",
-        "uom_name": uom_name,
-    })
-
-    uom.insert(ignore_permissions=True)
-
-    return uom 
-
-def create_item_category_if_not_exists(category_name="Item Category 1", is_group=0):
-    """Return an existing Item Category or create and return a new one."""
 
     if not category_name:
         frappe.throw("Item Category name is required")
 
-    if frappe.db.exists("Item Category", {"item_category_name": category_name}):
-        return frappe.get_doc("Item Category", {"item_category_name": category_name}).name
-
-    item_category = frappe.get_doc(
-        {
-            "doctype": "Item Category",
-            "item_category_name": category_name,
-            "is_group": is_group,
-        }
+    existing = frappe.db.exists(
+        "Item Category",
+        {"item_category_name": category_name},
     )
-    item_category.insert(ignore_permissions=True)
 
-    return item_category.name
+    if existing:
+        return existing
 
+    category_data = {
+        "doctype": "Item Category",
+        **overrides,
+        "item_category_name": category_name,
+        "is_group": is_group,
+    }
+
+    doc = frappe.get_doc(category_data)
+    doc.insert(ignore_permissions=True)
+
+    return doc.name
 
 
 class TestItemCategory(FrappeTestCase):
-	pass
+    pass

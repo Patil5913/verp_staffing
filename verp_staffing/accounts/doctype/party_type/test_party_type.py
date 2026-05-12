@@ -14,6 +14,13 @@ def create_party_types_if_not_exists(
     return_names=False,
     **overrides,
 ):
+    """
+    Ensure Party Types exist with correct account types.
+
+    Flow:
+    1. Create missing Party Types using overrides
+    2. Fix mismatched account_type for existing Party Types
+    """
 
     if party_type_map is None:
         party_type_map = {
@@ -21,38 +28,44 @@ def create_party_types_if_not_exists(
             "Supplier": "Payable",
         }
 
-    overrides.pop("party_type", None)
-    overrides.pop("account_type", None)
-
     created_or_fixed = []
 
     for party_type, account_type in party_type_map.items():
-        if not frappe.db.exists("Party Type", party_type):
-            doc = frappe.get_doc(
-                {
-                    "doctype": "Party Type",
-                    "party_type": party_type,
-                    "account_type": account_type,
-                    **overrides,
-                }
-            )
+
+        existing = frappe.db.exists(
+            "Party Type",
+            party_type,
+        )
+
+        if not existing:
+            party_type_data = {
+                "doctype": "Party Type",
+                "party_type": party_type,
+                "account_type": account_type,
+                **overrides,
+            }
+
+            doc = frappe.get_doc(party_type_data)
             doc.insert(ignore_permissions=True)
+
             created_or_fixed.append(party_type)
 
-        else:
-            existing_account_type = frappe.db.get_value(
+            continue
+
+        existing_account_type = frappe.db.get_value(
+            "Party Type",
+            party_type,
+            "account_type",
+        )
+
+        if existing_account_type != account_type:
+            frappe.db.set_value(
                 "Party Type",
                 party_type,
                 "account_type",
+                account_type,
             )
 
-            if existing_account_type != account_type:
-                frappe.db.set_value(
-                    "Party Type",
-                    party_type,
-                    "account_type",
-                    account_type,
-                )
-                created_or_fixed.append(party_type)
+            created_or_fixed.append(party_type)
 
     return created_or_fixed if return_names else None

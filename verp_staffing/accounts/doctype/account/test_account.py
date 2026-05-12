@@ -6,7 +6,8 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestAccount(FrappeTestCase):
-    pass
+	pass
+
 
 
 ROOT_MAP = {
@@ -35,22 +36,20 @@ def create_account_if_not_exists(
     is_group=0,
     **overrides,
 ):
+    """
+    Create account if not exists (ERPNext-style hierarchy).
 
-    overrides.pop("account_name", None)
-    overrides.pop("company", None)
-    overrides.pop("parent_account", None)
-    overrides.pop("root_type", None)
-    overrides.pop("account_type", None)
-    overrides.pop("is_group", None)
+    Any extra kwargs passed via **overrides are merged into the final
+    Account doc (they take precedence over the defaults).
+    """
 
     abbr = frappe.db.get_value("Company", company, "abbr")
     clean_name = account_name.split(" - ")[0]
 
-    existing = frappe.db.exists(
-        "Account",
-        {"account_name": clean_name, "company": company},
-    )
-    if existing:
+    # Check if already exists
+    if existing := frappe.db.exists(
+        "Account", {"account_name": clean_name, "company": company}
+    ):
         return frappe.get_doc("Account", existing)
 
     # ─────────────────────────────
@@ -60,15 +59,13 @@ def create_account_if_not_exists(
     root_name = f"{root_label} - {abbr}"
 
     if not frappe.db.exists("Account", root_name):
-        frappe.get_doc(
-            {
-                "doctype": "Account",
-                "account_name": root_label,
-                "company": company,
-                "is_group": 1,
-                "root_type": root_type,
-            }
-        ).insert(ignore_permissions=True)
+        frappe.get_doc({
+            "doctype": "Account",
+            "account_name": root_label,
+            "company": company,
+            "is_group": 1,
+            "root_type": root_type,
+        }).insert(ignore_permissions=True)
 
     # ─────────────────────────────
     # 2. Determine / validate parent
@@ -84,30 +81,29 @@ def create_account_if_not_exists(
         parent_account = f"{parent_label} - {abbr}"
 
         if not frappe.db.exists("Account", parent_account):
-            frappe.get_doc(
-                {
-                    "doctype": "Account",
-                    "account_name": parent_label,
-                    "company": company,
-                    "parent_account": root_name,
-                    "is_group": 1,
-                    "root_type": root_type,
-                }
-            ).insert(ignore_permissions=True)
+            frappe.get_doc({
+                "doctype": "Account",
+                "account_name": parent_label,
+                "company": company,
+                "parent_account": root_name,
+                "is_group": 1,
+                "root_type": root_type,
+            }).insert(ignore_permissions=True)
 
+    # ─────────────────────────────
     # 3. Create actual account
-    account = frappe.get_doc(
-        {
-            "doctype": "Account",
-            "account_name": clean_name,
-            "company": company,
-            "parent_account": parent_account,
-            "is_group": is_group,
-            "root_type": root_type,
-            "account_type": account_type,
-            **overrides,
-        }
-    )
+    # ─────────────────────────────
+    defaults = {
+        "doctype": "Account",
+        "account_name": clean_name,
+        "company": company,
+        "parent_account": parent_account,
+        "is_group": is_group,
+        "root_type": root_type,
+        "account_type": account_type,
+        **overrides
+    }
 
+    account = frappe.get_doc(defaults)
     account.insert(ignore_permissions=True)
     return account

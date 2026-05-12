@@ -301,9 +301,9 @@ class TestSubscriptionBase(FrappeTestCase):
 			"billing_currency": TEST_CURRENCY,
 			"generate_invoice_at": GENERATE_AT_END,
 			"days_until_due": 0,
+			**overrides
 		}
         
-        defaults.update(overrides)
         doc = frappe.get_doc(defaults)
         doc.insert(ignore_permissions = True)
         if submit:
