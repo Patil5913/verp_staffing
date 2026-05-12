@@ -2,103 +2,107 @@
 // For license information, please see license.txt
 
 frappe.query_reports["Balance Sheet"] = {
+	// ─────────────────────────────────────────────────────────────
+	// INTERNAL STATE
+	// ─────────────────────────────────────────────────────────────
+	_company_default_currency: null, // cached after company is resolved
 
 	// ─────────────────────────────────────────────────────────────
-	// INTERNAL: restrict fiscal year dropdowns to company's years
+	// INTERNAL: show / hide exchange_rate filter based on whether
+	// selected currency differs from company default currency
 	// ─────────────────────────────────────────────────────────────
-	_set_fiscal_year_query: function (fy_names) {
-		["from_fiscal_year", "to_fiscal_year"].forEach(function (fname) {
-			let filter = frappe.query_report.get_filter(fname);
-			if (!filter) return;
-			// Patch df.get_query — Frappe reads this when the Link popup opens
-			filter.df.get_query = function () {
-				return { filters: [["Fiscal Year", "name", "in", fy_names]] };
-			};
-			// Also patch the live control if already rendered
-			if (filter.df && filter.df.$input) {
-				let ctrl = filter.df.$input.data("fieldobj");
-				if (ctrl) ctrl.get_query = filter.df.get_query;
-			}
-		});
+	_toggle_exchange_rate: function () {
+		let me = frappe.query_reports["Balance Sheet"];
+		let currency = frappe.query_report.get_filter_value("currency");
+		let show =
+			currency && me._company_default_currency && currency !== me._company_default_currency;
+
+		frappe.query_report.toggle_filter_display("exchange_rate", !show);
+
+		if (!show) {
+			// Reset to 1 when hidden so it never silently distorts numbers
+			frappe.query_report.set_filter_value("exchange_rate", 1);
+		}
 	},
 
 	// ─────────────────────────────────────────────────────────────
-	// INTERNAL: cascade company → currency, finance_book, fiscal years
+	// INTERNAL: cascade company → currency + fiscal years
 	// force_fy = true  → always overwrite fiscal year values
 	// force_fy = false → only overwrite if current value is invalid
 	// ─────────────────────────────────────────────────────────────
 	_apply_company_defaults: function (company, force_fy) {
 		let me = frappe.query_reports["Balance Sheet"];
 
-		// 1. Company → default_currency + default_finance_book
-		frappe.db.get_value(
-			"Company", company,
-			["default_currency"],
-			function (r) {
-				if (!r) return;
-				if (r.default_currency) {
-					frappe.query_report.set_filter_value("currency", r.default_currency);
-				}
-				// if (r.default_finance_book) {
-				// 	frappe.query_report.set_filter_value("finance_book", r.default_finance_book);
-				// }
-			}
-		);
+		// 1. Fetch company default currency
+		frappe.db.get_value("Company", company, ["default_currency"], function (r) {
+			if (!r) return;
 
-		// 2. Fiscal years whose included_companies contains this company
-		frappe.db.get_list("Fiscal Year", {
-			fields:   ["name"],
-			filters:  [["Fiscal Year Company", "company", "=", company]],
-			order_by: "year_start_date asc",
-			limit:    500
-		}).then(function (rows) {
-			if (!rows || !rows.length) return;
-
-			let fy_names = rows.map(function (r) { return r.name; });
-			let last_fy  = fy_names[fy_names.length - 1];
-
-			// Apply get_query restriction so only valid years appear in popup
-			me._set_fiscal_year_query(fy_names);
-
-			// Set fiscal year values
-			if (force_fy) {
-				frappe.query_report.set_filter_value("from_fiscal_year", last_fy);
-				frappe.query_report.set_filter_value("to_fiscal_year",   last_fy);
-			} else {
-				let cur_from = frappe.query_report.get_filter_value("from_fiscal_year");
-				let cur_to   = frappe.query_report.get_filter_value("to_fiscal_year");
-				if (!cur_from || !fy_names.includes(cur_from)) {
-					frappe.query_report.set_filter_value("from_fiscal_year", last_fy);
-				}
-				if (!cur_to || !fy_names.includes(cur_to)) {
-					frappe.query_report.set_filter_value("to_fiscal_year", last_fy);
-				}
+			if (r.default_currency) {
+				me._company_default_currency = r.default_currency;
+				frappe.query_report.set_filter_value("currency", r.default_currency);
+				// Currency just reset to default → exchange rate should hide
+				me._toggle_exchange_rate();
 			}
 		});
+
+		// 2. Fetch all fiscal years that include this company.
+		//    Include disabled fiscal years so old years are still selectable
+		//    for historical balance sheet reports.
+		frappe.db
+			.get_list("Fiscal Year", {
+				fields: ["name", "year"],
+				filters: [["Fiscal Year Company", "company", "=", company]],
+				order_by: "year_start_date asc",
+				limit: 500,
+			})
+			.then(function (rows) {
+				if (!rows || !rows.length) return;
+
+				let fy_names = rows.map(function (r) {
+					return r.year;
+				});
+				let last_fy = fy_names[fy_names.length - 1];
+
+				if (force_fy) {
+					frappe.query_report.set_filter_value("from_fiscal_year", last_fy);
+					frappe.query_report.set_filter_value("to_fiscal_year", last_fy);
+				} else {
+					let cur_from = frappe.query_report.get_filter_value("from_fiscal_year");
+					let cur_to = frappe.query_report.get_filter_value("to_fiscal_year");
+					if (!cur_from || !fy_names.includes(cur_from)) {
+						frappe.query_report.set_filter_value("from_fiscal_year", last_fy);
+					}
+					if (!cur_to || !fy_names.includes(cur_to)) {
+						frappe.query_report.set_filter_value("to_fiscal_year", last_fy);
+					}
+				}
+			});
 	},
 
 	// ─────────────────────────────────────────────────────────────
-	// ONLOAD – auto-populate from Accounts Settings → Company
+	// ONLOAD
 	// ─────────────────────────────────────────────────────────────
 	onload: function (report) {
 		let me = frappe.query_reports["Balance Sheet"];
+
+		// Hide exchange_rate on load — it only appears when needed
+		frappe.query_report.toggle_filter_display("exchange_rate", true);
 
 		frappe.db.get_value(
 			"Accounts Settings",
 			"Accounts Settings",
 			"default_company",
 			function (r) {
-				let company = (r && r.default_company)
-					? r.default_company
-					: frappe.defaults.get_user_default("Company");
-
+				let company =
+					r && r.default_company
+						? r.default_company
+						: frappe.defaults.get_user_default("Company");
 				if (!company) return;
 
 				frappe.query_report.set_filter_value("company", company);
 				frappe.query_report.set_filter_value("filter_based_on", "Fiscal Year");
-				// force_fy = true on first load so fiscal year is always pre-filled
 				me._apply_company_defaults(company, true);
-			}
+			},
 		);
 	},
 
@@ -106,169 +110,279 @@ frappe.query_reports["Balance Sheet"] = {
 	// FILTERS
 	// ─────────────────────────────────────────────────────────────
 	filters: [
-
 		// ── Row 1 ──────────────────────────────────────────────────
 		{
 			fieldname: "company",
-			label:     __("Company"),
+			label: __("Company"),
 			fieldtype: "Link",
-			options:   "Company",
-			reqd:      1,
-			// No hardcoded default — set from Accounts Settings in onload
+			options: "Company",
+			reqd: 1,
 			on_change: function () {
 				let company = frappe.query_report.get_filter_value("company");
 				if (company) {
-					// force_fy = true: company changed, reset fiscal years
 					frappe.query_reports["Balance Sheet"]._apply_company_defaults(company, true);
 				}
-			}
+			},
 		},
 		{
 			fieldname: "finance_book",
-			label:     __("Finance Book"),
+			label: __("Finance Book"),
 			fieldtype: "Link",
-			options:   "Finance Book"
-			// auto-set from Company.default_finance_book
+			options: "Finance Book",
 		},
 
 		// ── Row 2 ──────────────────────────────────────────────────
 		{
 			fieldname: "filter_based_on",
-			label:     __("Filter Based On"),
+			label: __("Filter Based On"),
 			fieldtype: "Select",
-			options:   "Fiscal Year\nDate Range",
-			default:   "Fiscal Year",
-			reqd:      1,
+			options: "Fiscal Year\nDate Range",
+			default: "Fiscal Year",
+			reqd: 1,
 			on_change: function () {
 				let val = frappe.query_report.get_filter_value("filter_based_on");
-				frappe.query_report.toggle_filter_display("from_fiscal_year", val !== "Fiscal Year");
-				frappe.query_report.toggle_filter_display("to_fiscal_year",   val !== "Fiscal Year");
-				frappe.query_report.toggle_filter_display("from_date",        val !== "Date Range");
-				frappe.query_report.toggle_filter_display("to_date",          val !== "Date Range");
-			}
+				frappe.query_report.toggle_filter_display(
+					"from_fiscal_year",
+					val !== "Fiscal Year",
+				);
+				frappe.query_report.toggle_filter_display("to_fiscal_year", val !== "Fiscal Year");
+				frappe.query_report.toggle_filter_display("from_date", val !== "Date Range");
+				frappe.query_report.toggle_filter_display("to_date", val !== "Date Range");
+			},
 		},
-
-		// Fiscal Year sub-fields
 		{
-			fieldname:  "from_fiscal_year",
-			label:      __("Start Year"),
-			fieldtype:  "Link",
-			options:    "Fiscal Year",
+			fieldname: "from_fiscal_year",
+			label: __("Start Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
 			depends_on: "eval:doc.filter_based_on=='Fiscal Year'",
-			reqd:       0
-			// get_query injected by _set_fiscal_year_query
+			reqd: 0,
+			get_query: function () {
+				return {
+					query: "verp_staffing.accounts.utils.fiscal_year_opening_balance.get_fiscal_years_for_company",
+					filters: {
+						company: frappe.query_report.get_filter_value("company"),
+					},
+				};
+			},
 		},
 		{
-			fieldname:  "to_fiscal_year",
-			label:      __("End Year"),
-			fieldtype:  "Link",
-			options:    "Fiscal Year",
+			fieldname: "to_fiscal_year",
+			label: __("End Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
 			depends_on: "eval:doc.filter_based_on=='Fiscal Year'",
-			reqd:       0
-			// get_query injected by _set_fiscal_year_query
+			reqd: 0,
+			get_query: function () {
+				let company = frappe.query_report.get_filter_value("company");
+				return {
+					query: "verp_staffing.accounts.utils.fiscal_year_opening_balance.get_fiscal_years_for_company",
+					filters: {
+						company: company,
+					},
+				};
+			},
 		},
-
-		// Date Range sub-fields
 		{
-			fieldname:  "from_date",
-			label:      __("Start Date"),
-			fieldtype:  "Date",
+			fieldname: "from_date",
+			label: __("Start Date"),
+			fieldtype: "Date",
 			depends_on: "eval:doc.filter_based_on=='Date Range'",
-			reqd:       0
+			reqd: 0,
 		},
 		{
-			fieldname:  "to_date",
-			label:      __("End Date"),
-			fieldtype:  "Date",
+			fieldname: "to_date",
+			label: __("End Date"),
+			fieldtype: "Date",
 			depends_on: "eval:doc.filter_based_on=='Date Range'",
-			reqd:       0
+			reqd: 0,
 		},
 
 		// ── Row 3 ──────────────────────────────────────────────────
 		{
 			fieldname: "periodicity",
-			label:     __("Periodicity"),
+			label: __("Periodicity"),
 			fieldtype: "Select",
-			options:   "Yearly\nHalf-Yearly\nQuarterly\nMonthly",
-			default:   "Yearly",
-			reqd:      1
+			options: "Yearly\nHalf-Yearly\nQuarterly\nMonthly",
+			default: "Yearly",
+			reqd: 1,
 		},
 		{
 			fieldname: "currency",
-			label:     __("Currency"),
+			label: __("Presentation Currency"),
 			fieldtype: "Link",
-			options:   "Currency"
-			// auto-set from Company.default_currency
+			options: "Currency",
+			on_change: function () {
+				frappe.query_reports["Balance Sheet"]._toggle_exchange_rate();
+				format_currency(frappe.query_report.get_filter_value("exchange_rate"));
+				frappe.query_report.refresh();
+			},
 		},
 		{
 			fieldname: "view",
-			label:     __("Select View"),
+			label: __("Select View"),
 			fieldtype: "Select",
-			options:   "Report View\nGrowth View",
-			default:   "Report View"
+			options: "Report View\nGrowth View",
+			default: "Report View",
+		},
+
+		// ── Exchange Rate — hidden unless presentation currency ≠ company currency ──
+		{
+			fieldname: "exchange_rate",
+			label: __("Exchange Rate"),
+			fieldtype: "Float",
+			default: 1,
+			// Shown only when a different presentation currency is selected.
+			// All amounts in the report will be multiplied by this rate.
+			// Example: if company currency is INR and you select USD,
+			// enter today's INR → USD rate (e.g. 0.012).
+			// The report will display every amount converted to USD.
+			description: __(
+				"Enter the conversion rate from company currency to the selected presentation currency. " +
+					"All report amounts will be multiplied by this rate. " +
+					"Example: company currency is INR, presentation currency is USD → enter INR-to-USD rate (e.g. 0.012).",
+			),
+			hidden: 1, // starts hidden; _toggle_exchange_rate() controls visibility
+			on_change: function () {
+				let rate = frappe.query_report.get_filter_value("exchange_rate");
+				if (rate < 1) {
+					frappe.msgprint({
+						title: __("Invalid Exchange Rate"),
+						message: __("Exchange rate must be greater than 1."),
+						indicator: "red",
+					});
+					frappe.query_report.set_filter_value("exchange_rate", 1);
+				}
+				frappe.query_report.refresh();
+			},
 		},
 
 		// ── Checkboxes ─────────────────────────────────────────────
 		{
-			fieldname:   "show_period_movement",
-			label:       __("Show Period Movement (Advanced)"),
-			fieldtype:   "Check",
-			default:     0,
-			description: __("Shows changes during each period instead of total balances. For analysis use only.")
+			fieldname: "show_period_movement",
+			label: __("Show Period Movement (Advanced)"),
+			fieldtype: "Check",
+			default: 0,
+			description: __(
+				"Shows changes during each period instead of total balances. For analysis use only.",
+			),
 		},
 		{
 			fieldname: "include_default_fb_entries",
-			label:     __("Include Default FB Entries"),
+			label: __("Include Default FB Entries"),
 			fieldtype: "Check",
-			default:   1   // ON by default
+			default: 1,
 		},
 		{
 			fieldname: "show_zero_values",
-			label:     __("Show Zero Values"),
+			label: __("Show Zero Values"),
 			fieldtype: "Check",
-			default:   0   // OFF by default — zero rows hidden
-		}
+			default: 0,
+		},
 	],
 
 	// ─────────────────────────────────────────────────────────────
 	// FORMATTER
 	// ─────────────────────────────────────────────────────────────
 	formatter: function (value, row, column, data, default_formatter) {
-		if (!data) return value;
+		if (!data) return default_formatter(value, row, column, data);
 
-		value = default_formatter(value, row, column, data);
-
-		// Section headers: ASSETS / LIABILITIES / EQUITY
-		if (data.indent === 0 && data.is_group && column.fieldname === "account") {
-			value = `<span style="font-size:12px;font-weight:700;letter-spacing:0.08em;
-				text-transform:uppercase;color:var(--text-color)">${data.account}</span>`;
+		// ── Section headers (ASSETS / LIABILITIES / EQUITY) ──────
+		if (data.is_header && column.fieldname === "account") {
+			return `<span style="
+				font-size: 11px;
+				font-weight: 700;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--text-muted);
+			">${frappe.utils.escape_html(data.account || "")}</span>`;
 		}
 
-		// Total rows bold
-		if (data.bold && column.fieldname !== "account") {
-			value = `<strong>${value}</strong>`;
+		// ── Account name column ───────────────────────────────────
+		if (column.fieldname === "account") {
+			let label = frappe.utils.escape_html(data.account || "");
+			if (data.bold) {
+				return `<strong style="color: var(--text-color)">${label}</strong>`;
+			}
+			return default_formatter(value, row, column, data);
 		}
 
-		// Negative amounts in red
-		if (typeof value === "number" && value < 0) {
-			value = `<span style="color:var(--red-500)">${value}</span>`;
+		// ── Growth % columns — directional color only ─────────────
+		if (column.fieldname && column.fieldname.endsWith("_growth")) {
+			let formatted = default_formatter(value, row, column, data);
+			let num = flt(value);
+			if (num > 0) return `<span style="color: var(--green-500)">${formatted}</span>`;
+			if (num < 0) return `<span style="color: var(--red-500)">${formatted}</span>`;
+			return formatted;
 		}
 
-		return value;
+		// ── Amount columns ────────────────────────────────────────
+		// Apply exchange rate if a presentation currency is selected
+		let exchange_rate = flt(frappe.query_report.get_filter_value("exchange_rate") || 1);
+		let raw_num = flt(value);
+		let display_num = raw_num * exchange_rate;
+
+		// Re-format with converted value
+		let display_value = exchange_rate !== 1 ? display_num : raw_num;
+		let formatted =
+			exchange_rate !== 1
+				? format_currency(display_value, frappe.query_report.get_filter_value("currency"))
+				: default_formatter(value, row, column, data);
+
+		if (display_num === 0) return formatted;
+
+		let color = _get_amount_color(display_num, data);
+		if (color) {
+			let weight = data.bold ? "font-weight:600;" : "";
+			return `<span style="color:${color};${weight}">${formatted}</span>`;
+		}
+
+		return formatted;
 	},
 
 	// ─────────────────────────────────────────────────────────────
 	// TREE OPTIONS
 	// ─────────────────────────────────────────────────────────────
-	tree:          true,
-	name_field:    "account",
-	parent_field:  "parent_account",
+	tree: true,
+	name_field: "account",
+	parent_field: "parent_account",
 	initial_depth: 2,
-
 	get_datatable_options: function (options) {
 		return Object.assign(options, {
-			layout:     "fixed",
-			cellHeight: 36
+			layout: "fixed",
+			cellHeight: 36,
 		});
-	}
+	},
 };
+
+// ─────────────────────────────────────────────
+// COLOR HELPER
+// ─────────────────────────────────────────────
+
+/**
+ * Asset      → positive = Blue (normal debit balance), negative = Red
+ * Liability /
+ * Equity     → positive shown normally (no green for debts),
+ *               negative = Red (abnormal debit balance)
+ * Total rows → positive = neutral bold, negative = Red
+ */
+function _get_amount_color(num, data) {
+	let root_type = data.root_type;
+
+	if (root_type === "Asset") {
+		return num > 0 ? "var(--blue-500)" : "var(--red-500)";
+	}
+
+	if (root_type === "Liability" || root_type === "Equity") {
+		// Positive = normal credit balance → no special color (neutral)
+		// Negative = abnormal → red
+		return num > 0 ? "var(--red-500)" : "var(--blue-500)";
+	}
+
+	// Total / summary bold rows
+	if (data.bold) {
+		return num < 0 ? "var(--red-500)" : null;
+	}
+
+	return null;
+}

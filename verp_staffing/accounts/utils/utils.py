@@ -214,7 +214,7 @@ def get_balance_on(
 	if not party and frappe.form_dict.get("party"):
 		party = frappe.form_dict.get("party")
 
-	cond = ["is_cancelled=0"]
+	cond = []
 	if start_date:
 		cond.append("posting_date >= %s" % frappe.db.escape(cstr(start_date)))
 	if date:

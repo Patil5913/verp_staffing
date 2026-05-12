@@ -262,6 +262,13 @@ doc_events = {
         "on_submit": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_submit_purchase_invoice",
         "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice",
     },
+    "Fiscal Year": {
+        "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
+        "on_update": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
+    },
+    "GL Entry": {
+        "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
+    },
 }
 
 # Scheduled Tasks
@@ -275,7 +282,11 @@ scheduler_events = {
         "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
         "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
     ],
-    "daily": ["verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"],
+    "daily": [
+        "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
+    ],
     "cron": {
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
