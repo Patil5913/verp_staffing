@@ -28,7 +28,7 @@ def create_item_if_not_exists(
         "doctype": "Item",
         "item_name": item_name,
         "item_category": item_category,
-        "uom": uom,
+        "stock_uom": uom,
         **overrides
     }
 

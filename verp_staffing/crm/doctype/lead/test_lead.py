@@ -140,7 +140,7 @@ class TeasLead(LeadTestBase):
 
     def test_lead_status_set_to_opportunity_after_opportunity_created(self):
         lead = make_lead(name1="Opp Lifecycle Lead")
-        make_opportunity(lead)
+        make_opportunity(name1=lead.name1, opportunity_from_lead=lead.name)
 
         update_status_based_on_opportunity(lead.name, "open")
 
@@ -149,7 +149,7 @@ class TeasLead(LeadTestBase):
 
     def test_lead_status_becomes_won_when_opportunity_status_is_converted(self):
         lead = make_lead(name1="Customer Won Lead")
-        make_opportunity(lead)
+        make_opportunity(name1=lead.name1, opportunity_from_lead=lead.name)
 
         update_status_based_on_opportunity(lead.name, "converted")
 
@@ -158,7 +158,7 @@ class TeasLead(LeadTestBase):
 
     def test_lead_status_becomes_lost_when_opportunity_lost(self):
         lead = make_lead(name1="Customer Lost Lead")
-        make_opportunity(lead)
+        make_opportunity(name1=lead.name1, opportunity_from_lead=lead.name)
 
         update_status_based_on_opportunity(lead.name, "lost")
 

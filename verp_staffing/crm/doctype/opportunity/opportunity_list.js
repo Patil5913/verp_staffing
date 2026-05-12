@@ -108,17 +108,32 @@ function open_custom_dialog() {
 				doc.referral_customer = values.referral_customer;
 			}
 
-			frappe.call({
-				method: "frappe.client.insert",
-				args: {
-					doc: doc,
-				},
-				callback: function (r) {
-					if (!r.exc) {
-						dialog.hide();
-						frappe.set_route("Form", "Opportunity", r.message.name);
-					}
-				},
+			frappe.db.get_value("Employee", { user: frappe.session.user }, "name").then((r) => {
+				if (r && r.message && r.message.name) {
+					doc.opportunity_owner = r.message.name;
+				}
+
+				frappe.call({
+					method: "frappe.client.insert",
+					args: { doc: doc },
+					callback: function (r) {
+						if (r.message) {
+							dialog.hide();
+							frappe.show_alert({
+								message: __("Opportunity created"),
+								indicator: "green",
+							});
+							frappe.set_route("Form", "Opportunity", r.message.name);
+						}
+					},
+					error: function (r) {
+						frappe.msgprint({
+							title: __("Error"),
+							message: r.message || __("Failed to create Opportunity"),
+							indicator: "red",
+						});
+					},
+				});
 			});
 		},
 
@@ -131,7 +146,6 @@ function open_custom_dialog() {
 
 	dialog.show();
 
-	// 🔥 Move "Edit Full Form" to left side
 	setTimeout(() => {
 		let footer = dialog.$wrapper.find(".modal-footer");
 

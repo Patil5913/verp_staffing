@@ -10,7 +10,7 @@ class TestCompany(FrappeTestCase):
 
 
 # utils for test cases
-def create_company_if_not_exists(company_name, abbr, **overrides):
+def create_company_if_not_exists(company_name, abbr = None, **overrides):
     if not company_name:
         frappe.throw("Company name is required")
 
@@ -19,8 +19,9 @@ def create_company_if_not_exists(company_name, abbr, **overrides):
         return existing
 
     # 2. Check by abbr
-    if existing_abbr := frappe.db.exists("Company", {"abbr": abbr}):
-        return existing_abbr
+    if abbr:
+        if existing_abbr := frappe.db.exists("Company", {"abbr": abbr}):
+            return existing_abbr
 
     defaults = {
         "doctype": "Company",
