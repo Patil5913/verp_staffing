@@ -8,7 +8,6 @@ from verp_staffing.utils.hierarchy_roles import clean_hierarchy_roles
 
 
 class Department(Document):
-
     def validate(self):
         self.validate_department_name()
         self.validate_no_duplicate_roles()
@@ -19,17 +18,9 @@ class Department(Document):
         old_roles = set()
 
         if old_doc:
-            old_roles = {
-                (d.role or "").strip()
-                for d in old_doc.role
-                if d.role
-            }
+            old_roles = {(d.role or "").strip() for d in old_doc.role if d.role}
 
-        new_roles = {
-            (d.role or "").strip()
-            for d in self.role
-            if d.role
-        }
+        new_roles = {(d.role or "").strip() for d in self.role if d.role}
 
         if old_roles != new_roles:
             clean_hierarchy_roles(self.name)
@@ -57,9 +48,9 @@ class Department(Document):
                 continue
             if role in seen:
                 frappe.throw(
-                    _("Role <b>{0}</b> is listed more than once in the Role table.").format(
-                        role
-                    )
+                    _(
+                        "Role <b>{0}</b> is listed more than once in the Role table."
+                    ).format(role)
                 )
             seen.add(role)
 
@@ -73,8 +64,29 @@ class Department(Document):
                 continue
             if service in seen:
                 frappe.throw(
-                    _("Service <b>{0}</b> is listed more than once in the Services table.").format(
-                        service
-                    )
+                    _(
+                        "Service <b>{0}</b> is listed more than once in the Services table."
+                    ).format(service)
                 )
             seen.add(service)
+
+
+@frappe.whitelist()
+def get_department_service_query(doctype, txt, searchfield, start, page_len, filters):
+    return frappe.db.sql(
+        """
+	        SELECT s.name
+	        FROM `tabService` s
+	        LEFT JOIN `tabDepartment Service` ds
+	          ON ds.service_name = s.name
+	        WHERE ds.name IS NULL
+	          AND s.name LIKE %(txt)s
+	        ORDER BY s.name
+	        LIMIT %(start)s, %(page_len)s
+	        """,
+        {
+            "txt": f"%{txt}%",
+            "start": start,
+            "page_len": page_len,
+        },
+    )

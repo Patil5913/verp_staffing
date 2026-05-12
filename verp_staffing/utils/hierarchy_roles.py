@@ -1,10 +1,13 @@
 import json
 import frappe
 from frappe import _
-from frappe.utils import get_link_to_form
 
 
 def clean_hierarchy_roles(department_name, show_msg=True):
+    """
+    On department update this checks if any roles still exists in hierachy which is removed from department,
+    if yes then it's remove that and notifiy user
+    """
 
     if not department_name:
         return
@@ -80,9 +83,9 @@ def clean_hierarchy_roles(department_name, show_msg=True):
 
         frappe.msgprint(
             _(
-                "Removed roles from Hierarchy {0} for Department <b>{1}</b>:<br><br>{2}"
+                "Removed roles from Hierarchy <b>{0}</b> for Department <b>{1}</b>:<br><br>{2}"
             ).format(
-                get_link_to_form("Hierarchy", hierarchy_name),
+                hierarchy_name,
                 department_name,
                 "<br>".join(removed_roles),
             ),
