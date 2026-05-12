@@ -1,6 +1,8 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
+let isSaving = false;
+
 frappe.ui.form.on("Lead", {
 	onload(frm) {
 		frm.set_df_property("lead_owner", "read_only_onload", 1);
@@ -74,7 +76,7 @@ frappe.ui.form.on("Lead", {
 			args: {
 				doctype: "Lead",
 				filters: { name: frm.doc.name },
-				fieldname: ["status", "lead_owner"],
+				fieldname: ["status"],
 			},
 			callback: function (lead_res) {
 				if (!lead_res.message) return;
@@ -1004,7 +1006,7 @@ frappe.ui.form.on("Lead", {
 
 				const override = input.dataset.override;
 
-				// ✅ Convert SSN to number
+				// Convert SSN to number
 				if (override === "ssn" && val) {
 					val = parseInt(val, 10);
 				}
@@ -1125,8 +1127,6 @@ frappe.ui.form.on("Lead", {
 </div>`;
 
 			frm.set_df_property("lead_detail", "options", html);
-
-			let isSaving = false;
 
 			async function saveLeadDetailForm() {
 				if (!_lead_detail_dirty) return { saved: false, valid: true };
@@ -1323,7 +1323,7 @@ function lockLeadDetailForm() {
 
 	if (!wrapper) return;
 
-	// 🔒 Disable EVERYTHING inside
+	// Disable EVERYTHING inside
 	wrapper.querySelectorAll("*").forEach((el) => {
 		// Disable inputs
 		if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") {
