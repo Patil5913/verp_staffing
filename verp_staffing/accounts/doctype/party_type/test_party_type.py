@@ -6,46 +6,52 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestPartyType(FrappeTestCase):
-	pass
+    pass
 
 
-def create_party_types_if_not_exists(return_names=False):
-    """
-    Ensure Party Types exist with correct account types.
+def create_party_types_if_not_exists(
+    party_type_map=None,
+    return_names=False,
+    **overrides,
+):
 
-    Returns:
-        list | None
-    """
+    if party_type_map is None:
+        party_type_map = {
+            "Customer": "Receivable",
+            "Supplier": "Payable",
+        }
 
-    party_type_map = {
-        "Customer": "Receivable",
-        "Supplier": "Payable",
-    }
+    overrides.pop("party_type", None)
+    overrides.pop("account_type", None)
 
     created_or_fixed = []
 
     for party_type, account_type in party_type_map.items():
-
         if not frappe.db.exists("Party Type", party_type):
-            doc = frappe.get_doc({
-                "doctype": "Party Type",
-                "party_type": party_type,
-                "account_type": account_type,
-            })
+            doc = frappe.get_doc(
+                {
+                    "doctype": "Party Type",
+                    "party_type": party_type,
+                    "account_type": account_type,
+                    **overrides,
+                }
+            )
             doc.insert(ignore_permissions=True)
             created_or_fixed.append(party_type)
 
         else:
-            existing = frappe.db.get_value(
-                "Party Type", party_type, "account_type"
+            existing_account_type = frappe.db.get_value(
+                "Party Type",
+                party_type,
+                "account_type",
             )
 
-            if existing != account_type:
+            if existing_account_type != account_type:
                 frappe.db.set_value(
                     "Party Type",
                     party_type,
                     "account_type",
-                    account_type
+                    account_type,
                 )
                 created_or_fixed.append(party_type)
 

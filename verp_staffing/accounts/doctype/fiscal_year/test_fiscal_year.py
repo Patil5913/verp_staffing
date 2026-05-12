@@ -6,7 +6,7 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestFiscalYear(FrappeTestCase):
-	pass
+    pass
 
 
 def create_fiscal_year_if_not_exists(
@@ -14,27 +14,17 @@ def create_fiscal_year_if_not_exists(
     companies,
     start_date,
     end_date,
+    **overrides,
 ):
-    """
-    Ensure a Fiscal Year exists and is linked to given companies.
-
-    Args:
-        fiscal_year (str): Fiscal year name (e.g. "2026")
-        companies (list): List of company names
-        start_date (date)
-        end_date (date)
-
-    Returns:
-        Document: Fiscal Year doc
-    """
-
-    # 🔒 Validate input
     if not companies:
         frappe.throw("At least one company is required")
 
-    # ─────────────────────────────
-    # 1. If Fiscal Year exists
-    # ─────────────────────────────
+    overrides.pop("year", None)
+    overrides.pop("year_start_date", None)
+    overrides.pop("year_end_date", None)
+    overrides.pop("included_companies", None)
+
+    # 1. If Fiscal Year exists by name
     if frappe.db.exists("Fiscal Year", fiscal_year):
         fy = frappe.get_doc("Fiscal Year", fiscal_year)
 
@@ -48,9 +38,7 @@ def create_fiscal_year_if_not_exists(
         fy.save(ignore_permissions=True)
         return fy
 
-    # ─────────────────────────────
     # 2. Check if FY exists for any company
-    # ─────────────────────────────
     for company in companies:
         existing = frappe.db.get_value(
             "Fiscal Year Company",
@@ -60,15 +48,16 @@ def create_fiscal_year_if_not_exists(
         if existing:
             return frappe.get_doc("Fiscal Year", existing)
 
-    # ─────────────────────────────
     # 3. Create new Fiscal Year
-    # ─────────────────────────────
-    fy = frappe.get_doc({
-        "doctype": "Fiscal Year",
-        "year": fiscal_year,
-        "year_start_date": start_date,
-        "year_end_date": end_date,
-    })
+    fy = frappe.get_doc(
+        {
+            "doctype": "Fiscal Year",
+            "year": fiscal_year,
+            "year_start_date": start_date,
+            "year_end_date": end_date,
+            **overrides,
+        }
+    )
 
     for company in companies:
         fy.append("included_companies", {"company": company})

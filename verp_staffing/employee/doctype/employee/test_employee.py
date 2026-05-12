@@ -9,26 +9,37 @@ def get_or_create_user(
     email="test@example.com",
     first_name="Test",
     enabled=1,
+    **overrides,
 ):
     existing = frappe.db.exists("User", email)
 
     if existing:
         return existing
 
-    user = frappe.new_doc("User")
-    user.email = email
-    user.first_name = first_name
-    user.enabled = enabled
+    overrides.pop("email", None)
+    overrides.pop("first_name", None)
+    overrides.pop("enabled", None)
 
-    user.insert(ignore_permissions=True)
+    doc = frappe.get_doc(
+        {
+            "doctype": "User",
+            "email": email,
+            "first_name": first_name,
+            "enabled": enabled,
+            **overrides,
+        }
+    )
 
-    return user.name
+    doc.insert(ignore_permissions=True)
+
+    return doc.name
 
 
 def get_or_create_employee(
     user=None,
     employee_name="Test Employee",
     enabled=1,
+    **overrides,
 ):
     """
     Return existing Employee or create one.
@@ -45,14 +56,23 @@ def get_or_create_employee(
     if existing:
         return existing
 
-    employee = frappe.new_doc("Employee")
-    employee.user = user
-    employee.employee_name = employee_name
-    employee.enabled = enabled
+    overrides.pop("user", None)
+    overrides.pop("employee_name", None)
+    overrides.pop("enabled", None)
 
-    employee.insert(ignore_permissions=True)
+    doc = frappe.get_doc(
+        {
+            "doctype": "Employee",
+            "user": user,
+            "employee_name": employee_name,
+            "enabled": enabled,
+            **overrides,
+        }
+    )
 
-    return employee.name
+    doc.insert(ignore_permissions=True)
+
+    return doc.name
 
 
 class TestEmployee(FrappeTestCase):
