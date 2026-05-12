@@ -3,39 +3,33 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import cint
 
 class TestUOM(FrappeTestCase):
 	pass
 
 
-def create_uom_if_not_exists(uom_name, return_doc=True):
-    """
-    Ensure UOM exists.
-
-    Args:
-        uom_name (str)
-        return_doc (bool): return Document or name
-
-    Returns:
-        Document | str
-    """
+def create_uom_if_not_exists(uom_name, **overrides):
+    """Ensure UOM exists."""
 
     if not uom_name:
         frappe.throw("UOM name is required")
 
-    # Normalize (avoid duplicates like kg/KG)
     uom_name = uom_name.strip().upper()
 
+    
     existing = frappe.db.exists("UOM", uom_name)
 
     if existing:
-        return frappe.get_doc("UOM", existing) 
+        return existing
 
-    uom = frappe.get_doc({
+    defaults = {
         "doctype": "UOM",
         "uom_name": uom_name,
-    })
+        **overrides
+    }
+    defaults.update(overrides)
 
+    uom = frappe.get_doc(defaults)
     uom.insert(ignore_permissions=True)
-
-    return uom 
+    return uom.name

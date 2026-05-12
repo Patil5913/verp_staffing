@@ -514,7 +514,6 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 
 	let total = 0;
 
-	console.log("invoice ", invoices);
 
 	frm.clear_table("accounts");
 
@@ -570,7 +569,6 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 
 function get_company_currency(frm, callback) {
 	if (!frm.doc.company) {
-		console.warn("Company not selected");
 		return;
 	}
 

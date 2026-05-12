@@ -62,12 +62,39 @@ def make_payment_entry(
     paid_to=None,
     paid_amount=1000,
     references=None,
+    **overrides,
 ):
-    company = company or create_company_if_not_exists("vrugle").name
+    """
+    Create a Payment Entry for tests.
+
+    Flow:
+    1. Resolve company, accounts, and party
+    2. Append references if provided
+    3. Set allocation and unallocated amounts
+    4. Create Payment Entry using overrides
+    """
+
+    company = company or create_company_if_not_exists(
+        "Vrugle",
+        "V",
+    )
+
     currency = get_company_currency(company)
-    cash = create_account_if_not_exists("Cash", company).name
-    receivable = get_default_company_account(company, "Receivable")
-    payable = get_default_company_account(company, "Payable")
+
+    cash = create_account_if_not_exists(
+        "Cash",
+        company,
+    ).name
+
+    receivable = get_default_company_account(
+        company,
+        "Receivable",
+    )
+
+    payable = get_default_company_account(
+        company,
+        "Payable",
+    )
 
     if payment_type == "Receive":
         paid_from = paid_from or receivable
@@ -78,26 +105,36 @@ def make_payment_entry(
 
     if not party:
         if party_type == "Customer":
-            party = create_customer_if_not_exists(f"_Test Customer {company}")
+            party = create_customer_if_not_exists(
+                f"_Test Customer {company}"
+            )
         else:
-            party = create_supplier_if_not_exists(f"_Test Supplier {company}")
+            party = create_supplier_if_not_exists(
+                f"_Test Supplier {company}"
+            )
 
-    pe = frappe.new_doc("Payment Entry")
-    pe.company = company
-    pe.payment_type = payment_type
-    pe.posting_date = nowdate()
-    pe.party_type = party_type
-    pe.party = party
-    pe.paid_from = paid_from
-    pe.paid_to = paid_to
-    pe.paid_amount = paid_amount
-    pe.received_amount = paid_amount
-    pe.base_paid_amount = paid_amount
-    pe.base_received_amount = paid_amount
-    pe.paid_from_account_currency = currency
-    pe.paid_to_account_currency = currency
-    pe.currency = currency
-    pe.conversion_rate = 1
+    pe_data = {
+        "doctype": "Payment Entry",
+        **overrides,
+        "company": company,
+        "payment_type": payment_type,
+        "posting_date": nowdate(),
+        "party_type": party_type,
+        "party": party,
+        "paid_from": paid_from,
+        "paid_to": paid_to,
+        "paid_amount": paid_amount,
+        "received_amount": paid_amount,
+        "base_paid_amount": paid_amount,
+        "base_received_amount": paid_amount,
+        "paid_from_account_currency": currency,
+        "paid_to_account_currency": currency,
+        "currency": currency,
+        "company_currency": currency,
+        "conversion_rate": 1,
+    }
+
+    pe = frappe.get_doc(pe_data)
 
     for ref in references or []:
         pe.append(
@@ -105,32 +142,46 @@ def make_payment_entry(
             {
                 "reference_doctype": ref["reference_doctype"],
                 "reference_name": ref["reference_name"],
-                "total_amount": ref.get("total_amount", paid_amount),
-                "outstanding_amount": ref.get("outstanding_amount", paid_amount),
-                "allocated_amount": ref.get("allocated_amount", paid_amount),
+                "total_amount": ref.get(
+                    "total_amount",
+                    paid_amount,
+                ),
+                "outstanding_amount": ref.get(
+                    "outstanding_amount",
+                    paid_amount,
+                ),
+                "allocated_amount": ref.get(
+                    "allocated_amount",
+                    paid_amount,
+                ),
                 "exchange_rate": 1,
                 "invoice_currency": currency,
             },
         )
 
     if references:
-        total_alloc = sum(flt(r.get("allocated_amount", 0)) for r in references)
-        pe.total_allocated_amount = total_alloc
-        pe.base_total_allocated_amount = total_alloc
+        total_allocated = sum(
+            flt(r.get("allocated_amount", 0))
+            for r in references
+        )
+
+        pe.total_allocated_amount = total_allocated
+        pe.base_total_allocated_amount = total_allocated
         pe.unallocated_amount = 0
         pe.base_unallocated_amount = 0
+
     else:
-        pe.unallocated_amount = paid_amount
-        pe.base_unallocated_amount = paid_amount
         pe.total_allocated_amount = 0
         pe.base_total_allocated_amount = 0
+        pe.unallocated_amount = paid_amount
+        pe.base_unallocated_amount = paid_amount
 
     pe.difference_amount = 0
     pe.base_difference_amount = 0
 
     pe.insert(ignore_permissions=True)
-    return pe
 
+    return pe
 
 class PaymentEntry(FrappeTestCase):
     @classmethod

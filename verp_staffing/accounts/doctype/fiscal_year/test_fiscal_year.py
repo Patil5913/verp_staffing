@@ -6,7 +6,7 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestFiscalYear(FrappeTestCase):
-	pass
+    pass
 
 
 def create_fiscal_year_if_not_exists(
@@ -14,65 +14,62 @@ def create_fiscal_year_if_not_exists(
     companies,
     start_date,
     end_date,
+    **overrides,
 ):
     """
-    Ensure a Fiscal Year exists and is linked to given companies.
-
-    Args:
-        fiscal_year (str): Fiscal year name (e.g. "2026")
-        companies (list): List of company names
-        start_date (date)
-        end_date (date)
-
-    Returns:
-        Document: Fiscal Year doc
+    Ensure an active Fiscal Year exists and is linked to given companies.
+    Extra kwargs apply only when a NEW Fiscal Year is being created.
     """
 
-    # 🔒 Validate input
     if not companies:
         frappe.throw("At least one company is required")
 
-    # ─────────────────────────────
-    # 1. If Fiscal Year exists
-    # ─────────────────────────────
-    if frappe.db.exists("Fiscal Year", fiscal_year):
+    companies = list(dict.fromkeys(companies))
+    
+    # 1. Check ACTIVE FY by name
+    if frappe.db.exists("Fiscal Year", {"name": fiscal_year, "disabled": 0}):
         fy = frappe.get_doc("Fiscal Year", fiscal_year)
 
-        # Ensure all companies are linked
-        existing_companies = {c.company for c in fy.included_companies}
+        existing_companies = {row.company for row in fy.included_companies}
+        added = False
 
         for company in companies:
             if company not in existing_companies:
                 fy.append("included_companies", {"company": company})
+                added = True
 
-        fy.save(ignore_permissions=True)
+        if added:
+            fy.save(ignore_permissions=True)
+
         return fy
-
-    # ─────────────────────────────
-    # 2. Check if FY exists for any company
-    # ─────────────────────────────
+    
+    # 2. Check existing ACTIVE FY for companies
     for company in companies:
-        existing = frappe.db.get_value(
+        fy_name = frappe.db.get_value(
             "Fiscal Year Company",
-            {"company": company},
+            {"company": company, "parenttype": "Fiscal Year"},
             "parent",
         )
-        if existing:
-            return frappe.get_doc("Fiscal Year", existing)
 
-    # ─────────────────────────────
+        if fy_name:
+            fy_disabled = frappe.db.get_value("Fiscal Year", fy_name, "disabled")
+            if not fy_disabled:
+                return frappe.get_doc("Fiscal Year", fy_name)
+
     # 3. Create new Fiscal Year
-    # ─────────────────────────────
-    fy = frappe.get_doc({
+    defaults = {
         "doctype": "Fiscal Year",
         "year": fiscal_year,
         "year_start_date": start_date,
         "year_end_date": end_date,
-    })
+        "disabled": 0,
+        **overrides,
+    }
+
+    fy = frappe.get_doc(defaults)
 
     for company in companies:
         fy.append("included_companies", {"company": company})
 
     fy.insert(ignore_permissions=True)
-
     return fy

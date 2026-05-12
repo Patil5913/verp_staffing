@@ -127,65 +127,112 @@ def seed_all():
 def make_purchase_invoice(
     company=None,
     supplier=None,
+    items=None,
     amount=1000,
-    do_not_submit=False,
     currency=None,
-    conversion_rate=1,
+    conversion_rate=None,
+    posting_date=None,
+    due_date=None,
     credit_to=None,
     expense_account=None,
     discount_amount=0,
     additional_discount_account=None,
     taxes=None,
-    items=None,
+    do_not_submit=False,
     skip_insert=False,
+    **overrides,
 ):
-    company = _resolved.get("company")
-    company_currency = _resolved.get("company_currency")
+    """
+    Create a reusable Purchase Invoice document.
+
+    Flow:
+    1. Resolve company, supplier, currency, and accounts
+    2. Use provided items or generate default item row
+    3. Append taxes if provided
+    4. Create Purchase Invoice using overrides
+    5. Optionally insert and submit
+    """
+
+    company = company or _resolved.get("company")
+
+    if not company:
+        frappe.throw("Company is required")
+
+    supplier = supplier or _resolved.get("supplier")
+
+    if not supplier:
+        frappe.throw("Supplier is required")
+
+    company_currency = get_company_currency(company)
+
     currency = currency or company_currency
-    supplier = _resolved.get("supplier")
-    uom = _resolved.get("uom")
 
-    if credit_to is None:
-        credit_to = get_default_company_account(company, "Payable")
+    if conversion_rate is None:
+        conversion_rate = 1
 
-    if expense_account is None:
-        expense_account = _resolved.get("expense_account")
+    credit_to = credit_to or get_default_company_account(
+        company,
+        "Payable",
+    )
 
-    pi = frappe.new_doc("Purchase Invoice")
-    pi.company = company
-    pi.supplier = supplier
-    pi.posting_date = nowdate()
-    pi.due_date = add_days(nowdate(), 30)
-    pi.currency = currency
-    pi.conversion_rate = conversion_rate
-    pi.credit_to = credit_to
+    expense_account = expense_account or _resolved.get(
+        "expense_account"
+    )
+
+    pi_data = {
+        "doctype": "Purchase Invoice",
+        **overrides,
+        "company": company,
+        "supplier": supplier,
+        "posting_date": posting_date or nowdate(),
+        "due_date": due_date or add_days(
+            posting_date or nowdate(),
+            30,
+        ),
+        "currency": currency,
+        "conversion_rate": conversion_rate,
+        "credit_to": credit_to,
+    }
 
     if discount_amount:
-        pi.discount_amount = discount_amount
+        pi_data["discount_amount"] = flt(discount_amount)
+
     if additional_discount_account:
-        pi.additional_discount_account = additional_discount_account
+        pi_data[
+            "additional_discount_account"
+        ] = additional_discount_account
+
+    pi = frappe.get_doc(pi_data)
 
     if items is not None:
-        for row in items:
-            pi.append("items", row)
+        for item in items:
+            pi.append("items", item)
+
     else:
-        item = _resolved.get("item")
+        default_item = _resolved.get("item")
+        default_uom = _resolved.get("uom")
+
+        if not default_item:
+            frappe.throw(
+                "Items are required when no default item exists"
+            )
+
         pi.append(
             "items",
             {
-                "item": item,
+                "item": default_item,
                 "qty": 1,
                 "rate": flt(amount),
                 "amount": flt(amount),
-                "uom": uom,
+                "uom": default_uom,
                 "type": "Purchase",
                 "expense_account": expense_account,
             },
         )
 
     if taxes:
-        for tax_row in taxes:
-            pi.append("taxes", tax_row)
+        for tax in taxes:
+            pi.append("taxes", tax)
 
     pi.set_against_expense_account()
 
@@ -193,8 +240,10 @@ def make_purchase_invoice(
         return pi
 
     pi.insert(ignore_permissions=True)
+
     if not do_not_submit:
         pi.submit()
+
     return pi
 
 
@@ -212,7 +261,7 @@ class PurchaseInvoiceBase(FrappeTestCase):
 class TestPurchaseInvoiceValidation(PurchaseInvoiceBase):
     def test_missing_credit_to_raises_validation_error(self):
         with self.assertRaises(frappe.ValidationError):
-            make_purchase_invoice(credit_to="", do_not_submit=True)
+            make_purchase_invoice(credit_to=" ", do_not_submit=True)
 
     def test_auto_fetch_credit_to_from_company(self):
         pi = make_purchase_invoice(company=_resolved["company"], skip_insert=True)

@@ -59,7 +59,7 @@ class Opportunity(Document):
                 self.name1
             )
 
-        # 🔥 Link Opportunity → Lead Details in BOTH cases
+        # Link Opportunity → Lead Details in BOTH cases
         if lead_detail_name:
             # self.lead_details = lead_detail_name
             self.lead_details = lead_detail_name

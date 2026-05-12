@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe import get_doc
 
 
 class TestCompany(FrappeTestCase):
@@ -11,32 +10,29 @@ class TestCompany(FrappeTestCase):
 
 
 # utils for test cases
-
-
-def create_company_if_not_exists(company_name, abbr="VC"):
+def create_company_if_not_exists(company_name, abbr = None, **overrides):
     if not company_name:
         frappe.throw("Company name is required")
 
     # 1. Check by company name
-    existing = frappe.db.exists("Company", {"company_name": company_name})
-    if existing:
+    if existing := frappe.db.exists("Company", {"company_name": company_name}):
         return existing
 
-    # 2. Check by abbr (IMPORTANT FIX)
-    existing_abbr = frappe.db.exists("Company", {"abbr": abbr})
-    if existing_abbr:
-        return existing_abbr
+    # 2. Check by abbr
+    if abbr:
+        if existing_abbr := frappe.db.exists("Company", {"abbr": abbr}):
+            return existing_abbr
 
-    doc = frappe.get_doc(
-        {
-            "doctype": "Company",
-            "company_name": company_name,
-            "abbr": abbr,
-            "default_currency": "INR",
-            "country": "India",
-        }
-    )
+    defaults = {
+        "doctype": "Company",
+        "company_name": company_name,
+        "abbr": abbr,
+        "default_currency": "INR",
+        "country": "India",
+        **overrides
+    }
 
+    doc = frappe.get_doc(defaults)
     doc.insert(ignore_permissions=True)
     return doc.name
 
@@ -90,7 +86,7 @@ def get_default_company_account(company, account_type, throw=True):
             frappe.throw("Account type is required")
         return None
 
-    # 🔹 Normalize input
+    # Normalize input
     key = account_type.strip().lower()
 
     field = ACCOUNT_TYPE_TO_FIELD.get(key)

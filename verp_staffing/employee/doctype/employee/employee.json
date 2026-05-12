@@ -26,7 +26,8 @@
    "fieldname": "user",
    "fieldtype": "Link",
    "label": "User",
-   "options": "User"
+   "options": "User",
+   "reqd": 1
   },
   {
    "fieldname": "employee_name",
@@ -106,7 +107,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 15:29:34.010436",
+ "modified": "2026-05-12 10:08:46.678771",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee",
@@ -115,15 +116,15 @@
  "permissions": [
   {
    "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Lead Team Lead"
   },
   {
    "read": 1,
    "role": "Lead Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Person"
   },
   {
    "create": 1,
@@ -139,19 +140,28 @@
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Master Manager"
-  },
-  {
-   "read": 1,
    "role": "Sales Manager"
   },
   {
    "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
    "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
   },
   {
    "read": 1,
@@ -165,21 +175,7 @@
   },
   {
    "read": 1,
-   "role": "marketing Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Mentor",
+   "role": "Recruiter",
    "select": 1
   },
   {
@@ -189,17 +185,17 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
    "select": 1
   },
   {
@@ -209,22 +205,28 @@
   },
   {
    "read": 1,
-   "role": "RUC Person",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "Senior Resume Person",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Recruiter",
+   "role": "Training Person",
    "select": 1
   },
   {
    "read": 1,
    "role": "JDC",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
    "select": 1
   },
   {
@@ -239,14 +241,13 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "HR Manager",
-   "write": 1
+   "role": "Technical Master Manager",
+   "select": 1
   },
   {
    "read": 1,
-   "role": "OnBoarding Person",
+   "role": "RUC Person",
    "select": 1
   },
   {

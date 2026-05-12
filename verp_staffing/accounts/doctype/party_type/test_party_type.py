@@ -6,47 +6,66 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestPartyType(FrappeTestCase):
-	pass
+    pass
 
 
-def create_party_types_if_not_exists(return_names=False):
+def create_party_types_if_not_exists(
+    party_type_map=None,
+    return_names=False,
+    **overrides,
+):
     """
     Ensure Party Types exist with correct account types.
 
-    Returns:
-        list | None
+    Flow:
+    1. Create missing Party Types using overrides
+    2. Fix mismatched account_type for existing Party Types
     """
 
-    party_type_map = {
-        "Customer": "Receivable",
-        "Supplier": "Payable",
-    }
+    if party_type_map is None:
+        party_type_map = {
+            "Customer": "Receivable",
+            "Supplier": "Payable",
+        }
 
     created_or_fixed = []
 
     for party_type, account_type in party_type_map.items():
 
-        if not frappe.db.exists("Party Type", party_type):
-            doc = frappe.get_doc({
+        existing = frappe.db.exists(
+            "Party Type",
+            party_type,
+        )
+
+        if not existing:
+            party_type_data = {
                 "doctype": "Party Type",
                 "party_type": party_type,
                 "account_type": account_type,
-            })
+                **overrides,
+            }
+
+            doc = frappe.get_doc(party_type_data)
             doc.insert(ignore_permissions=True)
+
             created_or_fixed.append(party_type)
 
-        else:
-            existing = frappe.db.get_value(
-                "Party Type", party_type, "account_type"
+            continue
+
+        existing_account_type = frappe.db.get_value(
+            "Party Type",
+            party_type,
+            "account_type",
+        )
+
+        if existing_account_type != account_type:
+            frappe.db.set_value(
+                "Party Type",
+                party_type,
+                "account_type",
+                account_type,
             )
 
-            if existing != account_type:
-                frappe.db.set_value(
-                    "Party Type",
-                    party_type,
-                    "account_type",
-                    account_type
-                )
-                created_or_fixed.append(party_type)
+            created_or_fixed.append(party_type)
 
     return created_or_fixed if return_names else None

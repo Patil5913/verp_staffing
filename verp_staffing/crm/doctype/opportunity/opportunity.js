@@ -63,25 +63,7 @@ frappe.ui.form.on("Opportunity", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
-		if (!frm.doc.opportunity_owner) {
-			frappe.call({
-				method: "frappe.client.get_list",
-				args: {
-					doctype: "Employee",
-					filters: [
-						["Employee", "user", "=", frappe.session.user],
-						["Employee Assignment Detail", "department", "=", "Sales"],
-					],
-					fields: ["name"],
-					limit: 1,
-				},
-				callback: function (r) {
-					if (r.message && r.message.length > 0) {
-						frm.set_value("opportunity_owner", r.message[0].name);
-					}
-				},
-			});
-		}
+		
 		// but still allow changes *except* Converted
 		frm.doc._previous_status = frm.doc.status; //save the last status
 
