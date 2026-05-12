@@ -17,11 +17,11 @@ def create_uom_if_not_exists(uom_name, **overrides):
 
     uom_name = uom_name.strip().upper()
 
+    
     existing = frappe.db.exists("UOM", uom_name)
 
     if existing:
-        uom = frappe.get_doc("UOM", existing)
-        return uom.name
+        return existing
 
     defaults = {
         "doctype": "UOM",
