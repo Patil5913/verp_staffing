@@ -158,6 +158,14 @@ frappe.query_reports["Profit and Loss Statement"] = {
 			options: "Fiscal Year",
 			depends_on: "eval:doc.filter_based_on=='Fiscal Year'",
 			reqd: 0,
+			get_query: function () {
+				return {
+					query: "verp_staffing.accounts.utils.fiscal_year_opening_balance.get_fiscal_years_for_company",
+					filters: {
+						company: frappe.query_report.get_filter_value("company"),
+					},
+				};
+			},
 		},
 		{
 			fieldname: "to_fiscal_year",
@@ -166,6 +174,15 @@ frappe.query_reports["Profit and Loss Statement"] = {
 			options: "Fiscal Year",
 			depends_on: "eval:doc.filter_based_on=='Fiscal Year'",
 			reqd: 0,
+			get_query: function () {
+				let company = frappe.query_report.get_filter_value("company");
+				return {
+					query: "verp_staffing.accounts.utils.fiscal_year_opening_balance.get_fiscal_years_for_company",
+					filters: {
+						company: company,
+					},
+				};
+			},
 		},
 
 		// Date Range sub-fields

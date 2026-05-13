@@ -130,11 +130,38 @@ def get_period_date_ranges(filters):
     periodicity = filters.get("periodicity", "Yearly")
 
     if periodicity == "Yearly":
-        label = "{0} to {1}".format(
-            frappe.format(from_date, {"fieldtype": "Date"}),
-            frappe.format(to_date, {"fieldtype": "Date"}),
-        )
-        return [(label, from_date, to_date)]
+        if filters.filter_based_on == "Fiscal Year":
+            fy_names = _get_fiscal_years_in_range(
+                filters.from_fiscal_year, filters.to_fiscal_year
+            )
+            if not fy_names:
+                label = "{0} to {1}".format(
+                    frappe.format(from_date, {"fieldtype": "Date"}),
+                    frappe.format(to_date, {"fieldtype": "Date"}),
+                )
+                return [(label, from_date, to_date)]
+
+            period_list = []
+            for fy_name in fy_names:
+                fy = frappe.get_cached_doc("Fiscal Year", fy_name)
+                p_from = getdate(fy.year_start_date)
+                p_to = getdate(fy.year_end_date)
+                p_from = max(p_from, from_date)
+                p_to = min(p_to, to_date)
+                label = fy_name
+                period_list.append((label, p_from, p_to))
+            return period_list
+
+        else:
+            period_list = []
+            start = from_date
+            while start <= to_date:
+                year_end = datetime.date(start.year, 12, 31)
+                actual_end = min(year_end, to_date)
+                label = str(start.year)
+                period_list.append((label, start, actual_end))
+                start = datetime.date(start.year + 1, 1, 1)
+            return period_list
 
     period_list = []
     start = from_date
