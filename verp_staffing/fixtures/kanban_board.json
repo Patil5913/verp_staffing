@@ -13,7 +13,7 @@
    {
     "column_name": "Ongoing Interview",
     "indicator": "Yellow",
-    "order": "[\n \"j0m89u027l\",\n \"ihk12vieo6\",\n \"m061fvq52u\"\n]",
+    "order": "[]",
     "parent": "Interview",
     "parentfield": "columns",
     "parenttype": "Kanban Board",
@@ -22,7 +22,7 @@
    {
     "column_name": "Accepted",
     "indicator": "Green",
-    "order": "[\n \"38377dh8cd\",\n \"mmg6dj8qbf\",\n \"fqrnqfmoro\"\n]",
+    "order": "[]",
     "parent": "Interview",
     "parentfield": "columns",
     "parenttype": "Kanban Board",

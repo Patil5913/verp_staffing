@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-import frappe
 from frappe.tests.utils import FrappeTestCase
 from verp_staffing.buying.doctype.supplier_group.test_supplier_group import create_supplier_group_if_not_exists
 

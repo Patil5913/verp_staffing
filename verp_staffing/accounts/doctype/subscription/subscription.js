@@ -24,6 +24,17 @@ frappe.ui.form.on("Subscription", {
 			render_grand_totals(frm);
 		}
 
+		if (frm.is_new() || frm.doc.docstatus === 0) {
+			frm.set_query("plan", function () {
+				return {
+					filters: {
+						is_active: 1,
+						docstatus: 1
+					}
+				};
+			});
+		}
+
 		if (frm.doc.docstatus === 1) {
 			frm.add_custom_button("Generate Invoice Now", () => {
 				frappe.call({
@@ -58,6 +69,7 @@ frappe.ui.form.on("Subscription", {
 	onload: function (frm) {
 		set_account_queries(frm);
 	},
+	
 
 	setup_action_buttons(frm) {
 		if (frm.doc.docstatus !== 1) return;
@@ -461,16 +473,6 @@ function get_current_period_end(frm) {
 }
 
 function validate_end_date_alignment(frm) {
-	// `end_date` must align with a billing period boundary.
-	// A valid end_date is one of:
-	//   billing_start - 1 day                          (no regular invoices)
-	//   billing_start + 1*(interval*count) - 1 day     (1 invoice)
-	//   billing_start + 2*(interval*count) - 1 day     (2 invoices)
-	//   ...
-	// where billing_start = start_date (or trial_period_end + 1 day).
-	//
-	// If the user picks a date that doesn't land on one of these boundaries,
-	// snap it down to the nearest valid boundary and warn.
 	if (
 		!frm.doc.end_date ||
 		!frm.doc.start_date ||
@@ -482,63 +484,60 @@ function validate_end_date_alignment(frm) {
 	const end_date = frappe.datetime.str_to_obj(frm.doc.end_date);
 
 	let billing_start = frappe.datetime.str_to_obj(frm.doc.start_date);
+
 	if (frm.doc.trial_period_end) {
 		const trial_end = frappe.datetime.str_to_obj(frm.doc.trial_period_end);
 		billing_start = new Date(trial_end);
 		billing_start.setDate(billing_start.getDate() + 1);
 	}
 
-	// end_date must be >= billing_start - 1 day at minimum, else invalid
-	const min_valid = new Date(billing_start);
-	min_valid.setDate(min_valid.getDate() - 1);
-	if (end_date < min_valid) {
-		frm.set_value("end_date", frappe.datetime.obj_to_str(min_valid));
+	// must not be before start anchor
+	if (end_date < billing_start) {
+		frm.set_value(
+			"end_date",
+			frappe.datetime.obj_to_str(billing_start)
+		);
+
 		frappe.show_alert({
-			message: __("End Date adjusted to align with billing cycle: {0}", [
-				frappe.datetime.str_to_user(frappe.datetime.obj_to_str(min_valid)),
-			]),
-			indicator: "orange",
+			message: __("End Date cannot be before billing start"),
+			indicator: "red",
 		});
 		return;
 	}
 
-	// Walk billing periods forward; collect valid boundaries until we pass end_date
-	let last_valid = new Date(min_valid);
+	// direct deterministic validation (NO HARD LOOP LIMIT)
 	let cursor = new Date(billing_start);
-	const HARD_CAP = 1000;
 
-	for (let i = 0; i < HARD_CAP; i++) {
-		const next_period_start = calculate_end_date(
+	while (true) {
+		const next_start = calculate_end_date(
 			cursor,
 			_plan_billing_interval,
-			_plan_billing_interval_count,
+			_plan_billing_interval_count
 		);
-		const period_end = new Date(next_period_start);
+
+		const period_end = new Date(next_start);
 		period_end.setDate(period_end.getDate() - 1);
 
-		// Exact match -> already aligned, nothing to do
-		if (datesEqual(period_end, end_date)) return;
+		// exact match → valid
+		if (datesEqual(period_end, end_date)) {
+			return;
+		}
 
-		if (period_end > end_date) break;
+		// passed it → snap forward
+		if (period_end > end_date) {
+			frm.set_value(
+				"end_date",
+				frappe.datetime.obj_to_str(period_end)
+			);
 
-		last_valid = period_end;
-		cursor = next_period_start;
-	}
+			frappe.show_alert({
+				message: __("End Date adjusted as per billing cycle"),
+				indicator: "orange",
+			});
+			return;
+		}
 
-	// Snap down to the last valid boundary <= end_date
-	if (!datesEqual(last_valid, end_date)) {
-		frm.set_value("end_date", frappe.datetime.obj_to_str(last_valid));
-		frappe.show_alert({
-			message: __(
-				"End Date must align with the billing cycle ({0} × {1}). Adjusted to {2}.",
-				[
-					_plan_billing_interval_count,
-					_plan_billing_interval,
-					frappe.datetime.str_to_user(frappe.datetime.obj_to_str(last_valid)),
-				],
-			),
-			indicator: "orange",
-		});
+		cursor = next_start;
 	}
 }
 
@@ -863,7 +862,7 @@ function compute_discount_for_invoice(frm, invoice_number, net_total) {
 
 	rows.forEach((row) => {
 		const from_n = cint(row.from_invoice_number) || 1;
-		const to_n = row.to_invoice_number ? cint(row.to_invoice_number) : null;
+		const to_n = cint(row.to_invoice_number) || null;
 
 		const in_range = invoice_number >= from_n && (to_n === null || invoice_number <= to_n);
 		if (!in_range) return;

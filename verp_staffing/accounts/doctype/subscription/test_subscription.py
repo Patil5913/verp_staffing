@@ -41,6 +41,17 @@ from frappe.utils import (
 	today
 )
 
+from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
+from verp_staffing.crm.doctype.customer.test_customer import create_customer_if_not_exists
+from verp_staffing.accounts.doctype.company.test_company import create_company_if_not_exists
+from verp_staffing.accounts.doctype.account.test_account import create_account_if_not_exists
+from verp_staffing.buying.doctype.supplier.test_supplier import create_supplier_if_not_exists
+from verp_staffing.buying.doctype.supplier_group.test_supplier_group import create_supplier_group_if_not_exists
+from verp_staffing.accounts.doctype.subscription_plan.test_subscription_plan import create_subscription_plan_if_not_exists
+from verp_staffing.accounts.doctype.fiscal_year.test_fiscal_year import create_fiscal_year_if_not_exists
+
+
+
 from verp_staffing.accounts.doctype.subscription.subscription import (
 	APPLIES_ON_NET,
 	DISCOUNT_TYPE_FIXED,
@@ -61,17 +72,12 @@ from verp_staffing.accounts.doctype.subscription.subscription import (
 	process_due_subscriptions,
 )
 
-
-# --------------------------------------------------------------------------
-# Test fixtures: shared records reused across all tests
-# --------------------------------------------------------------------------
-
 # --------------------------------------------------------------------------
 # Constants
 # --------------------------------------------------------------------------
 
-TEST_COMPANY = "Vrugle Child"
-TEST_COMPANY_ABBR = "VC"
+TEST_COMPANY = "Test Subscription"
+TEST_COMPANY_ABBR = "TS"
 TEST_CURRENCY = "INR"
 TEST_CUSTOMER = "_Test Subscription Customer"
 TEST_SUPPLIER = "_Test Subscription Supplier"
@@ -87,225 +93,103 @@ TEST_OTC_ACCOUNT = "GST"
 TEST_DISCOUNT_ACCOUNT = "Discount"
 
 
-# --------------------------------------------------------------------------
-# Universal safe-insert helper (returns the ACTUAL name)
-# --------------------------------------------------------------------------
+_resolved: dict = {}
 
-def _safe_insert(doc_dict, lookup_filter):
-    """Idempotent insert. Returns the `name` of the existing-or-new document.
-    Survives autoname collisions, stale rows, and races."""
-    doctype = doc_dict["doctype"]
+def _seed_all():
+	# Company
+    test_company = create_company_if_not_exists(TEST_COMPANY,TEST_COMPANY_ABBR)
+    _resolved["company"] = test_company
+    
+    # Fiscal year for test_company
+    today = date.today()
+    fiscal_year_name = f"{today.year}-{today.year + 1}"
+    
+    _resolved["fiscal_year"] = create_fiscal_year_if_not_exists(
+		fiscal_year=fiscal_year_name,
+		company=test_company,
+		start_date=date(today.year, 4, 1),
+		end_date=date(today.year + 1, 3, 31),
+	)    
 
-    existing = frappe.db.get_value(doctype, lookup_filter, "name")
-    if existing:
-        return existing
+    # Parties
+    _resolved["supplier_group"] = create_supplier_group_if_not_exists()
+    _resolved["customer"]       = create_customer_if_not_exists(TEST_CUSTOMER)
+    _resolved["supplier"]       = create_supplier_if_not_exists(TEST_SUPPLIER, "Individual", "All Supplier Groups")
 
-    doc = frappe.get_doc(doc_dict)
-    doc.insert(ignore_permissions=True)
+    # Item
+    _resolved["item"] = create_item_if_not_exists(TEST_ITEM, stock_uom="Nos", must_be_whole_number=0)
 
-    return doc.name
+    # Accounts — util returns a Document, so grab .name
+    _resolved["income_account"]   = create_account_if_not_exists("Test Income",   _resolved["company"], root_type="Income", account_type= "Income Account").name
+    _resolved["expense_account"]  = create_account_if_not_exists("Test Expense",  _resolved["company"], root_type="Expense", account_type= "Expense Account").name
+    _resolved["discount_account"] = create_account_if_not_exists("Test Discount", _resolved["company"], root_type="Expense", account_type= "Expense Account").name
+    _resolved["payable_account"] = create_account_if_not_exists("Test Payable", _resolved["company"], root_type="Liability", account_type= "Payable").name
 
-
-# --------------------------------------------------------------------------
-# Resolved-name cache — computed once per test run
-# --------------------------------------------------------------------------
-
-_resolved = {}   # logical key -> actual `name` in DB
-
-
-def _ensure_company():
-    name = frappe.db.get_value("Company", {"company_name": TEST_COMPANY}, "name")
-
-    if name:
-        _resolved["company"] = name
-        return name
-
-    doc = frappe.get_doc({
-        "doctype": "Company",
-        "company_name": TEST_COMPANY,
-        "abbr": TEST_COMPANY_ABBR,
-        "default_currency": TEST_CURRENCY,
-        "country": "India",
+    # Company defaults
+    frappe.db.set_value("Company", _resolved["company"], {
+        "default_income_account":   _resolved["income_account"],
+        "default_expense_account":  _resolved["expense_account"],
+        "default_discount_account": _resolved["discount_account"],
+        "default_payable_account": _resolved["payable_account"],
     })
 
-    doc.insert(ignore_permissions=True)
-    _resolved["company"] = doc.name
-
-    return doc.name
-
-
-def _ensure_supplier_group():
-    _resolved["supplier_group"] = _safe_insert(
-        {
-            "doctype": "Supplier Group",
-            "supplier_group_name": "All Supplier Groups",
-            "is_group": 1,
-            "parent_supplier_group": None,
-        },
-        {"supplier_group_name": "All Supplier Groups"},
-    )
-    return _resolved["supplier_group"]
-
-
-def _ensure_party():
-    sg = _ensure_supplier_group()
-
-    _resolved["customer"] = _safe_insert(
-        {
-            "doctype": "Customer",
-            "name1": TEST_CUSTOMER,
-        },
-        {"name1": TEST_CUSTOMER},
-    )
-
-    _resolved["supplier"] = _safe_insert(
-        {
-            "doctype": "Supplier",
-            "supplier_name": TEST_SUPPLIER,
-            "supplier_group": sg,
-        },
-        {"supplier_name": TEST_SUPPLIER},
-    )
-
-
-def _ensure_uom():
-    return _safe_insert(
-        {"doctype": "UOM", "uom_name": "Nos"},
-        {"uom_name": "Nos"},
-    )
-    
-def _ensure_item_category():
-    return _safe_insert(
-        {"doctype": "Item Category", "item_category_name": "Item Category 1", "is_group": 0},
-        {"item_category_name": "Item Category 1"},
-    )
-
-
-def _ensure_item():
-    _ensure_uom()
-    _ensure_item_category()
-    _resolved["item"] = _safe_insert(
-        {
-            "doctype": "Item",
-            "item_name": TEST_ITEM,
-            "item_category": "Item Category 1",
-            "stock_uom": "Nos",
-        },
-        {"item_name": TEST_ITEM},
-    )
-    return _resolved["item"]
-    
-def _ensure_core_accounts():
-    company = _resolved["company"]
-
-    def create_account(acc_name, root_type):
-        full_name = f"{acc_name} - {TEST_COMPANY_ABBR}"
-
-        if frappe.db.exists("Account", full_name):
-            return full_name
-
-        parent = frappe.db.get_value(
-            "Account",
-            {"company": company, "is_group": 1, "root_type": root_type},
-            "name"
+    # Plans
+    for key, rate, interval, count, active, curr in [
+        (PLAN_MONTHLY,  1000, "Month", 1, 1, TEST_CURRENCY),
+        (PLAN_DAILY_3,  100,  "Day",   3, 1, TEST_CURRENCY),
+        (PLAN_INACTIVE, 500,  "Month", 1, 0, TEST_CURRENCY),
+        (PLAN_USD,      50,   "Month", 1, 1, "USD"),
+    ]:
+        _resolved[key] = create_subscription_plan_if_not_exists(
+            plan_name=key,
+            item_name=_resolved["item"],
+            rate=rate,
+            interval=interval,
+            interval_count=count,
+            is_active=active,
+            currency=curr,
         )
 
-        if not parent:
-            frappe.throw(f"Missing parent account for root_type {root_type}")
-
-        doc = frappe.get_doc({
-            "doctype": "Account",
-            "account_name": acc_name,
-            "parent_account": parent,
-            "company": company,
-            "is_group": 0,
-        })
-        doc.insert(ignore_permissions=True)
-
-        return doc.name
-
-    _resolved["income_account"] = create_account("Test Income", "Income")
-    _resolved["expense_account"] = create_account("Test Expense", "Expense")
-    _resolved["discount_account"] = create_account("Test Discount", "Expense")
-    
-    
-def _set_company_defaults():
-    frappe.db.set_value("Company", _resolved["company"], {
-        "default_income_account": _resolved["income_account"],
-        "default_expense_account": _resolved["expense_account"],
-        "default_discount_account": _resolved["discount_account"],
-    })
-
-
-def _ensure_plan(key, plan_name, rate, interval, count, is_active=1, currency=TEST_CURRENCY):
-    """`key` is the logical identifier we use in tests (e.g. PLAN_MONTHLY).
-    `plan_name` is the value stored in the DB. We cache the resolved `name`
-    under `key` so make_subscription can look it up."""
-    item_name = _resolved.get("item") or _ensure_item()
-
-    resolved = _safe_insert(
-        {
-            "doctype": "Subscription Plan",
-            "plan_name": plan_name,
-            "item": item_name,
-            "billing_interval": interval,
-            "billing_interval_count": count,
-            "currency": currency,
-            "rate": rate,
-            "is_active": is_active,
-        },
-        {"plan_name": plan_name},
-    )
-    _resolved[key] = resolved
-    return resolved
-
-
-def _ensure_plans():
-    _ensure_plan(PLAN_MONTHLY,  PLAN_MONTHLY,  1000, "Month", 1)
-    _ensure_plan(PLAN_DAILY_3,  PLAN_DAILY_3,  100,  "Day",   3)
-    _ensure_plan(PLAN_INACTIVE, PLAN_INACTIVE, 500,  "Month", 1, is_active=0)
-    _ensure_plan(PLAN_USD,      PLAN_USD,      50,   "Month", 1, currency="USD")
-
-# --------------------------------------------------------------------------
-# Base test class
-# --------------------------------------------------------------------------
 
 class TestSubscriptionBase(FrappeTestCase):
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        _ensure_company()
-        _ensure_core_accounts()
-        _set_company_defaults()
-        _ensure_party()
-        _ensure_item()
-        # _ensure_accounts()
-        _ensure_plans()
+        _seed_all()
+        
+        # Now disable commits for the test phase
+        cls._original_commit = frappe.db.commit
+        frappe.db.commit = lambda *a, **kw: None
+
+    @classmethod
+    def tearDownClass(cls):
+        # Put the real commit back BEFORE rollback runs
+        frappe.db.commit = cls._original_commit
+
+        # Now actually roll back — this works because no real commits happened
+        frappe.db.rollback()
+        super().tearDownClass()
+
 
     def make_subscription(self, submit=False, **overrides):
-        # Default to the resolved monthly plan name; let overrides win.
         plan_key = overrides.pop("plan", PLAN_MONTHLY)
-        # If caller passes a constant we know about, resolve it. Otherwise pass through
-    	# (lets tests pass a raw doc name explicitly if they need to).
-        plan_value = _resolved.get(plan_key, plan_key)
-        
         defaults = {
-			"doctype": "Subscription",
-			"subscription_type": SUBSCRIPTION_TYPE_SALES,
-			"party_type": "Customer",
-			"party": _resolved["customer"],
-			"company": _resolved["company"],
-			"plan": plan_value,
-			"qty": 1,
-			"start_date": today(),
-			"billing_currency": TEST_CURRENCY,
-			"generate_invoice_at": GENERATE_AT_END,
-			"days_until_due": 0,
-			**overrides
-		}
-        
+            "doctype":             "Subscription",
+            "subscription_type":   SUBSCRIPTION_TYPE_SALES,
+            "party_type":          "Customer",
+            "party":               _resolved["customer"],
+            "company":             _resolved["company"],
+            "plan":                _resolved.get(plan_key, plan_key),
+            "qty":                 1,
+            "start_date":          today(),
+            "billing_currency":    TEST_CURRENCY,
+            "generate_invoice_at": GENERATE_AT_END,
+            "days_until_due":      0,
+        }
+        defaults.update(overrides)
         doc = frappe.get_doc(defaults)
-        doc.insert(ignore_permissions = True)
+        doc.insert(ignore_permissions=True)
         if submit:
             doc.submit()
         return doc

@@ -71,7 +71,7 @@ class Subscription(Document):
 		self._compute_net_total()
 
 	def before_submit(self) -> None:
-		# Status should only resolve after submit; if user is just saving a draft,
+		# Status should only resolve before submit; if user is just saving a draft,
 		# leave status as-is.
 		if not self.status or self.status not in (
 			STATUS_ACTIVE,
@@ -530,14 +530,15 @@ class Subscription(Document):
 		invoice.company = self.company
 		invoice.currency = self.billing_currency
 
+		# ---- Plan line item ----
+		plan = frappe.get_cached_doc("Subscription Plan", self.plan)
+		item_doc = frappe.get_cached_doc("Item", plan.item)
+  
 		if is_sales:
 			invoice.customer = self.party
 		else:
 			invoice.supplier = self.party
-
-		# ---- Plan line item ----
-		plan = frappe.get_cached_doc("Subscription Plan", self.plan)
-		item_doc = frappe.get_cached_doc("Item", plan.item)
+			invoice.credit_to = self._resolve_account(item_doc, is_sales, True)
   
 		invoice.append(
 			"items",
@@ -548,9 +549,9 @@ class Subscription(Document):
 				"rate": flt(plan.rate),
 				"amount": flt(self.qty) * flt(plan.rate),
 				"type": SUBSCRIPTION_TYPE_SALES if is_sales else SUBSCRIPTION_TYPE_PURCHASE,
-				"income_account": self._resolve_account(item_doc, is_sales) if is_sales else None,
+				"income_account": self._resolve_account(item_doc, is_sales, False) if is_sales else None,
 				"expense_account": (
-					None if is_sales else self._resolve_account(item_doc, is_sales)
+					None if is_sales else self._resolve_account(item_doc, is_sales, False)
 				),
 			},
 		)
@@ -634,13 +635,15 @@ class Subscription(Document):
 
 		return invoice
 
-	def _resolve_account(self, item_doc, is_sales) -> Optional[str]:
+	def _resolve_account(self, item_doc, is_sales, is_credit_to) -> Optional[str]:
 		"""Pick an default income or expense account from company for the line item based on type."""
 		if not item_doc:
 			return None
 
 		if is_sales:
 			return frappe.get_cached_value("Company", self.company, "default_income_account")
+		elif is_credit_to:
+			return frappe.get_cached_value("Company", self.company, "default_payable_account")
 		else:
 			return frappe.get_cached_value("Company", self.company, "default_expense_account")
 
@@ -686,64 +689,150 @@ def _add_interval(d: date, interval: str, count: int) -> date:
 # Cron entry points (wire these in hooks.py)
 # ====================================================================
 
+from frappe.utils import now_datetime, escape_html
+
 
 def process_due_subscriptions() -> None:
 	"""Daily cron: generate today's due invoices for all eligible subscriptions.
 
-	Wire this into hooks.py:
-
-	    scheduler_events = {
-	        "daily": [
-	            "vrugle.subscription.doctype.subscription.subscription.process_due_subscriptions",
-	        ]
-	    }
+	Points:
+	  * Each subscription runs in its OWN transaction. A failure on one
+	    subscription will NOT prevent later subscriptions from being processed,
+	    nor will it roll back already-committed invoices.
+	  * Every failure is captured (per-subscription error log + aggregated for
+	    the admin report) so nothing fails silently.
+	  * A single summary email is sent to administrators at the end of the run
+	    whenever something noteworthy happened (failures, abort, generations,
+	    or auto-resumes). Quiet days stay silent.
 	"""
+ 
 	today_dt = getdate(today())
+	run_id = frappe.generate_hash(length=8)
+	started_at = now_datetime()
 
-	# 1. Auto-resume any paused subscriptions whose resume date has arrived.
-	_auto_resume_paused(today_dt)
+	stats = {
+		"run_id": run_id,
+		"started_at": started_at,
+		"today": today_dt,
+		"auto_resumed": 0,
+		"auto_resume_failures": [],     # [{"subscription": str, "error": str}]
+		"subscriptions": 0,
+		"generated": 0,
+		"skipped": 0,
+		"failed": 0,
+		"generation_failures": [],      # [{"subscription": str, "error": str}]
+		"generated_invoices": [],       # [{"subscription": str, "invoice": str}]
+		"aborted": False,
+		"abort_traceback": None,
+	}
 
-	# 2. Find candidates: submitted, not cancelled/completed, not paused, started.
-	candidates = frappe.get_all(
-		"Subscription",
-		filters={
-			"docstatus": 1,
-			"status": ["not in", [STATUS_CANCELLED, STATUS_COMPLETED, STATUS_TRIAL]],
-			"is_paused": 0,
-			"start_date": ["<=", today_dt],
-		},
-		pluck="name",
-	)
+	try:
+		# 1. Auto-resume any paused subscriptions whose resume date has arrived.
+		_auto_resume_paused(today_dt, stats)
 
-	generated = skipped = failed = 0
+		# 2. Find Subscriptions: submitted, not cancelled/completed/trial, not paused, started.
+		Subscriptions = frappe.get_all(
+			"Subscription",
+			filters={
+				"docstatus": 1,
+				"status": ["not in", [STATUS_CANCELLED, STATUS_COMPLETED, STATUS_TRIAL]],
+				"is_paused": 0,
+				"start_date": ["<=", today_dt],
+			},
+			pluck="name",
+			order_by="creation asc",
+		)
+		stats["subscriptions"] = len(Subscriptions)
 
-	for name in candidates:
+		# 3. Process each in isolation.
+		for name in Subscriptions:
+			_process_one_subscription(name, today_dt, stats)
+
+	except Exception:
+		# A top-level failure (DB blip, unexpected error in the loop scaffolding,
+		# etc.) — record it but DO NOT swallow the report. We still want to
+		# tell the admin what happened up to this point.
+		stats["aborted"] = True
+		stats["abort_traceback"] = frappe.get_traceback()
+		frappe.db.rollback()
+		frappe.log_error(
+			title=f"[Subscription cron] aborted run {run_id}",
+			message=stats["abort_traceback"],
+		)
+
+	finally:
+		stats["finished_at"] = now_datetime()
+		stats["duration_seconds"] = (
+			stats["finished_at"] - stats["started_at"]
+		).total_seconds()
+
+		frappe.logger().info(
+			f"[Subscription cron {run_id}] "
+			f"resumed={stats['auto_resumed']} "
+			f"resume_fail={len(stats['auto_resume_failures'])} "
+			f"subscriptions={stats['subscriptions']} "
+			f"generated={stats['generated']} "
+			f"skipped={stats['skipped']} "
+			f"failed={stats['failed']} "
+			f"duration={stats['duration_seconds']:.1f}s "
+			f"aborted={stats['aborted']}"
+		)
+
+		# Notification is best-effort; never let it crash the cron.
 		try:
-			sub = frappe.get_doc("Subscription", name)
-   
-			if not sub.is_due_for_invoicing(today_dt):
-				skipped += 1
-				continue
-
-			sub.generate_next_invoice()
-			generated += 1
-
+			_send_admin_report(stats)
 		except Exception:
-			failed += 1
 			frappe.log_error(
-				title=f"Subscription invoice generation failed: {name}",
+				title=f"[Subscription cron] failed to send admin report ({run_id})",
 				message=frappe.get_traceback(),
 			)
-   
-	frappe.db.commit()
-
-	frappe.logger().info(
-		f"[Subscription cron] generated={generated} skipped={skipped} failed={failed}"
-	)
 
 
-def _auto_resume_paused(today_dt: date) -> None:
-	"""Flip is_paused → 0 for subscriptions whose pause_resume_date has arrived."""
+def _process_one_subscription(name: str, today_dt: date, stats: dict) -> None:
+	"""Process a single subscription with isolated transaction boundaries."""
+	try:
+		sub = frappe.get_doc("Subscription", name)
+
+		if not sub.is_due_for_invoicing(today_dt):
+			stats["skipped"] += 1
+			return
+
+		invoice_name = sub.generate_next_invoice()
+
+		if invoice_name:
+			# Commit per-success so one downstream failure cannot roll back
+			# already-generated invoices.
+			frappe.db.commit()
+			stats["generated"] += 1
+			stats["generated_invoices"].append({
+				"subscription": name,
+				"invoice": invoice_name,
+			})
+		else:
+			# generate_next_invoice returned None (e.g. nothing scheduled,
+			# already in future, etc.) — nothing to commit, count as skipped.
+			stats["skipped"] += 1
+
+	except Exception as e:
+		# Roll back this subscription's partial work so the next iteration
+		# starts clean.
+		frappe.db.rollback()
+		stats["failed"] += 1
+		traceback_str = frappe.get_traceback()
+		stats["generation_failures"].append({
+			"subscription": name,
+			"error": (str(e) or e.__class__.__name__)[:500],
+		})
+		frappe.log_error(
+			title=f"Subscription invoice generation failed: {name}",
+			message=traceback_str,
+		)
+
+
+def _auto_resume_paused(today_dt: date, stats: dict | None = None) -> None:
+	"""Flip is_paused → 0 for subscriptions whose pause_resume_date has arrived.
+	Each resume is its own transaction so a single failure cannot block others.
+	"""
 	due_to_resume = frappe.get_all(
 		"Subscription",
 		filters={
@@ -753,30 +842,235 @@ def _auto_resume_paused(today_dt: date) -> None:
 		},
 		pluck="name",
 	)
- 
+
 	for name in due_to_resume:
 		try:
 			sub = frappe.get_doc("Subscription", name)
 			sub.resume_subscription()
-		except Exception:
+			frappe.db.commit()
+			if stats is not None:
+				stats["auto_resumed"] += 1
+		except Exception as e:
+			frappe.db.rollback()
+			if stats is not None:
+				stats["auto_resume_failures"].append({
+					"subscription": name,
+					"error": (str(e) or e.__class__.__name__)[:500],
+				})
 			frappe.log_error(
 				title=f"Subscription auto-resume failed: {name}",
 				message=frappe.get_traceback(),
 			)
 
-	# ONE commit
-	frappe.db.commit()
-# ====================================================================
-# Manual trigger (useful for testing / admin actions)
-# ====================================================================
 
+# --------------------------------------------------------------------
+# Admin notifications
+# --------------------------------------------------------------------
+
+def _send_admin_report(stats: dict) -> None:
+	"""Email a summary of the cron run to administrators.
+	Sends only when something noteworthy happened.
+	"""
+	has_failures = stats["failed"] > 0 or len(stats["auto_resume_failures"]) > 0
+	has_abort = stats["aborted"]
+	has_activity = stats["generated"] > 0 or stats["auto_resumed"] > 0
+
+	if not (has_failures or has_abort or has_activity):
+		return
+
+	recipient = _get_admin_recipient()
+	if not recipient:
+		frappe.logger().warning(
+			f"[Subscription cron {stats['run_id']}] no admin recipient "
+			f"configured; report not sent"
+		)
+		return
+
+	subject, message = _build_admin_email(stats, has_failures, has_abort)
+
+	frappe.sendmail(
+		recipients=recipient,
+		subject=subject,
+		message=message,
+		header=[
+			"Subscription Cron Report",
+			"red" if has_abort else ("orange" if has_failures else "green"),
+		],
+		now=True,
+	)
+
+
+def _get_admin_recipient() -> str | None:
+	"""Get recipient from Administrator's first linked Email Account."""
+
+	try:
+		admin_doc = frappe.get_doc("User", "Administrator")
+
+		if not admin_doc.user_emails:
+			return None
+
+		first_row = admin_doc.user_emails[0]
+
+		if not first_row.email_account:
+			return None
+
+		return frappe.db.get_value(
+			"Email Account",
+			first_row.email_account,
+			"email_id",
+		)
+
+	except Exception:
+		return None
+
+def _build_admin_email(stats: dict, has_failures: bool, has_abort: bool):
+	"""Compose subject + HTML body for the admin report."""
+	today_str = stats["today"].strftime("%Y-%m-%d")
+
+	if has_abort:
+		prefix = "[ABORTED]"
+	elif has_failures:
+		prefix = "[Failures]"
+	else:
+		prefix = "[Success]"
+
+	subject = (
+		f"{prefix} Subscription Cron — {today_str} "
+		f"(generated={stats['generated']}, failed={stats['failed']})"
+	)
+
+	# --- Summary table ---
+	summary_rows = [
+		("Run ID", stats["run_id"]),
+		("Date", today_str),
+		("Duration", f"{stats['duration_seconds']:.2f}s"),
+		("Auto-resumed", stats["auto_resumed"]),
+		("Auto-resume failures", len(stats["auto_resume_failures"])),
+		("Subscriptions", stats["subscriptions"]),
+		("Invoices generated", stats["generated"]),
+		("Skipped (not due)", stats["skipped"]),
+		("Failed", stats["failed"]),
+		("Aborted top-level", "Yes" if has_abort else "No"),
+	]
+	summary_html = (
+		"<table border='1' cellpadding='6' cellspacing='0' "
+		"style='border-collapse:collapse;font-family:sans-serif'>"
+		+ "".join(
+			f"<tr><td><b>{escape_html(str(label))}</b></td>"
+			f"<td>{escape_html(str(value))}</td></tr>"
+			for label, value in summary_rows
+		)
+		+ "</table>"
+	)
+
+	parts = [
+		"<h2 style='font-family:sans-serif'>Subscription Cron Run Summary</h2>",
+		summary_html,
+	]
+
+	# --- Top-level abort ---
+	if has_abort:
+		parts.append("<h3 style='color:#b91c1c'>Top-level Abort</h3>")
+		parts.append(
+			"<p>The cron run terminated early due to an unhandled exception. "
+			"Subscriptions processed before this point were committed; the "
+			"remaining Subscriptions were NOT processed and will be retried "
+			"on the next run.</p>"
+			f"<pre style='background:#f5f5f5;padding:10px;overflow:auto;"
+			f"font-size:12px'>{escape_html(stats.get('abort_traceback') or '')}</pre>"
+		)
+
+	# --- Generation failures ---
+	if stats["generation_failures"]:
+		parts.append(
+			f"<h3 style='color:#b91c1c'>Invoice Generation Failures "
+			f"({len(stats['generation_failures'])})</h3>"
+		)
+		parts.append(_failure_table(stats["generation_failures"]))
+
+	# --- Auto-resume failures ---
+	if stats["auto_resume_failures"]:
+		parts.append(
+			f"<h3 style='color:#b91c1c'>Auto-Resume Failures "
+			f"({len(stats['auto_resume_failures'])})</h3>"
+		)
+		parts.append(_failure_table(stats["auto_resume_failures"]))
+
+	# --- Successful generations (compact) ---
+	if stats["generated_invoices"] and len(stats["generated_invoices"]) <= 50:
+		parts.append(
+			f"<h3 style='color:#166534'>Generated Invoices "
+			f"({len(stats['generated_invoices'])})</h3>"
+		)
+		rows = "<table border='1' cellpadding='6' cellspacing='0' " \
+		       "style='border-collapse:collapse;font-family:sans-serif'>" \
+		       "<tr><th>Subscription</th><th>Invoice</th></tr>"
+		for g in stats["generated_invoices"]:
+			rows += (
+				f"<tr><td>{escape_html(g['subscription'])}</td>"
+				f"<td>{escape_html(g['invoice'])}</td></tr>"
+			)
+		rows += "</table>"
+		parts.append(rows)
+	elif len(stats["generated_invoices"]) > 50:
+		parts.append(
+			f"<p><i>{len(stats['generated_invoices'])} invoices generated "
+			f"(list omitted to keep the email compact).</i></p>"
+		)
+
+	parts.append(
+		"<hr><p style='color:#888;font-size:11px;font-family:sans-serif'>"
+		"Full tracebacks are recorded in the Frappe Error Log. "
+		"Filter by 'Subscription invoice generation failed' or "
+		"'Subscription auto-resume failed' to drill down."
+		"</p>"
+	)
+
+	return subject, "\n".join(parts)
+
+
+def _failure_table(failures: list, cap: int = 50) -> str:
+	"""Render a list of {subscription, error} dicts as an HTML table."""
+	html = (
+		"<table border='1' cellpadding='6' cellspacing='0' "
+		"style='border-collapse:collapse;font-family:sans-serif'>"
+		"<tr><th>Subscription</th><th>Error</th></tr>"
+	)
+	for f in failures[:cap]:
+		html += (
+			f"<tr><td>{escape_html(f['subscription'])}</td>"
+			f"<td><code>{escape_html(f['error'])}</code></td></tr>"
+		)
+	html += "</table>"
+	if len(failures) > cap:
+		html += (
+			f"<p><i>Showing first {cap} of {len(failures)} failures. "
+			f"See Error Log for the rest.</i></p>"
+		)
+	return html
+
+
+# ====================================================================
+# Manual trigger 
+# ====================================================================
 
 @frappe.whitelist()
-def generate_invoice_now(subscription: str) -> Optional[str]:
+def generate_invoice_now(subscription: str):
 	"""Manually trigger generation of the next invoice for a subscription.
 
-	Respects the 'no past-dated invoice' rule. Will only generate if the
-	scheduled invoice_date is today.
+	Useful for admin actions and debugging. Same safety semantics as the cron
+	(per-call commit on success, rollback on failure).
 	"""
-	sub = frappe.get_doc("Subscription", subscription)
-	return sub.generate_next_invoice()
+	try:
+		sub = frappe.get_doc("Subscription", subscription)
+		invoice_name = sub.generate_next_invoice()
+		if invoice_name:
+			frappe.db.commit()
+		return invoice_name
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(
+			title=f"Manual invoice generation failed: {subscription}",
+			message=frappe.get_traceback(),
+		)
+		raise

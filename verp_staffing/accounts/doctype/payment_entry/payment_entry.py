@@ -12,6 +12,7 @@ from verp_staffing.accounts.doctype.gl_entry.gl_entry import (
     cancel_gl_entries,
     merge_gl_entries,
 )
+from verp_staffing.accounts.doctype.company.company import get_company_currency
 
 
 class PaymentEntry(Document):
@@ -172,7 +173,7 @@ class PaymentEntry(Document):
         self.base_total_taxes_and_charges = 0.0
 
         rate = flt(self.conversion_rate) or 1.0
-        company_currency = self._get_company_currency()
+        company_currency = get_company_currency(self.company)
 
         # Build dict for 'Actual' charge-type adjustments
         actual_tax_dict = {
@@ -345,7 +346,7 @@ class PaymentEntry(Document):
             )
 
     def _add_deduction_gl_entries(self, gl_entries):
-        company_currency = self._get_company_currency()
+        company_currency = get_company_currency(self.company)
         base = self._base_gl_args()
 
         for d in self.get("deductions") or []:
@@ -372,7 +373,7 @@ class PaymentEntry(Document):
             )
 
     def _add_tax_gl_entries(self, gl_entries):
-        company_currency = self._get_company_currency()
+        company_currency = get_company_currency(self.company)
         base = self._base_gl_args()
 
         for d in self.get("taxes") or []:
@@ -427,13 +428,6 @@ class PaymentEntry(Document):
 
     def _get_payment_account_for_taxes(self):
         return self.paid_to if self.payment_type == "Receive" else self.paid_from
-
-    def _get_company_currency(self):
-        return (
-            frappe.get_cached_value("Company", self.company, "default_currency")
-            if self.company
-            else ""
-        )
 
     def _get_included_taxes(self):
         total = 0.0

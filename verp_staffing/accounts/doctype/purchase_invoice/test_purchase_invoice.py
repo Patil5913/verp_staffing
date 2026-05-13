@@ -8,8 +8,9 @@ from frappe.utils import flt, nowdate, add_days
 from verp_staffing.accounts.doctype.company.test_company import (
     create_company_if_not_exists,
     get_default_company_account,
-    get_company_currency,
 )
+from verp_staffing.accounts.doctype.company.company import get_company_currency
+
 from verp_staffing.accounts.doctype.account.test_account import (
     create_account_if_not_exists,
 )
@@ -92,7 +93,7 @@ def _ensure_fiscal_year():
     if not frappe.db.exists("Fiscal Year Company", {"company": company}):
         create_fiscal_year_if_not_exists(
             fiscal_year=TEST_FISCAL_YEAR,
-            companies=[company],
+            company=company,
             start_date="2026-01-01",
             end_date="2026-12-31",
         )

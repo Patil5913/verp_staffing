@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe import get_doc
 
 
 class TestCustomer(FrappeTestCase):

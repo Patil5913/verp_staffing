@@ -4,11 +4,9 @@
 
 import json
 import frappe
-from frappe import _
 from frappe.model.document import Document
 from frappe import _, scrub
-from frappe.core.doctype.submission_queue.submission_queue import queue_submission
-from frappe.utils import comma_and, cstr, flt, fmt_money, formatdate, get_link_to_form, nowdate
+from frappe.utils import cstr, flt
 
 from verp_staffing.accounts.doctype.gl_entry.gl_entry import (
     make_gl_entries,

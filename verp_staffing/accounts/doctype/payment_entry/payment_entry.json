@@ -10,7 +10,6 @@
   "type_of_payment",
   "naming_series",
   "payment_type",
-  "payment_order_status",
   "column_break_5",
   "posting_date",
   "company",
@@ -81,7 +80,6 @@
   "print_heading",
   "bank",
   "bank_account_no",
-  "payment_order",
   "in_words",
   "subscription_section",
   "auto_repeat",
@@ -590,15 +588,6 @@
    "label": "Bank Account No"
   },
   {
-   "fieldname": "payment_order",
-   "fieldtype": "Link",
-   "label": "Payment Order",
-   "no_copy": 1,
-   "options": "Payment Order",
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
    "fieldname": "subscription_section",
    "fieldtype": "Section Break",
    "label": "Subscription Section"
@@ -628,15 +617,6 @@
    "hidden": 1,
    "label": "Title",
    "print_hide": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "payment_order_status",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "label": "Payment Order Status",
-   "no_copy": 1,
-   "options": "Initiated\nPayment Ordered",
    "read_only": 1
   },
   {

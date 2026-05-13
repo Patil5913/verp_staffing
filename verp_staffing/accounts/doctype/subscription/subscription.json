@@ -70,6 +70,7 @@
    "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Customer\",\"Supplier\"]]]",
    "options": "DocType",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -79,6 +80,7 @@
    "label": "Party",
    "options": "party_type",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -100,7 +102,8 @@
    "label": "Status",
    "no_copy": 1,
    "options": "\nTrialing\nActive\nPaused\nCancelled\nCompleted",
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "allow_on_submit": 1,
@@ -124,7 +127,8 @@
    "description": "Leave blank for open-ended subscriptions",
    "fieldname": "end_date",
    "fieldtype": "Date",
-   "label": "Subscription End Date"
+   "label": "Subscription End Date",
+   "search_index": 1
   },
   {
    "fieldname": "column_period",
@@ -134,7 +138,8 @@
    "description": "Leave blank for no trial period",
    "fieldname": "trial_period_end",
    "fieldtype": "Date",
-   "label": "Trial Period End"
+   "label": "Trial Period End",
+   "search_index": 1
   },
   {
    "fieldname": "plan",
@@ -142,7 +147,8 @@
    "in_list_view": 1,
    "label": "Plan",
    "options": "Subscription Plan",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "default": "1",
@@ -220,7 +226,8 @@
    "fieldtype": "Select",
    "label": "Generate Invoice At",
    "options": "End of the current subscription period\nBeginning of the current subscription period\nDays before the current subscription period",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "depends_on": "eval:doc.generate_invoice_at === \"Days before the current subscription period\"",
@@ -253,6 +260,7 @@
    "description": "When checked, no invoices are generated until the resume date",
    "fieldname": "is_paused",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Paused",
    "no_copy": 1
   },
@@ -261,6 +269,7 @@
    "depends_on": "eval:doc.is_paused",
    "fieldname": "pause_resume_date",
    "fieldtype": "Date",
+   "hidden": 1,
    "label": "Resume On"
   },
   {
@@ -331,7 +340,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-05 15:22:28.359936",
+ "modified": "2026-05-08 16:23:32.017231",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Subscription",
