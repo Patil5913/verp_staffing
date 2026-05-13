@@ -52,6 +52,9 @@
   "agreement_tab",
   "agreement_html",
   "payment_terms_tab",
+  "invoice_section",
+  "invoices_html",
+  "payment_terms_section",
   "payment_terms"
  ],
  "fields": [
@@ -379,13 +382,27 @@
   {
    "fieldname": "payment_terms_tab",
    "fieldtype": "Tab Break",
+   "label": "Invoice And Payment Terms"
+  },
+  {
+   "fieldname": "invoice_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice"
+  },
+  {
+   "fieldname": "invoices_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "payment_terms_section",
+   "fieldtype": "Section Break",
    "label": "Payment Terms"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-13 10:03:57.388633",
+ "modified": "2026-05-13 15:00:36.924167",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",

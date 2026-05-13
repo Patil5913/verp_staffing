@@ -30,6 +30,17 @@ frappe.ui.form.on("Sales Order", {
 		);
 		await update_agreement_module(frm);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
+		await render_invoices_tab(frm);
+
+		if (!frm.is_new()) {
+			frm.add_custom_button(
+				__("Sales Invoice"),
+				() => {
+					open_create_invoice_dialog(frm);
+				},
+				__("Create"),
+			);
+		}
 	},
 	onload(frm) {
 		set_account_queries(frm);
@@ -214,10 +225,10 @@ frappe.ui.form.on("Items Table", {
 		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
 			if (r.message && r.message.stock_uom) {
 				row.uom = r.message.stock_uom;
-				row.qty = 1;
-
-				frm.refresh_field("items");
 			}
+			row.qty = 1;
+
+			frm.refresh_field("items");
 		});
 
 		if (frm.doc.company) {
@@ -555,4 +566,200 @@ function toggle_base_fields(frm, show) {
 	});
 }
 
+function get_invoice_indicator(inv) {
+	const today = frappe.datetime.get_today();
+	if (inv.outstanding_amount < 0) return { label: "Credit Note Issued", color: "grey" };
+	if (inv.outstanding_amount == 0) return { label: "Paid", color: "green" };
+	if (inv.outstanding_amount > 0 && inv.due_date && inv.due_date < today)
+		return { label: "Overdue", color: "red" };
+	if (inv.outstanding_amount > 0 && inv.outstanding_amount < inv.grand_total)
+		return { label: "Partly Paid", color: "blue" };
+	return { label: "Unpaid", color: "orange" };
+}
 
+async function render_invoices_tab(frm) {
+	if (frm.is_new()) {
+		frm.get_field("invoices_html").$wrapper.html(
+			`<p class="text-muted" style="padding:10px">
+                Save the Sales Order first to see linked invoices.
+            </p>`,
+		);
+		return;
+	}
+
+	const r = await frappe.call({
+		method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_linked_invoices",
+		args: { sales_order: frm.doc.name },
+	});
+
+	const invoices = r.message || [];
+	const wrapper = frm.get_field("invoices_html").$wrapper;
+
+	if (!invoices.length) {
+		wrapper.html(
+			`<p class="text-muted" style="padding:10px">
+                No invoices created yet.
+            </p>`,
+		);
+		return;
+	}
+
+	const rows = invoices
+		.map((inv) => {
+			const { label, color } = get_invoice_indicator(inv);
+			return `
+            <tr>
+                <td>
+                    <a href="/app/sales-invoice/${inv.name}" target="_blank">
+                        ${inv.name}
+                    </a>
+                </td>
+                <td>${frappe.datetime.str_to_user(inv.posting_date)}</td>
+                <td>${format_currency(inv.grand_total, inv.currency)}</td>
+                <td>${format_currency(inv.outstanding_amount, inv.currency)}</td>
+                <td>
+                    <span class="indicator-pill ${color}">
+                        ${__(label)}
+                    </span>
+                </td>
+            </tr>
+        `;
+		})
+		.join("");
+
+	wrapper.html(`
+        <div style="padding: 10px">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Date</th>
+                        <th>Grand Total</th>
+                        <th>Outstanding</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `);
+}
+
+function format_currency(value, currency) {
+	return frappe.format(value, { fieldtype: "Currency", options: currency });
+}
+
+function open_create_invoice_dialog(frm) {
+	const items = frm.doc.items || [];
+
+	if (!items.length) {
+		frappe.msgprint("No items found on this Sales Order.");
+		return;
+	}
+
+	// Build checklist rows — each item is pre-checked
+	const item_rows = items
+		.map(
+			(row) => `
+        <tr>
+            <td style="width:40px;text-align:center">
+                <input 
+                    type="checkbox" 
+                    class="so-item-check" 
+                    data-rowname="${row.name}"
+                    checked
+                />
+            </td>
+            <td>${row.item}</td>
+            <td style="text-align:right">${row.qty}</td>
+            <td style="text-align:right">
+                ${frappe.format(row.rate, { fieldtype: "Currency", options: frm.doc.currency })}
+            </td>
+            <td style="text-align:right">
+                ${frappe.format(row.amount, { fieldtype: "Currency", options: frm.doc.currency })}
+            </td>
+        </tr>
+    `,
+		)
+		.join("");
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Create Sales Invoice"),
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "items_html",
+				options: `
+                    <div style="margin-bottom:8px">
+                        <a href="#" id="check-all" style="margin-right:12px">Check All</a>
+                        <a href="#" id="uncheck-all">Uncheck All</a>
+                    </div>
+                    <table class="table table-bordered table-condensed">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Item</th>
+                                <th style="text-align:right">Qty</th>
+                                <th style="text-align:right">Rate</th>
+                                <th style="text-align:right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${item_rows}</tbody>
+                    </table>
+                `,
+			},
+		],
+		primary_action_label: __("Create Invoice"),
+		primary_action: async () => {
+			const selected = [];
+			dialog.$wrapper.find(".so-item-check:checked").each(function () {
+				selected.push($(this).data("rowname"));
+			});
+
+			if (!selected.length) {
+				frappe.msgprint("Please select at least one item.");
+				return;
+			}
+
+			dialog.disable_primary_action();
+
+			try {
+				const r = await frappe.call({
+					method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_sales_invoice",
+					args: {
+						sales_order: frm.doc.name,
+						selected_items: JSON.stringify(selected),
+					},
+				});
+
+				if (r.message) {
+					dialog.hide();
+					frappe.msgprint({
+						title: __("Invoice Created"),
+						message: `Sales Invoice <b>${r.message}</b> created successfully.
+                            <br><br>
+                            <a href="/app/sales-invoice/${r.message}" target="_blank">
+                                Open Invoice →
+                            </a>`,
+						indicator: "green",
+					});
+					await render_invoices_tab(frm);
+				}
+			} catch (e) {
+				dialog.enable_primary_action();
+			}
+		},
+	});
+
+	dialog.show();
+
+	// Wire up check all / uncheck all
+	dialog.$wrapper.find("#check-all").on("click", (e) => {
+		e.preventDefault();
+		dialog.$wrapper.find(".so-item-check").prop("checked", true);
+	});
+	dialog.$wrapper.find("#uncheck-all").on("click", (e) => {
+		e.preventDefault();
+		dialog.$wrapper.find(".so-item-check").prop("checked", false);
+	});
+}

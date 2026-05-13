@@ -1519,7 +1519,7 @@ def seed_services_and_departments():
             frappe.get_doc({
                 "doctype": "Item Category",
                 "item_category_name":"ALL"
-            })
+            }).insert()
         for service_name in services:
             if not frappe.db.exists("Item", service_name):
                 frappe.get_doc({

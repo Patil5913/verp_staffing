@@ -17,6 +17,7 @@ from frappe.utils import flt, now_datetime, money_in_words
 from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 
+
 class SalesOrder(Document):
     def autoname(self):
         if not self.customer:
@@ -42,7 +43,6 @@ class SalesOrder(Document):
         self.handle_currency_logic()
         run_calculation(self)
         self.set_in_words()
-    
 
     def validate_mandatory(self):
         if not self.customer:
@@ -53,15 +53,14 @@ class SalesOrder(Document):
 
         for item in self.items:
             if not item.income_account:
-                frappe.throw(
-                    _("Row {0}: Income account is mandatory").format(item.idx)
-                )
+                frappe.throw(_("Row {0}: Income account is mandatory").format(item.idx))
 
         if self.currency == self.company_currency:
             self.conversion_rate = 1
         else:
             if not self.conversion_rate or self.conversion_rate <= 0:
                 frappe.throw("Valid Conversion Rate required")
+
     def validate_expense_accounts(self):
         for item in self.items:
             validate_account(
@@ -71,6 +70,7 @@ class SalesOrder(Document):
                 label="Income Account",
                 row=item.idx,
             )
+
     def validate_tax_accounts(self):
         for tax in self.taxes:
             validate_account(
@@ -144,7 +144,7 @@ class SalesOrder(Document):
                     "Conversion rate is 1.00, but document currency is different from company currency"
                 )
             )
-            
+
     def set_in_words(self):
         self.in_words = money_in_words(self.rounded_total, self.currency)
 
@@ -228,7 +228,6 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         # 🔹 Try to use Email Template
         template_name = "Document Signature and Certificate"
-        
 
         if frappe.db.exists("Email Template", template_name):
             template = frappe.get_doc("Email Template", template_name)
@@ -285,7 +284,6 @@ def send_details_form_notification(recipient, sales_order, customer):
         template_name = "Candidate Details Form"
 
         if frappe.db.exists("Email Template", template_name):
-
             template = frappe.get_doc("Email Template", template_name)
 
             context = {
@@ -301,7 +299,7 @@ def send_details_form_notification(recipient, sales_order, customer):
             # handle both cases (depends on your template setup)
             message = frappe.render_template(
                 template.response_html or template.response, context
-            )            
+            )
 
         else:
             # Fallback (your existing logic)
@@ -330,3 +328,87 @@ def send_details_form_notification(recipient, sales_order, customer):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Details Form Notification Error")
         raise
+
+
+@frappe.whitelist()
+def create_sales_invoice(sales_order, selected_items):
+    """Create sales invoice directly from sales order
+    User can create multiple sales invoice and select
+    items from sales order to be included in invoice
+    """
+    if isinstance(selected_items, str):
+        selected_items = json.loads(selected_items)
+
+    if not selected_items:
+        frappe.throw("Please select at least one item to invoice")
+
+    so = frappe.get_doc("Sales Order", sales_order)
+
+    si = frappe.new_doc("Sales Invoice")
+    si.customer = so.customer
+    si.company = so.company
+    si.company_currency = so.company_currency
+    si.currency = so.currency
+    si.conversion_rate = so.conversion_rate
+    si.sales_order = so.name
+    si.disable_rounded_total = so.disable_rounded_total
+    si.additional_discount_percentage = so.additional_discount_percentage
+    si.discount_amount = so.discount_amount
+    si.additional_discount_account = so.additional_discount_account
+
+    # Copy only selected items (selected_items is a list of row names from Items Table)
+    for row in so.items:
+        if row.name in selected_items:
+            si.append(
+                "items",
+                {
+                    "item": row.item,
+                    "qty": row.qty,
+                    "rate": row.rate,
+                    "amount": row.amount,
+                    "uom": row.uom,
+                    "income_account": row.income_account,
+                    "type": row.type,
+                },
+            )
+
+    if not si.items:
+        frappe.throw("None of the selected items were found on the Sales Order")
+
+    # Copy taxes as-is
+    for tax in so.taxes:
+        si.append(
+            "taxes",
+            {
+                "charge_type": tax.charge_type,
+                "account_head": tax.account_head,
+                "description": tax.description,
+                "rate": tax.rate,
+                "tax_amount": tax.tax_amount,
+                "row_id": tax.row_id,
+            },
+        )
+
+    si.insert(ignore_permissions=True)
+    si.submit()
+    return si.name
+
+
+@frappe.whitelist()
+def get_linked_invoices(sales_order):
+    """Get invoices lined with sales order"""
+    invoices = frappe.get_all(
+        "Sales Invoice",
+        filters={"sales_order": sales_order},
+        fields=[
+            "name",
+            "posting_date",
+            "due_date",
+            "grand_total",
+            "outstanding_amount",
+            "currency",
+        ],
+        order_by="creation desc",
+    )
+
+    return invoices

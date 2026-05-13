@@ -22,6 +22,7 @@
   "return_against",
   "update_outstanding_for_self",
   "is_debit_note",
+  "sales_order",
   "currency_section",
   "currency",
   "conversion_rate",
@@ -510,13 +511,20 @@
    "read_only": 1,
    "report_hide": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "set_only_once": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-13 10:24:57.068112",
+ "modified": "2026-05-13 14:43:24.358408",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",
