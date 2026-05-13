@@ -729,26 +729,26 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		.join("");
 
 	// ── simple fields grid ────────────────────────────────────────────────────
-	const simpleHtml = `
-<p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;">${__("Select fields to update")}</p>
-<div id="fg-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
-	${Object.entries(fields)
-		.map(([fn, fm]) => {
-			const lbl = typeof fm === "string" ? fm : fm?.label || fn.replace(/_/g, " ");
-			const old = current_values[fn] || "";
-			return `<div class="fg-row" data-fieldname="${fn}" data-label="${frappe.utils.escape_html(lbl)}" data-current="${frappe.utils.escape_html(old)}"
-	style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;transition:all 0.2s ease;min-width:0;"
-	onmouseenter="this.style.borderColor='black'" onmouseleave="if(!this.classList.contains('selected'))this.style.borderColor='#00000020'">
-	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;">
-		<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
-	</div>
-	<span class="fg-label" style="font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${frappe.utils.escape_html(lbl)}</span>
-</div>`;
-		})
-		.join("")}
-</div>
-${tableWidgetHtml}
-<div id="fg-inputs-section" style="display:none;margin-top:16px;"><hr style="border:none;border-top:1px solid var(--color-border-tertiary);margin:0 0 16px;" /><div id="fg-inputs-container"></div></div>`;
+// 	const simpleHtml = `
+// <p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;">${__("Select fields to update")}</p>
+// <div id="fg-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+// 	${Object.entries(fields)
+// 		.map(([fn, fm]) => {
+// 			const lbl = typeof fm === "string" ? fm : fm?.label || fn.replace(/_/g, " ");
+// 			const old = current_values[fn] || "";
+// 			return `<div class="fg-row" data-fieldname="${fn}" data-label="${frappe.utils.escape_html(lbl)}" data-current="${frappe.utils.escape_html(old)}"
+// 	style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;transition:all 0.2s ease;min-width:0;"
+// 	onmouseenter="this.style.borderColor='black'" onmouseleave="if(!this.classList.contains('selected'))this.style.borderColor='#00000020'">
+// 	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;">
+// 		<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
+// 	</div>
+// 	<span class="fg-label" style="font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${frappe.utils.escape_html(lbl)}</span>
+// </div>`;
+// 		})
+// 		.join("")}
+// </div>
+// ${tableWidgetHtml}
+// <div id="fg-inputs-section" style="display:none;margin-top:16px;"><hr style="border:none;border-top:1px solid var(--color-border-tertiary);margin:0 0 16px;" /><div id="fg-inputs-container"></div></div>`;
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Update Detail"),

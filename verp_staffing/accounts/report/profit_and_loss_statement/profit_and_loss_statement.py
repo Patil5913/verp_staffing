@@ -130,26 +130,49 @@ def get_period_date_ranges(filters):
     periodicity = filters.get("periodicity", "Yearly")
 
     if periodicity == "Yearly":
+        # ── Fiscal Year based ─────────────────────────────
         if filters.filter_based_on == "Fiscal Year":
             fy_names = _get_fiscal_years_in_range(
-                filters.from_fiscal_year, filters.to_fiscal_year
+                filters.from_fiscal_year,
+                filters.to_fiscal_year,
             )
+
             if not fy_names:
                 label = "{0} to {1}".format(
                     frappe.format(from_date, {"fieldtype": "Date"}),
                     frappe.format(to_date, {"fieldtype": "Date"}),
                 )
+
                 return [(label, from_date, to_date)]
 
+            fiscal_years = frappe.db.sql(
+                """
+                SELECT
+                    name,
+                    year_start_date,
+                    year_end_date
+                FROM `tabFiscal Year`
+                WHERE name IN ({})
+                ORDER BY year_start_date ASC
+                """.format(", ".join(["%s"] * len(fy_names))),
+                fy_names,
+                as_dict=True,
+            )
+
             period_list = []
-            for fy_name in fy_names:
-                fy = frappe.get_cached_doc("Fiscal Year", fy_name)
-                p_from = getdate(fy.year_start_date)
-                p_to = getdate(fy.year_end_date)
-                p_from = max(p_from, from_date)
-                p_to = min(p_to, to_date)
-                label = fy_name
-                period_list.append((label, p_from, p_to))
+
+            for fy in fiscal_years:
+                p_from = max(getdate(fy.year_start_date), from_date)
+                p_to = min(getdate(fy.year_end_date), to_date)
+
+                period_list.append(
+                    (
+                        fy.name,
+                        p_from,
+                        p_to,
+                    )
+                )
+
             return period_list
 
         else:

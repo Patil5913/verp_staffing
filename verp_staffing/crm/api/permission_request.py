@@ -9,8 +9,6 @@ from verp_staffing.crm.api.helpers import (
     get_approver_by_department,
 )
 
-PERMISSION_EXPIRY_MINUTES = 30
-
 
 def _add_activity_log(doctype, docname, message, user):
     """Add a comment as activity log on a document."""
@@ -36,7 +34,7 @@ def check_candidate_form_required_from_sales_order(so_name):
     raw = frappe.db.get_single_value(
         "ERP Configuration", "candidate_details_form_fields"
     )
-    
+
     if not raw:
         return False
 
@@ -55,20 +53,6 @@ def check_candidate_form_required_from_sales_order(so_name):
         frappe.log_error(str(e), "Candidate Form Check Error")
 
     return False
-
-
-def is_permission_expired(granted_at_str):
-    if not granted_at_str:
-        return True
-    try:
-        granted_at = datetime.fromisoformat(granted_at_str)
-        if granted_at.tzinfo is None:
-            granted_at = granted_at.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) > granted_at + timedelta(
-            minutes=PERMISSION_EXPIRY_MINUTES
-        )
-    except Exception:
-        return True
 
 
 def _get_dept_access_config():
@@ -152,7 +136,8 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
                     and child_df.fieldname
                 ):
                     columns[child_df.fieldname] = {
-                        "label": child_df.label or child_df.fieldname.replace("_", " ").title(),
+                        "label": child_df.label
+                        or child_df.fieldname.replace("_", " ").title(),
                         "fieldtype": child_df.fieldtype,
                         "options": child_df.options or "",
                         "reqd": child_df.reqd or 0,
@@ -202,6 +187,7 @@ def _check_candidate_form_required_for_customer(customer_name, lead_detail_doc=N
 
     return False
 
+
 @frappe.whitelist()
 def on_sales_order_save(doc):
     if not doc.customer:
@@ -216,7 +202,7 @@ def on_sales_order_save(doc):
 def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     user = frappe.session.user
     employee = get_employee_name(user)
-    
+
     if user == "Administrator":
         return {
             "is_owner": True,
@@ -482,7 +468,7 @@ def request_field_update(
 
     elif service_doctype:
         department = get_department_from_service(service_doctype)
-        
+
     manager_employee = get_approver_by_department(employee, service_doctype, extra_info)
     if not manager_employee:
         frappe.throw(
@@ -599,7 +585,9 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
 
     manager_employee = get_approver_by_department(employee)
     if not manager_employee:
-        frappe.throw("Permission Request Configuration Is Not Set Up Properly For Sales Department. Please Contact Administrator.")
+        frappe.throw(
+            "Permission Request Configuration Is Not Set Up Properly For Sales Department. Please Contact Administrator."
+        )
 
     manager_user = get_user(manager_employee)
     if not manager_user:
@@ -908,7 +896,7 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
             updated_fields[field] = new_value
 
     data["status"] = "Approved"
-    data["approved_by"] = manager_employee  
+    data["approved_by"] = manager_employee
     data["approved_fields"] = approved_fields
     data["rejected_fields"] = rejected_fields
     data["approved_at"] = datetime.now(timezone.utc).isoformat()
