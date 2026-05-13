@@ -106,7 +106,7 @@ def _seed_all():
     
     _resolved["fiscal_year"] = create_fiscal_year_if_not_exists(
 		fiscal_year=fiscal_year_name,
-		companies=[test_company],
+		company=[test_company],
 		start_date=date(today.year, 4, 1),
 		end_date=date(today.year + 1, 3, 31),
 	)    

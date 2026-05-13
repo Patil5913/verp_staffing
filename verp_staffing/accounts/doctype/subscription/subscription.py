@@ -71,7 +71,7 @@ class Subscription(Document):
 		self._compute_net_total()
 
 	def before_submit(self) -> None:
-		# Status should only resolve after submit; if user is just saving a draft,
+		# Status should only resolve before submit; if user is just saving a draft,
 		# leave status as-is.
 		if not self.status or self.status not in (
 			STATUS_ACTIVE,

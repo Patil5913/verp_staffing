@@ -191,7 +191,7 @@ class PaymentEntry(FrappeTestCase):
         create_party_types_if_not_exists()
         create_fiscal_year_if_not_exists(
             fiscal_year="2026",
-            companies=[company],
+            company=[company],
             start_date="2026-01-01",
             end_date="2026-12-31",
         )
