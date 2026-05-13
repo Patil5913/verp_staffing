@@ -75,35 +75,15 @@ class Department(Document):
 def get_department_service_query(doctype, txt, searchfield, start, page_len, filters):
     return frappe.db.sql(
         """
-	        SELECT s.name
-	        FROM `tabService` s
-	        LEFT JOIN `tabDepartment Service` ds
-	          ON ds.service_name = s.name
-	        WHERE ds.name IS NULL
-	          AND s.name LIKE %(txt)s
-	        ORDER BY s.name
-	        LIMIT %(start)s, %(page_len)s
-	        """,
-        {
-            "txt": f"%{txt}%",
-            "start": start,
-            "page_len": page_len,
-        },
-    )
-
-@frappe.whitelist()
-def get_department_role_query(doctype, txt, searchfield, start, page_len, filters):
-    return frappe.db.sql(
-        """
-            SELECT r.name
-            FROM `tabRole` r
-            LEFT JOIN `tabDepartment Role` dr
-              ON dr.role = r.name
-            WHERE dr.name IS NULL
-              AND r.name LIKE %(txt)s
-            ORDER BY r.name
-            LIMIT %(start)s, %(page_len)s
-            """,
+        SELECT s.name
+        FROM `tabItem` s
+        LEFT JOIN `tabDepartment Service` ds
+          ON ds.service_name = s.name
+        WHERE ds.name IS NULL
+          AND s.name LIKE %(txt)s
+        ORDER BY s.name
+        LIMIT %(start)s, %(page_len)s
+        """,
         {
             "txt": f"%{txt}%",
             "start": start,

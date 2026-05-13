@@ -1514,31 +1514,38 @@ SERVICE_DEPARTMENT_MAP = {
 
 def seed_services_and_departments():
     for department_name, services in SERVICE_DEPARTMENT_MAP.items():
+        # Step 1: Ensure each service Item exists with is_service=1
+        if not frappe.db.exists("Item Category","ALL"):
+            frappe.get_doc({
+                "doctype": "Item Category",
+                "item_category_name":"ALL"
+            })
+        for service_name in services:
+            if not frappe.db.exists("Item", service_name):
+                frappe.get_doc({
+                    "doctype": "Item",
+                    "item_name": service_name,
+                    "is_service": 1,
+                    "item_category":"ALL",
+                    "disabled": 0,
+                }).insert(ignore_permissions=True)
+            else:
+                # Ensure existing item is flagged as service
+                frappe.db.set_value("Item", service_name, "is_service", 1)
 
+        # Step 2: Ensure Department exists
         if not frappe.db.exists("Department", department_name):
-            department = frappe.get_doc(
-                {
-                    "doctype": "Department",
-                    "department_name": department_name,
-                }
-            )
+            department = frappe.get_doc({
+                "doctype": "Department",
+                "department_name": department_name,
+            })
             department.insert(ignore_permissions=True)
         else:
             department = frappe.get_doc("Department", department_name)
 
+        # Step 3: Reset and re-populate Department Service multiselect
         department.services = []
-
         for service_name in services:
-
-            if not frappe.db.exists("Service", service_name):
-                service = frappe.get_doc(
-                    {
-                        "doctype": "Service",
-                        "service_name": service_name,
-                    }
-                )
-                service.insert(ignore_permissions=True)
-
             department.append("services", {"service_name": service_name})
 
         department.save(ignore_permissions=True)

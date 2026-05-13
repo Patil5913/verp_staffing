@@ -41,7 +41,6 @@ frappe.ui.form.on("Customer", {
 			},
 			callback(r) {
 				CURRENT_EMPLOYEE = r.message?.name;
-				load_routes(frm);
 			},
 		});
 
@@ -245,68 +244,6 @@ function set_customer_owner(frm) {
 			},
 		});
 	}
-}
-
-function load_routes(frm) {
-	frappe.call({
-		method: "verp_staffing.crm.doctype.customer.customer.get_customer_routes",
-		args: { customer: frm.doc.name },
-		callback(r) {
-			const data = r.message || [];
-			let html = "<p>No routing history</p>";
-
-			if (data.length) {
-				html = `
-                    <table class="table table-bordered">
-                        <tr>
-                            <th>Department</th>
-                            <th>Status</th>
-                            <th>Assigned To</th>
-                            <th>Forwarded On</th>
-                            <th>Completed On</th>
-                        </tr>
-                `;
-				data.forEach((row) => {
-					html += `
-                        <tr>
-                            <td>${row.department}</td>
-                            <td>${get_status_html(row)}</td>
-                            <td>${row.assigned_to || "-"}</td>
-                            <td>${row.forwarded_on || "-"}</td>
-                            <td>${row.completed_on || "-"}</td>
-                        </tr>
-                    `;
-				});
-				html += "</table>";
-			}
-
-			const wrapper = frm.fields_dict.department_route_html.$wrapper;
-			wrapper.html(html);
-			wrapper.off("change", ".route-status");
-			wrapper.on("change", ".route-status", function () {
-				const route = $(this).data("route");
-				const value = $(this).val();
-				if (value !== "Completed") return;
-
-				frappe.confirm(
-					"This action cannot be reverted. Continue?",
-					() => {
-						frappe.call({
-							method: "verp_staffing.crm.doctype.customer.customer.update_route_status",
-							args: { route_name: route, status: "Completed" },
-							callback() {
-								frappe.msgprint("Status updated to Completed");
-								frm.refresh();
-							},
-						});
-					},
-					() => {
-						frm.refresh();
-					},
-				);
-			});
-		},
-	});
 }
 
 function get_status_html(row) {

@@ -102,7 +102,6 @@
    "default": "{\"resume\":{\"fields\":[\"surname\",\"first_name\",\"father_name\",\"personal_phone_number\",\"email\",\"personal_linkedin\",\"date_of_birth\",\"educational_details\",\"past_experience_table\",\"technologies\",\"additional_skills\",\"entry_date\",\"current_address\",\"address_history\",\"certificate_or_completed_course\",\"current_visa_status\",\"experience\",\"number_for_marketing\",\"marketing_linkedin\",\"remarks\",\"ead_card\",\"old_resume\"],\"is_agreement_required\":false,\"is_candidate_form_required\":false},\"marketing\":{\"fields\":[\"surname\",\"first_name\",\"father_name\",\"personal_phone_number\",\"email\",\"personal_linkedin\",\"date_of_birth\",\"educational_details\",\"past_experience_table\",\"technologies\",\"additional_skills\",\"entry_date\",\"current_address\",\"address_history\",\"certificate_or_completed_course\",\"current_visa_status\",\"experience\",\"number_for_marketing\",\"google_voice_number\",\"marketing_linkedin\",\"linkedin_password\",\"passport_number\",\"ssn_digit\",\"availability_for_interview\",\"remarks\",\"visa_copy\",\"ead_card\",\"driving_licence\",\"old_resume\",\"position\",\"placement_company\",\"job_duration\",\"salary\",\"company_percentage\"],\"is_agreement_required\":false,\"is_candidate_form_required\":false},\"Cover Letter\":{\"fields\":[\"old_resume\"],\"is_agreement_required\":false,\"is_candidate_form_required\":false},\"Training\":{\"fields\":[\"email\",\"first_name\",\"personal_phone_number\",\"old_resume\"],\"is_agreement_required\":false,\"is_candidate_form_required\":false},\"JDC\":{\"fields\":[\"email\",\"first_name\",\"personal_phone_number\",\"old_resume\"],\"is_agreement_required\":false,\"is_candidate_form_required\":false},\"ruc\":{\"fields\":[\"email\",\"first_name\",\"personal_phone_number\",\"old_resume\"],\"is_agreement_required\":false,\"is_candidate_form_required\":false}}",
    "fieldname": "candidate_details_form_fields",
    "fieldtype": "Long Text",
-   "hidden": 1,
    "label": "Candidate Details Form Fields"
   },
   {
@@ -191,12 +190,16 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-02 15:25:44.391297",
+ "modified": "2026-05-12 14:55:26.170261",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
  "owner": "Administrator",
  "permissions": [
+  {
+   "read": 1,
+   "role": "Lead Manager"
+  },
   {
    "create": 1,
    "delete": 1,
@@ -209,15 +212,7 @@
   },
   {
    "read": 1,
-   "role": "Lead Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Lead Manager"
-  },
-  {
-   "read": 1,
-   "role": "Lead Person"
+   "role": "Sales Master Manager"
   },
   {
    "read": 1,
@@ -225,11 +220,15 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Lead Team Lead"
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Lead Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -241,31 +240,15 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Recruiter"
-  },
-  {
-   "read": 1,
    "role": "Marketing Team Lead"
   },
   {
    "read": 1,
-   "role": "Technical Coordinator"
+   "role": "Sales Person"
   },
   {
    "read": 1,
-   "role": "Senior Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "marketing Manager"
-  },
-  {
-   "read": 1,
-   "role": "Resume Person"
+   "role": "Marketing Manager"
   },
   {
    "read": 1,
@@ -273,27 +256,23 @@
   },
   {
    "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
    "role": "Technical Master Manager"
   },
   {
    "read": 1,
-   "role": "HR"
+   "role": "Technical Coordinator"
   },
   {
    "read": 1,
-   "role": "HR Manager"
-  },
-  {
-   "read": 1,
-   "role": "Support Person"
-  },
-  {
-   "read": 1,
-   "role": "RUC Person"
-  },
-  {
-   "read": 1,
-   "role": "Training Person"
+   "role": "Resume Person"
   },
   {
    "read": 1,
@@ -301,11 +280,31 @@
   },
   {
    "read": 1,
-   "role": "Onboarding Person"
+   "role": "Training Person"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
   },
   {
    "read": 1,
    "role": "JDC"
+  },
+  {
+   "read": 1,
+   "role": "HR"
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person"
   }
  ],
  "row_format": "Dynamic",

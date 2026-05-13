@@ -5,25 +5,23 @@ frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {
 		set_currency_labels(frm);
 		if (frm.doc.docstatus === 1) {
-			
-			frm.add_custom_button(__("Send Invoice"), function () {
-				frappe.confirm(
-					"Send Sales Invoice email to customer?",
-					function () {						
+			frm.add_custom_button(
+				__("Send Invoice"),
+				function () {
+					frappe.confirm("Send Sales Invoice email to customer?", function () {
 						frappe.call({
 							method: "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_sales_invoice_email",
 							args: { doc: frm.doc.name },
 							callback(r) {
 								if (!r.exc) {
-									
 									frappe.msgprint("Invoice sent successfully.");
 								}
-							}
+							},
 						});
-					}
-				);
-			}, __("Email"));
-
+					});
+				},
+				__("Email"),
+			);
 		}
 		(frm.doc.items || []).forEach((row) => {
 			if (!row.type) {
@@ -140,7 +138,7 @@ frappe.ui.form.on("Sales Invoice", {
 	disable_rounded_total(frm) {
 		verp_staffing.calculation_engine.calculate_rounding(frm);
 	},
-}); 
+});
 
 frappe.ui.form.on("Items Table", {
 	item: async function (frm, cdt, cdn) {
@@ -151,14 +149,13 @@ frappe.ui.form.on("Items Table", {
 		row.type = "Sales";
 
 		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
-
 			if (r.message && r.message.stock_uom) {
 				row.uom = r.message.stock_uom;
-				row.qty = 1;
-
-				frm.refresh_field("items");
 			}
 		});
+		row.qty = 1;
+
+		frm.refresh_field("items");
 
 		if (frm.doc.company) {
 			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
@@ -169,7 +166,21 @@ frappe.ui.form.on("Items Table", {
 				}
 			});
 		}
-
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	items_add: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		row.type = "Sales";
+		frm.refresh_field("items");
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	items_remove: function (frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	qty(frm, cdt, cdn) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	rate(frm, cdt, cdn) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
@@ -214,31 +225,25 @@ frappe.ui.form.on("Taxes and Charges", {
 function handle_currency_ui(frm) {
 	if (!frm.doc.company || !frm.doc.currency) return;
 
-	frappe.call({
-		method: "verp_staffing.accounts.doctype.company.company.get_company_currency",
-		args: { company: frm.doc.company },
-		callback(r) {
-			const company_currency = r.message;
+	const company_currency = frm.doc.company_currency;
 
-			if (!company_currency) return;
+	if (!company_currency) return;
 
-			if (frm.doc.currency === company_currency) {
-				// Same currency
-				frm.set_value("conversion_rate", 1);
+	if (frm.doc.currency === company_currency) {
+		// Same currency
+		frm.set_value("conversion_rate", 1);
 
-				frm.set_df_property("conversion_rate", "hidden", 1);
-				frm.set_df_property("conversion_rate", "reqd", 0);
+		frm.set_df_property("conversion_rate", "hidden", 1);
+		frm.set_df_property("conversion_rate", "reqd", 0);
 
-				toggle_base_fields(frm, false);
-			} else {
-				// Different currency
-				frm.set_df_property("conversion_rate", "hidden", 0);
-				frm.set_df_property("conversion_rate", "reqd", 1);
+		toggle_base_fields(frm, false);
+	} else {
+		// Different currency
+		frm.set_df_property("conversion_rate", "hidden", 0);
+		frm.set_df_property("conversion_rate", "reqd", 1);
 
-				toggle_base_fields(frm, true);
-			}
-		},
-	});
+		toggle_base_fields(frm, true);
+	}
 }
 
 function toggle_base_fields(frm, show) {
@@ -371,10 +376,9 @@ function set_account_queries(frm) {
 	};
 }
 
-async function set_currency_labels(frm) {
+function set_currency_labels(frm) {
 	const currency = frm.doc.currency || "";
-	const company_currency =
-		(await frappe.db.get_value("Company", frm.doc.company, "default_currency")) || "";
+	const company_currency = frm.doc.company_currency
 
 	const fields = [
 		"total",
@@ -406,7 +410,7 @@ async function set_currency_labels(frm) {
 		if (
 			currency &&
 			company_currency &&
-			currency !== company_currency.message.default_currency
+			currency !== company_currency
 		) {
 			frm.set_df_property(field, "hidden", false);
 		} else {
@@ -416,7 +420,7 @@ async function set_currency_labels(frm) {
 		frm.set_df_property(
 			field,
 			"label",
-			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency.message.default_currency})`,
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency})`,
 		);
 	});
 }

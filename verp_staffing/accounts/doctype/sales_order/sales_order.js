@@ -13,15 +13,39 @@ frappe.ui.form.on("Sales Order", {
 				__("Send"),
 			);
 		}
+		verp_staffing.purchase.items.update_items_currency_labels(frm);
+		verp_staffing.purchase.exchange.update_description(frm);
 
+		// Set query filter on items child table's item field
+		frm.fields_dict["items"].grid.get_field("item").get_query = function () {
+			return {
+				filters: {
+					is_service: 1,
+					disabled: 0,
+				},
+			};
+		};
+		(frm.doc.taxes || []).forEach((row) =>
+			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
+		);
 		await update_agreement_module(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
-
-	services(frm) {
-		update_agreement_module(frm);
+	onload(frm) {
+		set_account_queries(frm);
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
 	},
-
 	async validate(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
 		const config = await load_erp_config(frm);
 		const requirements = get_requirements_from_config(frm, config);
 
@@ -123,6 +147,143 @@ frappe.ui.form.on("Sales Order", {
 			await frm.reload_doc();
 		}
 	},
+	company: function (frm) {
+		verp_staffing.purchase.exchange.update_description(frm);
+		handle_currency(frm);
+
+		handle_discount_account(frm);
+		if (!frm.doc.company) return;
+		set_account_queries(frm);
+
+		if (frm.doc.items && frm.doc.items.length) {
+			frappe.db
+				.get_value("Company", frm.doc.company, "default_expense_account")
+				.then((r) => {
+					if (!r.message.default_expense_account) {
+						frappe.throw("Default Company Expense Account not set");
+					}
+					if (r.message && r.message.default_expense_account) {
+						frm.doc.items.forEach((item) => {
+							item.expense_account = r.message.default_expense_account;
+						});
+						frm.refresh_field("items");
+					}
+				});
+		}
+	},
+	currency: function (frm) {
+		verp_staffing.purchase.items.update_items_currency_labels(frm);
+		verp_staffing.purchase.exchange.update_description(frm);
+		handle_currency(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
+	},
+	conversion_rate: function (frm) {
+		verp_staffing.purchase.exchange.update_description(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
+	},
+	additional_discount_percentage(frm) {
+		let discount_amount = 0;
+		discount_amount =
+			(flt(frm.doc.total) * flt(frm.doc.additional_discount_percentage || 0)) / 100;
+
+		frm.set_value("discount_amount", discount_amount);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	discount_amount(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+		handle_discount_account(frm);
+	},
+	disable_rounded_total(frm) {
+		verp_staffing.calculation_engine.calculate_rounding(frm);
+	},
+});
+
+// Child table handler — re-apply filter when a new row is added
+frappe.ui.form.on("Items Table", {
+	item(frm, cdt, cdn) {
+		if (frm.doc.doctype !== "Sales Order") return;
+
+		const row = locals[cdt][cdn];
+
+		if (!row.item) return;
+
+		row.type = "Sales";
+
+		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
+			if (r.message && r.message.stock_uom) {
+				row.uom = r.message.stock_uom;
+				row.qty = 1;
+
+				frm.refresh_field("items");
+			}
+		});
+
+		if (frm.doc.company) {
+			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
+				if (r.message?.default_income_account) {
+					row.income_account = r.message.default_income_account;
+
+					frm.refresh_field("items");
+				}
+			});
+		}
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+		update_agreement_module(frm);
+	},
+	items_add(frm, cdt, cdn) {
+		frappe.model.set_value(cdt, cdn, "type", "Sales");
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+		frm.fields_dict["items"].grid.get_field("item").get_query = function () {
+			return {
+				filters: {
+					is_service: 1,
+					disabled: 0,
+				},
+			};
+		};
+		update_agreement_module(frm);
+	},
+	items_remove: function (frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+		update_agreement_module(frm);
+	},
+
+	qty: function (frm, cdt, cdn) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+
+	rate: function (frm, cdt, cdn) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+});
+
+frappe.ui.form.on("Taxes and Charges", {
+	refresh(frm) {
+		(frm.doc.taxes || []).forEach((row) =>
+			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
+		);
+	},
+	charge_type(frm, cdt, cdn) {
+		verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, cdt, cdn);
+	},
+	rate(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	tax_amount(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	taxes_add(frm, cdt, cdn) {
+		verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, cdt, cdn);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	taxes_remove(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
+	row_id(frm) {
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
 });
 
 async function update_agreement_module(frm) {
@@ -134,7 +295,8 @@ async function update_agreement_module(frm) {
 		wrapper: frm.get_field("agreement_html").$wrapper,
 		sales_order: frm.doc.name,
 		allow_create: true,
-		auto_mode: config.sendAgreementImmediately && requirements.agreement_required && frm.is_new(),
+		auto_mode:
+			config.sendAgreementImmediately && requirements.agreement_required && frm.is_new(),
 	});
 }
 
@@ -159,7 +321,7 @@ async function load_erp_config(frm) {
 		rawConfig = {};
 	}
 
-	// 🔥 Normalize structure (this is critical, don't skip)
+	// Normalize structure (this is critical, don't skip)
 	const serviceConfig = {};
 
 	Object.keys(rawConfig).forEach((service) => {
@@ -180,7 +342,7 @@ async function load_erp_config(frm) {
 			r.message.send_agreement_immediatly_after_sales_order_creation,
 		),
 
-		// 🔥 full service-wise config
+		// full service-wise config
 		serviceConfig: serviceConfig,
 	};
 
@@ -188,15 +350,15 @@ async function load_erp_config(frm) {
 }
 
 function get_requirements_from_config(frm, config) {
-	const services = (frm.fields_dict.services.get_value() || [])
-		.map((row) => row.service)
-		.filter(Boolean);
+	// Read item names directly from the items child table
+	// These are already guaranteed is_service=1 via the get_query filter
+	const items = (frm.doc.items || []).map((row) => row.item).filter(Boolean);
 
 	let agreement_required = false;
 	let candidate_required = false;
 
-	services.forEach((service) => {
-		const cfg = config.serviceConfig[service];
+	items.forEach((item) => {
+		const cfg = config.serviceConfig[(item || "").trim()];
 
 		if (!cfg) return;
 
@@ -243,3 +405,154 @@ async function send_details_form(frm) {
 		},
 	});
 }
+
+function handle_currency(frm) {
+	set_currency_labels(frm);
+	if (frm.doc.currency === frm.doc.company_currency) {
+		// Same currency
+		frm.set_value("conversion_rate", 1);
+		frm.set_df_property("conversion_rate", "hidden", 1);
+		frm.set_df_property("conversion_rate", "reqd", 0);
+
+		toggle_base_fields(frm, false);
+	} else {
+		// Different currency
+		frm.set_df_property("conversion_rate", "hidden", 0);
+		frm.set_df_property("conversion_rate", "reqd", 1);
+
+		toggle_base_fields(frm, true);
+	}
+}
+
+function set_account_queries(frm) {
+	frm.set_query("income_account", "items", () => {
+		if (!frm.doc.company) {
+			return {
+				filters: {
+					name: "__invalid__",
+				},
+			};
+		}
+
+		return {
+			filters: {
+				account_type: ["in", ["Income", "Income Account"]],
+				report_type: "Profit and Loss",
+				is_group: 0,
+				company: frm.doc.company,
+			},
+		};
+	});
+
+	frm.set_query("account_head", "taxes", () => {
+		if (!frm.doc.company) {
+			return {
+				filters: {
+					name: "__invalid__",
+				},
+			};
+		}
+
+		return {
+			filters: {
+				account_type: ["in", ["Tax", "Chargeable", "Expense", "Income Account"]],
+				is_group: 0,
+				company: frm.doc.company,
+			},
+		};
+	});
+
+	frm.set_query("additional_discount_account", () => {
+		if (!frm.doc.company) {
+			return {
+				filters: {
+					name: "__invalid__",
+				},
+			};
+		}
+
+		return {
+			filters: {
+				company: frm.doc.company,
+				is_group: 0,
+				report_type: "Profit and Loss",
+			},
+		};
+	});
+}
+
+function handle_discount_account(frm) {
+	if (!frm.doc.company) return;
+
+	if (flt(frm.doc.discount_amount) > 0 && !frm.doc.additional_discount_account) {
+		frappe.db.get_value("Company", frm.doc.company, "default_discount_account").then((r) => {
+			if (r.message && r.message.default_discount_account) {
+				frm.set_value("additional_discount_account", r.message.default_discount_account);
+			}
+		});
+	}
+}
+
+function set_currency_labels(frm) {
+	const currency = frm.doc.currency || "";
+	const company_currency = frm.doc.company_currency || "";
+
+	const fields = [
+		"total",
+		"net_total",
+		"grand_total",
+		"rounded_total",
+		"discount_amount",
+		"rounding_adjustment",
+		"total_taxes_and_charges",
+	];
+	fields.forEach((field) => {
+		frm.set_df_property(
+			field,
+			"label",
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${currency})`,
+		);
+	});
+	const company_currency_field = [
+		"base_total",
+		"base_net_total",
+		"base_grand_total",
+		"base_rounded_total",
+		"base_rounding_adjustment",
+		"base_total_taxes_and_charges",
+		"base_in_words",
+		"base_discount_amount",
+	];
+	company_currency_field.forEach((field) => {
+		if (currency && company_currency && currency !== company_currency) {
+			frm.set_df_property(field, "hidden", false);
+		} else {
+			frm.set_df_property(field, "hidden", true);
+		}
+
+		frm.set_df_property(
+			field,
+			"label",
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency})`,
+		);
+	});
+}
+
+function toggle_base_fields(frm, show) {
+	const fields = [
+		"base_total",
+		"base_net_total",
+		"base_grand_total",
+		"base_rounded_total",
+		"base_discount_amount",
+	];
+
+	fields.forEach((f) => {
+		frm.set_df_property(f, "hidden", show ? 0 : 1);
+		if (show) {
+			frm.set_value(f, 0);
+		}
+	});
+}
+
+

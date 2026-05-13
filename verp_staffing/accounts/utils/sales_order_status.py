@@ -75,13 +75,18 @@ def _are_all_services_completed(sales_order_doc) -> bool:
       - If NO records exist yet → treat as Pending → False
     """
     customer = sales_order_doc.customer
-
-    for row in sales_order_doc.services:
-        service_name = row.service
-        if not service_name:
-            continue
-
-        target_doctype = _get_service_doctype(service_name)
+    items = frappe.db.get_all(
+            "Items Table",
+            filters={"parent": sales_order_doc.name, "parenttype": "Sales Order"},
+            pluck="item",
+        )
+    service_items = frappe.get_all(
+            "Item",
+            filters={"name": ["in", items], "is_service": 1, "disabled": 0},
+            pluck="name",
+        )
+    for service in service_items:
+        target_doctype = _get_service_doctype(service)
 
         records = frappe.get_all(
             target_doctype,

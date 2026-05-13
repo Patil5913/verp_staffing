@@ -4,6 +4,7 @@
 from datetime import datetime, timedelta
 import os
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
 import hmac
@@ -12,7 +13,9 @@ import base64
 import json
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.permission_request import on_sales_order_save
-
+from frappe.utils import flt, now_datetime, money_in_words
+from verp_staffing.accounts.api.get_defaults import validate_account
+from verp_staffing.accounts.engine.calculator import run_calculation
 
 class SalesOrder(Document):
     def autoname(self):
@@ -23,11 +26,131 @@ class SalesOrder(Document):
 
         self.name = generate_name_series("Sales Order", customer_name)
 
-    # def after_insert(self):
-    #     on_sales_order_save(self)
+    def after_insert(self):
+        on_sales_order_save(self)
 
     # def on_submit(self):
     #     on_sales_order_save(self)
+    def validate(self):
+        self.validate_mandatory()
+        self.validate_expense_accounts()
+        self.validate_tax_accounts()
+        self.validate_tax_accounts()
+        self.validate_discount_account()
+        self.validate_account_currencies()
+        self.handle_currency_logic()
+        self.handle_currency_logic()
+        run_calculation(self)
+        self.set_in_words()
+    
+
+    def validate_mandatory(self):
+        if not self.customer:
+            frappe.throw(_("Customer is required"))
+
+        if not self.items:
+            frappe.throw(_("At least one item is required"))
+
+        for item in self.items:
+            if not item.income_account:
+                frappe.throw(
+                    _("Row {0}: Income account is mandatory").format(item.idx)
+                )
+
+        if self.currency == self.company_currency:
+            self.conversion_rate = 1
+        else:
+            if not self.conversion_rate or self.conversion_rate <= 0:
+                frappe.throw("Valid Conversion Rate required")
+    def validate_expense_accounts(self):
+        for item in self.items:
+            validate_account(
+                account=item.income_account,
+                company=self.company,
+                expected_types=["Income Account"],
+                label="Income Account",
+                row=item.idx,
+            )
+    def validate_tax_accounts(self):
+        for tax in self.taxes:
+            validate_account(
+                account=tax.account_head,
+                company=self.company,
+                expected_types=["Tax", "Chargeable", "Expense"],
+                label="Tax Account",
+                row=tax.idx,
+            )
+
+    def validate_discount_account(self):
+        if flt(self.discount_amount) > 0:
+            if not self.additional_discount_account:
+                frappe.throw(_("Discount Account is mandatory"))
+
+            validate_account(
+                account=self.additional_discount_account,
+                company=self.company,
+                expected_types=["Expense Account"],
+                label="Discount Account",
+            )
+
+    def validate_account_currencies(self):
+        company_currency = self.company_currency
+        doc_currency = self.currency
+
+        invalid_accounts = []
+
+        def check_account(account, label):
+            if not account:
+                return
+
+            acc_currency = frappe.get_cached_value(
+                "Account", account, "account_currency"
+            )
+
+            if acc_currency not in [company_currency, doc_currency]:
+                invalid_accounts.append(f"{label}: {account} ({acc_currency})")
+
+        # Check items
+        for row in self.items:
+            check_account(row.income_account, "Item Row")
+
+        # Check taxes
+        for tax in self.taxes:
+            check_account(tax.account_head, "Tax Row")
+
+        if invalid_accounts:
+            frappe.throw(
+                "Invalid account currency detected:<br>" + "<br>".join(invalid_accounts)
+            )
+
+    def handle_currency_logic(self):
+        default_currency = self.company_currency
+        if not default_currency:
+            frappe.throw(_("Please enter default currency in Company Master"))
+
+        if not self.conversion_rate:
+            frappe.throw(_("Conversion rate cannot be 0"))
+
+        if self.currency == default_currency and flt(self.conversion_rate) != 1.00:
+            frappe.throw(
+                _(
+                    "Conversion rate must be 1.00 if document currency is same as company currency"
+                )
+            )
+
+        if self.currency != default_currency and flt(self.conversion_rate) == 1.00:
+            frappe.msgprint(
+                _(
+                    "Conversion rate is 1.00, but document currency is different from company currency"
+                )
+            )
+            
+    def set_in_words(self):
+        self.in_words = money_in_words(self.rounded_total, self.currency)
+
+        self.base_in_words = money_in_words(
+            self.base_rounded_total, self.company_currency
+        )
 
 
 def generate_token(data: dict):
@@ -122,7 +245,7 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
             message = frappe.render_template(template.response_html, context)
 
         else:
-            # 🔻 Fallback (your current behavior)
+            # Fallback (your current behavior)
             subject = "Agreement for Review and Signature"
             message = f"Form: {form_url}"
 
@@ -175,13 +298,13 @@ def send_details_form_notification(recipient, sales_order, customer):
 
             subject = frappe.render_template(template.subject, context)
 
-            # ⚠️ handle both cases (depends on your template setup)
+            # handle both cases (depends on your template setup)
             message = frappe.render_template(
                 template.response_html or template.response, context
             )            
 
         else:
-            # 🔻 Fallback (your existing logic)
+            # Fallback (your existing logic)
 
             subject = "Candidate Details Form"
             message = (
@@ -193,7 +316,7 @@ def send_details_form_notification(recipient, sales_order, customer):
                 "Team"
             )
 
-        # 🔹 Send Notification
+        # Send Notification
         send_notification(
             recipients=[recipient],
             subject=subject,

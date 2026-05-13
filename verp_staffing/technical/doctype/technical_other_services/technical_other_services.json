@@ -37,7 +37,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Service",
-   "options": "Service",
+   "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
+   "options": "Item",
    "reqd": 1,
    "set_only_once": 1
   },
@@ -115,13 +116,21 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 09:39:56.168956",
+ "modified": "2026-05-12 15:46:38.321711",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -132,14 +141,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Technical Coordinator",
-   "select": 1,
    "write": 1
   },
   {

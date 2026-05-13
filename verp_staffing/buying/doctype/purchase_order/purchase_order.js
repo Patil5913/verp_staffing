@@ -9,10 +9,21 @@ frappe.ui.form.on("Purchase Order", {
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
 		);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
 
 	onload: function (frm) {
 		set_account_queries(frm);
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
 	},
 
 	validate(frm) {
@@ -50,11 +61,13 @@ frappe.ui.form.on("Purchase Order", {
 		verp_staffing.purchase.exchange.update_description(frm);
 		handle_currency(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
 
 	conversion_rate: function (frm) {
 		verp_staffing.purchase.exchange.update_description(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
 
 	additional_discount_percentage(frm) {
@@ -102,7 +115,6 @@ async function set_exchange_rate(frm) {
 frappe.ui.form.on("Purchase Order Item", {
 	item: verp_staffing.purchase.item_handler,
 
-
 	items_add: function (frm) {
 		frappe.model.set_value(cdt, cdn, "type", "Purchase");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
@@ -148,8 +160,6 @@ frappe.ui.form.on("Taxes and Charges", {
 	},
 });
 
-
-
 function update_currency_labels(frm) {
 	const currency = frm.doc.currency || "";
 
@@ -162,8 +172,6 @@ function update_currency_labels(frm) {
 
 	frm.refresh_fields();
 }
-
-
 
 function update_company_currency_labels(frm) {
 	const company_currency_field = [
