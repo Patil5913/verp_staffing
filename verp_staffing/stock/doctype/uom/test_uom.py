@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import cint
 
 class TestUOM(FrappeTestCase):
 	pass
