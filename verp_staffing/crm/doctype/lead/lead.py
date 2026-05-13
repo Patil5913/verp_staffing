@@ -38,7 +38,6 @@ class Lead(Document):
 
         if lead_detail_name:
             self.lead_details = lead_detail_name
-            self.db_update()
 
             # If email is filled in Lead, copy it to Lead Detail Form
             if self.email:
@@ -52,6 +51,7 @@ class Lead(Document):
                     "personal_phone_number",
                     self.personal_phone_number,
                 )
+            self.db_update()
 
     def on_update(self):
         # Sync email to Lead Detail Form whenever Lead email is updated

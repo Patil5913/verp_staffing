@@ -1523,6 +1523,7 @@ function create_opportunity(frm, owner) {
 				opportunity_from_lead: frm.doc.name,
 				opportunity_owner: owner,
 				name1: frm.doc.name1,
+				source: frm.doc.source,
 			},
 		},
 		callback: function (response) {
