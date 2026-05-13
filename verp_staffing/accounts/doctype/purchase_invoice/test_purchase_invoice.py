@@ -93,7 +93,7 @@ def _ensure_fiscal_year():
     if not frappe.db.exists("Fiscal Year Company", {"company": company}):
         create_fiscal_year_if_not_exists(
             fiscal_year=TEST_FISCAL_YEAR,
-            company=[company],
+            company=company,
             start_date="2026-01-01",
             end_date="2026-12-31",
         )

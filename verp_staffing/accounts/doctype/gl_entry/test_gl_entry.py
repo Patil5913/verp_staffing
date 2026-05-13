@@ -50,7 +50,7 @@ class TestGLEntry(FrappeTestCase):
         ).name
         cls.fiscal_year = create_fiscal_year_if_not_exists(
             fiscal_year="2026-2027",
-            company=[cls.company],
+            company=cls.company,
             start_date="2026-04-01",
             end_date="2027-03-31",
         ).name
