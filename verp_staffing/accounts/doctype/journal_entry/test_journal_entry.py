@@ -210,6 +210,7 @@ class TestJournalEntry(JournalEntryBase):
         with self.assertRaises(frappe.ValidationError):
             je.insert(ignore_permissions=True)
 
+
     # 4. Missing posting date raises ValidationError
     def test_missing_posting_date_raises_error(self):
         """
