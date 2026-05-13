@@ -20,15 +20,20 @@ def create_uom_if_not_exists(uom_name, **overrides):
     existing = frappe.db.exists("UOM", uom_name)
 
     if existing:
+        if overrides:
+            frappe.db.set_value(
+                "UOM",
+                existing,
+                overrides,
+            )
         return existing
 
-    defaults = {
+    uom_data = {
         "doctype": "UOM",
         "uom_name": uom_name,
         **overrides
     }
-    defaults.update(overrides)
 
-    uom = frappe.get_doc(defaults)
+    uom = frappe.get_doc(uom_data)
     uom.insert(ignore_permissions=True)
     return uom.name

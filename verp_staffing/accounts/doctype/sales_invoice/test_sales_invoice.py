@@ -20,6 +20,7 @@ from verp_staffing.accounts.doctype.sales_invoice.gl import (
 	on_submit_sales_invoice,
 )
 
+from verp_staffing.stock.doctype.uom.test_uom import create_uom_if_not_exists
 from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
 from verp_staffing.crm.doctype.customer.test_customer import create_customer_if_not_exists
 from verp_staffing.accounts.doctype.company.test_company import create_company_if_not_exists
@@ -61,16 +62,16 @@ def _seed_all():
 
 	_resolved["fiscal_year"] = create_fiscal_year_if_not_exists(
 		fiscal_year=fiscal_year_name,
-		companies=[test_company],
+		company=test_company,
 		start_date=date(today_date.year, 4, 1),
 		end_date=date(today_date.year + 1, 3, 31),
 	)
 
 	# Party & item
 	_resolved["customer"] = create_customer_if_not_exists(TEST_CUSTOMER)
-	_resolved["item"] = create_item_if_not_exists(TEST_ITEM, stock_uom=UOM_FRACTIONAL, must_be_whole_number=0)
+	_resolved["item"] = create_item_if_not_exists(TEST_ITEM, uom=UOM_FRACTIONAL)
 	_resolved["item_integer"] = create_item_if_not_exists(
-		TEST_ITEM_INTEGER, stock_uom=UOM_INTEGER, must_be_whole_number=1
+		TEST_ITEM_INTEGER, uom=UOM_INTEGER
 	)
 
 	# Accounts — util returns a Document, so grab .name
@@ -176,6 +177,7 @@ class TestSalesInvoiceBase(FrappeTestCase):
 				"items",
 				{
 					"item": it["item"],
+					"type": it.get("type", "Sales"),
 					"item_name": it.get("item_name", it["item"]),
 					"qty": it["qty"],
 					"rate": it["rate"],
@@ -253,6 +255,12 @@ class TestSalesInvoiceMandatory(TestSalesInvoiceBase):
 
 class TestUOMValidation(TestSalesInvoiceBase):
 	def test_fractional_qty_rejected_for_whole_number_uom(self):
+     
+		create_uom_if_not_exists(
+			UOM_INTEGER,
+			must_be_whole_number=1,
+		)
+  
 		with self.assertRaises(UOMMustBeIntegerError):
 			self.make_sales_invoice(
 				items=[
