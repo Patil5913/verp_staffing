@@ -43,7 +43,6 @@ frappe.ui.form.on("Opportunity", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
-		
 		// but still allow changes *except* Converted
 		frm.doc._previous_status = frm.doc.status; //save the last status
 
@@ -152,10 +151,6 @@ frappe.ui.form.on("Opportunity", {
 });
 
 async function handle_create_customer(frm) {
-	// if (frm.is_dirty()) {
-	// 	await frm.save();
-	// }
-
 	// fetch existing customers
 	const r = await frappe.call({
 		method: "frappe.client.get_list",

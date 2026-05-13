@@ -10,9 +10,6 @@ from verp_staffing.crm.api.naming import generate_name_series
 
 
 class Opportunity(Document):
-    def before_save(self):
-        pass
-
     def on_trash(self):
         unlink_and_clean_lead_detail("Opportunity", self.name)
 
