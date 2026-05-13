@@ -27,7 +27,6 @@ frappe.ui.form.on("Employee", {
 		toggle_linkedin_section(frm);
 		toggle_revenue_target_section(frm);
 
-		// 🔥 Load hierarchy
 		if (!frm._department_hierarchy) {
 			frm._department_hierarchy = {};
 		}
@@ -76,9 +75,6 @@ frappe.ui.form.on("Employee", {
 				};
 			};
 
-		// -------------------------------
-		// ✅ DESIGNATION FILTER
-		// -------------------------------
 		frm.fields_dict.employee_assignment_details_table.grid.get_field("designation").get_query =
 			function (doc, cdt, cdn) {
 				const row = locals[cdt][cdn];
@@ -114,9 +110,7 @@ frappe.ui.form.on("Employee", {
 				};
 			};
 
-		// -------------------------------
-		// ✅ ASSIGNED TO FILTER
-		// -------------------------------
+
 		frm.fields_dict.employee_assignment_details_table.grid.get_field("assigned_to").get_query =
 			function (doc, cdt, cdn) {
 				const row = locals[cdt][cdn];
@@ -186,9 +180,6 @@ frappe.ui.form.on("Employee", {
 	},
 });
 
-// --------------------------------
-// 🔥 CHILD TABLE EVENTS
-// --------------------------------
 
 frappe.ui.form.on("Employee Assignment Detail", {
 	async department(frm, cdt, cdn) {
@@ -262,10 +253,6 @@ frappe.ui.form.on("Employee Assignment Detail", {
 		}
 });
 
-
-// --------------------------------
-// UI HELPERS
-// --------------------------------
 
 function toggle_linkedin_section(frm) {
 	let show = false;

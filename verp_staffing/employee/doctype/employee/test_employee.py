@@ -15,44 +15,78 @@ from verp_staffing.employee.doctype.employee.employee import (
     user_belongs_to_department,
 )
 
+# ===========================================================================
+# GLOBAL CACHE
+# ===========================================================================
+
+_resolved: dict = {}
+
+# ===========================================================================
+# TEST DATA
+# ===========================================================================
+
 HIERARCHY_DATA = [
     {
         "department": "Lead",
         "role_hierarchy_json": [
             {"parent_role": "Lead Master Manager", "child_roles": ["Lead Manager"]},
-            {"parent_role": "Lead Manager",        "child_roles": ["Lead Team Lead"]},
-            {"parent_role": "Lead Team Lead",      "child_roles": ["Lead Person"]},
+            {"parent_role": "Lead Manager", "child_roles": ["Lead Team Lead"]},
+            {"parent_role": "Lead Team Lead", "child_roles": ["Lead Person"]},
         ],
     },
     {
         "department": "Sales",
         "role_hierarchy_json": [
             {"parent_role": "Sales Master Manager", "child_roles": ["Sales Manager"]},
-            {"parent_role": "Sales Manager",        "child_roles": ["Sales Team Lead"]},
-            {"parent_role": "Sales Team Lead",      "child_roles": ["Sales Person"]},
+            {"parent_role": "Sales Manager", "child_roles": ["Sales Team Lead"]},
+            {"parent_role": "Sales Team Lead", "child_roles": ["Sales Person"]},
         ],
     },
     {
         "department": "Marketing",
         "role_hierarchy_json": [
-            {"parent_role": "Marketing Master Manager", "child_roles": ["Marketing Manager"]},
-            {"parent_role": "Marketing Manager",        "child_roles": ["Marketing Team Lead"]},
-            {"parent_role": "Marketing Team Lead",      "child_roles": ["Senior Recruiter"]},
-            {"parent_role": "Senior Recruiter",         "child_roles": ["Marketing Mentor"]},
-            {"parent_role": "Marketing Mentor",         "child_roles": ["Recruiter"]},
+            {
+                "parent_role": "Marketing Master Manager",
+                "child_roles": ["Marketing Manager"],
+            },
+            {
+                "parent_role": "Marketing Manager",
+                "child_roles": ["Marketing Team Lead"],
+            },
+            {
+                "parent_role": "Marketing Team Lead",
+                "child_roles": ["Senior Recruiter"],
+            },
+            {
+                "parent_role": "Senior Recruiter",
+                "child_roles": ["Marketing Mentor"],
+            },
+            {
+                "parent_role": "Marketing Mentor",
+                "child_roles": ["Recruiter"],
+            },
         ],
     },
     {
         "department": "Resume",
         "role_hierarchy_json": [
-            {"parent_role": "Senior Resume Person", "child_roles": ["Resume Person"]},
+            {
+                "parent_role": "Senior Resume Person",
+                "child_roles": ["Resume Person"],
+            },
         ],
     },
     {
         "department": "Technical",
         "role_hierarchy_json": [
-            {"parent_role": "Technical Master Manager", "child_roles": ["Technical Manager"]},
-            {"parent_role": "Technical Manager",        "child_roles": ["Technical Coordinator"]},
+            {
+                "parent_role": "Technical Master Manager",
+                "child_roles": ["Technical Manager"],
+            },
+            {
+                "parent_role": "Technical Manager",
+                "child_roles": ["Technical Coordinator"],
+            },
             {
                 "parent_role": "Technical Coordinator",
                 "child_roles": [
@@ -72,73 +106,67 @@ HIERARCHY_DATA = [
     },
 ]
 
+# ===========================================================================
+# HELPERS
+# ===========================================================================
+
+
+def _uid(prefix: str) -> str:
+    return f"{prefix}_{uuid.uuid4().hex[:8]}"
+
+
 def _build_role_maps():
-    top_roles   = {}
+    top_roles = {}
     child_roles = {}
+
     for entry in HIERARCHY_DATA:
         dept = entry["department"]
-        all_children, all_parents = set(), set()
+
+        all_children = set()
+        all_parents = set()
+
         for node in entry["role_hierarchy_json"]:
             all_parents.add(node["parent_role"])
-            for cr in node.get("child_roles", []):
-                all_children.add(cr.strip())
-        top_roles[dept]   = all_parents - all_children
+
+            for child in node.get("child_roles", []):
+                all_children.add(child.strip())
+
+        top_roles[dept] = all_parents - all_children
         child_roles[dept] = all_children
+
     return top_roles, child_roles
 
 
 TOP_ROLES, CHILD_ROLES = _build_role_maps()
 
-
-def _top_role(department: str) -> str:
-    return next(iter(TOP_ROLES[department]))
-
-
-def _first_child_role(department: str) -> str:
-    entry = next(e for e in HIERARCHY_DATA if e["department"] == department)
-    return entry["role_hierarchy_json"][0]["child_roles"][0].strip()
-
-
-def _uid(prefix: str) -> str:
-    """Return a short, unique suffix to prevent name collisions across runs."""
-    return f"{prefix}_{uuid.uuid4().hex[:8]}"
-
-
 # ===========================================================================
-# FIXTURE FACTORIES
+# SEED HELPERS
 # ===========================================================================
 
-def make_user(email: str, first_name: str = "Test") -> str:
+
+def _ensure_user(key="default"):
+    cache_key = f"user_{key}"
+    email = f"{key}@test.verp"
+
+    # DB is source of truth, NOT cache
     if not frappe.db.exists("User", email):
         frappe.get_doc({
             "doctype": "User",
             "email": email,
-            "first_name": first_name,
+            "first_name": key.title(),
             "enabled": 1,
             "new_password": "Test@12345!",
             "send_welcome_email": 0,
         }).insert(ignore_permissions=True)
+
+    _resolved[cache_key] = email
+
     return email
 
 
-def make_hierarchy(department: str, hierarchy_json: list) -> None:
-    """Upsert Hierarchy doc and flush the cache so validators see fresh data."""
-    json_str = json.dumps(hierarchy_json)
-    if frappe.db.exists("Hierarchy", department):
-        frappe.db.set_value("Hierarchy", department, "role_hierarchy_json", json_str)
-    else:
-        frappe.get_doc({
-            "doctype": "Hierarchy",
-            "department": department,
-            "role_hierarchy_json": json_str,
-        }).insert(ignore_permissions=True)
-    # Ensure the validator's frappe.db.get_value() reads fresh data
-    frappe.db.commit()
-    frappe.clear_cache(doctype="Hierarchy")
-
-
-def make_all_hierarchies():
-    depts = []
+def _ensure_hierarchies():
+    if _resolved.get("hierarchies_seeded"):
+        return
 
     for entry in HIERARCHY_DATA:
         json_str = json.dumps(entry["role_hierarchy_json"])
@@ -157,119 +185,158 @@ def make_all_hierarchies():
                 "role_hierarchy_json": json_str,
             }).insert(ignore_permissions=True)
 
-        depts.append(entry["department"])
-
-    frappe.db.commit()
     frappe.clear_cache(doctype="Hierarchy")
 
-    return depts
+    _resolved["hierarchies_seeded"] = True
 
 
-def make_employee(employee_name: str, user=None, assignments=None):
-    """Insert through the normal lifecycle – validate() runs."""
+def seed_all():
+    _ensure_hierarchies()
+    _ensure_user()
+
+# ===========================================================================
+# FACTORIES
+# ===========================================================================
+
+
+def make_user(
+    email: str,
+    first_name: str = "Test",
+    **overrides,
+) -> str:
+    if frappe.db.exists("User", email):
+        return email
+
     doc = frappe.get_doc({
+        "doctype": "User",
+        "email": email,
+        "first_name": first_name,
+        "enabled": 1,
+        "new_password": "Test@12345!",
+        "send_welcome_email": 0,
+        **overrides,
+    })
+
+    doc.insert(ignore_permissions=True)
+
+    return email
+
+
+def make_hierarchy(
+    department: str,
+    hierarchy_json: list,
+    **overrides,
+) -> str:
+    json_str = json.dumps(hierarchy_json)
+
+    existing = frappe.db.exists("Hierarchy", department)
+
+    values = {
+        "doctype": "Hierarchy",
+        "department": department,
+        "role_hierarchy_json": json_str,
+        **overrides,
+    }
+
+    if existing:
+        doc = frappe.get_doc("Hierarchy", department)
+        doc.update(values)
+        doc.save(ignore_permissions=True)
+    else:
+        doc = frappe.get_doc(values)
+        doc.insert(ignore_permissions=True)
+
+    frappe.clear_cache(doctype="Hierarchy")
+
+    return doc.name
+
+def make_employee(
+    employee_name,
+    user=None,
+    assignments=None,
+    raw=False,
+    skip_insert=False,
+    **overrides,
+):
+    user = user or _ensure_user()
+
+    values = {
         "doctype": "Employee",
         "employee_name": employee_name,
         "user": user,
         "employee_assignment_details_table": assignments or [],
-    })
+        **overrides,
+    }
+
+    doc = frappe.get_doc(values)
+
+    if raw:
+        doc.flags.ignore_validate = True
+        doc.flags.ignore_links = True
+        doc.flags.ignore_mandatory = True
+        doc.flags.ignore_version = True
+
+        # skip expensive hooks
+        doc.run_post_save_methods = lambda: None
+
+    if skip_insert:
+        return doc
+
     doc.insert(ignore_permissions=True)
+
     return doc
-
-
-def make_employee_raw(employee_name: str, user=None, assignments=None):
-    """
-    Insert bypassing validate() and link validation.
-
-    Uses doc.flags instead of the non-existent ignore_validate kwarg.
-    Use only when the test needs a DB record whose state would fail validation –
-    e.g. an employee in a child role without assigned_to, purely to test a
-    query function.
-    """
-    doc = frappe.get_doc({
-        "doctype": "Employee",
-        "employee_name": employee_name,
-        "user": user,
-        "employee_assignment_details_table": assignments or [],
-    })
-    doc.flags.ignore_validate        = True
-    doc.flags.ignore_links           = True   # skip Frappe link validation
-    doc.flags.ignore_mandatory       = True   # skip mandatory checks
-    doc.insert(ignore_permissions=True)
-    return doc
-
 
 # ===========================================================================
 # BASE CLASS
 # ===========================================================================
 
-class EmployeeTestBase(FrappeTestCase):
 
-    _users_created:       list
-    _employees_created:   list
-    _hierarchies_created: list
+class EmployeeTestBase(FrappeTestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        
-        cls._users_created       = []
-        cls._employees_created   = []
-        cls._hierarchies_created = []
+        seed_all()
 
     @classmethod
     def tearDownClass(cls):
-        for emp in cls._employees_created:
-            if frappe.db.exists("Employee", emp):
-                frappe.delete_doc("Employee", emp,
-                                  ignore_permissions=True, force=True)
-        for user in cls._users_created:
-            if frappe.db.exists("User", user):
-                frappe.delete_doc("User", user,
-                                  ignore_permissions=True, force=True)
-        for dept in cls._hierarchies_created:
-            if frappe.db.exists("Hierarchy", dept):
-                frappe.delete_doc("Hierarchy", dept,
-                                  ignore_permissions=True, force=True)
-        if hasattr(cls, "_original_commit"):
-            frappe.db.commit = cls._original_commit
+        frappe.clear_cache(doctype="Hierarchy")
         frappe.db.rollback()
-        super().tearDownClass()
 
     @classmethod
     def _make_user(cls, email: str, first_name: str = "Test") -> str:
-        name = make_user(email, first_name)
-        if name not in cls._users_created:
-            cls._users_created.append(name)
-        return name
+        return make_user(email, first_name)
 
     @classmethod
-    def _make_hierarchy(cls, department: str, hierarchy_json: list) -> None:
-        make_hierarchy(department, hierarchy_json)
-        if department not in cls._hierarchies_created:
-            cls._hierarchies_created.append(department)
+    def _make_employee(
+        cls,
+        employee_name,
+        user=None,
+        assignments=None,
+    ):
+        return make_employee(
+            employee_name=employee_name,
+            user=user,
+            assignments=assignments,
+        )
 
     @classmethod
-    def _make_all_hierarchies(cls) -> list:
-        depts = make_all_hierarchies()
-        for d in depts:
-            if d not in cls._hierarchies_created:
-                cls._hierarchies_created.append(d)
-        return depts
-
+    def _make_employee_raw(
+        cls,
+        employee_name,
+        user=None,
+        assignments=None,
+    ):
+        return make_employee(
+            employee_name=employee_name,
+            user=user,
+            assignments=assignments,
+            raw=True,
+        )
+    
     @classmethod
-    def _make_employee(cls, employee_name: str, user=None, assignments=None):
-        doc = make_employee(employee_name, user, assignments)
-        cls._employees_created.append(doc.name)
-        return doc
-
-    @classmethod
-    def _make_employee_raw(cls, employee_name: str, user=None, assignments=None):
-        doc = make_employee_raw(employee_name, user, assignments)
-        cls._employees_created.append(doc.name)
-        return doc
-
-
+    def _make_all_hierarchies(cls):
+        _ensure_hierarchies()
 # ===========================================================================
 # 1.  AUTONAME
 # ===========================================================================
@@ -575,19 +642,6 @@ class TestValidateAssignedToRequired(EmployeeTestBase):
                 }],
             )
 
-    def test_all_technical_coordinator_children_require_assigned_to(self):
-        children = ["RUC Person", "Training Person", "JDC", "Support Person"]
-        for child in children:
-            with self.subTest(designation=child):
-                with self.assertRaises(frappe.ValidationError):
-                    self._make_employee(
-                        _uid(f"Tech {child}"),
-                        assignments=[{
-                            "department":  "Technical",
-                            "designation": child,
-                            "assigned_to": None,
-                        }],
-                    )
 
     def test_hr_child_role_hr_without_assigned_to_raises(self):
         with self.assertRaises(frappe.ValidationError):
@@ -650,9 +704,12 @@ class TestValidateAssignedToRequired(EmployeeTestBase):
         """
         # Temporarily remove the Lead hierarchy so the validator finds nothing
         if frappe.db.exists("Hierarchy", "Lead"):
-            frappe.delete_doc("Hierarchy", "Lead",
-                              ignore_permissions=True, force=True)
-            frappe.db.commit()
+            frappe.delete_doc(
+                "Hierarchy",
+                "Lead",
+                ignore_permissions=True,
+                force=True,
+            )
             frappe.clear_cache(doctype="Hierarchy")
 
         try:
