@@ -1,6 +1,6 @@
 import frappe
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from verp_staffing.crm.api.helpers import (
     get_employee_name,
@@ -230,13 +230,13 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
             "permission": "none",
         }
 
-    customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
+    customer_owner = frappe.db.get_cached_value("Customer", customer_name, "customer_owner")
     is_customer_owner = employee == customer_owner
 
     lead_owner_match = False
-    lead_detail_doc = frappe.db.get_value("Customer", customer_name, "lead_details")
+    lead_detail_doc = frappe.db.get_cached_value("Customer", customer_name, "lead_details")
     if lead_detail_doc:
-        lead_ref = frappe.db.get_value(
+        lead_ref = frappe.db.get_cached_value(
             "Doctype Reference",
             {
                 "parent": lead_detail_doc,
@@ -246,7 +246,7 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
             "reference_person",
         )
         if lead_ref:
-            lead_owner = frappe.db.get_value("Lead", lead_ref, "lead_owner")
+            lead_owner = frappe.db.get_cached_value("Lead", lead_ref, "lead_owner")
             lead_owner_match = lead_owner == employee
 
     is_service_assignee = False
@@ -529,7 +529,7 @@ def request_field_update(
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    # 📧 SEND EMAIL
+    #SEND EMAIL
     template_name = "Field Update Request - permission request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
