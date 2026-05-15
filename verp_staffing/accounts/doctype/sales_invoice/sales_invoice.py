@@ -146,9 +146,12 @@ class SalesInvoice(Document):
         if not self.customer:
             frappe.throw(_("Customer is required to determine receivable account"))
 
+
         # 2. Try Company Default
         company_account = frappe.db.get_value(
-            "Company", self.company, "default_receivable_account"
+            "Company",
+            self.company,
+            "default_receivable_account"
         )
 
         account = company_account
@@ -194,11 +197,13 @@ class SalesInvoice(Document):
             account=self.debit_to,
             company=self.company,
             expected_types=["Receivable"],
-            label="Receivable Account",
+            label="Receivable Account"
         )
 
         if acc.report_type != "Balance Sheet":
-            frappe.throw(_("Receivable Account must be a Balance Sheet account"))
+            frappe.throw(
+                _("Receivable Account must be a Balance Sheet account")
+            )
 
         self.party_account_currency = frappe.db.get_value(
             "Account", self.debit_to, "account_currency"
@@ -213,7 +218,9 @@ class SalesInvoice(Document):
 
         for item in self.items:
             if not item.income_account:
-                frappe.throw(_("Row {0}: Income account is mandatory").format(item.idx))
+                frappe.throw(
+                    _("Row {0}: Income account is mandatory").format(item.idx)
+                )
 
     def validate_account_currencies(self):
         company_currency = frappe.get_cached_value(
@@ -278,21 +285,19 @@ class SalesInvoice(Document):
             validate_account(
                 account=item.income_account,
                 company=self.company,
-                expected_types=["Income Account"],
+                expected_types=[ "Income Account"],
                 label="Income Account",
-                row=item.idx,
+                row=item.idx
             )
-
     def validate_tax_accounts(self):
         for tax in self.get("taxes"):
             validate_account(
                 account=tax.account_head,
                 company=self.company,
-                expected_types=["Tax", "Chargeable", "Expense"],
+                expected_types=["Tax","Chargeable","Expense"],
                 label="Tax Account",
-                row=tax.idx,
+                row=tax.idx
             )
-
     def validate_discount_account(self):
         if flt(self.discount_amount) > 0:
             if not self.additional_discount_account:
@@ -303,15 +308,14 @@ class SalesInvoice(Document):
                 account=self.additional_discount_account,
                 company=self.company,
                 expected_types=["Expense Account"],
-                label="Discount Account",
+                label="Discount Account"
             )
 
     def calculate_item_amount(self, item):
         if item.qty is None or item.rate is None:
             frappe.throw(
-                _("Row {0}: Qty and Rate are required to calculate amount").format(
-                    item.idx
-                )
+                _("Row {0}: Qty and Rate are required to calculate amount")
+                .format(item.idx)
             )
 
         if item.qty < 0 and not self.is_return:
@@ -393,7 +397,8 @@ class SalesInvoice(Document):
         self.in_words = money_in_words(self.rounded_total, self.currency)
 
         self.base_in_words = money_in_words(
-            self.base_rounded_total, get_company_currency(self.company)
+            self.base_rounded_total ,
+            get_company_currency(self.company)
         )
 
 

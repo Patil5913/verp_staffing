@@ -28,7 +28,7 @@
    "fieldname": "voucher_type",
    "fieldtype": "Select",
    "label": "Journal Entry Type",
-   "options": "Journal Entry\nInter Company Journal Entry\nBank Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation",
+   "options": "Journal Entry\nInter Company Journal Entry\nBank Entry\nCash Entry\nDebit Note\nCredit Note\nWrite Off Entry",
    "reqd": 1
   },
   {
@@ -73,7 +73,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 14:33:08.388349",
+ "modified": "2026-05-02 17:12:00.420790",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Journal Entry Template",
