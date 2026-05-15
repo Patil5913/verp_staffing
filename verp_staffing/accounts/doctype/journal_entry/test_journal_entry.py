@@ -129,8 +129,8 @@ class JournalEntryBase(FrappeTestCase):
         # --- Party types + fiscal year (created once) ---------------------
         create_party_types_if_not_exists()
         create_fiscal_year_if_not_exists(
+            company=cls.company,
             fiscal_year="2026",
-            companies=[cls.company],
             start_date="2026-01-01",
             end_date="2026-12-31",
         )

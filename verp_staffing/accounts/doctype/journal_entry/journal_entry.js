@@ -45,7 +45,7 @@ frappe.ui.form.on("Journal Entry", {
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
 	},
 	before_save: function (frm) {
-		if (frm.doc.docstatus == 0 && !frm.doc.is_system_generated) {
+		if (frm.doc.docstatus == 0 ) {
 			let payment_entry_references = frm.doc.accounts.filter(
 				(elem) => elem.reference_type == "Payment Entry",
 			);
