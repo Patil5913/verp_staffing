@@ -27,7 +27,7 @@ class TestSalesInvoice(FrappeTestCase):
     pass
 
 
-def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=False):
+def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=False, **overrides):
     company = company or create_company_if_not_exists("vrugle")
     currency = get_company_currency(company)
     debit_to = get_default_company_account(company, "Receivable")
@@ -55,6 +55,7 @@ def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=F
         "type": "Sales",            # ← mandatory
     })
 
+    si.update(overrides)
     si.insert(ignore_permissions=True)
     if not do_not_submit:
         si.submit()

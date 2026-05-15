@@ -31,13 +31,13 @@ from verp_staffing.accounts.doctype.purchase_invoice.test_purchase_invoice impor
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def make_journal_entry(
     company=None,
     voucher_type="Journal Entry",
     posting_date=None,
     accounts=None,
     do_not_submit=False,
+    **overrides,
 ):
     """
     Minimal factory for a Journal Entry.
@@ -54,6 +54,8 @@ def make_journal_entry(
     je.voucher_type = voucher_type
     je.posting_date = posting_date or nowdate()
     je.naming_series = "ACC-JV-.YYYY.-"
+    
+    je.update(overrides)
 
     for row in accounts or []:
         row.setdefault("exchange_rate", 1)
