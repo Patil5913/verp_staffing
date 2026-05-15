@@ -15,15 +15,8 @@ from verp_staffing.employee.doctype.employee.employee import (
     user_belongs_to_department,
 )
 
-# ===========================================================================
-# GLOBAL CACHE
-# ===========================================================================
-
 _resolved: dict = {}
 
-# ===========================================================================
-# TEST DATA
-# ===========================================================================
 
 HIERARCHY_DATA = [
     {
@@ -106,10 +99,6 @@ HIERARCHY_DATA = [
     },
 ]
 
-# ===========================================================================
-# HELPERS
-# ===========================================================================
-
 
 def _uid(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:8]}"
@@ -139,11 +128,6 @@ def _build_role_maps():
 
 TOP_ROLES, CHILD_ROLES = _build_role_maps()
 
-# ===========================================================================
-# SEED HELPERS
-# ===========================================================================
-
-
 def _ensure_user(key="default"):
     cache_key = f"user_{key}"
     email = f"{key}@test.verp"
@@ -162,6 +146,7 @@ def _ensure_user(key="default"):
     _resolved[cache_key] = email
 
     return email
+
 
 
 def _ensure_hierarchies():
@@ -193,10 +178,6 @@ def _ensure_hierarchies():
 def seed_all():
     _ensure_hierarchies()
     _ensure_user()
-
-# ===========================================================================
-# FACTORIES
-# ===========================================================================
 
 
 def make_user(
@@ -286,10 +267,6 @@ def make_employee(
 
     return doc
 
-# ===========================================================================
-# BASE CLASS
-# ===========================================================================
-
 
 class EmployeeTestBase(FrappeTestCase):
 
@@ -337,9 +314,6 @@ class EmployeeTestBase(FrappeTestCase):
     @classmethod
     def _make_all_hierarchies(cls):
         _ensure_hierarchies()
-# ===========================================================================
-# 1.  AUTONAME
-# ===========================================================================
 
 class TestEmployeeAutoname(EmployeeTestBase):
     """autoname() must produce a unique, deterministic, human-readable key."""
@@ -376,11 +350,6 @@ class TestEmployeeAutoname(EmployeeTestBase):
         emp1 = self._make_employee(_uid("Unique Name A"))
         emp2 = self._make_employee(_uid("Unique Name B"))
         self.assertNotEqual(emp1.name, emp2.name)
-
-
-# ===========================================================================
-# 2.  VALIDATE – designation required when department is set
-# ===========================================================================
 
 class TestValidateDesignationRequired(EmployeeTestBase):
     """_validate_assignment_details: a row with a department must have a designation."""
@@ -423,10 +392,6 @@ class TestValidateDesignationRequired(EmployeeTestBase):
                 self.assertTrue(emp.name)
 
 
-# ===========================================================================
-# 3.  VALIDATE – duplicate departments
-# ===========================================================================
-
 class TestValidateUniqueDepartments(EmployeeTestBase):
     """_validate_unique_departments: same department must not appear in two rows."""
 
@@ -460,7 +425,6 @@ class TestValidateUniqueDepartments(EmployeeTestBase):
                     {"department": "Sales", "designation": "Sales Manager"},
                 ],
             )
-        # Assert on the body text, NOT the title= kwarg (title is not in the exception string)
         self.assertIn("already selected", str(ctx.exception))
 
     def test_error_message_contains_the_duplicate_department_name(self):
@@ -497,10 +461,6 @@ class TestValidateUniqueDepartments(EmployeeTestBase):
         with self.assertRaises(frappe.ValidationError):
             self._make_employee(_uid("Six Plus One"), assignments=assignments)
 
-
-# ===========================================================================
-# 4.  VALIDATE – assigned_to required for non-top roles
-# ===========================================================================
 
 class TestValidateAssignedToRequired(EmployeeTestBase):
     """
@@ -932,18 +892,11 @@ class TestGetUsersNotLinkedToEmployee(EmployeeTestBase):
         self.assertGreaterEqual(len(results), 1)
 
 
-# ===========================================================================
-# 9.  get_employees_by_assignment
-# ===========================================================================
-
 class TestGetEmployeesByAssignment(EmployeeTestBase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # One employee per department at the top role – inserted raw to avoid
-        # hierarchy validation for the top role itself (top roles are valid, but
-        # using raw keeps this class independent of hierarchy fixture state)
         cls.dept_emp = {}
         for entry in HIERARCHY_DATA:
             dept = entry["department"]
