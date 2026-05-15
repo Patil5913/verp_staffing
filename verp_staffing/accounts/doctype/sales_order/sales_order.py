@@ -331,20 +331,23 @@ def send_details_form_notification(recipient, sales_order, customer):
 
 
 @frappe.whitelist()
-def create_sales_invoice(sales_order, selected_items):
+def create_sales_invoice(sales_order):
     """Create sales invoice directly from sales order
     User can create multiple sales invoice and select
     items from sales order to be included in invoice
     """
-    if isinstance(selected_items, str):
-        selected_items = json.loads(selected_items)
-
-    if not selected_items:
-        frappe.throw("Please select at least one item to invoice")
-
     so = frappe.get_doc("Sales Order", sales_order)
 
+    # Block if SI already exists for this SO
+    if existing := frappe.db.exists("Sales Invoice", {"sales_order": sales_order}):
+        frappe.throw(
+            f"A Sales Invoice already exists for this Sales Order: "
+            f"<a href='/app/sales-invoice/{existing}'>{existing}</a>",
+            title="Invoice Already Exists",
+        )
+
     si = frappe.new_doc("Sales Invoice")
+    si.naming_series = "ACC-SINV-.YYYY.-"
     si.customer = so.customer
     si.company = so.company
     si.company_currency = so.company_currency
@@ -356,27 +359,20 @@ def create_sales_invoice(sales_order, selected_items):
     si.discount_amount = so.discount_amount
     si.additional_discount_account = so.additional_discount_account
 
-    # Copy only selected items (selected_items is a list of row names from Items Table)
     for row in so.items:
-        if row.name in selected_items:
-            si.append(
-                "items",
-                {
-                    "item": row.item,
-                    "qty": row.qty,
-                    "rate": row.rate,
-                    "amount": row.amount,
-                    "uom": row.uom,
-                    "income_account": row.income_account,
-                    "type": row.type,
-                },
-            )
+        si.append(
+            "items",
+            {
+                "item": row.item,
+                "qty": row.qty,
+                "rate": row.rate,
+                "uom": row.uom,
+                "income_account": row.income_account,
+                "type": row.type,
+            },
+        )
 
-    if not si.items:
-        frappe.throw("None of the selected items were found on the Sales Order")
-
-    # Copy taxes as-is
-    for tax in so.taxes:
+    for tax in so.taxes or []:
         si.append(
             "taxes",
             {
@@ -395,9 +391,9 @@ def create_sales_invoice(sales_order, selected_items):
 
 
 @frappe.whitelist()
-def get_linked_invoices(sales_order):
-    """Get invoices lined with sales order"""
-    invoices = frappe.get_all(
+def get_linked_invoice(sales_order):
+    """Get invoice lined with sales order"""
+    invoice = frappe.get_all(
         "Sales Invoice",
         filters={"sales_order": sales_order},
         fields=[
@@ -409,6 +405,198 @@ def get_linked_invoices(sales_order):
             "currency",
         ],
         order_by="creation desc",
+        limit=1
     )
 
-    return invoices
+    return invoice
+
+
+@frappe.whitelist()
+def get_sales_invoice_for_order(sales_order):
+    """Returns linked SI name if exists, else None."""
+    return frappe.db.get_value("Sales Invoice", {"sales_order": sales_order}, "name")
+
+
+@frappe.whitelist()
+def get_interview_count_for_customer(customer):
+    """
+    Traverse: Customer → Marketing (unique) → get_interviews_by_marketing
+    Returns integer count.
+    """
+    if not customer:
+        return 0
+
+    marketing = frappe.db.get_value("Marketing", {"customer": customer}, "name")
+    if not marketing:
+        return 0
+
+    from verp_staffing.marketing.doctype.marketing.marketing import (
+        get_interviews_by_marketing,
+    )
+
+    try:
+        interviews = get_interviews_by_marketing(marketing)
+        return len(interviews) if interviews else 0
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Interview Count Fetch Error")
+        return 0
+
+
+@frappe.whitelist()
+def create_payment_entry_from_term(
+    sales_order, payment_term_row, reference_no, reference_date
+):
+    so = frappe.get_doc("Sales Order", sales_order)
+
+    term = next((r for r in so.payment_terms if r.name == payment_term_row), None)
+    if not term:
+        frappe.throw("Payment term row not found on this Sales Order")
+
+    if term.payment_status not in ("Unpaid", "Rejected"):
+        frappe.throw(f"This payment term is already in status: {term.payment_status}")
+
+    si_name = frappe.db.get_value("Sales Invoice", {"sales_order": sales_order}, "name")
+    if not si_name:
+        frappe.throw(
+            "Please create a Sales Invoice before requesting payment verification."
+        )
+
+    # Fetch SI totals for reference row
+    si = frappe.get_doc("Sales Invoice", si_name)
+
+    if term.payment_entry:
+        # Re-request on existing PE — just update status back to Pending
+        pe = frappe.get_doc("Payment Entry", term.payment_entry)
+        if pe.verification_status not in ("Pending Verification", "Rejected"):
+            frappe.throw("Cannot re-request verification for this payment entry.")
+
+        pe.verification_status = "Pending Verification"
+        pe.reference_no = reference_no
+        pe.reference_date = reference_date
+        pe.save(ignore_permissions=True)
+
+        _append_verification_log(
+            payment_term_row, f"Re-requested verification by {frappe.session.user}"
+        )
+        frappe.db.set_value(
+            "Customer Payment Terms",
+            payment_term_row,
+            "payment_status",
+            "Pending Verification",
+        )
+        return pe.name
+
+    # Fresh PE creation
+    pe = frappe.new_doc("Payment Entry")
+    pe.payment_type = "Receive"
+    pe.posting_date = frappe.utils.today()
+    pe.company = so.company
+    pe.party_type = "Customer"
+    pe.party = so.customer
+    pe.paid_amount = term.amount
+    pe.received_amount = term.amount
+    pe.reference_no = reference_no
+    pe.reference_date = reference_date
+    pe.currency = so.currency
+    pe.conversion_rate = so.conversion_rate
+    pe.payment_term_row = payment_term_row
+    pe.verification_status = "Pending Verification"
+
+    # Reference the Sales Invoice in references child table
+    pe.append(
+        "references",
+        {
+            "reference_doctype": "Sales Invoice",
+            "reference_name": si_name,
+            "total_amount": si.grand_total,
+            "outstanding_amount": si.outstanding_amount,
+            "allocated_amount": term.amount,
+        },
+    )
+
+    pe.insert(ignore_permissions=True)
+
+    frappe.db.set_value(
+        "Customer Payment Terms",
+        payment_term_row,
+        {
+            "payment_status": "Pending Verification",
+            "payment_entry": pe.name,
+        },
+    )
+    _append_verification_log(
+        payment_term_row, f"Payment entry {pe.name} created by {frappe.session.user}"
+    )
+
+    return pe.name
+
+
+@frappe.whitelist()
+def verify_payment_entry(payment_entry):
+    pe = frappe.get_doc("Payment Entry", payment_entry)
+
+    if pe.verification_status == "Verified":
+        frappe.throw("This payment entry is already verified and cannot be changed.")
+    if pe.verification_status not in ("Pending Verification", "Rejected"):
+        frappe.throw("Only Pending Verification or Rejected entries can be approved.")
+
+    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+    pe.verification_status = "Verified"
+    pe.verified_by = frappe.session.user
+    pe.verified_on = frappe.utils.now()
+    pe.save(ignore_permissions=True)
+    pe.submit()
+
+    if pe.payment_term_row:
+        frappe.db.set_value(
+            "Customer Payment Terms", pe.payment_term_row, "payment_status", "Verified"
+        )
+        _append_verification_log(
+            pe.payment_term_row, f"Verified by {frappe.session.user} on {now_str}"
+        )
+
+    return "verified"
+
+
+@frappe.whitelist()
+def reject_payment_entry(payment_entry, remarks):
+    if not remarks or not remarks.strip():
+        frappe.throw("Rejection remarks are required.")
+
+    pe = frappe.get_doc("Payment Entry", payment_entry)
+
+    if pe.verification_status == "Verified":
+        frappe.throw("A verified payment entry cannot be rejected.")
+
+    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+    full_note = f"Rejected by {frappe.session.user} on {now_str}: {remarks.strip()}"
+
+    pe.verification_status = "Rejected"
+    pe.rejected_by = frappe.session.user
+    pe.rejected_on = frappe.utils.now()
+    pe.rejection_remarks = full_note
+    pe.save(ignore_permissions=True)
+
+    if pe.payment_term_row:
+        frappe.db.set_value(
+            "Customer Payment Terms", pe.payment_term_row, "payment_status", "Rejected"
+        )
+        _append_verification_log(pe.payment_term_row, full_note)
+
+    return "rejected"
+
+
+def _append_verification_log(payment_term_row, message):
+    """Appends a timestamped line to the verification_log of a payment term row."""
+    existing = (
+        frappe.db.get_value(
+            "Customer Payment Terms", payment_term_row, "verification_log"
+        )
+        or ""
+    )
+    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+    new_line = f"[{now_str}] {message}"
+    updated = f"{existing}\n{new_line}".strip()
+    frappe.db.set_value(
+        "Customer Payment Terms", payment_term_row, "verification_log", updated
+    )

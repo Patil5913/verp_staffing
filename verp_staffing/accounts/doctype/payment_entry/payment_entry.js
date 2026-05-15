@@ -2,6 +2,101 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Payment Entry", {
+	refresh(frm) {
+		if (frm.doc.party_type && !frm.party_account_type) {
+			frappe.db.get_value("Party Type", frm.doc.party_type, "account_type").then((r) => {
+				frm.party_account_type = r.message?.account_type || null;
+			});
+		}
+		set_currency_labels(frm);
+		hide_unhide_fields(frm);
+		if (frm.doc.docstatus === 2) return; // Cancelled — nothing to show
+
+		const status = frm.doc.verification_status;
+		const is_locked = frm.doc.docstatus === 1; // Submitted = locked
+
+		// ── Approve button ─────────────────────────────────────────────
+		// Visible when: Pending Verification or Rejected, not yet submitted
+		if (!is_locked && status !== "Verified" && status !== null) {
+			frm.add_custom_button(
+				__("Approve"),
+				async () => {
+					frappe.confirm(
+						`Approve this payment of <b>${frm.doc.paid_amount}</b>
+                     <br>This will submit the Payment Entry and cannot be undone.`,
+						async () => {
+							const r = await frappe.call({
+								method: "verp_staffing.accounts.doctype.sales_order.sales_order.verify_payment_entry",
+								args: { payment_entry: frm.doc.name },
+							});
+							if (r.message === "verified") {
+								frappe.msgprint({
+									title: __("Approved"),
+									message: "Payment Entry approved and submitted.",
+									indicator: "green",
+								});
+								frm.reload_doc();
+							}
+						},
+					);
+				},
+				__("Actions"),
+			).addClass("btn-success");
+		}
+
+		// ── Reject button ──────────────────────────────────────────────
+		// Visible when: Pending Verification only, not submitted, not already verified
+		if (!is_locked && status === "Pending Verification") {
+			frm.add_custom_button(
+				__("Reject"),
+				() => {
+					const d = new frappe.ui.Dialog({
+						title: __("Reject Payment"),
+						fields: [
+							{
+								fieldtype: "Small Text",
+								fieldname: "remarks",
+								label: __("Reason for Rejection"),
+								reqd: 1,
+								description:
+									"Your name and timestamp will be added automatically.",
+							},
+						],
+						primary_action_label: __("Reject"),
+						primary_action: async (values) => {
+							d.disable_primary_action();
+							try {
+								const r = await frappe.call({
+									method: "verp_staffing.accounts.doctype.sales_order.sales_order.reject_payment_entry",
+									args: {
+										payment_entry: frm.doc.name,
+										remarks: values.remarks,
+									},
+								});
+								if (r.message === "rejected") {
+									d.hide();
+									frappe.msgprint({
+										title: __("Rejected"),
+										message:
+											"Payment Entry rejected. Salesperson can re-request.",
+										indicator: "red",
+									});
+									frm.reload_doc();
+								}
+							} catch (e) {
+								d.enable_primary_action();
+							}
+						},
+					});
+					d.show();
+				},
+				__("Actions"),
+			).addClass("btn-danger");
+		}
+
+		// ── Status indicator banner ────────────────────────────────────
+		render_verification_banner(frm);
+	},
 	onload: function (frm) {
 		frm.ignore_doctypes_on_cancel_all = [
 			"Sales Invoice",
@@ -122,16 +217,6 @@ frappe.ui.form.on("Payment Entry", {
 		frm.set_query("account_head", "taxes", function () {
 			return { filters: { is_group: 0, company: frm.doc.company } };
 		});
-	},
-
-	refresh: function (frm) {
-		if (frm.doc.party_type && !frm.party_account_type) {
-			frappe.db.get_value("Party Type", frm.doc.party_type, "account_type").then((r) => {
-				frm.party_account_type = r.message?.account_type || null;
-			});
-		}
-		set_currency_labels(frm);
-		hide_unhide_fields(frm);
 	},
 
 	company: function (frm) {
@@ -685,6 +770,27 @@ function get_outstanding_documents(frm, get_invoices, get_orders) {
 	);
 }
 
+function render_verification_banner(frm) {
+	const status = frm.doc.verification_status;
+	if (!status) return;
+
+	const config = {
+		"Pending Verification": { color: "orange", msg: "Awaiting accountant review." },
+		Verified: { color: "green", msg: "Payment verified and submitted." },
+		Rejected: { color: "red", msg: frm.doc.rejection_remarks || "Payment rejected." },
+	};
+
+	const c = config[status];
+	if (!c) return;
+
+	frm.dashboard.set_headline_alert(
+		`<div class="alert alert-${c.color === "green" ? "success" : c.color === "red" ? "danger" : "warning"}" 
+              style="margin:0">
+            <b>${status}</b> — ${c.msg}
+        </div>`,
+	);
+}
+
 function check_mandatory_to_fetch(frm) {
 	["company", "party_type", "party", "payment_type"].forEach(function (field) {
 		if (!frm.doc[field]) {
@@ -989,4 +1095,3 @@ function get_included_taxes(frm) {
 	});
 	return total;
 }
-

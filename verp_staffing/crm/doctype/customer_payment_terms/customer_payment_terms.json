@@ -5,19 +5,64 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "date",
-  "amount",
   "payment_condition",
   "counter",
-  "payment_status"
+  "column_break_1",
+  "start_date",
+  "due_date",
+  "section_break_amount",
+  "amount",
+  "column_break_2",
+  "payment_status",
+  "section_break_info",
+  "current_interview_count",
+  "payment_entry",
+  "description",
+  "verification_log"
  ],
  "fields": [
   {
-   "fieldname": "date",
+   "default": "Number of Days",
+   "fieldname": "payment_condition",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Condition",
+   "options": "Number of Interviews\nNumber of Days",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "counter",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Count",
+   "non_negative": 1,
+   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.payment_condition === 'Number of Days'",
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date",
+   "mandatory_depends_on": "eval: doc.payment_condition === 'Number of Days'",
+   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'"
+  },
+  {
+   "depends_on": "eval: doc.payment_condition === 'Number of Days'",
+   "fieldname": "due_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Date",
-   "reqd": 1
+   "label": "Due Date",
+   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'"
+  },
+  {
+   "fieldname": "section_break_amount",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "amount",
@@ -25,38 +70,60 @@
    "in_list_view": 1,
    "label": "Amount",
    "non_negative": 1,
+   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'",
    "reqd": 1
   },
   {
-   "default": "Number of Days",
-   "fieldname": "payment_condition",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Payment Condition",
-   "options": "Number of Interviews\nNumber of Days"
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
   },
   {
-   "default": "1",
-   "fieldname": "counter",
-   "fieldtype": "Int",
-   "in_list_view": 1,
-   "label": "Counter",
-   "non_negative": 1
-  },
-  {
-   "default": "Pending",
+   "default": "Unpaid",
    "fieldname": "payment_status",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Payment Status",
-   "options": "Pending\nCompleted"
+   "label": "Status",
+   "options": "Unpaid\nPending Verification\nVerified\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_info",
+   "fieldtype": "Section Break",
+   "label": "Info"
+  },
+  {
+   "depends_on": "eval: doc.payment_condition === 'Number of Interviews'",
+   "description": "Live count of interviews for this customer",
+   "fieldname": "current_interview_count",
+   "fieldtype": "Int",
+   "label": "Current Interview Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "description": "Auto-generated log of all verification actions",
+   "fieldname": "verification_log",
+   "fieldtype": "Small Text",
+   "label": "Verification Log",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-12 14:08:06.258869",
+ "modified": "2026-05-15 10:39:52.689215",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

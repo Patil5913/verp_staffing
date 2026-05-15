@@ -402,7 +402,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-13 15:00:36.924167",
+ "modified": "2026-05-15 15:53:57.530175",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
@@ -424,14 +424,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Manager",
+   "role": "Sales Team Lead",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Manager",
    "select": 1,
    "write": 1
   },

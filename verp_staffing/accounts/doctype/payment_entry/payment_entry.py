@@ -31,14 +31,26 @@ class PaymentEntry(Document):
         self.set_difference_amount()
         self.validate_same_account_not_allowed()
 
-    def validate_same_account_not_allowed(self):
-        if self.paid_from and self.paid_to and self.paid_from == self.paid_to:
+    def on_submit(self):
+        # Enforce account fields before submit
+        mandatory_on_submit = {
+            "paid_from": "Account Paid From",
+            "paid_to": "Account Paid To",
+            "paid_from_account_currency": "Account Currency (From)",
+            "paid_to_account_currency": "Account Currency (To)",
+        }
+        missing = [
+            label for field, label in mandatory_on_submit.items()
+            if not self.get(field)
+        ]
+        if missing:
             frappe.throw(
-                _("Paid From and Paid To accounts cannot be the same."),
-                title=_("Invalid Account Selection"),
+                _("The following fields are required before submitting: {0}").format(
+                    ", ".join(f"<b>{m}</b>" for m in missing)
+                ),
+                title=_("Missing Account Details")
             )
 
-    def on_submit(self):
         if flt(self.difference_amount):
             frappe.throw(_("Difference Amount must be zero before submitting."))
 
@@ -54,6 +66,13 @@ class PaymentEntry(Document):
         self.make_gl_entries()
         update_invoice_outstanding(self)
         update_order_outstanding(self)
+
+    def validate_same_account_not_allowed(self):
+        if self.paid_from and self.paid_to and self.paid_from == self.paid_to:
+            frappe.throw(
+                _("Paid From and Paid To accounts cannot be the same."),
+                title=_("Invalid Account Selection"),
+            )
 
     def on_cancel(self):
         self.make_gl_entries(cancel=True)
