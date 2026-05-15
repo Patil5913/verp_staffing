@@ -212,6 +212,12 @@ window.setup_service_permission_button = function (frm) {
 				},
 			});
 		},
+		error: function (err) {
+			frappe.show_alert(
+				{ message: err.message || __("Failed to load employee info."), indicator: "red" },
+				5,
+			);
+		},
 	});
 };
 
@@ -238,6 +244,20 @@ window._service_open_update_detail_dialog = function (frm) {
 						"service",
 					);
 				},
+				error: function (err) {
+					frappe.msgprint({
+						title: __("Error"),
+						message: err.message || __("Failed to load updatable fields."),
+						indicator: "red",
+					});
+				},
+			});
+		},
+		error: function (err) {
+			frappe.msgprint({
+				title: __("Error"),
+				message: err.message || __("Failed to load field values."),
+				indicator: "red",
 			});
 		},
 	});
@@ -272,6 +292,15 @@ window._service_show_accept_updates = function (frm) {
 					});
 				},
 			});
+		},
+		error: function (err) {
+			frappe.show_alert(
+				{
+					message: err.message || __("Failed to check pending requests."),
+					indicator: "red",
+				},
+				5,
+			);
 		},
 	});
 };
@@ -391,24 +420,19 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 			let opts = [];
 
 			if (col.options) {
-				// ✅ Array support
 				if (Array.isArray(col.options)) {
 					opts = col.options;
 				}
-				// ✅ Newline string (Frappe standard)
 				else if (typeof col.options === "string" && col.options.includes("\n")) {
 					opts = col.options.split(/\r?\n/).filter((o) => o && o.trim());
 				}
-				// ✅ Comma separated (extra support)
 				else if (typeof col.options === "string" && col.options.includes(",")) {
 					opts = col.options.split(",").map((o) => o.trim());
 				}
-				// ❌ REMOVE this wrong logic
 				else if (frappe.meta.docfield_map[col.options]) {
 					opts = [];
 				}
 
-				// ✅ fallback
 				else {
 					opts = [col.options];
 				}
@@ -523,20 +547,20 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 	<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border-tertiary,rgba(0,0,0,0.1));gap:8px;">
 		<div style="font-size:15px;font-weight:600;color:var(--color-text-primary);flex-shrink:0;">Editing Row #${rowIdx + 1}</div>
 		<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-			<button onclick="window.__perm_dlg_delete_('${tableId}',${rowIdx})"
+			<button onclick="window.__perm_dlg_delete_(&#39;${tableId}&#39;,${rowIdx})"
 				style="width:30px;height:30px;border:none;background:#f04438;color:#fff;border-radius:6px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"
 				title="Delete this row"
-				onmouseenter="this.style.background='#d92d20'" onmouseleave="this.style.background='#f04438'">🗑</button>
+				onmouseenter="this.style.background=&#39;#d92d20&#39;" onmouseleave="this.style.background=&#39;#f04438&#39;">🗑</button>
 			<div style="width:1px;height:18px;background:rgba(0,0,0,0.12);margin:0 2px;flex-shrink:0;"></div>
-			<button onclick="window.__perm_dlg_insert_('${tableId}',${rowIdx},'above')" style="${btnStyle}"
-				onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background='#fff'">↑ Above</button>
-			<button onclick="window.__perm_dlg_insert_('${tableId}',${rowIdx},'below')" style="${btnStyle}"
-				onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background='#fff'">↓ Below</button>
-			<button onclick="window.__perm_dlg_duplicate_('${tableId}',${rowIdx})" style="${btnStyle}"
-				onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background='#fff'">⧉ Duplicate</button>
+			<button onclick="window.__perm_dlg_insert_(&#39;${tableId}&#39;,${rowIdx},&#39;above&#39;)" style="${btnStyle}"
+				onmouseenter="this.style.background=&#39;#f9fafb&#39;" onmouseleave="this.style.background=&#39;#fff&#39;">↑ Above</button>
+			<button onclick="window.__perm_dlg_insert_(&#39;${tableId}&#39;,${rowIdx},&#39;below&#39;)" style="${btnStyle}"
+				onmouseenter="this.style.background=&#39;#f9fafb&#39;" onmouseleave="this.style.background=&#39;#fff&#39;">↓ Below</button>
+			<button onclick="window.__perm_dlg_duplicate_(&#39;${tableId}&#39;,${rowIdx})" style="${btnStyle}"
+				onmouseenter="this.style.background=&#39;#f9fafb&#39;" onmouseleave="this.style.background=&#39;#fff&#39;">⧉ Duplicate</button>
 			<button onclick="window.__perm_close_dialog_()"
 				style="width:30px;height:30px;border:none;background:transparent;color:#667085;border-radius:6px;cursor:pointer;font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"
-				onmouseenter="this.style.background='#f2f4f7'" onmouseleave="this.style.background='transparent'">×</button>
+				onmouseenter="this.style.background='#f2f4f7'" onmouseleave="this.style.background='transparent'">x</button>
 		</div>
 	</div>
 
@@ -598,7 +622,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		const colCells = previewCols
 			.map(
 				(col) => `
-<div class="ftbl-cell" onclick="window.__perm_open_row_('${tableId}',${idx})"
+<div class="ftbl-cell" onclick="window.__perm_open_row_(&#39;${tableId}&#39;,${idx})"
 	style="padding:6px 10px;display:flex;align-items:center;min-height:34px;border-right:0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.07));font-size:13px;color:var(--color-text-primary);cursor:pointer;overflow:hidden;">
 	<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;">${formatCellDisplay(col, row[col.fieldname])}</span>
 </div>`,
@@ -608,21 +632,21 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		return `
 <div class="ftbl-row" data-rowid="${rowId}" data-tableid="${tableId}" data-idx="${idx}"
 	style="display:grid;grid-template-columns:32px 44px ${previewCols.map(() => "1fr").join(" ")} 38px;border-bottom:0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.08));transition:background 0.1s;"
-	onmouseenter="this.style.background='var(--color-background-secondary,#F3F3F3)'"
-	onmouseleave="this.style.background=''">
+	onmouseenter="this.style.background=&#39;var(--color-background-secondary,#F3F3F3)&#39;"
+	onmouseleave="this.style.background=&#39;&#39;">
 	<div style="padding:6px 8px;display:flex;align-items:center;justify-content:center;">
 		<input type="checkbox" class="ftbl-chk" data-tableid="${tableId}" data-rowid="${rowId}"
-			onchange="window.__perm_chkchg_('${tableId}')"
+			onchange="window.__perm_chkchg_(&#39;${tableId}&#39;)"
 			onclick="event.stopPropagation()"
 			style="width:13px;height:13px;accent-color:#378add;cursor:pointer;" />
 	</div>
-	<div onclick="window.__perm_open_row_('${tableId}',${idx})"
+	<div onclick="window.__perm_open_row_(&#39;${tableId}&#39;,${idx})"
 		style="padding:6px 8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--color-text-secondary,#888);font-weight:500;cursor:pointer;">
 		${idx + 1}
 	</div>
 	${colCells}
 	<div style="padding:6px 6px;display:flex;align-items:center;justify-content:center;">
-		<button onclick="event.stopPropagation();window.__perm_open_row_('${tableId}',${idx})"
+		<button onclick="event.stopPropagation();window.__perm_open_row_(&#39;${tableId}&#39;,${idx})"
 			style="width:24px;height:24px;border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.2));background:transparent;color:var(--color-text-secondary,#666);cursor:pointer;border-radius:5px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;"
 			title="Edit row">✏</button>
 	</div>
@@ -649,7 +673,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 	style="border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.2));border-radius:var(--border-radius-md,8px);overflow:hidden;margin-top:4px;">
 	<div style="display:grid;grid-template-columns:32px 44px ${previewCols.map(() => "1fr").join(" ")} 38px;background:var(--color-background-secondary,#F3F3F3);border-bottom:0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.12));">
 		<div style="padding:7px 8px;display:flex;align-items:center;justify-content:center;">
-			<input type="checkbox" id="chk-all-${tableId}" onchange="window.__perm_toggleall_('${tableId}',this)"
+			<input type="checkbox" id="chk-all-${tableId}" onchange="window.__perm_toggleall_(&#39;${tableId}&#39;,this)"
 				style="width:13px;height:13px;accent-color:#378add;cursor:pointer;" />
 		</div>
 		<div style="padding:7px 10px;font-size:11px;font-weight:500;color:var(--color-text-secondary,#6b6b6b);text-transform:uppercase;letter-spacing:0.04em;">No.</div>
@@ -658,11 +682,11 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 	</div>
 	<div id="tbody-${tableId}" class="ftbl-body" data-tableid="${tableId}">${bodyHtml}</div>
 	<div style="padding:6px 10px;border-top:0.5px solid var(--color-border-tertiary,rgba(0,0,0,0.1));background:var(--color-background-secondary,#F3F3F3);display:flex;align-items:center;gap:6px;">
-		<button id="ftbl-del-sel-${tableId}" onclick="window.__perm_delsel_('${tableId}')"
+		<button id="ftbl-del-sel-${tableId}" onchange="window.__perm_toggleall_(&#39;${tableId}&#39;,this)"
 			style="display:none;align-items:center;gap:5px;height:28px;padding:0 14px;background:#e24b4a;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
 			Delete
 		</button>
-		<button onclick="window.__perm_addrow_('${tableId}')"
+		<button onclick="window.__perm_addrow_(&#39;${tableId}&#39;)"
 			style="height:28px;padding:0 14px;background:none;border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.25));color:var(--color-text-primary);border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;">
 			Add Row
 		</button>
@@ -716,8 +740,8 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 <div style="margin-top:12px;">
 	<div class="fg-row fg-table-toggle" data-fieldname="${fieldname}" data-tableid="${tableId}"
 		style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;transition:all 0.2s ease;"
-		onmouseenter="this.style.borderColor='black'" onmouseleave="if(!this.classList.contains('selected'))this.style.borderColor='#00000020'"
-		onclick="window._perm_toggleTableField(this,'${tableId}')">
+		onmouseenter="this.style.borderColor=&#39;black&#39;" onmouseleave="if(!this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;#00000020&#39;"
+		onclick="window._perm_toggleTableField(this,&#39;${tableId}&#39;)">
 		<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;">
 			<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
 		</div>
@@ -738,7 +762,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 			const old = current_values[fn] || "";
 			return `<div class="fg-row" data-fieldname="${fn}" data-label="${frappe.utils.escape_html(lbl)}" data-current="${frappe.utils.escape_html(old)}"
 	style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;transition:all 0.2s ease;min-width:0;"
-	onmouseenter="this.style.borderColor='black'" onmouseleave="if(!this.classList.contains('selected'))this.style.borderColor='#00000020'">
+	onmouseenter="this.style.borderColor=&#39;black&#39;" onmouseleave="if(!this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;#00000020&#39;">
 	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;">
 		<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
 	</div>
@@ -849,6 +873,13 @@ ${tableWidgetHtml}
 						);
 						frm.reload_doc();
 					}
+				},
+				error: function (err) {
+					frappe.msgprint({
+						title: __("Error"),
+						message: err.message || __("Failed to submit request. Please try again."),
+						indicator: "red",
+					});
 				},
 			});
 		},
@@ -1006,7 +1037,8 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 			all_html += `
 <div class="fg-row au-field-row" data-fieldname="${fn}" data-comment="${req.comment_name}"
 	style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;margin-bottom:10px;transition:all 0.2s ease;"
-	onmouseenter="this.style.borderColor='black'" onmouseleave="if(this.classList.contains('selected'))this.style.borderColor='black';else this.style.borderColor='#00000020'">
+	onmouseenter="this.style.borderColor=&#39;black&#39;"
+	onmouseleave="if(this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;black&#39;;else this.style.borderColor=&#39;#00000020&#39;">
 	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:black;margin-top:3px;">
 		<div class="fg-tick" style="width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
 	</div>
@@ -1054,10 +1086,18 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 						},
 					}),
 				),
-			).then(() => {
-				frappe.show_alert({ message: __("Updated successfully"), indicator: "green" });
-				frm.reload_doc();
-			});
+			)
+				.then(() => {
+					frappe.show_alert({ message: __("Updated successfully"), indicator: "green" });
+					frm.reload_doc();
+				})
+				.catch(function (err) {
+					frappe.msgprint({
+						title: __("Error"),
+						message: err.message || __("Failed to apply updates. Please try again."),
+						indicator: "red",
+					});
+				});
 		},
 		secondary_action_label: __("Reject All"),
 		secondary_action() {
@@ -1069,11 +1109,23 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 							args: { customer_name, comment_name: req.comment_name },
 						}),
 					),
-				).then(() => {
-					frappe.show_alert({ message: __("All updates rejected"), indicator: "red" });
-					d.hide();
-					frm.reload_doc();
-				});
+				)
+					.then(() => {
+						frappe.show_alert({
+							message: __("All updates rejected"),
+							indicator: "red",
+						});
+						d.hide();
+						frm.reload_doc();
+					})
+					.catch(function (err) {
+						frappe.msgprint({
+							title: __("Error"),
+							message:
+								err.message || __("Failed to reject requests. Please try again."),
+							indicator: "red",
+						});
+					});
 			});
 		},
 	});
