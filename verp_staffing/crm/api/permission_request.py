@@ -1,6 +1,6 @@
 import frappe
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from verp_staffing.crm.api.helpers import (
     get_employee_name,
@@ -186,6 +186,28 @@ def _check_candidate_form_required_for_customer(customer_name, lead_detail_doc=N
             return True
 
     return False
+
+
+def get_comments(
+    reference_doctype,
+    reference_name,
+    comment_type="Info",
+    fields=None,
+    order_by="creation desc",
+):
+    if not fields:
+        fields = ["name", "content"]
+
+    return frappe.get_all(
+        "Comment",
+        filters={
+            "reference_doctype": reference_doctype,
+            "reference_name": reference_name,
+            "comment_type": comment_type,
+        },
+        fields=fields,
+        order_by=order_by,
+    )
 
 
 @frappe.whitelist()
@@ -529,7 +551,7 @@ def request_field_update(
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    #SEND EMAIL
+    # 📧 SEND EMAIL
     template_name = "Field Update Request - permission request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
@@ -697,15 +719,9 @@ def get_pending_field_update_request(customer_name):
     if not current_employee:
         return {"has_pending": False}
 
-    comments = frappe.get_all(
-        "Comment",
-        filters={
-            "reference_doctype": "Customer",
-            "reference_name": customer_name,
-            "comment_type": "Info",
-        },
-        fields=["name", "content"],
-        order_by="creation desc",
+    comments = comments = get_comments(
+        reference_doctype="Customer",
+        reference_name=customer_name,
     )
 
     for c in comments:
@@ -737,15 +753,9 @@ def get_all_pending_field_update_requests(customer_name):
     if not current_employee:
         return []
 
-    comments = frappe.get_all(
-        "Comment",
-        filters={
-            "reference_doctype": "Customer",
-            "reference_name": customer_name,
-            "comment_type": "Info",
-        },
-        fields=["name", "content"],
-        order_by="creation desc",
+    comments = comments = get_comments(
+        reference_doctype="Customer",
+        reference_name=customer_name,
     )
 
     pending = []
@@ -788,15 +798,9 @@ def get_owner_pending_field_update_request(customer_name):
     if not employee:
         return {"has_pending": False}
 
-    comments = frappe.get_all(
-        "Comment",
-        filters={
-            "reference_doctype": "Customer",
-            "reference_name": customer_name,
-            "comment_type": "Info",
-        },
-        fields=["name", "content"],
-        order_by="creation desc",
+    comments = comments = get_comments(
+        reference_doctype="Customer",
+        reference_name=customer_name,
     )
 
     for c in comments:
