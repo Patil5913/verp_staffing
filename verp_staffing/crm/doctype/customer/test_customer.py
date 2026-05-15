@@ -1,46 +1,982 @@
-# Copyright (c) 2025, Vrugle and Contributors
+# Copyright (c) 2026, Vrugle and contributors
 # See license.txt
+
+"""
+Unit tests for the Customer DocType.
+
+Coverage:
+  1.  autoname()                         – TestCustomerAutoname
+  2.  validate() – stage JSON            – TestCustomerValidateStage
+  3.  after_insert() – no party (CASE 2) – TestCustomerAfterInsertNoParty
+  4.  after_insert() – with party (CASE 1)– TestCustomerAfterInsertWithParty
+  5.  on_trash()                         – TestCustomerOnTrash
+  6.  get_forwardable_departments()      – TestGetForwardableDepartments
+  7.  get_customer_routes()              – TestGetCustomerRoutes
+  8.  update_route_status()              – TestUpdateRouteStatus
+  9.  get_customer_email()               – TestGetCustomerEmail
+  10. generate_token()                   – TestGenerateToken
+  11. update_company_percentage()        – TestUpdateCompanyPercentage
+"""
+
+import base64
+import json
+import uuid
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.model.document import Document
+from verp_staffing.crm.doctype.customer.customer import (
+    generate_token,
+    get_customer_email,
+    get_customer_routes,
+    get_forwardable_departments,
+    update_company_percentage,
+    update_route_status,
+)
+from verp_staffing.employee.doctype.employee.test_employee import (
+    HIERARCHY_DATA,
+    _ensure_hierarchies,
+    make_employee,
+    make_user,
+)
+
+# ---------------------------------------------------------------------------
+# Module-level shared state  (mirrors _resolved pattern in purchase invoice)
+# ---------------------------------------------------------------------------
+
+_resolved: dict = {}
 
 
-class TestCustomer(FrappeTestCase):
-    pass
+# ---------------------------------------------------------------------------
+# Tiny utilities
+# ---------------------------------------------------------------------------
+
+def _uid(prefix: str) -> str:
+    """Return a unique, human-readable identifier safe for use as a Frappe name."""
+    return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
-def create_customer_if_not_exists(
-    customer_name,
-    **overrides,
-):
+def _doctype_exists(doctype: str) -> bool:
+    return bool(frappe.db.exists("DocType", doctype))
+
+
+# ---------------------------------------------------------------------------
+# Factory helpers
+# ---------------------------------------------------------------------------
+
+def make_customer(
+    name1: str = None,
+    customer_from: str = None,
+    party_name: str = None,
+    stage: str = None,
+    customer_owner: str = None,
+    skip_insert: bool = False,
+) -> Document:
     """
-    Ensure Customer exists by name1.
+    Build (and optionally insert) a Customer document.
 
-    Flow:
-    1. Return existing customer if found
-    2. Else create new customer using overrides
+    Parameters mirror the make_purchase_invoice / make_employee pattern:
+    pass skip_insert=True to get a transient doc for unit-testing validate()
+    or autoname() in isolation.
     """
+    doc = frappe.new_doc("Customer")
+    doc.name1 = name1  # intentionally allow None / "" for negative tests
 
-    if not customer_name:
-        frappe.throw("Customer name is required")
+    if customer_from is not None:
+        doc.customer_from = customer_from
+    if party_name is not None:
+        doc.party_name = party_name
+    if stage is not None:
+        doc.stage = stage
+    if customer_owner is not None:
+        doc.customer_owner = customer_owner
 
-    existing = frappe.db.get_value(
-        "Customer",
-        {"name1": customer_name},
-        "name",
-    )
-
-    if existing:
-        return existing
-
-    customer_data = {
-        "doctype": "Customer",
-        **overrides,
-        "name1": customer_name,
-    }
-
-    doc = frappe.get_doc(customer_data)
+    if skip_insert:
+        return doc
 
     doc.insert(ignore_permissions=True)
+    return doc
 
-    return doc.name
+
+def make_lead_with_lead_detail(
+    name_prefix: str = "Lead",
+    email: str = None,
+) -> tuple:
+    """
+    Create a Lead + a Lead Detail Form that holds a Doctype Reference row
+    pointing to that Lead.
+
+    Returns (lead_doc, lead_detail_form_doc) so callers can wire up a
+    Customer with customer_from='Lead' and party_name=lead.name.
+
+    Skips gracefully when the Lead doctype is unavailable.
+    """
+    if not _doctype_exists("Lead"):
+        return None, None
+
+    lead = frappe.new_doc("Lead")
+    lead.lead_name = _uid(name_prefix)
+    lead.insert(ignore_permissions=True)
+
+    ldf = frappe.new_doc("Lead Detail Form")
+    ldf.full_name = lead.lead_name
+    if email:
+        ldf.email = email
+    ldf.append(
+        "reference_table",
+        {"reference_doctype": "Lead", "reference_person": lead.name},
+    )
+    ldf.insert(ignore_permissions=True)
+
+    return lead, ldf
+
+
+def make_customer_department_route(
+    customer: str,
+    department: str = "Sales",
+    status: str = "Active",
+    assigned_to: str = None,
+) -> Document:
+    """Create and return a Customer Department Route record."""
+    if not _doctype_exists("Customer Department Route"):
+        return None
+
+    route = frappe.new_doc("Customer Department Route")
+    route.customer = customer
+    route.department = department
+    route.status = status
+    if assigned_to:
+        route.assigned_to = assigned_to
+    route.insert(ignore_permissions=True)
+    return route
+
+
+# ---------------------------------------------------------------------------
+# Seed
+# ---------------------------------------------------------------------------
+
+def seed_all():
+    _ensure_hierarchies()
+
+
+# ===========================================================================
+# Base class
+# ===========================================================================
+
+class CustomerTestBase(FrappeTestCase):
+    """Shared setup / teardown for all Customer test classes."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        seed_all()
+
+    @classmethod
+    def tearDownClass(cls):
+        frappe.db.rollback()
+
+
+# ===========================================================================
+# 1.  autoname()
+# ===========================================================================
+
+class TestCustomerAutoname(CustomerTestBase):
+    """
+    autoname() must derive a unique, deterministic, human-readable key from
+    name1 and raise frappe.ValidationError when name1 is absent.
+    """
+
+    def test_name_contains_slugified_customer_name(self):
+        customer = make_customer(_uid("Autoname Alpha"))
+        self.assertIn("Customer_Autoname_Alpha", customer.name)
+
+    def test_name_is_non_empty_string(self):
+        customer = make_customer(_uid("Name Type Check"))
+        self.assertIsInstance(customer.name, str)
+        self.assertGreater(len(customer.name), 0)
+
+    def test_none_name1_raises_validation_error(self):
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(name1=None)
+
+    def test_empty_string_name1_raises_validation_error(self):
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(name1="")
+
+    def test_whitespace_only_name1_raises_validation_error(self):
+        """Whitespace-only strings are falsy after strip; autoname should reject them."""
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(name1="   ")
+
+    def test_same_name_same_day_raises_duplicate_entry_error(self):
+        """
+        generate_name_series is date-keyed; inserting the same name1 twice on
+        the same day must raise DuplicateEntryError (a subclass of ValidationError).
+        """
+        same_name = _uid("Dup Customer")
+        make_customer(same_name)
+        with self.assertRaises(frappe.DuplicateEntryError):
+            make_customer(same_name)
+
+    def test_different_names_produce_different_doc_names(self):
+        c1 = make_customer(_uid("Unique Name A"))
+        c2 = make_customer(_uid("Unique Name B"))
+        self.assertNotEqual(c1.name, c2.name)
+
+    def test_inserted_name_matches_name1_slug(self):
+        slug = _uid("Slug Check")
+        customer = make_customer(slug)
+        # The generated name must contain every word in the slug
+        for word in slug.split("_"):
+            self.assertIn(word, customer.name)
+
+
+# ===========================================================================
+# 2.  validate() – stage JSON
+# ===========================================================================
+
+class TestCustomerValidateStage(CustomerTestBase):
+    """
+    validate() must silently accept absent / falsy stage values and raise
+    frappe.ValidationError for any stage text that is not valid JSON.
+    """
+
+    def test_valid_json_object_stage_passes(self):
+        customer = make_customer(
+            _uid("Valid JSON Object"),
+            stage=json.dumps({"status": "active", "step": 1}),
+        )
+        self.assertTrue(customer.name)
+
+    def test_valid_json_array_stage_passes(self):
+        customer = make_customer(
+            _uid("Valid JSON Array"),
+            stage=json.dumps([{"key": "value"}, {"key2": "value2"}]),
+        )
+        self.assertTrue(customer.name)
+
+    def test_json_null_string_stage_passes(self):
+        """'null' is valid JSON; the validator must not reject it."""
+        customer = make_customer(_uid("Null Stage"), stage="null")
+        self.assertTrue(customer.name)
+
+    def test_empty_string_stage_passes(self):
+        """Empty string is falsy – the if-guard should skip validation entirely."""
+        customer = make_customer(_uid("Empty Stage"), stage="")
+        self.assertTrue(customer.name)
+
+    def test_none_stage_passes(self):
+        """None stage must not trigger the JSON validator."""
+        customer = make_customer(_uid("None Stage"), stage=None)
+        self.assertTrue(customer.name)
+
+    def test_plain_string_stage_raises_validation_error(self):
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(_uid("Plain String Stage"), stage="hello world")
+
+    def test_malformed_json_stage_raises_validation_error(self):
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(_uid("Malformed JSON"), stage="{key: value}")
+
+    def test_partial_json_stage_raises_validation_error(self):
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(_uid("Partial JSON"), stage='{"status": "active"')
+
+    def test_error_message_mentions_invalid_json(self):
+        with self.assertRaises(frappe.ValidationError) as ctx:
+            make_customer(_uid("Error Msg Check"), stage="not-json")
+        self.assertIn("invalid JSON", str(ctx.exception).lower())
+
+    def test_validate_can_be_called_directly_on_doc(self):
+        """validate() must be callable directly on a transient doc."""
+        doc = make_customer(_uid("Direct Validate"), skip_insert=True)
+        doc.stage = json.dumps({"direct": True})
+        try:
+            doc.validate()
+        except frappe.ValidationError:
+            self.fail("validate() raised unexpectedly for valid JSON")
+
+
+# ===========================================================================
+# 3.  after_insert() – CASE 2: no party selected
+# ===========================================================================
+
+class TestCustomerAfterInsertNoParty(CustomerTestBase):
+    """
+    When no party_name / customer_from is supplied, after_insert() must create
+    a fresh Lead Detail Form and link it to the Customer via the lead_details
+    field (persisted through db_update).
+    """
+
+    def test_lead_details_field_is_populated_after_insert(self):
+        customer = make_customer(_uid("Standalone Cust"))
+        self.assertTrue(customer.lead_details)
+
+    def test_lead_details_doc_exists_in_db(self):
+        customer = make_customer(_uid("LDF Exists"))
+        self.assertTrue(
+            frappe.db.exists("Lead Detail Form", customer.lead_details)
+        )
+
+    def test_lead_details_field_is_persisted_via_db_update(self):
+        """db_update() must have saved lead_details to the database row."""
+        customer = make_customer(_uid("DB Persist Check"))
+        db_value = frappe.db.get_value("Customer", customer.name, "lead_details")
+        self.assertEqual(db_value, customer.lead_details)
+
+    def test_lead_detail_form_contains_customer_reference_row(self):
+        """The newly created LDF must already have a reference row for the Customer."""
+        customer = make_customer(_uid("Ref Row Check"))
+        ldf = frappe.get_doc("Lead Detail Form", customer.lead_details)
+        customer_refs = [
+            row for row in ldf.reference_table
+            if row.reference_doctype == "Customer"
+            and row.reference_person == customer.name
+        ]
+        self.assertEqual(len(customer_refs), 1)
+
+    def test_two_customers_receive_separate_lead_detail_forms(self):
+        c1 = make_customer(_uid("Sep LDF A"))
+        c2 = make_customer(_uid("Sep LDF B"))
+        self.assertNotEqual(c1.lead_details, c2.lead_details)
+
+    def test_lead_details_field_is_non_empty_string(self):
+        customer = make_customer(_uid("LDF Type Check"))
+        self.assertIsInstance(customer.lead_details, str)
+        self.assertGreater(len(customer.lead_details), 0)
+
+
+# ===========================================================================
+# 4.  after_insert() – CASE 1: party selected
+# ===========================================================================
+
+class TestCustomerAfterInsertWithParty(CustomerTestBase):
+    """
+    When party_name + customer_from are both supplied, after_insert() must
+    locate the existing Lead Detail Form via Doctype Reference, append a
+    Customer reference row (idempotently), and link lead_details.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        if not _doctype_exists("Lead"):
+            return
+        cls.lead, cls.ldf = make_lead_with_lead_detail("Party Lead", email="party@test.com")
+
+    def _skip_if_no_lead(self):
+        if not _doctype_exists("Lead"):
+            self.skipTest("Lead DocType is not available in this environment")
+        if not getattr(self, "lead", None):
+            self.skipTest("Lead / Lead Detail Form setup failed")
+
+    def test_customer_with_valid_party_links_to_existing_ldf(self):
+        self._skip_if_no_lead()
+        customer = make_customer(
+            _uid("Party Customer"),
+            customer_from="Lead",
+            party_name=self.lead.name,
+        )
+        self.assertEqual(customer.lead_details, self.ldf.name)
+
+    def test_customer_reference_row_appended_to_existing_ldf(self):
+        self._skip_if_no_lead()
+        customer = make_customer(
+            _uid("Ref Append Check"),
+            customer_from="Lead",
+            party_name=self.lead.name,
+        )
+        ldf = frappe.get_doc("Lead Detail Form", self.ldf.name)
+        refs = [
+            row for row in ldf.reference_table
+            if row.reference_doctype == "Customer"
+            and row.reference_person == customer.name
+        ]
+        self.assertEqual(len(refs), 1)
+
+    def test_duplicate_customer_reference_is_not_appended_twice(self):
+        """
+        If the same Customer name somehow appears twice, after_insert's
+        duplicate-check must prevent a second identical row.
+        """
+        self._skip_if_no_lead()
+        customer = make_customer(
+            _uid("Idempotent Ref"),
+            customer_from="Lead",
+            party_name=self.lead.name,
+        )
+        # Manually call after_insert again (simulate a re-run)
+        customer.after_insert()
+
+        ldf = frappe.get_doc("Lead Detail Form", self.ldf.name)
+        refs = [
+            row for row in ldf.reference_table
+            if row.reference_doctype == "Customer"
+            and row.reference_person == customer.name
+        ]
+        self.assertEqual(len(refs), 1)
+
+    def test_nonexistent_party_raises_validation_error(self):
+        """A party_name that has no Doctype Reference row must raise."""
+        if not _doctype_exists("Lead"):
+            self.skipTest("Lead DocType is not available")
+        with self.assertRaises(frappe.ValidationError):
+            make_customer(
+                _uid("Bad Party"),
+                customer_from="Lead",
+                party_name="DoesNotExist-99999",
+            )
+
+    def test_error_message_mentions_lead_details_not_found(self):
+        if not _doctype_exists("Lead"):
+            self.skipTest("Lead DocType is not available")
+        with self.assertRaises(frappe.ValidationError) as ctx:
+            make_customer(
+                _uid("Error Msg Party"),
+                customer_from="Lead",
+                party_name="DoesNotExist-88888",
+            )
+        self.assertIn("Lead Details not found", str(ctx.exception))
+
+
+# ===========================================================================
+# 5.  on_trash()
+# ===========================================================================
+
+class TestCustomerOnTrash(CustomerTestBase):
+    """
+    on_trash() delegates to unlink_and_clean_lead_detail.
+    After deletion the Customer reference row in the LDF must be gone.
+    """
+
+    def test_deleting_customer_does_not_raise(self):
+        customer = make_customer(_uid("Trash Safe"))
+        try:
+            frappe.delete_doc(
+                "Customer", customer.name, ignore_permissions=True, force=True
+            )
+        except Exception as exc:
+            self.fail(f"on_trash raised unexpectedly: {exc}")
+
+    def test_deleting_customer_removes_reference_from_ldf(self):
+        customer = make_customer(_uid("Trash Unlink"))
+        ldf_name = customer.lead_details
+
+        frappe.delete_doc(
+            "Customer", customer.name, ignore_permissions=True, force=True
+        )
+
+        if not frappe.db.exists("Lead Detail Form", ldf_name):
+            return  # LDF itself was deleted – reference is clearly gone
+
+        ldf = frappe.get_doc("Lead Detail Form", ldf_name)
+        refs = [
+            row for row in ldf.reference_table
+            if row.reference_doctype == "Customer"
+            and row.reference_person == customer.name
+        ]
+        self.assertEqual(len(refs), 0)
+
+    def test_customer_record_no_longer_exists_after_deletion(self):
+        customer = make_customer(_uid("Trash Gone"))
+        name = customer.name
+        frappe.delete_doc("Customer", name, ignore_permissions=True, force=True)
+        self.assertFalse(frappe.db.exists("Customer", name))
+
+
+# ===========================================================================
+# 6.  get_forwardable_departments()
+# ===========================================================================
+
+class TestGetForwardableDepartments(CustomerTestBase):
+    """
+    Tests for the get_forwardable_departments() whitelist function.
+    Logic summary:
+      - Active CR or Onboarding → blocked=True response dict
+      - No active Sales Order   → only "CR" is forwardable
+      - Services present, all completed + user in Marketing → Onboarding added
+    """
+
+    def _skip_if_no_cr(self):
+        if not _doctype_exists("CR"):
+            self.skipTest("CR DocType is not available in this environment")
+
+    def _skip_if_no_onboarding(self):
+        if not _doctype_exists("Onboardings"):
+            self.skipTest("Onboardings DocType is not available in this environment")
+
+    def test_fresh_customer_without_sales_order_returns_cr_option(self):
+        customer = make_customer(_uid("No SO Cust"))
+        result = get_forwardable_departments(customer.name)
+        if isinstance(result, list):
+            self.assertIn("CR", result)
+        else:
+            # May return dict with options key
+            self.assertIn("CR", result.get("options", result))
+
+    def test_result_type_is_list_or_dict(self):
+        customer = make_customer(_uid("Type Check Fwd"))
+        result = get_forwardable_departments(customer.name)
+        self.assertIsInstance(result, (list, dict))
+
+    def test_customer_with_active_cr_returns_blocked_true(self):
+        self._skip_if_no_cr()
+        customer = make_customer(_uid("Active CR Cust"))
+        cr = frappe.new_doc("CR")
+        cr.customer = customer.name
+        cr.status = "Active"
+        cr.insert(ignore_permissions=True)
+
+        result = get_forwardable_departments(customer.name)
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result.get("blocked"))
+
+    def test_customer_with_active_cr_blocked_response_includes_cr_in_active_in(self):
+        self._skip_if_no_cr()
+        customer = make_customer(_uid("Active CR Active In"))
+        cr = frappe.new_doc("CR")
+        cr.customer = customer.name
+        cr.status = "Active"
+        cr.insert(ignore_permissions=True)
+
+        result = get_forwardable_departments(customer.name)
+        self.assertIn("CR", result.get("active_in", []))
+
+    def test_customer_with_active_onboarding_returns_blocked_true(self):
+        self._skip_if_no_onboarding()
+        customer = make_customer(_uid("Active Onboard Cust"))
+        onboarding = frappe.new_doc("Onboardings")
+        onboarding.customer = customer.name
+        onboarding.status = "Active"
+        onboarding.insert(ignore_permissions=True)
+
+        result = get_forwardable_departments(customer.name)
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result.get("blocked"))
+
+    def test_blocked_result_contains_active_in_list(self):
+        self._skip_if_no_cr()
+        customer = make_customer(_uid("Active In List Check"))
+        cr = frappe.new_doc("CR")
+        cr.customer = customer.name
+        cr.status = "Active"
+        cr.insert(ignore_permissions=True)
+
+        result = get_forwardable_departments(customer.name)
+        if result.get("blocked"):
+            self.assertIn("active_in", result)
+            self.assertIsInstance(result["active_in"], list)
+
+    def test_active_in_contains_both_when_cr_and_onboarding_active(self):
+        self._skip_if_no_cr()
+        self._skip_if_no_onboarding()
+        customer = make_customer(_uid("Both Active Cust"))
+        cr = frappe.new_doc("CR")
+        cr.customer = customer.name
+        cr.status = "Active"
+        cr.insert(ignore_permissions=True)
+
+        onboarding = frappe.new_doc("Onboardings")
+        onboarding.customer = customer.name
+        onboarding.status = "Active"
+        onboarding.insert(ignore_permissions=True)
+
+        result = get_forwardable_departments(customer.name)
+        active_in = result.get("active_in", [])
+        self.assertIn("CR", active_in)
+        self.assertIn("Onboarding", active_in)
+
+
+# ===========================================================================
+# 7.  get_customer_routes()
+# ===========================================================================
+
+class TestGetCustomerRoutes(CustomerTestBase):
+    """get_customer_routes() must return a list of route dicts ordered by forwarded_on desc."""
+
+    def _skip_if_no_routes(self):
+        if not _doctype_exists("Customer Department Route"):
+            self.skipTest("Customer Department Route DocType is unavailable")
+
+    def test_fresh_customer_returns_empty_list(self):
+        customer = make_customer(_uid("No Routes Cust"))
+        result = get_customer_routes(customer.name)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 0)
+
+    def test_result_is_always_a_list(self):
+        customer = make_customer(_uid("Routes Type Cust"))
+        self.assertIsInstance(get_customer_routes(customer.name), list)
+
+    def test_added_route_appears_in_results(self):
+        self._skip_if_no_routes()
+        customer = make_customer(_uid("Has Route Cust"))
+        make_customer_department_route(customer.name, department="CR")
+
+        result = get_customer_routes(customer.name)
+        self.assertEqual(len(result), 1)
+
+    def test_route_result_contains_required_fields(self):
+        self._skip_if_no_routes()
+        customer = make_customer(_uid("Fields Route Cust"))
+        make_customer_department_route(customer.name, department="Sales")
+
+        result = get_customer_routes(customer.name)
+        self.assertGreater(len(result), 0)
+        row = result[0]
+        for field in ["name", "department", "status", "assigned_to", "forwarded_by"]:
+            self.assertIn(field, row)
+
+    def test_multiple_routes_all_returned(self):
+        self._skip_if_no_routes()
+        customer = make_customer(_uid("Multi Route Cust"))
+        make_customer_department_route(customer.name, department="CR")
+        make_customer_department_route(customer.name, department="Sales")
+
+        result = get_customer_routes(customer.name)
+        self.assertEqual(len(result), 2)
+
+    def test_route_department_matches_inserted_value(self):
+        self._skip_if_no_routes()
+        customer = make_customer(_uid("Route Dept Match"))
+        make_customer_department_route(customer.name, department="HR")
+
+        result = get_customer_routes(customer.name)
+        departments = [r["department"] for r in result]
+        self.assertIn("HR", departments)
+
+    def test_routes_for_other_customer_not_included(self):
+        self._skip_if_no_routes()
+        c1 = make_customer(_uid("Route Isolation A"))
+        c2 = make_customer(_uid("Route Isolation B"))
+        make_customer_department_route(c1.name, department="CR")
+
+        result = get_customer_routes(c2.name)
+        self.assertEqual(len(result), 0)
+
+
+# ===========================================================================
+# 8.  update_route_status()
+# ===========================================================================
+
+class TestUpdateRouteStatus(CustomerTestBase):
+    """
+    update_route_status() must:
+      - Reject any status other than 'Completed'
+      - Reject routes already marked Completed
+      - Reject updates by users who are not the assignee
+      - Reject when current user has no linked Employee
+      - Return success dict on the happy path
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        if not _doctype_exists("Customer Department Route"):
+            return
+
+        # Dedicated user + employee to act as the route assignee
+        cls.assignee_user = make_user("assignee_route@test.verp", "Route Assignee")
+        cls.assignee_emp = make_employee(
+            _uid("Route Assignee Emp"),
+            user=cls.assignee_user,
+            assignments=[{"department": "Sales", "designation": "Sales Master Manager"}],
+        )
+
+        # A second user who is NOT the assignee (but has an employee record)
+        cls.other_user = make_user("other_route@test.verp", "Route Other")
+        cls.other_emp = make_employee(
+            _uid("Route Other Emp"),
+            user=cls.other_user,
+            assignments=[{"department": "HR", "designation": "HR Manager"}],
+        )
+
+    def _skip_if_no_routes(self):
+        if not _doctype_exists("Customer Department Route"):
+            self.skipTest("Customer Department Route DocType is unavailable")
+
+    def _make_route(self, assigned_to: str = None) -> Document:
+        customer = make_customer(_uid("Route Status Cust"))
+        return make_customer_department_route(
+            customer.name,
+            department="Sales",
+            status="Active",
+            assigned_to=assigned_to or self.assignee_emp.name,
+        )
+
+    # ── rejections ────────────────────────────────────────────────────────────
+
+    def test_non_completed_status_raises_validation_error(self):
+        self._skip_if_no_routes()
+        route = self._make_route()
+        with self.assertRaises(frappe.ValidationError):
+            update_route_status(route.name, "Active")
+
+    def test_pending_status_raises_validation_error(self):
+        self._skip_if_no_routes()
+        route = self._make_route()
+        with self.assertRaises(frappe.ValidationError):
+            update_route_status(route.name, "Pending")
+
+    def test_already_completed_route_raises_validation_error(self):
+        self._skip_if_no_routes()
+        route = self._make_route()
+        frappe.db.set_value("Customer Department Route", route.name, "status", "Completed")
+        with self.assertRaises(frappe.ValidationError):
+            update_route_status(route.name, "Completed")
+
+    def test_error_message_mentions_already_completed(self):
+        self._skip_if_no_routes()
+        route = self._make_route()
+        frappe.db.set_value("Customer Department Route", route.name, "status", "Completed")
+        with self.assertRaises(frappe.ValidationError) as ctx:
+            update_route_status(route.name, "Completed")
+        self.assertIn("already completed", str(ctx.exception).lower())
+
+    def test_non_assignee_raises_validation_error(self):
+        self._skip_if_no_routes()
+        route = self._make_route(assigned_to=self.assignee_emp.name)
+        frappe.set_user(self.other_user)
+        try:
+            with self.assertRaises(frappe.ValidationError):
+                update_route_status(route.name, "Completed")
+        finally:
+            frappe.set_user("Administrator")
+
+    def test_user_without_employee_record_raises_validation_error(self):
+        self._skip_if_no_routes()
+        bare_user = make_user("bare_route@test.verp", "Bare Route")
+        route = self._make_route()
+        frappe.set_user(bare_user)
+        try:
+            with self.assertRaises(frappe.ValidationError):
+                update_route_status(route.name, "Completed")
+        finally:
+            frappe.set_user("Administrator")
+
+    # ── happy path ────────────────────────────────────────────────────────────
+
+    def test_assignee_can_mark_route_completed(self):
+        self._skip_if_no_routes()
+        route = self._make_route(assigned_to=self.assignee_emp.name)
+        frappe.set_user(self.assignee_user)
+        try:
+            result = update_route_status(route.name, "Completed")
+        finally:
+            frappe.set_user("Administrator")
+        self.assertEqual(result.get("status"), "success")
+
+    def test_completed_route_has_status_updated_in_db(self):
+        self._skip_if_no_routes()
+        route = self._make_route(assigned_to=self.assignee_emp.name)
+        frappe.set_user(self.assignee_user)
+        try:
+            update_route_status(route.name, "Completed")
+        finally:
+            frappe.set_user("Administrator")
+        db_status = frappe.db.get_value("Customer Department Route", route.name, "status")
+        self.assertEqual(db_status, "Completed")
+
+    def test_success_response_contains_message_field(self):
+        self._skip_if_no_routes()
+        route = self._make_route(assigned_to=self.assignee_emp.name)
+        frappe.set_user(self.assignee_user)
+        try:
+            result = update_route_status(route.name, "Completed")
+        finally:
+            frappe.set_user("Administrator")
+        self.assertIn("message", result)
+        self.assertIsInstance(result["message"], str)
+
+    def test_success_message_contains_department_name(self):
+        self._skip_if_no_routes()
+        route = self._make_route(assigned_to=self.assignee_emp.name)
+        frappe.set_user(self.assignee_user)
+        try:
+            result = update_route_status(route.name, "Completed")
+        finally:
+            frappe.set_user("Administrator")
+        self.assertIn("Sales", result["message"])
+
+
+# ===========================================================================
+# 9.  get_customer_email()
+# ===========================================================================
+
+class TestGetCustomerEmail(CustomerTestBase):
+    """
+    get_customer_email() executes a JOIN between Lead Detail Form and
+    Doctype Reference to fetch an email for a Customer.
+    """
+
+    def _attach_email_to_ldf(self, customer: Document, email: str):
+        """Helper: set the email on a customer's linked Lead Detail Form."""
+        ldf = frappe.get_doc("Lead Detail Form", customer.lead_details)
+        ldf.email = email
+        ldf.save(ignore_permissions=True)
+
+    def test_returns_correct_email_for_customer_with_email(self):
+        customer = make_customer(_uid("Email Cust"))
+        self._attach_email_to_ldf(customer, "cust@example.com")
+        email = get_customer_email(customer.name)
+        self.assertEqual(email, "cust@example.com")
+
+    def test_return_type_is_string(self):
+        customer = make_customer(_uid("Email Type Cust"))
+        self._attach_email_to_ldf(customer, "type@example.com")
+        self.assertIsInstance(get_customer_email(customer.name), str)
+
+    def test_different_customers_return_different_emails(self):
+        c1 = make_customer(_uid("Email Diff A"))
+        c2 = make_customer(_uid("Email Diff B"))
+        self._attach_email_to_ldf(c1, "a@example.com")
+        self._attach_email_to_ldf(c2, "b@example.com")
+        self.assertNotEqual(get_customer_email(c1.name), get_customer_email(c2.name))
+
+    def test_nonexistent_customer_raises(self):
+        with self.assertRaises(Exception):
+            get_customer_email("NonExistent-Customer-99999")
+
+    def test_customer_without_email_in_ldf_raises_or_returns_none(self):
+        """
+        If the LDF row exists but the email column is NULL / empty the function
+        either returns None or raises.  Neither outcome silently returns a value.
+        """
+        customer = make_customer(_uid("No Email Cust"))
+        ldf = frappe.get_doc("Lead Detail Form", customer.lead_details)
+        ldf.email = ""
+        ldf.save(ignore_permissions=True)
+
+        try:
+            result = get_customer_email(customer.name)
+            # Acceptable only if the SQL returned no rows (empty string ≠ match)
+            self.assertIsNone(result)
+        except (frappe.ValidationError, frappe.DoesNotExistError):
+            pass  # Also acceptable – function chose to raise
+
+    def test_email_with_special_characters_is_returned_intact(self):
+        customer = make_customer(_uid("Special Email Cust"))
+        special_email = "user+tag@sub.example.com"
+        self._attach_email_to_ldf(customer, special_email)
+        self.assertEqual(get_customer_email(customer.name), special_email)
+
+
+# ===========================================================================
+# 10. generate_token()
+# ===========================================================================
+
+class TestGenerateToken(CustomerTestBase):
+    """
+    generate_token() must produce a deterministic, base64url-encoded token
+    that embeds the email payload, is HMAC-signed, and strips leading /
+    trailing whitespace from the input.
+    """
+
+    def _encryption_key_available(self) -> bool:
+        return bool(frappe.conf.get("encryption_key"))
+
+    def test_token_is_non_empty_string(self):
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        token = generate_token("test@example.com")
+        self.assertIsInstance(token, str)
+        self.assertGreater(len(token), 0)
+
+    def test_same_email_produces_identical_tokens(self):
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        email = "stable@example.com"
+        self.assertEqual(generate_token(email), generate_token(email))
+
+    def test_different_emails_produce_different_tokens(self):
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        self.assertNotEqual(
+            generate_token("user1@example.com"),
+            generate_token("user2@example.com"),
+        )
+
+    def test_decoded_token_contains_original_email(self):
+        """The token must decode to a string that includes the email."""
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        email = "decode@example.com"
+        token = generate_token(email)
+        decoded = base64.urlsafe_b64decode(token.encode()).decode()
+        self.assertIn(email, decoded)
+
+    def test_decoded_token_contains_pipe_separator(self):
+        """Token format is '<payload>|<signature>' before base64 encoding."""
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        token = generate_token("pipe@example.com")
+        decoded = base64.urlsafe_b64decode(token.encode()).decode()
+        self.assertIn("|", decoded)
+
+    def test_whitespace_email_is_stripped_before_signing(self):
+        """Leading/trailing whitespace must be normalised: tokens must match."""
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        t1 = generate_token("stripped@example.com")
+        t2 = generate_token("  stripped@example.com  ")
+        self.assertEqual(t1, t2)
+
+    def test_token_is_valid_base64url(self):
+        """The token must survive a round-trip through base64 urlsafe decoding."""
+        if not self._encryption_key_available():
+            self.skipTest("encryption_key not configured")
+        token = generate_token("b64@example.com")
+        try:
+            base64.urlsafe_b64decode(token.encode())
+        except Exception:
+            self.fail("generate_token() did not return valid base64url-encoded data")
+
+
+# ===========================================================================
+# 11. update_company_percentage()
+# ===========================================================================
+
+class TestUpdateCompanyPercentage(CustomerTestBase):
+    """
+    update_company_percentage() must persist the supplied value to the
+    Lead Detail Form and return the string 'updated'.
+    """
+
+    def _get_ldf_for(self, customer: Document) -> Document:
+        return frappe.get_doc("Lead Detail Form", customer.lead_details)
+
+    def test_returns_updated_string(self):
+        customer = make_customer(_uid("Pct Return"))
+        result = update_company_percentage(customer.lead_details, 25)
+        self.assertEqual(result, "updated")
+
+    def test_value_is_persisted_in_db(self):
+        customer = make_customer(_uid("Pct Persist"))
+        update_company_percentage(customer.lead_details, 42)
+        db_val = frappe.db.get_value(
+            "Lead Detail Form", customer.lead_details, "company_percentage"
+        )
+        self.assertEqual(float(db_val), 42.0)
+
+    def test_zero_percentage_is_accepted(self):
+        customer = make_customer(_uid("Pct Zero"))
+        result = update_company_percentage(customer.lead_details, 0)
+        self.assertEqual(result, "updated")
+
+    def test_hundred_percentage_is_accepted(self):
+        customer = make_customer(_uid("Pct Hundred"))
+        result = update_company_percentage(customer.lead_details, 100)
+        self.assertEqual(result, "updated")
+
+    def test_sequential_updates_store_latest_value(self):
+        customer = make_customer(_uid("Pct Sequential"))
+        update_company_percentage(customer.lead_details, 10)
+        update_company_percentage(customer.lead_details, 75)
+        db_val = frappe.db.get_value(
+            "Lead Detail Form", customer.lead_details, "company_percentage"
+        )
+        self.assertEqual(float(db_val), 75.0)
+
+    def test_nonexistent_lead_name_raises(self):
+        with self.assertRaises(Exception):
+            update_company_percentage("NonExistentLDF-99999", 50)
