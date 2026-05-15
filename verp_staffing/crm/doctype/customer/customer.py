@@ -441,4 +441,10 @@ def get_customer_email(customer):
     if not email:
         frappe.throw(f"No email found in Lead Details for Customer {customer}")
 
-    return email[0].email
+    email_value = email[0].email
+
+    # Handle NULL / empty string
+    if not email_value:
+        return None
+
+    return email_value

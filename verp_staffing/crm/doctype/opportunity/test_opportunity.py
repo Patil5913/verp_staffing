@@ -6,8 +6,8 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import nowdate
 
 from verp_staffing.employee.doctype.employee.test_employee import (
-    get_or_create_employee,
-    get_or_create_user,
+    make_employee,
+    make_user,
 )
 
 _resolved: dict = {}
@@ -76,12 +76,12 @@ def make_opportunity(
 
 
 def seed_all():
-    user = get_or_create_user(
+    user = make_user(
         email="test_opp@example.com",
         first_name="Test Opp",
     )
 
-    employee = get_or_create_employee(
+    employee = make_employee(
         user=user,
         employee_name="Test Opportunity Employee",
     )
