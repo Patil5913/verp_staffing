@@ -42,7 +42,25 @@ def get_auto_assign_employee(
 
     employees = get_employees_with_role(role, department)
     if not employees:
-        frappe.throw("No employees available for auto assignment")
+        frappe.throw(
+            msg=f"""
+                <b>No employees available for auto assignment.</b><br><br>
+
+                The <b>{department}</b> department is not assigned to any employee.<br><br>
+
+                Please do one of the following:<br>
+
+                1. Update the related Employee Assignment Details.<br>
+                2. Assign the <b>{department}</b> department to an existing employee.<br>
+                3. Create a new employee and configure the assignment details.<br><br>
+
+                <a href="/app/employee"
+                class="btn btn-primary btn-sm">
+                Open Employee List
+                </a>
+            """,
+            title="Employee Assignment Required",
+        )
 
     load = []
     for emp in employees:
