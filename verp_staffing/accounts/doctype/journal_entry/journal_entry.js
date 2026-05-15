@@ -3,17 +3,6 @@
 
 frappe.provide("verp_staffing.accounts");
 frappe.provide("verp_staffing.journal_entry");
-//remove emojis form entire file
-// explain use of add_fetch in this file, line: 9
-// what is "set_purchase_account_queries", line: 71
-// why to call "set_exchange_rate" in this format then normal call, verp_staffing.journal_entry.set_exchange_rate(frm, row.doctype, row.name);
-// same for "set_debit_credit_in_company_currency", verp_staffing.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
-// reason for extending class, line: 145
-// "verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Controller"
-// the usecase of "cur_frm.cscript"
-// unable to find field "is_system_generated" in doctype
-
-
 
 frappe.ui.form.on("Journal Entry", {
 	refresh: function (frm) {
