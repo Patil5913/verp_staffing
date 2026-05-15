@@ -124,6 +124,7 @@ def get_data(filters):
 
     allowed_employees = get_visible_employee_names(user)
 
+    
     if employee_filter:
         if employee_filter not in allowed_employees and user != "Administrator":
             return []
@@ -150,7 +151,9 @@ def get_data(filters):
             # Non-admin — own hierarchy only
             allowed_employees = get_visible_employee_names(user)
             valid_employees = filter_sales_employees(allowed_employees)
+
             users = employees_to_users(valid_employees)
+
     if not users:
         return []
 
@@ -180,6 +183,7 @@ def get_data(filters):
 """
 
     return frappe.db.sql(query, values, as_dict=True)
+
 
 
 def get_chart(data):
