@@ -68,7 +68,6 @@ class JournalEntry(Document):
         self.validate_balance()
 
     def on_submit(self):
-        self.delete_existing_gl_entries()
 
         gl_map = get_journal_entry_gl_map(self)
         merged_gl = merge_gl_entries(gl_map)
@@ -138,19 +137,6 @@ class JournalEntry(Document):
 
             invoice.db_set("outstanding_amount", new_outstanding)
 
-
-    def delete_existing_gl_entries(self):
-        existing = frappe.get_all(
-            "GL Entry",
-            filters={
-                "voucher_type": self.doctype,
-                "voucher_no": self.name
-            },
-            pluck="name"
-        )
-
-        for name in existing:
-            frappe.delete_doc("GL Entry", name)
 
     def validate_accounts_exist(self):
         if not self.accounts:
