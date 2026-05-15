@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, get_datetime_str, nowdate
 from frappe.desk.reportview import get_match_cond
+from verp_staffing.accounts.doctype.company.company import get_company_currency
 
 @frappe.whitelist()
 def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=None):
@@ -95,17 +96,6 @@ def format_ces_api(data, param):
 @frappe.whitelist()
 def get_tax_rate(account_head):
 	return frappe.get_cached_value("Account", account_head, ["tax_rate", "account_name"], as_dict=True)
-
-
-def get_company_currency(company):
-	"""Returns the default company currency"""
-	if not frappe.flags.company_currency:
-		frappe.flags.company_currency = {}
-	if company not in frappe.flags.company_currency:
-		frappe.flags.company_currency[company] = frappe.db.get_value(
-			"Company", company, "default_currency", cache=True
-		)
-	return frappe.flags.company_currency[company]
 
 
 @frappe.whitelist()

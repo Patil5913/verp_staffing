@@ -9,9 +9,9 @@ from frappe.utils import flt, nowdate ,add_days
 
 from verp_staffing.accounts.doctype.company.test_company import (
     create_company_if_not_exists,
-    get_company_currency,
     get_default_company_account,
 )
+from verp_staffing.accounts.doctype.company.company import get_company_currency
 from verp_staffing.accounts.doctype.account.test_account import (
     create_account_if_not_exists,
 )
