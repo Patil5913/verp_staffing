@@ -1424,7 +1424,7 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 		frm.set_df_property(
 			"resume",
 			"options",
-			"<div style='color:#888'>No customer selected</div>",
+			'<div style="color:#888">No customer selected</div>',
 		);
 		return;
 	}
@@ -1442,7 +1442,7 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 				frm.set_df_property(
 					"resume",
 					"options",
-					"<div style='color:#888'>No resume uploaded</div>",
+					'<div style="color:#888">No resume uploaded</div>',
 				);
 				return;
 			}
