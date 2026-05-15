@@ -2,26 +2,6 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Opportunity", {
-	onload(frm) {
-		if (frm.is_new()) {
-			frm.set_value("sales_stage", "Prospecting");
-		}
-
-		const roles = frappe.user_roles;
-		const user = frappe.session.user;
-		if (user != "Administrator") {
-			// Only apply to Lead Employee
-			if (
-				roles.includes("Lead Employee") ||
-				roles.includes("Lead Manager") ||
-				roles.includes("Lead Master Manager")
-			) {
-				frappe.msgprint("You are not allowed to access Opportunity list.");
-				frappe.set_route("desk");
-			}
-		}
-	},
-
 	async refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -63,7 +43,6 @@ frappe.ui.form.on("Opportunity", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
-		
 		// but still allow changes *except* Converted
 		frm.doc._previous_status = frm.doc.status; //save the last status
 
@@ -158,38 +137,20 @@ frappe.ui.form.on("Opportunity", {
 		}
 	},
 
-	opportunity_from_lead: function (frm) {
-		frm.trigger("fetch_source_details");
-		if (frm.doc.opportunity_from_lead) {
-			let source_name = frm.doc.opportunity_from_lead;
+	opportunity_from_lead(frm) {
+		if (!frm.doc.opportunity_from_lead) return;
 
-			frappe.db.get_value("Lead", source_name, "name1").then((r) => {
-				if (r && r.message) {
-					let base_name = r.message.name1;
-					frm.set_value("name1", base_name ? base_name.trim() : "");
-				}
+		frappe.db
+			.get_value("Lead", frm.doc.opportunity_from_lead, ["name1", "source"])
+			.then((r) => {
+				if (!r?.message) return;
+				if (r.message.name1) frm.set_value("name1", r.message.name1.trim());
+				if (r.message.source) frm.set_value("source", r.message.source);
 			});
-		}
-	},
-
-	fetch_source_details: function (frm) {
-		if (frm.doc.opportunity_from_lead) {
-			frappe.db.get_value("Lead", frm.doc.opportunity_from_lead, "source", function (r) {
-				if (r) {
-					if (r.source) {
-						frm.set_value("source", r.source);
-					}
-				}
-			});
-		}
 	},
 });
 
 async function handle_create_customer(frm) {
-	// if (frm.is_dirty()) {
-	// 	await frm.save();
-	// }
-
 	// fetch existing customers
 	const r = await frappe.call({
 		method: "frappe.client.get_list",
