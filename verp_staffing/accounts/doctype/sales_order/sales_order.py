@@ -33,6 +33,7 @@ class SalesOrder(Document):
     # def on_submit(self):
     #     on_sales_order_save(self)
     def validate(self):
+        self.validate_payment_terms_deletion()
         self.validate_mandatory()
         self.validate_expense_accounts()
         self.validate_tax_accounts()
@@ -43,6 +44,49 @@ class SalesOrder(Document):
         self.handle_currency_logic()
         run_calculation(self)
         self.set_in_words()
+
+    def validate_payment_terms_deletion(self):
+        if self.is_new():
+            return
+
+        # Get previously saved payment term rows
+        old_term_names = frappe.get_all(
+            "Customer Payment Terms",
+            filters={"parent": self.name, "parenttype": "Sales Order"},
+            fields=["name", "payment_status", "payment_entry"],
+        )
+        old_map = {t["name"]: t for t in old_term_names}
+
+        # Current row names after user's edits
+        current_names = {row.name for row in (self.payment_terms or []) if row.name}
+
+        # Find deleted rows
+        for term_name, term_data in old_map.items():
+            if term_name not in current_names:
+                # Block deletion of Verified terms
+                if term_data["payment_status"] == "Verified":
+                    frappe.throw(
+                        f"Cannot delete payment term <b>{term_name}</b> — "
+                        f"it is already verified.",
+                        title="Deletion Blocked"
+                    )
+
+                # Delete linked PE for non-verified terms
+                if term_data["payment_entry"]:
+                    pe_name = term_data["payment_entry"]
+                    pe_status = frappe.db.get_value(
+                        "Payment Entry", pe_name, "docstatus"
+                    )
+                    if pe_status == 1:
+                        frappe.throw(
+                            f"Cannot delete payment term <b>{term_name}</b> — "
+                            f"linked Payment Entry <b>{pe_name}</b> is already submitted.",
+                            title="Deletion Blocked"
+                        )
+                    # Delete draft PE
+                    frappe.delete_doc(
+                        "Payment Entry", pe_name, force=True
+                    )
 
     def validate_mandatory(self):
         if not self.customer:
@@ -511,6 +555,7 @@ def create_payment_entry_from_term(
             "total_amount": si.grand_total,
             "outstanding_amount": si.outstanding_amount,
             "allocated_amount": term.amount,
+            "invoice_currency": si.currency
         },
     )
 
@@ -569,7 +614,7 @@ def reject_payment_entry(payment_entry, remarks):
         frappe.throw("A verified payment entry cannot be rejected.")
 
     now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
-    full_note = f"Rejected by {frappe.session.user} on {now_str}: {remarks.strip()}"
+    full_note = f"Rejected by {frappe.session.user} on {now_str}, Remarks: {remarks.strip()}"
 
     pe.verification_status = "Rejected"
     pe.rejected_by = frappe.session.user

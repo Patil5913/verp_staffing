@@ -911,7 +911,7 @@ async function render_invoices_tab(frm) {
 
 	const invoice = r.message[0] || [];
 	const wrapper = frm.get_field("invoices_html").$wrapper;
-	if (!invoice) {
+	if (invoice.length <= 0) {
 		wrapper.html(
 			`<p class="text-muted" style="padding:10px">
                 No invoice created yet.

@@ -112,13 +112,13 @@ def _are_all_services_completed(sales_order_doc) -> bool:
 def _are_all_payments_completed(sales_order_doc) -> bool:
     """
     All rows in payment_terms child table must have
-    payment_status == 'Completed'. Empty table → False.
+    payment_status == 'Verified'. Empty table → False.
     """
     if not sales_order_doc.payment_terms:
         return False
 
     return all(
-        (row.payment_status or "").strip() == "Completed"
+        (row.payment_status or "").strip() == "Verified"
         for row in sales_order_doc.payment_terms
     )
 
@@ -139,9 +139,11 @@ def evaluate_sales_order_status(sales_order_name: str) -> None:
     so = frappe.get_doc("Sales Order", sales_order_name)
 
     services_done = _are_all_services_completed(so)
+    frappe.errprint(f"services_done {services_done}")
     payments_done = _are_all_payments_completed(so)
+    frappe.errprint(f"payments_done {payments_done}")
     new_status = "Closed" if (services_done and payments_done) else "Open"
-
+    frappe.errprint(f"newstatus: {new_status}")
     if so.status != new_status:
         # Use db_set to avoid triggering a full save/recursion
         so.db_set("status", new_status, notify=True, commit=True)

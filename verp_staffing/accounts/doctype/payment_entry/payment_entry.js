@@ -11,7 +11,18 @@ frappe.ui.form.on("Payment Entry", {
 		set_currency_labels(frm);
 		hide_unhide_fields(frm);
 		if (frm.doc.docstatus === 2) return; // Cancelled — nothing to show
+		// Lock paid_amount if linked to a payment term
+		if (frm.doc.payment_term_row) {
+			frm.set_df_property("paid_amount", "read_only", 1);
+			// Lock references table — no add, delete, or edit
+			frm.set_df_property("references", "read_only", 1);
+			frm.set_df_property("references", "cannot_add_rows", 1);
+			frm.set_df_property("references", "cannot_delete_rows", 1);
 
+			// Hide the "Get Outstanding" buttons since user can't modify references
+			frm.set_df_property("get_outstanding_invoices", "hidden", 1);
+			frm.set_df_property("get_outstanding_orders", "hidden", 1);
+		}
 		const status = frm.doc.verification_status;
 		const is_locked = frm.doc.docstatus === 1; // Submitted = locked
 
@@ -104,6 +115,7 @@ frappe.ui.form.on("Payment Entry", {
 			"Journal Entry",
 			"Bank Transaction",
 			"Purchase Order",
+			"Sales Order",
 		];
 
 		// When the form opens fresh (not from an invoice), clear account
@@ -771,6 +783,7 @@ function get_outstanding_documents(frm, get_invoices, get_orders) {
 }
 
 function render_verification_banner(frm) {
+	if (frm.is_new()) return;
 	const status = frm.doc.verification_status;
 	if (!status) return;
 

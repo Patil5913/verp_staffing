@@ -8,7 +8,7 @@
   "customer",
   "company",
   "column_break_wknv",
-  "date",
+  "posting_date",
   "status",
   "company_currency",
   "currency_section",
@@ -55,18 +55,13 @@
   "invoice_section",
   "invoices_html",
   "payment_terms_section",
-  "payment_terms"
+  "payment_terms",
+  "amended_from"
  ],
  "fields": [
   {
    "fieldname": "column_break_wknv",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "Today",
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "label": "Date"
   },
   {
    "fieldname": "customer",
@@ -79,6 +74,7 @@
    "set_only_once": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "payment_terms",
    "fieldtype": "Table",
    "label": "Add Payment Terms",
@@ -397,12 +393,29 @@
    "fieldname": "payment_terms_section",
    "fieldtype": "Section Break",
    "label": "Payment Terms"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Sales Order",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-05-15 15:53:57.530175",
+ "modified": "2026-05-15 17:09:04.577366",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
@@ -459,5 +472,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
