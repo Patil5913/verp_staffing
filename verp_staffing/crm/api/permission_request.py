@@ -387,15 +387,19 @@ def get_lead_detail_field_values(customer_name):
     # Fetch simple field values in one query
     values = {}
     if simple_fieldnames:
-        values = (
-            frappe.db.get_value(
-                "Lead Detail Form",
-                lead_detail_name,
-                simple_fieldnames,
-                as_dict=True,
+        try:
+            values = (
+                frappe.db.get_value(
+                    "Lead Detail Form",
+                    lead_detail_name,
+                    simple_fieldnames,
+                    as_dict=True,
+                )
+                or {}
             )
-            or {}
-        )
+        except Exception as e:
+            frappe.log_error(str(e), "Lead Detail Field Values Error")
+            frappe.throw("Failed to load field values. Please contact Administrator.")
 
     # Fetch table field values
     for fieldname in table_fieldnames:
@@ -480,7 +484,10 @@ def request_field_update(
         frappe.throw("Approver employee has no linked User account.")
 
     if isinstance(field_updates, str):
-        field_updates = json.loads(field_updates)
+        try:
+            field_updates = json.loads(field_updates)
+        except Exception:
+            frappe.throw("Invalid field data received. Please try again.")
 
     # Build field labels for activity log
     lead_detail_meta = frappe.get_meta("Lead Detail Form")
@@ -594,7 +601,10 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
         frappe.throw("Approver employee has no linked User account.")
 
     if isinstance(field_updates, str):
-        field_updates = json.loads(field_updates)
+        try:
+            field_updates = json.loads(field_updates)
+        except Exception:
+            frappe.throw("Invalid field data received. Please try again.")
 
     lead_detail_meta = frappe.get_meta("Lead Detail Form")
     field_labels = []
@@ -633,7 +643,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    # 📧 SEND EMAIL
+    #  SEND EMAIL
     template_name = "Field Update Request by owner - Permission Request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
@@ -814,8 +824,14 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
     if isinstance(approved_fields, str):
         approved_fields = json.loads(approved_fields)
 
-    comment_doc = frappe.get_doc("Comment", comment_name)
-    data = json.loads(comment_doc.content)
+    try:
+        comment_doc = frappe.get_doc("Comment", comment_name)
+        data = json.loads(comment_doc.content)
+    except frappe.DoesNotExistError:
+        frappe.throw("Update request not found. It may have already been processed.")
+    except Exception as e:
+        frappe.log_error(str(e), "Apply Field Updates Error")
+        frappe.throw("Failed to load the update request. Please try again.")
 
     if frappe.session.user != "Administrator" and data.get("status") != "Pending":
         frappe.throw("This request has already been processed.")
@@ -892,7 +908,15 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
             "Link",
         ]:
             new_value = field_updates[field].get("new")
-            frappe.db.set_value("Lead Detail Form", lead_detail_name, field, new_value)
+            try:
+                frappe.db.set_value(
+                    "Lead Detail Form", lead_detail_name, field, new_value
+                )
+            except Exception as e:
+                frappe.log_error(str(e), f"Field Update Error: {field}")
+                frappe.throw(
+                    f"Failed to update field '{df.label or field}'. Please contact Administrator."
+                )
             updated_fields[field] = new_value
 
     data["status"] = "Approved"
@@ -990,8 +1014,14 @@ def reject_field_update_request(customer_name, comment_name):
     if not manager_employee:
         frappe.throw("No Employee record found.")
 
-    comment_doc = frappe.get_doc("Comment", comment_name)
-    data = json.loads(comment_doc.content)
+    try:
+        comment_doc = frappe.get_doc("Comment", comment_name)
+        data = json.loads(comment_doc.content)
+    except frappe.DoesNotExistError:
+        frappe.throw("Update request not found. It may have already been processed.")
+    except Exception as e:
+        frappe.log_error(str(e), "Apply Field Updates Error")
+        frappe.throw("Failed to load the update request. Please try again.")
 
     if data.get("status") != "Pending":
         frappe.throw("This request has already been processed.")
