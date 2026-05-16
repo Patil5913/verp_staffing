@@ -42,7 +42,7 @@ from frappe.utils import (
 )
 
 from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
-from verp_staffing.crm.doctype.customer.test_customer import create_customer_if_not_exists
+from verp_staffing.crm.doctype.customer.test_customer import make_customer
 from verp_staffing.accounts.doctype.company.test_company import create_company_if_not_exists
 from verp_staffing.accounts.doctype.account.test_account import create_account_if_not_exists
 from verp_staffing.buying.doctype.supplier.test_supplier import create_supplier_if_not_exists
@@ -113,7 +113,7 @@ def _seed_all():
 
     # Parties
     _resolved["supplier_group"] = create_supplier_group_if_not_exists()
-    _resolved["customer"]       = create_customer_if_not_exists(TEST_CUSTOMER)
+    _resolved["customer"]       = make_customer(TEST_CUSTOMER)
     _resolved["supplier"]       = create_supplier_if_not_exists(TEST_SUPPLIER, "Individual", "All Supplier Groups")
 
     # Item
@@ -205,7 +205,7 @@ class TestPartyValidation(TestSubscriptionBase):
 	def test_sales_with_customer_succeeds(self):
 		sub = self.make_subscription()
 		self.assertEqual(sub.party_type, "Customer")
-		self.assertEqual(sub.party, _resolved["customer"])
+		self.assertEqual(sub.party, _resolved["customer"].name)
 
 	def test_sales_with_supplier_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -865,7 +865,7 @@ class TestIsDueForInvoicing(TestSubscriptionBase):
 class TestComputeInvoiceIndex(TestSubscriptionBase):
 	def test_index_at_billing_start_is_1(self):
 		sub = self.make_subscription(start_date="2026-01-01")
-		plan = frappe.get_cached_doc("Subscription Plan", PLAN_MONTHLY)
+		plan = frappe.get_cached_doc("Subscription Plan", _resolved[PLAN_MONTHLY])
 		idx = sub._compute_invoice_index(
 			getdate("2026-01-01"), getdate("2026-01-01"), plan
 		)
@@ -873,7 +873,7 @@ class TestComputeInvoiceIndex(TestSubscriptionBase):
 
 	def test_index_after_three_months(self):
 		sub = self.make_subscription(start_date="2026-01-01")
-		plan = frappe.get_cached_doc("Subscription Plan", PLAN_MONTHLY)
+		plan = frappe.get_cached_doc("Subscription Plan", _resolved[PLAN_MONTHLY])
 		# After 3 monthly cycles billing_start moves +3 months, invoice #4.
 		idx = sub._compute_invoice_index(
 			getdate("2026-01-01"),
