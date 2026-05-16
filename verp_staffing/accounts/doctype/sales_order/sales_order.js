@@ -254,14 +254,21 @@ frappe.ui.form.on("Items Table", {
 
 		row.type = "Sales";
 
-		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
-			if (r.message && r.message.stock_uom) {
-				row.uom = r.message.stock_uom;
-			}
-			row.qty = 1;
-
-			frm.refresh_field("items");
+		frappe.call({
+			method: "frappe.client.get_value",
+			args: {
+				doctype: "Item",
+				filter: { name: row.item },
+				fieldname: ["stock_uom", "selling_rate"],
+			},
+			callback: function (r) {
+				if (r.message) {
+					row.uom = r.message.stock_uom ?? r.message.stock_uom;
+					row.rate = r.message.selling_rate ?? r.message.selling_rate;
+				}
+			},
 		});
+		row.qty = 1;
 
 		if (frm.doc.company) {
 			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {

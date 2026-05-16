@@ -9,7 +9,9 @@
   "is_service",
   "item_name",
   "item_category",
-  "stock_uom"
+  "stock_uom",
+  "buying_rate",
+  "selling_rate"
  ],
  "fields": [
   {
@@ -53,12 +55,26 @@
    "fieldtype": "Check",
    "label": "Is Service",
    "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "buying_rate",
+   "fieldtype": "Int",
+   "label": "Default Buying Rate (In Company Currency)",
+   "non_negative": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "selling_rate",
+   "fieldtype": "Int",
+   "label": "Default Selling Rate (In Company Currency)",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-12 15:43:13.373823",
+ "modified": "2026-05-16 11:58:59.977958",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Item",

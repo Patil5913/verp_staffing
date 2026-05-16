@@ -7,14 +7,33 @@ verp_staffing.purchase.item_handler = async function (frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	if (!row.item) return;
 
-	const item = await frappe.db.get_doc("Item", row.item);
+	frappe.call({
+		method: "frappe.client.get_value",
+		args: {
+			doctype: "Item",
+			filter: { name: row.item },
+			fieldname: ["stock_uom", "buying_rate"],
+		},
+		callback: function (r) {
+			console.log("r: ", r);
+			if (r.message) {
+				frappe.model.set_value(
+					cdt,
+					cdn,
+					"uom",
+					r.message.stock_uom ?? r.message.stock_uom,
+				);
+				frappe.model.set_value(
+					cdt,
+					cdn,
+					"rate",
+					r.message.buying_rate ?? r.message.buying_rate,
+				);
+			}
+		},
+	});
 
-	if (item) {
-		frappe.model.set_value(cdt, cdn, "item_name", item.item_name);
-		frappe.model.set_value(cdt, cdn, "uom", item.stock_uom);
-		frappe.model.set_value(cdt, cdn, "qty", 1);
-	}
-
+	frappe.model.set_value(cdt, cdn, "qty", 1);
 	// expense account
 	if (frm.doc.company) {
 		const r = await frappe.db.get_value("Company", frm.doc.company, "default_expense_account");

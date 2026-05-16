@@ -42,25 +42,23 @@ frappe.ui.form.on("Sales Invoice", {
 			);
 		}
 		if (frm.doc.docstatus === 1) {
-			
-			frm.add_custom_button(__("Send Invoice"), function () {
-				frappe.confirm(
-					"Send Sales Invoice email to customer?",
-					function () {						
+			frm.add_custom_button(
+				__("Send Invoice"),
+				function () {
+					frappe.confirm("Send Sales Invoice email to customer?", function () {
 						frappe.call({
 							method: "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_sales_invoice_email",
 							args: { doc: frm.doc.name },
 							callback(r) {
 								if (!r.exc) {
-									
 									frappe.msgprint("Invoice sent successfully.");
 								}
-							}
+							},
 						});
-					}
-				);
-			}, __("Email"));
-
+					});
+				},
+				__("Email"),
+			);
 		}
 	},
 	onload(frm) {
@@ -148,10 +146,19 @@ frappe.ui.form.on("Items Table", {
 
 		row.type = "Sales";
 
-		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
-			if (r.message && r.message.stock_uom) {
-				row.uom = r.message.stock_uom;
-			}
+		frappe.call({
+			method: "frappe.client.get_value",
+			args: {
+				doctype: "Item",
+				filter: { name: row.item },
+				fieldname: ["stock_uom", "selling_rate"],
+			},
+			callback: function (r) {
+				if (r.message) {
+					row.uom = r.message.stock_uom ?? r.message.stock_uom;
+					row.rate = r.message.selling_rate ?? r.message.selling_rate;
+				}
+			},
 		});
 		row.qty = 1;
 
@@ -378,7 +385,7 @@ function set_account_queries(frm) {
 
 function set_currency_labels(frm) {
 	const currency = frm.doc.currency || "";
-	const company_currency = frm.doc.company_currency
+	const company_currency = frm.doc.company_currency;
 
 	const fields = [
 		"total",
@@ -407,11 +414,7 @@ function set_currency_labels(frm) {
 		"base_discount_amount",
 	];
 	company_currency_field.forEach((field) => {
-		if (
-			currency &&
-			company_currency &&
-			currency !== company_currency
-		) {
+		if (currency && company_currency && currency !== company_currency) {
 			frm.set_df_property(field, "hidden", false);
 		} else {
 			frm.set_df_property(field, "hidden", true);
