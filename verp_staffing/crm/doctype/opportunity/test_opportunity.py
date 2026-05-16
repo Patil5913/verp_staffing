@@ -124,7 +124,7 @@ class TestOpportunityCreation(OpportunityTestBase):
             name1="Owned Opportunity",
             opportunity_owner=_resolved["employee"],
         )
-        self.assertEqual(opp.opportunity_owner, _resolved["employee"])
+        self.assertEqual(opp.opportunity_owner, _resolved["employee"].name)
 
     def test_create_opportunity_with_overrides(self):
         opp = make_opportunity(
@@ -240,7 +240,7 @@ class TestOpportunityCreation(OpportunityTestBase):
         )
         result = opp.create_customer()
         customer = frappe.get_doc("Customer", result["customer"])
-        self.assertEqual(customer.customer_owner, _resolved["employee"])
+        self.assertEqual(customer.customer_owner, _resolved["employee"].name)
 
     def test_trash_opportunity_unlinks_lead_details(self):
         opp = make_opportunity(name1="Opp Trash Test")
