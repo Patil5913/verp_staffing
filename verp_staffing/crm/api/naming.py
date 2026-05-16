@@ -38,8 +38,7 @@ def generate_name_series(doctype_name: str, name: str) -> str:
     base_series = f"{prefix}_{safe_name}_{today}"
 
     # Count how many docs in the doctype have this name
-    count = frappe.db.count(doctype_name, filters={"name": ["like", f"%{name}%"]})
-
+    count = frappe.db.count(doctype_name, filters={"name": ["like", f"%{safe_name}%"]})
     if count == 0:
         return base_series                  # 1st occurrence → no counter
     else:
