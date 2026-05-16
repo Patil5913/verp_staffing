@@ -70,6 +70,7 @@ frappe.ui.form.on("Sales Order", {
 					await render_payment_term_actions(frm, r.message);
 				},
 			});
+			toggle_payment_terms_add_button(frm);
 		}
 	},
 	onload(frm) {
@@ -329,6 +330,9 @@ frappe.ui.form.on("Taxes and Charges", {
 });
 
 frappe.ui.form.on("Customer Payment Terms", {
+	validate(frm) {
+		validate_payment_terms_total(frm);
+	},
 	// ── Condition changed ──────────────────────────────────────────
 	payment_condition(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
@@ -345,6 +349,20 @@ frappe.ui.form.on("Customer Payment Terms", {
 		}
 
 		update_payment_term_description(frm, cdt, cdn);
+	},
+	payment_terms_add(frm, cdt, cdn) {
+		const so_total = frm.doc.disable_rounded_total
+			? flt(frm.doc.grand_total)
+			: flt(frm.doc.rounded_total || frm.doc.grand_total);
+
+		const used = (frm.doc.payment_terms || [])
+			.filter((row) => row.name !== cdn) // exclude the newly added row
+			.reduce((sum, row) => sum + flt(row.amount || 0), 0);
+
+		const remaining = Math.max(0, so_total - used);
+
+		frappe.model.set_value(cdt, cdn, "amount", remaining);
+		frm.refresh_field("payment_terms");
 	},
 
 	// ── Start date changed (Number of Days only) ───────────────────
@@ -970,13 +988,52 @@ function validate_payment_terms_total(frm) {
 	);
 
 	if (!so_total) return; // SO total not computed yet — skip
-
+	console.log("terms_total,so_total: ", terms_total, so_total);
 	if (terms_total > so_total) {
 		const excess = format_currency(terms_total - so_total, frm.doc.currency, 2);
+
+		// Auto-correct the last editable row
+		for (let i = terms.length - 1; i >= 0; i--) {
+			const row = terms[i];
+			if (!in_list(["Pending Verification", "Verified"], row.payment_status)) {
+				const corrected = Math.max(0, flt(row.amount) - excess);
+				frappe.model.set_value(row.doctype, row.name, "amount", corrected);
+				break;
+			}
+		}
+
+		frm.refresh_field("payment_terms");
 		frappe.throw(
-			`Total payment terms (${format_currency(terms_total, frm.doc.currency, 4)}) ` +
-				`exceeds Sales Order total (${format_currency(so_total, frm.doc.currency, 4)}) ` +
+			`Total payment terms (${format_currency(terms_total, frm.doc.currency, 2)}) ` +
+				`exceeds Sales Order total (${format_currency(so_total, frm.doc.currency, 2)}) ` +
 				`by ${excess}.`,
 		);
+	}
+	toggle_payment_terms_add_button(frm, so_total);
+}
+
+function toggle_payment_terms_add_button(frm, so_total) {
+	// Restrict user from futher terms after terms total and so total becomes equal
+	if (!so_total) {
+		//calculate total if not provided
+		so_total = flt(
+			frm.doc.disable_rounded_total
+				? frm.doc.grand_total
+				: frm.doc.rounded_total || frm.doc.grand_total,
+		);
+	}
+
+	const terms_total = (frm.doc.payment_terms || []).reduce(
+		(sum, row) => sum + flt(row.amount || 0),
+		0,
+	);
+
+	const grid = frm.fields_dict["payment_terms"].grid;
+
+	if (so_total && flt(terms_total, 2) >= flt(so_total, 2)) {
+		//hide add button
+		grid.wrapper.find(".grid-add-row, .grid-add-multiple-rows").hide();
+	} else {
+		grid.wrapper.find(".grid-add-row, .grid-add-multiple-rows").show();
 	}
 }

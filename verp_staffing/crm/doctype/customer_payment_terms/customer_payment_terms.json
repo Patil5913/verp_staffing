@@ -22,6 +22,7 @@
  ],
  "fields": [
   {
+   "allow_on_submit": 1,
    "default": "Number of Days",
    "fieldname": "payment_condition",
    "fieldtype": "Select",
@@ -31,13 +32,14 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "1",
    "fieldname": "counter",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Count",
    "non_negative": 1,
-   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'",
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
    "reqd": 1
   },
   {
@@ -45,32 +47,35 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval: doc.payment_condition === 'Number of Days'",
    "fieldname": "start_date",
    "fieldtype": "Date",
    "label": "Start Date",
    "mandatory_depends_on": "eval: doc.payment_condition === 'Number of Days'",
-   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'"
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval: doc.payment_condition === 'Number of Days'",
    "fieldname": "due_date",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Due Date",
-   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'"
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)"
   },
   {
    "fieldname": "section_break_amount",
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Amount",
    "non_negative": 1,
-   "read_only_depends_on": "eval: doc.payment_status !== 'Unpaid'",
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
    "reqd": 1
   },
   {
@@ -78,6 +83,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "default": "Unpaid",
    "fieldname": "payment_status",
    "fieldtype": "Select",
@@ -92,6 +98,7 @@
    "label": "Info"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval: doc.payment_condition === 'Number of Interviews'",
    "description": "Live count of interviews for this customer",
    "fieldname": "current_interview_count",
@@ -100,6 +107,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "payment_entry",
    "fieldtype": "Link",
    "label": "Payment Entry",
@@ -107,11 +115,13 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
   },
   {
+   "allow_on_submit": 1,
    "description": "Auto-generated log of all verification actions",
    "fieldname": "verification_log",
    "fieldtype": "Small Text",
@@ -123,7 +133,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-15 10:39:52.689215",
+ "modified": "2026-05-16 10:27:53.054301",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

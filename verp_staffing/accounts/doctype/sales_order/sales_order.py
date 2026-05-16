@@ -13,7 +13,7 @@ import base64
 import json
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.permission_request import on_sales_order_save
-from frappe.utils import flt, now_datetime, money_in_words
+from frappe.utils import flt, now_datetime, money_in_words, fmt_money
 from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 
@@ -30,10 +30,16 @@ class SalesOrder(Document):
     def after_insert(self):
         on_sales_order_save(self)
 
+    def before_update_after_submit(self):
+        # Same validations must run post-submit too
+        self.validate_payment_terms_deletion()
+        self.validate_payment_terms_total()
+
     # def on_submit(self):
     #     on_sales_order_save(self)
     def validate(self):
         self.validate_payment_terms_deletion()
+        self.validate_payment_terms_total()
         self.validate_mandatory()
         self.validate_expense_accounts()
         self.validate_tax_accounts()
@@ -87,6 +93,24 @@ class SalesOrder(Document):
                     frappe.delete_doc(
                         "Payment Entry", pe_name, force=True
                     )
+
+    def validate_payment_terms_total(self):
+        if not self.payment_terms:
+            return
+
+        terms_total = sum(flt(row.amount) for row in self.payment_terms)
+        so_total = flt(self.rounded_total) if not self.disable_rounded_total and self.rounded_total else flt(self.grand_total)
+
+        if not so_total:
+            return
+
+        if flt(terms_total, 2) > flt(so_total, 2):
+            frappe.throw(
+                f"Total payment terms amount ({fmt_money(terms_total, 2, self.currency)}) "
+                f"exceeds Sales Order total ({fmt_money(so_total, 2, self.currency)}) "
+                f"by {fmt_money(terms_total - so_total, 2, self.currency)}.",
+                title="Payment Terms Total Exceeded"
+            )
 
     def validate_mandatory(self):
         if not self.customer:

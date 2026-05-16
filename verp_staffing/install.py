@@ -1498,16 +1498,16 @@ def get_primary_business_role(user_email: str) -> str | None:
 
 SERVICE_DEPARTMENT_MAP = {
     "Technical": [
-        "ruc",
+        "RUC",
         "JDC",
         "Training",
         "Cover Letter",
     ],
     "Resume": [
-        "resume",
+        "Resume",
     ],
     "Marketing": [
-        "marketing",
+        "Marketing",
     ],
 }
 
