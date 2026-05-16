@@ -645,11 +645,14 @@ def validate_party_type_in_master(doc):
     if not frappe.db.exists("Party Type", doc.party_type):
         valid_types = frappe.db.get_all("Party Type", pluck="name")
         valid_str = ", ".join(valid_types) if valid_types else _("(none configured)")
+        create_link = frappe.utils.get_url("/app/party-type/new-party-type-1")
         frappe.throw(
             _(
                 "Party Type '{0}' is not configured in the Party Type master. "
                 "Valid party types are: {1}."
-            ).format(frappe.bold(doc.party_type), valid_str),
+                "<br><br>"
+                "<a href='{2}' target='_blank'>➜ Create Party Type: {0}</a>"
+            ).format(frappe.bold(doc.party_type), valid_str, create_link),
             title=_("Invalid Party Type"),
         )
 
