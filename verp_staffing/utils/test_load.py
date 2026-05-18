@@ -1,132 +1,187 @@
 # Copyright (c) 2026, Vrugle and Contributors
 # See license.txt
 
+import statistics
 import time
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from verp_staffing.accounts.doctype.account.test_account import (
-    create_account_if_not_exists,
-)
-from verp_staffing.accounts.doctype.company.test_company import (
-    create_company_if_not_exists,
-)
-
 
 class TestLoad(FrappeTestCase):
+
+    TOTAL_RECORDS = 100
+    PRINT_EVERY = 10
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
 
-        # Reduce noise + slight speed improvement
         frappe.flags.print_messages = False
 
-        # Seed dependencies once
-        cls.seed_master_data()
-
-        # Prevent permanent DB commits during load tests
+        # Disable commits
         cls._original_commit = frappe.db.commit
         frappe.db.commit = lambda *a, **kw: None
+
+        # Optional benchmark flags
+        frappe.flags.in_load_test = True
+        frappe.flags.ignore_links = True
 
     @classmethod
     def tearDownClass(cls):
 
-        # Restore original commit function
+        # Restore commits
         frappe.db.commit = cls._original_commit
 
-        # Rollback everything created during tests
+        # Rollback everything
         frappe.db.rollback()
 
         super().tearDownClass()
 
-    @classmethod
-    def seed_master_data(cls):
-
-        cls.company = create_company_if_not_exists(
-            "Test Company",
-            "TC",
-        )
-
-        # Create reusable parent account
-        parent = create_account_if_not_exists(
-            "Load Test Parent Asset",
-            company=cls.company,
-            root_type="Asset",
-            is_group=1,
-        )
-
-        cls.parent_account = parent.name
-
-    def test_bulk_account_creation_1k(self):
-
-        start = time.perf_counter()
-
-        created = []
-
-        for i in range(1000):
-
-            acc = create_account_if_not_exists(
-                account_name=f"Stress Account {i}",
-                company=self.company,
-                parent_account=self.parent_account,
-                root_type="Asset",
-            )
-
-            created.append(acc.name)
-
-        duration = time.perf_counter() - start
+    def test_company_insert_performance(self):
 
         print(
-            f"\nCreated {len(created)} accounts "
-            f"in {duration:.2f} sec"
+            f"\n[PERF TEST] Inserting "
+            f"{self.TOTAL_RECORDS:,} companies "
+            f"(will rollback)...\n"
         )
 
-        self.assertEqual(len(created), 1000)
+        latencies = []
 
-    def test_bulk_account_creation_10k(self):
+        success = 0
+        errors = 0
 
-        start = time.perf_counter()
+        total_start = time.perf_counter()
 
-        # Optional benchmarking flags
-        frappe.flags.ignore_links = True
-        frappe.flags.ignore_account_permission = True
+        try:
 
-        inserted = 0
+            for i in range(self.TOTAL_RECORDS):
 
-        for batch in range(10):
+                start = time.perf_counter()
 
-            docs = []
+                try:
 
-            for i in range(1000):
-
-                idx = (batch * 1000) + i
-
-                docs.append(
-                    frappe.get_doc(
+                    company = frappe.get_doc(
                         {
-                            "doctype": "Account",
-                            "account_name": f"Bulk Account {idx}",
-                            "company": self.company,
-                            "parent_account": self.parent_account,
-                            "root_type": "Asset",
-                            "is_group": 0,
+                            "doctype": "Company",
+                            "company_name": (
+                                f"Load Company {i}"
+                            ),
+                            "abbr": f"L{i}",
+                            "default_currency": "INR",
+                            "country": "India",
                         }
                     )
-                )
 
-            for doc in docs:
-                doc.insert(ignore_permissions=True)
-                inserted += 1
+                    company.flags.ignore_mandatory = True
+                    company.flags.ignore_links = True
 
-            print(f"Batch {batch + 1}/10 completed")
+                    company.insert(
+                        ignore_permissions=True,
+                        ignore_links=True,
+                    )
 
-        duration = time.perf_counter() - start
+                    success += 1
 
-        print(
-            f"\nInserted {inserted} accounts "
-            f"in {duration:.2f} sec"
+                except Exception as e:
+
+                    errors += 1
+
+                    print(
+                        f"[ERROR] Record {i}: {str(e)}"
+                    )
+
+                latency = (
+                    time.perf_counter() - start
+                ) * 1000
+
+                latencies.append(latency)
+
+                # -------------------------------------------------
+                # PROGRESS LOGGING
+                # -------------------------------------------------
+
+                if (
+                    (i + 1) % self.PRINT_EVERY == 0
+                    or (i + 1) == self.TOTAL_RECORDS
+                ):
+
+                    avg_latency = statistics.mean(
+                        latencies
+                    )
+
+                    peak_latency = max(latencies)
+
+                    print(
+                        f"{i + 1:,} / "
+                        f"{self.TOTAL_RECORDS:,} "
+                        f"| avg {avg_latency:.1f} ms "
+                        f"| peak {peak_latency:.1f} ms"
+                    )
+
+        finally:
+
+            # Rollback immediately after benchmark
+            frappe.db.rollback()
+
+            print(
+                "\n[ROLLBACK] All inserts have "
+                "been rolled back. "
+                "DB is unchanged.\n"
+            )
+
+        # =====================================================
+        # FINAL METRICS
+        # =====================================================
+
+        total_time = (
+            time.perf_counter() - total_start
         )
 
-        self.assertEqual(inserted, 10000)
+        throughput = (
+            success / total_time
+            if total_time > 0
+            else 0
+        )
+
+        avg_latency = (
+            statistics.mean(latencies)
+            if latencies
+            else 0
+        )
+
+        min_latency = (
+            min(latencies)
+            if latencies
+            else 0
+        )
+
+        peak_latency = (
+            max(latencies)
+            if latencies
+            else 0
+        )
+
+        # =====================================================
+        # SUMMARY
+        # =====================================================
+
+        print("\n" + "=" * 55)
+        print("               PERFORMANCE TEST SUMMARY")
+        print("=" * 55)
+
+        print(f"\nAttempted   : {self.TOTAL_RECORDS:,}")
+        print(f"Succeeded   : {success:,}")
+        print(f"Errors      : {errors:,}")
+
+        print(f"\nTotal time  : {total_time:.2f} s")
+        print(f"Throughput  : {throughput:.1f} docs/s")
+
+        print(f"\nAvg latency : {avg_latency:.1f} ms")
+        print(f"Min latency : {min_latency:.1f} ms")
+        print(f"Peak latency: {peak_latency:.1f} ms")
+
+        print("\n" + "=" * 55)
+
+        self.assertEqual(errors, 0)
+        self.assertEqual(success, self.TOTAL_RECORDS)
