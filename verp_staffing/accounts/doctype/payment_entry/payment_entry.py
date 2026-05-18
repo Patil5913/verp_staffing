@@ -132,6 +132,7 @@ class PaymentEntry(Document):
                     "payment_entry": "",
                 },
             )
+            self.db_set("verification_status", "Rejected")
             from verp_staffing.accounts.doctype.sales_order.sales_order import (
                 _append_verification_log,
             )

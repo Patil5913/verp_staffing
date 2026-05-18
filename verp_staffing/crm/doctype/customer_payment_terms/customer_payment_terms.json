@@ -23,6 +23,7 @@
  "fields": [
   {
    "allow_on_submit": 1,
+   "columns": 2,
    "default": "Number of Days",
    "fieldname": "payment_condition",
    "fieldtype": "Select",
@@ -33,6 +34,7 @@
   },
   {
    "allow_on_submit": 1,
+   "columns": 1,
    "default": "1",
    "fieldname": "counter",
    "fieldtype": "Int",
@@ -40,7 +42,8 @@
    "label": "Count",
    "non_negative": 1,
    "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
-   "reqd": 1
+   "reqd": 1,
+   "width": "1"
   },
   {
    "fieldname": "column_break_1",
@@ -57,6 +60,7 @@
   },
   {
    "allow_on_submit": 1,
+   "columns": 1,
    "depends_on": "eval: doc.payment_condition === 'Number of Days'",
    "fieldname": "due_date",
    "fieldtype": "Date",
@@ -70,6 +74,7 @@
   },
   {
    "allow_on_submit": 1,
+   "columns": 1,
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -84,6 +89,7 @@
   },
   {
    "allow_on_submit": 1,
+   "columns": 1,
    "default": "Unpaid",
    "fieldname": "payment_status",
    "fieldtype": "Select",
@@ -133,7 +139,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-16 10:27:53.054301",
+ "modified": "2026-05-16 16:19:54.023271",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

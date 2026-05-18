@@ -8,6 +8,18 @@ frappe.ui.form.on("Payment Entry", {
 				frm.party_account_type = r.message?.account_type || null;
 			});
 		}
+		if (frm.doc.payment_term_row) {
+			const colors = {
+				"Pending Verification": "orange",
+				Verified: "green",
+				Rejected: "red",
+			};
+
+			frm.page.set_indicator(
+				__(frm.doc.verification_status),
+				colors[frm.doc.verification_status] || "gray",
+			);
+		}
 		set_currency_labels(frm);
 		hide_unhide_fields(frm);
 		if (frm.doc.docstatus === 2) return; // Cancelled — nothing to show
@@ -104,9 +116,6 @@ frappe.ui.form.on("Payment Entry", {
 				__("Actions"),
 			).addClass("btn-danger");
 		}
-
-		// ── Status indicator banner ────────────────────────────────────
-		render_verification_banner(frm);
 	},
 	onload: function (frm) {
 		frm.ignore_doctypes_on_cancel_all = [
@@ -779,28 +788,6 @@ function get_outstanding_documents(frm, get_invoices, get_orders) {
 		},
 		__("Filters"),
 		__(btn_text),
-	);
-}
-
-function render_verification_banner(frm) {
-	if (frm.is_new()) return;
-	const status = frm.doc.verification_status;
-	if (!status) return;
-
-	const config = {
-		"Pending Verification": { color: "orange", msg: "Awaiting accountant review." },
-		Verified: { color: "green", msg: "Payment verified and submitted." },
-		Rejected: { color: "red", msg: frm.doc.rejection_remarks || "Payment rejected." },
-	};
-
-	const c = config[status];
-	if (!c) return;
-
-	frm.dashboard.set_headline_alert(
-		`<div class="alert alert-${c.color === "green" ? "success" : c.color === "red" ? "danger" : "warning"}" 
-              style="margin:0">
-            <b>${status}</b> — ${c.msg}
-        </div>`,
 	);
 }
 
