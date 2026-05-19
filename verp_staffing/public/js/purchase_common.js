@@ -15,7 +15,6 @@ verp_staffing.purchase.item_handler = async function (frm, cdt, cdn) {
 			fieldname: ["stock_uom", "buying_rate"],
 		},
 		callback: function (r) {
-			console.log("r: ", r);
 			if (r.message) {
 				frappe.model.set_value(
 					cdt,

@@ -367,7 +367,7 @@ class SalesInvoice(Document):
                 if is_overdue(self, total):
                     self.status = "Overdue"
                 elif 0 < outstanding_amount < total:
-                    self.status = "Partly Paid"
+                    self.status = "Partially Paid"
                 elif outstanding_amount > 0 and getdate(self.due_date) >= getdate():
                     self.status = "Unpaid"
                 # Check if outstanding amount is 0 due to credit note issued against invoice

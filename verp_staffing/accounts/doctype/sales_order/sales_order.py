@@ -34,12 +34,14 @@ class SalesOrder(Document):
         # Same validations must run post-submit too
         self.validate_payment_terms_deletion()
         self.validate_payment_terms_total()
+        self.validate_payment_terms_dates()
 
-    # def on_submit(self):
-    #     on_sales_order_save(self)
+    def on_submit(self):
+        on_sales_order_save(self)
     def validate(self):
         self.validate_payment_terms_deletion()
         self.validate_payment_terms_total()
+        self.validate_payment_terms_dates()
         self.validate_mandatory()
         self.validate_expense_accounts()
         self.validate_tax_accounts()
@@ -111,7 +113,20 @@ class SalesOrder(Document):
                 f"by {fmt_money(terms_total - so_total, 2, self.currency)}.",
                 title="Payment Terms Total Exceeded"
             )
-
+    def validate_payment_terms_dates(self):
+        today = frappe.utils.today()
+        for row in (self.payment_terms or []):
+            if row.payment_condition == "Number of Days":
+                if row.start_date and str(row.start_date) < today:
+                    frappe.throw(
+                        f"Row {row.idx}: Start Date cannot be before today.",
+                        title="Invalid Date"
+                    )
+                if row.due_date and str(row.due_date) < today:
+                    frappe.throw(
+                        f"Row {row.idx}: Due Date cannot be before today.",
+                        title="Invalid Date"
+                    )
     def validate_mandatory(self):
         if not self.customer:
             frappe.throw(_("Customer is required"))
@@ -399,7 +414,7 @@ def send_details_form_notification(recipient, sales_order, customer):
 
 
 @frappe.whitelist()
-def create_sales_invoice(sales_order):
+def create_sales_invoice_from_sales_order(sales_order):
     """Create sales invoice directly from sales order
     User can create multiple sales invoice and select
     items from sales order to be included in invoice

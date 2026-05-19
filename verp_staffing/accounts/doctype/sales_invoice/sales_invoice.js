@@ -155,8 +155,18 @@ frappe.ui.form.on("Items Table", {
 			},
 			callback: function (r) {
 				if (r.message) {
-					row.uom = r.message.stock_uom ?? r.message.stock_uom;
-					row.rate = r.message.selling_rate ?? r.message.selling_rate;
+					frappe.model.set_value(
+						cdt,
+						cdn,
+						"uom",
+						r.message.stock_uom ?? r.message.stock_uom,
+					);
+					frappe.model.set_value(
+						cdt,
+						cdn,
+						"rate",
+						r.message.selling_rate ?? r.message.selling_rate,
+					);
 				}
 			},
 		});

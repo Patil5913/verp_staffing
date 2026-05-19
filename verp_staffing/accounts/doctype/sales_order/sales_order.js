@@ -46,7 +46,7 @@ frappe.ui.form.on("Sales Order", {
 									"Create a Sales Invoice for all items in this Sales Order?",
 									async () => {
 										const r = await frappe.call({
-											method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_sales_invoice",
+											method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_sales_invoice_from_sales_order",
 											args: { sales_order: frm.doc.name },
 										});
 										if (r.message) {
@@ -58,6 +58,11 @@ frappe.ui.form.on("Sales Order", {
                                         </a>`,
 												indicator: "green",
 											});
+											// remove button after successfull invoice creation
+											frm.remove_custom_button(
+												__("Sales Invoice"),
+												__("Create"),
+											);
 											await render_invoices_tab(frm);
 											await render_payment_term_actions(frm, r.message);
 										}
@@ -263,13 +268,32 @@ frappe.ui.form.on("Items Table", {
 			},
 			callback: function (r) {
 				if (r.message) {
-					row.uom = r.message.stock_uom ?? r.message.stock_uom;
-					row.rate = r.message.selling_rate ?? r.message.selling_rate;
+					frappe.model.set_value(
+						cdt,
+						cdn,
+						"uom",
+						r.message.stock_uom ?? r.message.stock_uom,
+					);
+
+					if (
+						frm.doc.company_currency != frm.doc.currency &&
+						frm.doc.conversion_rate > 1
+					) {
+						const updated_rate = r.message.selling_rate / frm.doc.conversion_rate;
+						frappe.model.set_value(
+							cdt,
+							cdn,
+							"rate",
+							updated_rate ?? r.message.selling_rate,
+						);
+					} else {
+						frappe.model.set_value(cdt, cdn, "rate", r.message.selling_rate ?? 0);
+					}
 				}
 			},
 		});
 		row.qty = 1;
-
+		if (row.rate) row.amount = row.qty * row.rate;
 		if (frm.doc.company) {
 			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
 				if (r.message?.default_income_account) {
@@ -343,19 +367,39 @@ frappe.ui.form.on("Customer Payment Terms", {
 	// ── Condition changed ──────────────────────────────────────────
 	payment_condition(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
+		const prev = row._prev_payment_condition;
 
-		// Reset fields that belong to the other condition
-		if (row.payment_condition === "Number of Days") {
-			frappe.model.set_value(cdt, cdn, "current_interview_count", 0);
-			frappe.model.set_value(cdt, cdn, "due_date", null);
-		} else {
-			frappe.model.set_value(cdt, cdn, "start_date", null);
-			frappe.model.set_value(cdt, cdn, "due_date", null);
-			// Fetch live interview count immediately on selection
-			fetch_and_set_interview_count(frm, cdt, cdn);
+		// Always update prev tracker
+		row._prev_payment_condition = row.payment_condition;
+
+		// No actual change (reload cycle) — only update description
+		if (prev === row.payment_condition) {
+			update_payment_term_description(frm, cdt, cdn);
+			return;
 		}
 
+		if (row.payment_condition === "Not Applied") {
+			frappe.model.set_value(cdt, cdn, "start_date", null);
+			frappe.model.set_value(cdt, cdn, "due_date", null);
+			frappe.model.set_value(cdt, cdn, "counter", 0);
+			frappe.model.set_value(cdt, cdn, "current_interview_count", 0);
+		} else if (row.payment_condition === "Number of Days") {
+			frappe.model.set_value(cdt, cdn, "start_date", frappe.datetime.get_today());
+
+			frappe.model.set_value(cdt, cdn, "current_interview_count", 0);
+			// Only clear due_date if genuinely switching from another condition
+			frappe.model.set_value(cdt, cdn, "due_date", null);
+		} else {
+			// Number of Interviews
+			// Only clear days-related fields if switching from Number of Days
+			if (prev !== undefined) {
+				frappe.model.set_value(cdt, cdn, "start_date", null);
+				frappe.model.set_value(cdt, cdn, "due_date", null);
+			}
+			fetch_and_set_interview_count(frm, cdt, cdn);
+		}
 		update_payment_term_description(frm, cdt, cdn);
+		toggle_payment_term_fields(frm, cdt, cdn);
 	},
 	payment_terms_add(frm, cdt, cdn) {
 		const so_total = frm.doc.disable_rounded_total
@@ -369,20 +413,39 @@ frappe.ui.form.on("Customer Payment Terms", {
 		const remaining = Math.max(0, so_total - used);
 
 		frappe.model.set_value(cdt, cdn, "amount", remaining);
-		frm.refresh_field("payment_terms");
+	},
+	payment_terms_remove(frm) {
+		const so_total = frm.doc.disable_rounded_total
+			? flt(frm.doc.grand_total)
+			: flt(frm.doc.rounded_total || frm.doc.grand_total);
+		toggle_payment_terms_add_button(frm, so_total);
 	},
 
 	// ── Start date changed (Number of Days only) ───────────────────
 	start_date(frm, cdt, cdn) {
-		compute_due_date(cdt, cdn);
+		const row = locals[cdt][cdn];
+		const today = frappe.datetime.get_today();
+		if (row.start_date && row.start_date < today) {
+			frappe.model.set_value(cdt, cdn, "start_date", today);
+			frappe.msgprint({
+				title: __("Invalid Date"),
+				message: "Start date cannot be before today.",
+				indicator: "red",
+			});
+			return;
+		}
+
+		compute_due_date(frm, cdt, cdn);
+
 		update_payment_term_description(frm, cdt, cdn);
 	},
-
 	// ── Counter changed ────────────────────────────────────────────
 	counter(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		if (row.payment_condition === "Number of Days") {
-			compute_due_date(cdt, cdn);
+			compute_due_date(frm, cdt, cdn);
+			const grid_row = frm.fields_dict["payment_terms"].grid.get_row(cdn);
+			if (grid_row) grid_row.refresh_field("due_date");
 		}
 		update_payment_term_description(frm, cdt, cdn);
 	},
@@ -396,19 +459,46 @@ frappe.ui.form.on("Customer Payment Terms", {
 	// ── Row form opened — refresh interview count if applicable ────
 	form_render(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
+		toggle_payment_term_fields(frm, cdt, cdn);
 		if (row.payment_condition === "Number of Interviews") {
 			fetch_and_set_interview_count(frm, cdt, cdn);
 		}
+		// Set min date = today for start_date and due_date
+		const today = frappe.datetime.get_today();
+		const grid_row = frm.fields_dict["payment_terms"].grid.grid_rows.find(
+			(r) => r.doc.name === cdn,
+		);
+		if (!grid_row) return;
+
+		grid_row.set_field_property("start_date", "options", {
+			minDate: today,
+		});
+		grid_row.set_field_property("due_date", "options", {
+			minDate: today,
+		});
 	},
 });
 
 // ── Compute due_date = start_date + counter days ───────────────────────
-function compute_due_date(cdt, cdn) {
+function compute_due_date(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
-	if (!row.start_date || !row.counter) return;
+	if (row.__syncing) return;
 
+	if (!row.start_date || !row.counter) {
+		return;
+	}
 	const due = frappe.datetime.add_days(row.start_date, row.counter);
-	frappe.model.set_value(cdt, cdn, "due_date", due);
+
+	if (row.due_date === due) return;
+	// Write directly to locals — no event chain triggered
+	locals[cdt][cdn].due_date = due;
+
+	// Refresh only the due_date field in the matching grid row
+	const grid = frm.fields_dict["payment_terms"].grid;
+	const grid_row = grid.grid_rows.find((r) => r.doc.name === cdn);
+	if (grid_row) {
+		grid_row.refresh_field("due_date");
+	}
 }
 
 // ── Fetch live interview count from Python and set on row ─────────────
@@ -436,7 +526,9 @@ function update_payment_term_description(frm, cdt, cdn) {
 
 	let desc = "";
 
-	if (row.payment_condition === "Number of Days") {
+	if (row.payment_condition === "Not Applied") {
+		desc = `Pay ${amount} — No condition applied (immediate or pre-paid)`;
+	} else if (row.payment_condition === "Number of Days") {
 		const days = row.counter || "?";
 		const start = row.start_date ? frappe.datetime.str_to_user(row.start_date) : "?";
 		const due = row.due_date ? frappe.datetime.str_to_user(row.due_date) : "not computed";
@@ -454,7 +546,6 @@ function update_payment_term_description(frm, cdt, cdn) {
 	}
 
 	frappe.model.set_value(cdt, cdn, "description", desc);
-	frm.refresh_field("payment_terms");
 }
 
 function open_rerequest_dialog(frm) {
@@ -915,7 +1006,7 @@ function get_invoice_indicator(inv) {
 	if (inv.outstanding_amount > 0 && inv.due_date && inv.due_date < today)
 		return { label: "Overdue", color: "red" };
 	if (inv.outstanding_amount > 0 && inv.outstanding_amount < inv.grand_total)
-		return { label: "Partly Paid", color: "blue" };
+		return { label: "Partially Paid", color: "blue" };
 	return { label: "Unpaid", color: "orange" };
 }
 
@@ -934,9 +1025,10 @@ async function render_invoices_tab(frm) {
 		args: { sales_order: frm.doc.name },
 	});
 
-	const invoice = r.message[0] || [];
+	const invoices = r.message || [];
+	const invoice = invoices.length ? invoices[0] : null;
 	const wrapper = frm.get_field("invoices_html").$wrapper;
-	if (invoice.length <= 0) {
+	if (!invoice) {
 		wrapper.html(
 			`<p class="text-muted" style="padding:10px">
                 No invoice created yet.
@@ -983,10 +1075,8 @@ async function render_invoices_tab(frm) {
 
 // ── Validates total payment terms don't exceed SO grand total ──────────
 function validate_payment_terms_total(frm) {
-	const terms_total = (frm.doc.payment_terms || []).reduce(
-		(sum, row) => sum + flt(row.amount || 0),
-		0,
-	);
+	const terms = frm.doc.payment_terms || [];
+	const terms_total = terms.reduce((sum, row) => sum + flt(row.amount || 0), 0);
 
 	const so_total = flt(
 		frm.doc.disable_rounded_total
@@ -995,9 +1085,8 @@ function validate_payment_terms_total(frm) {
 	);
 
 	if (!so_total) return; // SO total not computed yet — skip
-	console.log("terms_total,so_total: ", terms_total, so_total);
-	if (terms_total > so_total) {
-		const excess = format_currency(terms_total - so_total, frm.doc.currency, 2);
+	if (flt(terms_total, 2) > flt(so_total, 2)) {
+		const excess = flt(terms_total - so_total, 2);
 
 		// Auto-correct the last editable row
 		for (let i = terms.length - 1; i >= 0; i--) {
@@ -1009,7 +1098,6 @@ function validate_payment_terms_total(frm) {
 			}
 		}
 
-		frm.refresh_field("payment_terms");
 		frappe.throw(
 			`Total payment terms (${format_currency(terms_total, frm.doc.currency, 2)}) ` +
 				`exceeds Sales Order total (${format_currency(so_total, frm.doc.currency, 2)}) ` +
@@ -1043,4 +1131,40 @@ function toggle_payment_terms_add_button(frm, so_total) {
 	} else {
 		grid.wrapper.find(".grid-add-row, .grid-add-multiple-rows").show();
 	}
+}
+
+function toggle_payment_term_fields(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	const condition = row.payment_condition;
+
+	const visibility = {
+		"Not Applied": {
+			counter: 0,
+			start_date: 0,
+			due_date: 0,
+			current_interview_count: 0,
+		},
+		"Number of Days": {
+			counter: 1,
+			start_date: 1,
+			due_date: 1,
+			current_interview_count: 0,
+		},
+		"Number of Interviews": {
+			counter: 1,
+			start_date: 0,
+			due_date: 0,
+			current_interview_count: 1,
+		},
+	};
+
+	const config = visibility[condition] || visibility["Not Applied"];
+
+	const grid = frm.fields_dict["payment_terms"].grid;
+	const grid_row = grid.grid_rows.find((r) => r.doc.name === cdn);
+	if (!grid_row) return;
+
+	Object.entries(config).forEach(([fieldname, visible]) => {
+		grid_row.set_field_property(fieldname, "hidden", visible ? 0 : 1);
+	});
 }

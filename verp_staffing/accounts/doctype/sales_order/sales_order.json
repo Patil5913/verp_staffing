@@ -144,11 +144,6 @@
    "precision": "9"
   },
   {
-   "fieldname": "totals_section",
-   "fieldtype": "Section Break",
-   "label": "Totals"
-  },
-  {
    "fieldname": "total_qty",
    "fieldtype": "Float",
    "label": "Total Quantity",
@@ -392,7 +387,7 @@
   {
    "fieldname": "payment_terms_section",
    "fieldtype": "Section Break",
-   "label": "Payment Terms"
+   "label": "Pay Checks"
   },
   {
    "fieldname": "amended_from",
@@ -415,13 +410,20 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-15 17:09:04.577366",
+ "modified": "2026-05-19 11:17:52.894727",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -438,13 +440,6 @@
    "create": 1,
    "read": 1,
    "role": "Sales Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Manager",
    "select": 1,
    "write": 1
   },

@@ -3,6 +3,52 @@
 
 frappe.ui.form.on("Payment Entry", {
 	refresh(frm) {
+		// ── Custom Submit confirmation ─────────────────────────────
+		frm.savesubmit = function () {
+            frappe.confirm(
+                `<div style="line-height:1.6">
+                    <p><b>You are about to submit this Payment Entry.</b></p>
+                    <p>Submitting confirms that:</p>
+                    <ul style="padding-left:16px">
+                        <li>The payment of <b>${format_currency(frm.doc.paid_amount, frm.doc.currency)}</b> has been <b>received</b></li>
+                        <li>This will be recorded as a <b>Verified Payment</b></li>
+                        <li>This <b>cannot be edited</b> after submission.</li>
+                    </ul>
+                    <p class="text-muted" style="font-size:12px">
+                        If unsure, ask your accounts manager to verify instead.
+                    </p>
+                </div>`,
+                () => {
+                    frm.validate_and_save("Submit", "Submitted", "on_submit", frm);
+                },
+            );
+        };
+
+        // ── Override savecancel ────────────────────────────────────
+        frm.savecancel = function () {
+            frappe.confirm(
+                `<div style="line-height:1.6">
+                    <p><b>You are about to cancel this Payment Entry.</b></p>
+                    <p>Cancelling means:</p>
+                    <ul style="padding-left:16px">
+                        <li>The payment of <b>${format_currency(frm.doc.paid_amount, frm.doc.currency)}</b> will be <b>reversed</b></li>
+                        <li>All accounting entries (GL) will be <b>cancelled</b></li>
+                        ${frm.doc.payment_term_row
+                            ? `<li>The linked payment term will be <b>reset to Unpaid</b></li>`
+                            : `<li>Outstanding amounts on linked invoices will be <b>restored</b></li>`
+                        }
+                        <li>This action <b>cannot be undone</b></li>
+                    </ul>
+                    <p class="text-muted" style="font-size:12px">
+                        Only cancel if the payment was made in error.
+                    </p>
+                </div>`,
+                () => {
+                    frm.validate_and_save("Cancel", "Cancelled", "on_cancel", frm);
+                },
+            );
+        };
+
 		if (frm.doc.party_type && !frm.party_account_type) {
 			frappe.db.get_value("Party Type", frm.doc.party_type, "account_type").then((r) => {
 				frm.party_account_type = r.message?.account_type || null;
