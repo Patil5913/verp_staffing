@@ -35,6 +35,7 @@ class SalesOrder(Document):
         self.validate_payment_terms_deletion()
         self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
+        self.validate_payment_terms_fields()
 
     def on_submit(self):
         on_sales_order_save(self)
@@ -42,6 +43,7 @@ class SalesOrder(Document):
         self.validate_payment_terms_deletion()
         self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
+        self.validate_payment_terms_fields()
         self.validate_mandatory()
         self.validate_expense_accounts()
         self.validate_tax_accounts()
@@ -127,6 +129,27 @@ class SalesOrder(Document):
                         f"Row {row.idx}: Due Date cannot be before today.",
                         title="Invalid Date"
                     )
+
+    def validate_payment_terms_fields(self):
+        for row in (self.payment_terms or []):
+            if row.payment_condition == "Number of Days":
+                if not row.start_date:
+                    frappe.throw(
+                        f"Row {row.idx}: Start Date is required for 'Number of Days' condition.",
+                        title="Missing Field"
+                    )
+                if not row.counter:
+                    frappe.throw(
+                        f"Row {row.idx}: Count is required for 'Number of Days' condition.",
+                        title="Missing Field"
+                    )
+            elif row.payment_condition == "Number of Interviews":
+                if not row.counter:
+                    frappe.throw(
+                        f"Row {row.idx}: Count is required for 'Number of Interviews' condition.",
+                        title="Missing Field"
+                    )
+
     def validate_mandatory(self):
         if not self.customer:
             frappe.throw(_("Customer is required"))

@@ -3,6 +3,7 @@
  "allow_rename": 1,
  "creation": "2025-11-14 20:56:17.229547",
  "doctype": "DocType",
+ "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "payment_condition",
@@ -41,7 +42,6 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Count",
-   "mandatory_depends_on": "eval: doc.payment_condition !== 'Not Applied'",
    "non_negative": 1,
    "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
    "width": "1"
@@ -120,6 +120,7 @@
    "allow_on_submit": 1,
    "fieldname": "start_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Start Date"
   },
   {
@@ -135,7 +136,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-19 15:56:51.061060",
+ "modified": "2026-05-19 16:13:27.387923",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

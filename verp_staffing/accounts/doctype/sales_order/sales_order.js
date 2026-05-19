@@ -16,6 +16,28 @@ frappe.ui.form.on("Sales Order", {
 		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 
+		// Apply field visibility on every grid render for existing rows
+		const grid = frm.fields_dict["payment_terms"].grid;
+		const original_refresh = grid.refresh.bind(grid);
+		grid.refresh = function () {
+			original_refresh();
+			// Apply toggle to all rendered rows after grid refreshes
+			setTimeout(() => {
+				(frm.doc.payment_terms || []).forEach((term) => {
+					if (term.name) {
+						toggle_payment_term_fields(frm, "Customer Payment Terms", term.name);
+					}
+				});
+			}, 0);
+		};
+		// Trigger once immediately for already-rendered rows
+		setTimeout(() => {
+			(frm.doc.payment_terms || []).forEach((term) => {
+				if (term.name) {
+					toggle_payment_term_fields(frm, "Customer Payment Terms", term.name);
+				}
+			});
+		}, 0);
 		// Set query filter on items child table's item field
 		frm.fields_dict["items"].grid.get_field("item").get_query = function () {
 			return {
@@ -368,6 +390,7 @@ frappe.ui.form.on("Customer Payment Terms", {
 	payment_condition(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		const prev = row._prev_payment_condition;
+		toggle_payment_term_fields(frm, cdt, cdn);
 
 		// Always update prev tracker
 		row._prev_payment_condition = row.payment_condition;
@@ -384,22 +407,17 @@ frappe.ui.form.on("Customer Payment Terms", {
 			frappe.model.set_value(cdt, cdn, "counter", 0);
 			frappe.model.set_value(cdt, cdn, "current_interview_count", 0);
 		} else if (row.payment_condition === "Number of Days") {
-			frappe.model.set_value(cdt, cdn, "start_date", frappe.datetime.get_today());
-
 			frappe.model.set_value(cdt, cdn, "current_interview_count", 0);
 			// Only clear due_date if genuinely switching from another condition
 			frappe.model.set_value(cdt, cdn, "due_date", null);
 		} else {
 			// Number of Interviews
 			// Only clear days-related fields if switching from Number of Days
-			if (prev !== undefined) {
-				frappe.model.set_value(cdt, cdn, "start_date", null);
-				frappe.model.set_value(cdt, cdn, "due_date", null);
-			}
+			frappe.model.set_value(cdt, cdn, "start_date", null);
+			frappe.model.set_value(cdt, cdn, "due_date", null);
 			fetch_and_set_interview_count(frm, cdt, cdn);
 		}
 		update_payment_term_description(frm, cdt, cdn);
-		toggle_payment_term_fields(frm, cdt, cdn);
 	},
 	payment_terms_add(frm, cdt, cdn) {
 		const so_total = frm.doc.disable_rounded_total
@@ -463,19 +481,9 @@ frappe.ui.form.on("Customer Payment Terms", {
 		if (row.payment_condition === "Number of Interviews") {
 			fetch_and_set_interview_count(frm, cdt, cdn);
 		}
-		// Set min date = today for start_date and due_date
-		const today = frappe.datetime.get_today();
-		const grid_row = frm.fields_dict["payment_terms"].grid.grid_rows.find(
-			(r) => r.doc.name === cdn,
-		);
-		if (!grid_row) return;
-
-		grid_row.set_field_property("start_date", "options", {
-			minDate: today,
-		});
-		grid_row.set_field_property("due_date", "options", {
-			minDate: today,
-		});
+	},
+	onload(frm, cdt, cdn) {
+		toggle_payment_term_fields(frm, cdt, cdn);
 	},
 });
 
@@ -548,58 +556,21 @@ function update_payment_term_description(frm, cdt, cdn) {
 	frappe.model.set_value(cdt, cdn, "description", desc);
 }
 
-function open_rerequest_dialog(frm) {
-	const d = new frappe.ui.Dialog({
-		title: __("Re-request Verification"),
-		fields: [
-			{
-				fieldtype: "Data",
-				fieldname: "reference_no",
-				label: __("Reference / Cheque No"),
-				default: frm.doc.reference_no,
-				reqd: 1,
-			},
-			{
-				fieldtype: "Date",
-				fieldname: "reference_date",
-				label: __("Reference Date"),
-				default: frm.doc.reference_date || frappe.datetime.get_today(),
-				reqd: 1,
-			},
-		],
-		primary_action_label: __("Re-request"),
-		primary_action: async (values) => {
-			d.disable_primary_action();
-			try {
-				const r = await frappe.call({
-					method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_payment_entry_from_term",
-					args: {
-						sales_order: frm.doc.sales_order,
-						payment_term_row: frm.doc.payment_term_row,
-						reference_no: values.reference_no,
-						reference_date: values.reference_date,
-					},
-				});
-				if (r.message) {
-					d.hide();
-					frappe.msgprint({
-						title: __("Re-requested"),
-						message: "Verification re-requested successfully.",
-						indicator: "blue",
-					});
-					frm.reload_doc();
-				}
-			} catch (e) {
-				d.enable_primary_action();
-			}
-		},
-	});
-	d.show();
-}
-
 async function render_payment_term_actions(frm, si_name) {
 	const grid = frm.fields_dict["payment_terms"].grid;
 
+	grid.wrapper.off("click.fix_modal", ".grid-row-open .btn-open-row, .grid-row .btn-open-row");
+	$(document).off("hidden.bs.modal.pt_fix");
+	$(document).on("hidden.bs.modal.pt_fix", ".modal", function () {
+		// Clean up stuck modal state
+		setTimeout(() => {
+			if (!$(".modal.show").length && !$(".modal:visible").length) {
+				$("body").removeClass("modal-open");
+				$(".modal-backdrop").remove();
+				$("body").css("padding-right", "");
+			}
+		}, 100);
+	});
 	grid.grid_rows.forEach((grid_row) => {
 		const row = grid_row.doc;
 
@@ -612,7 +583,7 @@ async function render_payment_term_actions(frm, si_name) {
 			const $info = $(`
                 <span class="text-muted small payment-lock-msg" 
                       style="padding: 4px 8px; display: inline-block;">
-                    ⏳ Awaiting verification
+                    Awaiting verification
                     ${
 						row.payment_entry
 							? `— <a href="/app/payment-entry/${row.payment_entry}" target="_blank">
@@ -622,6 +593,8 @@ async function render_payment_term_actions(frm, si_name) {
 					}
                 </span>
             `);
+
+			$info.find(".pe-link").on("click", (e) => e.stopPropagation());
 			grid_row.wrapper.find(".data-row").append($info);
 			return;
 		}
@@ -1137,34 +1110,23 @@ function toggle_payment_term_fields(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	const condition = row.payment_condition;
 
-	const visibility = {
-		"Not Applied": {
+	const read_only_map = {
+		"Not Applied": { counter: 1, start_date: 1, due_date: 1, current_interview_count: 1 },
+		"Number of Days": { counter: 0, start_date: 0, due_date: 1, current_interview_count: 1 },
+		"Number of Interviews": {
 			counter: 0,
-			start_date: 0,
-			due_date: 0,
-			current_interview_count: 0,
-		},
-		"Number of Days": {
-			counter: 1,
 			start_date: 1,
 			due_date: 1,
-			current_interview_count: 0,
-		},
-		"Number of Interviews": {
-			counter: 1,
-			start_date: 0,
-			due_date: 0,
 			current_interview_count: 1,
 		},
 	};
 
-	const config = visibility[condition] || visibility["Not Applied"];
-
+	const config = read_only_map[condition] || read_only_map["Not Applied"];
 	const grid = frm.fields_dict["payment_terms"].grid;
 	const grid_row = grid.grid_rows.find((r) => r.doc.name === cdn);
 	if (!grid_row) return;
 
-	Object.entries(config).forEach(([fieldname, visible]) => {
-		grid_row.set_field_property(fieldname, "hidden", visible ? 0 : 1);
+	Object.entries(config).forEach(([fieldname, read_only]) => {
+		grid_row.set_field_property(fieldname, "read_only", read_only);
 	});
 }
