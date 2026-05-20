@@ -261,7 +261,6 @@ class SalesOrder(Document):
 
 def generate_token(data: dict):
     payload = json.dumps(data)
-
     signature = hmac.new(
         frappe.conf.get("encryption_key").encode(), payload.encode(), hashlib.sha256
     ).hexdigest()

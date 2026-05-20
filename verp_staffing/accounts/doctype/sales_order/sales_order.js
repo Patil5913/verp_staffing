@@ -3,19 +3,19 @@
 
 frappe.ui.form.on("Sales Order", {
 	async refresh(frm) {
+		verp_staffing.purchase.items.update_items_currency_labels(frm);
+		verp_staffing.purchase.exchange.update_description(frm);
+
 		const config = await load_erp_config(frm);
 		const requirements = get_requirements_from_config(frm, config);
 
-		if (!config.sendCandidateFormImmediately && requirements.candidate_required) {
+		if (requirements.candidate_required) {
 			frm.add_custom_button(
 				__("Send Details Form"),
 				() => send_details_form(frm),
 				__("Send"),
 			);
 		}
-		verp_staffing.purchase.items.update_items_currency_labels(frm);
-		verp_staffing.purchase.exchange.update_description(frm);
-
 		// Apply field visibility on every grid render for existing rows
 		const grid = frm.fields_dict["payment_terms"].grid;
 		const original_refresh = grid.refresh.bind(grid);
@@ -119,20 +119,20 @@ frappe.ui.form.on("Sales Order", {
 		const config = await load_erp_config(frm);
 		const requirements = get_requirements_from_config(frm, config);
 
-		if (config.sendAgreementImmediately && requirements.agreement_required) {
+		if (config.sendAgreementImmediately && requirements.agreement_required && frm.is_new()) {
 			const key = `so_agreement_draft_${frm.doc.name || "new"}`;
 			const draft = localStorage.getItem(key);
 
 			if (!draft) {
 				frappe.throw(
-					"Agreement template must be selected before saving for auto agreement send.",
+					"Agreement draft not saved yet please save the agreement before saving sales order.",
 				);
 			}
 		}
 
 		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
 			let r = await frappe.call({
-				method: "verp_staffing.crm.doctype.customer.get_customer_email",
+				method: "verp_staffing.crm.doctype.customer.customer.get_customer_email",
 				args: { customer: frm.doc.customer },
 			});
 
@@ -189,6 +189,7 @@ frappe.ui.form.on("Sales Order", {
 
 		if (config.sendAgreementImmediately && requirements.agreement_required) {
 			const key = `so_agreement_draft_${frm.doc.name}`;
+			console.log("key: ", key);
 			const draft = localStorage.getItem(key);
 
 			if (!draft) {
@@ -791,7 +792,7 @@ function get_requirements_from_config(frm, config) {
 
 async function send_details_form(frm) {
 	let recipient = await frappe.call({
-		method: "verp_staffing.crm.doctype.customer.get_customer_email",
+		method: "verp_staffing.crm.doctype.customer.customer.get_customer_email",
 		args: { customer: frm.doc.customer },
 	});
 	recipient = recipient.message;

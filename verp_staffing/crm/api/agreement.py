@@ -92,7 +92,6 @@ def send_existing_agreement(agreement):
                     f'➜ Open Lead Detail Form</a>'
             )
 
-
         if not doc.pdf:
             frappe.throw("Agreement PDF not generated")
 
@@ -194,7 +193,7 @@ def send_agreement_reminders():
 # Final submit
 @frappe.whitelist()
 def submit_and_generate(sales_order, template, data, send_email=0):
-
+    frappe.errprint(f"submit and generate called:{sales_order}, {send_email}")
     data_dict = json.loads(data) if isinstance(data, str) else (data or {})
 
     tpl = frappe.get_doc("Pdf Agreement Template", template)
