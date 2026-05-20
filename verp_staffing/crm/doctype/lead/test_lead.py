@@ -99,8 +99,13 @@ def is_valid_availability(v):
 class LeadTestBase(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+        cls._original_user = frappe.session.user #store current session user
         super().setUpClass()
         seed_all()
+
+    def tearDown(self):
+        frappe.set_user(self._original_user)        # restore after each test
+        super().tearDown()
 
 class TeasLead(LeadTestBase):
     valid = ["+12125551234", "+919876543210", "+447911123456"]

@@ -11,18 +11,15 @@ from frappe.model.document import Document
 from verp_staffing.crm.doctype.customer.customer import (
     generate_token,
     get_customer_email,
-    get_customer_routes,
     get_forwardable_departments,
     update_company_percentage,
-    update_route_status,
 )
 from verp_staffing.employee.doctype.employee.test_employee import (
     _ensure_hierarchies,
-    make_employee,
-    make_user,
 )
 
 _resolved: dict = {}
+
 
 def _uid(prefix: str) -> str:
     """Return a unique, human-readable identifier safe for use as a Frappe name."""
@@ -42,8 +39,14 @@ def make_customer(
     skip_insert: bool = False,
     **overrides,
 ) -> Document:
+    existing_customer = frappe.db.get_list(
+        "Customer", filters=[["name1", "=", name1]], fields=["name"], limit=1
+    )
+    if existing_customer:
+        return frappe.get_doc("Customer", existing_customer[0].name)
+
     doc = frappe.new_doc("Customer")
-    doc.name1 = name1  
+    doc.name1 = name1
 
     if customer_from is not None:
         doc.customer_from = customer_from
@@ -76,7 +79,7 @@ def make_lead_with_lead_detail(
 
     if email:
         lead.email = email
-        
+
     for key, value in overrides.items():
         lead.set(key, value)
 
@@ -87,9 +90,9 @@ def make_lead_with_lead_detail(
 
     return lead, ldf
 
+
 def seed_all():
     _ensure_hierarchies()
-
 
 
 class CustomerTestBase(FrappeTestCase):
@@ -136,8 +139,11 @@ class TestCustomerAutoname(CustomerTestBase):
         """
         same_name = _uid("Dup Customer")
         make_customer(same_name)
+        doc = frappe.new_doc("Customer")
+        doc.name1 = same_name
         with self.assertRaises(frappe.DuplicateEntryError):
-            make_customer(same_name)
+            # cannot use helper as it will return existing customer
+            doc.insert(ignore_permissions=True)
 
     def test_different_names_produce_different_doc_names(self):
         c1 = make_customer(_uid("Unique Name A"))
@@ -148,6 +154,7 @@ class TestCustomerAutoname(CustomerTestBase):
 # ===========================================================================
 # 2.  validate() – stage JSON
 # ===========================================================================
+
 
 class TestCustomerValidateStage(CustomerTestBase):
     """
@@ -215,6 +222,7 @@ class TestCustomerValidateStage(CustomerTestBase):
 # 3.  after_insert() – CASE 2: no party selected
 # ===========================================================================
 
+
 class TestCustomerAfterInsertNoParty(CustomerTestBase):
     """
     When no party_name / customer_from is supplied, after_insert() must create
@@ -228,9 +236,7 @@ class TestCustomerAfterInsertNoParty(CustomerTestBase):
 
     def test_lead_details_doc_exists_in_db(self):
         customer = make_customer(_uid("LDF Exists"))
-        self.assertTrue(
-            frappe.db.exists("Lead Detail Form", customer.lead_details)
-        )
+        self.assertTrue(frappe.db.exists("Lead Detail Form", customer.lead_details))
 
     def test_lead_details_field_is_persisted_via_db_update(self):
         """db_update() must have saved lead_details to the database row."""
@@ -243,7 +249,8 @@ class TestCustomerAfterInsertNoParty(CustomerTestBase):
         customer = make_customer(_uid("Ref Row Check"))
         ldf = frappe.get_doc("Lead Detail Form", customer.lead_details)
         customer_refs = [
-            row for row in ldf.reference_table
+            row
+            for row in ldf.reference_table
             if row.reference_doctype == "Customer"
             and row.reference_person == customer.name
         ]
@@ -264,6 +271,7 @@ class TestCustomerAfterInsertNoParty(CustomerTestBase):
 # 4.  after_insert() – CASE 1: party selected
 # ===========================================================================
 
+
 class TestCustomerAfterInsertWithParty(CustomerTestBase):
     """
     When party_name + customer_from are both supplied, after_insert() must
@@ -276,7 +284,9 @@ class TestCustomerAfterInsertWithParty(CustomerTestBase):
         super().setUpClass()
         if not _doctype_exists("Lead"):
             return
-        cls.lead, cls.ldf = make_lead_with_lead_detail("Party Lead", email="party@test.com")
+        cls.lead, cls.ldf = make_lead_with_lead_detail(
+            "Party Lead", email="party@test.com"
+        )
 
     def _skip_if_no_lead(self):
         if not _doctype_exists("Lead"):
@@ -302,7 +312,8 @@ class TestCustomerAfterInsertWithParty(CustomerTestBase):
         )
         ldf = frappe.get_doc("Lead Detail Form", self.ldf.name)
         refs = [
-            row for row in ldf.reference_table
+            row
+            for row in ldf.reference_table
             if row.reference_doctype == "Customer"
             and row.reference_person == customer.name
         ]
@@ -324,7 +335,8 @@ class TestCustomerAfterInsertWithParty(CustomerTestBase):
 
         ldf = frappe.get_doc("Lead Detail Form", self.ldf.name)
         refs = [
-            row for row in ldf.reference_table
+            row
+            for row in ldf.reference_table
             if row.reference_doctype == "Customer"
             and row.reference_person == customer.name
         ]
@@ -357,6 +369,7 @@ class TestCustomerAfterInsertWithParty(CustomerTestBase):
 # 5.  on_trash()
 # ===========================================================================
 
+
 class TestCustomerOnTrash(CustomerTestBase):
     """
     on_trash() delegates to unlink_and_clean_lead_detail.
@@ -385,7 +398,8 @@ class TestCustomerOnTrash(CustomerTestBase):
 
         ldf = frappe.get_doc("Lead Detail Form", ldf_name)
         refs = [
-            row for row in ldf.reference_table
+            row
+            for row in ldf.reference_table
             if row.reference_doctype == "Customer"
             and row.reference_person == customer.name
         ]
@@ -401,6 +415,7 @@ class TestCustomerOnTrash(CustomerTestBase):
 # ===========================================================================
 # 6.  get_forwardable_departments()
 # ===========================================================================
+
 
 class TestGetForwardableDepartments(CustomerTestBase):
     """
@@ -500,9 +515,11 @@ class TestGetForwardableDepartments(CustomerTestBase):
         self.assertIn("CR", active_in)
         self.assertIn("Onboarding", active_in)
 
+
 # ===========================================================================
 # 9.  get_customer_email()
 # ===========================================================================
+
 
 class TestGetCustomerEmail(CustomerTestBase):
     """
