@@ -652,8 +652,6 @@ def verify_payment_entry(payment_entry):
 
     now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
     pe.verification_status = "Verified"
-    pe.verified_by = frappe.session.user
-    pe.verified_on = frappe.utils.now()
     pe.save(ignore_permissions=True)
     pe.submit()
 

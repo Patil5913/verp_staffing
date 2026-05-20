@@ -3,10 +3,36 @@
 
 frappe.ui.form.on("Payment Entry", {
 	refresh(frm) {
+		if (frm.doc.payment_term_row) {
+			const colors = {
+				"Pending Verification": "orange",
+				Verified: "green",
+				Rejected: "red",
+			};
+			const status = frm.doc.verification_status;
+			const color = colors[status] || "gray";
+			// Set immediately too
+			frm.page.set_indicator(__(status), color);
+		}
+		if (frm.doc.verification_status === "Rejected") {
+			frm.disable_form(); // disables all fields + hides submit + clears dashboard messages
+			frm.dashboard.clear_comment();
+			frm.dashboard.set_headline_alert(`
+				<div class="alert alert-danger" style="margin:0">
+					<b>Rejected</b> — ${frm.doc.rejection_remarks || "This payment was rejected."}
+					<br>
+					<span class="text-muted" style="font-size:12px;">
+						Go to the linked Sales Order and click 
+						<b>Re-request Verification</b> on the payment term row.
+					</span>
+				</div>
+    		`);
+			return;
+		}
 		// ── Custom Submit confirmation ─────────────────────────────
 		frm.savesubmit = function () {
-            frappe.confirm(
-                `<div style="line-height:1.6">
+			frappe.confirm(
+				`<div style="line-height:1.6">
                     <p><b>You are about to submit this Payment Entry.</b></p>
                     <p>Submitting confirms that:</p>
                     <ul style="padding-left:16px">
@@ -18,53 +44,42 @@ frappe.ui.form.on("Payment Entry", {
                         If unsure, ask your accounts manager to verify instead.
                     </p>
                 </div>`,
-                () => {
-                    frm.validate_and_save("Submit", "Submitted", "on_submit", frm);
-                },
-            );
-        };
+				() => {
+					frm.validate_and_save("Submit", "Submitted", "on_submit", frm);
+				},
+			);
+		};
 
-        // ── Override savecancel ────────────────────────────────────
-        frm.savecancel = function () {
-            frappe.confirm(
-                `<div style="line-height:1.6">
+		// ── Override savecancel ────────────────────────────────────
+		frm.savecancel = function () {
+			frappe.confirm(
+				`<div style="line-height:1.6">
                     <p><b>You are about to cancel this Payment Entry.</b></p>
                     <p>Cancelling means:</p>
                     <ul style="padding-left:16px">
                         <li>The payment of <b>${format_currency(frm.doc.paid_amount, frm.doc.currency)}</b> will be <b>reversed</b></li>
                         <li>All accounting entries (GL) will be <b>cancelled</b></li>
-                        ${frm.doc.payment_term_row
-                            ? `<li>The linked payment term will be <b>reset to Unpaid</b></li>`
-                            : `<li>Outstanding amounts on linked invoices will be <b>restored</b></li>`
-                        }
+                        ${
+							frm.doc.payment_term_row
+								? `<li>The linked payment term will be <b>reset to Unpaid</b></li>`
+								: `<li>Outstanding amounts on linked invoices will be <b>restored</b></li>`
+						}
                         <li>This action <b>cannot be undone</b></li>
                     </ul>
                     <p class="text-muted" style="font-size:12px">
                         Only cancel if the payment was made in error.
                     </p>
                 </div>`,
-                () => {
-                    frm.validate_and_save("Cancel", "Cancelled", "on_cancel", frm);
-                },
-            );
-        };
+				() => {
+					frm.validate_and_save("Cancel", "Cancelled", "on_cancel", frm);
+				},
+			);
+		};
 
 		if (frm.doc.party_type && !frm.party_account_type) {
 			frappe.db.get_value("Party Type", frm.doc.party_type, "account_type").then((r) => {
 				frm.party_account_type = r.message?.account_type || null;
 			});
-		}
-		if (frm.doc.payment_term_row) {
-			const colors = {
-				"Pending Verification": "orange",
-				Verified: "green",
-				Rejected: "red",
-			};
-
-			frm.page.set_indicator(
-				__(frm.doc.verification_status),
-				colors[frm.doc.verification_status] || "gray",
-			);
 		}
 		set_currency_labels(frm);
 		hide_unhide_fields(frm);
