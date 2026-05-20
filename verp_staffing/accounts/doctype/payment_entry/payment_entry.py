@@ -17,14 +17,14 @@ from verp_staffing.accounts.doctype.company.company import get_company_currency
 
 class PaymentEntry(Document):
     def validate(self):
-        # if self.verification_status == "Rejected" and not self.is_new():
-        #     # Allow only internal system updates (re-request sets back to Pending)
-        #     # Block any user-triggered saves
-        #     frappe.throw(
-        #             "This Payment Entry has been rejected and cannot be edited. "
-        #             "Re-request verification from the Sales Order to reactivate it.",
-        #             title="Action Blocked"
-        #         )
+        if not self.is_new():
+            old_status = frappe.db.get_value("Payment Entry", self.name, "status")
+            if old_status == "Rejected":
+                frappe.throw(
+                    "This Payment Entry has been rejected and cannot be edited. "
+                    "Re-request verification from the Sales Order to reactivate it.",
+                    title="Action Blocked"
+                )
         validate_party_type_in_master(self)
         self.validate_references_not_tampered()
         validate_party_type_matches_payment_direction(self)
@@ -87,7 +87,6 @@ class PaymentEntry(Document):
                     "verification_status": "Verified",
                 }
             )
-            self.db_set("status", "Verified")
 
         # Update linked payment term row
         if self.payment_term_row:
@@ -149,7 +148,6 @@ class PaymentEntry(Document):
                 },
             )
             self.db_set("verification_status", "Rejected")
-            self.db_set("status", "Rejected")
             from verp_staffing.accounts.doctype.sales_order.sales_order import (
                 _append_verification_log,
             )
