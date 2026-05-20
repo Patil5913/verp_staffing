@@ -7,9 +7,6 @@ from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 
-from verp_staffing.crm.api.helpers import get_employee_name, get_all_subordinates , get_all_superiors_with_roles
-
-
 class Customer(Document):
     
     
@@ -61,7 +58,6 @@ class Customer(Document):
 
             lead_detail_name = create_lead_details("Customer", self.name, self.name1)
 
-        # 🔥 Link Customer → Lead Details in BOTH cases
         if lead_detail_name:
             self.lead_details = lead_detail_name
             self.db_update()
@@ -441,4 +437,10 @@ def get_customer_email(customer):
     if not email:
         frappe.throw(f"No email found in Lead Details for Customer {customer}")
 
-    return email[0].email
+    email_value = email[0].email
+
+    # Handle NULL / empty string
+    if not email_value:
+        return None
+
+    return email_value

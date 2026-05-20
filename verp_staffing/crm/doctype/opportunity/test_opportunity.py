@@ -6,8 +6,8 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import nowdate
 
 from verp_staffing.employee.doctype.employee.test_employee import (
-    get_or_create_employee,
-    get_or_create_user,
+    make_employee,
+    make_user,
 )
 
 _resolved: dict = {}
@@ -76,12 +76,12 @@ def make_opportunity(
 
 
 def seed_all():
-    user = get_or_create_user(
+    user = make_user(
         email="test_opp@example.com",
         first_name="Test Opp",
     )
 
-    employee = get_or_create_employee(
+    employee = make_employee(
         user=user,
         employee_name="Test Opportunity Employee",
     )
@@ -95,11 +95,6 @@ class OpportunityTestBase(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
         seed_all()
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
-
 
 class TestOpportunityCreation(OpportunityTestBase):
     def test_create_opportunity_with_name_only(self):
@@ -124,7 +119,7 @@ class TestOpportunityCreation(OpportunityTestBase):
             name1="Owned Opportunity",
             opportunity_owner=_resolved["employee"],
         )
-        self.assertEqual(opp.opportunity_owner, _resolved["employee"])
+        self.assertEqual(opp.opportunity_owner, _resolved["employee"].name)
 
     def test_create_opportunity_with_overrides(self):
         opp = make_opportunity(
@@ -240,7 +235,7 @@ class TestOpportunityCreation(OpportunityTestBase):
         )
         result = opp.create_customer()
         customer = frappe.get_doc("Customer", result["customer"])
-        self.assertEqual(customer.customer_owner, _resolved["employee"])
+        self.assertEqual(customer.customer_owner, _resolved["employee"].name)
 
     def test_trash_opportunity_unlinks_lead_details(self):
         opp = make_opportunity(name1="Opp Trash Test")

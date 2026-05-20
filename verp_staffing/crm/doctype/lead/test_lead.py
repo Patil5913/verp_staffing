@@ -6,10 +6,12 @@ import frappe
 from frappe import get_doc
 from frappe.tests.utils import FrappeTestCase
 from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
+
 from verp_staffing.employee.doctype.employee.test_employee import (
-    get_or_create_employee,
-    get_or_create_user,
+    make_employee,
+    make_user,
 )
+
 from verp_staffing.crm.doctype.opportunity.test_opportunity import make_opportunity
 
 _resolved: dict = {}
@@ -37,12 +39,12 @@ def make_lead(
 
 
 def seed_all():
-    user = get_or_create_user(
+    user = make_user(
         email="test@example.com",
         first_name="Test",
     )
 
-    employee = get_or_create_employee(
+    employee = make_employee(
         user=user,
         employee_name="Test Lead Employee",
     )
@@ -97,13 +99,13 @@ def is_valid_availability(v):
 class LeadTestBase(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+        cls._original_user = frappe.session.user #store current session user
         super().setUpClass()
         seed_all()
 
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
-
+    def tearDown(self):
+        frappe.set_user(self._original_user)        # restore after each test
+        super().tearDown()
 
 class TeasLead(LeadTestBase):
     valid = ["+12125551234", "+919876543210", "+447911123456"]
@@ -117,7 +119,7 @@ class TeasLead(LeadTestBase):
         frappe.set_user(_resolved["user"])
         emp = _resolved["employee"]
         lead = make_lead(name1="Auto Owner Lead")
-        self.assertEqual(lead.lead_owner, emp)
+        self.assertEqual(lead.lead_owner, emp.name)
 
     def test_lead_detail_form_created_after_insert(self):
         lead = make_lead(name1="Detail Form Lead")

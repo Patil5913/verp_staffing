@@ -16,7 +16,7 @@ from verp_staffing.accounts.doctype.account.test_account import (
     create_account_if_not_exists,
 )
 from verp_staffing.crm.doctype.customer.test_customer import (
-    create_customer_if_not_exists,
+    make_customer,
 )
 from verp_staffing.stock.doctype.uom.test_uom import create_uom_if_not_exists
 # from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
@@ -32,7 +32,7 @@ def make_sales_invoice(company=None, customer=None, amount=1000, do_not_submit=F
     currency = get_company_currency(company)
     debit_to = get_default_company_account(company, "Receivable")
     income_account = create_account_if_not_exists("Sales", company).name
-    customer = customer or create_customer_if_not_exists(f"_Test Customer {company}")
+    customer = customer or make_customer(f"_Test Customer {company}")
     uom = create_uom_if_not_exists("kg")
     item = create_item_if_not_exists("_Test Sales Item", "Item Category 1", "kg")
 
