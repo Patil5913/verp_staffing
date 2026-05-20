@@ -10,7 +10,7 @@ from verp_staffing.accounts.doctype.account.test_account import (
     create_account_if_not_exists,
 )
 from verp_staffing.crm.doctype.customer.test_customer import (
-    create_customer_if_not_exists,
+    make_customer,
 )
 from verp_staffing.accounts.doctype.party_type.test_party_type import (
     create_party_types_if_not_exists,
@@ -38,7 +38,7 @@ def make_sales_order(
     **overrides,
 ):
     company = company or create_company_if_not_exists("Test Company")
-    customer = customer or create_customer_if_not_exists(customer_name="Test Customer")
+    customer = customer or make_customer(name1="Test Customer")
     income_account = (
         income_account or create_account_if_not_exists("Sales", company).name
     )
@@ -102,7 +102,7 @@ class TestSalesOrder(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         cls.company = create_company_if_not_exists("Test Company", "TC")
-        cls.customer = create_customer_if_not_exists(customer_name="Test Customer")
+        cls.customer = make_customer(name1="Test Customer")
         cls.debtors_account = create_account_if_not_exists(
             "Debtors", cls.company, root_type="Asset", account_type="Receivable"
         ).name
