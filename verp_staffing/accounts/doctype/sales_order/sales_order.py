@@ -39,6 +39,7 @@ class SalesOrder(Document):
 
     def on_submit(self):
         on_sales_order_save(self)
+
     def validate(self):
         self.validate_payment_terms_deletion()
         self.validate_payment_terms_total()
@@ -78,7 +79,7 @@ class SalesOrder(Document):
                     frappe.throw(
                         f"Cannot delete payment term <b>{term_name}</b> — "
                         f"it is already verified.",
-                        title="Deletion Blocked"
+                        title="Deletion Blocked",
                     )
 
                 # Delete linked PE for non-verified terms
@@ -91,19 +92,21 @@ class SalesOrder(Document):
                         frappe.throw(
                             f"Cannot delete payment term <b>{term_name}</b> — "
                             f"linked Payment Entry <b>{pe_name}</b> is already submitted.",
-                            title="Deletion Blocked"
+                            title="Deletion Blocked",
                         )
                     # Delete draft PE
-                    frappe.delete_doc(
-                        "Payment Entry", pe_name, force=True
-                    )
+                    frappe.delete_doc("Payment Entry", pe_name, force=True)
 
     def validate_payment_terms_total(self):
         if not self.payment_terms:
             return
 
         terms_total = sum(flt(row.amount) for row in self.payment_terms)
-        so_total = flt(self.rounded_total) if not self.disable_rounded_total and self.rounded_total else flt(self.grand_total)
+        so_total = (
+            flt(self.rounded_total)
+            if not self.disable_rounded_total and self.rounded_total
+            else flt(self.grand_total)
+        )
 
         if not so_total:
             return
@@ -113,41 +116,42 @@ class SalesOrder(Document):
                 f"Total payment terms amount ({fmt_money(terms_total, 2, self.currency)}) "
                 f"exceeds Sales Order total ({fmt_money(so_total, 2, self.currency)}) "
                 f"by {fmt_money(terms_total - so_total, 2, self.currency)}.",
-                title="Payment Terms Total Exceeded"
+                title="Payment Terms Total Exceeded",
             )
+
     def validate_payment_terms_dates(self):
         today = frappe.utils.today()
-        for row in (self.payment_terms or []):
+        for row in self.payment_terms or []:
             if row.payment_condition == "Number of Days":
                 if row.start_date and str(row.start_date) < today:
                     frappe.throw(
                         f"Row {row.idx}: Start Date cannot be before today.",
-                        title="Invalid Date"
+                        title="Invalid Date",
                     )
                 if row.due_date and str(row.due_date) < today:
                     frappe.throw(
                         f"Row {row.idx}: Due Date cannot be before today.",
-                        title="Invalid Date"
+                        title="Invalid Date",
                     )
 
     def validate_payment_terms_fields(self):
-        for row in (self.payment_terms or []):
+        for row in self.payment_terms or []:
             if row.payment_condition == "Number of Days":
                 if not row.start_date:
                     frappe.throw(
                         f"Row {row.idx}: Start Date is required for 'Number of Days' condition.",
-                        title="Missing Field"
+                        title="Missing Field",
                     )
                 if not row.counter:
                     frappe.throw(
                         f"Row {row.idx}: Count is required for 'Number of Days' condition.",
-                        title="Missing Field"
+                        title="Missing Field",
                     )
             elif row.payment_condition == "Number of Interviews":
                 if not row.counter:
                     frappe.throw(
                         f"Row {row.idx}: Count is required for 'Number of Interviews' condition.",
-                        title="Missing Field"
+                        title="Missing Field",
                     )
 
     def validate_mandatory(self):
@@ -510,7 +514,7 @@ def get_linked_invoice(sales_order):
             "currency",
         ],
         order_by="creation desc",
-        limit=1
+        limit=1,
     )
 
     return invoice
@@ -616,7 +620,7 @@ def create_payment_entry_from_term(
             "total_amount": si.grand_total,
             "outstanding_amount": si.outstanding_amount,
             "allocated_amount": term.amount,
-            "invoice_currency": si.currency
+            "invoice_currency": si.currency,
         },
     )
 
@@ -675,17 +679,19 @@ def reject_payment_entry(payment_entry, remarks):
         frappe.throw("A verified payment entry cannot be rejected.")
 
     now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
-    full_note = f"Rejected by {frappe.session.user} on {now_str}, Remarks: {remarks.strip()}"
+    full_note = (
+        f"Rejected by {frappe.session.user} on {now_str}, Remarks: {remarks.strip()}"
+    )
 
     pe.verification_status = "Rejected"
-    pe.rejected_by = frappe.session.user
-    pe.rejected_on = frappe.utils.now()
-    pe.rejection_remarks = full_note
     pe.save(ignore_permissions=True)
 
     if pe.payment_term_row:
         frappe.db.set_value(
             "Customer Payment Terms", pe.payment_term_row, "payment_status", "Rejected"
+        )
+        frappe.db.set_value(
+            "Customer Payment Terms", pe.payment_term_row, "payment_entry", None
         )
         _append_verification_log(pe.payment_term_row, full_note)
 
