@@ -102,11 +102,6 @@ class LeadTestBase(FrappeTestCase):
         super().setUpClass()
         seed_all()
 
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
-
-
 class TeasLead(LeadTestBase):
     valid = ["+12125551234", "+919876543210", "+447911123456"]
     invalid = ["1234567890", "+1234", "abcdefghijk", "+0123456789", ""]

@@ -96,11 +96,6 @@ class OpportunityTestBase(FrappeTestCase):
         super().setUpClass()
         seed_all()
 
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
-
-
 class TestOpportunityCreation(OpportunityTestBase):
     def test_create_opportunity_with_name_only(self):
         opp = make_opportunity(name1="Basic Opportunity")
