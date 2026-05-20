@@ -189,7 +189,6 @@ frappe.ui.form.on("Sales Order", {
 
 		if (config.sendAgreementImmediately && requirements.agreement_required) {
 			const key = `so_agreement_draft_${frm.doc.name}`;
-			console.log("key: ", key);
 			const draft = localStorage.getItem(key);
 
 			if (!draft) {

@@ -332,7 +332,6 @@ function store_draft_locally(frm, wrapper) {
 	const data = collect_agreement_data(frm, wrapper);
 
 	const key = `so_agreement_draft_${frm.doc.name || "new"}`;
-	console.log("key from public: ", key);
 	localStorage.setItem(
 		key,
 		JSON.stringify({
