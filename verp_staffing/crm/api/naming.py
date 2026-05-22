@@ -1,6 +1,8 @@
-import frappe
-from datetime import datetime
 import re
+from datetime import datetime
+
+import frappe
+from frappe.utils import cstr
 
 DOCTYPE_PREFIX_MAP = {
     "Sales Order": "SO",
@@ -11,8 +13,18 @@ DOCTYPE_PREFIX_MAP = {
     "Lead Detail Form" : "LDF"
 }
 
-def sanitize(value):
-    return re.sub(r"[^a-zA-Z0-9]", "_", value)
+def sanitize(value: str) -> str:
+    """
+    Convert text into safe naming token.
+    """
+
+    value = cstr(value).strip()
+
+    return re.sub(
+        r"[^A-Za-z0-9]+",
+        "_",
+        value,
+    ).strip("_")
 
 def generate_name_series(doctype_name: str, name: str) -> str:
     """
@@ -30,16 +42,31 @@ def generate_name_series(doctype_name: str, name: str) -> str:
         2nd occurrence → DocType_name_25/03/2026_1
         3rd occurrence → DocType_name_25/03/2026_2
     """
-    today = datetime.today().strftime("%d/%m/%Y")
-    prefix = DOCTYPE_PREFIX_MAP.get(doctype_name, doctype_name)
+    prefix = DOCTYPE_PREFIX_MAP.get(
+        doctype_name,
+        sanitize(doctype_name).upper(),
+    )
 
     safe_name = sanitize(name)
 
-    base_series = f"{prefix}_{safe_name}_{today}"
+    today = datetime.now().strftime("%d_%m_%Y")
 
-    # Count how many docs in the doctype have this name
-    count = frappe.db.count(doctype_name, filters={"name": ["like", f"%{safe_name}%"]})
-    if count == 0:
-        return base_series                  # 1st occurrence → no counter
-    else:
-        return f"{base_series}_{count}"     # 2nd+ occurrence → append counter
+    base_name = f"{prefix}_{safe_name}_{today}"
+
+    # Fast path
+    if not frappe.db.exists(doctype_name, base_name):
+        return base_name
+
+    counter = 1
+
+    while True:
+
+        candidate_name = f"{base_name}_{counter}"
+
+        if not frappe.db.exists(
+            doctype_name,
+            candidate_name,
+        ):
+            return candidate_name
+
+        counter += 1 # 2nd+ occurrence → append counter

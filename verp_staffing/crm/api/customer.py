@@ -1,4 +1,6 @@
 import frappe
+import json
+from frappe.utils import now_datetime
 
 @frappe.whitelist()
 
@@ -131,3 +133,130 @@ def get_customer_department_panels(customer):
         }
 
     return result
+
+
+@frappe.whitelist()
+def update_customer_stage(
+    customer,
+    service,
+    *,
+    prevent_duplicate=True,
+    timestamp=None,
+):
+    """
+    Generic reusable customer stage updater.
+
+    Args:
+        customer (str): Customer name
+        service (str): Service key (example: "ruc", "visa", "marketing")
+        prevent_duplicate (bool): Avoid duplicate department entry
+        timestamp (str|None): Custom timestamp override
+    """
+
+    if not customer or not service:
+        return
+
+    cache_key = f"department_service::{service}"
+
+    department = frappe.cache().get_value(
+        cache_key
+    )
+
+    if not department:
+
+        department = frappe.db.get_value(
+            "Department Service",
+            {
+                "service_name": service,
+            },
+            "parent",
+        )
+
+        if not department:
+            frappe.throw(
+                f"Department not found for service: {service}"
+            )
+
+        frappe.cache().set_value(
+            cache_key,
+            department,
+        )
+
+    timestamp = (
+        timestamp
+        or now_datetime().isoformat()
+    )
+
+    stage = frappe.db.get_value(
+        "Customer",
+        customer,
+        "stage",
+    )
+
+    # =====================================
+    # ULTRA FAST PATH
+    # =====================================
+
+    if not stage:
+
+        frappe.db.set_value(
+            "Customer",
+            customer,
+            "stage",
+            json.dumps(
+                {
+                    service: [
+                        {
+                            "department": department,
+                            "timestamp": timestamp,
+                        }
+                    ]
+                },
+                separators=(",", ":"),
+            ),
+            update_modified=False,
+        )
+
+        return
+
+    # =====================================
+    # NORMAL PATH
+    # =====================================
+
+    try:
+        stage_data = json.loads(stage)
+    except Exception:
+        stage_data = {}
+
+    service_stage = stage_data.setdefault(
+        service,
+        [],
+    )
+
+    if prevent_duplicate:
+
+        exists = any(
+            row.get("department") == department
+            for row in service_stage
+        )
+
+        if exists:
+            return
+
+    service_stage.append(
+        {
+            "department": department,
+            "timestamp": timestamp,
+        }
+    )
+
+    frappe.db.set_value(
+        "Customer",
+        customer,
+        "stage",
+        json.dumps(
+            stage_data,
+            separators=(",", ":"),
+        ),
+        update_modified=False,
+    )

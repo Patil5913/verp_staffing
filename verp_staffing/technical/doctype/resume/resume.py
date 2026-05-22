@@ -5,6 +5,7 @@ import frappe,json
 from frappe.utils import now_datetime
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.customer import update_customer_stage
 
 class Resume(Document):
     
@@ -21,8 +22,12 @@ class Resume(Document):
 
     def on_update(self):
         self._auto_complete_after_save()
+        
     def after_insert(self):
-        self.create_customer()
+        update_customer_stage(
+            customer=self.customer,
+            service="visa",
+        )
 
     def _prevent_manual_completion(self):
         """
@@ -56,28 +61,3 @@ class Resume(Document):
             
         if self.resume and self.status != "Completed":
             self.db_set("status", "Completed", update_modified=False)
-    
-    def create_customer(self):
-        service = "resume"
-        parents = frappe.db.sql("""
-        SELECT parent FROM `tabDepartment Service`
-        WHERE service_name=%s
-        """, (service), as_dict=True)
-
-        customer = frappe.get_doc("Customer", self.customer)
-
-        stage = json.loads(customer.stage) if customer.stage else {}
-
-        department = parents[0].parent
-        if "resume" not in stage:
-            stage["resume"] = []
-        stage["resume"].append({
-            "department": department,
-            "timestamp": str(now_datetime())
-        })
-        frappe.db.set_value(
-            "Customer",
-            customer.name,
-            "stage",
-            json.dumps(stage)
-        )

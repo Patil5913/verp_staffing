@@ -11,11 +11,9 @@
   "name1",
   "lead_details",
   "source",
-  "personal_phone_number",
   "column_break_vwnk",
   "lead_owner",
   "status",
-  "email",
   "section_break_vcqc",
   "lead_detail",
   "note_tab",
@@ -35,7 +33,8 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Name",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "default": "Open",
@@ -90,22 +89,9 @@
    "read_only": 1
   },
   {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Email"
-  },
-  {
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
-  },
-  {
-   "fieldname": "personal_phone_number",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Phone Number (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx"
   },
   {
    "fieldname": "section_break_vcqc",
@@ -121,7 +107,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 17:23:30.664925",
+ "modified": "2026-05-20 11:43:43.152303",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -130,16 +116,21 @@
  "permissions": [
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Manager",
+   "role": "Lead Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Person",
+   "role": "Lead Team Lead",
    "write": 1
   },
   {
@@ -158,14 +149,21 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Team Lead",
+   "role": "Sales Manager",
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Manager",
+   "role": "Lead Person",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lead Manager",
    "write": 1
   },
   {
@@ -177,22 +175,15 @@
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Lead Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
    "read": 1,
    "report": 1,
    "role": "Sales Person",
    "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "_show_lead"
   },
   {
    "create": 1,
@@ -210,11 +201,6 @@
    "read": 1,
    "report": 1,
    "role": "_show_sales"
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "_show_lead"
   },
   {
    "create": 1,

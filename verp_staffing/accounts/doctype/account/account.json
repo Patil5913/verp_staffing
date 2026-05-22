@@ -79,14 +79,16 @@
    "in_list_view": 1,
    "label": "Account Name",
    "no_copy": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "account_number",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Account Number"
+   "label": "Account Number",
+   "search_index": 1
   },
   {
    "fieldname": "company",
@@ -95,7 +97,8 @@
    "label": "Company",
    "options": "Company",
    "remember_last_selected_value": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "column_break_miet",
@@ -159,7 +162,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-04-05 18:51:59.272511",
+ "modified": "2026-05-19 16:41:37.472651",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Account",

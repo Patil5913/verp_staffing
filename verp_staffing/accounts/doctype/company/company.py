@@ -4,14 +4,10 @@
 import frappe
 from frappe import _
 from frappe.utils.nestedset import NestedSet
-from frappe.contacts.address_and_contact import load_address_and_contact
-from verp_staffing.accounts.doctype.account.account import get_account_currency
 
 
 class Company(NestedSet):
-    def onload(self):
-        load_address_and_contact(self, "company")
-
+    # don't remove it, it's for future 
     def on_update(self):
         NestedSet.on_update(self)
         if not frappe.db.sql(
@@ -28,8 +24,7 @@ class Company(NestedSet):
         self.validate_abbr()
         self.validate_default_accounts()
         self.validate_coa_input()
-        self.check_country_change()
-        self.check_parent_changed()
+        # self.check_country_change()
         self.set_chart_of_accounts()
         self.validate_parent_company()
 
@@ -42,56 +37,86 @@ class Company(NestedSet):
         if not self.abbr.strip():
             frappe.throw(_("Abbreviation is mandatory"))
 
-        if frappe.db.sql(
-            "select abbr from tabCompany where name!=%s and abbr=%s",
-            (self.name, self.abbr),
+        if frappe.db.exists(
+            "Company",
+            {
+                "abbr": self.abbr,
+                "name": ["!=", self.name],
+            },
         ):
             frappe.throw(_("Abbreviation already used for another company"))
 
+
     def validate_default_accounts(self):
         accounts = [
-            ["Default Bank Account", "default_bank_account"],
-            ["Default Cash Account", "default_cash_account"],
-            ["Default Receivable Account", "default_receivable_account"],
-            ["Default Payable Account", "default_payable_account"],
-            ["Default Income Account", "default_income_account"],
-            ["Write Off Account", "write_off_account"],
-            ["Default Payment Discount Account", "default_discount_account"],
-            ["Round Off Account", "round_off_account"],
+            ("Default Bank Account", "default_bank_account"),
+            ("Default Cash Account", "default_cash_account"),
+            ("Default Receivable Account", "default_receivable_account"),
+            ("Default Payable Account", "default_payable_account"),
+            ("Default Income Account", "default_income_account"),
+            ("Write Off Account", "write_off_account"),
+            ("Default Payment Discount Account", "default_discount_account"),
+            ("Round Off Account", "round_off_account"),
         ]
 
-        for account in accounts:
-            if self.get(account[1]):
-                for_company, is_group, disabled = frappe.db.get_value(
-                    "Account", self.get(account[1]), ["company", "is_group", "disabled"]
+        account_map = {
+            fieldname: label for label, fieldname in accounts if self.get(fieldname)
+        }
+
+        if not account_map:
+            return
+
+        account_names = list({self.get(fieldname) for fieldname in account_map})
+
+        account_details = frappe.get_all(
+            "Account",
+            filters={"name": ["in", account_names]},
+            fields=[
+                "name",
+                "company",
+                "is_group",
+                "disabled",
+                "account_currency",
+            ],
+        )
+
+        account_details_map = {d.name: d for d in account_details}
+
+        for fieldname, label in account_map.items():
+            account_name = self.get(fieldname)
+            account = account_details_map.get(account_name)
+
+            if not account:
+                continue
+
+            if account.disabled:
+                frappe.throw(
+                    _("Account {0} is disabled.").format(frappe.bold(account_name))
                 )
 
-                if disabled:
-                    frappe.throw(
-                        _("Account {0} is disabled.").format(
-                            frappe.bold(self.get(account[1]))
-                        )
+            if account.is_group:
+                frappe.throw(
+                    _("{0}: {1} is a group account.").format(
+                        frappe.bold(label),
+                        frappe.bold(account_name),
                     )
+                )
 
-                if is_group:
-                    frappe.throw(
-                        _("{0}: {1} is a group account.").format(
-                            frappe.bold(account[0]), frappe.bold(self.get(account[1]))
-                        )
+            if account.company != self.name:
+                frappe.throw(
+                    _("Account {0} does not belong to company: {1}").format(
+                        account_name,
+                        self.name,
                     )
+                )
 
-                if for_company != self.name:
-                    frappe.throw(
-                        _("Account {0} does not belong to company: {1}").format(
-                            self.get(account[1]), self.name
-                        )
-                    )
-
-                if get_account_currency(self.get(account[1])) != self.default_currency:
-                    error_message = _(
-                        "{0} currency must be same as company's default currency. Please select another account."
-                    ).format(frappe.bold(account[0]))
-                    frappe.throw(error_message)
+            if account.account_currency != self.default_currency:
+                frappe.throw(
+                    _(
+                        "{0} currency must be same as company's default currency. "
+                        "Please select another account."
+                    ).format(frappe.bold(label))
+                )
 
     def validate_coa_input(self):
         if self.create_chart_of_accounts_based_on == "Existing Company":
@@ -107,21 +132,14 @@ class Company(NestedSet):
             if not self.chart_of_accounts:
                 self.chart_of_accounts = "India - Chart of Accounts"
 
-    def check_country_change(self):
-        frappe.flags.country_change = False
+    # don't remove it, it's for future 
+    # def check_country_change(self):
+    #     frappe.flags.country_change = False
 
-        if not self.is_new() and self.country != frappe.get_cached_value(
-            "Company", self.name, "country"
-        ):
-            frappe.flags.country_change = True
-
-    def check_parent_changed(self):
-        frappe.flags.parent_company_changed = False
-
-        if not self.is_new() and self.parent_company != frappe.db.get_value(
-            "Company", self.name, "parent_company"
-        ):
-            frappe.flags.parent_company_changed = True
+    #     if not self.is_new() and self.country != frappe.get_cached_value(
+    #         "Company", self.name, "country"
+    #     ):
+    #         frappe.flags.country_change = True
 
     def set_chart_of_accounts(self):
         """If parent company is set, chart of accounts will be based on that company"""
@@ -131,7 +149,7 @@ class Company(NestedSet):
 
     def validate_parent_company(self):
         if self.parent_company:
-            is_group = frappe.get_value("Company", self.parent_company, "is_group")
+            is_group = frappe.get_cached_value("Company", self.parent_company, "is_group")
 
             if not is_group:
                 frappe.throw(_("Parent Company must be a group company"))
@@ -141,7 +159,7 @@ class Company(NestedSet):
             create_charts,
         )
 
-        frappe.local.flags.ignore_root_company_validation = True
+        # frappe.local.flags.ignore_root_company_validation = True
         create_charts(self.name, self.chart_of_accounts, self.existing_company)
 
         self.db_set(
@@ -166,30 +184,36 @@ class Company(NestedSet):
         """
         NestedSet.validate_if_child_exists(self)
         frappe.utils.nestedset.update_nsm(self)
-        rec = frappe.db.sql(
-            f"SELECT name from `tabGL Entry` where company = %s", self.name
+        
+        gl_exists = frappe.db.exists(
+            "GL Entry",
+            {
+                "company": self.name,
+            },
         )
-        if not rec:
-            for doctype in ["Account"]:
-                frappe.db.sql(
-                    f"delete from `tab{doctype}` where company = %s", self.name
-                )
+        
+        if not gl_exists:
+            frappe.db.delete(
+                "Account",
+                {
+                    "company": self.name,
+                },
+            )
 
         frappe.defaults.clear_default("company", value=self.name)
 
-        # reset default company
         frappe.db.sql(
-            """update `tabSingles` set value=''
-                where doctype='Global Defaults' and field='default_company'
-                and value=%s""",
-            self.name,
-        )
-
-        # reset default company
-        frappe.db.sql(
-            """update `tabSingles` set value=''
-                where doctype='Chart of Accounts Importer' and field='company'
-                and value=%s""",
+            """
+            UPDATE `tabSingles`
+            SET value = ''
+            WHERE value = %s
+            AND (
+                    (doctype = 'Global Defaults'
+                    AND field = 'default_company')
+                OR (doctype = 'Chart of Accounts Importer'
+                    AND field = 'company')
+            )
+            """,
             self.name,
         )
 
