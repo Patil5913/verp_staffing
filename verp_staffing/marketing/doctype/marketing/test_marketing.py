@@ -9,13 +9,16 @@ from verp_staffing.crm.doctype.customer.test_customer import make_customer
 from verp_staffing.employee.doctype.employee.test_employee import (
     make_employee,
     make_user,
+    _ensure_hierarchies,
 )
 from verp_staffing.marketing.doctype.interview.test_interview import make_interview
 from verp_staffing.marketing.doctype.marketing.marketing import (
-    can_edit_by_hierarchy,
-    can_edit_marketing,
-    can_edit_job_application_date,
     get_interviews_by_marketing,
+    _is_superior_in_marketing,
+)
+from verp_staffing.crm.api.helpers import (
+    get_all_superiors_with_roles,
+    get_all_subordinates,
 )
 
 
@@ -285,89 +288,307 @@ class TestGetInterviewsByMarketing(MarketingTestBase):
         self.assertEqual(len(self.get_interviews(m2.name)), 0)
 
 
-# Permission functions ───────────────────────────────────────────────────
+class TestIsSuperiorInMarketing(MarketingTestBase):
+    """
+    Hierarchy:
+        emp_a → emp_b (direct manager) → emp_c (grandparent)
+        emp_x → unrelated, separate branch
+    """
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _ensure_hierarchies()
 
-class TestMarketingPermissions(MarketingTestBase):
-    """can_edit_marketing(), can_edit_job_application_date(), can_edit_by_hierarchy()."""
+        cls.user_a = make_user("hier_a@test.verp", "Hier A")
+        cls.user_b = make_user("hier_b@test.verp", "Hier B")
+        cls.user_c = make_user("hier_c@test.verp", "Hier C")
+        cls.user_x = make_user("hier_x@test.verp", "Hier X")
 
-    def _run_as(self, user, fn, *args, **kwargs):
-        frappe.set_user(user)
-        try:
-            return fn(*args, **kwargs)
-        finally:
-            frappe.set_user("Administrator")
-
-    def test_can_edit_marketing_admin_always_true(self):
-        result = can_edit_marketing(assign_to=self.assignee_emp.name)
-        self.assertTrue(all(result[k] for k in ("can_edit", "can_delete", "can_add")))
-
-    def test_can_edit_marketing_no_assign_to_returns_false(self):
-        bare_user = make_user("no_assign@test.verp", "No Assign")
-        result = self._run_as(bare_user, can_edit_marketing, assign_to=None)
-        self.assertFalse(any(result[k] for k in ("can_edit", "can_delete", "can_add")))
-
-    def test_can_edit_marketing_assignee_cannot_edit(self):
-        result = self._run_as(
-            self.assignee_user, can_edit_marketing, assign_to=self.assignee_emp.name
+        # emp_b is direct manager of emp_a
+        # emp_c is manager of emp_b
+        cls.emp_c = make_employee(
+            _uid("Hier C"),
+            user=cls.user_c,
+            assignments=[
+                {"department": "Marketing", "designation": "Marketing Master Manager"}
+            ],
         )
-        self.assertFalse(result["can_edit"])
-
-    def test_can_edit_marketing_unrelated_user_cannot_edit(self):
-        result = self._run_as(
-            self.other_user, can_edit_marketing, assign_to=self.assignee_emp.name
+        cls.emp_b = make_employee(
+            _uid("Hier B"),
+            user=cls.user_b,
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Marketing Manager",
+                    "assigned_to": cls.emp_c.name,
+                }
+            ],
         )
-        self.assertFalse(result["can_edit"])
-
-    def test_can_edit_marketing_result_has_all_keys_as_booleans(self):
-        result = can_edit_marketing(assign_to=self.assignee_emp.name)
-        for k in ("can_edit", "can_delete", "can_add"):
-            self.assertIn(k, result)
-            self.assertIsInstance(result[k], bool)
-
-    def test_can_edit_job_application_date_admin_true(self):
-        self.assertTrue(
-            can_edit_job_application_date(assign_to=self.assignee_emp.name)[
-                "can_edit_date"
-            ]
+        cls.emp_a = make_employee(
+            _uid("Hier A"),
+            user=cls.user_a,
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Marketing Team Lead",
+                    "assigned_to": cls.emp_b.name,
+                }
+            ],
+        )
+        # emp_x is on a completely different branch
+        cls.emp_x = make_employee(
+            _uid("Hier X"),
+            user=cls.user_x,
+            assignments=[
+                {"department": "Marketing", "designation": "Marketing Master Manager"}
+            ],
         )
 
-    def test_can_edit_job_application_date_assignee_false(self):
-        result = self._run_as(
-            self.assignee_user,
-            can_edit_job_application_date,
-            assign_to=self.assignee_emp.name,
+    def _check(self, assign_to, current_user):
+        return _is_superior_in_marketing(assign_to, current_user)["is_superior"]
+
+    # --- Administrator ---
+    def test_administrator_always_true(self):
+        self.assertTrue(self._check(self.emp_a.name, "Administrator"))
+
+    # --- assign_to's own user ---
+    def test_assignee_own_user_returns_false(self):
+        self.assertFalse(self._check(self.emp_a.name, self.user_a))
+
+    # --- Direct manager ---
+    def test_direct_manager_returns_true(self):
+        self.assertTrue(self._check(self.emp_a.name, self.user_b))
+
+    # --- Grandparent ---
+    def test_grandparent_returns_true(self):
+        self.assertTrue(self._check(self.emp_a.name, self.user_c))
+
+    # --- Unrelated user ---
+    def test_unrelated_user_returns_false(self):
+        self.assertFalse(self._check(self.emp_a.name, self.user_x))
+
+    # --- Top of chain has no manager ---
+    def test_top_of_chain_user_is_not_own_superior(self):
+        # emp_c is the top, no one above — should return False for itself
+        self.assertFalse(self._check(self.emp_c.name, self.user_c))
+
+    # --- Employee with no Marketing assignments at all ---
+    def test_employee_with_no_assignments_returns_false(self):
+        bare_user = make_user("hier_bare@test.verp", "Hier Bare")
+        bare_emp = make_employee(_uid("Hier Bare"), user=bare_user)
+        self.assertFalse(self._check(bare_emp.name, self.user_b))
+
+    # --- Return shape ---
+    def test_return_value_is_dict_with_is_superior_key(self):
+        result = _is_superior_in_marketing(self.emp_a.name, self.user_b)
+        self.assertIn("is_superior", result)
+        self.assertIsInstance(result["is_superior"], bool)
+
+
+class TestHierarchyHelpersBase(MarketingTestBase):
+    """
+    Shared hierarchy for both superior and subordinate tests.
+
+    emp_c (Marketing Master Manager) — top, no assigned_to
+        ↑
+    emp_b (Marketing Manager, assigned_to: emp_c)
+        ↑
+    emp_a (Marketing Team Lead, assigned_to: emp_b)
+        ↑
+    emp_d (Senior Recruiter, assigned_to: emp_a)   — bottom
+
+    emp_x (Marketing Master Manager) — separate branch, no assigned_to
+        ↑
+    emp_y (Marketing Manager, assigned_to: emp_x)
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.user_a = make_user("sup_a@test.verp", "Sup A")
+        cls.user_b = make_user("sup_b@test.verp", "Sup B")
+        cls.user_c = make_user("sup_c@test.verp", "Sup C")
+        cls.user_d = make_user("sup_d@test.verp", "Sup D")
+        cls.user_x = make_user("sup_x@test.verp", "Sup X")
+        cls.user_y = make_user("sup_y@test.verp", "Sup Y")
+
+        cls.emp_c = make_employee(
+            _uid("Sup C"),
+            user=cls.user_c,
+            assignments=[
+                {"department": "Marketing", "designation": "Marketing Master Manager"}
+            ],
         )
-        self.assertFalse(result["can_edit_date"])
-
-    def test_can_edit_job_application_date_unrelated_false(self):
-        result = self._run_as(
-            self.other_user,
-            can_edit_job_application_date,
-            assign_to=self.assignee_emp.name,
+        cls.emp_b = make_employee(
+            _uid("Sup B"),
+            user=cls.user_b,
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Marketing Manager",
+                    "assigned_to": cls.emp_c.name,
+                }
+            ],
         )
-        self.assertFalse(result["can_edit_date"])
+        cls.emp_a = make_employee(
+            _uid("Sup A"),
+            user=cls.user_a,
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Marketing Team Lead",
+                    "assigned_to": cls.emp_b.name,
+                }
+            ],
+        )
+        cls.emp_d = make_employee(
+            _uid("Sup D"),
+            user=cls.user_d,
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Senior Recruiter",
+                    "assigned_to": cls.emp_a.name,
+                }
+            ],
+        )
+        cls.emp_x = make_employee(
+            _uid("Sup X"),
+            user=cls.user_x,
+            assignments=[
+                {"department": "Marketing", "designation": "Marketing Master Manager"}
+            ],
+        )
+        cls.emp_y = make_employee(
+            _uid("Sup Y"),
+            user=cls.user_y,
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Marketing Manager",
+                    "assigned_to": cls.emp_x.name,
+                }
+            ],
+        )
 
-    def test_can_edit_job_application_date_result_is_bool(self):
-        result = can_edit_job_application_date(assign_to=self.assignee_emp.name)
-        self.assertIsInstance(result["can_edit_date"], bool)
 
-    def test_can_edit_by_hierarchy_admin_returns_1(self):
+# ── get_all_superiors_with_roles ─────────────────────────────────────────────
+class TestGetAllSuperiorsWithRoles(TestHierarchyHelpersBase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
 
+    def _employees(self, result):
+        return [r["employee"] for r in result]
+
+    def _users(self, result):
+        return [r["user"] for r in result]
+
+    # --- Basic traversal ---
+    def test_bottom_employee_gets_full_chain(self):
+        result = get_all_superiors_with_roles(self.emp_d.name, department="Marketing")
         self.assertEqual(
-            can_edit_by_hierarchy(assign_to=self.assignee_emp.name)["can_edit"], 1
+            self._employees(result), [self.emp_a.name, self.emp_b.name, self.emp_c.name]
         )
 
-    def test_can_edit_by_hierarchy_bare_user_returns_0(self):
+    def test_mid_employee_gets_partial_chain(self):
+        result = get_all_superiors_with_roles(self.emp_a.name, department="Marketing")
+        self.assertEqual(self._employees(result), [self.emp_b.name, self.emp_c.name])
 
-        bare_user = make_user("bare_hier@test.verp", "Bare Hierarchy")
-        result = self._run_as(
-            bare_user, can_edit_by_hierarchy, assign_to=self.assignee_emp.name
-        )
-        self.assertEqual(result["can_edit"], 0)
+    def test_top_employee_returns_empty(self):
+        result = get_all_superiors_with_roles(self.emp_c.name, department="Marketing")
+        self.assertEqual(result, [])
 
-    def test_can_edit_by_hierarchy_result_is_0_or_1(self):
+    # --- Ordering ---
+    def test_result_is_ordered_direct_manager_first(self):
+        result = get_all_superiors_with_roles(self.emp_d.name, department="Marketing")
+        self.assertEqual(result[0]["employee"], self.emp_a.name)  # direct manager
 
-        self.assertIn(
-            can_edit_by_hierarchy(assign_to=self.assignee_emp.name)["can_edit"], (0, 1)
-        )
+    # --- Users attached ---
+    def test_users_are_attached_correctly(self):
+        result = get_all_superiors_with_roles(self.emp_a.name, department="Marketing")
+        self.assertIn(self.user_b, self._users(result))
+        self.assertIn(self.user_c, self._users(result))
+
+    # --- Roles attached ---
+    def test_roles_key_present_on_every_result(self):
+        result = get_all_superiors_with_roles(self.emp_d.name, department="Marketing")
+        for row in result:
+            self.assertIn("roles", row)
+            self.assertIsInstance(row["roles"], list)
+
+    # --- Department filter isolation ---
+    def test_department_filter_excludes_other_departments(self):
+        result = get_all_superiors_with_roles(self.emp_d.name, department="HR")
+        self.assertEqual(result, [])
+
+    def test_no_department_filter_returns_chain(self):
+        result = get_all_superiors_with_roles(self.emp_d.name)
+        self.assertGreater(len(result), 0)
+
+    # --- Separate branch isolation ---
+    def test_does_not_cross_into_separate_branch(self):
+        result = get_all_superiors_with_roles(self.emp_y.name, department="Marketing")
+        names = self._employees(result)
+        self.assertNotIn(self.emp_b.name, names)
+        self.assertNotIn(self.emp_c.name, names)
+        self.assertIn(self.emp_x.name, names)
+
+    # --- Employee with no assignments ---
+    def test_employee_with_no_assignments_returns_empty(self):
+        bare_user = make_user("sup_bare@test.verp", "Sup Bare")
+        bare_emp = make_employee(_uid("Sup Bare"), user=bare_user)
+        self.assertEqual(get_all_superiors_with_roles(bare_emp.name, department="Marketing"), [])
+
+
+# ── get_all_subordinates ─────────────────────────────────────────────────────
+class TestGetAllSubordinates(TestHierarchyHelpersBase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    # --- Basic traversal ---
+    def test_top_employee_gets_full_subtree(self):
+        result = get_all_subordinates(self.emp_c.name, department="Marketing")
+        self.assertEqual(result, {self.emp_b.name, self.emp_a.name, self.emp_d.name})
+
+    def test_mid_employee_gets_partial_subtree(self):
+        result = get_all_subordinates(self.emp_b.name, department="Marketing")
+        self.assertEqual(result, {self.emp_a.name, self.emp_d.name})
+
+    def test_bottom_employee_returns_empty(self):
+        result = get_all_subordinates(self.emp_d.name, department="Marketing")
+        self.assertEqual(result, set())
+
+    # --- Return type ---
+    def test_returns_a_set(self):
+        result = get_all_subordinates(self.emp_c.name, department="Marketing")
+        self.assertIsInstance(result, set)
+
+    # --- Department filter ---
+    def test_department_filter_excludes_other_departments(self):
+        result = get_all_subordinates(self.emp_c.name, department="HR")
+        self.assertEqual(result, set())
+
+    def test_no_department_filter_returns_subtree(self):
+        result = get_all_subordinates(self.emp_c.name)
+        self.assertGreater(len(result), 0)
+
+    # --- Separate branch isolation ---
+    def test_does_not_include_separate_branch(self):
+        result = get_all_subordinates(self.emp_c.name, department="Marketing")
+        self.assertNotIn(self.emp_x.name, result)
+        self.assertNotIn(self.emp_y.name, result)
+
+    # --- Employee with no subordinates ---
+    def test_employee_with_no_assignments_returns_empty(self):
+        bare_user = make_user("sub_bare@test.verp", "Sub Bare")
+        bare_emp = make_employee(_uid("Sub Bare"), user=bare_user)
+        self.assertEqual(get_all_subordinates(bare_emp.name, department="Marketing"), set())
+
+    # --- Root employee not included in own subtree ---
+    def test_root_employee_not_in_result(self):
+        result = get_all_subordinates(self.emp_c.name, department="Marketing")
+        self.assertNotIn(self.emp_c.name, result)

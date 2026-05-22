@@ -35,9 +35,11 @@ class Marketing(Document):
         )
         if not department:
             frappe.throw(
-                _("No Department has selected 'marketing' as a service. "
-                "<a href='/app/department'>Go to Department List</a>"),
-                title=_("Marketing Service Not Configured")
+                _(
+                    "No Department has selected 'marketing' as a service. "
+                    "<a href='/app/department'>Go to Department List</a>"
+                ),
+                title=_("Marketing Service Not Configured"),
             )
         stage_raw = frappe.db.get_value("Customer", self.customer, "stage")
         stage = json.loads(stage_raw) if stage_raw else {}
@@ -59,6 +61,7 @@ def get_interviews_by_marketing(marketing):
     return frappe.get_all(
         "Interview", filters={"marketing_link": marketing}, fields=["company"]
     )
+
 
 def _get_marketing_hierarchy_users(assign_to: str) -> list[str]:
     """Walk up the Marketing assignment chain and return all user emails."""
@@ -86,103 +89,45 @@ def _get_marketing_hierarchy_users(assign_to: str) -> list[str]:
         current = next_emp
     return users
 
+
+# This api is called from the client-side
 @frappe.whitelist()
-def can_edit_marketing(assign_to=None):
-    current_user = frappe.session.user
-
+def _is_superior_in_marketing(assign_to: str, current_user: str) -> bool:
+    """
+    Returns True if current_user is anywhere above assign_to
+    in the Marketing assignment hierarchy.
+    """
     if current_user == "Administrator":
-        return {
-            "can_edit": True,
-            "can_delete": True,
-            "can_add": True,
-        }
+        return {"is_superior": True}
+    if current_user == frappe.db.get_value("Employee", assign_to, "user"):
+        return {"is_superior": False}
 
-    if not assign_to:
-        return {
-            "can_edit": False,
-            "can_delete": False,
-            "can_add": False,
-        }
+    # Single query — entire Marketing chain at once
+    rows = frappe.db.sql(
+        """
+        SELECT ead.parent, ead.assigned_to, e.user
+        FROM `tabEmployee Assignment Detail` ead
+        JOIN `tabEmployee` e ON e.name = ead.assigned_to
+        WHERE ead.department = 'Marketing'
+          AND ead.assigned_to IS NOT NULL
+        """,
+        as_dict=True,
+    )
+    # Build map: employee → (manager_employee, manager_user)
+    # { child: (manager_emp, manager_user) }
+    chain_map = {r.parent: (r.assigned_to, r.user) for r in rows}
 
-    assign_to_user = frappe.db.get_value("Employee", assign_to, "user")
-
-    if current_user == assign_to_user:
-        return {
-            "can_edit": False,
-            "can_delete": False,
-            "can_add": False,
-        }
-
-    can = current_user in _get_marketing_hierarchy_users(assign_to)
-    return {"can_edit": can, "can_delete": can, "can_add": can}
-
-
-@frappe.whitelist()
-def can_edit_job_application_date(assign_to=None):
-    current_user = frappe.session.user
-
-    # Administrator can edit date
-    if current_user == "Administrator":
-        return {"can_edit_date": True}
-
-    if not assign_to:
-        return {"can_edit_date": False}
-
-    assign_to_user = frappe.db.get_value("Employee", assign_to, "user")
-
-    if current_user == assign_to_user:
-        return {"can_edit_date": False}
-
+    # Walk upward in Python — no DB calls
     visited = set()
-    users = []
-    current_employee = assign_to
-
-    while current_employee and current_employee not in visited:
-        visited.add(current_employee)
-
-        nxt = frappe.db.sql(
-            """
-            SELECT t.assigned_to
-            FROM `tabEmployee Assignment Detail` t
-            WHERE t.parent = %s
-              AND t.department = 'Marketing'
-            LIMIT 1
-            """,
-            (current_employee,),
-            as_dict=True,
-        )
-
-        if not nxt:
+    current = assign_to
+    while current and current not in visited:
+        visited.add(current)
+        entry = chain_map.get(current)
+        if not entry:
             break
+        manager_emp, manager_user = entry
+        if manager_user == current_user:
+            return {"is_superior": True}
+        current = manager_emp
 
-        next_employee = nxt[0].assigned_to
-        next_user = frappe.db.get_value("Employee", next_employee, "user")
-
-        if next_user:
-            users.append(next_user)
-
-        current_employee = next_employee
-
-    if current_user in users:
-        return {"can_edit_date": True}
-
-    return {"can_edit_date": False}
-
-
-@frappe.whitelist()
-def can_edit_by_hierarchy(assign_to):
-    user = frappe.session.user
-
-    if user == "Administrator":
-        return {"can_edit": 1}
-
-    allowed_employees = get_visible_employee_names(user)
-
-    if not allowed_employees:
-        return {"can_edit": 0}
-
-    # assign_to is Employee name
-    if assign_to in allowed_employees:
-        return {"can_edit": 1}
-
-    return {"can_edit": 0}
+    return {"is_superior": False}

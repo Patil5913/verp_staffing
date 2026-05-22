@@ -28,27 +28,34 @@ def get_user(employee_name):
 
 # function to get all subordinate Employee names under root_employee
 def get_all_subordinates(root_employee: str, department: str | None = None) -> set[str]:
+    dept_filter = "AND department = %(department)s" if department else ""
 
-    collected = set()
+    # Query 1: entire reverse map at once
+    rows = frappe.db.sql(
+        f"""
+        SELECT DISTINCT parent, assigned_to
+        FROM `tabEmployee Assignment Detail`
+        WHERE assigned_to IS NOT NULL
+          {dept_filter}
+        """,
+        {"department": department},
+        as_dict=True,
+    )
+
+    # reverse map: manager → [direct subordinates]
+    reverse_map: dict[str, list[str]] = {}
+    for r in rows:
+        reverse_map.setdefault(r.assigned_to, []).append(r.parent)
+
+    # BFS in Python — zero DB calls
+    collected: set[str] = set()
     stack = [root_employee]
-
     while stack:
         current = stack.pop()
-
-        filters = {"assigned_to": current}
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
+        for child in reverse_map.get(current, []):
+            if child not in collected:
+                collected.add(child)
+                stack.append(child)
 
     return collected
 
@@ -96,7 +103,7 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
     if not allowed_set:
         return []
 
-    allowed = list(allowed_set)  # THIS is the missing piece
+    allowed = list(allowed_set) 
 
     placeholders = ", ".join(["%s"] * len(allowed))
 
@@ -115,42 +122,64 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
 
 @frappe.whitelist()
 def get_all_superiors_with_roles(employee: str, department: str | None = None):
-    result = []
+    dept_filter = "AND ead.department = %(department)s" if department else ""
+
+    # Query 1: entire assignment chain + linked user in one shot
+    rows = frappe.db.sql(
+        f"""
+        SELECT ead.parent, ead.assigned_to, e.user
+        FROM `tabEmployee Assignment Detail` ead
+        LEFT JOIN `tabEmployee` e ON e.name = ead.assigned_to
+        WHERE ead.assigned_to IS NOT NULL
+          {dept_filter}
+        """,
+        {"department": department},
+        as_dict=True,
+    )
+
+    # map: employee → (manager_emp, manager_user)
+    chain_map = {r.parent: (r.assigned_to, r.user) for r in rows}
+
+    # walk upward in Python — zero DB calls
     visited = set()
+    managers = []  # ordered: direct manager first
     current = employee
-
-    while current:
-        filters = {"parent": current}
-        if department:
-            filters["department"] = department
-
-        # Get manager (assigned_to)
-        manager = frappe.db.get_value(
-            "Employee Assignment Detail", filters, "assigned_to"
-        )
-
-        if not manager or manager in visited:
+    while current and current not in visited:
+        visited.add(current)
+        entry = chain_map.get(current)
+        if not entry:
             break
+        manager_emp, manager_user = entry
+        managers.append((manager_emp, manager_user))
+        current = manager_emp
 
-        visited.add(manager)
+    if not managers:
+        return []
 
-        # Get linked User for this manager Employee
-        manager_user = frappe.db.get_value("Employee", manager, "user")
+    # Query 2: all roles for all managers in one IN query
+    all_users = [u for _, u in managers if u]
+    roles_map = {}
+    if all_users:
+        role_rows = frappe.db.sql(
+            """
+            SELECT parent, role FROM `tabHas Role`
+            WHERE parent IN %(users)s
+              AND parenttype = 'User'
+            """,
+            {"users": all_users},
+            as_dict=True,
+        )
+        for r in role_rows:
+            roles_map.setdefault(r.parent, []).append(r.role)
 
-        # Get all Frappe roles assigned to that user
-        roles = []
-        if manager_user:
-            roles = frappe.db.get_all(
-                "Has Role",
-                filters={"parent": manager_user, "parenttype": "User"},
-                pluck="role",
-            )
-
-        result.append({"employee": manager, "roles": roles})
-
-        current = manager  # move upward
-
-    return result
+    return [
+        {
+            "employee": emp,
+            "user": user,
+            "roles": roles_map.get(user, []),
+        }
+        for emp, user in managers
+    ]
 
 
 SERVICE_DEPARTMENT_MAP = {
@@ -212,7 +241,6 @@ def _find_employee_with_role_in_dept(required_role, target_dept):
             continue
         emp_roles = _get_employee_roles(emp)
         if required_role in emp_roles:
-
             return emp
 
     return None
@@ -376,101 +404,7 @@ def get_allowed_leads(user):
     return list(set(own_leads + opp_leads))
 
 
-# to add list view restriction based on employee hierarchy
-# @frappe.whitelist()
-# def secure_get(**kwargs):
-#     user = frappe.session.user
-#     doctype = frappe.local.form_dict.get("doctype")
-
-#     if user == "Administrator":
-#         return original_get(**frappe.local.form_dict)
-
-#     if doctype == "Lead":
-#         allowed_leads = get_allowed_leads(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Lead", "name", "in", allowed_leads]]
-#         )
-#         return original_get(**frappe.local.form_dict)
-
-#     if doctype == "Opportunity":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Opportunity", "opportunity_owner", "in", owners]]
-#         )
-#         return original_get(**frappe.local.form_dict)
-
-#     if doctype == "Resume" or doctype == "RUC":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Resume","assign_to","in",owners]]
-#         )
-
-#     if doctype == "Marketing":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Marketing","assign_to","in",owners]]
-#         )
-
-#     if doctype == "Training":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Training","assign_to","in",owners]]
-#         )
-
-#     if doctype == "RUC":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["RUC","assign_to","in",owners]]
-#         )
-
-#     if doctype == "JDC":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["JDC","assign_to","in",owners]]
-#         )
-
-#     if doctype == "Cover Letter":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Cover Letter","assign_to","in",owners]]
-#         )
-
-#     if doctype == "Technical Other Services":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Technical Other Services","assign_to","in",owners]]
-#         )
-
-#     if doctype == "Marketing Other Services":
-#         owners = get_visible_employee_names(user)
-#         frappe.local.form_dict["filters"] = frappe.as_json(
-#             [["Marketing Other Services","assign_to","in",owners]]
-#         )
-
-# return original_get(**frappe.local.form_dict)
-
 import json
-
-
-# def send_system_notification(
-#     *,
-#     user,
-#     subject,
-#     message,
-#     reference_doctype=None,
-#     reference_name=None,
-# ):
-#     frappe.get_doc(
-#         {
-#             "doctype": "Notification Log",
-#             "subject": subject,
-#             "email_content": message,
-#             "for_user": user,
-#             "document_type": reference_doctype,
-#             "document_name": reference_name,
-#             "type": "Alert",
-#         }
-#     ).insert(ignore_permissions=True)
 
 
 def send_system_notification(
@@ -602,17 +536,24 @@ def send_notification(**kwargs):
         frappe.throw("recipients must be a list")
 
     # ---- Dispatch ----
-    notify(
-        recipients=recipients,
-        subject=subject,
-        message=message,
-        attachments=attachments,
-        reference_doctype=reference_doctype,
-        reference_name=reference_name,
-        send_email_flag=bool(send_email_flag),
-        send_system_flag=bool(send_system_flag),
-        now=now,
-    )
+
+    try:
+        notify(
+            recipients=recipients,
+            subject=subject,
+            message=message,
+            attachments=attachments,
+            reference_doctype=reference_doctype,
+            reference_name=reference_name,
+            send_email_flag=bool(send_email_flag),
+            send_system_flag=bool(send_system_flag),
+            now=now,
+        )
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"Notification failed | recipients: {recipients} | subject: {subject}",
+        )
 
     return {
         "status": "success",
@@ -679,7 +620,6 @@ def lead_query(user):
     # SALES LOGIC
     # -------------------------
     if "Sales" in departments:
-
         conditions.append(
             f"""
             `tabLead`.lead_owner IN ({team_sql})
@@ -758,7 +698,6 @@ def customer_query(user):
         routing_departments.append("Onboarding")
 
     if routing_departments:
-
         dept_sql = ",".join([frappe.db.escape(d) for d in routing_departments])
 
         conditions.append(

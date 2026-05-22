@@ -34,7 +34,6 @@
   {
    "fieldname": "role_hierarchy_json",
    "fieldtype": "Small Text",
-   "hidden": 1,
    "label": "role hierarchy json"
   },
   {
@@ -47,7 +46,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-25 16:28:15.681508",
+ "modified": "2026-05-22 14:25:36.218487",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Hierarchy",
