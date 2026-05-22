@@ -525,7 +525,7 @@ def send_email(recipients, subject, message, attachments=None, now=None):
         subject=subject,
         message=message,
         attachments=attachments,
-        delayed=(not now) if now is not None else self.flags.delay_emails,
+        delayed=(not now) if now is not None else True,
         retry=3,
     )
 

@@ -35,7 +35,7 @@ def execute(filters=None):
     data = frappe.db.sql(f"""
     SELECT
         c.name AS customer,
-        c.title AS customer_name,
+        c.name1 AS customer_name,
         COUNT(DISTINCT i.name) AS interview_count
     FROM `tabInterview` i
     INNER JOIN `tabInterview Round` ir
@@ -46,7 +46,7 @@ def execute(filters=None):
         ON c.name = m.customer
     WHERE 1=1
     {conditions}
-    GROUP BY c.name, c.title
+    GROUP BY c.name, c.name1
     ORDER BY interview_count DESC
 """, values, as_dict=True)
     
