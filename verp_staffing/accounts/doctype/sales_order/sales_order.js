@@ -53,8 +53,7 @@ frappe.ui.form.on("Sales Order", {
 		await update_agreement_module(frm);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
 		await render_invoices_tab(frm);
-
-		if (!frm.is_new()) {
+		if (!frm.is_new() && frm.doc.docstatus === 1) {
 			frappe.call({
 				method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_sales_invoice_for_order",
 				args: { sales_order: frm.doc.name },
@@ -286,7 +285,7 @@ frappe.ui.form.on("Items Table", {
 			args: {
 				doctype: "Item",
 				filter: { name: row.item },
-				fieldname: ["stock_uom", "selling_rate"],
+				fieldname: ["stock_uom"],
 			},
 			callback: function (r) {
 				if (r.message) {
@@ -296,21 +295,6 @@ frappe.ui.form.on("Items Table", {
 						"uom",
 						r.message.stock_uom ?? r.message.stock_uom,
 					);
-
-					if (
-						frm.doc.company_currency != frm.doc.currency &&
-						frm.doc.conversion_rate > 1
-					) {
-						const updated_rate = r.message.selling_rate / frm.doc.conversion_rate;
-						frappe.model.set_value(
-							cdt,
-							cdn,
-							"rate",
-							updated_rate ?? r.message.selling_rate,
-						);
-					} else {
-						frappe.model.set_value(cdt, cdn, "rate", r.message.selling_rate ?? 0);
-					}
 				}
 			},
 		});

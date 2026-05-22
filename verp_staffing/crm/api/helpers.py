@@ -403,7 +403,6 @@ def get_allowed_leads(user):
 
     return list(set(own_leads + opp_leads))
 
-
 import json
 
 
@@ -419,7 +418,7 @@ def send_system_notification(
         )
         return
 
-    doc = frappe.get_doc(
+    frappe.get_doc(
         {
             "doctype": "Notification Log",
             "for_user": user,
@@ -430,8 +429,7 @@ def send_system_notification(
             "document_type": reference_doctype,
             "document_name": reference_name,
         }
-    )
-    doc.insert(ignore_permissions=True)
+    ).insert(ignore_permissions=True)
 
 
 def send_email(recipients, subject, message, attachments=None, now=None):

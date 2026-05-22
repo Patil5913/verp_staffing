@@ -12,7 +12,7 @@ verp_staffing.purchase.item_handler = async function (frm, cdt, cdn) {
 		args: {
 			doctype: "Item",
 			filter: { name: row.item },
-			fieldname: ["stock_uom", "buying_rate"],
+			fieldname: ["stock_uom"],
 		},
 		callback: function (r) {
 			if (r.message) {
@@ -21,12 +21,6 @@ verp_staffing.purchase.item_handler = async function (frm, cdt, cdn) {
 					cdn,
 					"uom",
 					r.message.stock_uom ?? r.message.stock_uom,
-				);
-				frappe.model.set_value(
-					cdt,
-					cdn,
-					"rate",
-					r.message.buying_rate ?? r.message.buying_rate,
 				);
 			}
 		},

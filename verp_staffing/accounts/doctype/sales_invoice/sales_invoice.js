@@ -151,7 +151,7 @@ frappe.ui.form.on("Items Table", {
 			args: {
 				doctype: "Item",
 				filter: { name: row.item },
-				fieldname: ["stock_uom", "selling_rate"],
+				fieldname: ["stock_uom"],
 			},
 			callback: function (r) {
 				if (r.message) {
@@ -160,12 +160,6 @@ frappe.ui.form.on("Items Table", {
 						cdn,
 						"uom",
 						r.message.stock_uom ?? r.message.stock_uom,
-					);
-					frappe.model.set_value(
-						cdt,
-						cdn,
-						"rate",
-						r.message.selling_rate ?? r.message.selling_rate,
 					);
 				}
 			},
