@@ -490,7 +490,7 @@ HIERARCHY_DATA = [
                     "RUC Person",
                     "Training Person",
                     "JDC",
-                    " Support Person",
+                    "Support Person",
                 ],
             },
         ],
@@ -1064,7 +1064,8 @@ def seed_employee_departments():
         if frappe.db.exists("Department", department_name):
             # Fetch existing doc to get latest 'modified' timestamp
             doc = frappe.get_doc("Department", department_name)
-            doc.roles_json = json.dumps(roles)
+            for r in roles:
+                doc.append("role", {"role": r})
             doc.save(ignore_permissions=True)
             print(f"Updated Department: {department_name}")
         else:
@@ -1072,11 +1073,12 @@ def seed_employee_departments():
             doc = frappe.get_doc({
                 "doctype": "Department",
                 "department_name": department_name,
-                "roles_json": json.dumps(roles),
             })
+            for r in roles:
+                doc.append("role", {"role": r})
             doc.insert(ignore_permissions=True)
             print(f"Created Department: {department_name}")
-
+    frappe.db.commit()
 
 
 def assign_permissions_to_roles(role_permissions: dict):
