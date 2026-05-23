@@ -42,7 +42,7 @@ def execute(filters=None):
     data = frappe.db.sql(f"""
         SELECT
             c.name AS customer,
-            c.title AS name1,
+            c.name1 AS name1,
             COUNT(ir.name) AS upcoming_interviews
         FROM `tabInterview` i
         INNER JOIN `tabInterview Round` ir
@@ -54,7 +54,7 @@ def execute(filters=None):
         WHERE 1=1
         {conditions}
         {hierarchy_clause}
-        GROUP BY c.name, c.title
+        GROUP BY c.name, c.name1
         ORDER BY upcoming_interviews DESC
     """, values, as_dict=True)
 
@@ -98,7 +98,7 @@ def execute(filters=None):
 def get_customers_with_interviews(doctype, txt, searchfield, start, page_len, filters):
 
     return frappe.db.sql("""
-        SELECT DISTINCT c.name, c.title
+        SELECT DISTINCT c.name, c.name1
         FROM `tabCustomer` c
         INNER JOIN `tabMarketing` m ON m.customer = c.name
         INNER JOIN `tabInterview` i ON i.marketing_link = m.name

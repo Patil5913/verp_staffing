@@ -12,66 +12,24 @@ frappe.ui.form.on("Marketing", {
 		}
 
 		frappe.call({
-			method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_marketing",
+			method: "verp_staffing.marketing.doctype.marketing.marketing._is_superior_in_marketing",
 			args: {
 				assign_to: frm.doc.assign_to,
+				current_user: frappe.session.user,
 			},
 			callback(r) {
 				if (!r.message) return;
-
-				const canEdit = r.message.can_edit;
-				const canDelete = r.message.can_delete;
-				const canAdd = r.message.can_add;
-
-				const targetGrid = frm.fields_dict["target"].grid;
-
-				if (!targetGrid) return;
-
-				targetGrid.docfields.forEach((field) => {
-					targetGrid.update_docfield_property(
-						field.fieldname,
-						"read_only",
-						canEdit ? 0 : 1,
-					);
-				});
-
-				targetGrid.df.cannot_add_rows = !canAdd;
-				targetGrid.df.cannot_delete_rows = !canDelete;
-
+				const is_superior = r.message.is_superior;
+				frm.set_df_property("target", "read_only", !is_superior);
+				if(frm.doc.start_date){
+					frm.set_df_property("start_date", "read_only", !is_superior);
+				}
+				const jobGrid = frm.fields_dict["job_application_count"].grid;
+				jobGrid.update_docfield_property("date", "read_only", !is_superior);
 				frm.refresh_field("target");
 			},
 			error(err) {
 				console.error("Permission check failed", err);
-			},
-		});
-
-		frappe.call({
-			method: "verp_staffing.marketing.doctype.marketing.marketing.can_edit_job_application_date",
-			args: {
-				assign_to: frm.doc.assign_to,
-			},
-			callback(r) {
-				const canEditDate = r.message.can_edit_date;
-				const jobGrid = frm.fields_dict["job_application_count"].grid;
-
-				if (!canEditDate) {
-					// ❌ Lock date field
-					jobGrid.update_docfield_property("date", "read_only", 1);
-
-					// 📅 Set default today date
-					const today = frappe.datetime.get_today();
-
-					frm.doc.job_application_count.forEach((row) => {
-						if (!row.date) {
-							row.date = today;
-						}
-					});
-				} else {
-					// ✅ Allow edit
-					jobGrid.update_docfield_property("date", "read_only", 0);
-				}
-
-				frm.refresh_field("job_application_count");
 			},
 		});
 
@@ -100,14 +58,11 @@ frappe.ui.form.on("Marketing", {
 		if (!frm.is_new()) {
 			frm.set_df_property("customer", "read_only", 1);
 		}
-		frm._update_detail_fields = {
-			email: "Email",
-		};
 		window.setup_service_permission_button(frm);
 
 		// to display the interview list
 		render_interview_list(frm);
-		
+
 		const display_fields = await window.get_display_fields(frm.doctype);
 
 		window.render_customer_related_html({
@@ -204,7 +159,7 @@ function create_interview(frm, values) {
 			marketing_link: frm.doc.name,
 			company: values.company,
 			role: values.role,
-			status: status, // 🔥 dynamic now
+			status: status, // dynamic now
 		};
 
 		frappe.call({

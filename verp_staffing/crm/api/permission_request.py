@@ -1,6 +1,7 @@
 import frappe
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from frappe import _
 
 from verp_staffing.crm.api.helpers import (
     get_employee_name,
@@ -252,11 +253,15 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
             "permission": "none",
         }
 
-    customer_owner = frappe.db.get_cached_value("Customer", customer_name, "customer_owner")
+    customer_owner = frappe.db.get_cached_value(
+        "Customer", customer_name, "customer_owner"
+    )
     is_customer_owner = employee == customer_owner
 
     lead_owner_match = False
-    lead_detail_doc = frappe.db.get_cached_value("Customer", customer_name, "lead_details")
+    lead_detail_doc = frappe.db.get_cached_value(
+        "Customer", customer_name, "lead_details"
+    )
     if lead_detail_doc:
         lead_ref = frappe.db.get_cached_value(
             "Doctype Reference",
@@ -459,7 +464,7 @@ def get_department_from_service(service_name):
 
     for dept in departments:
         services = frappe.get_all(
-            "Department Service", filters={"parent": dept.name}, pluck="service"
+            "Department Service", filters={"parent": dept.name}, pluck="service_name"
         )
 
         # Match ignore case
@@ -485,7 +490,9 @@ def request_field_update(
         frappe.throw("No Employee record found for the current user.")
 
     if not frappe.db.get_value("Customer", customer_name, "customer_owner"):
-        frappe.throw("No customer owner found for this Customer.")
+        frappe.throw(
+            _("No customer owner found for this Customer.{0}").format(customer_name)
+        )
 
     department = None
 
@@ -575,16 +582,6 @@ def request_field_update(
             f"Please open Customer <b>{customer_name}</b> and click <b>Accept Updates</b> to review."
         )
 
-    send_notification(
-        recipients=[manager_email],
-        subject=subject,
-        message=message,
-        reference_doctype="Customer",
-        reference_name=customer_name,
-        send_email=1,
-        send_system=1,
-    )
-
     activity_message = (
         f"<b> requested field update for: <b>{', '.join(field_labels)}</b>.<br>"
         f"<b>Reason:</b> {reason}<br>"
@@ -597,6 +594,16 @@ def request_field_update(
     # ── Log on service doctype if provided ──
     if service_doctype and service_name:
         _add_activity_log(service_doctype, service_name, activity_message, user)
+
+    send_notification(
+        recipients=[manager_email],
+        subject=subject,
+        message=message,
+        reference_doctype="Customer",
+        reference_name=customer_name,
+        send_email=1,
+        send_system=1,
+    )
 
     return {"status": "success", "manager_employee": manager_employee}
 
@@ -689,16 +696,6 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
             f"Please open Customer <b>{customer_name}</b> and click <b>Accept Updates</b> to review."
         )
 
-    send_notification(
-        recipients=[manager_email],
-        subject=subject,
-        message=message,
-        reference_doctype="Customer",
-        reference_name=customer_name,
-        send_email=1,
-        send_system=1,
-    )
-
     activity_message = (
         f"<b>{employee}</b> (Customer Owner) requested field update for: <b>{', '.join(field_labels)}</b>.<br>"
         f"<b>Reason:</b> {reason}<br>"
@@ -708,6 +705,15 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
     # ── Log on Customer only (owner request) ──
     _add_activity_log("Customer", customer_name, activity_message, user)
 
+    send_notification(
+        recipients=[manager_email],
+        subject=subject,
+        message=message,
+        reference_doctype="Customer",
+        reference_name=customer_name,
+        send_email=1,
+        send_system=1,
+    )
     return {"status": "success", "manager_employee": manager_employee}
 
 
