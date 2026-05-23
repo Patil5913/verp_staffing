@@ -295,7 +295,7 @@ function show_sales_order(frm) {
 		method: "frappe.client.get_list",
 		args: {
 			doctype: "Sales Order",
-			filters: { customer: frm.doc.name },
+			filters: { customer: frm.doc.name, docstatus: 1 },
 			fields: ["name", "posting_date", "status", "grand_total", "currency"],
 			limit_page_length: 50,
 			order_by: "creation desc",
@@ -307,7 +307,7 @@ function show_sales_order(frm) {
 			if (!sales_orders.length) {
 				wrapper.html(`
                     <p class="text-muted" style="padding:10px">
-                        No Sales Orders found.
+                        No Sales Orders found. if you have created a Sales Order against this customer, it will appear here once submitted.
                     </p>
                 `);
 				return;

@@ -136,10 +136,11 @@ def evaluate_sales_order_status(sales_order_name: str) -> None:
     if not sales_order_name:
         return
 
-    so = frappe.get_doc("Sales Order", sales_order_name)
+    so = frappe.get_cached_doc("Sales Order", sales_order_name)
 
     services_done = _are_all_services_completed(so)
     payments_done = _are_all_payments_completed(so)
+    breakpoint()
     new_status = "Closed" if (services_done and payments_done) else "Open"
     if so.status != new_status:
         # Use db_set to avoid triggering a full save/recursion
@@ -166,7 +167,7 @@ def on_service_update(customer: str) -> None:
 
     open_orders = frappe.get_all(
         "Sales Order",
-        filters={"customer": customer},
+        filters={"customer": customer, "docstatus": 1},
         fields=["name"],
     )
 

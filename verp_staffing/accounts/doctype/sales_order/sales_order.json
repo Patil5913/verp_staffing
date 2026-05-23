@@ -90,15 +90,6 @@
    "fieldtype": "HTML"
   },
   {
-   "default": "Open",
-   "description": "This field tells Whether all services mentioned here are completed as well as all payment activities are completed",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Open\nClosed",
-   "read_only": 1
-  },
-  {
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
@@ -404,26 +395,28 @@
    "fieldname": "posting_date",
    "fieldtype": "Date",
    "label": "Date"
+  },
+  {
+   "default": "Open",
+   "description": "This field tells Whether all services mentioned here are completed as well as all payment activities are completed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nClosed",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-19 11:17:52.894727",
+ "modified": "2026-05-23 10:38:23.986897",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Manager",
-   "select": 1,
-   "write": 1
-  },
   {
    "create": 1,
    "delete": 1,
@@ -434,6 +427,13 @@
    "role": "Sales Master Manager",
    "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
    "write": 1
   },
   {

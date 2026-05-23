@@ -99,6 +99,14 @@ frappe.ui.form.on("Sales Order", {
 			toggle_payment_terms_add_button(frm);
 		}
 	},
+	// before_submit(frm) {
+	// 	frappe.dom.freeze(__("Processing submission..."));
+	// },
+
+	// on_submit(frm) {
+	// 	frappe.dom.unfreeze();
+	// 	frm.reload_doc();
+	// },
 	onload(frm) {
 		set_account_queries(frm);
 		if (!frm.doc.company) {
@@ -116,39 +124,6 @@ frappe.ui.form.on("Sales Order", {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		validate_payment_terms_total(frm);
 		const config = await load_erp_config(frm);
-		const requirements = get_requirements_from_config(frm, config);
-
-		if (config.sendAgreementImmediately && requirements.agreement_required && frm.is_new()) {
-			const key = `so_agreement_draft_${frm.doc.name || "new"}`;
-			const draft = localStorage.getItem(key);
-
-			if (!draft) {
-				frappe.throw(
-					"Agreement draft not saved yet please save the agreement before saving sales order.",
-				);
-			}
-		}
-
-		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
-			let r = await frappe.call({
-				method: "verp_staffing.crm.doctype.customer.customer.get_customer_email",
-				args: { customer: frm.doc.customer },
-			});
-
-			const recipient = r.message;
-
-			const res = await frappe.db.get_value("Customer", frm.doc.customer, "lead_details");
-			const lead_name = res.message.lead_details;
-
-			if (!recipient) {
-				frappe.throw(`
-					Email is required to send agreement.<br><br>
-					<a href="/app/lead-detail-form/${lead_name}" target="_blank">
-						➜ Open Lead Detail Form
-					</a>
-				`);
-			}
-		}
 	},
 
 	before_save(frm) {
@@ -159,6 +134,8 @@ frappe.ui.form.on("Sales Order", {
 	},
 
 	async after_save(frm) {
+		// frappe.dom.unfreeze();
+
 		if (!frm._is_first_save) {
 			return;
 		}
@@ -177,43 +154,6 @@ frappe.ui.form.on("Sales Order", {
 					localStorage.removeItem(k);
 				}
 			});
-		}
-
-		const config = await load_erp_config(frm);
-		const requirements = get_requirements_from_config(frm, config);
-
-		if (config.sendCandidateFormImmediately && requirements.candidate_required) {
-			send_details_form(frm);
-		}
-
-		if (config.sendAgreementImmediately && requirements.agreement_required) {
-			const key = `so_agreement_draft_${frm.doc.name}`;
-			const draft = localStorage.getItem(key);
-
-			if (!draft) {
-				return;
-			}
-
-			const payload = JSON.parse(draft);
-
-			const r = await frappe.call({
-				method: "verp_staffing.crm.api.agreement.submit_and_generate",
-				args: {
-					sales_order: frm.doc.name,
-					template: payload.template,
-					data: JSON.stringify(payload.data),
-					send_email: 1,
-				},
-			});
-
-			if (!r.message) {
-				frappe.throw("Agreement generation failed");
-			}
-
-			frappe.msgprint("Agreement send successfully.");
-			localStorage.removeItem(key);
-
-			await frm.reload_doc();
 		}
 	},
 	company: function (frm) {
@@ -782,6 +722,7 @@ async function send_details_form(frm) {
 
 	if (!recipient) {
 		const res = await frappe.db.get_value("Customer", frm.doc.customer, "lead_details");
+		console.log("res: ", res);
 		const lead_name = res.message.lead_details;
 
 		frappe.throw(`
@@ -800,6 +741,7 @@ async function send_details_form(frm) {
 			customer: frm.doc.customer,
 		},
 		callback(r) {
+			frm.validated = false;
 			if (!r.message) frappe.throw("Failed to send email, retry again.");
 			frappe.msgprint("Details form sent successfully.");
 			frm.reload_doc();

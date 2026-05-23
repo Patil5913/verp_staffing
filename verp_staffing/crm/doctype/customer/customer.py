@@ -7,9 +7,8 @@ from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 
+
 class Customer(Document):
-    
-    
     def on_trash(self):
         unlink_and_clean_lead_detail("Customer", self.name)
 
@@ -26,7 +25,6 @@ class Customer(Document):
 
         # CASE 1: Party selected → attach to existing Lead Details
         if self.party_name and self.customer_from:
-
             lead_detail_name = frappe.db.get_value(
                 "Doctype Reference",
                 {
@@ -55,7 +53,6 @@ class Customer(Document):
 
         # CASE 2: No party selected → create standalone Lead Details
         else:
-
             lead_detail_name = create_lead_details("Customer", self.name, self.name1)
 
         # Link Customer → Lead Details in BOTH cases
@@ -93,7 +90,9 @@ def get_forwardable_departments(customer):
 
     # If customer already has active CR or Onboarding, block all forwarding
     cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
-    onboarding_active = frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"})
+    onboarding_active = frappe.db.exists(
+        "Onboardings", {"customer": customer, "status": "Active"}
+    )
     if cr_active or onboarding_active:
         active_in = []
         if cr_active:
@@ -133,7 +132,7 @@ def get_services_for_customer(customer):
 
     so = frappe.get_all(
         "Sales Order",
-        filters={"customer": customer, "status": "Open"},
+        filters={"customer": customer, "status": "Open", "docstatus": 1},
         pluck="name",
         order_by="creation desc",
         limit=1,
@@ -173,7 +172,6 @@ def is_service_completed(service, customer):
     doctype = SERVICE_DOCTYPE_MAP.get(service_key)
 
     if not doctype:
-
         parents = frappe.db.sql(
             """
         SELECT parent FROM `tabDepartment Service`
@@ -248,7 +246,9 @@ def get_forwardable_departments_from_service(doctype, docname):
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
     cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
-    onboarding_active = frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"})
+    onboarding_active = frappe.db.exists(
+        "Onboardings", {"customer": customer, "status": "Active"}
+    )
     if doctype not in ["CR", "Onboardings"]:
         if cr_active or onboarding_active:
             active_in = []
@@ -290,7 +290,6 @@ from frappe.utils import now_datetime
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 
 
-
 @frappe.whitelist()
 def update_company_percentage(lead_name, company_percentage):
 
@@ -302,7 +301,7 @@ def update_company_percentage(lead_name, company_percentage):
 
     return "updated"
 
-    
+
 @frappe.whitelist(allow_guest=True)
 def generate_token(email: str):
     import hmac, hashlib, base64
@@ -317,6 +316,7 @@ def generate_token(email: str):
 
     token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
     return token
+
 
 @frappe.whitelist()
 def send_portal_link(customer):
@@ -345,9 +345,9 @@ def send_portal_link(customer):
     if not email:
         frappe.throw(
             title="Email Missing",
-            msg=f'Email is required to send agreement.<br><br>'
-                f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
-                f'➜ Open Lead Detail Form</a>'
+            msg=f"Email is required to send agreement.<br><br>"
+            f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
+            f"➜ Open Lead Detail Form</a>",
         )
 
     # STEP 3: generate token
@@ -370,14 +370,15 @@ def send_portal_link(customer):
 
     return True
 
+
 @frappe.whitelist()
-def get_customer_email(customer):
+def get_customer_email(customer, return_ldf=False):
     """
     Fetch email for a Customer from Lead Detail Form using raw SQL.
     """
     email = frappe.db.sql(
         """
-        SELECT ldf.email
+        SELECT ldf.email, ldf.name as lead_detail_name
         FROM `tabLead Detail Form` ldf
         INNER JOIN `tabDoctype Reference` dr
             ON dr.parent = ldf.name
@@ -390,9 +391,12 @@ def get_customer_email(customer):
     )
 
     if not email:
-        frappe.throw(f"No email found in Lead Details for Customer {customer}")
+        frappe.throw(f"No Lead Details found for Customer {customer}")
 
     email_value = email[0].email
+
+    if return_ldf:
+        return email_value, email[0].lead_detail_name
 
     # Handle NULL / empty string
     if not email_value:

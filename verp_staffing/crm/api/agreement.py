@@ -1,10 +1,13 @@
 import frappe, json
 import os
+from frappe import _
 from verp_staffing.crm.api.helpers import send_notification
-from frappe.utils import get_url
-from urllib.parse import quote
 from frappe.utils import now_datetime
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
+import hmac
+import hashlib
+import base64
+from datetime import datetime, timedelta
 
 @frappe.whitelist()
 def download_agreement(agreement):
@@ -55,9 +58,121 @@ def preview_agreement(template, data):
     return {"file_url": url}
 
 
-from verp_staffing.accounts.doctype.sales_order.sales_order import (
-    send_agreement_notification,
-)
+def generate_token(data: dict):
+    payload = json.dumps(data)
+    signature = hmac.new(
+        frappe.conf.get("encryption_key").encode(), payload.encode(), hashlib.sha256
+    ).hexdigest()
+
+    token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
+
+    return token
+
+
+def get_expiry_timestamp():
+    value = frappe.db.get_single_value("ERP Configuration", "expiry_hours_of_agreement")
+    if not value:
+        return None
+
+    try:
+        hours, minutes = map(int, value.split(":"))
+    except Exception:
+        return None
+    total_seconds = hours * 3600 + minutes * 60
+    expiry_dt = datetime.utcnow() + timedelta(seconds=total_seconds)
+    return int(expiry_dt.timestamp())
+
+
+def generate_form_url(
+    recipient, sales_order, customer, agreement=None, p=None, ia=False
+):
+    try:
+        base_url = frappe.utils.get_url()
+
+        expiry = get_expiry_timestamp() if ia else None
+        data = {
+            "so": sales_order,
+            "p": p,
+            "customer": customer,
+            "agr": agreement,
+            "e": recipient,
+            "ia": int(ia),
+            "exp": expiry,
+        }
+
+        token = generate_token(data)
+
+        return f"{base_url}/details-form/new?t={token}"
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Generate Form URL Error")
+        raise
+
+@frappe.whitelist()
+def send_agreement_notification(recipient, sales_order, customer, agreement):
+    try:
+        doc = frappe.get_doc("Agreement", agreement)
+
+        if not doc.pdf:
+            frappe.throw("Agreement PDF missing")
+
+        file_path = frappe.get_site_path("public", doc.pdf.lstrip("/"))
+
+        if not os.path.exists(file_path):
+            frappe.throw("PDF file not found on server")
+
+        form_url = generate_form_url(
+            recipient, sales_order, customer, agreement, doc.pdf, ia=True
+        )
+
+        # Read PDF
+        with open(file_path, "rb") as f:
+            file_content = f.read()
+
+        # 🔹 Try to use Email Template
+        template_name = "Document Signature and Certificate"
+
+        if frappe.db.exists("Email Template", template_name):
+            template = frappe.get_doc("Email Template", template_name)
+
+            context = {
+                "recipient": recipient,
+                "sales_order": sales_order,
+                "customer": customer,
+                "agreement": agreement,
+                "link": form_url,
+            }
+
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(template.response_html, context)
+
+        else:
+            # Fallback (your current behavior)
+            subject = "Agreement for Review and Signature"
+            message = f"Form: {form_url}"
+
+        # 🔹 Send
+        send_notification(
+            recipients=[recipient],
+            subject=subject,
+            message=message,
+            attachments=[
+                {
+                    "fname": os.path.basename(doc.pdf),
+                    "fcontent": file_content,
+                }
+            ],
+            send_email=1,
+            send_system=0,
+            now=False,
+        )
+
+        return {"success": "Agreement sent"}
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Agreement Notification Error")
+        raise
+
 
 @frappe.whitelist()
 def send_existing_agreement(agreement):
@@ -81,14 +196,13 @@ def send_existing_agreement(agreement):
 
         recipient = get_customer_email(so.customer)
 
-        customer = frappe.get_doc("Customer", so.customer)
-        lead_name = customer.lead_details
+        customer_lead_details = frappe.get_cached_value("Customer", so.customer, "lead_details")
 
         if not recipient:
             frappe.throw(
                 title="Email Missing",
                 msg=f'Email is required to send agreement.<br><br>'
-                    f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
+                    f'<a href="/app/lead-detail-form/{customer_lead_details}" target="_blank">'
                     f'➜ Open Lead Detail Form</a>'
             )
 
@@ -114,6 +228,9 @@ def send_existing_agreement(agreement):
 
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Send Agreement Error")
+        frappe.throw(
+            _("Failed to send agreement {0}").format(doc.name)
+        )
         raise
 
 
@@ -193,7 +310,6 @@ def send_agreement_reminders():
 # Final submit
 @frappe.whitelist()
 def submit_and_generate(sales_order, template, data, send_email=0):
-    frappe.errprint(f"submit and generate called:{sales_order}, {send_email}")
     data_dict = json.loads(data) if isinstance(data, str) else (data or {})
 
     tpl = frappe.get_doc("Pdf Agreement Template", template)
@@ -218,7 +334,7 @@ def submit_and_generate(sales_order, template, data, send_email=0):
         input_pdf_path, fields, data_dict, payment_terms=payment_terms, save_final=True
     )
 
-    # ✅ CREATE AGREEMENT (NO DUPLICATE BLOCK)
+    # CREATE AGREEMENT (NO DUPLICATE BLOCK)
     agreement = frappe.get_doc(
         {
             "doctype": "Agreement",
@@ -230,7 +346,7 @@ def submit_and_generate(sales_order, template, data, send_email=0):
         }
     ).insert(ignore_permissions=True)
 
-    # ✅ OPTIONAL SEND
+    # OPTIONAL SEND
     if int(send_email):
         send_existing_agreement(agreement.name)
 
