@@ -63,33 +63,6 @@ def get_interviews_by_marketing(marketing):
     )
 
 
-def _get_marketing_hierarchy_users(assign_to: str) -> list[str]:
-    """Walk up the Marketing assignment chain and return all user emails."""
-    visited = set()
-    users = []
-    current = assign_to
-    while current and current not in visited:
-        visited.add(current)
-        row = frappe.db.sql(
-            """
-            SELECT t.assigned_to
-            FROM `tabEmployee Assignment Detail` t
-            WHERE t.parent = %s AND t.department = 'Marketing'
-            LIMIT 1
-            """,
-            (current,),
-            as_dict=True,
-        )
-        if not row or not row[0].assigned_to:
-            break
-        next_emp = row[0].assigned_to
-        user = frappe.db.get_value("Employee", next_emp, "user")
-        if user:
-            users.append(user)
-        current = next_emp
-    return users
-
-
 # This api is called from the client-side
 @frappe.whitelist()
 def _is_superior_in_marketing(assign_to: str, current_user: str) -> bool:

@@ -97,7 +97,6 @@ frappe.ui.form.on("Customer", {
 							},
 						});
 					} else {
-						console.log("Not customer owner, checking for manager permissions...");
 						// Manager — show Accept Updates if pending
 						customer_show_accept_updates(frm);
 					}
