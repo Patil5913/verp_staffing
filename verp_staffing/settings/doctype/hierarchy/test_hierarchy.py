@@ -102,16 +102,17 @@ class TestHierarchyBase(FrappeTestCase):
         if not isinstance(auto_assign, str):
             auto_assign = json.dumps(auto_assign)
 
-        # Create unique department automatically unless explicitly provided
-        dept_name = (
-            overrides.pop("department", False)
-            or f"_Test Dept {frappe.generate_hash(length=6)}"
-        )
-        department = _create_department_if_not_exists(
-            dept_name,
-            roles=[ROLE_CEO, ROLE_MGR, ROLE_EMP, ROLE_EXTRA],
-        )
-
+		# Create unique department automatically unless explicitly provided
+        department_provided = "department" in overrides
+	
+        department = overrides.pop("department", None)
+	
+        if not department_provided:
+            department = _create_department_if_not_exists(
+				f"_Test Dept {frappe.generate_hash(length=6)}",
+				roles=[ROLE_CEO, ROLE_MGR, ROLE_EMP, ROLE_EXTRA],
+			)
+	
         defaults = {
             "doctype": "Hierarchy",
             "department": department,

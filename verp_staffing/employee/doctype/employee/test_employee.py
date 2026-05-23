@@ -691,6 +691,7 @@ class TestValidateAssignedToRequired(EmployeeTestBase):
                     for e in HIERARCHY_DATA
                     if e["department"] == "Lead"
                 ),
+                auto_assign_config = json.dumps({"role": "Lead Manager"}),
             )
 
     def test_valid_top_row_followed_by_invalid_child_row_raises(self):

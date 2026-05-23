@@ -11,6 +11,18 @@ from frappe.model.document import Document
 class Hierarchy(Document):
 
 	def validate(self):
+		if not self.department:
+			frappe.throw(
+				_("Please select a Department before defining the hierarchy."),
+				frappe.ValidationError,
+				title=_("Department Required"),
+			)
+		if not frappe.db.exists("Department", self.department):
+			frappe.throw(
+				_("Selected department <b>{0}</b> does not exist.").format(self.department),
+				frappe.ValidationError,
+				title=_("Invalid Department"),
+			)
 		self._validate_department_has_roles()
 		self._validate_role_hierarchy_json()
 		self._validate_auto_assign_config()
@@ -18,8 +30,6 @@ class Hierarchy(Document):
 	def _validate_department_has_roles(self):
 		"""Department must have at least one role configured before a hierarchy
 		can be defined for it."""
-		if not self.department:
-			return  # reqd field; Frappe will catch the missing value itself
 
 		dept_roles = self._get_department_roles()
 		if not dept_roles:
