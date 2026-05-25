@@ -32,5 +32,39 @@
   "sequence_id": 29.0,
   "shortcuts": [],
   "title": "Email Inbox"
+ },
+ {
+  "charts": [],
+  "content": "[{\"id\":\"qFl5vArheP\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Pending Payment Verification Requests\",\"col\":12}}]",
+  "custom_blocks": [
+   {
+    "custom_block_name": "Pending Payment Verification Requests",
+    "label": "Pending Payment Verification Requests",
+    "parent": "Pending PE Requests",
+    "parentfield": "custom_blocks",
+    "parenttype": "Workspace"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "expenses",
+  "indicator_color": "",
+  "is_hidden": 0,
+  "label": "Pending PE Requests",
+  "links": [],
+  "modified": "2026-05-25 11:38:00.783123",
+  "module": null,
+  "name": "Pending PE Requests",
+  "number_cards": [],
+  "parent_page": "Accounting",
+  "public": 1,
+  "quick_lists": [],
+  "restrict_to_domain": null,
+  "roles": [],
+  "sequence_id": 34.0,
+  "shortcuts": [],
+  "title": "Pending PE Request"
  }
 ]

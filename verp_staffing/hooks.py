@@ -403,8 +403,8 @@ before_request = [
 
 fixtures = [
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
-    {"dt": "Custom HTML Block", "filters": [["name", "=", "Email Inbox"]]},
-    {"dt": "Workspace", "filters": [["name", "=", "Email Inbox"]]},
+    {"dt": "Custom HTML Block", "filters": [["name", "in", ["Email Inbox", "Pending Payment Verification Requests"]]]},
+    {"dt": "Workspace", "filters": [["name", "in", ["Email Inbox", "Pending PE Requests"]]]},
 ]
 
 override_whitelisted_methods = {

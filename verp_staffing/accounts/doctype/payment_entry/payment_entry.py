@@ -1496,3 +1496,29 @@ def _get_je_outstanding(voucher_no, party_type=None, party=None):
     )
 
     return max(0, abs(original) - abs(allocated))
+
+@frappe.whitelist()
+def get_pending_payment_verification_requests():
+    return frappe.get_all(
+        "Payment Entry",
+        filters={
+            "verification_status": "Pending Verification",
+        },
+        or_filters={
+            "payment_term_row": ["is", "set"]
+        },
+        fields=[
+            "name",
+            "party",
+            "party_name",
+            "posting_date",
+            "paid_amount",
+            "currency",
+            "mode_of_payment",
+            "reference_no",
+            "verification_status",
+            "modified",
+        ],
+        order_by="modified desc",
+        limit=20,
+    )
