@@ -3,6 +3,16 @@
 
 frappe.ui.form.on("Sales Order", {
 	async refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Receivables",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
 		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 

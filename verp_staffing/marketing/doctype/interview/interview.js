@@ -108,7 +108,7 @@ function fetch_and_render_resume(frm) {
 				return;
 			}
 			const customer = Marketing_res[0].customer;
-			if (!frm.doc.customer) {
+			if (!customer) {
 				frm.set_df_property(
 					"resume",
 					"options",

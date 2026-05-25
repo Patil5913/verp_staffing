@@ -42,7 +42,7 @@ const get_tree_default = async function (option) {
 };
 
 frappe.treeview_settings["Account"] = {
-	breadcrumb: "Accounts",
+	breadcrumb: "Accounting",
 	title: __("Chart of Accounts"),
 	// Don't fetch root explicitly
 	get_tree_root: false,

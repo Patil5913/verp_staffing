@@ -5,6 +5,16 @@ const interview_limit = 5;
 
 frappe.ui.form.on("CR", {
 	refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Customer Representative",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
 		frappe.call({
 			method: "verp_staffing.www.customer.get_customer_history",
 			args: {

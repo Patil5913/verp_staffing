@@ -19,6 +19,16 @@ frappe.ui.form.on("Bank Account", {
 		});
 	},
 	refresh: function (frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Accounting",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
 		frappe.dynamic_link = { doc: frm.doc, fieldname: "name", doctype: "Bank Account" };
 
 		frm.toggle_display(["address_html", "contact_html"], !frm.doc.__islocal);
