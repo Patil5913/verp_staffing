@@ -1064,6 +1064,9 @@ def seed_employee_departments():
         if frappe.db.exists("Department", department_name):
             # Fetch existing doc to get latest 'modified' timestamp
             doc = frappe.get_doc("Department", department_name)
+
+            doc.role = []  # Clear existing roles to avoid duplication
+            # doc.save(ignore_permissions=True) 
             for r in roles:
                 doc.append("role", {"role": r})
             doc.save(ignore_permissions=True)
