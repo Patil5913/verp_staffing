@@ -7,8 +7,7 @@
  "field_order": [
   "mode_of_payment",
   "enabled",
-  "type",
-  "accounts"
+  "type"
  ],
  "fields": [
   {
@@ -31,18 +30,12 @@
    "in_standard_filter": 1,
    "label": "Type",
    "options": "Cash\nBank\nGeneral\nPhone"
-  },
-  {
-   "fieldname": "accounts",
-   "fieldtype": "Table",
-   "label": "Accounts",
-   "options": "Mode of Payment Account"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-24 11:27:12.975611",
+ "modified": "2026-05-25 10:34:34.955547",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Mode of Payment",
