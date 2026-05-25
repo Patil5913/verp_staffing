@@ -30,6 +30,7 @@ frappe.ui.form.on("Department", {
 	},
 	onload(frm) {
 		set_service_query(frm);
+		set_role_query(frm);
 	},
 });
 
@@ -37,6 +38,17 @@ function set_service_query(frm) {
 	frm.set_query("services", function () {
 		return {
 			query: "verp_staffing.settings.doctype.department.department.get_department_service_query",
+			filters: {
+				department: frm.doc.name,
+			},
+		};
+	});
+}
+
+function set_role_query(frm) {
+	frm.set_query("role", function () {
+		return {
+			query: "verp_staffing.settings.doctype.department.department.get_department_role_query",
 			filters: {
 				department: frm.doc.name,
 			},

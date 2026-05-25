@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+# This function is used by hierarchy tests
 def _create_department_if_not_exists(dept_name: str, roles: list[str] | None = None) -> str:
 	"""Create a Department with optional child-table roles and return its name."""
 	if frappe.db.exists("Department", dept_name):
@@ -47,18 +48,6 @@ def _create_role_if_not_exists(role_name: str) -> str:
             ignore_permissions=True
         )
     return role_name
-
-
-# def _create_service_if_not_exists(service_name: str) -> str:
-#     """
-#     Creates a minimal record in the doctype that 'Department Service'
-#     child table links to (adjust doctype name to match your app).
-#     """
-#     if not frappe.db.exists("Service", service_name):
-#         frappe.get_doc(
-#             {"doctype": "Service", "service_name": service_name}
-#         ).insert(ignore_permissions=True)
-#     return service_name
 
 
 def _create_service_if_not_exists(service_name: str) -> dict:

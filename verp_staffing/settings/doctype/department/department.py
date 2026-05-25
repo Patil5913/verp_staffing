@@ -30,9 +30,9 @@ class Department(Document):
     # ------------------------------------------------------------------
 
     def validate_department_name(self):
-        """Department name must not be blank or consist only of whitespace."""
+        """Department name must not be blank and cannot consist only of whitespace."""
         if not (self.department_name or "").strip():
-            frappe.throw(_("Department Name cannot be blank or whitespace."))
+            frappe.throw(_("Department Name cannot be blank."))
 
         # Auto-strip leading/trailing whitespace so the stored value is clean.
         stripped = self.department_name.strip()
@@ -40,7 +40,7 @@ class Department(Document):
             self.department_name = stripped
 
     def validate_no_duplicate_roles(self):
-        """Each role must appear at most once in the Role table."""
+        """Each role must appear at most once in the Role."""
         seen: set[str] = set()
         for row in self.role or []:
             role = (row.role or "").strip()
@@ -49,13 +49,13 @@ class Department(Document):
             if role in seen:
                 frappe.throw(
                     _(
-                        "Role <b>{0}</b> is listed more than once in the Role table."
+                        "Role <b>{0}</b> is listed more than once in the Role."
                     ).format(role)
                 )
             seen.add(role)
 
     def validate_no_duplicate_services(self):
-        """Each service must appear at most once in the Services table."""
+        """Each service must appear at most once in the Services."""
         seen: set[str] = set()
         for row in self.services or []:
             # 'service' is the link field name on the Department Service child doctype
@@ -65,7 +65,7 @@ class Department(Document):
             if service in seen:
                 frappe.throw(
                     _(
-                        "Service <b>{0}</b> is listed more than once in the Services table."
+                        "Service <b>{0}</b> is listed more than once in the Services."
                     ).format(service)
                 )
             seen.add(service)
@@ -84,6 +84,26 @@ def get_department_service_query(doctype, txt, searchfield, start, page_len, fil
 	        ORDER BY s.name
 	        LIMIT %(start)s, %(page_len)s
 	        """,
+        {
+            "txt": f"%{txt}%",
+            "start": start,
+            "page_len": page_len,
+        },
+    )
+
+@frappe.whitelist()
+def get_department_role_query(doctype, txt, searchfield, start, page_len, filters):
+    return frappe.db.sql(
+        """
+            SELECT r.name
+            FROM `tabRole` r
+            LEFT JOIN `tabDepartment Role` dr
+              ON dr.role = r.name
+            WHERE dr.name IS NULL
+              AND r.name LIKE %(txt)s
+            ORDER BY r.name
+            LIMIT %(start)s, %(page_len)s
+            """,
         {
             "txt": f"%{txt}%",
             "start": start,
