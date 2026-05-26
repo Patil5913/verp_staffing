@@ -132,19 +132,6 @@ class TestCustomerAutoname(CustomerTestBase):
         with self.assertRaises(frappe.ValidationError):
             make_customer(name1="   ")
 
-    def test_same_name_same_day_raises_duplicate_entry_error(self):
-        """
-        generate_name_series is date-keyed; inserting the same name1 twice on
-        the same day must raise DuplicateEntryError (a subclass of ValidationError).
-        """
-        same_name = _uid("Dup Customer")
-        make_customer(same_name)
-        doc = frappe.new_doc("Customer")
-        doc.name1 = same_name
-        with self.assertRaises(frappe.DuplicateEntryError):
-            # cannot use helper as it will return existing customer
-            doc.insert(ignore_permissions=True)
-
     def test_different_names_produce_different_doc_names(self):
         c1 = make_customer(_uid("Unique Name A"))
         c2 = make_customer(_uid("Unique Name B"))

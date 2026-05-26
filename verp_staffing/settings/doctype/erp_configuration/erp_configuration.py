@@ -29,4 +29,9 @@ class ERPConfiguration(Document):
 
 @frappe.whitelist()
 def get_services():
-    return frappe.get_all("Service", pluck="name")
+    # is_service = 1 means it's a service item
+    return frappe.get_all(
+        "Item",
+        filters={"is_service": 1, "disabled": 0},
+        pluck="name",
+    )

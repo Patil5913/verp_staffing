@@ -10,6 +10,8 @@
   "type_of_payment",
   "naming_series",
   "payment_type",
+  "verification_status",
+  "payment_term_row",
   "column_break_5",
   "posting_date",
   "company",
@@ -204,7 +206,6 @@
    "options": "Bank Account"
   },
   {
-   "collapsible": 1,
    "depends_on": "eval:doc.company",
    "fieldname": "payment_accounts_section",
    "fieldtype": "Section Break",
@@ -218,8 +219,7 @@
    "in_global_search": 1,
    "label": "Account Paid From",
    "options": "Account",
-   "print_hide": 1,
-   "reqd": 1
+   "print_hide": 1
   },
   {
    "fetch_from": "paid_from.account_type",
@@ -235,8 +235,7 @@
    "label": "Account Currency (From)",
    "options": "Currency",
    "print_hide": 1,
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_18",
@@ -249,8 +248,7 @@
    "in_global_search": 1,
    "label": "Account Paid To",
    "options": "Account",
-   "print_hide": 1,
-   "reqd": 1
+   "print_hide": 1
   },
   {
    "fetch_from": "paid_to.account_type",
@@ -266,8 +264,7 @@
    "label": "Account Currency (To)",
    "options": "Currency",
    "print_hide": 1,
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -515,11 +512,10 @@
   },
   {
    "bold": 1,
-   "depends_on": "eval:(doc.paid_from && doc.paid_to)",
+   "description": "Unique transaction number or Cheque number",
    "fieldname": "reference_no",
    "fieldtype": "Data",
-   "label": "Cheque/Reference No",
-   "mandatory_depends_on": "eval:(doc.paid_from_account_type == 'Bank' || doc.paid_to_account_type == 'Bank')"
+   "label": "Cheque/Reference No"
   },
   {
    "fieldname": "column_break_23",
@@ -527,11 +523,10 @@
   },
   {
    "bold": 1,
-   "depends_on": "eval:(doc.paid_from && doc.paid_to)",
+   "description": "Enter Reference date if applicable.",
    "fieldname": "reference_date",
    "fieldtype": "Date",
    "label": "Cheque/Reference Date",
-   "mandatory_depends_on": "eval:(doc.paid_from_account_type == 'Bank' || doc.paid_to_account_type == 'Bank')",
    "search_index": 1
   },
   {
@@ -657,11 +652,31 @@
    "options": "No\nYes",
    "print_hide": 1,
    "search_index": 1
+  },
+  {
+   "default": "Verified",
+   "fieldname": "verification_status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Verification Status ",
+   "options": "Pending Verification\nVerified\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_term_row",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Payment Term Row",
+   "print_hide": 1,
+   "report_hide": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-06 11:59:45.779249",
+ "modified": "2026-05-20 12:05:50.966133",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",

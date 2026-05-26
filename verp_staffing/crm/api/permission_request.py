@@ -41,17 +41,29 @@ def check_candidate_form_required_from_sales_order(so_name):
 
     try:
         tab_data = json.loads(raw)
+        # Step 1: Get all item names from Items Table child table
+        # here items will refer to services
         services = frappe.db.get_all(
-            "SalesOrderServices",
+            "Items Table",
             filters={"parent": so_name, "parenttype": "Sales Order"},
-            pluck="service",
+            pluck="item",
         )
-        for service in services:
-            config = tab_data.get((service or "").lower().strip())
+        if not services:
+            return False
+        # Step 2: Filter only those items where is_service=1 and disabled=0
+        service_items = frappe.get_all(
+            "Item",
+            filters={"name": ["in", services], "is_service": 1, "disabled": 0},
+            pluck="name",
+        )
+        # Step 3: Check ERP config against each service item
+        for item in service_items:
+            config = tab_data.get((item or "").lower().strip())
             if config and config.get("is_candidate_form_required") is True:
                 return True
+
     except Exception as e:
-        frappe.log_error(str(e), "Candidate Form Check Error")
+        frappe.log_error(str(e), "Error while checking erp configuration for candidate form requirement")
 
     return False
 

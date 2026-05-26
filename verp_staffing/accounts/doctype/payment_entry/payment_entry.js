@@ -2,6 +2,182 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Payment Entry", {
+	refresh(frm) {
+		if (frm.doc.payment_term_row) {
+			const colors = {
+				"Pending Verification": "orange",
+				Verified: "green",
+				Rejected: "red",
+			};
+			const status = frm.doc.verification_status;
+			const color = colors[status] || "gray";
+			// Set immediately too
+			frm.page.set_indicator(__(status), color);
+		}
+		if (frm.doc.verification_status === "Rejected") {
+			frm.disable_form(); // disables all fields + hides submit + clears dashboard messages
+			frm.dashboard.clear_comment();
+			frm.dashboard.set_headline_alert(`
+				<div class="alert alert-danger" style="margin:0">
+					<b>Rejected</b> — ${frm.doc.rejection_remarks || "This payment was rejected."}
+					<br>
+					<span class="text-muted" style="font-size:12px;">
+						Go to the linked Sales Order and click 
+						<b>Re-request Verification</b> on the payment term row.
+					</span>
+				</div>
+    		`);
+			return;
+		}
+		// ── Custom Submit confirmation ─────────────────────────────
+		frm.savesubmit = function () {
+			frappe.confirm(
+				`<div style="line-height:1.6">
+                    <p><b>You are about to submit this Payment Entry.</b></p>
+                    <p>Submitting confirms that:</p>
+                    <ul style="padding-left:16px">
+                        <li>The payment of <b>${format_currency(frm.doc.paid_amount, frm.doc.currency)}</b> has been <b>received</b></li>
+                        <li>This will be recorded as a <b>Verified Payment</b></li>
+                        <li>This <b>cannot be edited</b> after submission.</li>
+                    </ul>
+                    <p class="text-muted" style="font-size:12px">
+                        If unsure, ask your accounts manager to verify instead.
+                    </p>
+                </div>`,
+				() => {
+					frm.validate_and_save("Submit", "Submitted", "on_submit", frm);
+				},
+			);
+		};
+
+		// ── Override savecancel ────────────────────────────────────
+		frm.savecancel = function () {
+			frappe.confirm(
+				`<div style="line-height:1.6">
+                    <p><b>You are about to cancel this Payment Entry.</b></p>
+                    <p>Cancelling means:</p>
+                    <ul style="padding-left:16px">
+                        <li>The payment of <b>${format_currency(frm.doc.paid_amount, frm.doc.currency)}</b> will be <b>reversed</b></li>
+                        <li>All accounting entries (GL) will be <b>cancelled</b></li>
+                        ${
+							frm.doc.payment_term_row
+								? `<li>The linked payment term will be <b>reset to Unpaid</b></li>`
+								: `<li>Outstanding amounts on linked invoices will be <b>restored</b></li>`
+						}
+                        <li>This action <b>cannot be undone</b></li>
+                    </ul>
+                    <p class="text-muted" style="font-size:12px">
+                        Only cancel if the payment was made in error.
+                    </p>
+                </div>`,
+				() => {
+					frm.validate_and_save("Cancel", "Cancelled", "on_cancel", frm);
+				},
+			);
+		};
+
+		if (frm.doc.party_type && !frm.party_account_type) {
+			frappe.db.get_value("Party Type", frm.doc.party_type, "account_type").then((r) => {
+				frm.party_account_type = r.message?.account_type || null;
+			});
+		}
+		set_currency_labels(frm);
+		hide_unhide_fields(frm);
+		if (frm.doc.docstatus === 2) return; // Cancelled — nothing to show
+		// Lock paid_amount if linked to a payment term
+		if (frm.doc.payment_term_row) {
+			frm.set_df_property("paid_amount", "read_only", 1);
+			// Lock references table — no add, delete, or edit
+			frm.set_df_property("references", "read_only", 1);
+			frm.set_df_property("references", "cannot_add_rows", 1);
+			frm.set_df_property("references", "cannot_delete_rows", 1);
+
+			// Hide the "Get Outstanding" buttons since user can't modify references
+			frm.set_df_property("get_outstanding_invoices", "hidden", 1);
+			frm.set_df_property("get_outstanding_orders", "hidden", 1);
+		}
+		const status = frm.doc.verification_status;
+		const is_locked = frm.doc.docstatus === 1; // Submitted = locked
+
+		// ── Approve button ─────────────────────────────────────────────
+		// Visible when: Pending Verification or Rejected, not yet submitted
+		if (!is_locked && status !== "Verified" && status !== null) {
+			frm.add_custom_button(
+				__("Approve"),
+				async () => {
+					frappe.confirm(
+						`Approve this payment of <b>${frm.doc.paid_amount}</b>
+                     <br>This will submit the Payment Entry and cannot be undone.`,
+						async () => {
+							const r = await frappe.call({
+								method: "verp_staffing.accounts.doctype.sales_order.sales_order.verify_payment_entry",
+								args: { payment_entry: frm.doc.name },
+							});
+							if (r.message === "verified") {
+								frappe.msgprint({
+									title: __("Approved"),
+									message: "Payment Entry approved and submitted.",
+									indicator: "green",
+								});
+								frm.reload_doc();
+							}
+						},
+					);
+				},
+				__("Actions"),
+			).addClass("btn-success");
+		}
+
+		// ── Reject button ──────────────────────────────────────────────
+		// Visible when: Pending Verification only, not submitted, not already verified
+		if (!is_locked && status === "Pending Verification") {
+			frm.add_custom_button(
+				__("Reject"),
+				() => {
+					const d = new frappe.ui.Dialog({
+						title: __("Reject Payment"),
+						fields: [
+							{
+								fieldtype: "Small Text",
+								fieldname: "remarks",
+								label: __("Reason for Rejection"),
+								reqd: 1,
+								description:
+									"Your name and timestamp will be added automatically.",
+							},
+						],
+						primary_action_label: __("Reject"),
+						primary_action: async (values) => {
+							d.disable_primary_action();
+							try {
+								const r = await frappe.call({
+									method: "verp_staffing.accounts.doctype.sales_order.sales_order.reject_payment_entry",
+									args: {
+										payment_entry: frm.doc.name,
+										remarks: values.remarks,
+									},
+								});
+								if (r.message === "rejected") {
+									d.hide();
+									frappe.msgprint({
+										title: __("Rejected"),
+										message:
+											"Payment Entry rejected. Salesperson can re-request.",
+										indicator: "red",
+									});
+									frm.reload_doc();
+								}
+							} catch (e) {
+								d.enable_primary_action();
+							}
+						},
+					});
+					d.show();
+				},
+				__("Actions"),
+			).addClass("btn-danger");
+		}
+	},
 	onload: function (frm) {
 		frm.ignore_doctypes_on_cancel_all = [
 			"Sales Invoice",
@@ -9,6 +185,7 @@ frappe.ui.form.on("Payment Entry", {
 			"Journal Entry",
 			"Bank Transaction",
 			"Purchase Order",
+			"Sales Order",
 		];
 
 		// When the form opens fresh (not from an invoice), clear account
@@ -122,16 +299,6 @@ frappe.ui.form.on("Payment Entry", {
 		frm.set_query("account_head", "taxes", function () {
 			return { filters: { is_group: 0, company: frm.doc.company } };
 		});
-	},
-
-	refresh: function (frm) {
-		if (frm.doc.party_type && !frm.party_account_type) {
-			frappe.db.get_value("Party Type", frm.doc.party_type, "account_type").then((r) => {
-				frm.party_account_type = r.message?.account_type || null;
-			});
-		}
-		set_currency_labels(frm);
-		hide_unhide_fields(frm);
 	},
 
 	company: function (frm) {
@@ -989,4 +1156,3 @@ function get_included_taxes(frm) {
 	});
 	return total;
 }
-

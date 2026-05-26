@@ -11,6 +11,16 @@ frappe.ui.form.on("Subscription", {
 	// ================================================================
 
 	refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Accounting",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
 		frm.trigger("setup_action_buttons");
 		// Re-load plan info on refresh so totals can recompute correctly
 		if (frm.doc.plan) {
@@ -29,8 +39,8 @@ frappe.ui.form.on("Subscription", {
 				return {
 					filters: {
 						is_active: 1,
-						docstatus: 1
-					}
+						docstatus: 1,
+					},
 				};
 			});
 		}
@@ -69,7 +79,6 @@ frappe.ui.form.on("Subscription", {
 	onload: function (frm) {
 		set_account_queries(frm);
 	},
-	
 
 	setup_action_buttons(frm) {
 		if (frm.doc.docstatus !== 1) return;
@@ -493,10 +502,7 @@ function validate_end_date_alignment(frm) {
 
 	// must not be before start anchor
 	if (end_date < billing_start) {
-		frm.set_value(
-			"end_date",
-			frappe.datetime.obj_to_str(billing_start)
-		);
+		frm.set_value("end_date", frappe.datetime.obj_to_str(billing_start));
 
 		frappe.show_alert({
 			message: __("End Date cannot be before billing start"),
@@ -512,7 +518,7 @@ function validate_end_date_alignment(frm) {
 		const next_start = calculate_end_date(
 			cursor,
 			_plan_billing_interval,
-			_plan_billing_interval_count
+			_plan_billing_interval_count,
 		);
 
 		const period_end = new Date(next_start);
@@ -525,10 +531,7 @@ function validate_end_date_alignment(frm) {
 
 		// passed it → snap forward
 		if (period_end > end_date) {
-			frm.set_value(
-				"end_date",
-				frappe.datetime.obj_to_str(period_end)
-			);
+			frm.set_value("end_date", frappe.datetime.obj_to_str(period_end));
 
 			frappe.show_alert({
 				message: __("End Date adjusted as per billing cycle"),

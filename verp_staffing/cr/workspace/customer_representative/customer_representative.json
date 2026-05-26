@@ -9,14 +9,14 @@
  "hide_custom": 0,
  "icon": "assign",
  "idx": 0,
- "indicator_color": "green",
+ "indicator_color": "",
  "is_hidden": 0,
- "label": "CR",
+ "label": "Customer Representative",
  "links": [],
- "modified": "2026-04-22 15:15:40.050042",
+ "modified": "2026-05-25 14:05:59.752475",
  "modified_by": "Administrator",
  "module": "CR",
- "name": "CR",
+ "name": "Customer Representative",
  "number_cards": [
   {
    "label": "CR",
@@ -34,5 +34,5 @@
  ],
  "sequence_id": 28.0,
  "shortcuts": [],
- "title": "CR"
+ "title": "Customer Representative"
 }

@@ -12,7 +12,8 @@
    "fieldname": "service_name",
    "fieldtype": "Link",
    "label": "Service Name",
-   "options": "Service",
+   "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
+   "options": "Item",
    "unique": 1
   }
  ],
@@ -20,7 +21,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-25 16:27:30.394440",
+ "modified": "2026-05-12 17:35:50.352956",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Department Service",

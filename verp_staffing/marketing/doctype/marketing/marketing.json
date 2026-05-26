@@ -150,7 +150,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 15:26:20.500292",
+ "modified": "2026-05-26 10:36:35.218120",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -166,24 +166,24 @@
    "role": "Sales Manager"
   },
   {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
    "read": 1,
    "role": "Sales Team Lead"
   },
   {
-   "create": 1,
    "read": 1,
-   "report": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
+   "role": "Sales Person"
   },
   {
    "create": 1,
@@ -201,7 +201,23 @@
    "create": 1,
    "read": 1,
    "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
    "role": "Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   },
@@ -219,22 +235,6 @@
    "report": 1,
    "role": "Senior Recruiter",
    "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "marketing Master Manager",
-   "select": 1,
-   "share": 1,
    "write": 1
   }
  ],

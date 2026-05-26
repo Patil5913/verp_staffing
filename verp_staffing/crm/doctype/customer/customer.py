@@ -7,9 +7,8 @@ from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 
+
 class Customer(Document):
-    
-    
     def on_trash(self):
         unlink_and_clean_lead_detail("Customer", self.name)
 
@@ -26,7 +25,6 @@ class Customer(Document):
 
         # CASE 1: Party selected → attach to existing Lead Details
         if self.party_name and self.customer_from:
-
             lead_detail_name = frappe.db.get_value(
                 "Doctype Reference",
                 {
@@ -55,9 +53,9 @@ class Customer(Document):
 
         # CASE 2: No party selected → create standalone Lead Details
         else:
-
             lead_detail_name = create_lead_details("Customer", self.name, self.name1)
 
+        # Link Customer → Lead Details in BOTH cases
         if lead_detail_name:
             self.lead_details = lead_detail_name
             self.db_update()
@@ -92,7 +90,9 @@ def get_forwardable_departments(customer):
 
     # If customer already has active CR or Onboarding, block all forwarding
     cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
-    onboarding_active = frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"})
+    onboarding_active = frappe.db.exists(
+        "Onboardings", {"customer": customer, "status": "Active"}
+    )
     if cr_active or onboarding_active:
         active_in = []
         if cr_active:
@@ -130,26 +130,27 @@ def get_forwardable_departments(customer):
 
 def get_services_for_customer(customer):
 
-    so = frappe.get_all(
+    so = frappe.db.exists(
         "Sales Order",
-        filters={"customer": customer, "status": "Open"},
-        pluck="name",
-        order_by="creation desc",
-        limit=1,
+        {"customer": customer, "status": "Open", "docstatus": 1},
     )
 
     if not so:
         return []
+    # Get all items from the sales order's Items Table
+    items = frappe.db.get_all(
+        "Items Table",
+        filters={"parent": so, "parenttype": "Sales Order"},
+        pluck="item",
+    )
+    if not items:
+        return []
 
-    return frappe.db.sql(
-        """
-        SELECT service
-        FROM `tabSalesOrderServices`
-        WHERE parenttype = 'Sales Order'
-        AND parent IN %s
-        """,
-        (tuple(so),),
-        pluck="service",
+    # return items/services (extra check of is_service = 1)
+    return frappe.get_all(
+        "Item",
+        filters={"name": ["in", items], "is_service": 1, "disabled": 0},
+        pluck="name",
     )
 
 
@@ -168,7 +169,6 @@ def is_service_completed(service, customer):
     doctype = SERVICE_DOCTYPE_MAP.get(service_key)
 
     if not doctype:
-
         parents = frappe.db.sql(
             """
         SELECT parent FROM `tabDepartment Service`
@@ -210,14 +210,12 @@ def is_service_completed(service, customer):
 
 
 def get_active_departments(customer):
-
-    return frappe.get_all(
-        "Customer Department Route",
-        filters={
-            "customer": customer,
-        },
-        pluck="department",
-    )
+    active = []
+    if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
+        active.append("CR")
+    if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
+        active.append("Onboarding")
+    return active
 
 
 def can_user_forward_to_department(user, department):
@@ -245,7 +243,9 @@ def get_forwardable_departments_from_service(doctype, docname):
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
     cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
-    onboarding_active = frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"})
+    onboarding_active = frappe.db.exists(
+        "Onboardings", {"customer": customer, "status": "Active"}
+    )
     if doctype not in ["CR", "Onboardings"]:
         if cr_active or onboarding_active:
             active_in = []
@@ -283,57 +283,8 @@ def get_forwardable_departments_from_service(doctype, docname):
 import frappe
 import json
 
-@frappe.whitelist()
-def get_customer_routes(customer):
-
-    return frappe.get_all(
-        "Customer Department Route",
-        filters={"customer": customer},
-        fields=[
-            "name",
-            "department",
-            "status",
-            "assigned_to",
-            "forwarded_by",
-            "forwarded_on",
-            "completed_on",
-        ],
-        order_by="forwarded_on desc",
-    )
-
-
 from frappe.utils import now_datetime
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
-
-
-@frappe.whitelist()
-def update_route_status(route_name, status):
-    if status != "Completed":
-        frappe.throw("Only 'Completed' status update is allowed")
-    route = frappe.get_doc("Customer Department Route", route_name)
-
-    # Already completed
-    # 1. Block if already completed
-    if route.status == "Completed":
-        frappe.throw("Status already completed. Cannot revert.")
-
-    # 2. Get employee of current user
-    employee = get_employee_from_user(frappe.session.user)
-
-    if not employee:
-        frappe.throw("Employee not linked to user")
-
-    # 3. Only assignee can update
-    if route.assigned_to != employee:
-        frappe.throw("Only assigned employee can update this status")
-
-    # 3. Update status
-    route.status = "Completed"
-    route.completed_on = now_datetime()
-
-    route.save(ignore_permissions=True)
-
-    return {"status": "success", "message": f"{route.department} marked as Completed"}
 
 
 @frappe.whitelist()
@@ -347,7 +298,7 @@ def update_company_percentage(lead_name, company_percentage):
 
     return "updated"
 
-    
+
 @frappe.whitelist(allow_guest=True)
 def generate_token(email: str):
     import hmac, hashlib, base64
@@ -362,6 +313,7 @@ def generate_token(email: str):
 
     token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
     return token
+
 
 @frappe.whitelist()
 def send_portal_link(customer):
@@ -390,9 +342,9 @@ def send_portal_link(customer):
     if not email:
         frappe.throw(
             title="Email Missing",
-            msg=f'Email is required to send agreement.<br><br>'
-                f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
-                f'➜ Open Lead Detail Form</a>'
+            msg=f"Email is required to send agreement.<br><br>"
+            f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
+            f"➜ Open Lead Detail Form</a>",
         )
 
     # STEP 3: generate token
@@ -415,14 +367,15 @@ def send_portal_link(customer):
 
     return True
 
+
 @frappe.whitelist()
-def get_customer_email(customer):
+def get_customer_email(customer, return_ldf=False):
     """
     Fetch email for a Customer from Lead Detail Form using raw SQL.
     """
     email = frappe.db.sql(
         """
-        SELECT ldf.email
+        SELECT ldf.email, ldf.name as lead_detail_name
         FROM `tabLead Detail Form` ldf
         INNER JOIN `tabDoctype Reference` dr
             ON dr.parent = ldf.name
@@ -435,9 +388,12 @@ def get_customer_email(customer):
     )
 
     if not email:
-        frappe.throw(f"No email found in Lead Details for Customer {customer}")
+        frappe.throw(f"No Lead Details found for Customer {customer}")
 
     email_value = email[0].email
+
+    if return_ldf:
+        return email_value, email[0].lead_detail_name
 
     # Handle NULL / empty string
     if not email_value:

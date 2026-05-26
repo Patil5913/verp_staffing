@@ -1,7 +1,7 @@
 {
  "charts": [],
- "content": "[{\"id\":\"yLECmlEPzV\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Sales Invoice\",\"col\":4}},{\"id\":\"x2Oq9HfgHL\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Payment Entry\",\"col\":4}},{\"id\":\"jv1GpDalUC\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Journal Entry\",\"col\":4}},{\"id\":\"oUNmS2C5mN\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"nvrQ7YocbT\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reports &amp; Masters</span>\",\"col\":12}},{\"id\":\"tST7hvmkHy\",\"type\":\"card\",\"data\":{\"card_name\":\"Invoicing\",\"col\":4}},{\"id\":\"4_2LiDvrEX\",\"type\":\"card\",\"data\":{\"card_name\":\"Payments\",\"col\":4}}]",
- "creation": "2026-04-25 15:18:00.413547",
+ "content": "[{\"id\":\"ZS-0-tr-Ya\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Receivables</span>\",\"col\":12}},{\"id\":\"WEgdKVuAD5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Sales Invoice\",\"col\":4}},{\"id\":\"i3Y6nSCOt_\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Payment Entry\",\"col\":4}},{\"id\":\"FEz0QlcZIH\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Journal Entry\",\"col\":4}},{\"id\":\"PyO1vzfgNj\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reports &amp; Masters<b></b></span>\",\"col\":12}},{\"id\":\"yG0E7txEp4\",\"type\":\"card\",\"data\":{\"card_name\":\"Invoicing\",\"col\":4}},{\"id\":\"qA_-rs5jKT\",\"type\":\"card\",\"data\":{\"card_name\":\"Payments\",\"col\":4}}]",
+ "creation": "2026-05-16 14:51:02.658614",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -16,8 +16,37 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Invoicing",
+   "label": "Payments",
    "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Payment Entry",
+   "link_count": 0,
+   "link_to": "Payment Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Journal Entry",
+   "link_count": 0,
+   "link_to": "Journal Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Invoicing",
+   "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -45,34 +74,15 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Payments",
-   "link_count": 2,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Payment Entry",
+   "label": "Sales Order",
    "link_count": 0,
-   "link_to": "Payment Entry",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Payment Request",
-   "link_count": 0,
-   "link_to": "Payment Request",
+   "link_to": "Sales Order",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-04-29 12:11:07.915712",
+ "modified": "2026-05-16 15:26:59.924805",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Receivables",
@@ -95,7 +105,7 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 32.0,
+ "sequence_id": 19.0,
  "shortcuts": [],
  "title": "Receivables"
 }

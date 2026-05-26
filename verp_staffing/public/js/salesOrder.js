@@ -73,7 +73,7 @@ window.render_agreement_module = function ({
             </button>
             <button id="ag_save" class="btn btn-primary btn-sm" style="text-center>
               <svg class="icon icon-xs mr-1"><use href="#icon-save"/></svg>
-              Save
+              Save${auto_mode ? " As Draft" : ""}
             </button>
             <button id="ag_save_send" class="btn btn-sm" style="
 			  display: ${auto_mode ? "none" : "inline-block"};
@@ -113,12 +113,12 @@ function fetch_and_render_agreements(wrapper, sales_order) {
 			order_by: "creation desc",
 		},
 		callback(r) {
-			render_agreement_cards(wrapper, r.message || []);
+			render_agreement_cards(wrapper, r.message || [], sales_order);
 		},
 	});
 }
 
-function render_agreement_cards(wrapper, agreements) {
+function render_agreement_cards(wrapper, agreements, sales_order) {
 	const container = wrapper.find("#agreement_cards");
 	container.empty();
 
@@ -332,13 +332,12 @@ function store_draft_locally(frm, wrapper) {
 	const data = collect_agreement_data(frm, wrapper);
 
 	const key = `so_agreement_draft_${frm.doc.name || "new"}`;
-
 	localStorage.setItem(
 		key,
 		JSON.stringify({
 			template,
 			data,
-		})
+		}),
 	);
 }
 

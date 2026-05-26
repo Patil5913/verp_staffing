@@ -142,7 +142,6 @@ verp_staffing.calculation_engine.apply_discount = function (frm) {
  */
 verp_staffing.calculation_engine.calculate_base = function (frm) {
 	let rate = flt(frm.doc.conversion_rate || 1);
-
 	frm.set_value("base_total", flt(frm.doc.total) * rate);
 	frm.set_value("base_net_total", flt(frm.doc.net_total) * rate);
 	frm.set_value("base_grand_total", flt(frm.doc.grand_total) * rate);
@@ -179,4 +178,22 @@ verp_staffing.calculation_engine.calculate_rounding = function (frm) {
 	frm.set_value("rounding_adjustment", adjustment);
 	frm.set_value("base_rounded_total", rounded * rate);
 	frm.set_value("outstanding_amount", rounded);
+};
+
+// If currency is different we should disable the rounding as small value in foreign currency
+// can create major impact in company currency
+verp_staffing.calculation_engine.handle_rounded_total = function (frm) {
+	if (
+		frm.doc.currency &&
+		frm.doc.company_currency &&
+		frm.doc.currency !== frm.doc.company_currency
+	) {
+		frm.set_value("disable_rounded_total", 1);
+		frm.set_value("rounding_adjustment", 0);
+		frm.set_value("base_rounding_adjustment", 0);
+		frm.set_value("rounded_total", frm.doc.grand_total || 0);
+		frm.set_value("base_rounded_total", frm.doc.base_grand_total || 0);
+	} else {
+		frm.set_value("disable_rounded_total", 0);
+	}
 };

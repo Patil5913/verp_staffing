@@ -303,17 +303,6 @@ class Account(NestedSet):
 			self.is_group = 0
 			self.save()
 			return 1
-
-	@frappe.whitelist()
-	def convert_ledger_to_group(self):
-		if self.check_gle_exists():
-			throw(_("Account with existing transaction can not be converted to group."))
-		elif self.account_type and not self.flags.exclude_account_type_check:
-			throw(_("Cannot convert to Group because Account Type is selected."))
-		else:
-			self.is_group = 1
-			self.save()
-			return 1
 		
 
 def get_company_default_account_fields():
@@ -332,43 +321,6 @@ def get_company_default_account_fields():
 		"unrealized_exchange_gain_loss_account": "Unrealized Exchange Gain / Loss Account",
 		"round_off_account": "Round Off Account",
 	}
-
-
-@frappe.whitelist()
-def merge_account(old, new):
-	_ensure_idle_system()
-	# Validate properties before merging
-	new_account = frappe.get_cached_doc("Account", new)
-	old_account = frappe.get_cached_doc("Account", old)
-
-	if not new_account:
-		throw(_("Account {0} does not exist").format(new))
-
-	if (
-		cint(new_account.is_group),
-		new_account.root_type,
-		new_account.company,
-		cstr(new_account.account_currency),
-	) != (
-		cint(old_account.is_group),
-		old_account.root_type,
-		old_account.company,
-		cstr(old_account.account_currency),
-	):
-		throw(
-			msg=_(
-				"""Merging is only possible if following properties are same in both records. Is Group, Root Type, Company and Account Currency"""
-			),
-			title=("Invalid Accounts"),
-			exc=InvalidAccountMergeError,
-		)
-
-	if old_account.is_group and new_account.parent_account == old:
-		new_account.db_set("parent_account", frappe.get_cached_value("Account", old, "parent_account"))
-
-	frappe.rename_doc("Account", old, new, merge=1, force=1)
-
-	return new
 
 
 def _ensure_idle_system():

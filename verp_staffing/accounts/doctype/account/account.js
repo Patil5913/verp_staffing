@@ -17,6 +17,16 @@ frappe.ui.form.on("Account", {
 		});
 	},
 	refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Accounting",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
 		frm.toggle_display("account_name", frm.is_new());
 
 		// hide fields if group
@@ -44,13 +54,6 @@ frappe.ui.form.on("Account", {
 				frm.trigger("add_toolbar_buttons");
 			}
 			if (frm.has_perm("write")) {
-				frm.add_custom_button(
-					__("Merge Account"),
-					function () {
-						frm.trigger("merge_account");
-					},
-					__("Actions"),
-				);
 				frm.add_custom_button(
 					__("Update Account Name / Number"),
 					function () {
@@ -99,14 +102,6 @@ frappe.ui.form.on("Account", {
 				function () {
 					frappe.route_options = {
 						account: frm.doc.name,
-						from_date: erpnext.utils.get_fiscal_year(
-							frappe.datetime.get_today(),
-							true,
-						)[1],
-						to_date: erpnext.utils.get_fiscal_year(
-							frappe.datetime.get_today(),
-							true,
-						)[2],
 						company: frm.doc.company,
 					};
 					frappe.set_route("query-report", "General Ledger");
@@ -114,55 +109,10 @@ frappe.ui.form.on("Account", {
 				__("View"),
 			);
 
-			frm.add_custom_button(
-				__("Convert to Group"),
-				function () {
-					return frappe.call({
-						doc: frm.doc,
-						method: "convert_ledger_to_group",
-						callback: function () {
-							frm.refresh();
-						},
-					});
-				},
-				__("Actions"),
-			);
+	
 		}
 	},
-	merge_account: function (frm) {
-		var d = new frappe.ui.Dialog({
-			title: __("Merge with Existing Account"),
-			fields: [
-				{
-					label: "Name",
-					fieldname: "name",
-					fieldtype: "Data",
-					reqd: 1,
-					default: frm.doc.name,
-				},
-			],
-			primary_action: function () {
-				var data = d.get_values();
-				frappe.call({
-					method: "erpnext.accounts.doctype.account.account.merge_account",
-					args: {
-						old: frm.doc.name,
-						new: data.name,
-					},
-					callback: function (r) {
-						if (!r.exc) {
-							if (r.message) {
-								frappe.set_route("Form", "Account", r.message);
-							}
-							d.hide();
-						}
-					},
-				});
-			},
-			primary_action_label: __("Merge"),
-		});
-		d.show();
-	},
+
 	update_account_number: function (frm) {
 		var d = new frappe.ui.Dialog({
 			title: __("Update Account Number / Name"),
@@ -192,7 +142,7 @@ frappe.ui.form.on("Account", {
 				}
 
 				frappe.call({
-					method: "erpnext.accounts.doctype.account.account.update_account_number",
+					method: "verp_staffing.accounts.doctype.account.account.update_account_number",
 					args: {
 						account_number: data.account_number,
 						account_name: data.account_name,

@@ -345,7 +345,7 @@ def get_customer_interviews(customer):
 
 
 # CR/Onboarding Load analyzer
-def get_department_load_employee(department):
+def get_department_load_employee(department,target_doctype):
     hierarchy = frappe.get_all(
         "Hierarchy",
         filters={"department": department},
@@ -370,8 +370,9 @@ def get_department_load_employee(department):
     load = []
 
     for emp in employees:
+        count = 0
         count = frappe.db.count(
-            "Customer Department Route",
+            target_doctype,
             filters={
                 "assigned_to": emp,
                 "department": department,
@@ -385,6 +386,11 @@ def get_department_load_employee(department):
 
     return load[0]["employee"]
 
+    # Map department name to its doctype
+DEPARTMENT_DOCTYPE = {
+        "CR": "CR",
+        "Onboarding": "Onboardings",
+    }
 
 def handle_CR_Onboarding_forward(
     customer,
@@ -396,11 +402,6 @@ def handle_CR_Onboarding_forward(
     salary=None,
     company_percentage=None,
 ):
-    # Map department name to its doctype
-    DEPARTMENT_DOCTYPE = {
-        "CR": "CR",
-        "Onboarding": "Onboardings",
-    }
 
     target_doctype = DEPARTMENT_DOCTYPE.get(department)
     if not target_doctype:
@@ -431,7 +432,7 @@ def handle_CR_Onboarding_forward(
                 frappe.throw(f"{label} is required for onboarding")
 
     # Determine assignee
-    assignee = assign_employee or get_department_load_employee(department)
+    assignee = assign_employee or get_department_load_employee(department,target_doctype)
 
     # Get Customer + Lead Detail
     customer_doc = frappe.get_doc("Customer", customer)

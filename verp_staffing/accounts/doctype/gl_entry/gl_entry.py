@@ -99,7 +99,12 @@ class GLEntry(Document):
 
         if not fy:
             frappe.throw(
-                _("No Fiscal Year found for date {0}").format(self.posting_date)
+                _(
+                    "No Fiscal Year found for date {0}. <br><br>"
+                    '<a href="/app/fiscal-year/new-fiscal-year" target="_blank">'
+                    "Create Fiscal Year</a>"
+                ).format(self.posting_date),
+                title=_("Fiscal Year Missing"),
             )
 
         if not self.fiscal_year:
@@ -213,10 +218,9 @@ def make_gl_entries(gl_map, doc):
         total_debit += debit
         total_credit += credit
         enriched_entries.append(entry)
-        
-        
-    #this is final is_opening codiation do not change it without understanding the impact is_opening entries in financial reports like balance sheet and profit and loss statement.
-    is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes"  else "No"
+
+    # this is final is_opening codiation do not change it without understanding the impact is_opening entries in financial reports like balance sheet and profit and loss statement.
+    is_opening = "Yes" if getattr(doc, "is_opening", "No") == "Yes" else "No"
 
     if round(total_debit, 2) != round(total_credit, 2):
         frappe.throw(f"GL not balanced: Debit={total_debit}, Credit={total_credit}")
@@ -285,7 +289,7 @@ def cancel_gl_entries(doc, method=None):
             posting_date=doc.posting_date,
             voucher_type=doc.doctype,
             voucher_no=doc.name,
-            remarks="Reversal Entry"
+            remarks="Reversal Entry",
         )
         reverse["fiscal_year"] = original.fiscal_year
         reverse["debit_in_company_currency"] = original.credit_in_company_currency
@@ -313,7 +317,13 @@ def get_fiscal_year(posting_date, company=None):
     )
 
     if not fys:
-        frappe.throw(f"No Fiscal Year found for date {posting_date}")
+        frappe.throw(
+            _(
+                "No Fiscal Year found for date {0}. <br><br>"
+                '<a href="/app/fiscal-year/new-fiscal-year" target="_blank">'
+                "Create Fiscal Year</a>"
+            ).format(posting_date)
+        )
 
     fy_names = [fy.name for fy in fys]
 
@@ -328,7 +338,11 @@ def get_fiscal_year(posting_date, company=None):
 
         if not valid_fy:
             frappe.throw(
-                f"No Fiscal Year found for company {company} for date {posting_date}"
+                _(
+                    "No Fiscal Year found for company {0} for date {1}. <br><br>"
+                    '<a href="/app/fiscal-year/new-fiscal-year" target="_blank">'
+                    "Create Fiscal Year</a>"
+                ).format(company, posting_date)
             )
 
         return valid_fy[0]

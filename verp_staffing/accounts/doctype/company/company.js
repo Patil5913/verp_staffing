@@ -48,6 +48,16 @@ frappe.ui.form.on("Company", {
 		}
 	},
 	refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Accounting",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
 		frm.toggle_display("address_html", !frm.is_new());
 		setup_queries(frm);
 
@@ -107,8 +117,8 @@ const setup_queries = function (frm) {
 			["default_cash_account", { account_type: "Cash" }],
 			["default_receivable_account", { root_type: "Asset", account_type: "Receivable" }],
 			["default_payable_account", { root_type: "Liability", account_type: "Payable" }],
-			["default_expense_account", { root_type: "Expense" , account_type: "Expense Account" }],
-			["default_income_account", { root_type: "Income" , account_type: "Income Account" }],
+			["default_expense_account", { root_type: "Expense", account_type: "Expense Account" }],
+			["default_income_account", { root_type: "Income", account_type: "Income Account" }],
 			["round_off_account", { root_type: "Expense" }],
 			["write_off_account", { root_type: "Expense" }],
 			["default_discount_account", {}],

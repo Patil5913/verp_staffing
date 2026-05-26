@@ -41,7 +41,6 @@ frappe.ui.form.on("Customer", {
 			},
 			callback(r) {
 				CURRENT_EMPLOYEE = r.message?.name;
-				load_routes(frm);
 			},
 		});
 
@@ -247,68 +246,6 @@ function set_customer_owner(frm) {
 	}
 }
 
-function load_routes(frm) {
-	frappe.call({
-		method: "verp_staffing.crm.doctype.customer.customer.get_customer_routes",
-		args: { customer: frm.doc.name },
-		callback(r) {
-			const data = r.message || [];
-			let html = "<p>No routing history</p>";
-
-			if (data.length) {
-				html = `
-                    <table class="table table-bordered">
-                        <tr>
-                            <th>Department</th>
-                            <th>Status</th>
-                            <th>Assigned To</th>
-                            <th>Forwarded On</th>
-                            <th>Completed On</th>
-                        </tr>
-                `;
-				data.forEach((row) => {
-					html += `
-                        <tr>
-                            <td>${row.department}</td>
-                            <td>${get_status_html(row)}</td>
-                            <td>${row.assigned_to || "-"}</td>
-                            <td>${row.forwarded_on || "-"}</td>
-                            <td>${row.completed_on || "-"}</td>
-                        </tr>
-                    `;
-				});
-				html += "</table>";
-			}
-
-			const wrapper = frm.fields_dict.department_route_html.$wrapper;
-			wrapper.html(html);
-			wrapper.off("change", ".route-status");
-			wrapper.on("change", ".route-status", function () {
-				const route = $(this).data("route");
-				const value = $(this).val();
-				if (value !== "Completed") return;
-
-				frappe.confirm(
-					"This action cannot be reverted. Continue?",
-					() => {
-						frappe.call({
-							method: "verp_staffing.crm.doctype.customer.customer.update_route_status",
-							args: { route_name: route, status: "Completed" },
-							callback() {
-								frappe.msgprint("Status updated to Completed");
-								frm.refresh();
-							},
-						});
-					},
-					() => {
-						frm.refresh();
-					},
-				);
-			});
-		},
-	});
-}
-
 function get_status_html(row) {
 	const isAssignedUser = row.assigned_to === CURRENT_EMPLOYEE;
 	const isCompleted = row.status === "Completed";
@@ -358,48 +295,66 @@ function show_sales_order(frm) {
 		method: "frappe.client.get_list",
 		args: {
 			doctype: "Sales Order",
-			filters: { customer: frm.doc.name },
-			fields: ["name", "date", "creation"],
+			filters: { customer: frm.doc.name, docstatus: 1 },
+			fields: ["name", "posting_date", "status", "grand_total", "currency"],
 			limit_page_length: 50,
 			order_by: "creation desc",
 		},
 		callback(r) {
-			let sales_orders = r.message || [];
+			const sales_orders = r.message || [];
+			const wrapper = frm.fields_dict.sales_content.$wrapper;
 
-			if (sales_orders.length === 0) {
-				frm.fields_dict.sales_content.$wrapper.html(
-					"<p>No Sales Orders found, Create one.</p>",
-				);
+			if (!sales_orders.length) {
+				wrapper.html(`
+                    <p class="text-muted" style="padding:10px">
+                        No Sales Orders found. if you have created a Sales Order against this customer, it will appear here once submitted.
+                    </p>
+                `);
 				return;
 			}
 
-			let html = `<div style="padding: 10px;">`;
-			html += `<h3>Sales Orders (${sales_orders.length})</h3><hr/>`;
-
+			let html = `<div style="padding:10px">`;
 			sales_orders.forEach((so) => {
-				let safe_id = make_safe_id(so.name);
+				const safe_id = make_safe_id(so.name);
+				const status_color =
+					{
+						Open: "orange",
+						Closed: "green",
+					}[so.status] || "grey";
+
 				html += `
-                    <div style="border:1px solid #ddd; padding:15px; border-radius:6px; margin-bottom:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h4>Sales Order: ${so.name}</h4>
-                            <button class="btn btn-primary go-to-so-btn"
-                                data-so="${so.name}" style="font-size:13px;">
-                                go to Sales Order
-                            </button>
+                    <div style="border:1px solid var(--border-color);
+                                padding:15px; border-radius:6px; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between;
+                                    align-items:center; margin-bottom:8px;">
+                            <div>
+                                <a href="/app/sales-order/${so.name}" target="_blank"
+                                   style="font-size:15px; font-weight:600;">
+                                    ${so.name}
+                                </a>
+                                <span class="indicator-pill ${status_color}"
+                                      style="margin-left:8px; font-size:11px;">
+                                    ${so.status}
+                                </span>
+                            </div>
+                            <span class="text-muted" style="font-size:12px;">
+                                ${frappe.datetime.str_to_user(so.posting_date) || ""}
+                            </span>
                         </div>
-                        <p><b>Date:</b> ${so.date || ""}</p>
-                        <div id="terms_${safe_id}"><i>Loading Payment Terms...</i></div>
+                        <div id="terms_${safe_id}">
+                            <span class="text-muted" style="font-size:12px;">
+                                Loading payment terms...
+                            </span>
+                        </div>
                     </div>
                 `;
-				load_payment_terms(so.name, frm);
 			});
-
 			html += `</div>`;
-			frm.fields_dict.sales_content.$wrapper.html(html);
 
-			frm.fields_dict.sales_content.$wrapper.find(".go-to-so-btn").on("click", function () {
-				frappe.set_route("Form", "Sales Order", $(this).data("so"));
-			});
+			wrapper.html(html);
+
+			// Load payment terms for each SO
+			sales_orders.forEach((so) => load_payment_terms(so.name, frm));
 		},
 	});
 }
@@ -408,35 +363,87 @@ function load_payment_terms(so_name, frm) {
 	frappe.call({
 		method: "frappe.client.get",
 		args: { doctype: "Sales Order", name: so_name },
-		callback: function (r) {
+		callback(r) {
 			if (!r.message) return;
-			let so = r.message;
-			let html = `
-                <h5>Payment Terms</h5>
-                <table class="table table-bordered" style="width:100%; margin-top:10px;">
-                    <thead>
-                        <tr><th>#</th><th>Date</th><th>Amount</th><th>Received?</th></tr>
-                    </thead>
-                    <tbody>
-            `;
-			(so.payment_terms || []).forEach((row, i) => {
-				html += `
+			const so = r.message;
+			const terms = so.payment_terms || [];
+			const safe_id = make_safe_id(so_name);
+			const $target = frm.fields_dict.sales_content.$wrapper.find(`#terms_${safe_id}`);
+
+			if (!terms.length) {
+				$target.html(`
+                    <p class="text-muted" style="font-size:12px; margin:0">
+                        No payment terms added.
+                    </p>
+                `);
+				return;
+			}
+
+			const status_config = {
+				Unpaid: { color: "orange" },
+				"Pending Verification": { color: "yellow" },
+				Verified: { color: "green" },
+				Rejected: { color: "red" },
+			};
+
+			const rows = terms
+				.map((row, i) => {
+					const s = status_config[row.payment_status] || { color: "grey", icon: "—" };
+					const condition_label =
+						row.payment_condition === "Number of Days"
+							? `${row.counter} day(s) from ${frappe.datetime.str_to_user(row.start_date) || "?"}`
+							: row.payment_condition === "Number of Interviews"
+								? `After ${row.counter} interview(s)`
+								: "Not Applied";
+
+					return `
                     <tr>
-                        <td>${i + 1}</td>
-                        <td>${row.date || ""}</td>
-                        <td>${row.amount || ""}</td>
-                        <td>${row.is_received ? "Yes" : "No"}</td>
+                        <td style="text-align:center">${i + 1}</td>
+                        <td>${condition_label}</td>
+                        <td>${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "—"}</td>
+                        <td style="text-align:right">
+                            ${format_currency(row.amount, so.currency)}
+                        </td>
+                        <td>
+                            <span class="indicator-pill ${s.color}"
+                                  style="font-size:11px;">
+                                ${row.payment_status || "Unpaid"}
+                            </span>
+                        </td>
+                        <td>
+                            ${
+								row.payment_entry
+									? `<a href="/app/payment-entry/${row.payment_entry}"
+                                      target="_blank" style="font-size:11px;">
+                                       ${row.payment_entry}
+                                   </a>`
+									: `<span class="text-muted" style="font-size:11px;">—</span>`
+							}
+                        </td>
                     </tr>
                 `;
-			});
-			html += `</tbody></table>`;
-			let safe_id = make_safe_id(so_name);
+				})
+				.join("");
 
-			frm.fields_dict.sales_content.$wrapper.find(`#terms_${safe_id}`).html(html);
+			$target.html(`
+                <table class="table table-bordered table-condensed"
+                       style="margin-top:8px; margin-bottom:0; font-size:12px;">
+                    <thead style="background:var(--bg-light-gray)">
+                        <tr>
+                            <th style="width:30px">#</th>
+                            <th>Condition</th>
+                            <th>Due Date</th>
+                            <th style="text-align:right">Amount</th>
+                            <th>Status</th>
+                            <th>Payment Entry</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `);
 		},
 	});
 }
-
 const DEPARTMENT_VISIBILITY = {
 	sales: ["lead_details_html", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],
 	resume: ["lead_details_html", "resume_tab"],

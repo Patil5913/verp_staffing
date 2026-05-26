@@ -82,7 +82,6 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
-   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -154,7 +153,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 17:24:45.459665",
+ "modified": "2026-05-26 10:21:28.932275",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -183,9 +182,11 @@
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Senior Recruiter",
-   "select": 1
+   "report": 1,
+   "role": "Sales Person",
+   "write": 1
   },
   {
    "create": 1,
@@ -206,24 +207,17 @@
   },
   {
    "read": 1,
-   "role": "marketing Master Manager",
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
    "select": 1
   },
   {
    "read": 1,
    "role": "Marketing Mentor",
-   "select": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales Person",
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead",
    "select": 1
   },
   {
@@ -238,7 +232,7 @@
   },
   {
    "read": 1,
-   "role": "Resume Person",
+   "role": "Marketing Team Lead",
    "select": 1
   },
   {
@@ -248,12 +242,17 @@
   },
   {
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Master Manager",
    "select": 1
   },
   {
    "read": 1,
-   "role": "Support Person",
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
    "select": 1
   },
   {
@@ -263,7 +262,7 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Support Person",
    "select": 1
   },
   {

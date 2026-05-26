@@ -24,82 +24,135 @@ DEPARTMENT_FALLBACK_MAP = {
 
 DEFAULT_FALLBACK_DOCTYPE = "Other Services"
 
+FALLBACK_DOCTYPES = {
+    "Technical Other Services",
+    "Marketing Other Services",
+    "Other Services",
+}
+
 
 # ---------------------------------------------------------------------------
 # Core: resolve which DocType handles a given service name
 # ---------------------------------------------------------------------------
-def _get_service_doctype(service_name: str) -> str:
-    """
-    Resolve the target DocType for a service name.
-
-    Resolution order:
-      1. Direct match in SERVICE_DOCTYPE_MAP
-      2. Find which Department this service belongs to via
-         Department → services (Table MultiSelect) → service_name
-         then map that department to a fallback DocType
-      3. DEFAULT_FALLBACK_DOCTYPE if nothing matches
-    """
-    key = (service_name or "").strip().lower()
-
-    # 1. Direct map
-    if key in SERVICE_DOCTYPE_MAP:
-        return SERVICE_DOCTYPE_MAP[key]
-
-    # 2. Department-based fallback
-    # Find departments whose services table contains this service
-    matches = frappe.get_all(
-        "Department",  # parent DocType
-        filters={"service_name": service_name},  # child table filter
-        fields=["name"],
-        limit=1,
-    )
-
-    if matches:
-        dept_name = matches[0].name.strip().lower()
-        return DEPARTMENT_FALLBACK_MAP.get(dept_name, DEFAULT_FALLBACK_DOCTYPE)
-
-    # 3. Absolute fallback
-    return DEFAULT_FALLBACK_DOCTYPE
-
 
 # ---------------------------------------------------------------------------
 # Check: are all services on a Sales Order completed?
 # ---------------------------------------------------------------------------
 def _are_all_services_completed(sales_order_doc) -> bool:
-    """
-    For each service row in sales_order_doc.services:
-      - Resolve its DocType
-      - Query all records of that DocType for the same customer
-      - If ANY record has status 'Request For Update' → False immediately
-      - If ALL records are 'Completed' → that service passes
-      - If NO records exist yet → treat as Pending → False
-    """
     customer = sales_order_doc.customer
 
-    for row in sales_order_doc.services:
-        service_name = row.service
-        if not service_name:
+    # ------------------------------------------------------------------
+    # 1. Fetch all active service items from SO
+    # ------------------------------------------------------------------
+    service_items = frappe.db.sql(
+        """
+        SELECT i.name
+        FROM `tabItems Table` soi
+        INNER JOIN `tabItem` i
+            ON i.name = soi.item
+        WHERE
+            soi.parent = %s
+            AND soi.parenttype = 'Sales Order'
+            AND i.is_service = 1
+            AND i.disabled = 0
+        """,
+        (sales_order_doc.name,),
+        pluck=True,
+    )
+
+    if not service_items:
+        return True
+
+    # ------------------------------------------------------------------
+    # 2. Build service → department map once
+    # ------------------------------------------------------------------
+    department_rows = frappe.db.sql(
+        """
+        SELECT
+            ds.service_name,
+            d.name AS department
+        FROM `tabDepartment Service` ds
+        INNER JOIN `tabDepartment` d
+            ON d.name = ds.parent
+        """,
+        as_dict=True,
+    )
+
+    service_to_department = {
+        row.service_name: row.department
+        for row in department_rows
+    }
+
+    # ------------------------------------------------------------------
+    # 3. Resolve service → target doctype
+    # ------------------------------------------------------------------
+
+    resolved_services = []
+
+    for service in service_items:
+
+        key = (service or "").strip().lower()
+
+        # Direct mapping
+        if key in SERVICE_DOCTYPE_MAP:
+            resolved_services.append(
+                {
+                    "service": service,
+                    "doctype": SERVICE_DOCTYPE_MAP[key],
+                }
+            )
             continue
 
-        target_doctype = _get_service_doctype(service_name)
+        # Department fallback
+        department = service_to_department.get(service)
 
-        records = frappe.get_all(
-            target_doctype,
-            filters={"customer": customer},
-            fields=["status"],
+        if department:
+            dept_key = department.strip().lower()
+
+            resolved_services.append(
+                {
+                    "service": service,
+                    "doctype": DEPARTMENT_FALLBACK_MAP.get(
+                        dept_key,
+                        DEFAULT_FALLBACK_DOCTYPE,
+                    ),
+                }
+            )
+            continue
+
+        # Default fallback
+        resolved_services.append(
+            {
+                "service": service,
+                "doctype": DEFAULT_FALLBACK_DOCTYPE,
+            }
         )
 
-        if not records:
-            # Service work hasn't started yet
+
+    # ------------------------------------------------------------------
+    # 4. Validate completion
+    # ------------------------------------------------------------------
+    for row in resolved_services:
+
+        filters = {
+            "customer": customer,
+            "status": "Completed",
+        }
+
+        # Shared doctypes require service filter
+        if row["doctype"] in FALLBACK_DOCTYPES:
+            filters["service"] = row["service"]
+
+        record = frappe.db.exists(
+            row["doctype"],
+            filters,
+        )
+
+        # No record found
+        if not record:
             return False
 
-        for record in records:
-            status = (record.status or "").strip()
-            if status != "Completed":
-                return False
-
     return True
-
 
 # ---------------------------------------------------------------------------
 # Check: are all payment terms completed?
@@ -107,13 +160,13 @@ def _are_all_services_completed(sales_order_doc) -> bool:
 def _are_all_payments_completed(sales_order_doc) -> bool:
     """
     All rows in payment_terms child table must have
-    payment_status == 'Completed'. Empty table → False.
+    payment_status == 'Verified'. Empty table → False.
     """
     if not sales_order_doc.payment_terms:
         return False
 
     return all(
-        (row.payment_status or "").strip() == "Completed"
+        (row.payment_status or "").strip() == "Verified"
         for row in sales_order_doc.payment_terms
     )
 
@@ -131,12 +184,11 @@ def evaluate_sales_order_status(sales_order_name: str) -> None:
     if not sales_order_name:
         return
 
-    so = frappe.get_doc("Sales Order", sales_order_name)
+    so = frappe.get_cached_doc("Sales Order", sales_order_name)
 
     services_done = _are_all_services_completed(so)
     payments_done = _are_all_payments_completed(so)
     new_status = "Closed" if (services_done and payments_done) else "Open"
-
     if so.status != new_status:
         # Use db_set to avoid triggering a full save/recursion
         so.db_set("status", new_status, notify=True, commit=True)
@@ -162,7 +214,7 @@ def on_service_update(customer: str) -> None:
 
     open_orders = frappe.get_all(
         "Sales Order",
-        filters={"customer": customer},
+        filters={"customer": customer, "docstatus": 1},
         fields=["name"],
     )
 

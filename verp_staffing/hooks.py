@@ -37,12 +37,12 @@ app_license = "mit"
 app_include_css = ["/assets/verp_staffing/css/globel.css"]
 # pdflibjs Imports
 app_include_js = [
+    "/assets/verp_staffing/js/calculation_engine.js",
     "pdf_lib_bundle.bundle.js",
     "/assets/verp_staffing/js/reusable.js",
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/about_override.js",
-    "/assets/verp_staffing/js/calculation_engine.js",
     # "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
@@ -403,8 +403,8 @@ before_request = [
 
 fixtures = [
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
-    {"dt": "Custom HTML Block", "filters": [["name", "=", "Email Inbox"]]},
-    {"dt": "Workspace", "filters": [["name", "=", "Email Inbox"]]},
+    {"dt": "Custom HTML Block", "filters": [["name", "in", ["Email Inbox", "Pending Payment Verification Requests"]]]},
+    {"dt": "Workspace", "filters": [["name", "in", ["Email Inbox", "Pending PE Requests"]]]},
 ]
 
 override_whitelisted_methods = {

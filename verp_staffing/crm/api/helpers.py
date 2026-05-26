@@ -403,7 +403,6 @@ def get_allowed_leads(user):
 
     return list(set(own_leads + opp_leads))
 
-
 import json
 
 
@@ -419,7 +418,7 @@ def send_system_notification(
         )
         return
 
-    doc = frappe.get_doc(
+    frappe.get_doc(
         {
             "doctype": "Notification Log",
             "for_user": user,
@@ -430,8 +429,7 @@ def send_system_notification(
             "document_type": reference_doctype,
             "document_name": reference_name,
         }
-    )
-    doc.insert(ignore_permissions=True)
+    ).insert(ignore_permissions=True)
 
 
 def send_email(recipients, subject, message, attachments=None, now=None):
@@ -685,34 +683,6 @@ def customer_query(user):
             `tabCustomer`.customer_owner IN ({team_sql})
         """
         )
-
-    # -------------------------
-    # CR / ONBOARDING LOGIC
-    # -------------------------
-    routing_departments = []
-
-    if "CR" in departments:
-        routing_departments.append("CR")
-
-    if "Onboarding" in departments:
-        routing_departments.append("Onboarding")
-
-    if routing_departments:
-        dept_sql = ",".join([frappe.db.escape(d) for d in routing_departments])
-
-        conditions.append(
-            f"""
-            EXISTS (
-                SELECT 1
-                FROM `tabCustomer Department Route`
-                WHERE
-                    `tabCustomer Department Route`.customer = `tabCustomer`.name
-                    AND `tabCustomer Department Route`.department IN ({dept_sql})
-                    AND `tabCustomer Department Route`.assigned_to IN ({team_sql})
-            )
-        """
-        )
-
     # -------------------------
     # FINAL CONDITION
     # -------------------------

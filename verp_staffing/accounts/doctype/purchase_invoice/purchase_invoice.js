@@ -31,6 +31,7 @@ frappe.ui.form.on("Purchase Invoice", {
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
 		);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
 
 	onload(frm) {
@@ -87,11 +88,13 @@ frappe.ui.form.on("Purchase Invoice", {
 		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
 
 	conversion_rate(frm) {
 		verp_staffing.purchase.exchange.update_description(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
+		verp_staffing.calculation_engine.handle_rounded_total(frm);
 	},
 
 	additional_discount_percentage(frm) {
@@ -148,7 +151,7 @@ frappe.ui.form.on("Purchase Invoice", {
 
 		frm.refresh_fields();
 
-		// 🔥 CRITICAL: wait a tick so model updates settle
+		// CRITICAL: wait a tick so model updates settle
 		await frappe.after_ajax();
 
 		// ---------- Now calculate ----------

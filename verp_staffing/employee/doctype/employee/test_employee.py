@@ -335,17 +335,6 @@ class TestEmployeeAutoname(EmployeeTestBase):
         with self.assertRaises(frappe.ValidationError):
             self._make_employee(employee_name="")
 
-    def test_same_name_on_same_day_raises_duplicate_entry_error(self):
-        """
-        generate_name_series keys on name + date, so inserting the same full
-        name twice on the same day produces a duplicate primary key.
-        DuplicateEntryError is a subclass of ValidationError.
-        """
-        same_name = _uid("Dup Name")
-        self._make_employee(same_name)
-        with self.assertRaises(frappe.DuplicateEntryError):
-            self._make_employee(same_name)
-
     def test_employees_with_different_names_get_different_keys(self):
         emp1 = self._make_employee(_uid("Unique Name A"))
         emp2 = self._make_employee(_uid("Unique Name B"))

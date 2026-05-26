@@ -17,7 +17,16 @@ from verp_staffing.accounts.doctype.company.company import get_company_currency
 
 class PaymentEntry(Document):
     def validate(self):
+        if not self.is_new():
+            old_status = frappe.db.get_value("Payment Entry", self.name, "status")
+            if old_status == "Rejected":
+                frappe.throw(
+                    "This Payment Entry has been rejected and cannot be edited. "
+                    "Re-request verification from the Sales Order to reactivate it.",
+                    title="Action Blocked"
+                )
         validate_party_type_in_master(self)
+        self.validate_references_not_tampered()
         validate_party_type_matches_payment_direction(self)
         validate_party_exists(self)
         validate_paid_from_account_type(self)
@@ -31,14 +40,31 @@ class PaymentEntry(Document):
         self.set_difference_amount()
         self.validate_same_account_not_allowed()
 
-    def validate_same_account_not_allowed(self):
-        if self.paid_from and self.paid_to and self.paid_from == self.paid_to:
+    def on_submit(self):
+        if self.verification_status == "Rejected":
             frappe.throw(
-                _("Paid From and Paid To accounts cannot be the same."),
-                title=_("Invalid Account Selection"),
+                "This Payment Entry has been rejected and cannot be submitted. "
+                "Please re-request verification from the Sales Order payment terms.",
+                title="Action Blocked",
+            )
+        # Enforce account fields before submit
+        mandatory_on_submit = {
+            "paid_from": "Account Paid From",
+            "paid_to": "Account Paid To",
+            "paid_from_account_currency": "Account Currency (From)",
+            "paid_to_account_currency": "Account Currency (To)",
+        }
+        missing = [
+            label for field, label in mandatory_on_submit.items() if not self.get(field)
+        ]
+        if missing:
+            frappe.throw(
+                _("The following fields are required before submitting: {0}").format(
+                    ", ".join(f"<b>{m}</b>" for m in missing)
+                ),
+                title=_("Missing Account Details"),
             )
 
-    def on_submit(self):
         if flt(self.difference_amount):
             frappe.throw(_("Difference Amount must be zero before submitting."))
 
@@ -51,14 +77,84 @@ class PaymentEntry(Document):
                 "Account", self.paid_to, "account_currency"
             )
 
+        # Any submit = approved — sync verification status and term row
+        if self.verification_status != "Verified":
+            self.verification_status = "Verified"
+            self.verified_by = frappe.session.user
+            self.verified_on = frappe.utils.now()
+            self.db_set(
+                {
+                    "verification_status": "Verified",
+                }
+            )
+
+        # Update linked payment term row
+        if self.payment_term_row:
+            frappe.db.set_value(
+                "Customer Payment Terms",
+                self.payment_term_row,
+                "payment_status",
+                "Verified",
+            )
+            from verp_staffing.accounts.doctype.sales_order.sales_order import (
+                _append_verification_log,
+            )
+
+            _append_verification_log(
+                self.payment_term_row, f"Verified by {frappe.session.user} (submitted)"
+            )
+
         self.make_gl_entries()
         update_invoice_outstanding(self)
         update_order_outstanding(self)
+
+    def validate_references_not_tampered(self):
+        if not self.payment_term_row or self.is_new():
+            return
+
+        old_refs = frappe.db.count(
+            "Payment Entry Reference",
+            filters={"parent": self.name, "parenttype": "Payment Entry"},
+        )
+        current_refs = self.references or []
+
+        if len(current_refs) != old_refs:
+            frappe.throw(
+                "Cannot modify payment references for a Payment Entry "
+                "created from a payment term.",
+                title="References Locked",
+            )
+
+    def validate_same_account_not_allowed(self):
+        if self.paid_from and self.paid_to and self.paid_from == self.paid_to:
+            frappe.throw(
+                _("Paid From and Paid To accounts cannot be the same."),
+                title=_("Invalid Account Selection"),
+            )
 
     def on_cancel(self):
         self.make_gl_entries(cancel=True)
         update_invoice_outstanding(self, cancel=True)
         update_order_outstanding(self, cancel=True)
+        # Reset linked payment term to Unpaid with cancellation log
+        if self.payment_term_row:
+            frappe.db.set_value(
+                "Customer Payment Terms",
+                self.payment_term_row,
+                {
+                    "payment_status": "Unpaid",
+                    "payment_entry": "",
+                },
+            )
+            self.db_set("verification_status", "Rejected")
+            from verp_staffing.accounts.doctype.sales_order.sales_order import (
+                _append_verification_log,
+            )
+
+            _append_verification_log(
+                self.payment_term_row,
+                f"Payment Entry {self.name} cancelled by {frappe.session.user}",
+            )
 
     def set_missing_base_amounts(self):
         """
@@ -564,11 +660,14 @@ def validate_party_type_in_master(doc):
     if not frappe.db.exists("Party Type", doc.party_type):
         valid_types = frappe.db.get_all("Party Type", pluck="name")
         valid_str = ", ".join(valid_types) if valid_types else _("(none configured)")
+        create_link = frappe.utils.get_url("/app/party-type/new-party-type-1")
         frappe.throw(
             _(
                 "Party Type '{0}' is not configured in the Party Type master. "
                 "Valid party types are: {1}."
-            ).format(frappe.bold(doc.party_type), valid_str),
+                "<br><br>"
+                "<a href='{2}' target='_blank'>➜ Create Party Type: {0}</a>"
+            ).format(frappe.bold(doc.party_type), valid_str, create_link),
             title=_("Invalid Party Type"),
         )
 
@@ -957,26 +1056,40 @@ def get_outstanding_reference_documents(args):
             order_doctype = None
 
         if order_doctype:
+            meta = frappe.get_meta(order_doctype)
+            has_advance_paid = meta.has_field("advance_paid")
+            has_per_billed = meta.has_field("per_billed")
+
+            advance_paid_expr = "advance_paid" if has_advance_paid else "0"
+            per_billed_filter = (
+                "AND ABS(100 - per_billed) > 0.01" if has_per_billed else ""
+            )
+
             orders = frappe.db.sql(
                 """
-                SELECT
-                    name AS voucher_no,
-                    %(order_doctype)s AS voucher_type,
-                    transaction_date AS posting_date,
-                    IF(base_rounded_total, base_rounded_total, base_grand_total) AS invoice_amount,
-                    (IF(base_rounded_total, base_rounded_total, base_grand_total) - advance_paid)
-                        AS outstanding_amount,
-                    1 AS exchange_rate
-                FROM `tab{order_doctype}`
-                WHERE
-                    `{party_field}` = %(party)s
-                    AND company = %(company)s
-                    AND docstatus = 1
-                    AND status != 'Closed'
-                    AND (IF(base_rounded_total, base_rounded_total, base_grand_total) > advance_paid)
-                    AND ABS(100 - per_billed) > 0.01
-                ORDER BY transaction_date, name
-                """.format(order_doctype=order_doctype, party_field=party_field),
+        SELECT
+            name AS voucher_no,
+            %(order_doctype)s AS voucher_type,
+            posting_date,
+            IF(base_rounded_total, base_rounded_total, base_grand_total) AS invoice_amount,
+            (IF(base_rounded_total, base_rounded_total, base_grand_total) - {advance_paid})
+                AS outstanding_amount,
+            1 AS exchange_rate
+        FROM `tab{order_doctype}`
+        WHERE
+            `{party_field}` = %(party)s
+            AND company = %(company)s
+            AND docstatus = 1
+            AND status != 'Closed'
+            AND (IF(base_rounded_total, base_rounded_total, base_grand_total) > {advance_paid})
+            {per_billed_filter}
+        ORDER BY posting_date, name
+        """.format(
+                    order_doctype=order_doctype,
+                    party_field=party_field,
+                    advance_paid=advance_paid_expr,
+                    per_billed_filter=per_billed_filter,
+                ),
                 {
                     "party": args.party,
                     "company": args.company,
@@ -1209,7 +1322,7 @@ def update_invoice_outstanding(payment_doc, cancel=False):
 
 
 def update_order_outstanding(payment_doc, cancel=False):
-    supported = {"Purchase Order"}
+    supported = {"Purchase Order", "Sales Order"}
     for ref in payment_doc.get("references") or []:
         if ref.reference_doctype not in supported or not ref.reference_name:
             continue
@@ -1382,3 +1495,29 @@ def _get_je_outstanding(voucher_no, party_type=None, party=None):
     )
 
     return max(0, abs(original) - abs(allocated))
+
+@frappe.whitelist()
+def get_pending_payment_verification_requests():
+    return frappe.get_all(
+        "Payment Entry",
+        filters={
+            "verification_status": "Pending Verification",
+        },
+        or_filters={
+            "payment_term_row": ["is", "set"]
+        },
+        fields=[
+            "name",
+            "party",
+            "party_name",
+            "posting_date",
+            "paid_amount",
+            "currency",
+            "mode_of_payment",
+            "reference_no",
+            "verification_status",
+            "modified",
+        ],
+        order_by="modified desc",
+        limit=20,
+    )

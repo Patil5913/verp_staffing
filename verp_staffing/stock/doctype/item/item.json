@@ -1,25 +1,17 @@
 {
  "actions": [],
- "allow_rename": 1,
- "autoname": "naming_series:",
+ "autoname": "field:item_name",
  "creation": "2026-04-07 11:24:11.162101",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "disabled",
-  "naming_series",
+  "is_service",
   "item_name",
   "item_category",
   "stock_uom"
  ],
  "fields": [
-  {
-   "fieldname": "naming_series",
-   "fieldtype": "Select",
-   "label": "Series",
-   "options": "STO-ITEM-.YYYY.-",
-   "set_only_once": 1
-  },
   {
    "bold": 1,
    "fieldname": "item_name",
@@ -28,7 +20,7 @@
    "in_list_view": 1,
    "label": "Item Name",
    "reqd": 1,
-   "search_index": 1
+   "unique": 1
   },
   {
    "fieldname": "item_category",
@@ -47,24 +39,30 @@
    "fieldtype": "Link",
    "ignore_user_permissions": 1,
    "label": "Unit Of Measurement",
-   "options": "UOM",
-   "reqd": 1
+   "options": "UOM"
   },
   {
    "default": "0",
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Disabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_service",
+   "fieldtype": "Check",
+   "label": "Is Service",
+   "set_only_once": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-12 14:40:37.547061",
+ "modified": "2026-05-22 10:38:52.845740",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Item",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -82,7 +80,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "item_name",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "item_name"
 }

@@ -526,7 +526,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "\nDraft\nReturn\nDebit Note Issued\nSubmitted\nPaid\nPartly Paid\nUnpaid\nOverdue\nCancelled\nInternal Transfer"
+   "options": "\nDraft\nReturn\nDebit Note Issued\nSubmitted\nPaid\nPartially Paid\nUnpaid\nOverdue\nCancelled\nInternal Transfer"
   },
   {
    "fieldname": "column_break_dkeq",

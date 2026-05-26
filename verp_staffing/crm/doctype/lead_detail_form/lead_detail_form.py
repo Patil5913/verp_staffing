@@ -1178,9 +1178,10 @@ def get_candidate_fields_from_sales_order(name, customer=None):
     if not name:
         return {"fields": [], "values": {}, "table_columns": {}}
 
-    services = frappe.db.sql(
-        """SELECT service FROM `tabSalesOrderServices` WHERE parent = %s""",
-        (name,), pluck="service",
+    services = frappe.db.get_all(
+        "Items Table",
+        filters={"parent": name, "parenttype": "Sales Order"},
+        pluck="item",
     )
 
     raw_config = frappe.db.get_single_value("ERP Configuration", "candidate_details_form_fields")

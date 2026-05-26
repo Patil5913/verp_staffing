@@ -1,4 +1,3 @@
-
 // namespace safety
 window.verp_staffing = window.verp_staffing || {};
 verp_staffing.purchase = {};
@@ -8,29 +7,32 @@ verp_staffing.purchase.item_handler = async function (frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	if (!row.item) return;
 
-	const item = await frappe.db.get_doc("Item", row.item);
+	frappe.call({
+		method: "frappe.client.get_value",
+		args: {
+			doctype: "Item",
+			filter: { name: row.item },
+			fieldname: ["stock_uom"],
+		},
+		callback: function (r) {
+			if (r.message) {
+				frappe.model.set_value(
+					cdt,
+					cdn,
+					"uom",
+					r.message.stock_uom ?? r.message.stock_uom,
+				);
+			}
+		},
+	});
 
-	if (item) {
-		frappe.model.set_value(cdt, cdn, "item_name", item.item_name);
-		frappe.model.set_value(cdt, cdn, "uom", item.stock_uom);
-		frappe.model.set_value(cdt, cdn, "qty", 1);
-	}
-
+	frappe.model.set_value(cdt, cdn, "qty", 1);
 	// expense account
 	if (frm.doc.company) {
-		const r = await frappe.db.get_value(
-			"Company",
-			frm.doc.company,
-			"default_expense_account"
-		);
+		const r = await frappe.db.get_value("Company", frm.doc.company, "default_expense_account");
 
 		if (r.message?.default_expense_account) {
-			frappe.model.set_value(
-				cdt,
-				cdn,
-				"expense_account",
-				r.message.default_expense_account
-			);
+			frappe.model.set_value(cdt, cdn, "expense_account", r.message.default_expense_account);
 		}
 	}
 };
@@ -81,11 +83,7 @@ verp_staffing.purchase.exchange.update_description = function (frm) {
 	}
 
 	if (currency === company_currency) {
-		frm.set_df_property(
-			"conversion_rate",
-			"description",
-			"Same currency, rate = 1"
-		);
+		frm.set_df_property("conversion_rate", "description", "Same currency, rate = 1");
 		return;
 	}
 
