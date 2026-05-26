@@ -732,16 +732,19 @@ def create_payment_entry_from_term(
         pe.reference_no = reference_no
         pe.reference_date = reference_date
         pe.save(ignore_permissions=True)
-
-        _append_verification_log(
-            payment_term_row, f"Re-requested verification by {frappe.session.user}"
-        )
-        frappe.db.set_value(
+        now = frappe.utils.now_datetime()
+        now_str = frappe.utils.format_datetime(now)
+        payment_term = frappe.get_doc(
             "Customer Payment Terms",
             payment_term_row,
-            "payment_status",
-            "Pending Verification",
         )
+        payment_term.payment_status = "Pending Verification"
+        _append_verification_log(
+            payment_term,
+            f"Re-requested verification by {frappe.session.user}",
+            now_str,
+        )
+        payment_term.save(ignore_permissions=True)
         return pe.name
 
     # Fresh PE creation
@@ -774,29 +777,31 @@ def create_payment_entry_from_term(
     )
 
     pe.insert(ignore_permissions=True)
-
-    frappe.db.set_value(
+    payment_term = frappe.get_doc(
         "Customer Payment Terms",
         payment_term_row,
-        {
-            "payment_status": "Pending Verification",
-            "payment_entry": pe.name,
-        },
     )
+    payment_term.payment_entry = pe.name
+    payment_term.payment_status = "Pending Verification"
+
+    now = frappe.utils.now_datetime()
+    now_str = frappe.utils.format_datetime(now)
     _append_verification_log(
-        payment_term_row, f"Payment entry {pe.name} created by {frappe.session.user}"
+        payment_term,
+        f"Payment entry {pe.name} created by {frappe.session.user}",
+        now_str,
     )
+    payment_term.save(ignore_permissions=True)
 
     return pe.name
+
 
 @frappe.whitelist()
 def verify_payment_entry(payment_entry):
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
-        frappe.throw(
-            _("This payment entry is already verified and cannot be changed.")
-        )
+        frappe.throw(_("This payment entry is already verified and cannot be changed."))
 
     if pe.verification_status not in ("Pending Verification", "Rejected"):
         frappe.throw(
@@ -839,9 +844,7 @@ def reject_payment_entry(payment_entry, remarks):
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
-        frappe.throw(
-            _("A verified payment entry cannot be rejected.")
-        )
+        frappe.throw(_("A verified payment entry cannot be rejected."))
 
     now = frappe.utils.now_datetime()
     now_str = frappe.utils.format_datetime(now)
@@ -874,9 +877,8 @@ def _append_verification_log(doc, message, now_str):
 
     new_line = f"[{now_str}] {message}"
 
-    doc.verification_log = (
-        f"{existing}\n{new_line}".strip()
-    )
+    doc.verification_log = f"{existing}\n{new_line}".strip()
+
 
 def handle_background_failure(title, sales_order, error, message):
     # Error Log

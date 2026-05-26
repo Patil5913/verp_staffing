@@ -113,7 +113,7 @@ class PaymentEntry(Document):
             return
 
         old_refs = frappe.db.count(
-            doctype ="Payment Entry Reference",
+            "Payment Entry Reference",
             filters={"parent": self.name, "parenttype": "Payment Entry"},
         )
         current_refs = self.references or []
