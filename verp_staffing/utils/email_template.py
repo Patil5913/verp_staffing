@@ -388,13 +388,12 @@ def seed_email_template():
      
 
 """
-  +
-  Common_Footer,
+            + Common_Footer,
         },
-       {
-    "name": "Service Plan Email",
-    "subject": "Choose the Right Plan for You",
-    "html_content": """
+        {
+            "name": "Service Plan Email",
+            "subject": "Choose the Right Plan for You",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -525,12 +524,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-       {
-    "name": "Candidate Details Form",
-    "subject": "Candidate Details Form",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Candidate Details Form",
+            "subject": "Candidate Details Form",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;margin:0;padding:0;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -604,13 +604,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-        
+"""
+            + Common_Footer,
+        },
         {
-    "name": "Agreement Signed - Customer",
-    "subject": "Agreement signed successfully",
-    "html_content": """
+            "name": "Agreement Signed - Customer",
+            "subject": "Agreement signed successfully",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -659,13 +659,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-        
+"""
+            + Common_Footer,
+        },
         {
             "name": "Agreement Signed - Internal",
             "subject": "Agreement Signed by Customer",
-           "html_content": """
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -721,11 +721,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer, },
+"""
+            + Common_Footer,
+        },
         {
-    "name": "Agreement Link Request - Customer",
-    "subject": "Agreement Link Request Received",
-    "html_content": """
+            "name": "Agreement Link Request - Customer",
+            "subject": "Agreement Link Request Received",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -777,13 +779,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
-      {
-    "name": "Agreement Link Request - Internal",
-    "subject": "Customer Requested a New Agreement Link",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Agreement Link Request - Internal",
+            "subject": "Customer Requested a New Agreement Link",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -837,12 +839,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-      {
-    "name": "OTP Verification Email",
-    "subject": "Your Verification Code",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "OTP Verification Email",
+            "subject": "Your Verification Code",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -915,12 +918,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-      {
-    "name": "Document Sign Request - e_sign",
-    "subject": "Please Sign Document",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Document Sign Request - e_sign",
+            "subject": "Please Sign Document",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -987,12 +991,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-      {
-    "name": "Final Signed Agreement Email - e_sign",
-    "subject": "Final Signed Agreement - {{ agreement_name }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Final Signed Agreement Email - e_sign",
+            "subject": "Final Signed Agreement - {{ agreement_name }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1045,12 +1050,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-      {
-    "name": "Contact Us - Customer Reply",
-    "subject": "We've received your query!",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Contact Us - Customer Reply",
+            "subject": "We've received your query!",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1120,13 +1126,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
-{
-    "name": "Contact Us - Internal Forward",
-    "subject": "New Website Query: {{ subject }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Contact Us - Internal Forward",
+            "subject": "New Website Query: {{ subject }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1200,12 +1206,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Personal Data Download Request",
-    "subject": "Download Your Data",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Personal Data Download Request",
+            "subject": "Download Your Data",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1291,12 +1298,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Account Deletion Notification",
-    "subject": "Your Account Has Been Deleted",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Account Deletion Notification",
+            "subject": "Your Account Has Been Deleted",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1365,12 +1373,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Account Deletion Confirmation",
-    "subject": "Confirm Deletion of Your Account",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Account Deletion Confirmation",
+            "subject": "Confirm Deletion of Your Account",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1456,12 +1465,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Data Deletion Approval",
-    "subject": "Approval Required: User {{ user }} Requested Account Deletion",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Data Deletion Approval",
+            "subject": "Approval Required: User {{ user }} Requested Account Deletion",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1547,12 +1557,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Backup Upload Successful",
-    "subject": "Backup Upload Successful",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Backup Upload Successful",
+            "subject": "Backup Upload Successful",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1619,13 +1630,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
-    {
-    "name": "Backup Upload Failed",
-    "subject": "[Warning] Backup Upload Failed",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Backup Upload Failed",
+            "subject": "[Warning] Backup Upload Failed",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1707,12 +1718,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-   {
-    "name": "File Backup Notification",
-    "subject": "Your File Backup is Ready",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "File Backup Notification",
+            "subject": "Your File Backup is Ready",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1897,12 +1909,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Agreement Signature Reminder",
-    "subject": "Reminder: Agreement Pending Your Signature",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Agreement Signature Reminder",
+            "subject": "Reminder: Agreement Pending Your Signature",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -1978,12 +1991,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "New Candidate Assigned",
-    "subject": "New Candidate Assigned - {{ service }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "New Candidate Assigned",
+            "subject": "New Candidate Assigned - {{ service }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2045,12 +2059,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "User Limit Exceeded",
-    "subject": "User Limit Exceeded",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "User Limit Exceeded",
+            "subject": "User Limit Exceeded",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2138,12 +2153,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Site Storage Limit Exceeded",
-    "subject": "Site Storage Limit Exceeded",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Site Storage Limit Exceeded",
+            "subject": "Site Storage Limit Exceeded",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2231,12 +2247,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Site Expiry Notification",
-    "subject": "Site Expiring in {{ days_left }} Day(s)",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Site Expiry Notification",
+            "subject": "Site Expiring in {{ days_left }} Day(s)",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2312,12 +2329,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Field Update Request - permission request",
-    "subject": "Field Update Request for Customer {{ customer_name }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Field Update Request - permission request",
+            "subject": "Field Update Request for Customer {{ customer_name }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2400,13 +2418,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
-    {
-    "name": "Field Update Request Rejected - permission request",
-    "subject": "Field Update Request Rejected for Customer {{ customer_name }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Field Update Request Rejected - permission request",
+            "subject": "Field Update Request Rejected for Customer {{ customer_name }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2485,12 +2503,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-    {
-    "name": "Field Update Request Reviewed - permission request",
-    "subject": "Field Update Request Reviewed for Customer {{ customer_name }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Field Update Request Reviewed - permission request",
+            "subject": "Field Update Request Reviewed for Customer {{ customer_name }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2580,13 +2599,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
-    {
-    "name": "Field Update Request by owner - Permission Request",
-    "subject": "Field Update Permission Request for Customer {{ customer_name }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Field Update Request by owner - Permission Request",
+            "subject": "Field Update Permission Request for Customer {{ customer_name }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2671,12 +2690,13 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-  {
-    "name": "Payment Reminder - Sales Invoice (Customer)",
-    "subject": "Friendly Reminder: Invoice {{ doc.name or 'N/A' }} Payment Due on {{ doc.due_date or 'N/A' }}",
-    "html_content": """
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Payment Reminder - Sales Invoice (Customer)",
+            "subject": "Friendly Reminder: Invoice {{ doc.name or 'N/A' }} Payment Due on {{ doc.due_date or 'N/A' }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -2822,17 +2842,17 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
+"""
+            + Common_Footer,
+        },
         # ══════════════════════════════════════════════════════════════
         # TEMPLATE 2 — Sales Invoice Created — Send Invoice to Customer
         # Trigger: On Submit of Sales Invoice (with PDF attachment)
         # ══════════════════════════════════════════════════════════════
         {
-    "name": "Sales Invoice - Send to Customer",
-    "subject": "Invoice {{ doc.name }} from {{ doc.company }} | Due {{ doc.due_date or 'N/A' }}",
-    "html_content": """
+            "name": "Sales Invoice - Send to Customer",
+            "subject": "Invoice {{ doc.name }} from {{ doc.company }} | Due {{ doc.due_date or 'N/A' }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -3086,18 +3106,18 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-
+"""
+            + Common_Footer,
+        },
         # ══════════════════════════════════════════════════════════════
         # TEMPLATE 3 — Purchase Invoice Due Date Reminder (Internal)
         # Trigger: Notification on Purchase Invoice → due_date is near
         # Recipient: Company accounts team email (set in Notification)
         # ══════════════════════════════════════════════════════════════
         {
-    "name": "Payment Due Reminder - Purchase Invoice",
-    "subject": "Action Required: Supplier Payment Due – {{ doc.name }} | Due {{ doc.due_date }}",
-    "html_content": """
+            "name": "Payment Due Reminder - Purchase Invoice",
+            "subject": "Action Required: Supplier Payment Due – {{ doc.name }} | Due {{ doc.due_date }}",
+            "html_content": """
 <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
   <tr>
     <td align="center" style="padding:30px 10px;">
@@ -3271,9 +3291,227 @@ def seed_email_template():
           </td>
         </tr>
 
-""" + Common_Footer,
-},
-   ]
+"""
+            + Common_Footer,
+        },
+        {
+            "name": "Payment Term Reminder",
+            "subject": "Payment Reminder - {{ sales_order }}",
+            "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+
+      <!-- Outer wrapper -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- Top logo -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src=""
+                 alt="Logo"
+                 width="140"
+                 height="36"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- Main card -->
+        <tr>
+          <td bgcolor="#ffffff"
+              style="border-radius:12px;
+                     box-shadow:0 4px 16px rgba(0,0,0,0.08);
+                     overflow:hidden;
+                     padding:40px 36px 36px 36px;">
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+
+              <!-- Title -->
+              <tr>
+                <td align="center" style="padding-bottom:24px;">
+                  <div style="font-size:26px;
+                              font-weight:800;
+                              color:#111111;
+                              line-height:1.3;
+                              font-family:Arial,sans-serif;
+                              max-width:440px;
+                              margin:0 auto;">
+                    Payment Reminder
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Greeting -->
+              <tr>
+                <td style="padding-bottom:8px;">
+                  <div style="font-size:14px;
+                              color:#e07b00;
+                              font-family:Arial,sans-serif;">
+                    Hi {{ recipient or "User" }},
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Intro -->
+              <tr>
+                <td style="padding-bottom:24px;">
+                  <div style="font-size:14px;
+                              color:#444444;
+                              line-height:1.7;
+                              font-family:Arial,sans-serif;">
+
+                    {% if payment_condition == "Number of Days" %}
+                      The payment due date for the following Sales Order has been reached.
+                    {% elif payment_condition == "Number of Interviews" %}
+                      The interview threshold for the following Sales Order has been reached.
+                    {% else %}
+                      A payment reminder has been triggered for the following Sales Order.
+                    {% endif %}
+
+                    Please review the transaction details below.
+                  </div>
+                </td>
+              </tr>
+
+              <!-- CTA -->
+              <tr>
+                <td align="center" style="padding-bottom:28px;">
+                  <a href="{{ link }}"
+                     style="display:inline-block;
+                            background:#3b82f6;
+                            color:#ffffff;
+                            padding:13px 36px;
+                            text-decoration:none;
+                            border-radius:8px;
+                            font-weight:700;
+                            font-size:15px;
+                            font-family:Arial,sans-serif;
+                            letter-spacing:0.2px;">
+                    Review Sales Order
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Section label -->
+              <tr>
+                <td style="padding-bottom:10px;">
+                  <div style="font-size:14px;
+                              font-weight:700;
+                              color:#111111;
+                              font-family:Arial,sans-serif;">
+                    Payment details:
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Details table -->
+              <tr>
+                <td style="padding-bottom:24px;">
+                  <table width="100%" cellpadding="0" cellspacing="0"
+                         style="border:1px solid #e5e7eb;
+                                border-radius:8px;
+                                overflow:hidden;
+                                font-size:14px;
+                                font-family:Arial,sans-serif;">
+
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Customer</td>
+                      <td style="padding:12px 16px;color:#3b82f6;font-weight:600;">
+                        {{ customer_name or customer }}
+                      </td>
+                    </tr>
+
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Sales Order</td>
+                      <td style="padding:12px 16px;color:#333333;">
+                        {{ sales_order }}
+                      </td>
+                    </tr>
+
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Payment Condition</td>
+                      <td style="padding:12px 16px;color:#333333;">
+                        {{ payment_condition }}
+                      </td>
+                    </tr>
+
+                    {% if payment_condition == "Number of Days" %}
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Due Date</td>
+                      <td style="padding:12px 16px;color:#333333;">
+                        {{ due_date }}
+                      </td>
+                    </tr>
+                    {% endif %}
+
+                    {% if payment_condition == "Number of Interviews" %}
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Interview Threshold</td>
+                      <td style="padding:12px 16px;color:#333333;">
+                        {{ counter }}
+                      </td>
+                    </tr>
+
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Current Interviews</td>
+                      <td style="padding:12px 16px;color:#333333;">
+                        {{ current_count }}
+                      </td>
+                    </tr>
+                    {% endif %}
+
+                    <tr>
+                      <td style="padding:12px 16px;color:#555555;">Payment Amount</td>
+                      <td style="padding:12px 16px;color:#333333;font-weight:600;">
+                        {{ amount }}
+                      </td>
+                    </tr>
+
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Divider -->
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <hr style="border:none;border-top:1px solid #eeeeee;margin:0;" />
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td>
+                  <div style="font-size:13px;
+                              color:#5b7fa6;
+                              line-height:1.7;
+                              font-style:italic;
+                              font-family:Arial,sans-serif;">
+
+                    Please review the Sales Order and take the necessary action.
+
+                    <br><br>
+
+                    If the button above does not work, copy and paste this link into your browser:<br>
+
+                    <a href="{{ link }}"
+                       style="color:#3b82f6;
+                              word-break:break-all;
+                              font-style:normal;">
+                      {{ link }}
+                    </a>
+
+                  </div>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+"""
+            + Common_Footer,
+        },
+    ]
 
     for t in templates:
         if frappe.db.exists("Email Template", t["name"]):

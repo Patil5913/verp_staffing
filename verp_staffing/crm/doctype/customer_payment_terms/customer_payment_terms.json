@@ -11,6 +11,7 @@
   "column_break_1",
   "start_date",
   "due_date",
+  "last_reminder_date",
   "section_break_amount",
   "amount",
   "column_break_2",
@@ -130,13 +131,23 @@
    "in_list_view": 1,
    "label": "Due Date",
    "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "last_reminder_date",
+   "fieldtype": "Date",
+   "label": "Last Remainder Sent On",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-19 16:13:27.387923",
+ "modified": "2026-05-26 15:55:03.252510",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

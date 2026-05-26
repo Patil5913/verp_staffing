@@ -25,9 +25,9 @@ app_license = "mit"
 #         "* * * * *": [
 #             "verp_staffing.crm.api.agreement.send_agreement_reminders"
 #         ],
-    # "0 8 * * *": [  # This cron expression runs daily at midnight
-    #         "verp_staffing.accounts.doctype.sales_invoice.send_dynamic_payment_reminders"
-    #     ],
+# "0 8 * * *": [  # This cron expression runs daily at midnight
+#         "verp_staffing.accounts.doctype.sales_invoice.send_dynamic_payment_reminders"
+#     ],
 #     }
 # }
 # Includes in <head>
@@ -141,7 +141,7 @@ after_migrate = [
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
     # "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.utils.email_template.seed_email_template"
+    "verp_staffing.utils.email_template.seed_email_template",
 ]
 
 # Uninstallation
@@ -286,23 +286,20 @@ scheduler_events = {
         "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry",
         "verp_staffing.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
         "verp_staffing.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
-        "verp_staffing.accounts.doctype.subscription.subscription.process_due_subscriptions", 
+        "verp_staffing.accounts.doctype.subscription.subscription.process_due_subscriptions",
+        "verp_staffing.accounts.doctype.sales_order.sales_order.send_payment_term_reminders",
     ],
     "cron": {
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
         ],
-        "0 */12 * * *": [
-            "verp_staffing.crm.api.agreement.send_agreement_reminders"
-        ],
+        "0 */12 * * *": ["verp_staffing.crm.api.agreement.send_agreement_reminders"],
         "0 9 * * *": [  # This cron expression runs daily at 8 am
             "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.corn_job_send_payment_reminders"
         ],
-    }
-   
+    },
 }
-
 
 
 # Testing
@@ -403,8 +400,16 @@ before_request = [
 
 fixtures = [
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
-    {"dt": "Custom HTML Block", "filters": [["name", "in", ["Email Inbox", "Pending Payment Verification Requests"]]]},
-    {"dt": "Workspace", "filters": [["name", "in", ["Email Inbox", "Pending PE Requests"]]]},
+    {
+        "dt": "Custom HTML Block",
+        "filters": [
+            ["name", "in", ["Email Inbox", "Pending Payment Verification Requests"]]
+        ],
+    },
+    {
+        "dt": "Workspace",
+        "filters": [["name", "in", ["Email Inbox", "Pending PE Requests"]]],
+    },
 ]
 
 override_whitelisted_methods = {
