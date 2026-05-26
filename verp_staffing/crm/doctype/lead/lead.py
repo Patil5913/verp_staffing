@@ -28,6 +28,8 @@ class Lead(Document):
 
     def before_insert(self):
         self.set_lead_owner()
+
+    def after_insert(self):
         self.create_lead_detail()
 
     def on_trash(self):
@@ -70,7 +72,11 @@ class Lead(Document):
         if not lead_detail_name:
             return
 
-        self.lead_details = lead_detail_name
+        self.db_set(
+            "lead_details",
+            lead_detail_name,
+            update_modified=False,
+        )
 
 
 @frappe.whitelist()

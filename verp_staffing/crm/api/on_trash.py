@@ -27,7 +27,7 @@ def unlink_and_clean_lead_detail(
 
     # delete matching child rows directly
     frappe.db.delete(
-        "Lead Detail Reference",
+        "Doctype Reference",
         {
             "parent": lead_details_name,
             "reference_doctype": doctype,

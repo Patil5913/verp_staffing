@@ -81,9 +81,7 @@ class Opportunity(Document):
         # Single update (cheap)
         # =========================
         if lead_detail_name:
-            frappe.db.set_value(
-                "Opportunity",
-                self.name,
+            self.db_set(
                 "lead_details",
                 lead_detail_name,
                 update_modified=False,
@@ -105,7 +103,7 @@ class Opportunity(Document):
         customer = frappe.get_doc(
             {
                 "doctype": "Customer",
-                "customer_name": self.name1,
+                "name1": self.name1,
                 "customer_from": "Opportunity",
                 "party_name": self.name,
                 "customer_owner": self.opportunity_owner,
