@@ -129,7 +129,7 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
         with open(file_path, "rb") as f:
             file_content = f.read()
 
-        # 🔹 Try to use Email Template
+        # Try to use Email Template
         template_name = "Document Signature and Certificate"
 
         if frappe.db.exists("Email Template", template_name):
@@ -151,7 +151,7 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
             subject = "Agreement for Review and Signature"
             message = f"Form: {form_url}"
 
-        # 🔹 Send
+        # Send
         send_notification(
             recipients=[recipient],
             subject=subject,
@@ -257,11 +257,11 @@ def send_agreement_reminders():
 
         doc = frappe.get_doc("Agreement", ag.name)
 
-        # 🔁 decide reference time
+        # decide reference time
         reference_time = ag.last_reminder_sent or ag.sent_on
         hours_passed = time_diff_in_hours(now_datetime(), reference_time)
 
-        # ⏰ check 24 hours passed
+        # check 24 hours passed
         if hours_passed >= 24:
             # safety check
             if doc.status != "Sent For Signature":
@@ -286,7 +286,7 @@ def send_agreement_reminders():
                     f"Please take necessary action."
                 )
 
-            # 📧 SEND EMAIL
+            # SEND EMAIL
             send_notification(
                 recipients=[recipient],
                 subject=subject,
@@ -297,7 +297,7 @@ def send_agreement_reminders():
                 send_system=0,
             )
 
-            # ✅ update last reminder timestamp
+            # update last reminder timestamp
             frappe.db.set_value(
                 "Agreement",
                 doc.name,
@@ -449,14 +449,14 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 c.drawText(text_obj)
                 drew_anything = True
 
-        # 🔴 REQUIRED
+        # REQUIRED
         c.showPage()
         c.save()
 
         packet.seek(0)
         overlay_pdf = PdfReader(packet)
 
-        # ✅ CRITICAL SAFETY CHECK
+        # CRITICAL SAFETY CHECK
         if overlay_pdf.pages:
             PageMerge(page).add(overlay_pdf.pages[0]).render()
 

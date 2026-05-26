@@ -28,6 +28,7 @@
    "label": "Customer",
    "options": "Customer",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -38,6 +39,7 @@
    "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
    "options": "Item",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -112,7 +114,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-12 15:46:10.833568",
+ "modified": "2026-05-26 10:33:17.137261",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing Other Services",
@@ -143,14 +145,6 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
    "role": "Senior Recruiter",
    "select": 1,
    "write": 1
@@ -168,6 +162,14 @@
    "read": 1,
    "report": 1,
    "role": "Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   }

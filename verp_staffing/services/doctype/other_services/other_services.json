@@ -30,7 +30,8 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "department",
@@ -47,7 +48,8 @@
    "label": "Service",
    "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
    "options": "Item",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "column_break_xbfz",
@@ -132,7 +134,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-12 15:36:13.676478",
+ "modified": "2026-05-26 10:33:29.931176",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",
@@ -171,7 +173,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Mentor",
+   "role": "Senior Recruiter",
    "select": 1,
    "write": 1
   },
@@ -179,7 +181,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Senior Recruiter",
+   "role": "Marketing Mentor",
    "select": 1,
    "write": 1
   },

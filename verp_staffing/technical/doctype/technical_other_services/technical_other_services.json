@@ -29,6 +29,7 @@
    "label": "Customer",
    "options": "Customer",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -40,6 +41,7 @@
    "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
    "options": "Item",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -116,7 +118,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-12 15:46:38.321711",
+ "modified": "2026-05-26 10:33:06.753737",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",
@@ -127,7 +129,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   },
@@ -147,7 +149,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Technical Manager",
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   },
@@ -155,7 +157,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Technical Master Manager",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   }

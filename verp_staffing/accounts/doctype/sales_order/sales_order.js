@@ -934,8 +934,7 @@ async function render_invoices_tab(frm) {
 		args: { sales_order: frm.doc.name },
 	});
 
-	const invoices = r.message || [];
-	const invoice = invoices.length ? invoices[0] : null;
+	const invoice = r.message;
 	const wrapper = frm.get_field("invoices_html").$wrapper;
 	if (!invoice) {
 		wrapper.html(

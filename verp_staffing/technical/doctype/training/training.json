@@ -34,6 +34,7 @@
    "label": "Customer",
    "options": "Customer",
    "read_only": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -95,7 +96,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 15:54:57.478892",
+ "modified": "2026-05-26 10:35:27.227924",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",
@@ -105,7 +106,7 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Coordinator",
+   "role": "Technical Master Manager",
    "select": 1,
    "write": 1
   },
@@ -124,14 +125,14 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Manager",
+   "role": "Technical Coordinator",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Technical Master Manager",
+   "role": "Technical Manager",
    "select": 1,
    "write": 1
   },

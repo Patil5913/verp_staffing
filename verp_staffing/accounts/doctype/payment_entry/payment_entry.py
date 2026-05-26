@@ -112,14 +112,13 @@ class PaymentEntry(Document):
         if not self.payment_term_row or self.is_new():
             return
 
-        old_refs = frappe.get_all(
-            "Payment Entry Reference",
+        old_refs = frappe.db.count(
+            doctype ="Payment Entry Reference",
             filters={"parent": self.name, "parenttype": "Payment Entry"},
-            fields=["reference_doctype", "reference_name", "allocated_amount"],
         )
         current_refs = self.references or []
 
-        if len(current_refs) != len(old_refs):
+        if len(current_refs) != old_refs:
             frappe.throw(
                 "Cannot modify payment references for a Payment Entry "
                 "created from a payment term.",

@@ -3,6 +3,8 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
+
 
 # This function is used by hierarchy tests
 def _create_department_if_not_exists(dept_name: str, roles: list[str] | None = None) -> str:
@@ -50,23 +52,6 @@ def _create_role_if_not_exists(role_name: str) -> str:
     return role_name
 
 
-def _create_service_if_not_exists(service_name: str) -> dict:
-    if not service_name:
-        raise ValueError("service_name is required")
-
-    if not frappe.db.exists("Service", {"service_name": service_name}):
-        frappe.get_doc(
-            {
-                "doctype": "Service",
-                "service_name": service_name,
-            }
-        ).insert(ignore_permissions=True)
-
-    return {
-        "doctype": "Department Service",
-        "service_name": service_name,
-    }
-
 
 def _seed_all():
     # Roles
@@ -74,9 +59,9 @@ def _seed_all():
     _resolved["role_b"] = _create_role_if_not_exists(TEST_ROLE_B)
 
     # Services
-    _resolved["service_a"] = _create_service_if_not_exists(TEST_SERVICE_A)
-    _resolved["service_b"] = _create_service_if_not_exists(TEST_SERVICE_B)
-    _resolved["service_c"] = _create_service_if_not_exists(TEST_SERVICE_C)
+    _resolved["service_a"] = create_item_if_not_exists(TEST_SERVICE_A)
+    _resolved["service_b"] = create_item_if_not_exists(TEST_SERVICE_B)
+    _resolved["service_c"] = create_item_if_not_exists(TEST_SERVICE_C)
 
 
 # ---------------------------------------------------------------------------

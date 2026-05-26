@@ -362,38 +362,44 @@ class SalesOrder(Document):
 
     def validate_agreement_requirements(self):
 
-        agreements = frappe.get_all(
+        has_agreement = frappe.db.exists(
             "Agreement",
-            filters={"sales_order": self.name},
-            fields=["name", "status", "pdf"],
+            {"sales_order": self.name},
         )
 
-        if not agreements:
+        if not has_agreement:
             frappe.throw(_("No agreement found for this Sales Order"))
 
-        for agreement in agreements:
-            if agreement.status == "Sent For Signature":
-                continue
+        missing_pdf = frappe.db.exists(
+            "Agreement",
+            {
+                "sales_order": self.name,
+                "status": ["!=", "Sent For Signature"],
+                "pdf": ["in", ["", None]],
+            },
+        )
 
-            if not agreement.pdf:
-                frappe.throw(
-                    _("Agreement PDF not generated for {0}").format(
-                        frappe.bold(agreement.name)
-                    )
+        if missing_pdf:
+            frappe.throw(
+                _("Agreement PDF not generated for {0}").format(
+                    frappe.bold(missing_pdf)
                 )
+            )
 
 
 def send_candidate_form_job(sales_order):
 
     try:
-        so = frappe.get_doc("Sales Order", sales_order)
+        so = frappe.get_all(
+            "Sales Order", filters={"name": sales_order}, fields=["name", "customer"]
+        )
 
-        recipient = get_customer_email(so.customer)
+        recipient = get_customer_email(so[0].customer)
 
         send_details_form_notification(
             recipient=recipient,
-            sales_order=so.name,
-            customer=so.customer,
+            sales_order=so[0].name,
+            customer=so[0].customer,
         )
 
     except Exception:
@@ -412,14 +418,14 @@ def send_agreement_job(sales_order):
     try:
         agreements = frappe.get_all(
             "Agreement",
-            filters={"sales_order": sales_order},
-            fields=["name", "status"],
+            filters={
+                "sales_order": sales_order,
+                "status": ["!=", "Sent For Signature"],
+            },
+            fields=["name"],
         )
 
         for agreement in agreements:
-            if agreement.status == "Sent For Signature":
-                continue
-
             send_existing_agreement(agreement.name)
 
     except Exception:
@@ -439,8 +445,16 @@ def get_erp_config():
     Fetch and normalize ERP Configuration
     """
 
-    config = frappe.get_single("ERP Configuration")
-
+    config = frappe.db.get_value(
+        "ERP Configuration",
+        "ERP Configuration",
+        [
+            "candidate_details_form_fields",
+            "send_candidate_form_immediatly_after_sales_order_creation",
+            "send_agreement_immediatly_after_sales_order_creation",
+        ],
+        as_dict=True,
+    )
     raw_service_config = {}
 
     if config.candidate_details_form_fields:
@@ -460,13 +474,12 @@ def get_erp_config():
             "is_agreement_required": bool(cfg.get("is_agreement_required")),
             "is_candidate_form_required": bool(cfg.get("is_candidate_form_required")),
         }
-
     return {
         "send_candidate_form_immediately": bool(
-            config.send_candidate_form_immediatly_after_sales_order_creation
+            int(config.send_candidate_form_immediatly_after_sales_order_creation)
         ),
         "send_agreement_immediately": bool(
-            config.send_agreement_immediatly_after_sales_order_creation
+            int(config.send_agreement_immediatly_after_sales_order_creation)
         ),
         "service_config": service_config,
     }
@@ -516,11 +529,17 @@ def send_details_form_notification(recipient, sales_order, customer):
             recipient, sales_order, customer, agreement=None, p=None, ia=False
         )
         # Try Email Template
-        template_name = "Candidate Details Form"
-
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc("Email Template", template_name)
-
+        template = frappe.db.get_value(
+            "Email Template",
+            "Candidate Details Form",
+            [
+                "subject",
+                "response",
+                "response_html",
+            ],
+            as_dict=True,
+        )
+        if template:
             context = {
                 "recipient": recipient,
                 "sales_order": sales_order,
@@ -628,10 +647,10 @@ def create_sales_invoice_from_sales_order(sales_order):
 @frappe.whitelist()
 def get_linked_invoice(sales_order):
     """Get invoice lined with sales order"""
-    invoice = frappe.get_all(
+    invoice = frappe.db.get_value(
         "Sales Invoice",
-        filters={"sales_order": sales_order},
-        fields=[
+        {"sales_order": sales_order},
+        [
             "name",
             "posting_date",
             "due_date",
@@ -639,8 +658,7 @@ def get_linked_invoice(sales_order):
             "outstanding_amount",
             "currency",
         ],
-        order_by="creation desc",
-        limit=1,
+        as_dict=True,
     )
 
     return invoice
@@ -697,7 +715,12 @@ def create_payment_entry_from_term(
         )
 
     # Fetch SI totals for reference row
-    si = frappe.get_doc("Sales Invoice", si_name)
+    si = frappe.db.get_value(
+        "Sales Invoice",
+        si_name,
+        ["grand_total", "outstanding_amount", "currency"],
+        as_dict=True,
+    )
 
     if term.payment_entry:
         # Re-request on existing PE — just update status back to Pending
@@ -766,77 +789,94 @@ def create_payment_entry_from_term(
 
     return pe.name
 
-
 @frappe.whitelist()
 def verify_payment_entry(payment_entry):
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
-        frappe.throw("This payment entry is already verified and cannot be changed.")
-    if pe.verification_status not in ("Pending Verification", "Rejected"):
-        frappe.throw("Only Pending Verification or Rejected entries can be approved.")
+        frappe.throw(
+            _("This payment entry is already verified and cannot be changed.")
+        )
 
-    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+    if pe.verification_status not in ("Pending Verification", "Rejected"):
+        frappe.throw(
+            _("Only Pending Verification or Rejected entries can be approved.")
+        )
+
+    now = frappe.utils.now_datetime()
+    now_str = frappe.utils.format_datetime(now)
+
     pe.verification_status = "Verified"
     pe.save(ignore_permissions=True)
     pe.submit()
 
     if pe.payment_term_row:
-        frappe.db.set_value(
-            "Customer Payment Terms", pe.payment_term_row, "payment_status", "Verified"
+        payment_term = frappe.get_doc(
+            "Customer Payment Terms",
+            pe.payment_term_row,
         )
+
+        payment_term.payment_status = "Verified"
+
         _append_verification_log(
-            pe.payment_term_row, f"Verified by {frappe.session.user} on {now_str}"
+            payment_term,
+            f"Verified by {frappe.session.user} on {now_str}",
+            now_str,
         )
+
+        payment_term.save(ignore_permissions=True)
 
     return "verified"
 
 
 @frappe.whitelist()
 def reject_payment_entry(payment_entry, remarks):
-    if not remarks or not remarks.strip():
-        frappe.throw("Rejection remarks are required.")
+    remarks = (remarks or "").strip()
+
+    if not remarks:
+        frappe.throw(_("Rejection remarks are required."))
 
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
-        frappe.throw("A verified payment entry cannot be rejected.")
+        frappe.throw(
+            _("A verified payment entry cannot be rejected.")
+        )
 
-    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
-    full_note = (
-        f"Rejected by {frappe.session.user} on {now_str}, Remarks: {remarks.strip()}"
-    )
+    now = frappe.utils.now_datetime()
+    now_str = frappe.utils.format_datetime(now)
 
     pe.verification_status = "Rejected"
     pe.save(ignore_permissions=True)
 
     if pe.payment_term_row:
-        frappe.db.set_value(
-            "Customer Payment Terms", pe.payment_term_row, "payment_status", "Rejected"
+        payment_term = frappe.get_doc(
+            "Customer Payment Terms",
+            pe.payment_term_row,
         )
-        frappe.db.set_value(
-            "Customer Payment Terms", pe.payment_term_row, "payment_entry", None
+
+        payment_term.payment_status = "Rejected"
+        payment_term.payment_entry = None
+
+        _append_verification_log(
+            payment_term,
+            f"Rejected by {frappe.session.user} on {now_str}, Remarks: {remarks}",
+            now_str,
         )
-        _append_verification_log(pe.payment_term_row, full_note)
+
+        payment_term.save(ignore_permissions=True)
 
     return "rejected"
 
 
-def _append_verification_log(payment_term_row, message):
-    """Appends a timestamped line to the verification_log of a payment term row."""
-    existing = (
-        frappe.db.get_value(
-            "Customer Payment Terms", payment_term_row, "verification_log"
-        )
-        or ""
-    )
-    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
-    new_line = f"[{now_str}] {message}"
-    updated = f"{existing}\n{new_line}".strip()
-    frappe.db.set_value(
-        "Customer Payment Terms", payment_term_row, "verification_log", updated
-    )
+def _append_verification_log(doc, message, now_str):
+    existing = doc.verification_log or ""
 
+    new_line = f"[{now_str}] {message}"
+
+    doc.verification_log = (
+        f"{existing}\n{new_line}".strip()
+    )
 
 def handle_background_failure(title, sales_order, error, message):
     # Error Log

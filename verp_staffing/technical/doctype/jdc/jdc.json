@@ -27,6 +27,7 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
+   "search_index": 1,
    "read_only": 1,
    "set_only_once": 1
   },
