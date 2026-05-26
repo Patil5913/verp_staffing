@@ -601,7 +601,6 @@ def create_sales_invoice_from_sales_order(sales_order):
         )
 
     si = frappe.new_doc("Sales Invoice")
-    si.naming_series = "ACC-SINV-.YYYY.-"
     si.customer = so.customer
     si.company = so.company
     si.company_currency = so.company_currency

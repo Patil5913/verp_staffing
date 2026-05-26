@@ -53,8 +53,8 @@ def make_payment_entry(
     """
 
     company = company or create_company_if_not_exists(
-        "Vrugle",
-        "V",
+        "Test Company",
+        "TC",
     )
 
     currency = get_company_currency(company)
@@ -159,7 +159,7 @@ class PaymentEntry(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.company = create_company_if_not_exists("vrugle")
+        cls.company = create_company_if_not_exists("Test Company", "TC",)
         create_party_types_if_not_exists()
         cls.fy = create_fiscal_year_if_not_exists(
             fiscal_year="2026",
@@ -185,7 +185,7 @@ class TestPaymentEntry(PaymentEntry):
         When a Payment Entry covering the full invoice amount is submitted,
         outstanding_amount must become 0.
         """
-        si = make_sales_invoice(amount=500, company=self.company)
+        si = make_sales_invoice(amount=500, company=self.company, submit=True)
 
         self.assertEqual(
             flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")),
@@ -224,7 +224,7 @@ class TestPaymentEntry(PaymentEntry):
         A payment less than the invoice total should reduce outstanding_amount
         by exactly the allocated amount.
         """
-        si = make_sales_invoice(amount=1000)
+        si = make_sales_invoice(amount=1000, submit=True)
 
         pe = make_payment_entry(
             payment_type="Receive",
@@ -256,7 +256,7 @@ class TestPaymentEntry(PaymentEntry):
         Cancelling a Payment Entry must add back the allocated amount
         to outstanding_amount.
         """
-        si = make_sales_invoice(amount=300)
+        si = make_sales_invoice(amount=300, submit=True)
 
         pe = make_payment_entry(
             payment_type="Receive",
@@ -297,7 +297,7 @@ class TestPaymentEntry(PaymentEntry):
         Submitting a Payment Entry with a non-zero difference_amount
         must raise a ValidationError.
         """
-        si = make_sales_invoice(amount=200)
+        si = make_sales_invoice(amount=200, submit=True)
 
         pe = make_payment_entry(
             payment_type="Receive",
@@ -351,7 +351,7 @@ class TestPaymentEntry(PaymentEntry):
         A Payment Entry with no references (advance) must not change
         the outstanding_amount on any invoice.
         """
-        si = make_sales_invoice(amount=700)
+        si = make_sales_invoice(amount=700, submit=True)
         original_outstanding = flt(
             frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount")
         )
@@ -390,7 +390,7 @@ class TestPaymentEntry(PaymentEntry):
         differs from the Payment Entry currency, a ValidationError must
         be raised.
         """
-        company = create_company_if_not_exists("vrugle")
+        company = create_company_if_not_exists("Test Company", "TC",)
         company_currency = get_company_currency(company)
         customer = make_customer(f"_Test Customer {company}")
 
@@ -451,7 +451,7 @@ class TestPaymentEntry(PaymentEntry):
         Two successive partial Payment Entries covering the full invoice
         amount should leave outstanding_amount = 0.
         """
-        si = make_sales_invoice(amount=800)
+        si = make_sales_invoice(amount=800, submit=True)
 
         pe1 = make_payment_entry(
             payment_type="Receive",
@@ -509,7 +509,7 @@ class TestPaymentEntry(PaymentEntry):
         a ValidationError.
         """
         si = make_sales_invoice(amount=100)
-        company = create_company_if_not_exists("vrugle")
+        company = create_company_if_not_exists("Test Company", "TC",)
         currency = get_company_currency(company)
 
         pe = frappe.new_doc("Payment Entry")
@@ -553,8 +553,8 @@ class TestPaymentEntry(PaymentEntry):
         If paid_amount and allocated_amount are equal,
         difference_amount should be 0.
         """
-        si = make_sales_invoice(amount=100)
-        company = create_company_if_not_exists("vrugle")
+        si = make_sales_invoice(amount=100, submit=True)
+        company = create_company_if_not_exists("Test Company", "TC",)
         currency = get_company_currency(company)
 
         pe = frappe.new_doc("Payment Entry")
@@ -602,8 +602,8 @@ class TestPaymentEntry(PaymentEntry):
         If allocated_amount > paid_amount, difference_amount should equal
         allocated_amount − paid_amount.
         """
-        si = make_sales_invoice(amount=150)
-        company = create_company_if_not_exists("vrugle")
+        si = make_sales_invoice(amount=150, submit=True)
+        company = create_company_if_not_exists("Test Company", "TC",)
         currency = get_company_currency(company)
 
         pe = frappe.new_doc("Payment Entry")
@@ -651,7 +651,7 @@ class TestPaymentEntry(PaymentEntry):
         After submitting a Payment Entry, GL Entries must exist
         for this voucher.
         """
-        si = make_sales_invoice(amount=250)
+        si = make_sales_invoice(amount=250, submit=True)
 
         pe = make_payment_entry(
             payment_type="Receive",
@@ -688,7 +688,7 @@ class TestPaymentEntry(PaymentEntry):
         """
         Cancelling a Payment Entry must mark original GL entries as cancelled.
         """
-        si = make_sales_invoice(amount=150)
+        si = make_sales_invoice(amount=150, submit=True)
 
         pe = make_payment_entry(
             payment_type="Receive",
@@ -729,7 +729,7 @@ class TestPaymentEntry(PaymentEntry):
         When Payment Entry currency differs from company currency,
         all base_* fields must be calculated using conversion_rate.
         """
-        company = create_company_if_not_exists("vrugle")
+        company = create_company_if_not_exists("Test Company", "TC",)
         customer = make_customer(f"_Test Customer {company}")
         exchange_rate = 100
 
@@ -792,9 +792,9 @@ class TestPaymentEntry(PaymentEntry):
         When the user writes off the difference amount, that amount must
         be reflected in the Payment Deductions / Loss table.
         """
-        company = create_company_if_not_exists("vrugle")
+        company = create_company_if_not_exists("Test Company", "TC",)
         currency = get_company_currency(company)
-        si = make_sales_invoice(amount=150)
+        si = make_sales_invoice(amount=150, submit=True)
         write_off_account = create_account_if_not_exists("Write Off", company).name
 
         pe = frappe.new_doc("Payment Entry")
@@ -849,9 +849,9 @@ class TestPaymentEntry(PaymentEntry):
         When the difference amount is written off, a corresponding GL Entry
         must be created against the company write-off account.
         """
-        company = create_company_if_not_exists("vrugle")
+        company = create_company_if_not_exists("Test Company", "TC",)
         currency = get_company_currency(company)
-        si = make_sales_invoice(amount=150)
+        si = make_sales_invoice(amount=150, submit=True)
         write_off_account = create_account_if_not_exists("Write Off", company).name
 
         pe = frappe.new_doc("Payment Entry")

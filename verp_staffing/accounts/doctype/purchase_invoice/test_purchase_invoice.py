@@ -27,7 +27,7 @@ from verp_staffing.accounts.doctype.fiscal_year.test_fiscal_year import (
 from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
 
 
-TEST_COMPANY = "vrugle"
+TEST_COMPANY = "Test Company"
 TEST_ITEM_NAME = "_Test Purchase Item"
 TEST_ITEM_CATEGORY = "Item Category 1"
 TEST_UOM = "NOS"
@@ -40,7 +40,7 @@ _resolved: dict = {}
 
 
 def _ensure_company():
-    name = create_company_if_not_exists(TEST_COMPANY, "v")
+    name = create_company_if_not_exists(TEST_COMPANY, "TC")
     _resolved["company"] = name
     return name
 
