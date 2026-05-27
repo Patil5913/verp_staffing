@@ -47,7 +47,7 @@ def make_journal_entry(
         account, debit_in_account_currency, credit_in_account_currency,
         exchange_rate, party_type, party, reference_type, reference_name …
     """
-    company = company or create_company_if_not_exists("vrugle","v")
+    company = company or create_company_if_not_exists("Test Company","TC")
 
     je = frappe.new_doc("Journal Entry")
     je.company = company
@@ -123,14 +123,14 @@ class JournalEntryBase(FrappeTestCase):
 
         seed_all()
         # --- Company + currency (created once) ----------------------------
-        cls.company = create_company_if_not_exists("vrugle","v")
+        cls.company = create_company_if_not_exists("Test Company","TC")
         cls.company_currency = get_company_currency(cls.company)
 
         # --- Party types + fiscal year (created once) ---------------------
         create_party_types_if_not_exists()
         create_fiscal_year_if_not_exists(
             company=cls.company,
-            fiscal_year="2026",
+            fiscal_year="2026-2027",
             start_date="2026-01-01",
             end_date="2026-12-31",
         )

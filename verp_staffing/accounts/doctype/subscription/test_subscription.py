@@ -76,8 +76,8 @@ from verp_staffing.accounts.doctype.subscription.subscription import (
 # Constants
 # --------------------------------------------------------------------------
 
-TEST_COMPANY = "Test Subscription"
-TEST_COMPANY_ABBR = "TS"
+TEST_COMPANY = "Test Company"
+TEST_COMPANY_ABBR = "TC"
 TEST_CURRENCY = "INR"
 TEST_CUSTOMER = "_Test Subscription Customer"
 TEST_SUPPLIER = "_Test Subscription Supplier"
@@ -203,9 +203,14 @@ class TestSubscriptionBase(FrappeTestCase):
 
 class TestPartyValidation(TestSubscriptionBase):
 	def test_sales_with_customer_succeeds(self):
-		sub = self.make_subscription()
+		customer = _resolved["customer"]
+
+		sub = self.make_subscription(
+			party=customer.name,
+			party_type="Customer",
+		)
 		self.assertEqual(sub.party_type, "Customer")
-		self.assertEqual(sub.party, _resolved["customer"].name)
+		self.assertEqual(sub.party, customer.name)
 
 	def test_sales_with_supplier_rejected(self):
 		with self.assertRaises(frappe.ValidationError):

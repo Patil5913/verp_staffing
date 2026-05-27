@@ -237,8 +237,11 @@ def make_gl_entries(gl_map, doc):
             if account_report_type == "Profit and Loss":
                 frappe.throw(f"Opening Entry cannot be made for P&L account: {acc}")
 
-        frappe.get_doc({"doctype": "GL Entry", **entry}).insert(ignore_permissions=True)
-
+        frappe.get_doc({
+            "doctype": "GL Entry",
+            **entry
+        }).insert(ignore_permissions=True)
+                
 
 def cancel_gl_entries(doc, method=None):
     if frappe.db.exists(
@@ -285,11 +288,14 @@ def cancel_gl_entries(doc, method=None):
             against_voucher=original.against_voucher,
             transaction_currency=original.transaction_currency,
             exchange_rate=original.exchange_rate,
+            
             company=doc.company,
             posting_date=doc.posting_date,
             voucher_type=doc.doctype,
             voucher_no=doc.name,
-            remarks="Reversal Entry",
+            
+            against=original.against,
+            remarks="Reversal Entry"
         )
         reverse["fiscal_year"] = original.fiscal_year
         reverse["debit_in_company_currency"] = original.credit_in_company_currency

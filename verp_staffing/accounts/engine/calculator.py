@@ -60,16 +60,18 @@ def calculate_taxes(doc):
 
 # discount only on net_total
 def apply_discount(doc):
+    total = flt(doc.total)
+
+    # Calculate based on percentage
+    if doc.additional_discount_percentage:
+        doc.discount_amount = flt(total * doc.additional_discount_percentage / 100)
+
     discount = flt(doc.discount_amount or 0)
 
-    if not discount:
-        doc.net_total = doc.total
-        return
-
-    if discount > doc.total:
+    if discount > total:
         frappe.throw("Discount cannot exceed total")
 
-    doc.net_total = flt(doc.total - discount)
+    doc.net_total = flt(total - discount)
 
 # conversion to company currency
 def calculate_base(doc):

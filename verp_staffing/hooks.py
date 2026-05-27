@@ -296,7 +296,7 @@ scheduler_events = {
         ],
         "0 */12 * * *": ["verp_staffing.crm.api.agreement.send_agreement_reminders"],
         "0 9 * * *": [  # This cron expression runs daily at 8 am
-            "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.corn_job_send_payment_reminders"
+            "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_dynamic_payment_reminders"
         ],
     },
 }
