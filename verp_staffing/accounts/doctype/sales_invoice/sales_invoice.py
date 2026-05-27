@@ -76,10 +76,10 @@ class SalesInvoice(Document):
 
     def validate_mandatory_fields(self):
         if not self.customer:
-            frappe.throw(_("Customer is required", frappe.MandatoryError))
+            frappe.throw("Customer is required", frappe.MandatoryError)
 
         if not self.company:
-            frappe.throw(_("Company is required", frappe.MandatoryError))
+            frappe.throw("Company is required", frappe.MandatoryError)
 
     def validate_auto_set_posting_date(self):
         if not self.posting_date:
