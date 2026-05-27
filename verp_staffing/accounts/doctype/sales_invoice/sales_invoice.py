@@ -42,6 +42,7 @@ class SalesInvoice(Document):
     def validate(self):
         self.validate_mandatory_fields()
         self.validate_item()
+        self.validate_taxes()
         self.validate_auto_set_posting_date()
         self.validate_fiscal_year_configuration()
         self.validate_due_date()
@@ -49,9 +50,6 @@ class SalesInvoice(Document):
         self.validate_uom_is_integer("stock_uom", "stock_qty")
         self.validate_uom_is_integer("uom", "qty")
         self.validate_duplicate_items()
-
-        self.validate_tax_rate_bounds()
-        self.validate_tax_row_id()
 
         self.check_sales_order_close()
         self.set_debit_to_account()
@@ -350,79 +348,155 @@ class SalesInvoice(Document):
             else:
                 seen[item.item] = item.idx
 
-    def validate_tax_rate_bounds(self):
-        """Validate tax rate and amount based on charge type."""
+    def validate_taxes(self):
+        """
+        Centralized tax validation.
 
-        for tax in self.get("taxes"):
-            # Handle Actual type → validate tax_amount
-            if tax.charge_type == "Actual":
-                if tax.tax_amount is None:
+        Covers:
+        - tax rate validation
+        - tax amount validation
+        - charge type validation
+        - previous row validation
+        - row_id validation
+        - auto description filling
+        """
+
+        previous_row_types = (
+            "On Previous Row Amount",
+            "On Previous Row Total",
+        )
+
+        direct_charge_types = (
+            "Actual",
+            "On Net Total",
+            "On Paid Amount",
+        )
+
+        taxes = self.get("taxes") or []
+
+        for tax in taxes:
+
+            idx = tax.idx
+
+            charge_type = tax.charge_type
+            row_id = cint(tax.row_id)
+            rate = flt(tax.rate)
+            tax_amount = flt(tax.tax_amount)
+
+            # =====================================================
+            # Auto Description
+            # =====================================================
+
+            if tax.account_head and not tax.description:
+                tax.description = tax.account_head.split(" - ")[0]
+
+            # =====================================================
+            # Charge Type Required
+            # =====================================================
+
+            if not charge_type and (
+                tax.row_id
+                or tax.rate
+                or tax.tax_amount
+            ):
+                frappe.throw(
+                    _("Row {0}: Please select Charge Type first").format(idx)
+                )
+
+            # =====================================================
+            # Direct Charge Types
+            # =====================================================
+
+            if charge_type in direct_charge_types and tax.row_id:
+
+                frappe.throw(
+                    _(
+                        "Row {0}: Row ID is allowed only for "
+                        "'On Previous Row Amount' or "
+                        "'On Previous Row Total'"
+                    ).format(idx)
+                )
+
+            # =====================================================
+            # Previous Row Charge Types
+            # =====================================================
+
+            if charge_type in previous_row_types:
+
+                if idx == 1:
                     frappe.throw(
-                        _("Row {0}: Tax Amount cannot be empty for Actual type").format(
-                            tax.idx
-                        )
+                        _(
+                            "Row {0}: Cannot use "
+                            "'On Previous Row' charge type "
+                            "in first tax row"
+                        ).format(idx)
                     )
 
-                if flt(tax.tax_amount) < 0:
+                if not row_id:
+                    tax.row_id = idx - 1
+                    row_id = tax.row_id
+
+                if row_id < 1:
                     frappe.throw(
-                        _("Row {0}: Tax Amount cannot be negative").format(tax.idx)
+                        _("Row {0}: Row ID must be greater than 0").format(idx)
+                    )
+
+                if row_id >= idx:
+                    frappe.throw(
+                        _(
+                            "Row {0}: Row ID ({1}) must reference "
+                            "an earlier tax row"
+                        ).format(idx, row_id)
+                    )
+
+            # =====================================================
+            # ACTUAL TYPE VALIDATION
+            # =====================================================
+
+            if charge_type == "Actual":
+
+                if tax.tax_amount is None:
+                    frappe.throw(
+                        _(
+                            "Row {0}: Tax Amount cannot be empty "
+                            "for Actual type"
+                        ).format(idx)
+                    )
+
+                if tax_amount < 0:
+                    frappe.throw(
+                        _("Row {0}: Tax Amount cannot be negative").format(idx)
                     )
 
                 continue
 
-            # Handle percentage-based taxes → validate rate
+            # =====================================================
+            # RATE VALIDATION
+            # =====================================================
+
             if tax.rate is None:
-                frappe.throw(_("Row {0}: Tax Rate cannot be empty").format(tax.idx))
-
-            rate = flt(tax.rate)
-
-            if rate <= 0:
                 frappe.throw(
-                    _("Row {0}: Tax Rate cannot be {1}").format(
-                        tax.idx, "Negative" if rate < 0 else "Zero"
-                    )
+                    _("Row {0}: Tax Rate cannot be empty").format(idx)
+                )
+
+            if rate < 0:
+                frappe.throw(
+                    _("Row {0}: Tax Rate cannot be negative").format(idx)
+                )
+
+            if rate == 0:
+                frappe.throw(
+                    _("Row {0}: Tax Rate cannot be zero").format(idx)
                 )
 
             if rate > 100:
                 frappe.throw(
-                    _("Row {0}: Tax Rate ({1}%) cannot exceed 100%").format(
-                        tax.idx, rate
-                    )
+                    _(
+                        "Row {0}: Tax Rate ({1}%) "
+                        "cannot exceed 100%"
+                    ).format(idx, rate)
                 )
-
-    def validate_tax_row_id(self):
-        """Validate row_id when charge_type references a previous tax row."""
-        prev_row_types = ("On Previous Row Amount", "On Previous Row Total")
-        for tax in self.get("taxes"):
-            if tax.charge_type not in prev_row_types:
-                continue
-
-            if not tax.row_id:
-                frappe.throw(
-                    _("Row {0}: Row ID is required for charge type '{1}'").format(
-                        tax.idx, tax.charge_type
-                    )
-                )
-
-            try:
-                ref_idx = cint(tax.row_id)
-            except (TypeError, ValueError):
-                frappe.throw(
-                    _("Row {0}: Row ID must be a valid integer").format(tax.idx)
-                )
-
-            if ref_idx < 1:
-                frappe.throw(
-                    _("Row {0}: Row ID must be greater than 0").format(tax.idx)
-                )
-
-            if ref_idx >= tax.idx:
-                frappe.throw(
-                    _("Row {0}: Row ID ({1}) must reference an earlier tax row").format(
-                        tax.idx, ref_idx
-                    )
-                )
-
+                
     def validate_grand_total(self):
         """Block submission of zero/negative grand total on invoices."""
         if flt(self.grand_total) <= 0:

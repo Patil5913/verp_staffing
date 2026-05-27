@@ -185,12 +185,12 @@ frappe.ui.form.on("Items Table", {
 		if (!row.item) return;
 
 		row.type = "Sales";
+		row.qty = 1;
 
 		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
 			if (r.message && r.message.stock_uom) {
 				row.uom = r.message.stock_uom;
-				row.qty = 1;
-
+				
 				frm.refresh_field("items");
 			}
 		});
@@ -226,6 +226,7 @@ frappe.ui.form.on("Items Table", {
 
 frappe.ui.form.on("Taxes and Charges", {
 	charge_type(frm, cdt, cdn) {
+		validate_taxes_and_charges(frm, tax);
 		const row = locals[cdt][cdn];
 
 		if (row.charge_type === "Actual") {
@@ -245,18 +246,23 @@ frappe.ui.form.on("Taxes and Charges", {
 		}
 	},
 	rate(frm) {
+		validate_taxes_and_charges(frm, tax);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	tax_amount(frm) {
+		validate_taxes_and_charges(frm, tax);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	taxes_add(frm) {
+		validate_taxes_and_charges(frm, tax);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	taxes_remove(frm) {
+		validate_taxes_and_charges(frm, tax);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 	row_id(frm) {
+		validate_taxes_and_charges(frm, tax);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
@@ -285,6 +291,39 @@ function handle_currency_ui(frm) {
 	}
 }
 
+function validate_taxes_and_charges(frm, tax) {
+	let msg = "";
+	if (tax.account_head && !tax.description) {
+		tax.description = tax.account_head.split(" - ")[0];
+	}
+	if (!tax.charge_type && (tax.row_id || tax.rate || tax.tax_amount)) {
+		msg = __("Please select Charge Type first");
+		tax.row_id = "";
+		tax.rate = tax.tax_amount = 0.0;
+	} else if (
+		["Actual", "On Net Total", "On Paid Amount"].includes(tax.charge_type) &&
+		tax.row_id
+	) {
+		msg = __(
+			"Can refer row only if charge type is 'On Previous Row Amount' or 'On Previous Row Total'",
+		);
+		tax.row_id = "";
+	} else if (["On Previous Row Amount", "On Previous Row Total"].includes(tax.charge_type)) {
+		if (tax.idx === 1) {
+			msg = __("Cannot select 'On Previous Row' charge type for the first row");
+			tax.charge_type = "";
+		} else if (!tax.row_id) {
+			tax.row_id = tax.idx - 1;
+		} else if (cint(tax.row_id) >= cint(tax.idx)) {
+			msg = __("Row ID must be less than the current row number");
+			tax.row_id = "";
+		}
+	}
+	if (msg) {
+		frappe.validated = false;
+		frappe.throw(msg);
+	}
+}
 
 async function validate_fiscal_year(frm) {
 	if (!frm.doc.company || !frm.doc.posting_date) return;
