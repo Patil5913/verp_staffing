@@ -483,7 +483,8 @@
    "fieldtype": "Link",
    "label": "Sales Order",
    "options": "Sales Order",
-   "set_only_once": 1
+   "set_only_once": 1,
+   "unique": 1
   },
   {
    "fetch_from": "company.default_currency",
@@ -497,7 +498,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-27 11:31:16.713260",
+ "modified": "2026-05-27 17:01:22.688149",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",

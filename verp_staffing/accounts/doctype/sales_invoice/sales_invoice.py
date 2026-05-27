@@ -226,9 +226,6 @@ class SalesInvoice(Document):
                 frappe.throw(_("Row {0}: Income account is mandatory").format(item.idx))
 
     def validate_account_currencies(self):
-        company_currency = frappe.get_cached_value(
-            "Company", self.company, "default_currency"
-        )
         doc_currency = self.currency
 
         invalid_accounts = []
@@ -241,7 +238,7 @@ class SalesInvoice(Document):
                 "Account", account, "account_currency"
             )
 
-            if acc_currency not in [company_currency, doc_currency]:
+            if acc_currency not in [self.company_currency, doc_currency]:
                 invalid_accounts.append(f"{label}: {account} ({acc_currency})")
 
         # Check items
@@ -459,14 +456,11 @@ class SalesInvoice(Document):
         if not (cint(self.is_paid) and self.cash_bank_account):
             return
 
-        company_currency = frappe.db.get_value(
-            "Company", self.company, "default_currency"
-        )
         acc_currency = frappe.db.get_value(
             "Account", self.cash_bank_account, "account_currency"
         )
 
-        if acc_currency not in [company_currency, self.currency]:
+        if acc_currency not in [self.company_currency, self.currency]:
             frappe.throw(
                 _(
                     "Cash/Bank Account {0} currency ({1}) must match either "
@@ -474,7 +468,7 @@ class SalesInvoice(Document):
                 ).format(
                     self.cash_bank_account,
                     acc_currency,
-                    company_currency,
+                    self.company_currency,
                     self.currency,
                 )
             )
@@ -830,7 +824,6 @@ def send_sales_invoice_email(doc):
 
 @frappe.whitelist()
 def send_dynamic_payment_reminders():
-
     days_before = frappe.db.get_single_value(
         "Accounts Settings",
         "invoice_reminder_days",
@@ -844,32 +837,39 @@ def send_dynamic_payment_reminders():
         int(days_before),
     )
 
-    companies = frappe.get_all(
-        "Company",
-        pluck="name",
-    )
-
     invoice_configs = (
-        ("Sales Invoice", "customer"),
-        ("Purchase Invoice", "supplier"),
+        {
+            "doctype": "Sales Invoice",
+            "party_field": "customer",
+        },
+        {
+            "doctype": "Purchase Invoice",
+            "party_field": "supplier",
+        },
     )
+    
+    common_fields = [
+        "name",
+        "due_date",
+        "outstanding_amount",
+        "company",
+    ]
 
-    for doctype, party_type in invoice_configs:
+    for config in invoice_configs:
+
+        doctype = config["doctype"]
+        party_field = config["party_field"]
+
         invoices = frappe.get_all(
             doctype,
             filters={
                 "docstatus": 1,
-                "company": ["in", companies],
                 "outstanding_amount": [">", 0],
                 "due_date": target_date,
             },
             fields=[
-                "name",
-                "customer",
-                "supplier",
-                "due_date",
-                "outstanding_amount",
-                "company",
+                *common_fields,
+                party_field,
             ],
         )
 
@@ -895,7 +895,27 @@ def send_reminder_email(doc, invoice_type="Sales Invoice"):
         else "Payment Due Reminder - Purchase Invoice"
     )
 
-    template = frappe.get_doc("Email Template", template_name)
+    if not frappe.db.exists(
+        "Email Template",
+        template_name,
+    ):
+
+        frappe.log_error(
+            title="Missing Email Template",
+            message=(
+                f"Required Email Template "
+                f"'{template_name}' was not found.\n\n"
+                f"Invoice Type: {invoice_type}\n"
+                f"Invoice: {doc.get('name')}"
+            ),
+        )
+
+        return
+
+    template = frappe.get_cached_doc(
+        "Email Template",
+        template_name,
+    )
 
     # now doc is dict, not frappe object
     context = {"doc": doc}

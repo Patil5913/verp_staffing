@@ -157,6 +157,12 @@ class TestSalesInvoiceCreationFromSalesOrder(TestSalesOrder):
         si_doc = frappe.get_cached_doc("Sales Invoice", si)
 
         self.assertEqual(si_doc.sales_order, so.name)
+        self.assertEqual(si_doc.customer, so.customer)
+        self.assertEqual(si_doc.company, so.company)
+        self.assertEqual(si_doc.company_currency, so.company_currency)
+        self.assertEqual(si_doc.currency, so.currency)
+        self.assertEqual(si_doc.conversion_rate, so.conversion_rate)
+        self.assertEqual(len(si_doc.items), 1)
 
     def test_duplicate_sales_invoice_blocked(self):
         "Creating a second SI for the same SO must raise ValidationError"
