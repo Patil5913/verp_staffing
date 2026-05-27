@@ -11,7 +11,7 @@ from verp_staffing.crm.api.helpers import send_notification
 import json
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.permission_request import on_sales_order_save
-from frappe.utils import flt, money_in_words, fmt_money
+from frappe.utils import flt, money_in_words, fmt_money, today, date_diff, cint
 from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
@@ -683,13 +683,9 @@ def get_interview_count_for_customer(customer):
     if not marketing:
         return 0
 
-    from verp_staffing.marketing.doctype.marketing.marketing import (
-        get_interviews_by_marketing,
-    )
-
     try:
-        interviews = get_interviews_by_marketing(marketing)
-        return len(interviews) if interviews else 0
+        interviews = frappe.db.count("Interview", {"marketing": marketing})
+        return cint(interviews)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Interview Count Fetch Error")
         return 0
@@ -924,3 +920,213 @@ def handle_background_failure(title, sales_order, error, message):
             },
             user=user,
         )
+
+
+def send_payment_term_reminders():
+    """
+    Daily cron job.
+
+    Sends reminders for:
+    1. Number of Days payment terms whose due date is reached
+    2. Number of Interviews payment terms whose interview count exceeded counter
+
+    Reminder cooldown:
+    - 3 days from last_reminder_date
+    """
+
+    current_date = today()
+
+    # ------------------------------------------------------------------
+    # Fetch only actionable payment terms
+    # ------------------------------------------------------------------
+    payment_terms = frappe.get_all(
+        "Customer Payment Terms",
+        filters={
+            "payment_status": ["!=", "Verified"],
+            "parenttype": "Sales Order",
+        },
+        fields=[
+            "name",
+            "parent",
+            "payment_condition",
+            "counter",
+            "due_date",
+            "amount",
+            "payment_status",
+            "last_reminder_date",
+        ],
+    )
+
+    if not payment_terms:
+        return
+
+    # ------------------------------------------------------------------
+    # Cache SO data
+    # ------------------------------------------------------------------
+    sales_order_names = list({row.parent for row in payment_terms})
+
+    sales_orders = frappe.get_all(
+        "Sales Order",
+        filters={
+            "name": ["in", sales_order_names],
+            "docstatus": 1,
+            "status": "Open",
+        },
+        fields=[
+            "name",
+            "customer",
+            "customer_name",
+            "owner",
+        ],
+    )
+
+    so_map = {so.name: so for so in sales_orders}
+
+    if not so_map:
+        return
+
+    # ------------------------------------------------------------------
+    # Interview count cache
+    # ------------------------------------------------------------------
+    interview_cache = {}
+
+    # ------------------------------------------------------------------
+    # Load email template once
+    # ------------------------------------------------------------------
+    template_name = "Payment Term Reminder"
+
+    template = frappe.db.get_value(
+        "Email Template",
+        template_name,
+        ["subject", "response_html"],
+        as_dict=True,
+    )
+
+    # ------------------------------------------------------------------
+    # Process terms
+    # ------------------------------------------------------------------
+    for row in payment_terms:
+        so = so_map.get(row.parent)
+
+        # SO no longer valid/open
+        if not so:
+            continue
+
+        # --------------------------------------------------------------
+        # Reminder cooldown
+        # --------------------------------------------------------------
+        if (
+            row.last_reminder_date
+            and date_diff(current_date, row.last_reminder_date) < 3
+        ):
+            continue
+
+        should_notify = False
+
+        # --------------------------------------------------------------
+        # Number of Days logic
+        # --------------------------------------------------------------
+        if row.payment_condition == "Number of Days":
+
+            if row.due_date and current_date >= row.due_date:
+                should_notify = True
+
+        # --------------------------------------------------------------
+        # Number of Interviews logic
+        # --------------------------------------------------------------
+        elif row.payment_condition == "Number of Interviews":
+
+            customer = so.customer
+
+            if customer not in interview_cache:
+                interview_cache[customer] = (
+                    get_interview_count_for_customer(customer)
+                )
+
+            if interview_cache[customer] >= (row.counter or 0):
+                should_notify = True
+
+        # --------------------------------------------------------------
+        # Skip if not triggered
+        # --------------------------------------------------------------
+        if not should_notify:
+            continue
+
+        # --------------------------------------------------------------
+        # Build template context
+        # --------------------------------------------------------------
+        context = {
+            "sales_order": so.name,
+            "customer": so.customer,
+            "customer_name": so.customer_name,
+            "payment_term": row.name,
+            "payment_condition": row.payment_condition,
+            "due_date": row.due_date,
+            "counter": row.counter,
+            "amount": row.amount,
+        }
+
+        # --------------------------------------------------------------
+        # Render template
+        # --------------------------------------------------------------
+        if template:
+
+            subject = frappe.render_template(
+                template.subject,
+                context,
+            )
+
+            message = frappe.render_template(
+                template.response_html,
+                context,
+            )
+
+        else:
+            # fallback message
+            subject = f"Payment Reminder for Sales Order {so.name}"
+
+            message = f"""
+                Payment reminder triggered for Sales Order <b>{so.name}</b>.
+
+                <br><br>
+
+                Customer: {so.customer_name or so.customer}
+
+                <br>
+
+                Condition: {row.payment_condition}
+
+                <br>
+
+                Amount: {row.amount}
+            """
+
+        # --------------------------------------------------------------
+        # Send notification
+        # --------------------------------------------------------------
+        try:
+            send_notification(
+                recipients=[so.owner],
+                subject=subject,
+                message=message,
+                reference_doctype="Sales Order",
+                reference_name=so.name,
+                send_email=1,
+                send_system=1,
+                now=False,
+            )
+
+            # Update reminder date only after successful send
+            frappe.db.set_value(
+                "Customer Payment Terms",
+                row.name,
+                "last_reminder_date",
+                current_date,
+                update_modified=False,
+            )
+
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Payment Reminder Failed | SO: {so.name} | Payment Term: {row.name}",
+            )

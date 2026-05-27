@@ -130,17 +130,23 @@ def get_forwardable_departments(customer):
 
 def get_services_for_customer(customer):
 
-    so = frappe.db.exists(
+    sales_orders = frappe.db.get_all(
         "Sales Order",
-        {"customer": customer, "status": "Open", "docstatus": 1},
+        filters={
+            "customer": customer,
+            "status": "Open",
+            "docstatus": 1,
+        },
+        pluck="name",
     )
 
-    if not so:
+    if not sales_orders:
         return []
+
     # Get all items from the sales order's Items Table
     items = frappe.db.get_all(
         "Items Table",
-        filters={"parent": so, "parenttype": "Sales Order"},
+        filters={"parent": ["in", sales_orders], "parenttype": "Sales Order"},
         pluck="item",
     )
     if not items:
