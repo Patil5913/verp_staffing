@@ -2,6 +2,7 @@ import frappe
 from frappe.utils import flt
 
 from verp_staffing.accounts.doctype.sales_invoice.sales_invoice import get_sales_invoice_gl_map
+from verp_staffing.accounts.doctype.sales_invoice.sales_invoice import send_sales_invoice_email
 
 from verp_staffing.accounts.doctype.gl_entry.gl_entry import (
     cancel_gl_entries,
@@ -59,6 +60,10 @@ def on_submit_sales_invoice(doc, method=None):
         
     frappe.db.set_value("Sales Invoice", doc.name, "outstanding_amount", outstanding)
     doc.outstanding_amount = outstanding
+    
+    auto_send = frappe.db.get_single_value("Accounts Settings", "auto_send_sales_invoice_after_submission")
+    if auto_send:
+        send_sales_invoice_email(doc)
     
     # CRITICAL FIX: recompute status
     if hasattr(doc, "set_status"):
