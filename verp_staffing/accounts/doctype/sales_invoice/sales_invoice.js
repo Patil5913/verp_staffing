@@ -46,7 +46,7 @@ frappe.ui.form.on("Sales Invoice", {
 				__("Email"),
 			);
 		}
-		
+
 		(frm.doc.items || []).forEach((row) => {
 			if (!row.type) {
 				const type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";
@@ -66,25 +66,23 @@ frappe.ui.form.on("Sales Invoice", {
 			);
 		}
 		if (frm.doc.docstatus === 1) {
-			
-			frm.add_custom_button(__("Send Invoice"), function () {
-				frappe.confirm(
-					"Send Sales Invoice email to customer?",
-					function () {						
+			frm.add_custom_button(
+				__("Send Invoice"),
+				function () {
+					frappe.confirm("Send Sales Invoice email to customer?", function () {
 						frappe.call({
 							method: "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_sales_invoice_email",
 							args: { doc: frm.doc.name },
 							callback(r) {
 								if (!r.exc) {
-									
 									frappe.msgprint("Invoice sent successfully.");
 								}
-							}
+							},
 						});
-					}
-				);
-			}, __("Email"));
-
+					});
+				},
+				__("Email"),
+			);
 		}
 	},
 
@@ -176,6 +174,54 @@ frappe.ui.form.on("Sales Invoice", {
 	disable_rounded_total(frm) {
 		verp_staffing.calculation_engine.calculate_rounding(frm);
 	},
+
+	sales_order: async function (frm) {
+		if (!frm.doc.sales_order) return;
+
+		const po = await frappe.db.get_doc("Sales Order", frm.doc.sales_order);
+
+		// ---------- Parent fields ----------
+		frm.set_value("customer", po.customer);
+		frm.set_value("company", po.company);
+		frm.set_value("currency", po.currency);
+		frm.set_value("conversion_rate", po.conversion_rate);
+
+		// ---------- Clear tables ----------
+		frm.clear_table("items");
+		// frm.clear_table("taxes");
+
+		// ---------- Items ----------
+		(po.items || []).forEach((row) => {
+			let child = frm.add_child("items");
+
+			child.type = "Sales";
+			child.item = row.item;
+			child.qty = row.qty;
+			child.uom = row.uom;
+			child.rate = row.rate;
+			child.income_account = row.income_account;
+		});
+
+		// ---------- Taxes ----------
+		(po.taxes || []).forEach((row) => {
+			let tax = frm.add_child("taxes");
+
+			Object.assign(tax, row);
+		});
+
+		frm.set_value("additional_discount_account", po.additional_discount_account);
+		frm.set_value("additional_discount_percentage", po.additional_discount_percentage);
+		frm.set_value("discount_amount", po.discount_amount);
+
+		frm.refresh_fields();
+
+		// CRITICAL: wait a tick so model updates settle
+		await frappe.after_ajax();
+
+		// ---------- Now calculate ----------
+		set_currency_labels(frm);
+		verp_staffing.calculation_engine.calculate_invoice(frm);
+	},
 });
 
 frappe.ui.form.on("Items Table", {
@@ -190,7 +236,7 @@ frappe.ui.form.on("Items Table", {
 		frappe.db.get_value("Item", row.item, "stock_uom").then((r) => {
 			if (r.message && r.message.stock_uom) {
 				row.uom = r.message.stock_uom;
-				
+
 				frm.refresh_field("items");
 			}
 		});
@@ -226,12 +272,11 @@ frappe.ui.form.on("Items Table", {
 
 frappe.ui.form.on("Taxes and Charges", {
 	charge_type(frm, cdt, cdn) {
-		validate_taxes_and_charges(frm, tax);
 		const row = locals[cdt][cdn];
-
+		
 		if (row.charge_type === "Actual") {
 			frappe.model.set_value(cdt, cdn, "rate", 0);
-
+			
 			frm.fields_dict["taxes"].grid.grid_rows_by_docname[cdn].toggle_editable("rate", false);
 			frm.fields_dict["taxes"].grid.grid_rows_by_docname[cdn].toggle_editable(
 				"tax_amount",
@@ -244,25 +289,31 @@ frappe.ui.form.on("Taxes and Charges", {
 				false,
 			);
 		}
+		validate_taxes_and_charges(frm, row);
 	},
-	rate(frm) {
-		validate_taxes_and_charges(frm, tax);
+	rate(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		validate_taxes_and_charges(frm, row);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-	tax_amount(frm) {
-		validate_taxes_and_charges(frm, tax);
+	tax_amount(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		validate_taxes_and_charges(frm, row);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-	taxes_add(frm) {
-		validate_taxes_and_charges(frm, tax);
+	taxes_add(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		validate_taxes_and_charges(frm, row);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-	taxes_remove(frm) {
-		validate_taxes_and_charges(frm, tax);
+	taxes_remove(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		validate_taxes_and_charges(frm, row);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-	row_id(frm) {
-		validate_taxes_and_charges(frm, tax);
+	row_id(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		validate_taxes_and_charges(frm, row);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
