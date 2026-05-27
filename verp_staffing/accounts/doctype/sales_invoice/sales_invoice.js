@@ -3,6 +3,17 @@
 
 frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {
+		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Receivables",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
+
 		set_currency_labels(frm);
 		if (frm.doc.docstatus === 1) {
 			frm.add_custom_button("View Ledger", function () {
