@@ -48,9 +48,9 @@ class Department(Document):
                 continue
             if role in seen:
                 frappe.throw(
-                    _(
-                        "Role <b>{0}</b> is listed more than once in the Role."
-                    ).format(role)
+                    _("Role <b>{0}</b> is listed more than once in the Role.").format(
+                        role
+                    )
                 )
             seen.add(role)
 
@@ -69,6 +69,27 @@ class Department(Document):
                     ).format(service)
                 )
             seen.add(service)
+
+
+@frappe.whitelist()
+def get_department_role_query(doctype, txt, searchfield, start, page_len, filters):
+    return frappe.db.sql(
+        """
+            SELECT r.name
+            FROM `tabRole` r
+            LEFT JOIN `tabDepartment Role` dr
+              ON dr.role = r.name
+            WHERE dr.name IS NULL
+              AND r.name LIKE %(txt)s
+            ORDER BY r.name
+            LIMIT %(start)s, %(page_len)s
+            """,
+        {
+            "txt": f"%{txt}%",
+            "start": start,
+            "page_len": page_len,
+        },
+    )
 
 
 @frappe.whitelist()

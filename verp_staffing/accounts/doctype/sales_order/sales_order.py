@@ -11,7 +11,7 @@ from verp_staffing.crm.api.helpers import send_notification
 import json
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.permission_request import on_sales_order_save
-from frappe.utils import flt, money_in_words, fmt_money, today, date_diff
+from frappe.utils import flt, money_in_words, fmt_money, today, date_diff, cint
 from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
@@ -683,13 +683,9 @@ def get_interview_count_for_customer(customer):
     if not marketing:
         return 0
 
-    from verp_staffing.marketing.doctype.marketing.marketing import (
-        get_interviews_by_marketing,
-    )
-
     try:
         interviews = frappe.db.count("Interview", {"marketing": marketing})
-        return interviews if interviews else 0
+        return cint(interviews)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Interview Count Fetch Error")
         return 0
@@ -938,6 +934,8 @@ def send_payment_term_reminders():
     - 3 days from last_reminder_date
     """
 
+    current_date = today()
+
     # ------------------------------------------------------------------
     # Fetch only actionable payment terms
     # ------------------------------------------------------------------
@@ -952,7 +950,6 @@ def send_payment_term_reminders():
             "parent",
             "payment_condition",
             "counter",
-            "current_interview_count",
             "due_date",
             "amount",
             "payment_status",
@@ -994,6 +991,18 @@ def send_payment_term_reminders():
     interview_cache = {}
 
     # ------------------------------------------------------------------
+    # Load email template once
+    # ------------------------------------------------------------------
+    template_name = "Payment Term Reminder"
+
+    template = frappe.db.get_value(
+        "Email Template",
+        template_name,
+        ["subject", "response_html"],
+        as_dict=True,
+    )
+
+    # ------------------------------------------------------------------
     # Process terms
     # ------------------------------------------------------------------
     for row in payment_terms:
@@ -1006,11 +1015,11 @@ def send_payment_term_reminders():
         # --------------------------------------------------------------
         # Reminder cooldown
         # --------------------------------------------------------------
-        if row.last_reminder_date:
-            days = date_diff(today(), row.last_reminder_date)
-
-            if days < 3:
-                continue
+        if (
+            row.last_reminder_date
+            and date_diff(current_date, row.last_reminder_date) < 3
+        ):
+            continue
 
         should_notify = False
 
@@ -1018,21 +1027,23 @@ def send_payment_term_reminders():
         # Number of Days logic
         # --------------------------------------------------------------
         if row.payment_condition == "Number of Days":
-            if row.due_date and str(today()) >= str(row.due_date):
+
+            if row.due_date and current_date >= row.due_date:
                 should_notify = True
 
         # --------------------------------------------------------------
         # Number of Interviews logic
         # --------------------------------------------------------------
         elif row.payment_condition == "Number of Interviews":
+
             customer = so.customer
 
             if customer not in interview_cache:
-                interview_cache[customer] = get_interview_count_for_customer(customer)
+                interview_cache[customer] = (
+                    get_interview_count_for_customer(customer)
+                )
 
-            interview_count = interview_cache[customer]
-
-            if interview_count >= (row.counter or 0):
+            if interview_cache[customer] >= (row.counter or 0):
                 should_notify = True
 
         # --------------------------------------------------------------
@@ -1056,15 +1067,9 @@ def send_payment_term_reminders():
         }
 
         # --------------------------------------------------------------
-        # Email Template
+        # Render template
         # --------------------------------------------------------------
-        template_name = "Payment Term Reminder"
-
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc(
-                "Email Template",
-                template_name,
-            )
+        if template:
 
             subject = frappe.render_template(
                 template.subject,
@@ -1077,7 +1082,7 @@ def send_payment_term_reminders():
             )
 
         else:
-            # use basic fallback if template not found
+            # fallback message
             subject = f"Payment Reminder for Sales Order {so.name}"
 
             message = f"""
@@ -1097,16 +1102,11 @@ def send_payment_term_reminders():
             """
 
         # --------------------------------------------------------------
-        # Recipients (the person who created the SO)
-        # -------------------------------------------------------------
-        recipients = [so.owner]
-
-        # --------------------------------------------------------------
         # Send notification
         # --------------------------------------------------------------
         try:
             send_notification(
-                recipients=recipients,
+                recipients=[so.owner],
                 subject=subject,
                 message=message,
                 reference_doctype="Sales Order",
@@ -1121,7 +1121,7 @@ def send_payment_term_reminders():
                 "Customer Payment Terms",
                 row.name,
                 "last_reminder_date",
-                today(),
+                current_date,
                 update_modified=False,
             )
 

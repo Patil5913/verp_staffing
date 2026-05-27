@@ -23,7 +23,7 @@ class PaymentEntry(Document):
                 frappe.throw(
                     "This Payment Entry has been rejected and cannot be edited. "
                     "Re-request verification from the Sales Order to reactivate it.",
-                    title="Action Blocked"
+                    title="Action Blocked",
                 )
         validate_party_type_in_master(self)
         self.validate_references_not_tampered()
@@ -100,8 +100,12 @@ class PaymentEntry(Document):
                 _append_verification_log,
             )
 
+            now = frappe.utils.now_datetime()
+            now_str = frappe.utils.format_datetime(now)
             _append_verification_log(
-                self.payment_term_row, f"Verified by {frappe.session.user} (submitted)"
+                self.payment_term_row,
+                f"Verified by {frappe.session.user} (submitted)",
+                now_str,
             )
 
         self.make_gl_entries()
@@ -1496,6 +1500,7 @@ def _get_je_outstanding(voucher_no, party_type=None, party=None):
 
     return max(0, abs(original) - abs(allocated))
 
+
 @frappe.whitelist()
 def get_pending_payment_verification_requests():
     return frappe.get_all(
@@ -1503,9 +1508,7 @@ def get_pending_payment_verification_requests():
         filters={
             "verification_status": "Pending Verification",
         },
-        or_filters={
-            "payment_term_row": ["is", "set"]
-        },
+        or_filters={"payment_term_row": ["is", "set"]},
         fields=[
             "name",
             "party",
