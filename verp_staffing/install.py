@@ -9,8 +9,8 @@ SERVICE_DOCTYPE_MAP = {
     "training": "Training",
     "cover letter": "Cover Letter",
     "marketing": "Marketing",
-    "cr":"CR",
-    "onboarding": "Onboarding"
+    "cr": "CR",
+    "onboarding": "Onboarding",
 }
 
 
@@ -49,7 +49,7 @@ ROLES = [
     "_show_marketing",
     "_show_employees",
     "_show_onboarding",
-    "_show_cr"
+    "_show_cr",
 ]
 
 PERM_FIELDS = [
@@ -137,7 +137,6 @@ ROLE_PERMISSIONS = {
         ],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Stage": ["read", "create"],
         "Sales Order": [
             "select",
             "read",
@@ -149,15 +148,59 @@ ROLE_PERMISSIONS = {
             "report",
             "share",
         ],
+        "Sales Invoice": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "email",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Fiscal Year": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Accounts Settings": [
+            "select",
+            "read",
+        ],
+        "UOM": ["select", "read", "create"],
+        "Company": ["read", "select"],
+        "Account": ["read", "select"],
         "Agreement": ["select", "read", "write", "create"],
         "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
+        "JDC": ["read"],
+        "Cover Letter": ["read"],
+        "Training": ["read"],
+        "Technical Other Services": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
+        "Marketing Other Services": ["read"],
         "Interview": ["read"],
-        "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"],
+        "Other Services": ["read"],
+        "Item": ["read", "select"],
+        "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
     },
     "Sales Manager": {
@@ -165,17 +208,60 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Stage": ["read", "create"],
         "Sales Order": ["select", "read", "write", "create"],
+        "Sales Invoice": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "email",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Fiscal Year": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Accounts Settings": [
+            "select",
+            "read",
+        ],
+        "UOM": ["select", "read", "create"],
+        "Company": ["read", "select"],
+        "Account": ["read", "select"],
         "Agreement": ["select", "read", "write", "create"],
         "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
+        "JDC": ["read"],
+        "Cover Letter": ["read"],
+        "Training": ["read"],
+        "Technical Other Services": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
+        "Marketing Other Services": ["read"],
         "Interview": ["read"],
-        "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"],
+        "Other Services": ["read"],
+        "Item": ["read", "select"],
+        "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
     },
     "Sales Team Lead": {
@@ -183,17 +269,60 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Stage": ["read", "create"],
         "Sales Order": ["select", "read", "write", "create"],
+        "Sales Invoice": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "email",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Fiscal Year": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Accounts Settings": [
+            "select",
+            "read",
+        ],
+        "UOM": ["select", "read", "create"],
+        "Company": ["read", "select"],
+        "Account": ["read", "select"],
         "Agreement": ["select", "read", "write", "create"],
         "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
+        "JDC": ["read"],
+        "Cover Letter": ["read"],
+        "Training": ["read"],
+        "Technical Other Services": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
+        "Marketing Other Services": ["read"],
         "Interview": ["read"],
-        "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"],
+        "Other Services": ["read"],
+        "Item": ["read", "select"],
+        "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
     },
     "Sales Person": {
@@ -201,17 +330,58 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Stage": ["read", "create"],
         "Sales Order": ["select", "read", "write", "create"],
+        "Sales Invoice": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "email",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Fiscal Year": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Accounts Settings": [
+            "select",
+            "read",
+        ],
+        "UOM": ["select", "read", "create"],
+        "Company": ["read", "select"],
+        "Account": ["read", "select"],
         "Agreement": ["select", "read", "write", "create"],
         "Pdf Agreement Template": ["select", "read", "write", "create"],
         "Lead Detail Form": ["read"],
         "Resume": ["read"],
+        "JDC": ["read"],
+        "Cover Letter": ["read"],
+        "Training": ["read"],
+        "Technical Other Services": ["read"],
         "RUC": ["read"],
         "Marketing": ["read"],
+        "Marketing Other Services": ["read"],
         "Interview": ["read"],
-        "Service":["read","select"],
-        "Sales Stage": ["read", "create","select"],
+        "Other Services": ["read"],
+        "Item": ["read", "select"],
+        "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
     },
     "Marketing Master Manager": {
@@ -387,12 +557,118 @@ ROLE_PERMISSIONS = {
         "Communication": ["read", "create", "email"],
         "Email Account": ["read"],
     },
-    "OnBoarding Person":{
-        "RUC": ["read", "write", "create", "select"],
+    "OnBoarding Person": {
+        "Sales Invoice": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "email",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Fiscal Year": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Accounts Settings": [
+            "select",
+            "read",
+        ],
+        "UOM": ["select", "read", "create"],
+        "Company": ["read", "select"],
+        "Account": ["read", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
+        "Resume": ["read"],
+        "JDC": ["read"],
+        "Cover Letter": ["read"],
+        "Training": ["read"],
+        "Technical Other Services": ["read"],
+        "RUC": ["read"],
+        "Marketing": ["read"],
+        "Marketing Other Services": ["read"],
+        "Interview": ["read"],
+        "Other Services": ["read"],
+        "Item": ["read", "select"],
+        "Sales Stage": ["read", "create", "select"],
+        "ERP Configuration": ["read"],
+    },
+    "CR": {
+        "Sales Invoice": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "delete",
+            "print",
+            "email",
+            "report",
+            "share",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "email",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Fiscal Year": [
+            "select",
+            "read",
+            "write",
+            "create",
+        ],
+        "Accounts Settings": [
+            "select",
+            "read",
+        ],
+        "UOM": ["select", "read", "create"],
+        "Company": ["read", "select"],
+        "Account": ["read", "select"],
+        "Customer": ["read", "select"],
+        "Employee": ["read", "select"],
+        "Outsource": ["read", "write", "create", "select"],
+        "Lead Detail Form": ["read"],
+        "Resume": ["read"],
+        "JDC": ["read"],
+        "Cover Letter": ["read"],
+        "Training": ["read"],
+        "Technical Other Services": ["read"],
+        "RUC": ["read"],
+        "Marketing": ["read"],
+        "Marketing Other Services": ["read"],
+        "Interview": ["read"],
+        "Other Services": ["read"],
+        "Item": ["read", "select"],
+        "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
     },
     "_show_marketing": {"Customer": ["read", "report"]},
@@ -428,6 +704,8 @@ DEPARTMENTS_ROLES = {
         "Support Person",
     ],
     "HR": ["HR Manager", "HR"],
+    "CR": ["CR"],
+    "Onboarding": ["OnBoarding Person"],
 }
 
 HIERARCHY_DATA = [
@@ -502,6 +780,20 @@ HIERARCHY_DATA = [
             {"parent_role": "HR Manager", "child_roles": ["HR"]},
         ],
         "auto_assign_config": {"role": "HR Manager"},
+    },
+    {
+        "department": "CR",
+        "role_hierarchy_json": [
+            {"parent_role": "CR", "child_roles": []},
+        ],
+        "auto_assign_config": {"role": "CR"},
+    },
+    {
+        "department": "Onboarding",
+        "role_hierarchy_json": [
+            {"parent_role": "OnBoarding Person", "child_roles": []},
+        ],
+        "auto_assign_config": {"role": "OnBoarding Person"},
     },
 ]
 
@@ -752,7 +1044,7 @@ FORM_TOURS = {
                 "description": "Provide the official name of the customer. This will be used across all transactions and records.",
                 "position": "Right Center",
                 "label": "Customer Name",
-                "fieldtype": "Data"
+                "fieldtype": "Data",
             },
             {
                 "title": "Select Customer Source",
@@ -760,7 +1052,7 @@ FORM_TOURS = {
                 "description": "Choose where this customer originated from. Select <b>Lead</b> or <b>Opportunity</b>.",
                 "position": "Right Center",
                 "label": "Customer From",
-                "fieldtype": "Link"
+                "fieldtype": "Link",
             },
             {
                 "title": "Link the Source Record",
@@ -768,9 +1060,9 @@ FORM_TOURS = {
                 "description": "Based on the selected source, choose the relevant record. Only matching <b>Leads</b> or <b>Opportunities</b> will be shown.",
                 "position": "Right Center",
                 "label": "Party",
-                "fieldtype": "Dynamic Link"
-            }
-        ]
+                "fieldtype": "Dynamic Link",
+            },
+        ],
     },
 }
 
@@ -997,7 +1289,6 @@ def seed_type_of_interview():
 
 def seed_form_tours():
     for reference_doctype, config in FORM_TOURS.items():
-
         tour_name = reference_doctype
         meta = frappe.get_meta(reference_doctype)
 
@@ -1060,23 +1351,24 @@ def create_all_roles():
 
 def seed_employee_departments():
     for department_name, roles in DEPARTMENTS_ROLES.items():
-
         if frappe.db.exists("Department", department_name):
             # Fetch existing doc to get latest 'modified' timestamp
             doc = frappe.get_doc("Department", department_name)
 
             doc.role = []  # Clear existing roles to avoid duplication
-            # doc.save(ignore_permissions=True) 
+            # doc.save(ignore_permissions=True)
             for r in roles:
                 doc.append("role", {"role": r})
             doc.save(ignore_permissions=True)
             print(f"Updated Department: {department_name}")
         else:
             # Create new
-            doc = frappe.get_doc({
-                "doctype": "Department",
-                "department_name": department_name,
-            })
+            doc = frappe.get_doc(
+                {
+                    "doctype": "Department",
+                    "department_name": department_name,
+                }
+            )
             for r in roles:
                 doc.append("role", {"role": r})
             doc.insert(ignore_permissions=True)
@@ -1090,7 +1382,6 @@ def assign_permissions_to_roles(role_permissions: dict):
     """
 
     for role, doctypes in role_permissions.items():
-
         # Never touch Administrator
         if role == "Administrator":
             continue
@@ -1100,7 +1391,6 @@ def assign_permissions_to_roles(role_permissions: dict):
             continue
 
         for doctype, config in doctypes.items():
-
             # Doctype must exist
             if not frappe.db.exists("DocType", doctype):
                 continue
@@ -1194,7 +1484,7 @@ def remove_default_workspaces():
         "Financial Reports",
         "Receivables",
         "Payables",
-        "Pending PE Requests"
+        "Pending PE Requests",
     ]
 
     # Hide all others
@@ -1203,9 +1493,7 @@ def remove_default_workspaces():
         UPDATE `tabWorkspace`
         SET is_hidden = 1
         WHERE name NOT IN ({})
-    """.format(
-            ", ".join(["%s"] * len(keep_list))
-        ),
+    """.format(", ".join(["%s"] * len(keep_list))),
         tuple(keep_list),
     )
 
@@ -1264,7 +1552,6 @@ def seed_bulk_users_with_password():
 
     try:
         for role_name, count in ROLE_USER_COUNTS.items():
-
             # Role must exist
             if not frappe.db.exists("Role", role_name):
                 frappe.log_error(
@@ -1330,7 +1617,7 @@ DEPARTMENT_WORKSPACE_ROLE_MAP = {
     "Marketing": ["_show_marketing"],
     "HR": ["_show_employees"],
     "Onboarding": ["_show_onboarding"],
-    "CR":["_show_cr"]
+    "CR": ["_show_cr"],
 }
 
 
@@ -1414,7 +1701,6 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
     # -------------------------------------------------
     for department, edges in hierarchy_edges.items():
         for parent_role, child_role in edges:
-
             parents = employee_by_role.get(parent_role, [])
             children = employee_by_role.get(child_role, [])
 
@@ -1516,30 +1802,33 @@ SERVICE_DEPARTMENT_MAP = {
 def seed_services_and_departments():
     for department_name, services in SERVICE_DEPARTMENT_MAP.items():
         # Step 1: Ensure each service Item exists with is_service=1
-        if not frappe.db.exists("Item Category","ALL"):
-            frappe.get_doc({
-                "doctype": "Item Category",
-                "item_category_name":"ALL"
-            }).insert()
+        if not frappe.db.exists("Item Category", "ALL"):
+            frappe.get_doc(
+                {"doctype": "Item Category", "item_category_name": "ALL"}
+            ).insert()
         for service_name in services:
             if not frappe.db.exists("Item", service_name):
-                frappe.get_doc({
-                    "doctype": "Item",
-                    "item_name": service_name,
-                    "is_service": 1,
-                    "item_category":"ALL",
-                    "disabled": 0,
-                }).insert(ignore_permissions=True)
+                frappe.get_doc(
+                    {
+                        "doctype": "Item",
+                        "item_name": service_name,
+                        "is_service": 1,
+                        "item_category": "ALL",
+                        "disabled": 0,
+                    }
+                ).insert(ignore_permissions=True)
             else:
                 # Ensure existing item is flagged as service
                 frappe.db.set_value("Item", service_name, "is_service", 1)
 
         # Step 2: Ensure Department exists
         if not frappe.db.exists("Department", department_name):
-            department = frappe.get_doc({
-                "doctype": "Department",
-                "department_name": department_name,
-            })
+            department = frappe.get_doc(
+                {
+                    "doctype": "Department",
+                    "department_name": department_name,
+                }
+            )
             department.insert(ignore_permissions=True)
         else:
             department = frappe.get_doc("Department", department_name)
