@@ -13,6 +13,7 @@
   "customer",
   "company",
   "sales_order",
+  "company_currency",
   "column_break_dqbo",
   "posting_date",
   "due_date",
@@ -483,13 +484,20 @@
    "label": "Sales Order",
    "options": "Sales Order",
    "set_only_once": 1
+  },
+  {
+   "fetch_from": "company.default_currency",
+   "fetch_if_empty": 1,
+   "fieldname": "company_currency",
+   "fieldtype": "Data",
+   "label": "Company Currency"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-26 15:28:19.309566",
+ "modified": "2026-05-27 11:31:16.713260",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",

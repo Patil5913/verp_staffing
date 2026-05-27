@@ -264,32 +264,27 @@ frappe.ui.form.on("Taxes and Charges", {
 function handle_currency_ui(frm) {
 	if (!frm.doc.company || !frm.doc.currency) return;
 
-	frappe.call({
-		method: "verp_staffing.accounts.doctype.company.company.get_company_currency",
-		args: { company: frm.doc.company },
-		callback(r) {
-			const company_currency = r.message;
+	const company_currency = frm.doc.company_currency;
 
-			if (!company_currency) return;
+	if (!company_currency) return;
 
-			if (frm.doc.currency === company_currency) {
-				// Same currency
-				frm.set_value("conversion_rate", 1);
+	if (frm.doc.currency === company_currency) {
+		// Same currency
+		frm.set_value("conversion_rate", 1);
 
-				frm.set_df_property("conversion_rate", "hidden", 1);
-				frm.set_df_property("conversion_rate", "reqd", 0);
+		frm.set_df_property("conversion_rate", "hidden", 1);
+		frm.set_df_property("conversion_rate", "reqd", 0);
 
-				toggle_base_fields(frm, false);
-			} else {
-				// Different currency
-				frm.set_df_property("conversion_rate", "hidden", 0);
-				frm.set_df_property("conversion_rate", "reqd", 1);
+		toggle_base_fields(frm, false);
+	} else {
+		// Different currency
+		frm.set_df_property("conversion_rate", "hidden", 0);
+		frm.set_df_property("conversion_rate", "reqd", 1);
 
-				toggle_base_fields(frm, true);
-			}
-		},
-	});
+		toggle_base_fields(frm, true);
+	}
 }
+
 
 async function validate_fiscal_year(frm) {
 	if (!frm.doc.company || !frm.doc.posting_date) return;
