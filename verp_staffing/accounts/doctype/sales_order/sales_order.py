@@ -868,10 +868,14 @@ def reject_payment_entry(payment_entry, remarks):
 
 
 def _append_verification_log(doc, message, now_str):
+    frappe.errprint(f"is instance {isinstance(doc,str)}")
+    if isinstance(doc,str):
+        frappe.errprint("is instance")
+        doc = frappe.get_doc("Customer Payment Terms",doc)
     existing = doc.verification_log or ""
 
     new_line = f"[{now_str}] {message}"
-
+    frappe.errprint(f"doc: {doc}")
     doc.verification_log = f"{existing}\n{new_line}".strip()
 
 
