@@ -349,17 +349,6 @@ class SalesInvoice(Document):
                 seen[item.item] = item.idx
 
     def validate_taxes(self):
-        """
-        Centralized tax validation.
-
-        Covers:
-        - tax rate validation
-        - tax amount validation
-        - charge type validation
-        - previous row validation
-        - row_id validation
-        - auto description filling
-        """
 
         previous_row_types = (
             "On Previous Row Amount",
@@ -379,23 +368,24 @@ class SalesInvoice(Document):
             idx = tax.idx
 
             charge_type = tax.charge_type
-            row_id = cint(tax.row_id)
+            row_id = cint(getattr(tax, "row_id", 0))
+
             rate = flt(tax.rate)
             tax_amount = flt(tax.tax_amount)
 
-            # =====================================================
+            # ==========================================
             # Auto Description
-            # =====================================================
+            # ==========================================
 
             if tax.account_head and not tax.description:
                 tax.description = tax.account_head.split(" - ")[0]
 
-            # =====================================================
+            # ==========================================
             # Charge Type Required
-            # =====================================================
+            # ==========================================
 
             if not charge_type and (
-                tax.row_id
+                getattr(tax, "row_id", None)
                 or tax.rate
                 or tax.tax_amount
             ):
@@ -403,11 +393,14 @@ class SalesInvoice(Document):
                     _("Row {0}: Please select Charge Type first").format(idx)
                 )
 
-            # =====================================================
+            # ==========================================
             # Direct Charge Types
-            # =====================================================
+            # ==========================================
 
-            if charge_type in direct_charge_types and tax.row_id:
+            if (
+                charge_type in direct_charge_types
+                and getattr(tax, "row_id", None)
+            ):
 
                 frappe.throw(
                     _(
@@ -417,9 +410,9 @@ class SalesInvoice(Document):
                     ).format(idx)
                 )
 
-            # =====================================================
+            # ==========================================
             # Previous Row Charge Types
-            # =====================================================
+            # ==========================================
 
             if charge_type in previous_row_types:
 
@@ -433,8 +426,10 @@ class SalesInvoice(Document):
                     )
 
                 if not row_id:
-                    tax.row_id = idx - 1
-                    row_id = tax.row_id
+                    row_id = idx - 1
+
+                    if hasattr(tax, "row_id"):
+                        tax.row_id = row_id
 
                 if row_id < 1:
                     frappe.throw(
@@ -449,9 +444,9 @@ class SalesInvoice(Document):
                         ).format(idx, row_id)
                     )
 
-            # =====================================================
+            # ==========================================
             # ACTUAL TYPE VALIDATION
-            # =====================================================
+            # ==========================================
 
             if charge_type == "Actual":
 
@@ -470,9 +465,9 @@ class SalesInvoice(Document):
 
                 continue
 
-            # =====================================================
+            # ==========================================
             # RATE VALIDATION
-            # =====================================================
+            # ==========================================
 
             if tax.rate is None:
                 frappe.throw(
