@@ -182,23 +182,33 @@ def get_logged_in_employee():
 
 def get_reporting_subtree(root_employee, department):
     """
-    Returns root employee + all downstream employees
-    via Employee Assignment Detail.assigned_to chain.
+    Return root employee and all downstream employees
+    through Employee Assignment Detail.assigned_to hierarchy.
     """
-    result = {root_employee}
+
+    assignments = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"department": department},
+        fields=["parent", "assigned_to"],
+    )
+
+    reporting_map = {}
+
+    for row in assignments:
+        reporting_map.setdefault(row.assigned_to, []).append(row.parent)
+
+    visited = {root_employee}
     stack = [root_employee]
+
     while stack:
-        current = stack.pop()
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters={"assigned_to": current, "department": department},
-            pluck="parent",
-        )
-        for emp in children:
-            if emp not in result:
-                result.add(emp)
-                stack.append(emp)
-    return list(result)
+        employee = stack.pop()
+
+        for child in reporting_map.get(employee, ()):
+            if child not in visited:
+                visited.add(child)
+                stack.append(child)
+
+    return list(visited)
 
 
 def get_allowed_employee_ids(department):
