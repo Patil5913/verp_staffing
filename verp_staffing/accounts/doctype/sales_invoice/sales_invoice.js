@@ -344,9 +344,6 @@ function handle_currency_ui(frm) {
 
 function validate_taxes_and_charges(frm, tax) {
 	let msg = "";
-	if (tax.account_head && !tax.description) {
-		tax.description = tax.account_head.split(" - ")[0];
-	}
 	if (!tax.charge_type && (tax.row_id || tax.rate || tax.tax_amount)) {
 		msg = __("Please select Charge Type first");
 		tax.row_id = "";
