@@ -375,7 +375,7 @@ class TestReportingSubtree(InterviewTestBase):
 
     def test_subtree_with_no_children_returns_root_only(self):
         result = self._import()("EMP-FAKE-002", "HR")
-        self.assertEqual(result, ["EMP-FAKE-002"])
+        self.assertEqual(result, {"EMP-FAKE-002"})
 
 
 # ===========================================================================
