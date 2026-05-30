@@ -64,47 +64,14 @@ def get_all_subordinates(root_employee: str, department: str | None = None) -> s
 @frappe.whitelist()
 def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filters):
     user = frappe.session.user
-
     department = filters.get("department") if filters else None
 
-    if user == "Administrator":
-        if department:
-            return frappe.db.sql(
-                """
-                SELECT DISTINCT e.name
-                FROM `tabEmployee` e
-                INNER JOIN `tabEmployee Assignment Detail` d
-                    ON d.parent = e.name
-                WHERE d.department = %s
-                AND e.name LIKE %s
-                ORDER BY e.name
-                LIMIT %s OFFSET %s
-                """,
-                (department, f"%{txt}%", page_len, start),
-            )
+    allowed = get_allowed_employees(user, department)
 
-        return frappe.db.sql(
-            """
-            SELECT name
-            FROM `tabEmployee`
-            WHERE name LIKE %s
-            ORDER BY name
-            LIMIT %s OFFSET %s
-            """,
-            (f"%{txt}%", page_len, start),
-        )
-
-    employee = get_employee_name(user)
-    if not employee:
+    if not allowed:
         return []
 
-    allowed_set = get_all_subordinates(employee, department)
-
-    if not allowed_set:
-        return []
-
-    allowed = list(allowed_set) 
-
+    # safe LIKE filter in SQL
     placeholders = ", ".join(["%s"] * len(allowed))
 
     return frappe.db.sql(
@@ -116,8 +83,62 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
         ORDER BY name
         LIMIT %s OFFSET %s
         """,
-        allowed + [f"%{txt}%", page_len, start],
+        list(allowed) + [f"%{txt}%", page_len, start],
     )
+    
+def get_allowed_employees(user, department=None):
+    """
+    Returns employees user is allowed to see.
+    """
+
+    if user == "Administrator":
+        # admin sees all (optionally filtered by department)
+        if department:
+            return set(
+                frappe.get_all(
+                    "Employee Assignment Detail",
+                    filters={"department": department},
+                    pluck="parent",
+                    distinct=True,
+                )
+            )
+        return set(frappe.get_all("Employee", pluck="name"))
+
+    employee = get_employee_name(user)
+    if not employee:
+        return set()
+
+    return get_reporting_subtree(employee, department)
+
+def get_reporting_subtree(root_employee, department=None):
+    """
+    Returns root employee + all downstream employees
+    using Employee Assignment Detail hierarchy.
+    """
+
+    assignments = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"department": department} if department else {},
+        fields=["parent", "assigned_to"],
+    )
+
+    children_map = {}
+
+    for row in assignments:
+        children_map.setdefault(row.assigned_to, []).append(row.parent)
+
+    visited = set()
+    stack = [root_employee]
+
+    while stack:
+        emp = stack.pop()
+        if emp in visited:
+            continue
+
+        visited.add(emp)
+        stack.extend(children_map.get(emp, []))
+
+    return visited
 
 
 @frappe.whitelist()

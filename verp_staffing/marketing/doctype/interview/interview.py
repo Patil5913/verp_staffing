@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.helpers import get_reporting_subtree
 
 
 class Interview(Document):
@@ -174,42 +175,6 @@ def get_logged_in_employee():
         {"user": frappe.session.user},
         "name",
     )
-
-
-# ---------------------------------------------------------------------------
-# Core logic (assigned_to tree)
-# ---------------------------------------------------------------------------
-
-def get_reporting_subtree(root_employee, department):
-    """
-    Return root employee and all downstream employees
-    through Employee Assignment Detail.assigned_to hierarchy.
-    """
-
-    assignments = frappe.get_all(
-        "Employee Assignment Detail",
-        filters={"department": department},
-        fields=["parent", "assigned_to"],
-    )
-
-    reporting_map = {}
-
-    for row in assignments:
-        reporting_map.setdefault(row.assigned_to, []).append(row.parent)
-
-    visited = {root_employee}
-    stack = [root_employee]
-
-    while stack:
-        employee = stack.pop()
-
-        for child in reporting_map.get(employee, ()):
-            if child not in visited:
-                visited.add(child)
-                stack.append(child)
-
-    return list(visited)
-
 
 def get_allowed_employee_ids(department):
     """
