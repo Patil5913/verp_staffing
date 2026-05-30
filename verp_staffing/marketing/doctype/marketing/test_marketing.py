@@ -272,19 +272,19 @@ class TestGetInterviewsByMarketing(MarketingTestBase):
 
     def test_linked_interview_appears_in_results(self):
         mkt = make_marketing(customer=make_customer(_uid("C")).name)
-        make_interview(mkt.name)
+        make_interview(marketing_link=mkt.name)
         self.assertEqual(len(self.get_interviews(mkt.name)), 1)
 
     def test_result_rows_contain_company_field(self):
         mkt = make_marketing(customer=make_customer(_uid("C")).name)
-        make_interview(mkt.name)
+        make_interview(marketing_link=mkt.name)
         result = self.get_interviews(mkt.name)
         self.assertIn("company", result[0])
 
     def test_interviews_from_other_marketing_not_included(self):
         m1 = make_marketing(customer=make_customer(_uid("A")).name)
         m2 = make_marketing(customer=make_customer(_uid("B")).name)
-        make_interview(m1.name)
+        make_interview(marketing_link=m1.name)
         self.assertEqual(len(self.get_interviews(m2.name)), 0)
 
 

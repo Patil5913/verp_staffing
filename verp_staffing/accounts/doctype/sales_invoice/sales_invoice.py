@@ -374,13 +374,6 @@ class SalesInvoice(Document):
             tax_amount = flt(tax.tax_amount)
 
             # ==========================================
-            # Auto Description
-            # ==========================================
-
-            if tax.account_head and not tax.description:
-                tax.description = tax.account_head.split(" - ")[0]
-
-            # ==========================================
             # Charge Type Required
             # ==========================================
 

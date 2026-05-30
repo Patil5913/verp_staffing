@@ -11,7 +11,7 @@ from verp_staffing.accounts.engine.calculator import run_calculation
 
 class PurchaseOrder(Document):
     def validate(self):
-        self.validate_auto_set_transaction_date()
+        self.validate_auto_set_posting_date()
 
         self.validate_mandatory()
         self.validate_expense_accounts()
@@ -22,21 +22,21 @@ class PurchaseOrder(Document):
         run_calculation(self)
         self.set_in_words()
 
-    def validate_auto_set_transaction_date(self):
+    def validate_auto_set_posting_date(self):
         # Don't auto set the posting date and time if invoice is amended
         if self.is_new() and self.amended_from:
-            self.set_transaction_date = 1
+            self.set_posting_date = 1
 
-        self.validate_transaction_date()
+        self.validate_posting_date()
 
-    def validate_transaction_date(self):
+    def validate_posting_date(self):
         # set Edit Posting Date and Time to 1 while data import
-        if frappe.flags.in_import and self.transaction_date:
-            self.set_transaction_date = 1
+        if frappe.flags.in_import and self.posting_date:
+            self.set_posting_date = 1
 
-        if not getattr(self, "set_transaction_date", None):
+        if not getattr(self, "set_posting_date", None):
             now = now_datetime()
-            self.transaction_date = now.strftime("%Y-%m-%d")
+            self.posting_date = now.strftime("%Y-%m-%d")
 
     def validate_expense_accounts(self):
         for item in self.items:

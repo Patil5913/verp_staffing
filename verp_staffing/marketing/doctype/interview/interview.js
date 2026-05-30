@@ -8,25 +8,16 @@ frappe.ui.form.on("Interview", {
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
-		fetch_and_render_resume(frm);
-
+		
 		set_round_numbers(frm);
-
-		const grid = frm.fields_dict.interview_rounds_table?.grid;
-		if (!grid) return;
-
-		grid.update_docfield_property("date", "read_only", 1);
-		grid.update_docfield_property("round", "read_only", 1);
-
+		
 		if (!frm.is_new()) {
 			frm.set_df_property("marketing_link", "read_only", 1);
 			frm.set_df_property("role", "read_only", 1);
+			frm.set_df_property("compnay", "read_only", 1);
+			fetch_and_render_resume(frm);
 		}
 	},
-
-	// validate(frm) {
-	// 	validate_interview_times(frm);
-	// },
 });
 
 frappe.ui.form.on("Interview Round", {
@@ -34,11 +25,6 @@ frappe.ui.form.on("Interview Round", {
 		set_round_numbers(frm);
 
 		const row = locals[cdt][cdn];
-
-		// set default today's date
-		if (!row.date) {
-			row.date = frappe.datetime.get_today();
-		}
 
 		// adding previos follow up value in state
 		row.__prev_follow_up = row.follow_up || 0;
@@ -73,83 +59,55 @@ function set_round_numbers(frm) {
 	frm.refresh_field("interview_rounds_table");
 }
 
-// function validate_interview_times(frm) {
-// 	const rows = frm.doc.interview_rounds_table || [];
-
-// 	const timeRegex =
-// 		/^(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s-\s(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s\((EDT|EST)\)$/;
-
-// 	rows.forEach((row, index) => {
-// 		// if (!row.time_of_interview) {
-// 		// 	frappe.throw(`Row ${index + 1}: Time of Interview is required`);
-// 		// }
-
-// 		if (!timeRegex.test(row.time_of_interview)) {
-// 			frappe.throw(
-// 				`Row ${index + 1}: Invalid Time of Interview format.\n` +
-// 					`Expected: HH:MM (AM/PM) - HH:MM (AM/PM) (EDT/EST)\n` +
-// 					`Example: 01:00 PM - 03:00 PM (EST)`,
-// 			);
-// 		}
-// 	});
-// }
-
 function fetch_and_render_resume(frm) {
+	const set_html = (html) =>
+		frm.set_df_property("resume", "options", html);
+
 	frappe.db
-		.get_list("Marketing", {
-			filters: {
-				name: frm.doc.marketing_link,
-			},
-			fields: ["name", "customer"],
-			limit: 1,
-		})
-		.then((Marketing_res) => {
-			if (!Marketing_res || !Marketing_res.length || !Marketing_res[0].customer) {
-				return;
-			}
-			const customer = Marketing_res[0].customer;
+		.get_value(
+			"Marketing",
+			frm.doc.marketing_link,
+			"customer",
+		)
+		.then(({ message }) => {
+			const customer = message?.customer;
+
 			if (!customer) {
-				frm.set_df_property(
-					"resume",
-					"options",
-					"<div style='color:#888'>No customer selected</div>",
-				);
+				set_html('<div style="color:#888">No customer selected</div>');
+				return null;
+			}
+
+			return frappe.db.get_value(
+				"Resume",
+				{
+					customer,
+				},
+				["resume"],
+			);
+		})
+		.then((r) => {
+			const file_url = r?.message?.resume;
+
+			if (!file_url) {
+				set_html('<div style="color:#888">No resume uploaded</div>');
 				return;
 			}
-			frappe.db
-				.get_list("Resume", {
-					filters: {
-						customer: customer,
-					},
-					fields: ["name", "resume"],
-					order_by: "creation desc",
-					limit: 1,
-				})
-				.then((res) => {
-					if (!res || !res.length || !res[0].resume) {
-						frm.set_df_property(
-							"resume",
-							"options",
-							"<div style='color:#888'>No resume uploaded</div>",
-						);
-						return;
-					}
 
-					const file_url = res[0].resume;
-
-					const html = `
-            <div style="padding:8px">
-                <a href="${file_url}" target="_blank" style="
-                    color:#1a73e8;
-                    font-weight:600;
-                    text-decoration:none;
-                ">
-                    📄 View Resume
-                </a>
-            </div>
-        `;
-
-					frm.set_df_property("resume", "options", html);
-				});
+			set_html(`
+				<div style="padding:8px">
+					<a href="${file_url}"
+						target="_blank"
+						style="
+							color:#1a73e8;
+							font-weight:600;
+							text-decoration:none;
+						">
+						📄 View Resume
+					</a>
+				</div>
+			`);
+		})
+		.catch(() => {
+			set_html('<div style="color:#888">No resume uploaded</div>');
 		});
 }
