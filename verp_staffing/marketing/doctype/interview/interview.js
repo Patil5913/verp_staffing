@@ -1,5 +1,16 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
+// List view JS for your DocType
+// frappe.listview_settings['Interview'] = {
+//     onload: function(listview) {
+//         // Hide filter button
+//         listview.page.btn_filter && listview.page.btn_filter.hide();
+        
+//         // Or hide via DOM
+//         $('.list-filter-button').hide();
+//         $('[data-action="filter"]').hide();
+//     }
+// };
 
 frappe.ui.form.on("Interview", {
 	refresh(frm) {
@@ -12,21 +23,11 @@ frappe.ui.form.on("Interview", {
 
 		set_round_numbers(frm);
 
-		const grid = frm.fields_dict.interview_rounds_table?.grid;
-		if (!grid) return;
-
-		grid.update_docfield_property("date", "read_only", 1);
-		grid.update_docfield_property("round", "read_only", 1);
-
 		if (!frm.is_new()) {
 			frm.set_df_property("marketing_link", "read_only", 1);
 			frm.set_df_property("role", "read_only", 1);
 		}
 	},
-
-	// validate(frm) {
-	// 	validate_interview_times(frm);
-	// },
 });
 
 frappe.ui.form.on("Interview Round", {
@@ -34,11 +35,6 @@ frappe.ui.form.on("Interview Round", {
 		set_round_numbers(frm);
 
 		const row = locals[cdt][cdn];
-
-		// set default today's date
-		if (!row.date) {
-			row.date = frappe.datetime.get_today();
-		}
 
 		// adding previos follow up value in state
 		row.__prev_follow_up = row.follow_up || 0;
@@ -73,27 +69,6 @@ function set_round_numbers(frm) {
 	frm.refresh_field("interview_rounds_table");
 }
 
-// function validate_interview_times(frm) {
-// 	const rows = frm.doc.interview_rounds_table || [];
-
-// 	const timeRegex =
-// 		/^(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s-\s(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s\((EDT|EST)\)$/;
-
-// 	rows.forEach((row, index) => {
-// 		// if (!row.time_of_interview) {
-// 		// 	frappe.throw(`Row ${index + 1}: Time of Interview is required`);
-// 		// }
-
-// 		if (!timeRegex.test(row.time_of_interview)) {
-// 			frappe.throw(
-// 				`Row ${index + 1}: Invalid Time of Interview format.\n` +
-// 					`Expected: HH:MM (AM/PM) - HH:MM (AM/PM) (EDT/EST)\n` +
-// 					`Example: 01:00 PM - 03:00 PM (EST)`,
-// 			);
-// 		}
-// 	});
-// }
-
 function fetch_and_render_resume(frm) {
 	frappe.db
 		.get_list("Marketing", {
@@ -112,7 +87,7 @@ function fetch_and_render_resume(frm) {
 				frm.set_df_property(
 					"resume",
 					"options",
-					"<div style='color:#888'>No customer selected</div>",
+					'<div style="color:#888">No customer selected</div>',
 				);
 				return;
 			}
@@ -125,12 +100,12 @@ function fetch_and_render_resume(frm) {
 					order_by: "creation desc",
 					limit: 1,
 				})
-				.then((res) => {
+				.then((res) => {					
 					if (!res || !res.length || !res[0].resume) {
 						frm.set_df_property(
 							"resume",
 							"options",
-							"<div style='color:#888'>No resume uploaded</div>",
+							'<div style="color:#888">No resume uploaded</div>',
 						);
 						return;
 					}

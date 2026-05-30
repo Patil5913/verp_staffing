@@ -28,15 +28,14 @@ frappe.listview_settings["Interview"] = {
 			});
 		}
 
-		// ✅ Block if we ourselves triggered this refresh
 		if (_marketing_is_setting) return;
 
 		const param = get_marketing_param();
 
-		// ✅ Block if this value was already applied — don't re-apply
 		if (_marketing_applied_value === param && param) return;
 
 		auto_apply_marketing_filter(listview);
+		hide_filter_button(page); 
 	},
 };
 
@@ -74,20 +73,17 @@ function auto_apply_marketing_filter(listview) {
 			const value = param || options[0].value;
 			if (!param) set_marketing_param(value);
 
-			// ✅ If already applied this exact value — skip entirely
 			if (_marketing_applied_value === value) {
 				update_customer_label(listview.page, options, value);
 				return;
 			}
 
-			// ✅ Set guard so the refresh caused by filter change is ignored
 			_marketing_is_setting = true;
 			_marketing_applied_value = value;
 
 			set_filter_without_loop(listview, value);
 			update_customer_label(listview.page, options, value);
 
-			// ✅ Release guard after Frappe settles
 			setTimeout(() => {
 				_marketing_is_setting = false;
 			}, 1000);
@@ -96,7 +92,6 @@ function auto_apply_marketing_filter(listview) {
 }
 
 function set_filter_without_loop(listview, value) {
-	// ✅ Directly manipulate filter state without triggering refresh chain
 	try {
 		const existing = listview.filter_area.filter_list.filters || [];
 
@@ -113,6 +108,7 @@ function set_filter_without_loop(listview, value) {
 		listview.filter_area.clear();
 		listview.filter_area.add([["Interview", "marketing_link", "=", value]]);
 	}
+	hide_filter_button(listview.page);
 }
 
 function ensure_customer_label(page) {
@@ -190,7 +186,6 @@ function open_marketing_customer_dialog(listview) {
 				primary_action(values) {
 					dialog.hide();
 
-					// ✅ Reset applied value so filter re-applies with new value
 					_marketing_applied_value = null;
 
 					set_marketing_param(values.marketing);
@@ -213,7 +208,32 @@ function apply_marketing_filter(listview, value) {
 	listview.filter_area.clear();
 	listview.filter_area.add("Interview", "marketing_link", "=", value);
 
+	hide_filter_button(listview.page); 
+
 	setTimeout(() => {
 		_marketing_is_setting = false;
 	}, 1000);
+}
+
+
+function hide_filter_button(page) {
+    setTimeout(() => {
+        // Hide the Filters button
+        page.inner_toolbar.find('button[data-action="show_filters"]').hide();
+        page.wrapper.find('.filter-button').hide();
+        page.wrapper.find('.btn-filter').hide();
+
+        // Hide the "Filters 1 ×" active pill/tag
+        page.wrapper.find('.filter-x-button').hide();
+        page.wrapper.find('.tag-filters-area').hide();
+        page.wrapper.find('.active-tag-filters').hide();
+
+        // Nuclear: hide any button containing "Filters" text
+        page.inner_toolbar.find('button').each(function () {
+            if ($(this).text().trim().startsWith('Filters')) {
+                $(this).closest('.page-form').hide();
+                $(this).hide();
+            }
+        });
+    }, 600);
 }
