@@ -1,14 +1,18 @@
 import frappe
 
+def get_company_logo():
+    return frappe.db.get_single_value("Navbar Settings", "app_logo") or ""
 
 def seed_email_template():
-    Common_Footer = """
+    logo_url = get_company_logo()
+  
+    Common_Footer = f"""
       <!-- COMMON FOOTER -->
       <tr>
         <td align="center" style="padding:28px 16px 20px 16px;">
 
           <!-- Logo -->
-          <img src="" alt="Company Logo" width="140" height="36"
+          <img src="{logo_url}" alt="Company Logo" width="140" height="36"
                style="display:block;margin:0 auto 12px auto;object-fit:contain;" />
 
           <!-- Tagline -->
