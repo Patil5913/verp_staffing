@@ -2,6 +2,14 @@ let _marketing_applied_value = null;
 let _marketing_is_setting = false;
 
 frappe.listview_settings["Interview"] = {
+	onload: function (listview) {
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Interviews",
+			doctype: listview.doctype,
+			type: "List",
+		};
+		frappe.breadcrumbs.update();
+	},
 	refresh(listview) {
 		const page = listview.page;
 		if (!page) return;
@@ -35,7 +43,7 @@ frappe.listview_settings["Interview"] = {
 		if (_marketing_applied_value === param && param) return;
 
 		auto_apply_marketing_filter(listview);
-		hide_filter_button(page); 
+		hide_filter_button(page);
 	},
 };
 
@@ -53,8 +61,12 @@ function auto_apply_marketing_filter(listview) {
 	const fa = listview.filter_area;
 	if (!fa) return;
 
+	const param = get_marketing_param();
 	frappe.call({
-		method: "verp_staffing.marketing.doctype.interview.interview.get_marketing_customer_options",
+		method: "verp_staffing.marketing.doctype.interview.interview.get_default_marketing_customer_options",
+		args: {
+			param: param,
+		},
 		callback(r) {
 			const options = r.message || [];
 			if (!options.length) {
@@ -69,12 +81,11 @@ function auto_apply_marketing_filter(listview) {
 				return;
 			}
 
-			const param = get_marketing_param();
 			const value = param || options[0].value;
 			if (!param) set_marketing_param(value);
 
 			if (_marketing_applied_value === value) {
-				update_customer_label(listview.page, options, value);
+				update_customer_label(listview.page, options[0].label);
 				return;
 			}
 
@@ -82,8 +93,7 @@ function auto_apply_marketing_filter(listview) {
 			_marketing_applied_value = value;
 
 			set_filter_without_loop(listview, value);
-			update_customer_label(listview.page, options, value);
-
+			update_customer_label(listview.page, options[0].label);
 			setTimeout(() => {
 				_marketing_is_setting = false;
 			}, 1000);
@@ -143,60 +153,59 @@ function ensure_customer_label(page) {
 	return label;
 }
 
-function update_customer_label(page, options, selected_value) {
+function update_customer_label(page, label) {
 	const pill = ensure_customer_label(page);
 	const valueEl = pill.find(".marketing-customer-value");
-	const selected = options.find((o) => o.value === selected_value);
 
-	if (!selected) {
+	if (!label) {
 		valueEl.text("—");
 		pill.css("opacity", 0.6);
 		return;
 	}
 
-	valueEl.text(selected.label ? selected.label : selected.value);
+	valueEl.text(label);
 	pill.css("opacity", 1);
 }
 
 function open_marketing_customer_dialog(listview) {
 	const current_value = get_marketing_param();
 
-	frappe.call({
-		method: "verp_staffing.marketing.doctype.interview.interview.get_marketing_customer_options",
-		callback(r) {
-			const options = r.message || [];
-			if (!options.length) {
-				frappe.msgprint("No customers assigned.");
-				return;
-			}
+	const dialog = new frappe.ui.Dialog({
+		title: "Filter Interviews by Customer",
+		fields: [
+			{
+				fieldtype: "Link",
+				fieldname: "marketing",
+				label: "Customer",
+				default: current_value,
+				options: "Marketing",
+				reqd: 1,
 
-			const dialog = new frappe.ui.Dialog({
-				title: "Filter Interviews by Customer",
-				fields: [
-					{
-						fieldtype: "Select",
-						fieldname: "marketing",
-						label: "Customer",
-						options: options.map((o) => ({ label: o.label, value: o.value })),
-						default: current_value,
-						reqd: 1,
-					},
-				],
-				primary_action_label: "Apply",
-				primary_action(values) {
-					dialog.hide();
-
-					_marketing_applied_value = null;
-
-					set_marketing_param(values.marketing);
-					apply_marketing_filter(listview, values.marketing);
-					update_customer_label(listview.page, options, values.marketing);
+				get_query() {
+					return {
+						query: "verp_staffing.marketing.doctype.interview.interview.search_marketing_customers",
+					};
 				},
-			});
+			},
+		],
+		primary_action_label: "Apply",
+		primary_action(values) {
+			dialog.hide();
 
-			dialog.show();
+			_marketing_applied_value = null;
+
+			set_marketing_param(values.marketing);
+			apply_marketing_filter(listview, values.marketing);
+			const marketing_field = dialog.get_field("marketing");
+
+			update_customer_label(
+				listview.page,
+				marketing_field.get_label?.() || values.marketing,
+			);
 		},
 	});
+
+	dialog.show();
 }
 
 function apply_marketing_filter(listview, value) {
@@ -208,32 +217,31 @@ function apply_marketing_filter(listview, value) {
 	listview.filter_area.clear();
 	listview.filter_area.add("Interview", "marketing_link", "=", value);
 
-	hide_filter_button(listview.page); 
+	hide_filter_button(listview.page);
 
 	setTimeout(() => {
 		_marketing_is_setting = false;
 	}, 1000);
 }
 
-
 function hide_filter_button(page) {
-    setTimeout(() => {
-        // Hide the Filters button
-        page.inner_toolbar.find('button[data-action="show_filters"]').hide();
-        page.wrapper.find('.filter-button').hide();
-        page.wrapper.find('.btn-filter').hide();
+	setTimeout(() => {
+		// Hide the Filters button
+		page.inner_toolbar.find('button[data-action="show_filters"]').hide();
+		page.wrapper.find(".filter-button").hide();
+		page.wrapper.find(".btn-filter").hide();
 
-        // Hide the "Filters 1 ×" active pill/tag
-        page.wrapper.find('.filter-x-button').hide();
-        page.wrapper.find('.tag-filters-area').hide();
-        page.wrapper.find('.active-tag-filters').hide();
+		// Hide the "Filters 1 ×" active pill/tag
+		page.wrapper.find(".filter-x-button").hide();
+		page.wrapper.find(".tag-filters-area").hide();
+		page.wrapper.find(".active-tag-filters").hide();
 
-        // Nuclear: hide any button containing "Filters" text
-        page.inner_toolbar.find('button').each(function () {
-            if ($(this).text().trim().startsWith('Filters')) {
-                $(this).closest('.page-form').hide();
-                $(this).hide();
-            }
-        });
-    }, 600);
+		// Nuclear: hide any button containing "Filters" text
+		page.inner_toolbar.find("button").each(function () {
+			if ($(this).text().trim().startsWith("Filters")) {
+				$(this).closest(".page-form").hide();
+				$(this).hide();
+			}
+		});
+	}, 600);
 }

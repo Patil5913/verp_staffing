@@ -6,7 +6,6 @@ from verp_staffing.crm.api.helpers import get_reporting_subtree
 
 
 class Interview(Document):
-
     def autoname(self):
         if not self.marketing_link:
             frappe.throw(_("Marketing is required"), frappe.ValidationError)
@@ -140,11 +139,14 @@ def add_to_kanban(doc, method):
     kb = frappe.get_doc("Kanban Board", KANBAN_NAME)
     if any(c.column_name == doc.status_name for c in kb.columns):
         return
-    kb.append("columns", {
-        "column_name": doc.status_name,
-        "indicator": "Blue",
-        "status": "Active",
-    })
+    kb.append(
+        "columns",
+        {
+            "column_name": doc.status_name,
+            "indicator": "Blue",
+            "status": "Active",
+        },
+    )
     kb.save(ignore_permissions=True)
 
 
@@ -166,6 +168,7 @@ def sync_kanban(doc, method):
 # Utils
 # ---------------------------------------------------------------------------
 
+
 def get_logged_in_employee():
     """Returns Employee ID linked to logged-in user."""
     if frappe.session.user == "Administrator":
@@ -175,6 +178,7 @@ def get_logged_in_employee():
         {"user": frappe.session.user},
         "name",
     )
+
 
 def get_allowed_employee_ids(department):
     """
@@ -192,34 +196,108 @@ def get_allowed_employee_ids(department):
 # ---------------------------------------------------------------------------
 # API
 # ---------------------------------------------------------------------------
-
 @frappe.whitelist()
-def get_marketing_customer_options():
+def get_default_marketing_customer_options(param=""):
     department = "Marketing"
 
-    if frappe.session.user == "Administrator":
-        query = """
-            SELECT
-                m.name AS value,
-                c.name AS label
-            FROM `tabMarketing` m
-            LEFT JOIN `tabCustomer` c ON c.name = m.customer
-            ORDER BY c.name
-        """
-        return frappe.db.sql(query, as_dict=True)
+    conditions = []
+    values = []
 
-    allowed_employees = get_allowed_employee_ids(department)
-    if not allowed_employees:
-        return []
+    # Selected customer from URL
+    if param:
+        conditions.append("m.name = %s")
+        values.append(param)
 
-    placeholders = ", ".join(["%s"] * len(allowed_employees))
+    # Hierarchy restriction
+    if frappe.session.user != "Administrator":
+        allowed_employees = get_allowed_employee_ids(department)
+
+        if not allowed_employees:
+            return []
+
+        placeholders = ", ".join(["%s"] * len(allowed_employees))
+
+        conditions.append(f"m.assign_to IN ({placeholders})")
+
+        values.extend(allowed_employees)
+
+    where_clause = ""
+
+    if conditions:
+        where_clause = "WHERE " + " AND ".join(conditions)
+
     query = f"""
         SELECT
             m.name AS value,
             c.name AS label
         FROM `tabMarketing` m
-        LEFT JOIN `tabCustomer` c ON c.name = m.customer
-        WHERE m.assign_to IN ({placeholders})
-        ORDER BY c.name
+        LEFT JOIN `tabCustomer` c
+            ON c.name = m.customer
+        {where_clause}
+        ORDER BY m.creation DESC
+        LIMIT 1
     """
-    return frappe.db.sql(query, allowed_employees, as_dict=True)
+
+    return frappe.db.sql(
+        query,
+        values,
+        as_dict=True,
+    )
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def search_marketing_customers(
+    doctype,
+    txt,
+    searchfield,
+    start,
+    page_len,
+    filters,
+):
+    department = "Marketing"
+
+    conditions = []
+    values = {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": min(page_len or 50, 50),
+    }
+
+    if frappe.session.user != "Administrator":
+        allowed_employees = get_allowed_employee_ids(department)
+
+        if not allowed_employees:
+            return []
+
+        placeholders = []
+
+        for idx, emp in enumerate(allowed_employees):
+            key = f"emp_{idx}"
+
+            placeholders.append(f"%({key})s")
+            values[key] = emp
+
+        conditions.append(f"m.assign_to IN ({', '.join(placeholders)})")
+
+    conditions.append(
+        "(c.name LIKE %(txt)s OR c.name1 LIKE %(txt)s) OR m.name LIKE %(txt)s"
+    )
+
+    where_clause = " AND ".join(conditions)
+    return frappe.db.sql(
+        f"""
+        SELECT
+            m.name,
+            CONCAT(
+                COALESCE(c.name1, '')
+            )
+        FROM `tabMarketing` m
+        INNER JOIN `tabCustomer` c
+            ON c.name = m.customer
+        WHERE {where_clause}
+        ORDER BY m.creation DESC
+        LIMIT %(start)s, %(page_len)s
+        """,
+        values,
+    )
