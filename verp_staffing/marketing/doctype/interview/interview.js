@@ -3,6 +3,17 @@
 
 frappe.ui.form.on("Interview", {
 	refresh(frm) {
+				frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Interviews",
+			doctype: frm.doctype,
+			type: "Form",
+		};
+
+		frappe.breadcrumbs.update();
+
 		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Interview Form";
 

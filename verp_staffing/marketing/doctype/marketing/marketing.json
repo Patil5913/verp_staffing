@@ -46,7 +46,8 @@
    "fieldname": "assign_to",
    "fieldtype": "Link",
    "label": "Assigned To",
-   "options": "Employee"
+   "options": "Employee",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_jejh",
@@ -150,7 +151,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-26 10:36:35.218120",
+ "modified": "2026-06-01 17:00:09.890444",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
@@ -159,31 +160,27 @@
  "permissions": [
   {
    "read": 1,
+   "role": "OnBoarding Person"
+  },
+  {
+   "read": 1,
+   "role": "CR"
+  },
+  {
+   "read": 1,
    "role": "Sales Master Manager"
   },
   {
-   "read": 1,
-   "role": "Sales Manager"
-  },
-  {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Marketing Master Manager",
+   "role": "Senior Recruiter",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -198,20 +195,8 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "report": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
+   "role": "Sales Person"
   },
   {
    "create": 1,
@@ -220,6 +205,30 @@
    "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
   },
   {
    "create": 1,
@@ -233,7 +242,7 @@
    "create": 1,
    "read": 1,
    "report": 1,
-   "role": "Senior Recruiter",
+   "role": "Recruiter",
    "select": 1,
    "write": 1
   }
