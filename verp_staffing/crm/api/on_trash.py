@@ -5,14 +5,8 @@ import frappe
 def unlink_and_clean_lead_detail(
     doctype,
     docname,
-    lead_details_field="lead_details",
+    lead_details_name,    
 ):
-    lead_details_name = frappe.db.get_value(
-        doctype,
-        docname,
-        lead_details_field,
-    )
-
     if not lead_details_name:
         return
 
@@ -20,7 +14,7 @@ def unlink_and_clean_lead_detail(
     frappe.db.set_value(
         doctype,
         docname,
-        lead_details_field,
+        "lead_details",
         None,
         update_modified=False,
     )

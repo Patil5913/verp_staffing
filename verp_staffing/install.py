@@ -452,10 +452,10 @@ HIERARCHY_DATA = [
     {
         "department": "Marketing",
         "role_hierarchy_json": [
-            # {
-            #     "parent_role": "Marketing Master Manager",
-            #     "child_roles": ["Marketing Manager"],
-            # },
+            {
+                "parent_role": "Marketing Master Manager",
+                "child_roles": ["Marketing Manager"],
+            },
             {
                 "parent_role": "Marketing Manager",
                 "child_roles": ["Marketing Team Lead"],

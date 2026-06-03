@@ -1,8 +1,10 @@
 import re
 from datetime import datetime
 
-import frappe
+# import frappe
 from frappe.utils import cstr
+from frappe.model.naming import getseries
+
 
 DOCTYPE_PREFIX_MAP = {
     "Sales Order": "SO",
@@ -26,47 +28,41 @@ def sanitize(value: str) -> str:
         value,
     ).strip("_")
 
-def generate_name_series(doctype_name: str, name: str) -> str:
+def generate_name_series(
+    doctype_name: str,
+    name: str,
+) -> str:
     """
-    Generate a name series based on doctype name, given name, today's date, and occurrence count.
-    
-    Args:
-        doctype_name (str): The name of the DocType (e.g., 'DocType')
-        name (str): The name to search for (e.g., 'name')
-    
-    Returns:
-        str: Generated series like 'DocType_name_25/03/2026' or 'DocType_name_25/03/2026_2'
-    
-    Examples:
-        1st occurrence → DocType_name_25/03/2026
-        2nd occurrence → DocType_name_25/03/2026_1
-        3rd occurrence → DocType_name_25/03/2026_2
+    Generate a unique document name in the format:
+
+        PREFIX_NAME_DD_MM_YYYY
+        PREFIX_NAME_DD_MM_YYYY_1
+        PREFIX_NAME_DD_MM_YYYY_2
+        ...
+
+    Uses Frappe's naming-series mechanism to safely
+    generate unique suffixes without database calls in loops.
     """
+
     prefix = DOCTYPE_PREFIX_MAP.get(
         doctype_name,
         sanitize(doctype_name).upper(),
     )
 
     safe_name = sanitize(name)
-
-    today = datetime.now().strftime("%d_%m_%Y")
+    today = datetime.now().strftime("%d/%m/%Y")
 
     base_name = f"{prefix}_{safe_name}_{today}"
 
-    # Fast path
-    if not frappe.db.exists(doctype_name, base_name):
-        return base_name
+    series = int(
+        getseries(
+            f"{base_name}_",
+            3,
+        )
+    )
 
-    counter = 1
-
-    while True:
-
-        candidate_name = f"{base_name}_{counter}"
-
-        if not frappe.db.exists(
-            doctype_name,
-            candidate_name,
-        ):
-            return candidate_name
-
-        counter += 1 # 2nd+ occurrence → append counter
+    return (
+        base_name
+        if series == 1
+        else f"{base_name}_{series - 1}"
+    )

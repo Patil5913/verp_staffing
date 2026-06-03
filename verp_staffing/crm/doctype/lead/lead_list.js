@@ -17,21 +17,6 @@ frappe.listview_settings["Lead"] = {
 
 		const page = listview.page;
 		if (!page) return;
-
-		// setTimeout(() => {
-		// 	page.wrapper.find(".add-new-column").hide();
-
-		// 	// Hide "Select Kanban" button
-		// 	page.inner_toolbar.find("button").each(function () {
-		// 		if ($(this).text().includes("Select Kanban")) {
-		// 			$(this).parent().hide();
-		// 		}
-		// 	});
-		// }, 50);
-
-		// setTimeout(() => {
-		// 	page.wrapper.find(".add-new-column").hide();
-		// }, 50);
 	},
 	get_indicator: function (doc) {
 		const status_colors = {
@@ -76,16 +61,18 @@ function open_custom_dialog() {
 				validate_phone(values.personal_phone_number, "Phone Number");
 			}
 
-			let doc = {
-				doctype: "Lead",
-				name1: values.name1,
-				personal_phone_number: values.personal_phone_number,
-				email: values.email,
-			};
-
 			frappe.call({
 				method: "frappe.client.insert",
-				args: { doc: doc },
+				args: {
+					doc: {
+						doctype: "Lead",
+						name1: values.name1,
+
+						// temporary values
+						_personal_phone_number: values.personal_phone_number,
+						_email: values.email,
+					},
+				},
 				callback: function (r) {
 					if (!r.exc) {
 						dialog.hide();

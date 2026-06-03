@@ -92,13 +92,6 @@ class Account(NestedSet):
 		from verp_staffing.accounts.utils.utils import get_autoname_with_number
 
 		self.name = get_autoname_with_number(self.account_number, self.account_name, self.company)
-     
-	def onload(self):
-		frozen_accounts_modifier = frappe.db.get_value(
-			"Accounts Settings", "Accounts Settings", "frozen_accounts_modifier"
-		)
-		if not frozen_accounts_modifier or frozen_accounts_modifier in frappe.get_roles():
-			self.set_onload("can_freeze_account", True)
    
 	def validate(self):
 		self.validate_parent()
@@ -109,7 +102,6 @@ class Account(NestedSet):
 		self.validate_group_or_ledger()
 		self.set_root_and_report_type()
 		self.validate_mandatory()
-		self.validate_frozen_accounts_modifier()
 		self.validate_account_currency()
   
 	def validate_parent(self):
@@ -394,26 +386,6 @@ class Account(NestedSet):
 		if not self.report_type:
 			throw(_("Report Type is mandatory"))
 
-	def validate_frozen_accounts_modifier(self):
-		previous_doc = self.get_doc_before_save()
-
-		if (
-			not previous_doc
-			or previous_doc.freeze_account == self.freeze_account
-		):
-			return
-
-		allowed_role = frappe.get_cached_value(
-			"Accounts Settings",
-			"Accounts Settings",
-			"frozen_accounts_modifier",
-		)
-
-		if allowed_role and allowed_role in frappe.get_roles():
-			return
-
-		throw(_("You are not authorized to set Frozen value"))
-
 	def validate_account_currency(self):
 		self.currency_explicitly_specified = True
 
@@ -496,79 +468,6 @@ def get_company_default_account_fields():
 		"round_off_account": "Round Off Account",
 	}
 
-
-@frappe.whitelist()
-def merge_account(old, new):
-    _ensure_idle_system()
-
-    accounts = frappe.db.get_values(
-        "Account",
-        {"name": ["in", [old, new]]},
-        [
-            "name",
-            "is_group",
-            "root_type",
-            "company",
-            "account_currency",
-            "parent_account",
-        ],
-        as_dict=True,
-    )
-
-    if len(accounts) != 2:
-        missing = {old, new} - {d.name for d in accounts}
-
-        throw(
-            _("Account {0} does not exist").format(", ".join(missing))
-        )
-
-    account_map = {
-        d.name: d
-        for d in accounts
-    }
-
-    old_account = account_map[old]
-    new_account = account_map[new]
-
-    fields_to_compare = (
-        "is_group",
-        "root_type",
-        "company",
-        "account_currency",
-    )
-
-    for field in fields_to_compare:
-        if cstr(old_account.get(field)) != cstr(new_account.get(field)):
-            throw(
-                msg=_(
-                    "Merging is only possible if following properties are same in both records. "
-                    "Is Group, Root Type, Company and Account Currency"
-                ),
-                title=_("Invalid Accounts"),
-                exc=InvalidAccountMergeError,
-            )
-
-    if (
-        cint(old_account.is_group)
-        and new_account.parent_account == old
-    ):
-        frappe.db.set_value(
-            "Account",
-            new,
-            "parent_account",
-            old_account.parent_account,
-            update_modified=False,
-        )
-
-    frappe.rename_doc(
-        "Account",
-        old,
-        new,
-        merge=True,
-        force=True,
-    )
-
-    return new
 
 def _ensure_idle_system():
     """

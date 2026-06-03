@@ -126,16 +126,7 @@ def create_charts(
 
     try:
         _import_accounts(chart, None, None, root_account=True)
-
-        # tree_start = time.perf_counter()
         rebuild_tree("Account", "parent_account")
-        # tree_time = time.perf_counter() - tree_start
-
-        # print("\n==== PROFILE ====")
-        # print(f"Accounts inserted : {insert_count}")
-        # print(f"Insert total time : {insert_time:.2f}s")
-        # print(f"Tree rebuild time : {tree_time:.2f}s")
-        # print("=================\n")
 
     finally:
         frappe.local.flags.ignore_update_nsm = previous_flag

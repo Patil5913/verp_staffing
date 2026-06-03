@@ -25,6 +25,7 @@ class Opportunity(Document):
         unlink_and_clean_lead_detail(
             "Opportunity",
             self.name,
+            self.lead_details,
         )
 
     def after_insert(self):
@@ -112,14 +113,7 @@ class Opportunity(Document):
 
         customer.insert(ignore_permissions=True)
 
-        # single DB call instead of full doc load
-        frappe.db.set_value(
-            "Opportunity",
-            self.name,
-            "status",
-            "Converted",
-            update_modified=False,
-        )
+        self.db_set("status", "Converted")
 
         if self.opportunity_from_lead:
             frappe.db.set_value(

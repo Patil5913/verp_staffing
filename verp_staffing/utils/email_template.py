@@ -1,19 +1,25 @@
 import frappe
 
-def get_company_logo():
-    return frappe.db.get_single_value("Navbar Settings", "app_logo") or ""
+def get_company_logo_url():
+    logo = frappe.db.get_single_value("Navbar Settings", "app_logo")
+    if not logo:
+        return ""
+
+    return frappe.utils.get_url(logo)
 
 def seed_email_template():
-    logo_url = get_company_logo()
+    frappe.logger().info("SEED EMAIL TEMPLATE TRIGGERED")
+    frappe.logger().info("seed_email_template CALLED")
+    logo_url = get_company_logo_url()
+    print("******************************************FINAL LOGO URL:", logo_url)
   
-    Common_Footer = f"""
+    Common_Footer = """
       <!-- COMMON FOOTER -->
       <tr>
         <td align="center" style="padding:28px 16px 20px 16px;">
 
           <!-- Logo -->
-          <img src="{logo_url}" alt="Company Logo" width="140" height="36"
-               style="display:block;margin:0 auto 12px auto;object-fit:contain;" />
+          <img src="__LOGO_URL__" width="140" style="display:block;margin:auto;">
 
           <!-- Tagline -->
           <p style="font-size:13px;color:#6b7280;text-align:center;
@@ -245,7 +251,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src=""
-                 alt="Logo"
+                 alt="Logo++++++++"
                  width="140"
                  height="36"
                  style="display:block;object-fit:contain;" />
@@ -543,8 +549,8 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
-                 alt="Logo"
+            <img src="__LOGO_URL__"
+                 alt="Logo++++"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -3518,10 +3524,14 @@ def seed_email_template():
     ]
 
     for t in templates:
+        html = t["html_content"].replace("__LOGO_URL__", logo_url)
+        print("FOUND PLACEHOLDER:", "__LOGO_URL__" in t["html_content"])
+        print("FOUND LOGO URL:", logo_url)
+
         if frappe.db.exists("Email Template", t["name"]):
             doc = frappe.get_doc("Email Template", t["name"])
             doc.subject = t["subject"]
-            doc.response_html = t["html_content"]
+            doc.response_html = html
             doc.use_html = 1
             doc.flags.ignore_html_validation = True
             doc.save(ignore_permissions=True)
@@ -3531,7 +3541,7 @@ def seed_email_template():
                     "doctype": "Email Template",
                     "name": t["name"],
                     "subject": t["subject"],
-                    "response_html": t["html_content"],
+                    "response_html": html,
                     "use_html": 1,
                 }
             )

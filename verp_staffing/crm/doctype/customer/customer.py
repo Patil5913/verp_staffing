@@ -10,7 +10,7 @@ from verp_staffing.crm.api.naming import generate_name_series
 
 class Customer(Document):
     def on_trash(self):
-        unlink_and_clean_lead_detail("Customer", self.name)
+        unlink_and_clean_lead_detail("Customer", self.name, self.lead_details)
 
     def autoname(self):
         name = self.name1

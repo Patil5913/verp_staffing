@@ -33,7 +33,7 @@ class Lead(Document):
         self.create_lead_detail()
 
     def on_trash(self):
-        unlink_and_clean_lead_detail("Lead", self.name)
+        unlink_and_clean_lead_detail("Lead", self.name, self.lead_details)
 
     def set_lead_owner(self):
         """Assign logged-in employee as lead owner."""
@@ -58,25 +58,31 @@ class Lead(Document):
             self.lead_owner = employee
 
     def create_lead_detail(self):
-        """Create linked Lead Detail before insert."""
-
         if self.lead_details:
             return
+
+        custom_values = {
+            field: value
+            for field in (
+                "personal_phone_number",
+                "email",
+            )
+            if (value := getattr(self, f"_{field}", None))
+        }
 
         lead_detail_name = create_lead_details(
             "Lead",
             self.name,
             self.name1,
+            custom_values=custom_values or None,
         )
 
-        if not lead_detail_name:
-            return
-
-        self.db_set(
-            "lead_details",
-            lead_detail_name,
-            update_modified=False,
-        )
+        if lead_detail_name:
+            self.db_set(
+                "lead_details",
+                lead_detail_name,
+                update_modified=False,
+            )
 
 
 @frappe.whitelist()
