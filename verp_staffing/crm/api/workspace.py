@@ -1,6 +1,5 @@
 import frappe
-# from verp_staffing.crm.api.helpers import get_visible_employee_names
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 # ─────────────────────────────────────────────
 # Doctype → field that stores the "owner" link
@@ -36,7 +35,7 @@ def _get_count_for_doctype(doctype: str) -> dict:
         frappe.logger().info(f"[_get_count_for_doctype] ADMIN count={count}")
         return {"value": count, "route": ["List", doctype]}
 
-    employees = get_visible_employee_names(user)
+    employees = get_visible_employee_names_cached()
     frappe.logger().info(f"[_get_count_for_doctype] employees={employees}")
 
     if not employees:
@@ -71,7 +70,7 @@ def get_visible_interview_count():
 
         return {"value": count, "route": ["List", "Interview"]}
 
-    employees = get_visible_employee_names(user)
+    employees = get_visible_employee_names_cached()
 
     if not employees:
         return {"value": 0, "route": ["List", "Interview"]}

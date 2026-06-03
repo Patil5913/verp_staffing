@@ -1,5 +1,5 @@
 import frappe
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
 def execute(filters=None):
@@ -44,7 +44,6 @@ def get_data(filters):
         conditions.append("ldf.current_visa_status = %(visa_status)s")
         values["visa_status"] = filters["visa_status"]
 
-    user = frappe.session.user
     hierarchy_conditions = []
 
     # If employee filter is selected → show only that employee
@@ -53,9 +52,9 @@ def get_data(filters):
         values["employee"] = filters["employee"]
 
     # Otherwise apply hierarchy
-    elif user != "Administrator":
+    elif frappe.session.user != "Administrator":
 
-        allowed_employees = get_visible_employee_names(user)
+        allowed_employees = get_visible_employee_names_cached()
 
         if not allowed_employees:
             return []
@@ -135,7 +134,6 @@ def get_lead_hierarchy_employees(
     Shows only employees from Lead department.
     Non-admin users see only themselves + their hierarchy.
     """
-    user = frappe.session.user
 
     values = {
         "txt": f"%{txt}%",
@@ -157,8 +155,8 @@ def get_lead_hierarchy_employees(
     ]
 
     # Apply hierarchy restriction for non-admin users
-    if user != "Administrator":
-        allowed_employees = get_visible_employee_names(user)
+    if frappe.session.user != "Administrator":
+        allowed_employees = get_visible_employee_names_cached()
 
         if not allowed_employees:
             return []

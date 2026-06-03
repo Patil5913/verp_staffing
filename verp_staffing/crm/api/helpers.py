@@ -85,7 +85,8 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
         """,
         list(allowed) + [f"%{txt}%", page_len, start],
     )
-    
+
+
 def get_allowed_employees(user, department=None):
     """
     Returns employees user is allowed to see.
@@ -109,6 +110,7 @@ def get_allowed_employees(user, department=None):
         return set()
 
     return get_reporting_subtree(employee, department)
+
 
 def get_reporting_subtree(root_employee, department=None):
     """
@@ -402,13 +404,37 @@ def get_visible_employee_names(user, department=None):
     return list(users)
 
 
+def get_visible_employee_names_cached(department=None):
+    cache = frappe.cache()
+
+    employees = cache.hget(
+        "Visible_Employee_Names",
+        frappe.session.user,
+    )
+
+    if employees is not None:
+        return employees
+
+    employees = get_visible_employee_names(
+        user=frappe.session.user, department=department
+    )
+
+    cache.hset(
+        "Visible_Employee_Names",
+        frappe.session.user,
+        employees,
+    )
+
+    return employees
+
+
 # get allowed leads for sales person
 def get_allowed_leads(user):
     root_employee = get_employee_name(user)
     if not root_employee:
         return []
 
-    users = get_visible_employee_names(user)
+    users = get_visible_employee_names_cached()
 
     own_leads = frappe.db.get_all(
         "Lead",
@@ -423,6 +449,7 @@ def get_allowed_leads(user):
     )
 
     return list(set(own_leads + opp_leads))
+
 
 import json
 
@@ -592,7 +619,7 @@ def generic_assign_query(user):
     if not employee:
         return "1=0"
 
-    team = get_visible_employee_names(user)
+    team = get_visible_employee_names_cached()
 
     if not team:
         return "1=0"
@@ -607,7 +634,7 @@ def opportunity_query(user):
     if user == "Administrator":
         return ""
 
-    team = get_visible_employee_names(user)
+    team = get_visible_employee_names_cached()
 
     if not team:
         return "1=0"
@@ -625,7 +652,7 @@ def lead_query(user):
     if user == "Administrator":
         return ""
 
-    team = get_visible_employee_names(user)
+    team = get_visible_employee_names_cached()
 
     if not team:
         return "1=0"
@@ -686,7 +713,7 @@ def customer_query(user):
     )
 
     # 3. get team
-    team = get_visible_employee_names(user)
+    team = get_visible_employee_names_cached()
 
     if not team:
         return "1=0"

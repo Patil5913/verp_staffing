@@ -1,5 +1,5 @@
 import frappe
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 def get_employee_hierarchy_condition(alias="m", field="employee"):
     """
@@ -8,12 +8,10 @@ def get_employee_hierarchy_condition(alias="m", field="employee"):
     field: employee field name
     """
 
-    user = frappe.session.user
-
-    if user == "Administrator":
+    if frappe.session.user == "Administrator":
         return "", {}
 
-    employees = get_visible_employee_names(user)
+    employees = get_visible_employee_names_cached()
 
     if not employees:
         # Block everything if no access

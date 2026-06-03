@@ -16,6 +16,13 @@ class Employee(Document):
 
         self.name = generate_name_series("Employee", name)
 
+    def on_update(self):
+        # Clear cached visible employee names for the user whenever an Employee is updated,
+        # to ensure any changes are reflected in reports immediately
+        frappe.cache().delete_key(
+            "Visible_Employee_Names"
+        )
+
     def validate(self):
 
         rows = self.employee_assignment_details_table or []

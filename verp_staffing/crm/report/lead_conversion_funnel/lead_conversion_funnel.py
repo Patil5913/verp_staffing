@@ -1,5 +1,5 @@
 import frappe
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
 def execute(filters=None):
@@ -28,7 +28,6 @@ def get_columns():
 
 
 def get_data(filters=None):
-    user = frappe.session.user
     conditions = []
     values = {}
 
@@ -40,8 +39,8 @@ def get_data(filters=None):
         conditions.append("l.creation <= %(to_date)s")
         values["to_date"] = filters["to_date"]
 
-    if user != "Administrator":
-        allowed_employees = get_visible_employee_names(user)
+    if frappe.session.user != "Administrator":
+        allowed_employees = get_visible_employee_names_cached()
 
         if not allowed_employees:
             return []

@@ -1485,6 +1485,8 @@ def remove_default_workspaces():
         "Receivables",
         "Payables",
         "Pending PE Requests",
+        "Interviews",
+        "Reports & KPI"
     ]
 
     # Hide all others

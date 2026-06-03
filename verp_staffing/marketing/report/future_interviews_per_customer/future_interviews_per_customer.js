@@ -56,7 +56,7 @@ frappe.query_reports["Future Interviews Per Customer"] = {
 			options: "Customer",
 			get_query: function () {
 				return {
-					query: "verp_staffing.marketing.report.future_interviews_per_customer.future_interviews_per_customer.get_customers_with_interviews",
+					query: "verp_staffing.marketing.report.interviews_per_customer.interviews_per_customer.get_customers_with_interviews",
 				};
 			},
 		},
