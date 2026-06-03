@@ -250,8 +250,8 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
-                 alt="Logo++++++++"
+            <img src="__LOGO_URL__"
+                 alt="Logo"
                  width="140"
                  height="36"
                  style="display:block;object-fit:contain;" />
@@ -412,7 +412,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -550,7 +550,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo++++"
+                 alt="Logo"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -629,7 +629,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -684,7 +684,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -746,7 +746,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -804,7 +804,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -864,7 +864,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -943,7 +943,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1016,7 +1016,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1075,7 +1075,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1151,7 +1151,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1231,7 +1231,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1323,7 +1323,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1398,7 +1398,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1490,7 +1490,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1582,7 +1582,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1655,7 +1655,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1743,7 +1743,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -1934,7 +1934,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2016,7 +2016,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2084,7 +2084,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2178,7 +2178,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2272,7 +2272,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2354,7 +2354,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2443,7 +2443,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2528,7 +2528,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2624,7 +2624,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2715,7 +2715,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -2871,7 +2871,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -3136,7 +3136,7 @@ def seed_email_template():
         <!-- TOP BAR: Logo only -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
                  height="52"
@@ -3318,7 +3318,7 @@ def seed_email_template():
         <!-- Top logo -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <img src=""
+            <img src="__LOGO_URL__"
                  alt="Logo"
                  width="140"
                  height="36"
