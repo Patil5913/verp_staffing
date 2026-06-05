@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.customer import update_customer_stage
 import json
 from frappe.utils import now_datetime
 from verp_staffing.crm.api.naming import generate_name_series
@@ -26,31 +26,10 @@ class Marketing(Document):
             frappe.throw(_("Target must be greater than 0 when Start Date is set"))
 
     def after_insert(self):
-        self.update_customer_stage()
-
-    def update_customer_stage(self):
-        service = "marketing"
-        department = frappe.db.get_value(
-            "Department Service", {"service_name": service}, "parent"
+        update_customer_stage(
+            customer=self.customer,
+            service="marketing",
         )
-        if not department:
-            frappe.throw(
-                _(
-                    "No Department has selected 'marketing' as a service. "
-                    "<a href='/app/department'>Go to Department List</a>"
-                ),
-                title=_("Marketing Service Not Configured"),
-            )
-        stage_raw = frappe.db.get_value("Customer", self.customer, "stage")
-        stage = json.loads(stage_raw) if stage_raw else {}
-        # department = parents[0].parent
-
-        if "marketing" not in stage:
-            stage["marketing"] = []
-        stage["marketing"].append(
-            {"department": department, "timestamp": str(now_datetime())}
-        )
-        frappe.db.set_value("Customer", self.customer, "stage", json.dumps(stage))
 
 
 @frappe.whitelist()

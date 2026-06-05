@@ -5,27 +5,7 @@ let isSaving = false;
 
 frappe.ui.form.on("Lead", {
 	onload(frm) {
-		frm.set_df_property("lead_owner", "read_only_onload", 1);
-
-		if (!frm.doc.lead_owner) {
-			frappe.call({
-				method: "frappe.client.get_value",
-				args: {
-					doctype: "Employee",
-					filters: { user: frappe.session.user },
-					fieldname: "name",
-				},
-				callback: function (r) {
-					if (r.message) {
-						frm.set_value("lead_owner", r.message.name);
-						frm.set_df_property("lead_owner", "read_only", 1);
-					}
-				},
-			});
-		} else {
-			frm.set_df_property("lead_owner", "read_only", 1);
-		}
-
+		frm.set_df_property("lead_owner", "read_only", 1);
 		frm.set_df_property("status", "read_only", 1);
 	},
 

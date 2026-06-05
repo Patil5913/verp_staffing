@@ -101,6 +101,7 @@
    "fieldtype": "Data",
    "label": "Abbr",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -300,7 +301,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-05-05 14:44:29.947567",
+ "modified": "2026-05-18 16:48:28.643608",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",

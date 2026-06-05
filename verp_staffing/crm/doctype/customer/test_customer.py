@@ -112,7 +112,9 @@ class TestCustomerAutoname(CustomerTestBase):
 
     def test_name_contains_slugified_customer_name(self):
         customer = make_customer(_uid("Autoname Alpha"))
-        self.assertIn("Customer_Autoname_Alpha", customer.name)
+
+        self.assertIn("Autoname_Alpha", customer.name)
+        self.assertIn("CUSTOMER", customer.name)
 
     def test_name_is_non_empty_string(self):
         customer = make_customer(_uid("Name Type Check"))
@@ -131,6 +133,20 @@ class TestCustomerAutoname(CustomerTestBase):
         """Whitespace-only strings are falsy after strip; autoname should reject them."""
         with self.assertRaises(frappe.ValidationError):
             make_customer(name1="   ")
+
+    def test_same_name_same_day_generates_incremented_series(self):
+
+        same_name = _uid("Dup Customer")
+
+        first = make_customer(same_name)
+
+        second = frappe.new_doc("Customer")
+        second.name1 = same_name
+        second.insert(ignore_permissions=True)
+
+        self.assertNotEqual(first.name, second.name)
+
+        self.assertTrue(second.name.endswith("_1"))
 
     def test_different_names_produce_different_doc_names(self):
         c1 = make_customer(_uid("Unique Name A"))

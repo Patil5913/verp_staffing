@@ -135,7 +135,8 @@
    "fieldname": "name1",
    "fieldtype": "Data",
    "label": "Opportunity Name",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "section_break_yqzw",
@@ -185,7 +186,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-13 15:42:26.792854",
+ "modified": "2026-05-20 11:50:23.778905",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -205,7 +206,7 @@
    "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Team Lead",
+   "role": "Lead Manager",
    "write": 1
   },
   {
@@ -213,7 +214,7 @@
    "if_owner": 1,
    "read": 1,
    "report": 1,
-   "role": "Lead Manager",
+   "role": "Lead Team Lead",
    "write": 1
   },
   {
@@ -222,9 +223,14 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Team Lead",
+   "role": "Sales Master Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   },
   {
@@ -244,14 +250,9 @@
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Sales Master Manager",
-   "select": 1,
-   "share": 1,
+   "role": "Sales Team Lead",
    "write": 1
   },
   {

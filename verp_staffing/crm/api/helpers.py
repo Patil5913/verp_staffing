@@ -704,6 +704,7 @@ def customer_query(user):
             `tabCustomer`.customer_owner IN ({team_sql})
         """
         )
+
     # -------------------------
     # FINAL CONDITION
     # -------------------------

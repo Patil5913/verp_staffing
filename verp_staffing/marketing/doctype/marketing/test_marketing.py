@@ -81,7 +81,7 @@ class TestMarketingAutoname(MarketingTestBase):
 
     def test_name_contains_marketing_prefix(self):
         mkt = make_marketing(customer=make_customer(_uid("C")).name)
-        self.assertIn("Marketing", mkt.name)
+        self.assertIn("MARKETING", mkt.name)
 
     def test_name_contains_slugified_customer_name1(self):
         slug = "SlugCheck"

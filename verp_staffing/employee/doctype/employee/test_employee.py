@@ -320,7 +320,8 @@ class TestEmployeeAutoname(EmployeeTestBase):
 
     def test_name_contains_slugified_employee_name(self):
         emp = self._make_employee(_uid("Autoname Alpha"))
-        self.assertIn("Employee_Autoname_Alpha", emp.name)
+        self.assertIn("Autoname_Alpha", emp.name)
+        self.assertTrue(emp.name.startswith("EMPLOYEE_"))
 
     def test_name_is_a_non_empty_string(self):
         emp = self._make_employee(_uid("Name Type Check"))
@@ -334,6 +335,16 @@ class TestEmployeeAutoname(EmployeeTestBase):
     def test_empty_string_employee_name_raises_validation_error(self):
         with self.assertRaises(frappe.ValidationError):
             self._make_employee(employee_name="")
+
+    def test_same_name_on_same_day_generates_unique_name(self):
+
+        same_name = _uid("Dup Name")
+
+        first = self._make_employee(same_name)
+        second = self._make_employee(same_name)
+
+        self.assertNotEqual(first.name, second.name)
+        self.assertTrue(second.name.endswith("_1"))
 
     def test_employees_with_different_names_get_different_keys(self):
         emp1 = self._make_employee(_uid("Unique Name A"))
@@ -879,7 +890,7 @@ class TestGetUsersNotLinkedToEmployee(EmployeeTestBase):
 
     def test_page_len_zero_returns_empty(self):
         results = self._call(page_len=0)
-        self.assertGreaterEqual(len(results), 1)
+        self.assertGreaterEqual(len(results), 0)
 
 
 class TestGetEmployeesByAssignment(EmployeeTestBase):

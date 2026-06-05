@@ -804,6 +804,12 @@ def send_otp(token=None):
             context = {"otp": otp}
             subject = frappe.render_template(template.subject, context)
             message = frappe.render_template(template.response_html or template.response, context)
+            html = frappe.render_template(
+                template.response_html,
+                {"otp": otp}
+            )
+
+            print(html)
         else:
             subject = "Your Verification Code"
             message = f"<p>Your OTP is: <b>{otp}</b></p>"

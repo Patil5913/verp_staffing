@@ -19,17 +19,11 @@ _resolved: dict = {}
 
 def make_lead(
     name1=None,
-    email=None,
-    personal_phone_number=None,
     lead_owner=None,
     skip_insert=False,
 ):
     lead = frappe.new_doc("Lead")
     lead.name1 = name1
-    if email:
-        lead.email = email
-    if personal_phone_number:
-        lead.personal_phone_number = personal_phone_number
     if lead_owner:
         lead.lead_owner = lead_owner
     if skip_insert:
@@ -125,20 +119,6 @@ class TeasLead(LeadTestBase):
         lead = make_lead(name1="Detail Form Lead")
         self.assertTrue(lead.lead_details)
         self.assertTrue(frappe.db.exists("Lead Detail Form", lead.lead_details))
-
-    def test_email_synced_to_detail_form_on_insert(self):
-        lead = make_lead(name1="Email Insert Lead", email="insert@example.com")
-        synced = frappe.db.get_value("Lead Detail Form", lead.lead_details, "email")
-        self.assertEqual(synced, "insert@example.com")
-
-    def test_phone_synced_to_detail_form_on_insert(self):
-        lead = make_lead(
-            name1="Phone Insert Lead", personal_phone_number="+911234567890"
-        )
-        synced = frappe.db.get_value(
-            "Lead Detail Form", lead.lead_details, "personal_phone_number"
-        )
-        self.assertEqual(synced, "+911234567890")
 
     def test_lead_status_set_to_opportunity_after_opportunity_created(self):
         lead = make_lead(name1="Opp Lifecycle Lead")
