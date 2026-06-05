@@ -11,7 +11,6 @@ def seed_email_template():
     frappe.logger().info("SEED EMAIL TEMPLATE TRIGGERED")
     frappe.logger().info("seed_email_template CALLED")
     logo_url = get_company_logo_url()
-    print("******************************************FINAL LOGO URL:", logo_url)
   
     Common_Footer = """
       <!-- COMMON FOOTER -->
@@ -3525,8 +3524,6 @@ def seed_email_template():
 
     for t in templates:
         html = t["html_content"].replace("__LOGO_URL__", logo_url)
-        print("FOUND PLACEHOLDER:", "__LOGO_URL__" in t["html_content"])
-        print("FOUND LOGO URL:", logo_url)
 
         if frappe.db.exists("Email Template", t["name"]):
             doc = frappe.get_doc("Email Template", t["name"])

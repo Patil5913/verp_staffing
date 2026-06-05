@@ -21,7 +21,6 @@
   "account_type",
   "tax_rate",
   "freeze_account",
-  "balance_must_be",
   "section_break_y1gg",
   "lft",
   "rgt",
@@ -126,12 +125,6 @@
    "fieldtype": "Select",
    "label": "Freeze Account",
    "options": "No\nYes"
-  },
-  {
-   "fieldname": "balance_must_be",
-   "fieldtype": "Select",
-   "label": "Balance must be",
-   "options": "\nDebit\nCredit"
   },
   {
    "depends_on": "eval:doc.is_group==0",

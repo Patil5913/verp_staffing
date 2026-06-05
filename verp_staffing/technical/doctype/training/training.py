@@ -21,5 +21,5 @@ class Training(Document):
     def after_insert(self):
         update_customer_stage(
             customer=self.customer,
-            service="visa",
+            service="training",
         )
