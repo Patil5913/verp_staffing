@@ -866,8 +866,7 @@ def seed_email_template():
             <img src="__LOGO_URL__"
                  alt="Logo"
                  width="200"
-                 height="52"
-                 style="display:block;object-fit:contain;" />
+                 style="display:block;" />
           </td>
         </tr>
 
