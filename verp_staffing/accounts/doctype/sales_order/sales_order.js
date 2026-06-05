@@ -173,17 +173,16 @@ frappe.ui.form.on("Sales Order", {
 		handle_discount_account(frm);
 		if (!frm.doc.company) return;
 		set_account_queries(frm);
-
 		if (frm.doc.items && frm.doc.items.length) {
-			frappe.db
-				.get_value("Company", frm.doc.company, "default_expense_account")
+			frappe
+				.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+					company: frm.doc.company,
+					fieldname: "default_income_account",
+				})
 				.then((r) => {
-					if (!r.message.default_expense_account) {
-						frappe.throw("Default Company Expense Account not set");
-					}
-					if (r.message && r.message.default_expense_account) {
+					if (r.message) {
 						frm.doc.items.forEach((item) => {
-							item.expense_account = r.message.default_expense_account;
+							item.income_account = r.message;
 						});
 						frm.refresh_field("items");
 					}
@@ -251,13 +250,18 @@ frappe.ui.form.on("Items Table", {
 		row.qty = 1;
 		if (row.rate) row.amount = row.qty * row.rate;
 		if (frm.doc.company) {
-			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
-				if (r.message?.default_income_account) {
-					row.income_account = r.message.default_income_account;
+			frappe
+				.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+					company: frm.doc.company,
+					fieldname: "default_income_account",
+				})
+				.then((r) => {
+					if (r.message) {
+						row.income_account = r.message;
 
-					frm.refresh_field("items");
-				}
-			});
+						frm.refresh_field("items");
+					}
+				});
 		}
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		update_agreement_module(frm);

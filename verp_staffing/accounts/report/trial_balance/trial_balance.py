@@ -37,7 +37,7 @@ def execute(filters=None):
 
     # If dates not provided, pull from fiscal year
     if filters.fiscal_year and (not filters.from_date or not filters.to_date):
-        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
+        fy = frappe.get_cached_doc("Fiscal Year", filters.fiscal_year)
         if not filters.from_date:
             filters.from_date = fy.year_start_date
         if not filters.to_date:

@@ -307,8 +307,7 @@ frappe.ui.form.on("Payment Entry", {
 	},
 
 	currency: async function (frm) {
-		const r = await frappe.db.get_value("Company", frm.doc.company, "default_currency");
-		const company_currency = r.message.default_currency;
+		const company_currency = frm.doc.company_currency || "";
 		if (frm.doc.currency === company_currency) {
 			frm.set_value("conversion_rate", 1);
 		}
@@ -907,9 +906,7 @@ async function calculate_taxes(frm) {
 	frm.doc.base_total_taxes_and_charges = 0.0;
 
 	const rate = flt(frm.doc.conversion_rate) || 1;
-	const r = await frappe.db.get_value("Company", frm.doc.company, "default_currency");
-
-	const company_currency = r.message.default_currency;
+	const company_currency = frm.doc.company_currency || "";
 
 	let actual_tax_dict = {};
 	$.each(frm.doc.taxes || [], function (i, tax) {
@@ -1098,8 +1095,7 @@ function set_difference_amount(frm) {
 }
 
 async function hide_unhide_fields(frm) {
-	const r = await frappe.db.get_value("Company", frm.doc.company, "default_currency");
-	const company_currency = r.message.default_currency;
+	const company_currency = frm.doc.company_currency || "";
 	const is_multi = !!(frm.doc.currency && frm.doc.currency !== company_currency);
 
 	[

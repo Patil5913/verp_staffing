@@ -45,7 +45,7 @@ class GLEntry(Document):
         if not frappe.db.exists("Account", self.account):
             frappe.throw(_("Account {0} does not exist").format(self.account))
 
-        account_company = frappe.db.get_value("Account", self.account, "company")
+        account_company = frappe.get_cached_value("Account", self.account, "company")
 
         if account_company != self.company:
             frappe.throw(
@@ -61,7 +61,7 @@ class GLEntry(Document):
 
     # PARTY VALIDATION
     def validate_party(self):
-        account_type = frappe.db.get_value("Account", self.account, "account_type")
+        account_type = frappe.get_cached_value("Account", self.account, "account_type")
 
         if account_type in ["Receivable", "Payable"]:
             if not self.party:
@@ -81,7 +81,7 @@ class GLEntry(Document):
         if exchange_rate <= 0:
             frappe.throw(_("Exchange Rate must be greater than 0"))
 
-        company_currency = frappe.db.get_value(
+        company_currency = frappe.get_cached_value(
             "Company", self.company, "default_currency"
         )
 

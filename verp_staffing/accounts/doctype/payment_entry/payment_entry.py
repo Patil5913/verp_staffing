@@ -680,7 +680,7 @@ def validate_party_type_in_master(doc):
 def validate_party_type_matches_payment_direction(doc):
     if doc.payment_type == "Internal Transfer" or not doc.party_type:
         return
-    account_type = frappe.db.get_value("Party Type", doc.party_type, "account_type")
+    account_type = frappe.get_cached_value("Party Type", doc.party_type, "account_type")
     if not account_type:
         return
     expected = "Receivable" if doc.payment_type == "Receive" else "Payable"
@@ -719,7 +719,7 @@ def validate_paid_from_account_type(doc):
     account_type = frappe.get_cached_value("Account", doc.paid_from, "account_type")
     if doc.payment_type == "Receive":
         expected = (
-            frappe.db.get_value("Party Type", doc.party_type, "account_type")
+            frappe.get_cached_value("Party Type", doc.party_type, "account_type")
             or "Receivable"
         )
         if account_type != expected:
@@ -756,7 +756,7 @@ def validate_paid_to_account_type(doc):
     account_type = frappe.get_cached_value("Account", doc.paid_to, "account_type")
     if doc.payment_type == "Pay":
         expected = (
-            frappe.db.get_value("Party Type", doc.party_type, "account_type")
+            frappe.get_cached_value("Party Type", doc.party_type, "account_type")
             or "Payable"
         )
         if account_type != expected:
@@ -992,7 +992,7 @@ def get_outstanding_reference_documents(args):
     ):
         args["get_outstanding_invoices"] = True
 
-    account_type = frappe.db.get_value("Party Type", args.party_type, "account_type")
+    account_type = frappe.get_cached_value("Party Type", args.party_type, "account_type")
     outstanding_docs = []
 
     if args.get("get_outstanding_invoices"):
@@ -1379,7 +1379,7 @@ def _get_party_account(party_type, party, company):
     elif party_type == "Employee":
         account = frappe.get_cached_value("Company", company, "default_payable_account")
     else:
-        pt_account_type = frappe.db.get_value("Party Type", party_type, "account_type")
+        pt_account_type = frappe.get_cached_value("Party Type", party_type, "account_type")
         if pt_account_type in ("Receivable", "Payable"):
             account = frappe.db.get_value(
                 "Account",

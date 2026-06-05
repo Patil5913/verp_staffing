@@ -54,7 +54,7 @@ class PurchaseInvoice(Document):
                 _("Payable Account must be a Balance Sheet account")
             )
 
-        self.party_account_currency = frappe.db.get_value(
+        self.party_account_currency = frappe.get_cached_value(
             "Account", self.credit_to, "account_currency"
         )
 
@@ -190,7 +190,7 @@ class PurchaseInvoice(Document):
         if not self.company:
             frappe.throw(_("Company is required"))
 
-        account = frappe.db.get_value(
+        account = frappe.get_cached_value(
             "Company",
             self.company,
             "default_payable_account"
@@ -277,7 +277,7 @@ def get_purchase_invoice_gl_map(doc):
 
     # 5. Rounding
     if doc.rounding_adjustment:
-        account = frappe.db.get_value("Company", doc.company, "round_off_account")
+        account = frappe.get_cached_value("Company", doc.company, "round_off_account")
         if not account:
             frappe.throw(
                 _("Please set Round Off Account in Company {0}").format(

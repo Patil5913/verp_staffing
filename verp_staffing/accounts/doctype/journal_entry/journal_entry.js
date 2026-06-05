@@ -44,8 +44,20 @@ frappe.ui.form.on("Journal Entry", {
 		// hide /unhide fields based on currency
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
 	},
+	onload(frm) {
+		if (!frm.doc.company) {
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.company.company.fetch_default_company",
+				callback(r) {
+					if (r.message) {
+						frm.set_value("company", r.message);
+					}
+				},
+			});
+		}
+	},
 	before_save: function (frm) {
-		if (frm.doc.docstatus == 0 ) {
+		if (frm.doc.docstatus == 0) {
 			let payment_entry_references = frm.doc.accounts.filter(
 				(elem) => elem.reference_type == "Payment Entry",
 			);
@@ -99,7 +111,6 @@ frappe.ui.form.on("Journal Entry", {
 					},
 					callback: function (r) {
 						if (r.message) {
-
 							if (!$.isEmptyObject(r.message)) {
 								update_jv_details(frm.doc, [r.message]);
 							}
@@ -133,7 +144,7 @@ function update_jv_details(doc, r) {
 		frappe.model.set_value(row.doctype, row.name, "account", d.account);
 	});
 	refresh_field("accounts");
-};
+}
 
 verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Controller {
 	onload() {
@@ -422,7 +433,7 @@ function open_outstanding_dialog(frm) {
 				fieldtype: "Table",
 				label: "Invoices",
 				cannot_add_rows: true,
-				cannot_delete_rows: true, 
+				cannot_delete_rows: true,
 				in_place_edit: false,
 				fields: [
 					{ fieldname: "name", label: "Invoice", fieldtype: "Data", in_list_view: 1 },
@@ -469,7 +480,7 @@ function open_outstanding_dialog(frm) {
 		let grid = dialog.fields_dict.invoices.grid;
 
 		grid.wrapper.find(".grid-footer").hide();
-		grid.wrapper.find(".grid-remove-rows").hide(); 
+		grid.wrapper.find(".grid-remove-rows").hide();
 		grid.wrapper.find(".row-actions").hide();
 	}, 100);
 
@@ -495,7 +506,6 @@ function open_outstanding_dialog(frm) {
 
 function add_invoices_to_jv(frm, invoices, based_on) {
 	let total = 0;
-
 
 	frm.clear_table("accounts");
 
@@ -549,17 +559,6 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 	cur_frm.cscript.get_balance(frm.doc);
 }
 
-function get_company_currency(frm, callback) {
-	if (!frm.doc.company) {
-		return;
-	}
-
-	frappe.db.get_value("Company", frm.doc.company, "default_currency").then((r) => {
-		if (r && r.message) {
-			callback(r.message.default_currency);
-		}
-	});
-}
 function auto_balance(frm) {
 	let accounts = frm.doc.accounts || [];
 
@@ -834,7 +833,7 @@ $.extend(verp_staffing.journal_entry, {
 			filters.company = frm.doc.company;
 		}
 
-		let company_currency = get_company_currency(frm);
+		let company_currency = frm.doc.company_currency || "";
 
 		if (!frm.doc.multi_currency && frm.doc.company) {
 			let company = frappe.get_doc(":Company", frm.doc.company);

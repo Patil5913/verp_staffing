@@ -57,7 +57,7 @@ def get_columns(filters):
     in_acc_currency = filters.get("show_in_account_currency")
 
     if in_acc_currency and filters.get("account"):
-        display_currency = frappe.db.get_value(
+        display_currency = frappe.get_cached_value(
             "Account", filters.account, "account_currency"
         )
     else:
@@ -171,7 +171,7 @@ def get_data(filters):
 
     display_currency = company_currency
     if in_acc_currency and filters.get("account"):
-        display_currency = frappe.db.get_value(
+        display_currency = frappe.get_cached_value(
             "Account", filters.account, "account_currency"
         )
 
@@ -248,7 +248,7 @@ def get_opening_balance(filters, in_acc_currency):
     """
     root_type = None
     if filters.get("account"):
-        root_type = frappe.db.get_value("Account", filters.account, "root_type")
+        root_type = frappe.get_cached_value("Account", filters.account, "root_type")
 
     conds = ["gle.is_cancelled = 0"]
     values = {"company": filters.company}

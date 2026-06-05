@@ -890,7 +890,7 @@ def handle_background_failure(title, sales_order, error, message):
     customer_owner_employee = frappe.db.get_value(
         "Customer", customer, "customer_owner"
     )
-    owner_user = frappe.db.get_value("Employee", customer_owner_employee, "user")
+    owner_user = frappe.get_cached_value("Employee", customer_owner_employee, "user")
     recipients = set()
     recipients.add("Administrator")  # Always notify admin
     if owner_user:
