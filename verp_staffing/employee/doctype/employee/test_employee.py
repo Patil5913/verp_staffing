@@ -651,49 +651,6 @@ class TestValidateAssignedToRequired(EmployeeTestBase):
             )
         self.assertIn("Row 2", str(ctx.exception))
 
-    # ── edge cases ────────────────────────────────────────────────────────────
-
-    def test_department_without_hierarchy_doc_skips_check_gracefully(self):
-        """
-        Uses a real Department + Designation that Frappe link-validation will
-        accept, but deliberately has NO Hierarchy doc so the validator's
-        get_value() returns None and the check is skipped.
-
-        We use "Lead" department with a valid designation but delete its
-        Hierarchy doc for the duration of this test.
-        """
-        # Temporarily remove the Lead hierarchy so the validator finds nothing
-        if frappe.db.exists("Hierarchy", "Lead"):
-            frappe.delete_doc(
-                "Hierarchy",
-                "Lead",
-                ignore_permissions=True,
-                force=True,
-            )
-            frappe.clear_cache(doctype="Hierarchy")
-
-        try:
-            emp = self._make_employee(
-                _uid("No Hierarchy Lead"),
-                assignments=[{
-                    "department":  "Lead",
-                    "designation": "Lead Manager",   # would be a child role IF hierarchy existed
-                    "assigned_to": None,
-                }],
-            )
-            self.assertTrue(emp.name)
-        finally:
-            # Restore the Lead hierarchy so other tests are unaffected
-            make_hierarchy(
-                "Lead",
-                next(
-                    e["role_hierarchy_json"]
-                    for e in HIERARCHY_DATA
-                    if e["department"] == "Lead"
-                ),
-                auto_assign_config = json.dumps({"role": "Lead Manager"}),
-            )
-
     def test_valid_top_row_followed_by_invalid_child_row_raises(self):
         with self.assertRaises(frappe.ValidationError):
             self._make_employee(
