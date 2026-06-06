@@ -110,7 +110,6 @@ frappe.ui.form.on("Employee", {
 				};
 			};
 
-
 		frm.fields_dict.employee_assignment_details_table.grid.get_field("assigned_to").get_query =
 			function (doc, cdt, cdn) {
 				const row = locals[cdt][cdn];
@@ -123,12 +122,14 @@ frappe.ui.form.on("Employee", {
 				if (!hierarchy) {
 					return { filters: { name: ["=", ""] } };
 				}
-
-				const parent_role = hierarchy.find(
-					(r) => Array.isArray(r.child_roles) && r.child_roles.includes(row.designation),
-				)?.parent_role;
-
-				if (!parent_role) {
+				const parent_roles = hierarchy
+					.filter(
+						(r) =>
+							Array.isArray(r.child_roles) &&
+							r.child_roles.includes(row.designation),
+					)
+					.map((r) => r.parent_role);
+				if (!parent_roles.length) {
 					return { filters: { name: ["=", ""] } };
 				}
 
@@ -136,7 +137,7 @@ frappe.ui.form.on("Employee", {
 					query: "verp_staffing.employee.doctype.employee.employee.get_employees_by_assignment",
 					filters: {
 						department: row.department,
-						designation: parent_role,
+						designation: parent_roles,
 					},
 				};
 			};
@@ -179,7 +180,6 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 });
-
 
 frappe.ui.form.on("Employee Assignment Detail", {
 	async department(frm, cdt, cdn) {
@@ -250,9 +250,8 @@ frappe.ui.form.on("Employee Assignment Detail", {
 		frappe.model.set_value(cdt, cdn, "assigned_to", null);
 
 		frm.refresh_field("employee_assignment_details_table");
-		}
+	},
 });
-
 
 function toggle_linkedin_section(frm) {
 	let show = false;

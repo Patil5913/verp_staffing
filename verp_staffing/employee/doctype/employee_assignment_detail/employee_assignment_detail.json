@@ -46,7 +46,8 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Assigned To",
-   "options": "Employee"
+   "options": "Employee",
+   "search_index": 1
   },
   {
    "fieldname": "section_break_ewgb",
@@ -64,7 +65,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-22 10:53:46.342530",
+ "modified": "2026-06-06 13:57:06.160880",
  "modified_by": "Administrator",
  "module": "Employee",
  "name": "Employee Assignment Detail",

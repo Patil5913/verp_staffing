@@ -4,27 +4,34 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from verp_staffing.stock.doctype.item.test_item import create_item_if_not_exists
-
+from verp_staffing.employee.doctype.employee.test_employee import (
+    make_employee,
+    _ensure_user,
+)
 
 # This function is used by hierarchy tests
-def _create_department_if_not_exists(dept_name: str, roles: list[str] | None = None) -> str:
-	"""Create a Department with optional child-table roles and return its name."""
-	if frappe.db.exists("Department", dept_name):
-		return dept_name
+def _create_department_if_not_exists(
+    dept_name: str, roles: list[str] | None = None
+) -> str:
+    """Create a Department with optional child-table roles and return its name."""
+    if frappe.db.exists("Department", dept_name):
+        return dept_name
 
-	doc = frappe.get_doc(
-		{
-			"doctype": "Department",
-			"department_name": dept_name,
-			"is_group": 0,
-		}
-	)
+    doc = frappe.get_doc(
+        {
+            "doctype": "Department",
+            "department_name": dept_name,
+            "is_group": 0,
+        }
+    )
 
-	for role in (roles or []):
-		doc.append("role", {"role": role})
+    for role in roles or []:
+        doc.append("role", {"role": role})
 
-	doc.insert(ignore_permissions=True)
-	return doc.name
+    doc.insert(ignore_permissions=True)
+    return doc.name
+
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -50,7 +57,6 @@ def _create_role_if_not_exists(role_name: str) -> str:
             ignore_permissions=True
         )
     return role_name
-
 
 
 def _seed_all():
@@ -115,7 +121,6 @@ class TestDepartmentBase(FrappeTestCase):
             doc.append("role", {"role": role})
 
         for svc in services:
-            
             if isinstance(svc, dict):
                 svc = svc.get("service_name")
             doc.append(
@@ -263,3 +268,127 @@ class TestDepartmentCombined(TestDepartmentBase):
             self.fail(
                 f"on_update raised unexpectedly for dept without a Hierarchy: {exc}"
             )
+
+
+# ===========================================================================
+# 5. Department Role Removal Protection
+# ===========================================================================
+
+
+class TestDepartmentRoleRemovalProtection(TestDepartmentBase):
+    def test_removing_unused_role_succeeds(self):
+        dept = self.make_department(
+            department_name="_Test Dept Remove Unused Role",
+            roles=[
+                _resolved["role_a"],
+                _resolved["role_b"],
+            ],
+        )
+
+        dept.role = [row for row in dept.role if row.role != _resolved["role_b"]]
+
+        dept.save(ignore_permissions=True)
+
+        self.assertEqual(
+            len(dept.role),
+            1,
+        )
+
+    def test_removing_assigned_role_is_blocked(self):
+        dept = self.make_department(
+            department_name="_Test Dept Assigned Role",
+            roles=[
+                _resolved["role_a"],
+                _resolved["role_b"],
+            ],
+        )
+
+        make_employee(
+            employee_name="_Test Employee Assigned Role",
+            assignments=[
+                {
+                    "department": dept.name,
+                    "designation": _resolved["role_b"],
+                }
+            ],
+        )
+
+        dept.role = [
+            row
+            for row in dept.role
+            if row.role != _resolved["role_b"]
+        ]
+
+        with self.assertRaises(frappe.ValidationError):
+            dept.save(ignore_permissions=True)
+
+    def test_removing_multiple_assigned_roles_is_blocked(self):
+        dept = self.make_department(
+            department_name="_Test Dept Multiple Assigned Roles",
+            roles=[
+                _resolved["role_a"],
+                _resolved["role_b"],
+            ],
+        )
+        user = _ensure_user()
+        employee = frappe.get_doc(
+            {
+                "doctype": "Employee",
+                "employee_name": "_Test Employee Multi Role",
+                "user":user,
+                "employee_assignment_details_table": [
+                    {
+                        "department": dept.name,
+                        "designation": _resolved["role_a"],
+                    }
+                ],
+            }
+        )
+
+        employee.insert(ignore_permissions=True)
+
+        dept.role = []
+
+        with self.assertRaises(frappe.ValidationError):
+            dept.save(ignore_permissions=True)
+
+# ===========================================================================
+# 6. Department Delete Protection
+# ===========================================================================
+
+
+class TestDepartmentDeleteProtection(TestDepartmentBase):
+
+    def test_delete_department_without_assignments_succeeds(self):
+        dept = self.make_department(
+            department_name="_Test Dept Delete Empty",
+            roles=[_resolved["role_a"]],
+        )
+
+        dept.delete()
+
+        self.assertFalse(
+            frappe.db.exists(
+                "Department",
+                dept.name,
+            )
+        )
+
+    def test_delete_department_with_assignments_is_blocked(self):
+        dept = self.make_department(
+            department_name="_Test Dept Delete Protected",
+            roles=[_resolved["role_a"]],
+        )
+
+        make_employee(
+            employee_name="_Test Employee Delete Protected",
+            assignments=[
+                {
+                    "department": dept.name,
+                    "designation": _resolved["role_a"],
+                }
+            ],
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            dept.delete()

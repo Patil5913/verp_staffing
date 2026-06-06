@@ -1021,3 +1021,231 @@ class TestGetEmployeesByAssignment(EmployeeTestBase):
         )
         names = [r[0] for r in self._call("Resume", "Resume Person")]
         self.assertIn(emp.name, names)
+
+
+# ===========================================================================
+# Employee Delete Validation
+# ===========================================================================
+
+class TestEmployeeDeleteValidation(EmployeeTestBase):
+
+    def test_delete_employee_without_dependents_succeeds(self):
+        manager = self._make_employee(
+            employee_name=_uid("Delete Allowed"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Master Manager",
+                }
+            ],
+        )
+
+        manager.delete()
+
+        self.assertFalse(
+            frappe.db.exists(
+                "Employee",
+                manager.name,
+            )
+        )
+
+    def test_delete_employee_with_dependents_is_blocked(self):
+        manager = self._make_employee(
+            employee_name=_uid("Delete Blocked"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Master Manager",
+                }
+            ],
+        )
+
+        self._make_employee(
+            employee_name=_uid("Manager"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Manager",
+                    "assigned_to": manager.name,
+                }
+            ],
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            manager.delete()
+
+
+# ===========================================================================
+# Employee Hierarchy Validation
+# ===========================================================================
+
+
+class TestEmployeeHierarchyValidation(EmployeeTestBase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Helper Master Manager to assign to while testing validation
+        cls.manager_user2 = cls._make_user("master_manager2@testverp.com", "UBDept User")
+        cls.manager2 = cls._make_employee(
+            employee_name=_uid("Master Manager"),
+            user=cls.manager_user2,
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Master Manager",
+                }
+            ],
+        )
+
+    def test_role_change_to_allowed_parent_role_succeeds(self):
+        manager = self._make_employee(
+            employee_name=_uid("Master Manager"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Master Manager",
+                }
+            ],
+        )
+
+        manager.employee_assignment_details_table[0].designation = (
+            "Technical Manager"
+        )
+        manager.employee_assignment_details_table[0].assigned_to = (
+            self.manager2.name
+        )
+
+        manager.save(ignore_permissions=True)
+
+        self.assertEqual(
+            manager.employee_assignment_details_table[0].designation,
+            "Technical Manager",
+        )
+
+    def test_role_change_breaking_child_hierarchy_is_blocked(self):
+        manager = self._make_employee(
+            employee_name=_uid("Manager"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Manager",
+                    "assigned_to": self.manager2.name,
+                }
+            ],
+        )
+
+        self._make_employee(
+            employee_name=_uid("Coordinator"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Coordinator",
+                    "assigned_to": manager.name,
+                }
+            ],
+        )
+
+        manager.employee_assignment_details_table[0].designation = (
+            "Technical Master Manager"
+        )
+        manager.employee_assignment_details_table[0].assigned_to = ("")
+
+        with self.assertRaises(frappe.ValidationError):
+            manager.save(ignore_permissions=True)
+
+    def test_child_role_requires_valid_parent(self):
+        manager = self._make_employee(
+            employee_name=_uid("Manager"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Manager",
+                    "assigned_to": self.manager2.name,
+                }
+            ],
+        )
+
+        coordinator = self._make_employee(
+            employee_name=_uid("Coordinator"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Coordinator",
+                    "assigned_to": manager.name,
+                }
+            ],
+        )
+
+        coordinator.employee_assignment_details_table[0].designation = (
+            "RUC Person"
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            coordinator.save(ignore_permissions=True)
+
+    def test_root_role_cannot_have_assigned_to(self):
+        root = self._make_employee(
+            employee_name=_uid("Root"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Master Manager",
+                }
+            ],
+        )
+
+        manager = self._make_employee(
+            employee_name=_uid("Manager"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Manager",
+                    "assigned_to": self.manager2.name,
+                }
+            ],
+        )
+
+        root.employee_assignment_details_table[0].assigned_to = manager.name
+
+        with self.assertRaises(frappe.ValidationError):
+            root.save(ignore_permissions=True)
+
+    def test_assigned_to_change_to_invalid_parent_is_blocked(self):
+        manager = self._make_employee(
+            employee_name=_uid("Manager"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Manager",
+                    "assigned_to": self.manager2.name,
+                }
+            ],
+        )
+
+        coordinator = self._make_employee(
+            employee_name=_uid("Coordinator"),
+            assignments=[
+                {
+                    "department": "Technical",
+                    "designation": "Technical Coordinator",
+                    "assigned_to": manager.name,
+                }
+            ],
+        )
+
+        recruiter = self._make_employee(
+            employee_name=_uid("Recruiter"),
+            assignments=[
+                {
+                    "department": "Marketing",
+                    "designation": "Technical Master Manager",
+                }
+            ],
+        )
+
+        coordinator.employee_assignment_details_table[0].assigned_to = (
+            recruiter.name
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            coordinator.save(ignore_permissions=True)

@@ -12,8 +12,12 @@ class Department(Document):
         self.validate_department_name()
         self.validate_no_duplicate_roles()
         self.validate_no_duplicate_services()
+        validate_removed_department_roles(self)
 
     def on_update(self):
+        # check if department is updated from hierarchy.
+        if frappe.flags.skip_hierarchy_cleanup:
+            return
         old_doc = self.get_doc_before_save()
         old_roles = set()
 
@@ -25,6 +29,8 @@ class Department(Document):
         if old_roles != new_roles:
             clean_hierarchy_roles(self.name)
 
+    def on_trash(self):
+        validate_department_delete(self)
     # ------------------------------------------------------------------
     # Validation helpers
     # ------------------------------------------------------------------
@@ -110,4 +116,101 @@ def get_department_service_query(doctype, txt, searchfield, start, page_len, fil
             "start": start,
             "page_len": page_len,
         },
+    )
+
+
+def validate_removed_department_roles(doc):
+    old_doc = doc.get_doc_before_save()
+
+    if not old_doc:
+        return
+
+    old_roles = {(d.role or "").strip() for d in old_doc.role if d.role}
+
+    new_roles = {(d.role or "").strip() for d in doc.role if d.role}
+
+    removed_roles = old_roles - new_roles
+
+    if not removed_roles:
+        return
+
+    assignments = frappe.db.sql(
+        """
+        SELECT
+            parent,
+            designation
+        FROM `tabEmployee Assignment Detail`
+        WHERE
+            department = %(department)s
+            AND designation IN %(roles)s
+        """,
+        {
+            "department": doc.name,
+            "roles": tuple(removed_roles),
+        },
+        as_dict=True,
+    )
+
+    if not assignments:
+        return
+
+    employee_links = []
+
+    for row in assignments:
+        employee_links.append(
+            f'<a href="/app/employee/{row.parent}">{row.parent}</a> ({row.designation})'
+        )
+
+    frappe.throw(
+        _(
+            "Cannot remove role(s): <b>{0}</b><br><br>"
+            "The following employees are still assigned to these roles:<br><br>{1}<br><br>"
+            "Please update employee assignments before removing the role."
+        ).format(
+            ", ".join(sorted(removed_roles)),
+            "<br>".join(employee_links),
+        )
+    )
+
+
+def validate_department_delete(doc):
+    department_roles = {(d.role or "").strip() for d in doc.role if d.role}
+
+    if not department_roles:
+        return
+
+    assignments = frappe.db.sql(
+        """
+        SELECT
+            parent,
+            designation
+        FROM `tabEmployee Assignment Detail`
+        WHERE
+            department = %(department)s
+        """,
+        {
+            "department": doc.name,
+        },
+        as_dict=True,
+    )
+
+    if not assignments:
+        return
+
+    employee_links = []
+
+    for row in assignments:
+        employee_links.append(
+            f'<a href="/app/employee/{row.parent}">{row.parent}</a> ({row.designation})'
+        )
+
+    frappe.throw(
+        _(
+            "Cannot delete Department <b>{0}</b>.<br><br>"
+            "The following employees are still assigned to roles within this department:<br><br>{1}<br><br>"
+            "Please update employee assignments before deleting the department."
+        ).format(
+            doc.name,
+            "<br>".join(employee_links),
+        )
     )
