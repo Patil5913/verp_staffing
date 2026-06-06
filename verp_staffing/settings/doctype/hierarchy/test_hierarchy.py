@@ -10,6 +10,11 @@ from verp_staffing.settings.doctype.department.test_department import (
     _create_department_if_not_exists,
 )
 
+from verp_staffing.employee.doctype.employee.test_employee import (
+    make_employee,
+    make_user,
+)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -102,17 +107,17 @@ class TestHierarchyBase(FrappeTestCase):
         if not isinstance(auto_assign, str):
             auto_assign = json.dumps(auto_assign)
 
-		# Create unique department automatically unless explicitly provided
+        # Create unique department automatically unless explicitly provided
         department_provided = "department" in overrides
-	
+
         department = overrides.pop("department", None)
-	
+
         if not department_provided:
             department = _create_department_if_not_exists(
-				f"_Test Dept {frappe.generate_hash(length=6)}",
-				roles=[ROLE_CEO, ROLE_MGR, ROLE_EMP, ROLE_EXTRA],
-			)
-	
+                f"_Test Dept {frappe.generate_hash(length=6)}",
+                roles=[ROLE_CEO, ROLE_MGR, ROLE_EMP, ROLE_EXTRA],
+            )
+
         defaults = {
             "doctype": "Hierarchy",
             "department": department,
@@ -565,3 +570,254 @@ class TestCombinedScenarios(TestHierarchyBase):
             ]
         )
         self.assertIsNotNone(doc.name)
+
+
+# ===========================================================================
+# 12. Hierarchy ↔ Employee Integrity Validation
+# ===========================================================================
+
+
+class TestHierarchyEmployeeIntegrity(TestHierarchyBase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.root_employee = make_employee(
+            employee_name="_Root Hierarchy Employee",
+            user=make_user(f"{frappe.generate_hash(length=8)}@test.com"),
+            assignments=[
+                {
+                    "department": _resolved["department"],
+                    "designation": ROLE_CEO,
+                }
+            ],
+        )
+
+    def _make_employee_with_assignment(
+        self,
+        employee_name,
+        department,
+        designation,
+        assigned_to=None,
+    ):
+        if not assigned_to and designation != ROLE_CEO:
+            assigned_to = self.root_employee.name
+        return make_employee(
+            employee_name=employee_name,
+            user=make_user(f"{frappe.generate_hash(length=8)}@test.com"),
+            assignments=[
+                {
+                    "department": department,
+                    "designation": designation,
+                    "assigned_to": assigned_to,
+                }
+            ],
+        )
+
+    def test_role_becoming_root_auto_clears_assignment(self):
+        hierarchy = self.make_hierarchy(
+            role_hierarchy_json=[
+                {
+                    "parent_role": ROLE_CEO,
+                    "child_roles": [ROLE_MGR],
+                },
+                {
+                    "parent_role": ROLE_MGR,
+                    "child_roles": [ROLE_EMP],
+                },
+            ]
+        )
+
+        manager = self._make_employee_with_assignment(
+            "_Mgr Root Cleanup",
+            hierarchy.department,
+            ROLE_MGR,
+        )
+
+        employee = self._make_employee_with_assignment(
+            "_Emp Root Cleanup",
+            hierarchy.department,
+            ROLE_EMP,
+            assigned_to=manager.name,
+        )
+
+        hierarchy.role_hierarchy_json = json.dumps(
+            [
+                {
+                    "parent_role": ROLE_CEO,
+                    "child_roles": [ROLE_MGR],
+                },
+                {
+                    "parent_role": ROLE_EMP,
+                    "child_roles": [],
+                },
+            ]
+        )
+
+        hierarchy.save(ignore_permissions=True)
+
+        assigned_to = frappe.db.get_value(
+            "Employee Assignment Detail",
+            {
+                "parent": employee.name,
+                "department": hierarchy.department,
+            },
+            "assigned_to",
+        )
+
+        self.assertFalse(assigned_to)
+
+    def test_invalid_parent_after_hierarchy_change_rejected(self):
+        hierarchy = self.make_hierarchy(
+            role_hierarchy_json=[
+                {
+                    "parent_role": ROLE_CEO,
+                    "child_roles": [ROLE_EMP],
+                },
+                {
+                    "parent_role": ROLE_MGR,
+                    "child_roles": [ROLE_EMP],
+                },
+            ]
+        )
+
+        manager = self._make_employee_with_assignment(
+            "_Mgr Invalid Parent",
+            hierarchy.department,
+            ROLE_MGR,
+        )
+
+        self._make_employee_with_assignment(
+            "_Emp Invalid Parent",
+            hierarchy.department,
+            ROLE_EMP,
+            assigned_to=manager.name,
+        )
+
+        hierarchy.role_hierarchy_json = json.dumps(
+            [
+                {
+                    "parent_role": ROLE_CEO,
+                    "child_roles": [ROLE_EMP],
+                }
+            ]
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            hierarchy.save(ignore_permissions=True)
+
+    def test_removing_relationship_used_by_employee_rejected(self):
+        hierarchy = self.make_hierarchy(
+            role_hierarchy_json=[
+                {
+                    "parent_role": ROLE_MGR,
+                    "child_roles": [ROLE_EMP],
+                }
+            ]
+        )
+
+        manager = self._make_employee_with_assignment(
+            "_Mgr Relationship Removal",
+            hierarchy.department,
+            ROLE_MGR,
+        )
+
+        self._make_employee_with_assignment(
+            "_Emp Relationship Removal",
+            hierarchy.department,
+            ROLE_EMP,
+            assigned_to=manager.name,
+        )
+
+        hierarchy.role_hierarchy_json = json.dumps([])
+
+        with self.assertRaises(frappe.ValidationError):
+            hierarchy.save(ignore_permissions=True)
+
+    def test_hierarchy_delete_rejected_when_employee_assignments_exist(self):
+        hierarchy = self.make_hierarchy()
+
+        self._make_employee_with_assignment(
+            "_Emp Delete Block",
+            hierarchy.department,
+            ROLE_EMP,
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            hierarchy.delete()
+
+    def test_hierarchy_delete_allowed_without_employee_assignments(self):
+        hierarchy = self.make_hierarchy()
+
+        try:
+            hierarchy.delete()
+        except Exception as exc:
+            self.fail(f"Hierarchy deletion unexpectedly failed: {exc}")
+
+    def test_auto_cleanup_only_updates_same_department(self):
+        hierarchy = self.make_hierarchy(
+            role_hierarchy_json=[
+                {
+                    "parent_role": ROLE_CEO,
+                    "child_roles": [ROLE_MGR],
+                },
+                {
+                    "parent_role": ROLE_MGR,
+                    "child_roles": [ROLE_EMP],
+                },
+            ]
+        )
+
+        manager = self._make_employee_with_assignment(
+            "_Mgr Multi Department",
+            hierarchy.department,
+            ROLE_MGR,
+        )
+
+        employee = make_employee(
+            employee_name="_Emp Multi Department",
+            user=make_user(f"{frappe.generate_hash(length=8)}@test.com"),
+            assignments=[
+                {
+                    "department": hierarchy.department,
+                    "designation": ROLE_EMP,
+                    "assigned_to": manager.name,
+                },
+                {
+                    "department": "HR",
+                    "designation": "HR",
+                    "assigned_to": manager.name,
+                },
+            ],
+        )
+
+        hierarchy.role_hierarchy_json = json.dumps(
+            [
+                {
+                    "parent_role": ROLE_CEO,
+                    "child_roles": [ROLE_MGR],
+                },
+                {
+                    "parent_role": ROLE_EMP,
+                    "child_roles": [],
+                },
+            ]
+        )
+
+        hierarchy.save(ignore_permissions=True)
+
+        rows = frappe.db.get_all(
+            "Employee Assignment Detail",
+            filters={"parent": employee.name},
+            fields=[
+                "department",
+                "assigned_to",
+            ],
+        )
+
+        marketing_row = next(r for r in rows if r.department == hierarchy.department)
+
+        hr_row = next(r for r in rows if r.department == "HR")
+
+        self.assertFalse(marketing_row.assigned_to)
+        self.assertEqual(hr_row.assigned_to, manager.name)

@@ -21,7 +21,8 @@
    "fieldtype": "Link",
    "label": "Marketing",
    "options": "Marketing",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "company",
@@ -72,7 +73,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 15:31:34.910198",
+ "modified": "2026-06-01 15:00:15.305342",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
@@ -81,11 +82,11 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "CR"
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "OnBoarding Person"
   },
   {
    "create": 1,
@@ -101,38 +102,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Master Manager"
   },
   {
    "create": 1,
@@ -148,54 +118,7 @@
   },
   {
    "read": 1,
-   "report": 1,
-   "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "marketing Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "marketing Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
+   "role": "Sales Manager"
   },
   {
    "create": 1,
@@ -211,9 +134,37 @@
   },
   {
    "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Master Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
    "read": 1,
    "report": 1,
    "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Recruiter",
    "select": 1,
    "write": 1
   }

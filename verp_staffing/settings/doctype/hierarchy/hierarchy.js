@@ -1,6 +1,7 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
+let hierarchy_confirmation_processed = false;
 frappe.ui.form.on("Hierarchy", {
 	async refresh(frm) {
 		// Only render if wrapper is empty or force re-render is needed
@@ -46,7 +47,12 @@ frappe.ui.form.on("Hierarchy", {
 		init_role_table(frm);
 	},
 
-	before_save(frm) {
+	async before_save(frm) {
+		// Prevent recursion after confirmation
+		if (hierarchy_confirmation_processed) {
+			hierarchy_confirmation_processed = false;
+			return;
+		}
 		// Force save before actual save to ensure latest data
 		save_table_to_json(frm);
 
@@ -62,6 +68,26 @@ frappe.ui.form.on("Hierarchy", {
 				),
 			);
 			frappe.validated = false;
+		}
+		try {
+			const response = await frappe.call({
+				method: "verp_staffing.settings.doctype.hierarchy.hierarchy.precheck_department_role_consistency",
+				args: {
+					doc: frm.doc,
+				},
+			});
+
+			const result = response.message;
+
+			if (!result?.requires_confirmation) {
+				return;
+			}
+
+			frappe.validated = false;
+			show_unused_role_dialog(frm, result.token, result.unused_roles);
+		} catch (e) {
+			frappe.validated = false;
+			throw e;
 		}
 
 		// Extra safety: prevent change even before save
@@ -158,7 +184,7 @@ function init_role_table(frm) {
 	try {
 		data = frm.doc.role_hierarchy_json ? JSON.parse(frm.doc.role_hierarchy_json) : [];
 	} catch (e) {
-		console.log("Error parsing role_hierarchy_json:", e);
+		console.error("Error parsing role_hierarchy_json:", e);
 		data = [];
 	}
 
@@ -959,4 +985,72 @@ function save_auto_assign_config(frm) {
 	}
 
 	frm.set_value("auto_assign_config", JSON.stringify({ role }));
+}
+
+function show_unused_role_dialog(frm, token, unused_roles) {
+	const rolesHtml = unused_roles
+		.map((role) => `<li>${frappe.utils.escape_html(role)}</li>`)
+		.join("");
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Unused Department Roles"),
+		size: "large",
+		fields: [
+			{
+				fieldtype: "HTML",
+				options: `
+					<div>
+						<p>
+							The following Department Roles are not used anywhere in the Hierarchy:
+						</p>
+
+						<ul>
+							${rolesHtml}
+						</ul>
+
+						<p>
+							Do you want to remove them from the Department or continue without removing them?
+						</p>
+					</div>
+				`,
+			},
+		],
+		primary_action_label: __("Remove From Department"),
+		primary_action() {
+			dialog.hide();
+
+			process_hierarchy_confirmation(frm, token, "remove");
+		},
+	});
+
+	dialog.add_custom_action(__("Continue Without Removing"), () => {
+		dialog.hide();
+
+		process_hierarchy_confirmation(frm, token, "continue");
+	});
+
+	dialog.show();
+}
+
+async function process_hierarchy_confirmation(frm, token, action) {
+	try {
+		await frappe.call({
+			method: "verp_staffing.settings.doctype.hierarchy.hierarchy.process_hierarchy_confirmation",
+			args: {
+				hierarchy_name: frm.doc.name,
+				token,
+				action,
+			},
+		});
+		frm.doc.__hierarchy_validation_token = token;
+		hierarchy_confirmation_processed = true;
+
+		await frm.save();
+	} catch (e) {
+		frappe.msgprint({
+			title: __("Validation Failed"),
+			message: e.message || __("Unable to process hierarchy confirmation."),
+			indicator: "red",
+		});
+	}
 }

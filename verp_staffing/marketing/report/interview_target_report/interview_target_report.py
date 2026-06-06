@@ -1,7 +1,7 @@
 import frappe
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
 def execute(filters=None):
@@ -151,7 +151,7 @@ def get_data(filters):
         else:
             # Use existing utility — it already handles hierarchy via Employee Assignment Detail
             employee_names = (
-                get_visible_employee_names(user, department="Marketing") or []
+                get_visible_employee_names_cached(department="Marketing") or []
             )
             valid_employees = filter_marketing_employees(employee_names)
 

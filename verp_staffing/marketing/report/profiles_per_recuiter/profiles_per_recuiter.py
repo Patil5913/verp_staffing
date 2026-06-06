@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 def execute(filters=None):
     filters = filters or {}
@@ -24,7 +24,7 @@ def execute(filters=None):
     hierarchy_clause = ""
 
     if user != "Administrator":
-        allowed_employees = get_visible_employee_names(user)
+        allowed_employees = get_visible_employee_names_cached()
 
         if not allowed_employees:
             return [], [], None, {}

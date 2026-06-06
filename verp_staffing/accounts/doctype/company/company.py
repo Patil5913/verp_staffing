@@ -203,17 +203,9 @@ class Company(NestedSet):
         frappe.defaults.clear_default("company", value=self.name)
 
         frappe.db.sql(
-            """
-            UPDATE `tabSingles`
-            SET value = ''
-            WHERE value = %s
-            AND (
-                    (doctype = 'Global Defaults'
-                    AND field = 'default_company')
-                OR (doctype = 'Chart of Accounts Importer'
-                    AND field = 'company')
-            )
-            """,
+            """update `tabSingles` set value=''
+                where doctype='Accounts Settings' and field='default_company'
+                and value=%s""",
             self.name,
         )
 

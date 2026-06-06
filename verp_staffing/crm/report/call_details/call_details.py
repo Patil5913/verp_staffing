@@ -4,7 +4,7 @@
 import frappe
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from verp_staffing.crm.api.helpers import get_visible_employee_names
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
 def execute(filters=None):
@@ -94,7 +94,7 @@ def get_data(filters):
         values["end_date"] = end_date
 
 
-    allowed_employees = get_visible_employee_names(user)
+    allowed_employees = get_visible_employee_names_cached()
 
     if employee_filter:
         if employee_filter not in allowed_employees and user != "Administrator":
@@ -134,7 +134,7 @@ def get_data(filters):
 
         else:
             # Non-admin — show own hierarchy
-            allowed_employees = get_visible_employee_names(user)
+            allowed_employees = get_visible_employee_names_cached()
             valid_employees = filter_sales_employees(allowed_employees)
 
             if not valid_employees:
@@ -220,7 +220,7 @@ def get_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters)
     ]
 
     if user != "Administrator":
-        all_emps = get_visible_employee_names(user)
+        all_emps = get_visible_employee_names_cached()
 
         if not all_emps:
             return []

@@ -732,7 +732,6 @@ async function send_details_form(frm) {
 
 	if (!recipient) {
 		const res = await frappe.db.get_value("Customer", frm.doc.customer, "lead_details");
-		console.log("res: ", res);
 		const lead_name = res.message.lead_details;
 
 		frappe.throw(`

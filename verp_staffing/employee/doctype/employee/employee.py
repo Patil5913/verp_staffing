@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
+import json
+from frappe import _
 
 
 class Employee(Document):
@@ -16,6 +18,15 @@ class Employee(Document):
 
         self.name = generate_name_series("Employee", name)
 
+    def on_update(self):
+        # Clear cached visible employee names for the user whenever an Employee is updated,
+        # to ensure any changes are reflected in reports immediately
+        frappe.cache().delete_key("Visible_Employee_Names")
+
+    def on_trash(self):
+        validate_employee_delete(self)
+        frappe.cache().delete_key("Visible_Employee_Names")
+
     def validate(self):
 
         rows = self.employee_assignment_details_table or []
@@ -24,6 +35,7 @@ class Employee(Document):
             return
 
         self._validate_assignment_rows(rows)
+        validate_employee_assignment_hierarchy(self)
 
     def _validate_assignment_rows(self, rows):
 
@@ -187,7 +199,7 @@ def get_users_not_linked_to_employee(
 @frappe.whitelist()
 def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filters):
     department = filters.get("department")
-    designation = filters.get("designation")
+    designation = filters.get("designation")  # list of parent roles
 
     if not department or not designation:
         return []
@@ -297,7 +309,6 @@ def get_employee_from_user(user):
 
     return employee
 
-
 @frappe.whitelist()
 def get_user_departments(user=None):
 
@@ -329,3 +340,246 @@ def get_user_departments(user=None):
     )
 
     return departments
+
+
+
+def validate_employee_assignment_hierarchy(doc):
+    old_doc = doc.get_doc_before_save()
+
+    if not old_doc:
+        return
+
+    old_rows = {
+        row.name: (
+            (row.designation or "").strip(),
+            (row.assigned_to or "").strip(),
+        )
+        for row in old_doc.employee_assignment_details_table
+    }
+
+    should_validate = False
+
+    for row in doc.employee_assignment_details_table:
+        old_designation, old_assigned_to = old_rows.get(
+            row.name,
+            ("", ""),
+        )
+
+        if (
+            old_designation != (row.designation or "").strip()
+            or old_assigned_to != (row.assigned_to or "").strip()
+        ):
+            should_validate = True
+            break
+
+    if not should_validate:
+        return
+
+    employee_name = doc.name
+
+    current_rows = [
+        row
+        for row in doc.employee_assignment_details_table
+        if row.department and row.designation
+    ]
+
+    if not current_rows:
+        return
+
+    departments = list({row.department for row in current_rows})
+
+    hierarchy_rows = frappe.db.sql(
+        """
+        SELECT
+            department,
+            role_hierarchy_json
+        FROM `tabHierarchy`
+        WHERE department IN %(departments)s
+        """,
+        {
+            "departments": tuple(departments),
+        },
+        as_dict=True,
+    )
+
+    hierarchy_map = {}
+
+    for row in hierarchy_rows:
+        hierarchy_json = json.loads(row.role_hierarchy_json or "[]")
+
+        parent_role_map = {}
+
+        for item in hierarchy_json:
+            parent_role = (item.get("parent_role") or "").strip()
+
+            if not parent_role:
+                continue
+
+            for child_role in item.get("child_roles") or []:
+                child_role = (child_role or "").strip()
+
+                if not child_role:
+                    continue
+
+                parent_role_map.setdefault(
+                    child_role,
+                    set(),
+                ).add(parent_role)
+
+        hierarchy_map[row.department] = parent_role_map
+
+    # employees that currently employee has been assigned to
+    assigned_to_employees = {row.assigned_to for row in current_rows if row.assigned_to}
+
+    # Employees who have assigned_to pointing to current employee
+    referenced_rows = frappe.db.sql(
+        """
+        SELECT
+            parent,
+            designation,
+            assigned_to
+        FROM `tabEmployee Assignment Detail`
+        WHERE assigned_to = %(employee)s
+        """,
+        {
+            "employee": employee_name,
+        },
+        as_dict=True,
+    )
+
+    referencing_employees = {row.parent for row in referenced_rows}
+    # union both child and parent employees
+    employee_names = assigned_to_employees | referencing_employees
+
+    role_rows = []
+
+    if employee_names:
+        role_rows = frappe.db.sql(
+            """
+            SELECT
+                parent,
+                designation
+            FROM `tabEmployee Assignment Detail`
+            WHERE parent IN %(employees)s
+            """,
+            {
+                "employees": tuple(employee_names),
+            },
+            as_dict=True,
+        )
+
+    employee_role_map = {}
+
+    for row in role_rows:
+        employee_role_map.setdefault(
+            row.parent,
+            set(),
+        ).add((row.designation or "").strip())
+
+    # --------------------------------------------------
+    # Rule 1
+    # Validate employees pointing to current employee
+    # --------------------------------------------------
+
+    current_role_map = {row.department: row.designation for row in current_rows}
+
+    for row in referenced_rows:
+        child_role = (row.designation or "").strip()
+
+        allowed_parent_roles = None
+
+        for dept, role_map in hierarchy_map.items():
+            if child_role in role_map:
+                allowed_parent_roles = role_map.get(
+                    child_role,
+                    set(),
+                )
+                expected_department = dept
+                break
+
+        if not allowed_parent_roles:
+            continue
+
+        current_role = current_role_map.get(expected_department)
+
+        if current_role not in allowed_parent_roles:
+            frappe.throw(
+                _(
+                    "Cannot change role because Employee <b>{0}</b> "
+                    "with role <b>{1}</b> is assigned to this employee and "
+                    "must report to <b>{2}</b>."
+                ).format(
+                    row.parent,
+                    child_role,
+                    ", ".join(sorted(allowed_parent_roles)),
+                )
+            )
+
+    # --------------------------------------------------
+    # Rule 2
+    # Validate current employee assigned_to
+    # --------------------------------------------------
+
+    for row in current_rows:
+        role_map = hierarchy_map.get(
+            row.department,
+            {},
+        )
+
+        current_role = (row.designation or "").strip()
+
+        assigned_to = (row.assigned_to or "").strip()
+
+        allowed_parent_roles = role_map.get(
+            current_role,
+            set(),
+        )
+
+        # root role
+        if not allowed_parent_roles:
+            if assigned_to:
+                frappe.throw(
+                    _(
+                        "Role <b>{0}</b> is a root role and cannot have Assigned To."
+                    ).format(current_role)
+                )
+
+            continue
+
+        if not assigned_to:
+            frappe.throw(
+                _("Role <b>{0}</b> must be assigned to a <b>{1}</b>.").format(
+                    current_role,
+                    ", ".join(sorted(allowed_parent_roles)),
+                )
+            )
+
+        assigned_roles = employee_role_map.get(
+            assigned_to,
+            set(),
+        )
+
+        if not assigned_roles.intersection(allowed_parent_roles):
+            frappe.throw(
+                _("Employee assigned to <b>{0}</b> must have role <b>{1}</b>.").format(
+                    current_role,
+                    ", ".join(sorted(allowed_parent_roles)),
+                )
+            )
+
+
+def validate_employee_delete(doc):
+    exists = frappe.db.exists(
+        "Employee Assignment Detail",
+        {
+            "assigned_to": doc.name,
+        },
+    )
+
+    if exists:
+        frappe.throw(
+            _(
+                "Cannot delete Employee <b>{0}</b>. "
+                "Other employees are assigned to this employee."
+            ).format(doc.name)
+        )

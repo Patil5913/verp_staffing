@@ -15,14 +15,15 @@ from verp_staffing.marketing.doctype.interview_status.test_interview_status impo
 # ---------------------------------------------------------------------------
 
 TEST_CUSTOMER = "_Test Interview Customer"
-TEST_STATUS   = "_Test Interview Status"
-TEST_COMPANY  = "Test Company"
-TEST_ROLE     = "Software Engineer"
+TEST_STATUS = "_Test Interview Status"
+TEST_COMPANY = "Test Company"
+TEST_ROLE = "Software Engineer"
 
 
 # ---------------------------------------------------------------------------
 # Seed helpers
 # ---------------------------------------------------------------------------
+
 
 def _seed_fixtures():
     """
@@ -40,14 +41,16 @@ def _seed_fixtures():
     # ── Marketing ─────────────────────────────────────────────────────────
     # Always insert fresh; autoname gives a unique timestamped name so
     # there's no collision risk.
-    marketing_doc = frappe.get_doc({
-        "doctype":         "Marketing",
-        "customer":        resolved["customer"],
-        "target_based_on": "Weekly",
-        "status":          "Pending",
-    })
+    marketing_doc = frappe.get_doc(
+        {
+            "doctype": "Marketing",
+            "customer": resolved["customer"],
+            "target_based_on": "Weekly",
+            "status": "Pending",
+        }
+    )
     marketing_doc.insert(ignore_permissions=True)
-    resolved["marketing"] = marketing_doc.name   # real autonamed name
+    resolved["marketing"] = marketing_doc.name  # real autonamed name
 
     # ── Interview Status ──────────────────────────────────────────────────
     resolved["status"] = make_interview_status(TEST_STATUS).name
@@ -68,9 +71,8 @@ def _get_lazy_resolved():
     Return a seeded resolved dict, re-seeding if the cached Marketing record
     no longer exists in the DB (e.g. after a rollback in another test module).
     """
-    if (
-        not _lazy_resolved.get("marketing")
-        or not frappe.db.exists("Marketing", _lazy_resolved["marketing"])
+    if not _lazy_resolved.get("marketing") or not frappe.db.exists(
+        "Marketing", _lazy_resolved["marketing"]
     ):
         _lazy_resolved.clear()
         _lazy_resolved.update(_seed_fixtures())
@@ -80,6 +82,7 @@ def _get_lazy_resolved():
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def make_interview(resolved=None, submit=False, rounds=None, **overrides):
     """
@@ -106,46 +109,51 @@ def make_interview(resolved=None, submit=False, rounds=None, **overrides):
     if rounds is None:
         rounds = [
             {
-                "round":             1,
+                "round": 1,
                 "type_of_interview": "Google Meet",
                 "date_of_interview": today(),
-                "support":           0,
-                "follow_up":         0,
-                "edt_est":           "EST",
-                "from_time":         "10:00:00",
-                "to_time":           "11:00:00",
+                "support": 0,
+                "follow_up": 0,
+                "edt_est": "EST",
+                "from_time": "10:00:00",
+                "to_time": "11:00:00",
             }
         ]
 
     # ── Doc ───────────────────────────────────────────────────────────────
     marketing_link = overrides.pop("marketing_link", resolved["marketing"])
-    company        = overrides.pop("company",        TEST_COMPANY)
-    role           = overrides.pop("role",           TEST_ROLE)
-    status         = overrides.pop("status",         resolved["status"])
+    company = overrides.pop("company", TEST_COMPANY)
+    role = overrides.pop("role", TEST_ROLE)
+    status = overrides.pop("status", resolved["status"])
 
-    doc = frappe.get_doc({
-        "doctype":        "Interview",
-        "marketing_link": marketing_link,
-        "company":        company,
-        "role":           role,
-        "status":         status,
-        **overrides,
-    })
+    doc = frappe.get_doc(
+        {
+            "doctype": "Interview",
+            "marketing_link": marketing_link,
+            "company": company,
+            "role": role,
+            "status": status,
+            **overrides,
+        }
+    )
 
     # ── Child rows ────────────────────────────────────────────────────────
     for row in rounds:
-        doc.append("interview_rounds_table", {
-            "round":             row.get("round"),
-            "date":              row.get("date",              today()),
-            "type_of_interview": row.get("type_of_interview", "Google Meet"),
-            "date_of_interview": row.get("date_of_interview", today()),
-            "support":           row.get("support",           0),
-            "feedback":          row.get("feedback"),
-            "follow_up":         row.get("follow_up",         0),
-            "edt_est":           row.get("edt_est",           "EST"),
-            "from_time":         row.get("from_time"),
-            "to_time":           row.get("to_time"),
-        })
+        doc.append(
+            "interview_rounds_table",
+            {
+                "round": row.get("round"),
+                "date": row.get("date", today()),
+                "type_of_interview": row.get("type_of_interview", "Google Meet"),
+                "date_of_interview": row.get("date_of_interview", today()),
+                "support": row.get("support", 0),
+                "feedback": row.get("feedback"),
+                "follow_up": row.get("follow_up", 0),
+                "edt_est": row.get("edt_est", "EST"),
+                "from_time": row.get("from_time"),
+                "to_time": row.get("to_time"),
+            },
+        )
 
     doc.insert(ignore_permissions=True, ignore_links=ignore_links)
 
@@ -158,6 +166,7 @@ def make_interview(resolved=None, submit=False, rounds=None, **overrides):
 # ---------------------------------------------------------------------------
 # Base class
 # ---------------------------------------------------------------------------
+
 
 class InterviewTestBase(FrappeTestCase):
     """
@@ -190,19 +199,17 @@ class InterviewTestBase(FrappeTestCase):
     def make_round(self, date_of_interview=None, follow_up=0, round_no=1):
         """Return a fully-populated child-table row dict."""
         return {
-            "round":             round_no,
-            "date":              today(),
+            "round": round_no,
+            "date": today(),
             "type_of_interview": "Google Meet",
             "date_of_interview": (
-                date_of_interview
-                if date_of_interview is not None
-                else today()
+                date_of_interview if date_of_interview is not None else today()
             ),
-            "support":           0,
-            "follow_up":         follow_up,
-            "edt_est":           "EST",
-            "from_time":         "10:00:00",
-            "to_time":           "11:00:00",
+            "support": 0,
+            "follow_up": follow_up,
+            "edt_est": "EST",
+            "from_time": "10:00:00",
+            "to_time": "11:00:00",
         }
 
 
@@ -210,8 +217,8 @@ class InterviewTestBase(FrappeTestCase):
 # 1. Marketing-link validation
 # ===========================================================================
 
-class TestMarketingLinkValidation(InterviewTestBase):
 
+class TestMarketingLinkValidation(InterviewTestBase):
     def test_valid_marketing_link_succeeds(self):
         doc = self._make()
         self.assertEqual(doc.marketing_link, self.resolved["marketing"])
@@ -239,7 +246,7 @@ class TestMarketingLinkValidation(InterviewTestBase):
         real_get_value = frappe.db.get_value
 
         def patched(*args, **kwargs):
-            doctype   = args[0] if len(args) > 0 else kwargs.get("doctype")
+            doctype = args[0] if len(args) > 0 else kwargs.get("doctype")
             fieldname = args[2] if len(args) > 2 else kwargs.get("fieldname")
             if doctype == "Marketing" and fieldname == "customer":
                 return None
@@ -257,8 +264,8 @@ class TestMarketingLinkValidation(InterviewTestBase):
 # 2. Required-field validation  (company, role, status)
 # ===========================================================================
 
-class TestRequiredFieldValidation(InterviewTestBase):
 
+class TestRequiredFieldValidation(InterviewTestBase):
     def test_missing_company_rejected(self):
         with self.assertRaises((frappe.MandatoryError, frappe.ValidationError)):
             self._make(company=None)
@@ -281,16 +288,16 @@ class TestRequiredFieldValidation(InterviewTestBase):
         doc = self._make()
         self.assertTrue(doc.name)
         self.assertEqual(doc.company, TEST_COMPANY)
-        self.assertEqual(doc.role,    TEST_ROLE)
-        self.assertEqual(doc.status,  self.resolved["status"])
+        self.assertEqual(doc.role, TEST_ROLE)
+        self.assertEqual(doc.status, self.resolved["status"])
 
 
 # ===========================================================================
 # 3. Interview Rounds child-table validation
 # ===========================================================================
 
-class TestInterviewRoundsValidation(InterviewTestBase):
 
+class TestInterviewRoundsValidation(InterviewTestBase):
     def test_no_rounds_succeeds(self):
         """An Interview with an empty rounds table must be valid."""
         doc = self._make(rounds=[])
@@ -337,8 +344,8 @@ class TestInterviewRoundsValidation(InterviewTestBase):
 # 4. Autoname
 # ===========================================================================
 
-class TestAutoname(InterviewTestBase):
 
+class TestAutoname(InterviewTestBase):
     def test_autoname_generates_name(self):
         doc = self._make()
         self.assertTrue(doc.name)
@@ -346,12 +353,14 @@ class TestAutoname(InterviewTestBase):
 
     def test_autoname_without_marketing_link_raises(self):
         """autoname() must throw when marketing_link is absent."""
-        doc = frappe.get_doc({
-            "doctype": "Interview",
-            "company": TEST_COMPANY,
-            "role":    TEST_ROLE,
-            "status":  self.resolved["status"],
-        })
+        doc = frappe.get_doc(
+            {
+                "doctype": "Interview",
+                "company": TEST_COMPANY,
+                "role": TEST_ROLE,
+                "status": self.resolved["status"],
+            }
+        )
         with self.assertRaises(frappe.ValidationError):
             doc.autoname()
 
@@ -360,13 +369,14 @@ class TestAutoname(InterviewTestBase):
 # 5. get_reporting_subtree utility
 # ===========================================================================
 
-class TestReportingSubtree(InterviewTestBase):
 
+class TestReportingSubtree(InterviewTestBase):
     @staticmethod
     def _import():
         from verp_staffing.marketing.doctype.interview.interview import (
             get_reporting_subtree,
         )
+
         return get_reporting_subtree
 
     def test_subtree_contains_root(self):
@@ -382,20 +392,21 @@ class TestReportingSubtree(InterviewTestBase):
 # 6. get_allowed_employee_ids utility
 # ===========================================================================
 
-class TestAllowedEmployeeIds(InterviewTestBase):
 
+class TestAllowedEmployeeIds(InterviewTestBase):
     @staticmethod
     def _import():
         from verp_staffing.marketing.doctype.interview.interview import (
             get_allowed_employee_ids,
         )
+
         return get_allowed_employee_ids
 
     def test_admin_gets_all_employees(self):
         original_user = frappe.session.user
         try:
             frappe.session.user = "Administrator"
-            result   = self._import()("Marketing")
+            result = self._import()("Marketing")
             all_emps = frappe.db.get_all("Employee", pluck="name")
             self.assertEqual(sorted(result), sorted(all_emps))
         finally:
@@ -412,43 +423,116 @@ class TestAllowedEmployeeIds(InterviewTestBase):
 
 
 # ===========================================================================
-# 7. get_marketing_customer_options API
+# 7. search_marketing_customers API
 # ===========================================================================
 
-class TestGetMarketingCustomerOptions(InterviewTestBase):
 
+class TestSearchMarketingCustomers(InterviewTestBase):
     @staticmethod
     def _import():
         from verp_staffing.marketing.doctype.interview.interview import (
-            get_marketing_customer_options,
+            search_marketing_customers,
         )
-        return get_marketing_customer_options
 
-    def test_admin_returns_list(self):
+        return search_marketing_customers
+
+    def test_admin_returns_tuple(self):
         original_user = frappe.session.user
+
         try:
             frappe.session.user = "Administrator"
-            result = self._import()()
-            self.assertIsInstance(result, list)
+
+            result = self._import()(
+                doctype="Marketing",
+                txt="",
+                searchfield="name",
+                start=0,
+                page_len=20,
+                filters=None,
+            )
+            self.assertIsInstance(result, tuple)
+
         finally:
             frappe.session.user = original_user
 
-    def test_admin_result_has_value_and_label_keys(self):
+    def test_admin_result_contains_two_columns(self):
         original_user = frappe.session.user
+
         try:
             frappe.session.user = "Administrator"
-            result = self._import()()
+
+            result = self._import()(
+                doctype="Marketing",
+                txt="",
+                searchfield="name",
+                start=0,
+                page_len=20,
+                filters=None,
+            )
+
             if result:
-                self.assertIn("value", result[0])
-                self.assertIn("label", result[0])
+                self.assertEqual(len(result[0]), 2)
+
+        finally:
+            frappe.session.user = original_user
+
+    def test_admin_result_contains_marketing_name(self):
+        original_user = frappe.session.user
+
+        try:
+            frappe.session.user = "Administrator"
+
+            result = self._import()(
+                doctype="Marketing",
+                txt="",
+                searchfield="name",
+                start=0,
+                page_len=20,
+                filters=None,
+            )
+
+            if result:
+                self.assertTrue(result[0][0])
+
         finally:
             frappe.session.user = original_user
 
     def test_non_admin_no_employee_returns_empty(self):
         original_user = frappe.session.user
+
         try:
             frappe.session.user = "ghost@example.com"
-            result = self._import()()
+
+            result = self._import()(
+                doctype="Marketing",
+                txt="",
+                searchfield="name",
+                start=0,
+                page_len=20,
+                filters=None,
+            )
+
             self.assertEqual(result, [])
+
+        finally:
+            frappe.session.user = original_user
+
+    def test_page_length_is_capped_at_50(self):
+        original_user = frappe.session.user
+
+        try:
+            frappe.session.user = "Administrator"
+
+            result = self._import()(
+                doctype="Marketing",
+                txt="",
+                searchfield="name",
+                start=0,
+                page_len=500,
+                filters=None,
+            )
+
+            self.assertLessEqual(len(result), 50)
+
         finally:
             frappe.session.user = original_user
