@@ -9,11 +9,17 @@ from frappe.model.document import Document
 from frappe.utils.file_manager import save_file
 import random
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 from pdfrw import PdfReader, PdfWriter
+from pdfrw.pagemerge import PageMerge
 from datetime import datetime, timezone
 import os
+from frappe.utils.file_manager import save_file
 from frappe.utils import now_datetime
 
+import io
+from PIL import Image
+from verp_staffing.crm.api import agreement
 
 class ESign(Document):
 
@@ -309,6 +315,425 @@ def calculate_file_hash(file_path):
         for chunk in iter(lambda: f.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
+
+# def write_field_to_pdf(agreement_name, field):
+#     """
+#     Writes a single field value into the current PDF.
+
+#     Called whenever a signer completes a field.
+#     """
+
+#     agreement = frappe.get_doc("E Sign", agreement_name)
+
+#     if not agreement.signed_pdf:
+#         pdf_url = agreement.original_pdf
+#     else:
+#         pdf_url = agreement.signed_pdf
+
+#     file_path = frappe.get_site_path(
+#         pdf_url.replace("/files/", "public/files/")
+#     )
+
+#     pdf = fitz.open(file_path)
+
+#     try:
+
+#         if field.page_number < 1 or field.page_number > len(pdf):
+#             return
+
+#         page = pdf[field.page_number - 1]
+
+#         rect = page.rect
+
+#         x = rect.width * (field.x_percent / 100)
+#         y = rect.height * (field.y_percent / 100)
+#         w = rect.width * (field.width_percent / 100)
+#         h = rect.height * (field.height_percent / 100)
+#         print(f"{field.field_type},{field.page_number},{x},{y},{w},{h}")
+#         print(
+#             f"""
+#             type={field.field_type}
+#             font={field.font_size}
+#             width={w}
+#             height={h}
+#             """
+#         )
+#         pdf_rect = fitz.Rect(x, y, x + w, y + h)
+
+#         field_type = (field.field_type or "").lower()
+
+#         # Signature
+#         if field_type == "signature" and field.signature_image:
+
+#             image_path = frappe.get_site_path(
+#                 field.signature_image.replace("/files/", "public/files/")
+#             )
+#             print(f"image path: {image_path}")
+#             res = page.insert_image(
+#                 pdf_rect,
+#                 filename=image_path
+#             )
+#             print(f"insert image result: {res}")
+
+#         # Checkbox
+#         elif field_type == "checkbox":
+
+#             page.draw_rect(pdf_rect)
+
+#         # Text / Number / Date
+#         elif field_type in ["text", "number", "date"]:
+
+#             value = field.field_value or ""
+#             result = page.insert_textbox(
+#                 pdf_rect,
+#                 value,
+#                 fontsize=float(field.font_size or 12),
+#                 align=0
+#             )
+#             print(f"type: {field_type} \n value: {value},\n result: {result}")
+
+#         pdf.saveIncr()
+
+#     finally:
+#         pdf.close()
+
+def get_pdf_source_path(agreement):
+    """
+    Returns source PDF path.
+
+    Priority:
+    signed_pdf -> original_pdf
+    """
+
+    pdf_url = agreement.signed_pdf or agreement.original_pdf
+
+    return frappe.get_site_path(
+        pdf_url.replace("/files/", "public/files/")
+    )
+
+def render_text(
+    canvas_obj,
+    value,
+    x,
+    y,
+    height,
+    font_size=12,
+):
+    """
+    Draw text value.
+    """
+
+    if not value:
+        return
+
+    canvas_obj.setFont(
+        "Helvetica",
+        float(font_size or 12)
+    )
+
+    canvas_obj.drawString(
+        x,
+        y + (height - float(font_size or 12)),
+        str(value)
+    )
+
+def render_checkbox(
+    canvas_obj,
+    value,
+    x,
+    y,
+    height, 
+    width
+):
+    """
+    Render checkbox.
+    """
+    checkbox_size = min(width, height) * 0.5
+    box_x = x + ((width - checkbox_size) / 2)
+    box_y = y + ((height - checkbox_size) / 2)
+
+    canvas_obj.rect(
+        box_x,
+        box_y,
+        checkbox_size,
+        checkbox_size,
+        stroke=1,
+        fill=0
+    )
+
+    checked = str(value).lower() in (
+        "1",
+        "true",
+        "yes",
+        "checked",
+    )
+
+    if checked:
+
+        canvas_obj.line(
+            box_x + checkbox_size * 0.20,
+            box_y + checkbox_size * 0.55,
+            box_x + checkbox_size * 0.42,
+            box_y + checkbox_size * 0.25,
+        )
+
+        canvas_obj.line(
+            box_x + checkbox_size * 0.42,
+            box_y + checkbox_size * 0.25,
+            box_x + checkbox_size * 0.80,
+            box_y + checkbox_size * 0.80,
+        )
+
+def render_signature(
+    canvas_obj,
+    file_url,
+    x,
+    y,
+    width,
+    height,
+):
+    """
+    Draw signature image.
+    """
+
+    if not file_url:
+        return
+
+    image_path = frappe.get_site_path(
+        file_url.replace(
+            "/files/",
+            "public/files/"
+        )
+    )
+
+    if not os.path.exists(image_path):
+        return
+
+    img = Image.open(image_path)
+
+    canvas_obj.drawImage(
+        ImageReader(img),
+        x,
+        y,
+        width=width,
+        height=height,
+        mask="auto",
+    )
+
+def calculate_pdf_coordinates(
+    field,
+    page_width,
+    page_height,
+):
+    """
+    Convert percentage coordinates
+    into PDF coordinates.
+    """
+
+    x = page_width * (
+        field.x_percent / 100
+    )
+
+    width = page_width * (
+        field.width_percent / 100
+    )
+
+    height = page_height * (
+        field.height_percent / 100
+    )
+
+    top_y = page_height * (
+        field.y_percent / 100
+    )
+
+    y = page_height - (
+        top_y + height
+    )
+
+    return (
+        x,
+        y,
+        width,
+        height,
+    )
+
+def rebuild_signed_pdf(
+    agreement_name,
+):
+    """
+    Rebuild entire signed PDF
+    from DB state.
+    """
+
+    agreement = frappe.get_doc(
+        "E Sign",
+        agreement_name,
+    )
+
+    source_path = get_pdf_source_path(
+        agreement
+    )
+
+    reader = PdfReader(source_path)
+
+    writer = PdfWriter()
+
+    for page_index, page in enumerate(
+        reader.pages
+    ):
+
+        page_width = float(
+            page.MediaBox[2]
+        )
+
+        page_height = float(
+            page.MediaBox[3]
+        )
+
+        packet = io.BytesIO()
+
+        c = canvas.Canvas(
+            packet,
+            pagesize=(
+                page_width,
+                page_height,
+            ),
+        )
+
+        for field in agreement.signature_fields:
+
+            if (field.page_number or 1) - 1 != page_index:
+                continue
+
+            x, y, width, height = calculate_pdf_coordinates(
+                field,
+                page_width,
+                page_height,
+            )
+
+            field_type = (field.field_type or "").lower()
+            print(f"Rendering field {field.field_type} at page {field.page_number} with coords ({x}, {y}, {width}, {height})")
+            if field_type == "signature":
+
+                render_signature(
+                    c,
+                    field.signature_image,
+                    x,
+                    y,
+                    width,
+                    height,
+                )
+
+            elif field_type == "checkbox":
+
+                render_checkbox(
+                    c,
+                    field.field_value,
+                    x,
+                    y,
+                    height,
+                    width, 
+                )
+
+            elif field_type in (
+                "text",
+                "number",
+                "date",
+            ):
+
+                render_text(
+                    c,
+                    field.field_value,
+                    x,
+                    y,
+                    height,
+                    field.font_size,
+                )
+        c.showPage()
+        c.save()
+
+        packet.seek(0)
+
+        overlay = PdfReader(packet)
+
+        if overlay.pages:
+            PageMerge(page).add(
+                    overlay.pages[0]
+                ).render()
+
+        writer.addpage(page)
+
+    output = io.BytesIO()
+
+    writer.write(output)
+
+    output.seek(0)
+
+    return output.getvalue()
+
+def save_rebuilt_pdf(agreement_name):
+    """
+    Rebuild PDF from current DB state and
+    replace agreement.signed_pdf.
+
+    Keeps only one signed PDF.
+    """
+
+    agreement = frappe.get_doc(
+        "E Sign",
+        agreement_name,
+    )
+
+    old_pdf_url = agreement.signed_pdf
+
+    pdf_bytes = rebuild_signed_pdf(
+        agreement_name
+    )
+    print(f"Rebuilt PDF size: {len(pdf_bytes)} bytes saving it")
+    file_doc = save_file(
+        fname=f"{agreement.name}_signed2.pdf",
+        content=pdf_bytes,
+        dt="E Sign",
+        dn=agreement.name,
+        is_private=0,
+    )
+
+    frappe.db.set_value(
+        "E Sign",
+        agreement.name,
+        "signed_pdf",
+        file_doc.file_url,
+    )
+
+    frappe.db.commit()
+    print(f"Agreement: {agreement.name}, Signed PDF updated: {agreement.signed_pdf}")
+    print(f"New signed PDF URL: {file_doc.file_url}")
+    if old_pdf_url:
+
+        old_file = frappe.db.exists(
+            "File",
+            {
+                "file_url": old_pdf_url
+            }
+        )
+
+        if old_file and old_file != file_doc.name:
+
+            try:
+                frappe.delete_doc(
+                    "File",
+                    old_file,
+                    force=1,
+                    ignore_permissions=True,
+                )
+
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    "Failed deleting old signed PDF",
+                )
+
+    return file_doc.file_url
 
 def generate_final_signed_pdf(agreement_name):
 

@@ -6,7 +6,6 @@ if (window.pdfjsLib) {
 
 frappe.ui.form.on("Pdf Agreement Template", {
 	refresh(frm) {
-		
 		if (frm._pdf_dialog_observer) {
 			frm._pdf_dialog_observer.disconnect();
 			frm._pdf_dialog_observer = null;
@@ -202,49 +201,79 @@ frappe.ui.form.on("Pdf Agreement Template", {
 	},
 });
 
+// Load pdf.js once per browser session.
+function load_pdfjs() {
+	if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+	if (window._dsc_pdfjs_promise) return window._dsc_pdfjs_promise;
+
+	window._dsc_pdfjs_promise = new Promise((resolve, reject) => {
+		const s = document.createElement("script");
+		s.src = PDFJS_URL;
+		s.onload = () => {
+			if (window.pdfjsLib) {
+				window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+				resolve(window.pdfjsLib);
+			} else {
+				reject(new Error(__("pdf.js failed to initialise.")));
+			}
+		};
+		s.onerror = () => reject(new Error(__("Could not load the PDF viewer (pdf.js).")));
+		document.head.appendChild(s);
+	});
+	return window._dsc_pdfjs_promise;
+}
+
 async function load_pdf_into_builder(frm) {
-	if (!window.pdfjsLib) {
-		frappe.throw("PDF.js not loaded. Check app_include_js.");
-	}
-	const pdf_url = frappe.urllib.get_full_url(frm.doc.upload_pdf_template);
+	//first load pdf.js if not already loaded
+	load_pdfjs()
+		.then(async () => {
+			const pdf_url = frappe.urllib.get_full_url(frm.doc.upload_pdf_template);
 
-	if (!pdf_url) return;
+			if (!pdf_url) return;
 
-	// ensure temp fields container
-	if (!frm._temp_fields) frm._temp_fields = [];
+			// ensure temp fields container
+			if (!frm._temp_fields) frm._temp_fields = [];
 
-	const wrapper = $("#pdf-pages");
-	wrapper.empty();
+			const wrapper = $("#pdf-pages");
+			wrapper.empty();
 
-	// load with pdfjsLib (assumes you included require() and worker elsewhere)
-	const pdf = await pdfjsLib.getDocument(pdf_url).promise;
+			// load with pdfjsLib (assumes you included require() and worker elsewhere)
+			const pdf = await pdfjsLib.getDocument(pdf_url).promise;
 
-	// render each page as image and a positioned overlay div
-	for (let i = 1; i <= pdf.numPages; i++) {
-		const page = await pdf.getPage(i);
-		const viewport = page.getViewport({ scale: 1.5 });
+			// render each page as image and a positioned overlay div
+			for (let i = 1; i <= pdf.numPages; i++) {
+				const page = await pdf.getPage(i);
+				const viewport = page.getViewport({ scale: 1.5 });
 
-		// render to canvas off-DOM
-		const canvas = document.createElement("canvas");
-		canvas.width = viewport.width;
-		canvas.height = viewport.height;
-		const ctx = canvas.getContext("2d");
-		await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+				// render to canvas off-DOM
+				const canvas = document.createElement("canvas");
+				canvas.width = viewport.width;
+				canvas.height = viewport.height;
+				const ctx = canvas.getContext("2d");
+				await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-		// append page container
-		const pageHtml = $(`
+				// append page container
+				const pageHtml = $(`
             <div class="pdf-page-container" data-page="${i}" style="position:relative; margin: 18px auto; width:${viewport.width}px; height:${viewport.height}px; box-shadow:0 1px 4px rgba(0,0,0,0.08); background:#fff;">
                 <img src="${canvas.toDataURL()}" class="pdf-page-img" style="width:100%; height:100%; display:block;" />
                 <div class="fields-layer" style="position:absolute; top:0; left:0; width:100%; height:100%;"></div>
             </div>
         `);
 
-		wrapper.append(pageHtml);
-	}
+				wrapper.append(pageHtml);
+			}
 
-	// after pages created, load existing fields and enable interactions
-	load_existing_fields(frm);
-	setup_drag_drop(frm);
+			// after pages created, load existing fields and enable interactions
+			load_existing_fields(frm);
+			setup_drag_drop(frm);
+		})
+		.catch((err) => {
+			frappe.msgprint(
+				`Error loading PDF template: ${frappe.utils.escape_html(
+					(err && err.message) || String(err),
+				)}`,
+			);
+		});
 }
 
 // Render saved fields from frm.doc.fields_json into overlay

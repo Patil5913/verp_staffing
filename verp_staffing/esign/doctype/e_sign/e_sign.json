@@ -36,21 +36,18 @@
   {
    "fieldname": "signed_pdf",
    "fieldtype": "Attach",
-   "label": "Signed PDF",
-   "read_only": 1
+   "label": "Signed PDF"
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Draft\nSent\nFully Signed",
-   "read_only": 1
+   "options": "Draft\nSent\nFully Signed"
   },
   {
    "fieldname": "signature_fields",
    "fieldtype": "Table",
-   "hidden": 1,
    "label": "Signature Fields",
    "options": "Signature Fields"
   },
@@ -86,7 +83,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 14:26:18.128167",
+ "modified": "2026-06-09 15:19:04.433195",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",
