@@ -58,54 +58,6 @@ class ESign(Document):
         file_doc.delete(ignore_permissions=True)
 
 
-@frappe.whitelist()
-def generate_pdf_pages(docname):
-
-    doc = frappe.get_doc("E Sign", docname)
-
-    if not doc.original_pdf:
-        return []
-
-    file_path = frappe.get_site_path(
-        doc.original_pdf.replace("/files/", "public/files/")
-    )
-
-    pdf = fitz.open(file_path)
-    pages = []
-
-    for i, page in enumerate(pdf):
-        file_name = f"{docname}_page_{i + 1}.png"
-
-        # ✅ Check if file already exists
-        existing_file = frappe.get_all(
-            "File",
-            filters={
-                "attached_to_doctype": doc.doctype,
-                "attached_to_name": doc.name,
-                "file_name": file_name,
-            },
-            fields=["file_url"],
-            limit=1,
-        )
-
-        if existing_file:
-            # 🔁 Reuse existing image
-            pages.append({"page_number": i + 1, "url": existing_file[0]["file_url"]})
-            continue
-
-        # 🚀 Only generate if not exists
-        pix = page.get_pixmap(dpi=150)
-        img_bytes = pix.tobytes("png")
-
-        file_doc = save_file(file_name, img_bytes, doc.doctype, doc.name, is_private=0)
-
-        pages.append({"page_number": i + 1, "url": file_doc.file_url})
-
-    pdf.close()
-
-    return pages
-
-
 def format_timestamp_utc():
     return now_datetime().strftime("%d-%m-%Y, %H:%M:%S UTC")
 
@@ -133,15 +85,9 @@ def complete_signing(token=None, fields=None):
         frappe.throw("Unauthorized access")
 
     # Process fields
-    field = frappe.get_doc(
-        "Signature Fields",
-        verified
-    )
+    field = frappe.get_doc("Signature Fields", verified)
 
-    agreement = frappe.get_doc(
-        "E Sign",
-        field.parent
-    )
+    agreement = frappe.get_doc("E Sign", field.parent)
 
     signer_fields = get_signer_fields(
         agreement,
@@ -158,9 +104,7 @@ def complete_signing(token=None, fields=None):
         signer_fields,
         fields,
     )
-    save_rebuilt_pdf(
-        agreement.name
-    )
+    save_rebuilt_pdf(agreement.name)
     # Reload agreement
     agreement.reload()
     # Check if agreement complete
@@ -303,88 +247,6 @@ def calculate_file_hash(file_path):
     return sha256.hexdigest()
 
 
-# def write_field_to_pdf(agreement_name, field):
-#     """
-#     Writes a single field value into the current PDF.
-
-#     Called whenever a signer completes a field.
-#     """
-
-#     agreement = frappe.get_doc("E Sign", agreement_name)
-
-#     if not agreement.signed_pdf:
-#         pdf_url = agreement.original_pdf
-#     else:
-#         pdf_url = agreement.signed_pdf
-
-#     file_path = frappe.get_site_path(
-#         pdf_url.replace("/files/", "public/files/")
-#     )
-
-#     pdf = fitz.open(file_path)
-
-#     try:
-
-#         if field.page_number < 1 or field.page_number > len(pdf):
-#             return
-
-#         page = pdf[field.page_number - 1]
-
-#         rect = page.rect
-
-#         x = rect.width * (field.x_percent / 100)
-#         y = rect.height * (field.y_percent / 100)
-#         w = rect.width * (field.width_percent / 100)
-#         h = rect.height * (field.height_percent / 100)
-#         print(f"{field.field_type},{field.page_number},{x},{y},{w},{h}")
-#         print(
-#             f"""
-#             type={field.field_type}
-#             font={field.font_size}
-#             width={w}
-#             height={h}
-#             """
-#         )
-#         pdf_rect = fitz.Rect(x, y, x + w, y + h)
-
-#         field_type = (field.field_type or "").lower()
-
-#         # Signature
-#         if field_type == "signature" and field.signature_image:
-
-#             image_path = frappe.get_site_path(
-#                 field.signature_image.replace("/files/", "public/files/")
-#             )
-#             print(f"image path: {image_path}")
-#             res = page.insert_image(
-#                 pdf_rect,
-#                 filename=image_path
-#             )
-#             print(f"insert image result: {res}")
-
-#         # Checkbox
-#         elif field_type == "checkbox":
-
-#             page.draw_rect(pdf_rect)
-
-#         # Text / Number / Date
-#         elif field_type in ["text", "number", "date"]:
-
-#             value = field.field_value or ""
-#             result = page.insert_textbox(
-#                 pdf_rect,
-#                 value,
-#                 fontsize=float(field.font_size or 12),
-#                 align=0
-#             )
-#             print(f"type: {field_type} \n value: {value},\n result: {result}")
-
-#         pdf.saveIncr()
-
-#     finally:
-#         pdf.close()
-
-
 def get_pdf_source_path(agreement):
     """
     Returns source PDF path.
@@ -509,6 +371,7 @@ def calculate_pdf_coordinates(
         width,
         height,
     )
+
 
 def rebuild_signed_pdf(
     agreement_name,
@@ -695,33 +558,25 @@ def validate_signer_fields(
     """
 
     for field in signer_fields:
-
         field_key = field.name
 
         value = submitted_values.get(field_key)
 
-        field_type = (
-            field.field_type or ""
-        ).lower()
+        field_type = (field.field_type or "").lower()
 
         if field_type == "checkbox":
-
             if str(value).lower() not in (
                 "1",
                 "true",
                 "yes",
                 "checked",
             ):
-                frappe.throw(
-                    f"Checkbox field '{field.field_label}' must be checked."
-                )
+                frappe.throw(f"Checkbox field '{field.field_label}' must be checked.")
 
         else:
-
             if not value:
-                frappe.throw(
-                    f"Field '{field.field_label}' is required."
-                )
+                frappe.throw(f"Field '{field.field_label}' is required.")
+
 
 def save_signer_values(
     signer_fields,
@@ -733,26 +588,16 @@ def save_signer_values(
     """
 
     for field in signer_fields:
-
-        value = submitted_values.get(
-            field.name
-        )
+        value = submitted_values.get(field.name)
         if value is None:
-            frappe.throw(
-                f"Missing value for field {field.field_label}"
-            )
+            frappe.throw(f"Missing value for field {field.field_label}")
 
-        field_type = (
-            field.field_type or ""
-        ).lower()
+        field_type = (field.field_type or "").lower()
 
         if field_type == "signature":
-
             header, encoded = value.split(",", 1)
 
-            filedata = base64.b64decode(
-                encoded
-            )
+            filedata = base64.b64decode(encoded)
 
             file_doc = save_file(
                 f"{field.name}.png",
@@ -762,22 +607,16 @@ def save_signer_values(
                 is_private=0,
             )
 
-            field.signature_image = (
-                file_doc.file_url
-            )
+            field.signature_image = file_doc.file_url
 
         else:
-
-            field.field_value = str(
-                value
-            )
+            field.field_value = str(value)
 
         field.signed = 1
         field.signed_on = format_timestamp_utc()
 
-        field.save(
-            ignore_permissions=True
-        )
+        field.save(ignore_permissions=True)
+
 
 def generate_certificate_page(agreement_name):
 
@@ -1286,7 +1125,7 @@ def verify_otp(token=None, otp=None):
         if otp != cached_otp:
             return {"status": "invalid_otp"}
 
-        # ✅ Generate persistent verification key
+        # Generate persistent verification key
         verification_key = str(uuid.uuid4())
 
         # Save verification key to ALL fields of this signer

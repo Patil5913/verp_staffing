@@ -11,10 +11,9 @@
   "status",
   "section_break_mqgi",
   "original_pdf",
+  "signers_panel",
   "section_break_crjn",
   "signature_fields",
-  "column_break_wujr",
-  "signers_panel",
   "section_break_ixwc",
   "activity"
  ],
@@ -27,7 +26,8 @@
   {
    "fieldname": "original_pdf",
    "fieldtype": "Attach",
-   "label": "Original PDF"
+   "label": "Original PDF",
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_ygal",
@@ -36,7 +36,8 @@
   {
    "fieldname": "signed_pdf",
    "fieldtype": "Attach",
-   "label": "Signed PDF"
+   "label": "Signed PDF",
+   "read_only": 1
   },
   {
    "fieldname": "status",
@@ -67,23 +68,18 @@
   {
    "fieldname": "activity",
    "fieldtype": "Table",
-   "hidden": 1,
    "label": "Activity",
    "options": "activity"
   },
   {
    "fieldname": "section_break_mqgi",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_wujr",
-   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-09 15:19:04.433195",
+ "modified": "2026-06-10 15:33:25.572711",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",
