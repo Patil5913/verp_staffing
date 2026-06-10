@@ -41,7 +41,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nQuotation\nReplied\nConverted\nLost"
+   "options": "Open\nQuotation\nReplied\nConverted\nLost",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_nesv",
@@ -57,7 +58,8 @@
    "fieldname": "opportunity_owner",
    "fieldtype": "Link",
    "label": "Opportunity Owner",
-   "options": "Employee"
+   "options": "Employee",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_lbgc",

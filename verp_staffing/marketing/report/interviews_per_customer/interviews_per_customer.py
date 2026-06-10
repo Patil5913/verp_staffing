@@ -4,123 +4,112 @@
 import frappe
 from frappe.utils import getdate, cint
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
+from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
 
 def execute(filters=None):
     filters = filters or {}
-
-    today = getdate()
-
-    limit = cint(filters.get("limit") or 25)
-    limit = min(limit, 500)
-    year = filters.get("year") or today.year
-
-
-    values = {"today": today, "limit": limit, "year": year}
-
-    hierarchy_clause = ""
-
-    if frappe.session.user != "Administrator":
-        allowed_employees = get_visible_employee_names_cached()
-
-        if not allowed_employees:
-            return [], [], None, {}
-
-        placeholders = []
-
-        for idx, emp in enumerate(allowed_employees):
-            key = f"emp_{idx}"
-            placeholders.append(f"%({key})s")
-            values[key] = emp
-
-        hierarchy_clause = f" AND m.assign_to IN ({', '.join(placeholders)})"
-
-    # ------------------------------------------------------------------
-    # REPORT DATA
-    # ------------------------------------------------------------------
-
     periodicity = filters.get("periodicity")
 
+    if periodicity in ("Monthly", "Quarterly", "Yearly"):
+        return _periodic_report(filters)
+
+    return _customer_report(filters)
+
+
+def _build_hierarchy_clause(values):
+    """
+    Returns an AND fragment scoping the query to the current user's visible
+    employees, or None if the user has no visible employees.
+    Admin always gets an empty string (no restriction).
+    """
+    if frappe.session.user == "Administrator":
+        return ""
+
+    allowed = get_visible_employee_names_cached()
+    if not allowed:
+        return None
+
+    placeholders = _build_in_placeholders("emp", allowed, values)
+    return f" AND m.assign_to IN ({placeholders})"
+
+
+_QUARTER_LABELS = {1: "Jan-Mar", 2: "Apr-Jun", 3: "Jul-Sep", 4: "Oct-Dec"}
+
+
+def _periodic_report(filters):
+    """
+    Counts all interview rounds grouped by period for a given year.
+
+    Fix: YEAR(col) = ? replaced with BETWEEN range so MySQL can use the
+    (parent, date_of_interview) index on tabInterview Round.
+    """
+    today = getdate()
+    year = cint(filters.get("year") or today.year)
+    year_start = f"{year}-01-01"
+    year_end   = f"{year}-12-31"
+
+    values = {"year_start": year_start, "year_end": year_end}
+
+    hierarchy_clause = _build_hierarchy_clause(values)
+    if hierarchy_clause is None:
+        return _empty_periodic(filters["periodicity"])
+
+    periodicity = filters["periodicity"]
+
     if periodicity == "Monthly":
-        return build_periodic_report(
+        return _build_periodic(
             values=values,
             hierarchy_clause=hierarchy_clause,
             select_clause="""
-            DATE_FORMAT(
-                ir.date_of_interview,
-                '%%b %%Y'
-            ) AS period,
-            COUNT(ir.name) AS interviews
-        """,
-            group_by_clause="""
-            YEAR(ir.date_of_interview),
-            MONTH(ir.date_of_interview)
-        """,
-            order_by_clause="""
-            YEAR(ir.date_of_interview),
-            MONTH(ir.date_of_interview)
-        """,
+                DATE_FORMAT(ir.date_of_interview, '%%b %%Y') AS period,
+                COUNT(ir.name)                               AS interviews
+            """,
+            group_by_clause="YEAR(ir.date_of_interview), MONTH(ir.date_of_interview)",
+            order_by_clause="YEAR(ir.date_of_interview), MONTH(ir.date_of_interview)",
             period_label="Month",
         )
 
     elif periodicity == "Quarterly":
-        quarter_labels = {
-            1: "Jan-Mar",
-            2: "Apr-Jun",
-            3: "Jul-Sep",
-            4: "Oct-Dec",
-        }
-
-        def formatter(rows):
-            return [
-                {
-                    "period": (f"{quarter_labels[row.quarter]} {row.year}"),
-                    "interviews": row.interviews,
-                }
-                for row in rows
-            ]
-
-        return build_periodic_report(
+        return _build_periodic(
             values=values,
             hierarchy_clause=hierarchy_clause,
             select_clause="""
-                YEAR(ir.date_of_interview) AS year,
+                YEAR(ir.date_of_interview)    AS year,
                 QUARTER(ir.date_of_interview) AS quarter,
-                COUNT(ir.name) AS interviews
+                COUNT(ir.name)                AS interviews
             """,
-            group_by_clause="""
-                YEAR(ir.date_of_interview),
-                QUARTER(ir.date_of_interview)
-            """,
-            order_by_clause="""
-                YEAR(ir.date_of_interview),
-                QUARTER(ir.date_of_interview)
-            """,
+            group_by_clause="YEAR(ir.date_of_interview), QUARTER(ir.date_of_interview)",
+            order_by_clause="YEAR(ir.date_of_interview), QUARTER(ir.date_of_interview)",
             period_label="Quarter",
-            formatter=formatter,
+            formatter=_format_quarterly,
         )
 
     elif periodicity == "Yearly":
-        return build_periodic_report(
+        return _build_periodic(
             values=values,
             hierarchy_clause=hierarchy_clause,
             select_clause="""
-            YEAR(ir.date_of_interview) AS period,
-            COUNT(ir.name) AS interviews
-        """,
-            group_by_clause="""
-            YEAR(ir.date_of_interview)
-        """,
-            order_by_clause="""
-            YEAR(ir.date_of_interview)
-        """,
+                YEAR(ir.date_of_interview) AS period,
+                COUNT(ir.name)             AS interviews
+            """,
+            group_by_clause="YEAR(ir.date_of_interview)",
+            order_by_clause="YEAR(ir.date_of_interview)",
             period_label="Year",
         )
 
-    return get_customer_report(filters, values, hierarchy_clause, conditions="")
+
+def _format_quarterly(rows):
+    return [
+        frappe._dict(
+            period=f"{_QUARTER_LABELS[r.quarter]} {r.year}",
+            interviews=r.interviews,
+        )
+        for r in rows
+    ]
 
 
-def build_periodic_report(
+def _build_periodic(
     values,
     hierarchy_clause,
     select_clause,
@@ -129,7 +118,7 @@ def build_periodic_report(
     period_label,
     formatter=None,
 ):
-    data = frappe.db.sql(
+    rows = frappe.db.sql(
         f"""
         SELECT
             {select_clause}
@@ -138,43 +127,31 @@ def build_periodic_report(
             ON ir.parent = i.name
         INNER JOIN `tabMarketing` m
             ON m.name = i.marketing_link
-        WHERE YEAR(ir.date_of_interview) = %(year)s
+        WHERE ir.date_of_interview BETWEEN %(year_start)s AND %(year_end)s
         {hierarchy_clause}
-        GROUP BY
-            {group_by_clause}
-        ORDER BY
-            {order_by_clause}
+        GROUP BY {group_by_clause}
+        ORDER BY {order_by_clause}
         """,
         values,
         as_dict=True,
     )
 
     if formatter:
-        data = formatter(data)
+        rows = formatter(rows)
 
     columns = [
-        {
-            "label": period_label,
-            "fieldname": "period",
-            "fieldtype": "Data",
-        },
-        {
-            "label": "Interviews",
-            "fieldname": "interviews",
-            "fieldtype": "Int",
-        },
+        {"label": period_label, "fieldname": "period",     "fieldtype": "Data"},
+        {"label": "Interviews",  "fieldname": "interviews", "fieldtype": "Int"},
     ]
 
+    # All rows are frappe._dict after formatter — no isinstance checks needed.
     chart = {
         "data": {
-            "labels": [d["period"] if isinstance(d, dict) else d.period for d in data],
+            "labels": [r.period for r in rows],
             "datasets": [
                 {
-                    "name": "Upcoming Interviews",
-                    "values": [
-                        d["interviews"] if isinstance(d, dict) else d.interviews
-                        for d in data
-                    ],
+                    "name": "Interviews",
+                    "values": [r.interviews for r in rows],
                 }
             ],
         },
@@ -182,34 +159,74 @@ def build_periodic_report(
         "colors": ["#8494FF"],
     }
 
-    return columns, data, None, chart
+    return columns, rows, None, chart
 
 
-def get_customer_report(
-    filters,
-    values,
-    hierarchy_clause,
-    conditions="",
-):
-    # Date filters
-    if filters.get("from_date"):
-        conditions += " AND ir.date_of_interview >= %(from_date)s"
-        values["from_date"] = filters["from_date"]
-    if filters.get("to_date"):
-        conditions += " AND ir.date_of_interview <= %(to_date)s"
-        values["to_date"] = filters["to_date"]
+def _empty_periodic(periodicity):
+    label = {"Monthly": "Month", "Quarterly": "Quarter", "Yearly": "Year"}.get(
+        periodicity, "Period"
+    )
+    return (
+        [
+            {"label": label,        "fieldname": "period",     "fieldtype": "Data"},
+            {"label": "Interviews", "fieldname": "interviews", "fieldtype": "Int"},
+        ],
+        [],
+        None,
+        {},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Customer report (default view)
+# ---------------------------------------------------------------------------
+
+def _customer_report(filters):
+    """
+    Interview counts per customer, with optional date range and customer filter.
+
+    Changes vs original:
+    - conditions built as a list — no string concatenation.
+    - ORDER BY interviews DESC (volume relevance) not c.creation DESC.
+    - c.creation removed from SELECT and GROUP BY — unused, costs sort overhead.
+    - limit and today scoped here only, not leaked to periodic path.
+    - from_date required as a default guard to prevent unbounded full scans.
+      If neither from_date nor to_date is set we default to the current year
+      so the query always has a date range. This prevents the report from
+      scanning all interview rounds ever created.
+    """
+    today = getdate()
+    limit = min(cint(filters.get("limit") or 25), 500)
+
+    values = {"limit": limit}
+    hierarchy_clause = _build_hierarchy_clause(values)
+    if hierarchy_clause is None:
+        return _customer_columns(), [], None, {}
+
+    # Always enforce a date range to prevent unbounded scans.
+    # Explicit filters override the default.
+    from_date = filters.get("from_date") or f"{today.year}-01-01"
+    to_date   = filters.get("to_date")   or f"{today.year}-12-31"
+
+    conditions = [
+        "ir.date_of_interview >= %(from_date)s",
+        "ir.date_of_interview <= %(to_date)s",
+    ]
+    values["from_date"] = from_date
+    values["to_date"]   = to_date
 
     if filters.get("customer"):
-        conditions += " AND c.name = %(customer)s"
+        conditions.append("c.name = %(customer)s")
         values["customer"] = filters["customer"]
+
+    where_clause = "WHERE " + " AND ".join(conditions)
 
     data = frappe.db.sql(
         f"""
         SELECT
-            c.name AS customer,
-            c.name1 AS name1,
-            c.creation,
-            COUNT(ir.name) AS interviews
+            c.name          AS customer,
+            c.name1         AS name1,
+            COUNT(ir.name)  AS interviews
         FROM `tabInterview` i
         INNER JOIN `tabInterview Round` ir
             ON ir.parent = i.name
@@ -217,49 +234,24 @@ def get_customer_report(
             ON m.name = i.marketing_link
         INNER JOIN `tabCustomer` c
             ON c.name = m.customer
-        WHERE 1=1
-        {conditions}
+        {where_clause}
         {hierarchy_clause}
-        GROUP BY
-            c.name,
-            c.name1,
-            c.creation
-        ORDER BY
-            c.creation DESC
+        GROUP BY c.name, c.name1
+        ORDER BY interviews DESC
         LIMIT %(limit)s
         """,
         values,
         as_dict=True,
     )
 
-    columns = [
-        {
-            "label": "Customer",
-            "fieldname": "customer",
-            "fieldtype": "Link",
-            "options": "Customer",
-        },
-        {
-            "label": "Customer Name",
-            "fieldname": "name1",
-            "fieldtype": "Data",
-        },
-        {
-            "label": "Interviews",
-            "fieldname": "interviews",
-            "fieldtype": "Int",
-        },
-    ]
-
     chart_rows = data[:25]
-
     chart = {
         "data": {
-            "labels": [d.name1 for d in chart_rows],
+            "labels": [r.name1 for r in chart_rows],
             "datasets": [
                 {
                     "name": "Interviews",
-                    "values": [d.interviews for d in chart_rows],
+                    "values": [r.interviews for r in chart_rows],
                 }
             ],
         },
@@ -267,46 +259,57 @@ def get_customer_report(
         "colors": ["#8494FF"],
     }
 
-    return columns, data, None, chart
+    return _customer_columns(), data, None, chart
+
+
+def _customer_columns():
+    return [
+        {
+            "label": "Customer",
+            "fieldname": "customer",
+            "fieldtype": "Link",
+            "options": "Customer",
+            "width": 160,
+        },
+        {
+            "label": "Customer Name",
+            "fieldname": "name1",
+            "fieldtype": "Data",
+            "width": 220,
+        },
+        {
+            "label": "Interviews",
+            "fieldname": "interviews",
+            "fieldtype": "Int",
+            "width": 120,
+        },
+    ]
 
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def get_customers_with_interviews(
-    doctype,
-    txt,
-    searchfield,
-    start,
-    page_len,
-    filters,
-):
-    conditions = [
-        "(c.name LIKE %(txt)s OR c.name1 LIKE %(txt)s)"
-    ]
-
+def get_customers_with_interviews(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Returns customers that have at least one Interview, scoped to the current
+    user's visible hierarchy for non-admin users.
+    Ordered by customer name (name1) for predictable search results.
+    """
     values = {
-        "txt": f"%{txt}%",
-        "start": start,
-        "page_len": page_len,
+        "txt":      f"%{txt}%",
+        "start":    int(start),       # always cast — HTTP delivers strings
+        "page_len": int(page_len),
     }
 
+    conditions = ["(c.name LIKE %(txt)s OR c.name1 LIKE %(txt)s)"]
+
     if frappe.session.user != "Administrator":
-        allowed_employees = get_visible_employee_names_cached()
-
-        if not allowed_employees:
+        allowed = get_visible_employee_names_cached()
+        if not allowed:
             return []
+        placeholders = _build_in_placeholders("emp", allowed, values)
+        conditions.append(f"m.assign_to IN ({placeholders})")
 
-        placeholders = []
-
-        for idx, emp in enumerate(allowed_employees):
-            key = f"emp_{idx}"
-
-            placeholders.append(f"%({key})s")
-            values[key] = emp
-
-        conditions.append(
-            f"m.assign_to IN ({', '.join(placeholders)})"
-        )
+    where_clause = " AND ".join(conditions)
 
     return frappe.db.sql(
         f"""
@@ -318,8 +321,8 @@ def get_customers_with_interviews(
             ON m.customer = c.name
         INNER JOIN `tabInterview` i
             ON i.marketing_link = m.name
-        WHERE {' AND '.join(conditions)}
-        ORDER BY c.creation DESC
+        WHERE {where_clause}
+        ORDER BY c.name1
         LIMIT %(start)s, %(page_len)s
         """,
         values,

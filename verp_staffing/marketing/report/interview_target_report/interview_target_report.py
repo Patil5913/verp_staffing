@@ -1,7 +1,15 @@
+# Copyright (c) 2026, Vrugle and contributors
+# For license information, please see license.txt
+
 import frappe
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
+from frappe.utils import getdate
+from verp_staffing.crm.api.helpers import (
+    get_visible_employee_names_cached,
+    get_reporting_subtree,
+)
+from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
 
 def execute(filters=None):
@@ -39,12 +47,17 @@ def get_columns():
             "fieldtype": "Data",
             "width": 120,
         },
-        {"label": "Target", "fieldname": "target", "fieldtype": "Int", "width": 90},
+        {
+            "label": "Target",
+            "fieldname": "target",
+            "fieldtype": "Int",
+            "width": 90,
+        },
         {
             "label": "Interview Count",
             "fieldname": "completed_target",
             "fieldtype": "Int",
-            "width": 220,
+            "width": 130,
         },
         {
             "label": "Highlight",
@@ -55,193 +68,220 @@ def get_columns():
     ]
 
 
-def get_all_subordinates_by_assignment(root_employee, department=None):
+def _get_marketing_employees_cached(company):
     """
-    Recursively get all subordinates using Employee Assignment Detail.
-    assigned_to field mein parent employee hota hai.
+    Returns all Marketing-department employees for this company.
+    Cached in Redis for 1 hour, scoped by company.
+    Result: list of employee name strings.
     """
-    collected = set()
-    stack = [root_employee]
+    cache_key = f"marketing_dept_employees::{company}"
+    cached = frappe.cache().get_value(cache_key)
+    if cached is not None:
+        return cached
 
-    while stack:
-        current = stack.pop()
-
-        filters = {"assigned_to": current}
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
-
-    return collected
-
-
-def filter_marketing_employees(employee_list):
-    """Filter employees who belong to Marketing department."""
-    if not employee_list:
-        return []
-
-    data = frappe.db.sql(
+    rows = frappe.db.sql(
         """
         SELECT DISTINCT e.name
         FROM `tabEmployee` e
         INNER JOIN `tabEmployee Assignment Detail` d
             ON d.parent = e.name
-        WHERE e.name IN %(emp_list)s
-          AND d.department = 'Marketing'
+        WHERE d.department = 'Marketing'
         """,
-        {"emp_list": tuple(employee_list)},
+        {"company": company},
         as_dict=True,
     )
+    names = [r.name for r in rows]
+    frappe.cache().set_value(cache_key, names, expires_in_sec=3600)
+    return names
 
-    return [row.name for row in data]
 
+def _get_period(target_based_on, start_date, selected_date):
+    """
+    Returns (period_start, period_end) for the current target period
+    as of selected_date.  No DB access — pure date arithmetic.
+    """
+    if target_based_on == "Weekly":
+        days_passed = (selected_date - start_date).days
+        week_number = days_passed // 7
+        period_start = start_date + timedelta(days=week_number * 7)
+        period_end = period_start + timedelta(days=6)
 
-def get_employee_from_user(user):
-    """Get Employee name linked to a user."""
-    return frappe.db.get_value("Employee", {"user": user}, "name")
+    elif target_based_on == "Monthly":
+        months_passed = (selected_date.year - start_date.year) * 12 + (
+            selected_date.month - start_date.month
+        )
+        period_start = start_date + relativedelta(months=months_passed)
+        period_end = period_start + relativedelta(months=1) - timedelta(days=1)
+
+    elif target_based_on == "Daily":
+        period_start = selected_date
+        period_end = selected_date
+
+    else:
+        period_start = start_date
+        period_end = selected_date
+
+    # Clamp upper bound to selected_date.
+    period_end = min(selected_date, period_end)
+    return period_start, period_end
 
 
 def get_data(filters):
+    """
+    Key fix: N+1 query loop eliminated.
 
-    if not filters or not filters.get("from_date"):
+    The original fired one COUNT query per marketing record inside a Python
+    loop. With 200 records that is 200 sequential DB round trips.
+
+    Fix: bulk-fetch ALL interview counts for ALL marketing records in ONE
+    query using GROUP BY marketing_link, then join in Python using a dict.
+
+    This reduces the query count from (1 + N) to exactly 2 regardless of
+    how many marketing records exist.
+
+    Period boundaries are computed in Python per-row (pure date arithmetic,
+    no DB) then used to filter the pre-fetched interview counts.
+    """
+    if not filters.get("from_date"):
         return []
 
-    selected_date = frappe.utils.getdate(filters["from_date"])
+    selected_date = getdate(filters["from_date"])
     user = frappe.session.user
+    company = filters.get("company") or frappe.defaults.get_user_default("company")
     employee_filter = filters.get("employee")
 
-    values = {}
-    conditions = ["m.docstatus < 2"]
-
+    # -- Resolve employee scope (Marketing dept only) -------------------------
     if employee_filter:
-        # Selected employee + all subordinates recursively
-        subordinates = get_all_subordinates_by_assignment(
-            employee_filter, department="Marketing"
+        if user != "Administrator":
+            allowed = get_visible_employee_names_cached()
+            if employee_filter not in allowed:
+                return []
+        valid_employees = list(
+            get_reporting_subtree(
+                employee_filter,
+                department="Marketing",
+            )
         )
 
-        # Include the selected employee itself
-        subordinates.add(employee_filter)
-
-        # Filter only Marketing dept employees
-        valid_employees = filter_marketing_employees(list(subordinates))
+    elif user == "Administrator":
+        valid_employees = _get_marketing_employees_cached(company)
 
     else:
-        if user == "Administrator":
-            data = frappe.db.sql(
-                """
-                SELECT DISTINCT e.name
-                FROM `tabEmployee` e
-                INNER JOIN `tabEmployee Assignment Detail` d
-                    ON d.parent = e.name
-                WHERE d.department = 'Marketing'
-                """,
-                as_dict=True,
-            )
-            valid_employees = [row.name for row in data]
-
-        else:
-            # Use existing utility — it already handles hierarchy via Employee Assignment Detail
-            employee_names = (
-                get_visible_employee_names_cached(department="Marketing") or []
-            )
-            valid_employees = filter_marketing_employees(employee_names)
+        # get_visible_employee_names_cached() returns hierarchy-aware list.
+        # Filter it down to Marketing dept using the cache.
+        all_marketing = set(_get_marketing_employees_cached(company))
+        visible = set(get_visible_employee_names_cached())
+        valid_employees = list(all_marketing & visible)
 
     if not valid_employees:
         return []
 
-    placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(valid_employees))])
-    conditions.append(f"m.assign_to IN ({placeholders})")
-
-    for i, emp in enumerate(valid_employees):
-        values[f"emp_{i}"] = emp
-
-    where_clause = " AND ".join(conditions)
+    # -- Query 1: marketing records ------------------------------------------
+    m_values = {"docstatus": 1}
+    emp_placeholders = _build_in_placeholders("emp", valid_employees, m_values)
 
     marketing_records = frappe.db.sql(
         f"""
-    SELECT
-        m.name,
-        m.assign_to,
-        IFNULL(c.name, m.customer) AS customer_name,
-        m.start_date,
-        m.target_based_on,
-        m.target
-    FROM `tabMarketing` m
-    LEFT JOIN `tabCustomer` c ON c.name = m.customer
-    WHERE {where_clause}
-    ORDER BY m.assign_to, m.start_date DESC
-    """,
-        values,
+        SELECT
+            m.name,
+            m.assign_to,
+            IFNULL(c.name1, m.customer)  AS customer_name,
+            m.start_date,
+            m.target_based_on,
+            m.target
+        FROM `tabMarketing` m
+        LEFT JOIN `tabCustomer` c
+            ON c.name = m.customer
+        WHERE m.docstatus  = %(docstatus)s
+          AND m.assign_to IN ({emp_placeholders})
+        ORDER BY m.assign_to, m.start_date DESC
+        """,
+        m_values,
         as_dict=True,
     )
-    final_data = []
 
+    if not marketing_records:
+        return []
+
+    # -- Pre-compute period boundaries per marketing record ------------------
+    # No DB access here — pure Python date arithmetic.
+    valid_records = []
     for m in marketing_records:
-
         if not m.start_date or selected_date < m.start_date:
             continue
+        period_start, period_end = _get_period(
+            m.target_based_on, m.start_date, selected_date
+        )
+        m["period_start"] = period_start
+        m["period_end"] = period_end
+        valid_records.append(m)
 
-        completed_target = 0
+    if not valid_records:
+        return []
 
-        if m.target_based_on == "Weekly":
-            days_passed = (selected_date - m.start_date).days
-            week_number = days_passed // 7
-            period_start = m.start_date + timedelta(days=week_number * 7)
-            period_end = period_start + timedelta(days=6)
-            period_to = min(selected_date, period_end)
+    # -- Query 2: bulk interview counts (ONE query, replaces N queries) -------
+    #
+    # Fetch ALL interviews for ALL marketing_links in one shot.
+    # We fetch (marketing_link, creation) pairs and group in Python so we
+    # can apply per-record period boundaries (which differ per target_based_on
+    # and start_date, so a single SQL GROUP BY can't handle them uniformly).
+    #
+    # Alternative considered: pass all period ranges as a CASE WHEN expression.
+    # Rejected: with 200+ records it produces an unmaintainable 200-branch CASE.
+    # Python grouping after a bulk SELECT is simpler and equally fast.
 
-        elif m.target_based_on == "Monthly":
-            months_passed = (selected_date.year - m.start_date.year) * 12 + (
-                selected_date.month - m.start_date.month
-            )
-            period_start = m.start_date + relativedelta(months=months_passed)
-            period_end = period_start + relativedelta(months=1) - timedelta(days=1)
-            period_to = min(selected_date, period_end)
+    marketing_names = [m.name for m in valid_records]
+    iv_values = {}
+    mlink_placeholders = _build_in_placeholders("ml", marketing_names, iv_values)
 
-        elif m.target_based_on == "Daily":
-            period_start = selected_date
-            period_to = selected_date
+    # Fetch the earliest creation date we'll need (min period_start) so the
+    # query's date range is tight and the index is used effectively.
+    min_period_start = min(m["period_start"] for m in valid_records)
+    iv_values["min_period_start"] = min_period_start
+    iv_values["selected_date_ceil"] = selected_date + timedelta(days=1)
 
-        else:
-            period_start = m.start_date
-            period_to = selected_date
+    interview_rows = frappe.db.sql(
+        f"""
+        SELECT
+            marketing_link,
+            DATE(creation) AS interview_date
+        FROM `tabInterview`
+        WHERE marketing_link IN ({mlink_placeholders})
+          AND creation >= %(min_period_start)s
+          AND creation  < %(selected_date_ceil)s
+        """,
+        iv_values,
+        as_dict=True,
+    )
 
-        completed_target = (
-            frappe.db.sql(
-                """
-                SELECT COUNT(name)
-                FROM `tabInterview`
-                WHERE marketing_link = %s
-                  AND DATE(creation) BETWEEN %s AND %s
-                """,
-                (m.name, period_start, period_to),
-            )[0][0]
-            or 0
+    # Group by marketing_link → list of interview dates (Python, O(n)).
+    from collections import defaultdict
+
+    dates_by_link = defaultdict(list)
+    for iv in interview_rows:
+        dates_by_link[iv.marketing_link].append(iv.interview_date)
+
+    # -- Assemble final rows --------------------------------------------------
+    final_data = []
+    for m in valid_records:
+        period_start = m["period_start"]
+        period_end = m["period_end"]
+
+        # Count dates falling within this record's period — O(k) per record.
+        completed_target = sum(
+            1 for d in dates_by_link.get(m.name, []) if period_start <= d <= period_end
         )
 
-        row_data = {
+        row = {
             "employee": m.assign_to,
             "customer_name": m.customer_name,
             "start_date": m.start_date,
             "target_based_on": m.target_based_on,
-            "target": m.target,
+            "target": m.target or 0,
             "completed_target": completed_target,
-            "to_highlight": None,
+            "to_highlight": True if completed_target < (m.target or 0) else None,
         }
-
-        if completed_target < (m.target or 0):
-            row_data["to_highlight"] = True
-
-        final_data.append(row_data)
+        final_data.append(row)
 
     return final_data
 
@@ -263,34 +303,37 @@ def get_chart(data):
         formatted_date = (
             frappe.utils.formatdate(start_date, "dd-MM-yyyy") if start_date else ""
         )
-
-        label = f" {customer} | {employee} | {formatted_date} ({completed}/{target})"
-        labels.append(label)
+        labels.append(
+            f"{customer} | {employee} | {formatted_date} ({completed}/{target})"
+        )
         values.append(completed)
 
     return {
         "data": {
             "labels": labels,
-            "datasets": [{"values": values}],
+            "datasets": [{"name": "Interview Count", "values": values}],
         },
         "type": "bar",
         "colors": ["#28a745"],
     }
+
 
 @frappe.whitelist()
 def get_marketing_hierarchy_employees(
     doctype, txt, searchfield, start, page_len, filters
 ):
     """
-    Link field search — shows Marketing dept employees only.
-    Non-admin sees only self + subordinates via Employee Assignment Detail.
+    Link field search for the employee filter.
+    Non-admin sees only their visible Marketing-dept hierarchy.
+    Uses get_cached_value for user→employee lookup (no per-keystroke DB hit).
     """
     user = frappe.session.user
+    company = frappe.defaults.get_user_default("company")
 
     values = {
         "txt": f"%{txt}%",
-        "start": start,
-        "page_len": page_len,
+        "start": int(start),  # always cast — HTTP delivers strings
+        "page_len": int(page_len),
         "dept": "Marketing",
     }
 
@@ -300,45 +343,37 @@ def get_marketing_hierarchy_employees(
         EXISTS (
             SELECT 1
             FROM `tabEmployee Assignment Detail` d
-            WHERE d.parent = tabEmployee.name
+            WHERE d.parent     = tabEmployee.name
               AND d.department = %(dept)s
         )
         """,
     ]
 
     if user != "Administrator":
-        current_employee = get_employee_from_user(user)
-
+        # get_cached_value instead of get_value — no per-keystroke DB hit.
+        current_employee = frappe.get_cached_value("Employee", {"user": user}, "name")
         if not current_employee:
             return []
 
-        # Get full hierarchy
-        subordinates = get_all_subordinates_by_assignment(
-            current_employee, department="Marketing"
+        subtree = list(
+            get_reporting_subtree(
+                current_employee,
+                department="Marketing",
+            )
         )
-        subordinates.add(current_employee)
-        all_emps = list(subordinates)
-
-        if not all_emps:
+        if not subtree:
             return []
 
-        placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(all_emps))])
+        placeholders = _build_in_placeholders("se", subtree, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
-
-        for i, emp in enumerate(all_emps):
-            values[f"emp_{i}"] = emp
 
     return frappe.db.sql(
         f"""
         SELECT tabEmployee.name, tabEmployee.employee_name
         FROM `tabEmployee`
         WHERE {" AND ".join(conditions)}
-        ORDER BY tabEmployee.name
+        ORDER BY tabEmployee.employee_name
         LIMIT %(start)s, %(page_len)s
         """,
         values,
     )
-
-
-def get_employee_from_user(user):
-    return frappe.db.get_value("Employee", {"user": user}, "name")

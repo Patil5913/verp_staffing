@@ -42,7 +42,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nLead\nInterested\nWon\nLost\nOpportunity"
+   "options": "Open\nLead\nInterested\nWon\nLost\nOpportunity",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_vwnk",
@@ -52,7 +53,8 @@
    "fieldname": "lead_owner",
    "fieldtype": "Link",
    "label": "Lead Owner",
-   "options": "Employee"
+   "options": "Employee",
+   "search_index": 1
   },
   {
    "fieldname": "source",
@@ -107,7 +109,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-20 11:43:43.152303",
+ "modified": "2026-06-09 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",

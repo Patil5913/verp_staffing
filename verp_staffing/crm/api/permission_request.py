@@ -32,9 +32,7 @@ def check_candidate_form_required_from_sales_order(so_name):
     if not so_name:
         return False
 
-    raw = frappe.db.get_single_value(
-        "ERP Configuration", "candidate_details_form_fields"
-    )
+    raw = get_cached_erp_config_json("candidate_details_form_fields")
 
     if not raw:
         return False
@@ -63,21 +61,61 @@ def check_candidate_form_required_from_sales_order(so_name):
                 return True
 
     except Exception as e:
-        frappe.log_error(str(e), "Error while checking erp configuration for candidate form requirement")
+        frappe.log_error(
+            str(e),
+            "Error while checking erp configuration for candidate form requirement",
+        )
 
     return False
 
 
-def _get_dept_access_config():
+def get_cached_erp_config_json(fieldname, cache_prefix="erp_config"):
+    cache = frappe.cache()
+    cache_key = f"{cache_prefix}:{fieldname}"
+
+    cached = cache.get_value(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         raw = frappe.db.get_single_value(
-            "ERP Configuration", "department_access_form_fields"
+            "ERP Configuration",
+            fieldname,
         )
-        if not raw:
-            return {}
-        return {k.lower().strip(): v for k, v in json.loads(raw).items()}
+
+        result = (
+            {k.lower().strip(): v for k, v in json.loads(raw).items()} if raw else {}
+        )
+
     except Exception:
-        return {}
+        result = {}
+
+    cache.set_value(
+        cache_key,
+        result,
+        expires_in_sec=3600,
+    )
+
+    return result
+
+@frappe.whitelist()
+def _get_cached_meta(doctype):
+    cache = frappe.cache()
+    cache_key = f"doctype_meta:{doctype}"
+
+    meta = cache.get_value(cache_key)
+    if meta is not None:
+        return meta
+
+    meta = frappe.get_meta(doctype)
+
+    cache.set_value(
+        cache_key,
+        meta,
+        expires_in_sec=3600,
+    )
+
+    return meta
 
 
 def _build_fields_from_fieldnames(allowed_fieldnames):
@@ -86,7 +124,7 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
     by reading Lead Detail Form meta and child doctype metas dynamically.
     """
     try:
-        lead_detail_meta = frappe.get_meta("Lead Detail Form")
+        lead_detail_meta = _get_cached_meta("Lead Detail Form")
     except Exception:
         return {"simple_fields": {}, "table_fields": {}}
 
@@ -136,7 +174,7 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
             if not child_doctype:
                 continue
             try:
-                child_meta = frappe.get_meta(child_doctype)
+                child_meta = _get_cached_meta(child_doctype)
             except Exception:
                 continue
 
@@ -268,6 +306,7 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     customer_owner = frappe.db.get_cached_value(
         "Customer", customer_name, "customer_owner"
     )
+    
     is_customer_owner = employee == customer_owner
 
     lead_owner_match = False
@@ -326,7 +365,7 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
 
 @frappe.whitelist()
 def get_department_updatable_fields(doctype=None):
-    dept_access = _get_dept_access_config()
+    dept_access = get_cached_erp_config_json("department_access_form_fields")
     if not dept_access:
         return {"simple_fields": {}, "table_fields": {}}
 
@@ -350,7 +389,7 @@ def get_customer_owner_updatable_fields():
     using the 'customer' key in ERP Configuration → department_access_form_fields.
     Called when Update Detail dialog opens on Customer form.
     """
-    dept_access_normalized = _get_dept_access_config()
+    dept_access_normalized = get_cached_erp_config_json("department_access_form_fields")
     allowed_fieldnames = dept_access_normalized.get("customer", [])
     if not allowed_fieldnames:
         return {"simple_fields": {}, "table_fields": {}}
@@ -368,7 +407,7 @@ def get_lead_detail_field_values(customer_name):
     if not lead_detail_name:
         return {}
 
-    dept_access_normalized = _get_dept_access_config()
+    dept_access_normalized = get_cached_erp_config_json("department_access_form_fields")
 
     # Collect ALL fieldnames across ALL department keys
     all_fieldnames = set()
@@ -381,7 +420,7 @@ def get_lead_detail_field_values(customer_name):
         return {}
 
     try:
-        lead_detail_meta = frappe.get_meta("Lead Detail Form")
+        lead_detail_meta = _get_cached_meta("Lead Detail Form")
     except Exception:
         return {}
 
@@ -446,7 +485,7 @@ def get_lead_detail_field_values(customer_name):
         if not df or not df.options:
             continue
         try:
-            child_meta = frappe.get_meta(df.options)
+            child_meta = _get_cached_meta(df.options)
             col_fieldnames = [
                 cf.fieldname
                 for cf in child_meta.fields
@@ -531,7 +570,7 @@ def request_field_update(
             frappe.throw("Invalid field data received. Please try again.")
 
     # Build field labels for activity log
-    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    lead_detail_meta = _get_cached_meta("Lead Detail Form")
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
@@ -570,7 +609,7 @@ def request_field_update(
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    # 📧 SEND EMAIL
+    # SEND EMAIL
     template_name = "Field Update Request - permission request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
@@ -647,7 +686,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
         except Exception:
             frappe.throw("Invalid field data received. Please try again.")
 
-    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    lead_detail_meta = _get_cached_meta("Lead Detail Form")
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
@@ -684,7 +723,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    #  SEND EMAIL
+    # SEND EMAIL
     template_name = "Field Update Request by owner - Permission Request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
@@ -867,7 +906,7 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
     if not lead_detail_name:
         frappe.throw("No Lead Detail Form found for this Customer.")
 
-    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    lead_detail_meta = _get_cached_meta("Lead Detail Form")
     updated_fields = {}
     rejected_fields = []
 
@@ -1054,7 +1093,7 @@ def reject_field_update_request(customer_name, comment_name):
     service_name = data.get("service_name")
 
     # Build field labels
-    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    lead_detail_meta = _get_cached_meta("Lead Detail Form")
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)

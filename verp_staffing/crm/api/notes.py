@@ -5,7 +5,6 @@ from frappe.utils import now_datetime
 
 
 @frappe.whitelist()
-@frappe.whitelist()
 def get_notes(reference_doctype, reference_name, limit=20, start=0):
     if not reference_doctype or not reference_name:
         return {"notes": [], "updates": []}

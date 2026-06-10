@@ -1,7 +1,10 @@
+# Copyright (c) 2026, Vrugle and contributors
+# For license information, please see license.txt
+
 import frappe
-from datetime import date
 from dateutil.relativedelta import relativedelta
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
+from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
 
 def execute(filters=None):
@@ -17,14 +20,27 @@ def get_columns():
         {
             "label": "Employee",
             "fieldname": "employee",
+            "fieldtype": "Link",
+            "options": "Employee",
+            "width": 220,
+        },
+        {
+            "label": "Employee Name",
+            "fieldname": "employee_name",
             "fieldtype": "Data",
-            "width": 250,
+            "width": 200,
         },
         {
             "label": "Total Revenue",
             "fieldname": "total_revenue",
             "fieldtype": "Currency",
             "width": 150,
+        },
+        {
+            "label": "Target",
+            "fieldname": "target",
+            "fieldtype": "Currency",
+            "width": 130,
         },
         {
             "label": "Target Based On",
@@ -36,154 +52,162 @@ def get_columns():
             "label": "Target Start Date",
             "fieldname": "start_date",
             "fieldtype": "Date",
-            "width": 150,
-        },
-        {
-            "label": "Target",
-            "fieldname": "target",
-            "fieldtype": "Currency",
-            "width": 150,
+            "width": 130,
         },
     ]
+    
+
+def _get_sales_employees(employee_names, company):
+    """
+    Given a list of employee names (or None for "all"), return a list of dicts:
+        { name, user, employee_name, target, target_based_on, start_date }
+
+    Replaces the original filter_sales_employees() + employees_to_users()
+    two-query pattern with a single query that fetches everything needed.
+
+    Cache key is scoped by company to prevent multi-tenant data bleed.
+    """
+    cache_key = f"sales_emp_details::{company}"
+    cached = frappe.cache().get_value(cache_key)
+
+    if cached is None:
+        # Fetch all Sales employees for this company once and cache the full set.
+        cached = frappe.db.sql(
+            """
+            SELECT DISTINCT
+                e.name,
+                e.employee_name,
+                e.user,
+                e.target,
+                e.target_based_on,
+                e.start_date
+            FROM `tabEmployee` e
+            INNER JOIN `tabEmployee Assignment Detail` d
+                ON d.parent = e.name
+            WHERE d.department = 'Sales'
+              AND e.user IS NOT NULL
+              AND e.user != ''
+            """,
+            {"company": company},
+            as_dict=True,
+        )
+        frappe.cache().set_value(cache_key, cached, expires_in_sec=3600)
+
+    if employee_names is None:
+        # Caller wants all Sales employees (admin, no filter).
+        return cached
+
+    requested = set(employee_names)
+    return [e for e in cached if e["name"] in requested]
 
 
-def filter_sales_employees(employee_list):
-    """Filter employees who belong to Sales department."""
-    if not employee_list:
-        return []
-
-    data = frappe.db.sql(
-        """
-        SELECT DISTINCT e.name
-        FROM `tabEmployee` e
-        INNER JOIN `tabEmployee Assignment Detail` d
-            ON d.parent = e.name
-        WHERE e.name IN %(emp_list)s
-          AND d.department = 'Sales'
-        """,
-        {"emp_list": tuple(employee_list)},
-        as_dict=True,
-    )
-
-    return [row.name for row in data]
-
-
-def employees_to_users(employee_list):
-    """Get user IDs linked to given employees in Sales department."""
-    if not employee_list:
-        return []
-
-    data = frappe.db.sql(
-        """
-        SELECT DISTINCT e.user
-        FROM `tabEmployee` e
-        INNER JOIN `tabEmployee Assignment Detail` d
-            ON d.parent = e.name
-        WHERE e.name IN %(emp_list)s
-          AND d.department = 'Sales'
-        """,
-        {"emp_list": tuple(employee_list)},
-        as_dict=True,
-    )
-
-    return [row.user for row in data if row.user]
-
-
-def get_data(filters):
-    conditions = []
-    values = {}
-
+def _resolve_dates(filters):
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
     timeline = filters.get("timeline")
 
     if timeline and not start_date:
         today = frappe.utils.getdate()
+        delta_map = {
+            "Monthly":  dict(months=1),
+            "3 Months": dict(months=3),
+            "6 Months": dict(months=6),
+            "Yearly":   dict(years=1),
+        }
+        if timeline in delta_map:
+            start_date = today - relativedelta(**delta_map[timeline])
+            end_date = today
 
-        if timeline == "Monthly":
-            start_date = today - relativedelta(months=1)
-        elif timeline == "3 Months":
-            start_date = today - relativedelta(months=3)
-        elif timeline == "6 Months":
-            start_date = today - relativedelta(months=6)
-        elif timeline == "Yearly":
-            start_date = today - relativedelta(years=1)
+    return start_date, end_date
 
-        end_date = today
+
+def get_data(filters):
+    user = frappe.session.user
+    company = filters.get("company") or frappe.defaults.get_user_default("company")
+    employee_filter = filters.get("employee")
+
+    # -- Resolve which employees are in scope --------------------------------
+    allowed_employees = get_visible_employee_names_cached()  # called once
+
+    if employee_filter:
+        if user != "Administrator" and employee_filter not in allowed_employees:
+            return []
+        sales_employees = _get_sales_employees([employee_filter], company)
+    elif user == "Administrator":
+        sales_employees = _get_sales_employees(None, company)  # all Sales
+    else:
+        sales_employees = _get_sales_employees(allowed_employees, company)
+
+    if not sales_employees:
+        return []
+
+    # Build lookup dicts for later Python-side enrichment.
+    # { user_email: employee_dict }
+    emp_by_user = {e["user"]: e for e in sales_employees if e.get("user")}
+    user_list = list(emp_by_user.keys())
+
+    if not user_list:
+        return []
+
+    # -- Build WHERE ---------------------------------------------------------
+    conditions = ["so.owner IS NOT NULL", "so.docstatus = 1"]
+    values = {}
+
+    start_date, end_date = _resolve_dates(filters)
 
     if start_date:
         conditions.append("so.creation >= %(start_date)s")
         values["start_date"] = start_date
 
     if end_date:
-        conditions.append("so.creation <= %(end_date)s")
+        # Inclusive upper bound for DATETIME column.
+        conditions.append("so.creation < DATE_ADD(%(end_date)s, INTERVAL 1 DAY)")
         values["end_date"] = end_date
 
-    user = frappe.session.user
-    employee_filter = filters.get("employee")
+    user_placeholders = _build_in_placeholders("usr", user_list, values)
+    conditions.append(f"so.owner IN ({user_placeholders})")
 
-    allowed_employees = get_visible_employee_names_cached()
+    where_clause = "WHERE " + " AND ".join(conditions)
 
-    
-    if employee_filter:
-        if employee_filter not in allowed_employees and user != "Administrator":
-            return []
+    # -- Revenue query -------------------------------------------------------
+    # No JOIN to tabEmployee here — avoids the multi-Assignment-Detail
+    # duplication bug. Employee metadata is merged from the cache in Python.
+    revenue_rows = frappe.db.sql(
+        f"""
+        SELECT
+            so.owner                AS user,
+            SUM(cpt.amount)         AS total_revenue
+        FROM `tabCustomer Payment Terms` cpt
+        INNER JOIN `tabSales Order` so
+            ON cpt.parent = so.name
+        {where_clause}
+        GROUP BY so.owner
+        ORDER BY total_revenue DESC
+        """,
+        values,
+        as_dict=True,
+    )
 
-        valid_employees = filter_sales_employees([employee_filter])
-        users = employees_to_users(valid_employees)
-
-    else:
-        if user == "Administrator":
-            # Admin — all Sales employees
-            data = frappe.db.sql(
-                """
-                SELECT DISTINCT e.user
-                FROM `tabEmployee` e
-                INNER JOIN `tabEmployee Assignment Detail` d
-                    ON d.parent = e.name
-                WHERE d.department = 'Sales'
-                """,
-                as_dict=True,
-            )
-            users = [row.user for row in data if row.user]
-
-        else:
-            # Non-admin — own hierarchy only
-            allowed_employees = get_visible_employee_names_cached()
-            valid_employees = filter_sales_employees(allowed_employees)
-
-            users = employees_to_users(valid_employees)
-
-    if not users:
+    if not revenue_rows:
         return []
 
-    placeholders = ", ".join([f"%(user_{i})s" for i in range(len(users))])
-    conditions.append(f"so.owner IN ({placeholders})")
+    # -- Enrich with employee metadata (no extra DB call) --------------------
+    result = []
+    for row in revenue_rows:
+        emp = emp_by_user.get(row["user"])
+        if not emp:
+            # so.owner has no matching Sales employee — skip.
+            continue
+        result.append({
+            "employee":        emp["name"],
+            "employee_name":   emp["employee_name"],
+            "total_revenue":   row["total_revenue"] or 0.0,
+            "target":          emp.get("target") or 0.0,
+            "target_based_on": emp.get("target_based_on") or "",
+            "start_date":      emp.get("start_date") or "",
+        })
 
-    for i, u in enumerate(users):
-        values[f"user_{i}"] = u
-
-    where_clause = " AND ".join(["so.owner IS NOT NULL"] + conditions)
-
-    query = f"""
-    SELECT
-        so.owner AS employee,
-        SUM(cpt.amount) AS total_revenue,
-        e.target AS target,
-        e.target_based_on,
-        e.start_date
-    FROM `tabCustomer Payment Terms` cpt
-    JOIN `tabSales Order` so
-        ON cpt.parent = so.name
-    LEFT JOIN `tabEmployee` e
-        ON e.user = so.owner
-    WHERE {where_clause}
-    GROUP BY so.owner
-    ORDER BY total_revenue DESC
-"""
-
-    return frappe.db.sql(query, values, as_dict=True)
-
+    return result
 
 
 def get_chart(data):
@@ -192,7 +216,7 @@ def get_chart(data):
 
     return {
         "data": {
-            "labels": [row["employee"] for row in data],
+            "labels": [row["employee_name"] or row["employee"] for row in data],
             "datasets": [
                 {
                     "name": "Revenue per Employee",
@@ -208,15 +232,14 @@ def get_chart(data):
 @frappe.whitelist()
 def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
     """
-    Link field search — shows Sales dept employees only.
-    Non-admin sees only self + subordinates via Employee Assignment Detail.
+    Link field search for the employee filter.
+    Restricts to Sales department employees visible to the current user.
+    Non-admin sees only their visible hierarchy.
     """
-    user = frappe.session.user
-
     values = {
         "txt": f"%{txt}%",
-        "start": start,
-        "page_len": page_len,
+        "start":    int(start),     # always cast — HTTP delivers strings
+        "page_len": int(page_len),
         "dept": "Sales",
     }
 
@@ -233,23 +256,18 @@ def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, fi
     ]
 
     if frappe.session.user != "Administrator":
-        all_emps = get_visible_employee_names_cached()
-
-        if not all_emps:
+        allowed = get_visible_employee_names_cached()
+        if not allowed:
             return []
-
-        placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(all_emps))])
+        placeholders = _build_in_placeholders("se", allowed, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
-
-        for i, emp in enumerate(all_emps):
-            values[f"emp_{i}"] = emp
 
     return frappe.db.sql(
         f"""
         SELECT tabEmployee.name, tabEmployee.employee_name
         FROM `tabEmployee`
         WHERE {" AND ".join(conditions)}
-        ORDER BY tabEmployee.name
+        ORDER BY tabEmployee.employee_name
         LIMIT %(start)s, %(page_len)s
         """,
         values,

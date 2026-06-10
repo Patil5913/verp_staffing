@@ -1,12 +1,11 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
+import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
-import json
-from frappe import _
 
 
 class Employee(Document):
@@ -38,40 +37,57 @@ class Employee(Document):
         validate_employee_assignment_hierarchy(self)
 
     def _validate_assignment_rows(self, rows):
-
         seen_departments = set()
 
-        # Collect unique departments first
-        departments = {row.department for row in rows if row.department}
+        # Collect unique departments used in rows
+        departments = {
+            row.department
+            for row in rows
+            if row.department
+        }
 
-        hierarchy_map = {}
+        # Build department -> child_roles map once
+        department_child_roles = {}
 
         if departments:
             hierarchy_data = frappe.get_all(
                 "Hierarchy",
                 filters={"name": ["in", list(departments)]},
-                fields=[
-                    "name",
-                    "role_hierarchy_json",
-                ],
+                fields=["name", "role_hierarchy_json"],
             )
 
-            hierarchy_map = {d.name: d.role_hierarchy_json for d in hierarchy_data}
+            for hierarchy_row in hierarchy_data:
+                child_roles = set()
 
-        # Cache parsed child roles
-        child_roles_cache = {}
+                if hierarchy_row.role_hierarchy_json:
+                    try:
+                        hierarchy = frappe.parse_json(
+                            hierarchy_row.role_hierarchy_json
+                        )
+
+                        for entry in hierarchy:
+                            child_roles.update(
+                                entry.get("child_roles") or []
+                            )
+
+                    except Exception:
+                        frappe.log_error(
+                            frappe.get_traceback(),
+                            f"Invalid role_hierarchy_json for Hierarchy '{hierarchy_row.name}'",
+                        )
+
+                department_child_roles[hierarchy_row.name] = child_roles
 
         for row in rows:
             department = row.department
             designation = row.designation
             assigned_to = row.assigned_to
 
-            # Skip fully empty rows
-
+            # Skip completely empty rows
             if not (department or designation or assigned_to):
                 continue
 
-            # Designation required
+            # Department requires designation
             if department and not designation:
                 frappe.throw(
                     _(
@@ -84,7 +100,9 @@ class Employee(Document):
             if department:
                 if department in seen_departments:
                     frappe.throw(
-                        _("Row {0}: Department <b>{1}</b> is already selected.").format(
+                        _(
+                            "Row {0}: Department <b>{1}</b> is already selected."
+                        ).format(
                             row.idx,
                             department,
                         ),
@@ -93,30 +111,13 @@ class Employee(Document):
 
                 seen_departments.add(department)
 
-            # Assigned To validation
-            if not (department and designation):
+            # Nothing further to validate
+            if not department or not designation:
                 continue
 
-            child_roles = child_roles_cache.get(department)
+            child_roles = department_child_roles.get(department, set())
 
-            if child_roles is None:
-                child_roles = set()
-
-                hierarchy_json = hierarchy_map.get(department)
-
-                if hierarchy_json:
-                    try:
-                        hierarchy = frappe.parse_json(hierarchy_json)
-
-                        for entry in hierarchy:
-                            child_roles.update(entry.get("child_roles") or [])
-
-                    except Exception:
-                        pass
-
-                child_roles_cache[department] = child_roles
-
-            # top role -> no assigned_to needed
+            # Top-level role, no manager assignment required
             if designation not in child_roles:
                 continue
 
@@ -134,7 +135,6 @@ class Employee(Document):
                 ),
                 title=_("Assigned To Required"),
             )
-
 
 @frappe.whitelist()
 def get_users_not_linked_to_employee(
@@ -281,7 +281,7 @@ def user_belongs_to_department(user, department):
         )
     )
 
-
+@frappe.whitelist()
 def get_employee_from_user(user):
 
     if not user:

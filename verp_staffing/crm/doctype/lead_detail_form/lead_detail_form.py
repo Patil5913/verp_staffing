@@ -119,7 +119,7 @@ def apply_pdf_signature(doc, signature_image_file):
     except Exception:
         frappe.throw("Invalid fields_json in template")
 
-    # ✅ Retry loop — handles any parallel 1020 conflict
+    # Retry loop — handles any parallel 1020 conflict
     max_retries = 5
     for attempt in range(max_retries):
         try:
@@ -200,7 +200,7 @@ def verify_token(token):
 
         data = json.loads(payload)
 
-        # 🔥 EXPIRY CHECK
+        # EXPIRY CHECK
         if data.get("exp"):
             if datetime.utcnow().timestamp() > data["exp"]:
                 return None
@@ -598,7 +598,7 @@ def apply_signature_and_audit_to_pdf(
                 key=lambda x: datetime.strptime(x["timestamp"], "%d-%m-%Y, %H:%M:%S UTC"),
             )
             for i, log in enumerate(sorted_sigs, 1):
-                ensure_space(80)  # ✅ enough space for bubble + text + device + divider
+                ensure_space(80)  # enough space for bubble + text + device + divider
                 ts = fmt_ts(log.get("timestamp", ""))
                 method = log.get("method", "N/A")
                 event_label = log.get("event", "signature_added").replace("_", " ").title()
@@ -755,7 +755,7 @@ def apply_signature_and_audit_to_pdf(
 
     with open(output_path, "rb") as f:
         content = f.read()
-    # 🔹 CUSTOMER EMAIL
+    # CUSTOMER EMAIL
     template_name = "Agreement Signed - Customer"
     
     if frappe.db.exists("Email Template", template_name):
@@ -792,7 +792,7 @@ def apply_signature_and_audit_to_pdf(
     )
     
     
-    # 🔹 INTERNAL NOTIFICATION
+    # INTERNAL NOTIFICATION
     template_name = "Agreement Signed - Internal"
     
     if frappe.db.exists("Email Template", template_name):
@@ -1154,7 +1154,7 @@ def verify_otp(token, otp):
     if data.get("otp") != otp:
         frappe.throw("Invalid OTP")
 
-    # ✅ OTP is correct — single-use: delete immediately
+    # OTP is correct — single-use: delete immediately
     frappe.cache().delete_value(cache_key)
 
     # Store verified flag for VERIFIED_TTL seconds (1 day by default)
@@ -1197,7 +1197,7 @@ def get_candidate_fields_from_sales_order(name, customer=None):
         config = {}
 
     fields = []
-    table_columns = {}  # 🔥 fieldname -> [allowed child columns]
+    table_columns = {}  # fieldname -> [allowed child columns]
 
     for service in services:
         cfg = config.get(service)
@@ -1236,7 +1236,7 @@ def get_candidate_fields_from_sales_order(name, customer=None):
                     for row in val:
                         row_dict = row.as_dict()
                         if allowed_cols:
-                            # 🔥 Strip non-allowed columns from each row
+                            # Strip non-allowed columns from each row
                             row_dict = {k: v for k, v in row_dict.items() if k in allowed_cols}
                         rows.append(row_dict)
                     values[f] = rows
@@ -1246,7 +1246,7 @@ def get_candidate_fields_from_sales_order(name, customer=None):
     return {
         "fields": fields,
         "values": values,
-        "table_columns": table_columns,  # 🔥 Pass to frontend
+        "table_columns": table_columns,  # Pass to frontend
     }
     
     

@@ -1,5 +1,4 @@
 import frappe
-from frappe.desk.reportview import get as original_get
 
 
 # get employee name from user
@@ -117,6 +116,12 @@ def get_reporting_subtree(root_employee, department=None):
     Returns root employee + all downstream employees
     using Employee Assignment Detail hierarchy.
     """
+    cache = frappe.cache()
+    cache_key = f"emp_tree:{root_employee}:{department or 'all'}"
+
+    cached = cache.get_value(cache_key)
+    if cached:
+        return set(cached)
 
     assignments = frappe.get_all(
         "Employee Assignment Detail",
@@ -140,11 +145,22 @@ def get_reporting_subtree(root_employee, department=None):
         visited.add(emp)
         stack.extend(children_map.get(emp, []))
 
+    result = list(visited)
+
+    cache.set_value(cache_key, result, expires_in_sec=600)
+
     return visited
 
 
 @frappe.whitelist()
-def get_all_superiors_with_roles(employee: str, department: str | None = None):
+def get_all_superiors_with_roles_cached(employee: str, department: str | None = None):
+    cache = frappe.cache()
+    key = f"superiors:{employee}:{department}"
+
+    cached = cache.get_value(key)
+    if cached:
+        return cached
+    
     dept_filter = "AND ead.department = %(department)s" if department else ""
 
     # Query 1: entire assignment chain + linked user in one shot
@@ -194,8 +210,8 @@ def get_all_superiors_with_roles(employee: str, department: str | None = None):
         )
         for r in role_rows:
             roles_map.setdefault(r.parent, []).append(r.role)
-
-    return [
+            
+    superiors_with_roles = [
         {
             "employee": emp,
             "user": user,
@@ -203,6 +219,10 @@ def get_all_superiors_with_roles(employee: str, department: str | None = None):
         }
         for emp, user in managers
     ]
+            
+    cache.set_value(key, superiors_with_roles, expires_in_sec=600)
+
+    return superiors_with_roles
 
 
 SERVICE_DEPARTMENT_MAP = {
@@ -229,8 +249,15 @@ def _resolve_department_from_service(extra_info):
     return dept
 
 
-def _get_employee_roles(employee_name):
+def get_employee_roles_cached(employee_name):
     """Get Frappe system roles for an employee via their linked User."""
+    cache = frappe.cache()
+    key = f"roles:{employee_name}"
+
+    cached = cache.get_value(key)
+    if cached:
+        return cached
+    
     user = frappe.db.get_value("Employee", employee_name, "user")
     if not user:
         return []
@@ -239,7 +266,12 @@ def _get_employee_roles(employee_name):
         filters={"parent": user, "parenttype": "User"},
         pluck="role",
     )
-    return roles or []
+    
+    employee_roles = roles or []
+    
+    cache.set_value(key, employee_roles, expires_in_sec=3600)
+    
+    return employee_roles
 
 
 def _find_employee_with_role_in_dept(required_role, target_dept):
@@ -262,27 +294,37 @@ def _find_employee_with_role_in_dept(required_role, target_dept):
         emp = row.get("parent")
         if not emp:
             continue
-        emp_roles = _get_employee_roles(emp)
+        emp_roles = get_employee_roles_cached(emp)
         if required_role in emp_roles:
             return emp
 
     return None
 
 
+def get_dept_role_map_cached():
+    cache = frappe.cache()
+    key = "dept_role_map"
+
+    cached = cache.get_value(key)
+    if cached:
+        return cached
+
+    erp_config = frappe.get_single("ERP Configuration")
+
+    dept_role_map = {}
+    for row in erp_config.get("table_tpxt") or []:
+        if row.department and row.role:
+            dept_role_map[row.department.strip().lower()] = row.role
+
+    cache.set_value(key, dept_role_map, expires_in_sec=3600)
+
+    return dept_role_map
+
+
 def get_approver_by_department(employee_name, service_doctype=None, extra_info=None):
     """
     Finds the correct approver based on the required role for a department.
     """
-    try:
-        erp_config = frappe.get_single("ERP Configuration")
-    except Exception:
-        frappe.throw("ERP Configuration not found.")
-
-    # Build dept → role map from ERP Configuration child table
-    dept_role_map = {}
-    for row in erp_config.get("table_tpxt") or []:
-        if row.department and row.role:
-            dept_role_map[row.department] = row.role
 
     # Get ALL assignment rows for this employee
     assignment_rows = frappe.db.get_all(
@@ -299,6 +341,9 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
         (r.get("assigned_to") for r in assignment_rows if r.get("assigned_to")),
         None,
     )
+    
+    # Build dept → role map from ERP Configuration child table
+    dept_role_map = get_dept_role_map_cached()
 
     # ── CASE 1: Request from Other Services ───────────────────────────────
     if service_doctype == "Other Services" and extra_info:
@@ -341,11 +386,11 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
             return approver
 
         if direct_manager:
-            starting_roles = _get_employee_roles(direct_manager)
+            starting_roles = get_employee_roles_cached(direct_manager)
             if required_role in starting_roles:
                 return direct_manager
 
-            superiors = get_all_superiors_with_roles(direct_manager)
+            superiors = get_all_superiors_with_roles_cached(direct_manager)
             for superior in superiors:
                 if required_role in superior.get("roles", []):
                     return superior.get("employee")
@@ -379,7 +424,7 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
                 if approver and approver != employee_name:
                     return approver
 
-        superiors = get_all_superiors_with_roles(employee_name)
+        superiors = get_all_superiors_with_roles_cached(employee_name)
         for superior in superiors:
             sup_roles = superior.get("roles", [])
             matched = next((r for r in required_roles if r in sup_roles), None)
@@ -407,21 +452,24 @@ def get_visible_employee_names(user, department=None):
 def get_visible_employee_names_cached(department=None):
     cache = frappe.cache()
 
+    cache_key = f"{frappe.session.user}:{department or 'all'}"
+
     employees = cache.hget(
         "Visible_Employee_Names",
-        frappe.session.user,
+        cache_key,
     )
 
     if employees is not None:
         return employees
 
     employees = get_visible_employee_names(
-        user=frappe.session.user, department=department
+        user=frappe.session.user,
+        department=department,
     )
 
     cache.hset(
         "Visible_Employee_Names",
-        frappe.session.user,
+        cache_key,
         employees,
     )
 
