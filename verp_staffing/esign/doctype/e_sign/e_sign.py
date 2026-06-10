@@ -16,14 +16,15 @@ from datetime import datetime, timezone
 import os
 from frappe.utils.file_manager import save_file
 from frappe.utils import now_datetime
+import base64
+
 
 import io
 from PIL import Image
 from verp_staffing.crm.api import agreement
 
+
 class ESign(Document):
-
-
     def validate(self):
 
         if not self.original_pdf:
@@ -47,7 +48,7 @@ class ESign(Document):
             content=content,
             dt=self.doctype,
             dn=self.name,
-            is_private=0
+            is_private=0,
         )
 
         # Update field to new public file
@@ -55,6 +56,7 @@ class ESign(Document):
 
         # Optional: delete old private file record
         file_doc.delete(ignore_permissions=True)
+
 
 @frappe.whitelist()
 def generate_pdf_pages(docname):
@@ -72,8 +74,7 @@ def generate_pdf_pages(docname):
     pages = []
 
     for i, page in enumerate(pdf):
-
-        file_name = f"{docname}_page_{i+1}.png"
+        file_name = f"{docname}_page_{i + 1}.png"
 
         # ✅ Check if file already exists
         existing_file = frappe.get_all(
@@ -81,36 +82,24 @@ def generate_pdf_pages(docname):
             filters={
                 "attached_to_doctype": doc.doctype,
                 "attached_to_name": doc.name,
-                "file_name": file_name
+                "file_name": file_name,
             },
             fields=["file_url"],
-            limit=1
+            limit=1,
         )
 
         if existing_file:
             # 🔁 Reuse existing image
-            pages.append({
-                "page_number": i + 1,
-                "url": existing_file[0]["file_url"]
-            })
+            pages.append({"page_number": i + 1, "url": existing_file[0]["file_url"]})
             continue
 
         # 🚀 Only generate if not exists
         pix = page.get_pixmap(dpi=150)
         img_bytes = pix.tobytes("png")
 
-        file_doc = save_file(
-            file_name,
-            img_bytes,
-            doc.doctype,
-            doc.name,
-            is_private=0
-        )
+        file_doc = save_file(file_name, img_bytes, doc.doctype, doc.name, is_private=0)
 
-        pages.append({
-            "page_number": i + 1,
-            "url": file_doc.file_url
-        })
+        pages.append({"page_number": i + 1, "url": file_doc.file_url})
 
     pdf.close()
 
@@ -120,18 +109,16 @@ def generate_pdf_pages(docname):
 def format_timestamp_utc():
     return now_datetime().strftime("%d-%m-%Y, %H:%M:%S UTC")
 
+
 @frappe.whitelist(allow_guest=True)
 def complete_signing(token=None, fields=None):
 
     if not token or not fields:
         frappe.throw("Missing data")
 
-    import base64
-    from frappe.utils.file_manager import save_file
-
     fields = frappe.parse_json(fields)
 
-    # 1️⃣ Verification cookie check (same as your old function)
+    #  Verification cookie check
     verification_cookie = frappe.request.cookies.get(f"verify_{token}")
 
     if not verification_cookie:
@@ -139,78 +126,71 @@ def complete_signing(token=None, fields=None):
 
     verified = frappe.db.exists(
         "Signature Fields",
-        {
-            "sign_token": token,
-            "verification_key": verification_cookie
-        }
+        {"sign_token": token, "verification_key": verification_cookie},
     )
 
     if not verified:
         frappe.throw("Unauthorized access")
 
-    # 2️⃣ Process each field
-    for item in fields:
+    # Process fields
+    field = frappe.get_doc(
+        "Signature Fields",
+        verified
+    )
 
-        field_name = item.get("field")
-        field_type = item.get("type")
-        image = item.get("image")
+    agreement = frappe.get_doc(
+        "E Sign",
+        field.parent
+    )
 
-        if not field_name or not image:
-            continue
+    signer_fields = get_signer_fields(
+        agreement,
+        field.signer_email,
+        token,
+    )
 
-        field = frappe.get_doc("Signature Fields", field_name)
+    validate_signer_fields(
+        signer_fields,
+        fields,
+    )
 
-        # decode base64 image
-        header, encoded = image.split(",", 1)
-        filedata = base64.b64decode(encoded)
-
-        file_doc = save_file(
-            f"{field_name}.png",
-            filedata,
-            field.doctype,
-            field.name,
-            is_private=0
-        )
-
-        field.signature_image = file_doc.file_url
-        field.signed = 1
-        field.signed_on = format_timestamp_utc()
-        field.save(ignore_permissions=True)
-
-    frappe.db.commit()
-
-    # 3️⃣ Check if agreement complete
-    agreement = frappe.get_doc("E Sign", field.parent)
-
+    save_signer_values(
+        signer_fields,
+        fields,
+    )
+    save_rebuilt_pdf(
+        agreement.name
+    )
+    # Reload agreement
+    agreement.reload()
+    # Check if agreement complete
     all_signed = all(row.signed for row in agreement.signature_fields)
 
     if all_signed:
+        try:
+            generate_certificate_page(agreement.name)
+            send_final_signed_email(agreement.name)
+        except Exception as e:
+            frappe.log_error(str(e), "Certificate Generation Error")
 
-        final_pdf_path = generate_final_signed_pdf(agreement.name)
+    return {"status": "success"}
 
-        if final_pdf_path:
-            try:
-                generate_certificate_page(agreement.name)
-                send_final_signed_email(agreement.name)
-            except Exception as e:
-                frappe.log_error(str(e), "Certificate Generation Error")
-
-    return {
-        "status": "success"
-    }
 
 @frappe.whitelist()
 def send_all_signers(agreement):
 
     doc = frappe.get_doc("E Sign", agreement)
-    unique_emails = list(set([
-        row.signer_email for row in doc.signature_fields
-        if row.signer_email
-    ]))
+    unique_emails = list(
+        set([row.signer_email for row in doc.signature_fields if row.signer_email])
+    )
 
     # fetch template once outside the loop
     template_name = "Document Sign Request - e_sign"
-    template = frappe.get_doc("Email Template", template_name) if frappe.db.exists("Email Template", template_name) else None
+    template = (
+        frappe.get_doc("Email Template", template_name)
+        if frappe.db.exists("Email Template", template_name)
+        else None
+    )
 
     for email in unique_emails:
         token = str(uuid.uuid4())
@@ -226,7 +206,9 @@ def send_all_signers(agreement):
         if template:
             context = {"link": link}
             subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html or template.response, context)
+            message = frappe.render_template(
+                template.response_html or template.response, context
+            )
         else:
             subject = "Please Sign Document"
             message = f"""
@@ -235,15 +217,13 @@ def send_all_signers(agreement):
             """
 
         frappe.sendmail(
-            recipients=[email],
-            subject=subject,
-            message=message,
-            delayed=False
+            recipients=[email], subject=subject, message=message, delayed=False
         )
 
     doc.status = "Sent"
     doc.save(ignore_permissions=True)
     return "Emails Sent"
+
 
 def send_final_signed_email(agreement_name):
 
@@ -259,11 +239,11 @@ def send_final_signed_email(agreement_name):
     )
 
     # Collect unique emails
-    signer_emails = list(set([
-        row.signer_email
-        for row in agreement.signature_fields
-        if row.signer_email
-    ]))
+    signer_emails = list(
+        set(
+            [row.signer_email for row in agreement.signature_fields if row.signer_email]
+        )
+    )
 
     if not signer_emails:
         frappe.log_error("No signer emails found", "Email Send Failed")
@@ -276,14 +256,20 @@ def send_final_signed_email(agreement_name):
     # Send individually
     # Fetch template once outside the loop
     template_name = "Final Signed Agreement Email - e_sign"
-    template = frappe.get_doc("Email Template", template_name) if frappe.db.exists("Email Template", template_name) else None
+    template = (
+        frappe.get_doc("Email Template", template_name)
+        if frappe.db.exists("Email Template", template_name)
+        else None
+    )
 
     # Send individually
     for email in signer_emails:
         if template:
             context = {"agreement_name": agreement.name}
             subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html or template.response, context)
+            message = frappe.render_template(
+                template.response_html or template.response, context
+            )
         else:
             subject = "Final Signed Agreement"
             message = f"""
@@ -298,15 +284,15 @@ def send_final_signed_email(agreement_name):
             recipients=[email],
             subject=subject,
             message=message,
-            attachments=[{
-                "fname": "Final_Signed_Agreement.pdf",
-                "fcontent": pdf_content
-            }],
-            delayed=False
+            attachments=[
+                {"fname": "Final_Signed_Agreement.pdf", "fcontent": pdf_content}
+            ],
+            delayed=False,
         )
 
     frappe.logger().info(f"Final signed emails sent for {agreement.name}")
-    
+
+
 def calculate_file_hash(file_path):
     import hashlib
 
@@ -315,6 +301,7 @@ def calculate_file_hash(file_path):
         for chunk in iter(lambda: f.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
+
 
 # def write_field_to_pdf(agreement_name, field):
 #     """
@@ -397,6 +384,7 @@ def calculate_file_hash(file_path):
 #     finally:
 #         pdf.close()
 
+
 def get_pdf_source_path(agreement):
     """
     Returns source PDF path.
@@ -407,9 +395,8 @@ def get_pdf_source_path(agreement):
 
     pdf_url = agreement.signed_pdf or agreement.original_pdf
 
-    return frappe.get_site_path(
-        pdf_url.replace("/files/", "public/files/")
-    )
+    return frappe.get_site_path(pdf_url.replace("/files/", "public/files/"))
+
 
 def render_text(
     canvas_obj,
@@ -426,25 +413,12 @@ def render_text(
     if not value:
         return
 
-    canvas_obj.setFont(
-        "Helvetica",
-        float(font_size or 12)
-    )
+    canvas_obj.setFont("Helvetica", float(font_size or 12))
 
-    canvas_obj.drawString(
-        x,
-        y + (height - float(font_size or 12)),
-        str(value)
-    )
+    canvas_obj.drawString(x, y + (height - float(font_size or 12)), str(value))
 
-def render_checkbox(
-    canvas_obj,
-    value,
-    x,
-    y,
-    height, 
-    width
-):
+
+def render_checkbox(canvas_obj, value, x, y, height, width):
     """
     Render checkbox.
     """
@@ -452,14 +426,7 @@ def render_checkbox(
     box_x = x + ((width - checkbox_size) / 2)
     box_y = y + ((height - checkbox_size) / 2)
 
-    canvas_obj.rect(
-        box_x,
-        box_y,
-        checkbox_size,
-        checkbox_size,
-        stroke=1,
-        fill=0
-    )
+    canvas_obj.rect(box_x, box_y, checkbox_size, checkbox_size, stroke=1, fill=0)
 
     checked = str(value).lower() in (
         "1",
@@ -469,7 +436,6 @@ def render_checkbox(
     )
 
     if checked:
-
         canvas_obj.line(
             box_x + checkbox_size * 0.20,
             box_y + checkbox_size * 0.55,
@@ -483,6 +449,7 @@ def render_checkbox(
             box_x + checkbox_size * 0.80,
             box_y + checkbox_size * 0.80,
         )
+
 
 def render_signature(
     canvas_obj,
@@ -499,12 +466,7 @@ def render_signature(
     if not file_url:
         return
 
-    image_path = frappe.get_site_path(
-        file_url.replace(
-            "/files/",
-            "public/files/"
-        )
-    )
+    image_path = frappe.get_site_path(file_url.replace("/files/", "public/files/"))
 
     if not os.path.exists(image_path):
         return
@@ -520,6 +482,7 @@ def render_signature(
         mask="auto",
     )
 
+
 def calculate_pdf_coordinates(
     field,
     page_width,
@@ -530,25 +493,15 @@ def calculate_pdf_coordinates(
     into PDF coordinates.
     """
 
-    x = page_width * (
-        field.x_percent / 100
-    )
+    x = page_width * (field.x_percent / 100)
 
-    width = page_width * (
-        field.width_percent / 100
-    )
+    width = page_width * (field.width_percent / 100)
 
-    height = page_height * (
-        field.height_percent / 100
-    )
+    height = page_height * (field.height_percent / 100)
 
-    top_y = page_height * (
-        field.y_percent / 100
-    )
+    top_y = page_height * (field.y_percent / 100)
 
-    y = page_height - (
-        top_y + height
-    )
+    y = page_height - (top_y + height)
 
     return (
         x,
@@ -570,25 +523,16 @@ def rebuild_signed_pdf(
         agreement_name,
     )
 
-    source_path = get_pdf_source_path(
-        agreement
-    )
+    source_path = get_pdf_source_path(agreement)
 
     reader = PdfReader(source_path)
 
     writer = PdfWriter()
 
-    for page_index, page in enumerate(
-        reader.pages
-    ):
+    for page_index, page in enumerate(reader.pages):
+        page_width = float(page.MediaBox[2])
 
-        page_width = float(
-            page.MediaBox[2]
-        )
-
-        page_height = float(
-            page.MediaBox[3]
-        )
+        page_height = float(page.MediaBox[3])
 
         packet = io.BytesIO()
 
@@ -601,7 +545,6 @@ def rebuild_signed_pdf(
         )
 
         for field in agreement.signature_fields:
-
             if (field.page_number or 1) - 1 != page_index:
                 continue
 
@@ -612,9 +555,10 @@ def rebuild_signed_pdf(
             )
 
             field_type = (field.field_type or "").lower()
-            print(f"Rendering field {field.field_type} at page {field.page_number} with coords ({x}, {y}, {width}, {height})")
+            print(
+                f"Rendering field {field.field_type} at page {field.page_number} with coords ({x}, {y}, {width}, {height})"
+            )
             if field_type == "signature":
-
                 render_signature(
                     c,
                     field.signature_image,
@@ -625,14 +569,13 @@ def rebuild_signed_pdf(
                 )
 
             elif field_type == "checkbox":
-
                 render_checkbox(
                     c,
                     field.field_value,
                     x,
                     y,
                     height,
-                    width, 
+                    width,
                 )
 
             elif field_type in (
@@ -640,7 +583,6 @@ def rebuild_signed_pdf(
                 "number",
                 "date",
             ):
-
                 render_text(
                     c,
                     field.field_value,
@@ -657,9 +599,7 @@ def rebuild_signed_pdf(
         overlay = PdfReader(packet)
 
         if overlay.pages:
-            PageMerge(page).add(
-                    overlay.pages[0]
-                ).render()
+            PageMerge(page).add(overlay.pages[0]).render()
 
         writer.addpage(page)
 
@@ -670,6 +610,7 @@ def rebuild_signed_pdf(
     output.seek(0)
 
     return output.getvalue()
+
 
 def save_rebuilt_pdf(agreement_name):
     """
@@ -686,9 +627,7 @@ def save_rebuilt_pdf(agreement_name):
 
     old_pdf_url = agreement.signed_pdf
 
-    pdf_bytes = rebuild_signed_pdf(
-        agreement_name
-    )
+    pdf_bytes = rebuild_signed_pdf(agreement_name)
     print(f"Rebuilt PDF size: {len(pdf_bytes)} bytes saving it")
     file_doc = save_file(
         fname=f"{agreement.name}_signed2.pdf",
@@ -709,16 +648,9 @@ def save_rebuilt_pdf(agreement_name):
     print(f"Agreement: {agreement.name}, Signed PDF updated: {agreement.signed_pdf}")
     print(f"New signed PDF URL: {file_doc.file_url}")
     if old_pdf_url:
-
-        old_file = frappe.db.exists(
-            "File",
-            {
-                "file_url": old_pdf_url
-            }
-        )
+        old_file = frappe.db.exists("File", {"file_url": old_pdf_url})
 
         if old_file and old_file != file_doc.name:
-
             try:
                 frappe.delete_doc(
                     "File",
@@ -735,74 +667,117 @@ def save_rebuilt_pdf(agreement_name):
 
     return file_doc.file_url
 
-def generate_final_signed_pdf(agreement_name):
 
-    agreement = frappe.get_doc("E Sign", agreement_name)
+def get_signer_fields(
+    agreement,
+    signer_email,
+    sign_token,
+):
+    """
+    Return all fields assigned
+    to a signer.
+    """
 
-    if not agreement.original_pdf:
-        return
+    return [
+        field
+        for field in agreement.signature_fields
+        if (field.signer_email == signer_email and field.sign_token == sign_token)
+    ]
 
-    # 1️⃣ Load original PDF
-    file_path = frappe.get_site_path(
-        agreement.original_pdf.replace("/files/", "public/files/")
-    )
 
-    pdf = fitz.open(file_path)
+def validate_signer_fields(
+    signer_fields,
+    submitted_values,
+):
+    """
+    Validate all fields assigned
+    to signer are completed.
+    """
 
-    # 2️⃣ Loop through all signature fields
-    for field in agreement.signature_fields:
+    for field in signer_fields:
 
-        if not field.signature_image:
-            continue
+        field_key = field.name
 
-        if field.page_number < 1 or field.page_number > len(pdf):
-            continue
-        
-        page = pdf[field.page_number - 1]
+        value = submitted_values.get(field_key)
 
-        # Convert percent to actual coordinates
-        rect = page.rect
+        field_type = (
+            field.field_type or ""
+        ).lower()
 
-        x = rect.width * (field.x_percent / 100)
-        y = rect.height * (field.y_percent / 100)
-        w = rect.width * (field.width_percent / 100)
-        h = rect.height * (field.height_percent / 100)
+        if field_type == "checkbox":
 
-        image_path = frappe.get_site_path(
-            field.signature_image.replace("/files/", "public/files/")
+            if str(value).lower() not in (
+                "1",
+                "true",
+                "yes",
+                "checked",
+            ):
+                frappe.throw(
+                    f"Checkbox field '{field.field_label}' must be checked."
+                )
+
+        else:
+
+            if not value:
+                frappe.throw(
+                    f"Field '{field.field_label}' is required."
+                )
+
+def save_signer_values(
+    signer_fields,
+    submitted_values,
+):
+    """
+    Persist signer values
+    into Signature Fields rows.
+    """
+
+    for field in signer_fields:
+
+        value = submitted_values.get(
+            field.name
         )
+        if value is None:
+            frappe.throw(
+                f"Missing value for field {field.field_label}"
+            )
 
-        page.insert_image(
-            fitz.Rect(x, y, x + w, y + h),
-            filename=image_path
+        field_type = (
+            field.field_type or ""
+        ).lower()
+
+        if field_type == "signature":
+
+            header, encoded = value.split(",", 1)
+
+            filedata = base64.b64decode(
+                encoded
+            )
+
+            file_doc = save_file(
+                f"{field.name}.png",
+                filedata,
+                field.doctype,
+                field.name,
+                is_private=0,
+            )
+
+            field.signature_image = (
+                file_doc.file_url
+            )
+
+        else:
+
+            field.field_value = str(
+                value
+            )
+
+        field.signed = 1
+        field.signed_on = format_timestamp_utc()
+
+        field.save(
+            ignore_permissions=True
         )
-
-    # 3️⃣ Save new signed PDF
-    final_path = frappe.get_site_path(
-        f"public/files/{agreement.name}_SIGNED.pdf"
-    )
-
-    pdf.save(final_path)
-    pdf.close()
-
-    # 4️⃣ Attach to doctype
-    with open(final_path, "rb") as f:
-        file_doc = save_file(
-            f"{agreement.name}_SIGNED.pdf",
-            f.read(),
-            agreement.doctype,
-            agreement.name,
-            is_private=0
-        )
-
-    agreement.signed_pdf = file_doc.file_url
-    agreement.status = "Fully Signed"
-    agreement.save(ignore_permissions=True)
-
-    frappe.db.commit()
-    
-    return {"status" : "final pdf upload"}
-    
 
 def generate_certificate_page(agreement_name):
 
@@ -816,14 +791,14 @@ def generate_certificate_page(agreement_name):
     from reportlab.lib.units import mm
     from pdfrw import PdfReader, PdfWriter
 
-    NAVY        = (0.06, 0.08, 0.20)
-    ACCENT      = (0.09, 0.39, 0.93)
+    NAVY = (0.06, 0.08, 0.20)
+    ACCENT = (0.09, 0.39, 0.93)
     ACCENT_DARK = (0.05, 0.24, 0.60)
-    SILVER      = (0.95, 0.96, 0.98)
-    MID_GREY    = (0.55, 0.58, 0.64)
-    BORDER      = (0.88, 0.90, 0.94)
-    GREEN       = (0.06, 0.63, 0.35)
-    WHITE       = (1, 1, 1)
+    SILVER = (0.95, 0.96, 0.98)
+    MID_GREY = (0.55, 0.58, 0.64)
+    BORDER = (0.88, 0.90, 0.94)
+    GREEN = (0.06, 0.63, 0.35)
+    WHITE = (1, 1, 1)
 
     def set_rgb(c, rgb):
         c.setFillColorRGB(*rgb)
@@ -865,9 +840,18 @@ def generate_certificate_page(agreement_name):
         c.line(x, y, x + w, y)
 
     # ── FIX 1: label drawn at y, value drawn below at y - (label_size + 3) ──
-    def draw_label_value(c, lx, vx, y, label, value,
-                          label_color=MID_GREY, value_color=NAVY,
-                          label_size=7.5, value_size=9.5):
+    def draw_label_value(
+        c,
+        lx,
+        vx,
+        y,
+        label,
+        value,
+        label_color=MID_GREY,
+        value_color=NAVY,
+        label_size=7.5,
+        value_size=9.5,
+    ):
         c.setFont("Helvetica", label_size)
         set_rgb(c, label_color)
         c.drawString(lx, y, label.upper())
@@ -900,11 +884,11 @@ def generate_certificate_page(agreement_name):
 
     document_hash = calculate_file_hash(signed_path)
 
-    packet   = io.BytesIO()
-    c        = canvas.Canvas(packet, pagesize=A4)
-    W, H     = A4
-    MARGIN   = 36
-    COL_W    = W - 2 * MARGIN
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    W, H = A4
+    MARGIN = 36
+    COL_W = W - 2 * MARGIN
 
     draw_rounded_rect(c, 0, H - 72, W, 72, r=0, fill=NAVY)
     set_rgb(c, SILVER)
@@ -928,23 +912,32 @@ def generate_certificate_page(agreement_name):
     draw_badge(c, W - MARGIN - 70, H - 62, "✓  VERIFIED", bg=GREEN)
 
     # ── FIX 2: card_h increased from 60 → 76 to fit two label+value rows ──
-    card_y  = H - 148
-    card_h  = 76
-    draw_rounded_rect(c, MARGIN, card_y, COL_W, card_h,
-                      r=8, fill=WHITE, stroke=BORDER, line_width=0.5)
+    card_y = H - 148
+    card_h = 76
+    draw_rounded_rect(
+        c, MARGIN, card_y, COL_W, card_h, r=8, fill=WHITE, stroke=BORDER, line_width=0.5
+    )
 
     half = COL_W / 2
 
     # ── FIX 3: top row y pushed up to card_h - 18 so label+value both fit ──
-    draw_label_value(c,
-        lx=MARGIN + 14, vx=MARGIN + 14,
+    draw_label_value(
+        c,
+        lx=MARGIN + 14,
+        vx=MARGIN + 14,
         y=card_y + card_h - 18,
-        label="Agreement ID", value=agreement.name)
+        label="Agreement ID",
+        value=agreement.name,
+    )
 
-    draw_label_value(c,
-        lx=MARGIN + half + 10, vx=MARGIN + half + 10,
+    draw_label_value(
+        c,
+        lx=MARGIN + half + 10,
+        vx=MARGIN + half + 10,
         y=card_y + card_h - 18,
-        label="Status", value="Completed")
+        label="Status",
+        value="Completed",
+    )
 
     # Divider sits below the value text (label_size=7.5, value_size=9.5, gap=3 → ~20pt total)
     draw_divider(c, MARGIN + 14, card_y + card_h - 40, COL_W - 28)
@@ -952,11 +945,16 @@ def generate_certificate_page(agreement_name):
     hash_display = document_hash
 
     # ── FIX 4: hash row y raised from card_y+12 → card_y+28 so label isn't clipped ──
-    draw_label_value(c,
-        lx=MARGIN + 14, vx=MARGIN + 14,
+    draw_label_value(
+        c,
+        lx=MARGIN + 14,
+        vx=MARGIN + 14,
         y=card_y + 28,
-        label="Document Hash (SHA-256)", value=hash_display,
-        value_color=MID_GREY, value_size=8)
+        label="Document Hash (SHA-256)",
+        value=hash_display,
+        value_color=MID_GREY,
+        value_size=8,
+    )
 
     def draw_section_title(c, y, title):
         c.setFont("Helvetica-Bold", 8)
@@ -980,10 +978,9 @@ def generate_certificate_page(agreement_name):
         return H - 100
 
     for idx, (email, field) in enumerate(unique_signers.items()):
-
         SIGNER_CARD_H = 140
         signer_activity = [a for a in agreement.activity if a.email == email]
-        activity_extra  = max(0, len(signer_activity) - 0) * 20
+        activity_extra = max(0, len(signer_activity) - 0) * 20
 
         needed = SIGNER_CARD_H + activity_extra + 20
         if cursor_y - needed < 60:
@@ -991,19 +988,33 @@ def generate_certificate_page(agreement_name):
             cursor_y = draw_section_title(c, cursor_y, "Signers (cont.)")
 
         sc_h = SIGNER_CARD_H + activity_extra
-        draw_rounded_rect(c, MARGIN, cursor_y - sc_h, COL_W, sc_h,
-                          r=8, fill=WHITE, stroke=BORDER, line_width=0.5)
-        draw_rounded_rect(c, MARGIN, cursor_y - sc_h, 3, sc_h,
-                          r=2, fill=ACCENT)
+        draw_rounded_rect(
+            c,
+            MARGIN,
+            cursor_y - sc_h,
+            COL_W,
+            sc_h,
+            r=8,
+            fill=WHITE,
+            stroke=BORDER,
+            line_width=0.5,
+        )
+        draw_rounded_rect(c, MARGIN, cursor_y - sc_h, 3, sc_h, r=2, fill=ACCENT)
 
-                # 
+        #
         badge_r = 11
-        row_center_y = cursor_y - 22   # single reference line for all three elements
+        row_center_y = cursor_y - 22  # single reference line for all three elements
 
         # Number circle — centered on row_center_y
         bx = MARGIN + 16 + badge_r
-        draw_pill(c, bx - badge_r, row_center_y - badge_r,
-                badge_r * 2, badge_r * 2, fill=ACCENT)
+        draw_pill(
+            c,
+            bx - badge_r,
+            row_center_y - badge_r,
+            badge_r * 2,
+            badge_r * 2,
+            fill=ACCENT,
+        )
         c.setFont("Helvetica-Bold", 9)
         set_rgb(c, WHITE)
         c.drawCentredString(bx, row_center_y - 4, str(idx + 1))
@@ -1019,15 +1030,15 @@ def generate_certificate_page(agreement_name):
         draw_divider(c, MARGIN + 14, cursor_y - 34, COL_W - 28)
 
         # ── FIX 5: label drawn at row_y, value at row_y - 13 (already done via draw_label_value fix) ──
-        row_y    = cursor_y - 50
+        row_y = cursor_y - 50
         col_unit = COL_W / 4
-        cx       = MARGIN + 14
+        cx = MARGIN + 14
 
         fields_data = [
-            ("Sent",     field.email_sent_on),
+            ("Sent", field.email_sent_on),
             ("Verified", field.verified_on),
-            ("Signed",   field.signed_on),
-            ("Method",   "OTP Email"),
+            ("Signed", field.signed_on),
+            ("Method", "OTP Email"),
         ]
 
         for i, (lbl, val) in enumerate(fields_data):
@@ -1053,8 +1064,17 @@ def generate_certificate_page(agreement_name):
         sig_box_y = sig_y - 5
         sig_box_w = 160
         sig_box_h = 48
-        draw_rounded_rect(c, sig_box_x, sig_box_y, sig_box_w, sig_box_h,
-                          r=5, fill=(0.97, 0.98, 1.0), stroke=BORDER, line_width=0.4)
+        draw_rounded_rect(
+            c,
+            sig_box_x,
+            sig_box_y,
+            sig_box_w,
+            sig_box_h,
+            r=5,
+            fill=(0.97, 0.98, 1.0),
+            stroke=BORDER,
+            line_width=0.4,
+        )
 
         if field.signature_image:
             img_path = frappe.get_site_path(
@@ -1076,13 +1096,13 @@ def generate_certificate_page(agreement_name):
                         width=sig_box_w - 12,
                         height=sig_box_h - 8,
                         preserveAspectRatio=True,
-                        mask=None
+                        mask=None,
                     )
                 except Exception:
                     pass
 
         if signer_activity:
-            act_x       = MARGIN + 200
+            act_x = MARGIN + 200
             act_title_y = sig_y + 50
 
             c.setFont("Helvetica", 7)
@@ -1095,9 +1115,9 @@ def generate_certificate_page(agreement_name):
                     break
 
                 row_bg = (0.97, 0.98, 1.0) if act_idx % 2 == 0 else WHITE
-                draw_rounded_rect(c, act_x - 2, log_y - 3,
-                                  COL_W - 200 - 14, 14,
-                                  r=3, fill=row_bg)
+                draw_rounded_rect(
+                    c, act_x - 2, log_y - 3, COL_W - 200 - 14, 14, r=3, fill=row_bg
+                )
 
                 c.setFont("Helvetica", 7.5)
                 set_rgb(c, NAVY)
@@ -1112,7 +1132,7 @@ def generate_certificate_page(agreement_name):
 
                 log_y -= 18
 
-        cursor_y -= (sc_h + 14)
+        cursor_y -= sc_h + 14
 
     if cursor_y - 70 < 40:
         cursor_y = new_page(c)
@@ -1131,10 +1151,10 @@ def generate_certificate_page(agreement_name):
         "All signatures were authenticated via OTP email verification. "
         "Document integrity is guaranteed by the SHA-256 hash recorded above."
     )
-    words  = legal.split()
-    line   = ""
+    words = legal.split()
+    line = ""
     line_y = footer_y + 4
-    max_w  = COL_W - 80
+    max_w = COL_W - 80
     for word in words:
         test = (line + " " + word).strip()
         if c.stringWidth(test, "Helvetica", 7) < max_w:
@@ -1154,8 +1174,8 @@ def generate_certificate_page(agreement_name):
     packet.seek(0)
 
     cert_pdf = PdfReader(packet)
-    reader   = PdfReader(signed_path)
-    writer   = PdfWriter()
+    reader = PdfReader(signed_path)
+    writer = PdfWriter()
 
     for p in reader.pages:
         writer.addpage(p)
@@ -1163,7 +1183,8 @@ def generate_certificate_page(agreement_name):
         writer.addpage(p)
 
     writer.write(signed_path)
-    
+
+
 @frappe.whitelist(allow_guest=True)
 def track_ip_and_device(browser=None, os=None, device=None, token=None):
 
@@ -1173,7 +1194,7 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
     fields = frappe.get_all(
         "Signature Fields",
         filters={"sign_token": token},
-        fields=["parent", "signer_email"]
+        fields=["parent", "signer_email"],
     )
 
     if not fields:
@@ -1186,20 +1207,24 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
 
     ip_address = frappe.local.request_ip
 
-    agreement.append("activity", {
-        "email": signer_email,
-        "ip_address": ip_address,
-        "browser": browser,
-        "os": os,
-        "device": device,
-        "visited_at": format_timestamp_utc(),
-        "agreement" : agreement_name
-    })
+    agreement.append(
+        "activity",
+        {
+            "email": signer_email,
+            "ip_address": ip_address,
+            "browser": browser,
+            "os": os,
+            "device": device,
+            "visited_at": format_timestamp_utc(),
+            "agreement": agreement_name,
+        },
+    )
 
     agreement.save(ignore_permissions=True)
     frappe.db.commit()
 
     return {"status": "success"}
+
 
 @frappe.whitelist(allow_guest=True)
 def send_otp(token=None):
@@ -1210,7 +1235,7 @@ def send_otp(token=None):
         fields = frappe.get_all(
             "Signature Fields",
             filters={"sign_token": token},
-            fields=["parent", "signer_email"]
+            fields=["parent", "signer_email"],
         )
 
         if not fields:
@@ -1222,17 +1247,16 @@ def send_otp(token=None):
 
         frappe.cache().set_value(f"otp_{token}", otp, expires_in_sec=300)
 
-         # Fetch template
+        # Fetch template
         template_name = "OTP Verification Email"
         if frappe.db.exists("Email Template", template_name):
             template = frappe.get_doc("Email Template", template_name)
             context = {"otp": otp}
             subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html or template.response, context)
-            html = frappe.render_template(
-                template.response_html,
-                {"otp": otp}
+            message = frappe.render_template(
+                template.response_html or template.response, context
             )
+            html = frappe.render_template(template.response_html, {"otp": otp})
 
             print(html)
         else:
@@ -1240,20 +1264,18 @@ def send_otp(token=None):
             message = f"<p>Your OTP is: <b>{otp}</b></p>"
 
         frappe.sendmail(
-            recipients=[email],
-            subject=subject,
-            message=message,
-            delayed=False
+            recipients=[email], subject=subject, message=message, delayed=False
         )
         return {"status": "sent"}
-    
+
     except Exception:
         frappe.log_error(frappe.get_traceback(), "OTP Send Failed")
         return {"status": "error"}
 
+
 @frappe.whitelist(allow_guest=True)
 def verify_otp(token=None, otp=None):
-    try: 
+    try:
         if not token or not otp:
             return {"status": "invalid_request"}
 
@@ -1269,9 +1291,7 @@ def verify_otp(token=None, otp=None):
 
         # Save verification key to ALL fields of this signer
         rows = frappe.get_all(
-            "Signature Fields",
-            filters={"sign_token": token},
-            fields=["name"]
+            "Signature Fields", filters={"sign_token": token}, fields=["name"]
         )
 
         # for row in rows:
@@ -1283,28 +1303,28 @@ def verify_otp(token=None, otp=None):
         # frappe.db.commit()
 
         frappe.db.set_value(
-        "Signature Fields",
-        {"sign_token": token},
-        {
-            "verification_key": verification_key,
-            "verified_on": format_timestamp_utc()
-        },
-        update_modified=False
+            "Signature Fields",
+            {"sign_token": token},
+            {
+                "verification_key": verification_key,
+                "verified_on": format_timestamp_utc(),
+            },
+            update_modified=False,
         )
 
         frappe.db.commit()
-        
+
         frappe.local.cookie_manager.set_cookie(
             key=f"verify_{token}",
             value=verification_key,
-            max_age=60 * 60 * 24 * 7, # 7 days
-            secure=True,              # Set to True in production (requires HTTPS)
+            max_age=60 * 60 * 24 * 7,  # 7 days
+            secure=True,  # Set to True in production (requires HTTPS)
             httponly=True,
-            samesite="Lax"            # Required for modern browsers
-            )
+            samesite="Lax",  # Required for modern browsers
+        )
 
         frappe.cache().delete_value(f"otp_{token}")
-        return {"status": "verified"} 
+        return {"status": "verified"}
     except Exception:
         frappe.log_error(frappe.get_traceback(), "OTP Verification Failed")
         return {"status": "error"}
