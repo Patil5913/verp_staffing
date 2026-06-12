@@ -1,6 +1,5 @@
 // Copyright (c) 2026, Vrugle and contributors
 // For license information, please see license.txt
-let propertySidebar = null;
 let selectedField = null;
 let boxChanged = false;
 let activeBox = null;
@@ -160,6 +159,8 @@ async function load_pdf_pages(frm) {
 	await render_pdf_with_pdfjs(frm);
 	render_existing_boxes(frm);
 }
+const PDFJS_URL = "/assets/e_sign/js/vendor/pdf.min.js";
+const PDFJS_WORKER = "/assets/e_sign/js/vendor/pdf.worker.min.js";
 
 // Load pdf.js once per browser session.
 function load_pdfjs() {
@@ -560,29 +561,36 @@ function field_button(type, label, icon) {
 
 const fieldIcons = {
 	signature: "fa-pencil",
-	initial: "fa-font",
 	text: "fa-keyboard-o",
-	email: "fa-envelope",
 	date: "fa-calendar",
 	number: "fa-hashtag",
 	checkbox: "fa-check-square-o",
 };
 
 function select_field(frm, box) {
-	document.querySelectorAll(".esign-box").forEach((b) => b.classList.remove("selected-field"));
+	if (selectedField == box) {
+		const sidebar = $("#field-properties");
+		sidebar.hide();
+		selectedField = null;
+		return;
+	} else {
+		document
+			.querySelectorAll(".esign-box")
+			.forEach((b) => b.classList.remove("selected-field"));
 
-	box.classList.add("selected-field");
+		box.classList.add("selected-field");
 
-	selectedField = box;
+		selectedField = box;
 
-	open_property_sidebar(frm, box);
+		open_property_sidebar(frm, box);
+	}
 }
 
 function open_property_sidebar(frm, box) {
-	if (cur_frm.doc.status !== "Draft") {
-		propertySidebar.hide();
-	}
 	const sidebar = $("#field-properties");
+	if (cur_frm.doc.status !== "Draft") {
+		sidebar.hide();
+	}
 	const row = frm.doc.signature_fields.find((r) => r.name === box.dataset.rowname);
 	if (!row) return;
 	//no field editor for checkbox
@@ -644,7 +652,7 @@ function open_property_sidebar(frm, box) {
 		</div>
 	`);
 
-	// Lable
+	// Label
 	$("#field-label").on("input", function () {
 		row.field_label = this.value;
 
@@ -708,13 +716,14 @@ function create_box(frm, type = "signature") {
 		const checkbox = document.createElement("input");
 		checkbox.type = "checkbox";
 		checkbox.disabled = true;
+		checkbox.style.height = "28px";
+		checkbox.style.setProperty("width", "28px", "important"); //match the exact checkbox drawn by backend
 		checkbox.background = color + "22";
+		checkbox.style.border = "2px solid black";
 		checkbox.style.pointerEvents = "none";
 
 		box.appendChild(checkbox);
-	}
-
-	if (type !== "checkbox") {
+	} else {
 		const label = document.createElement("div");
 
 		label.innerHTML = `
@@ -732,7 +741,6 @@ function create_box(frm, type = "signature") {
 		label.style.display = "flex";
 		label.style.alignItems = "center";
 		label.style.gap = "4px";
-		label.style.fontSize = "9px";
 		label.style.fontWeight = "600";
 		label.style.color = color;
 		label.style.pointerEvents = "none";
@@ -820,7 +828,6 @@ function refresh_box_preview(box, row) {
 
 	if (row.field_type === "signature") {
 		preview.innerText = row.placeholder_text || "SIGN HERE";
-		return;
 	}
 
 	preview.innerText = row.placeholder_text || row.field_label || row.field_type;
@@ -837,11 +844,6 @@ function refresh_box_preview(box, row) {
 
 function attach_box_events(frm, box, overlay) {
 	const resizeHandle = box.lastChild;
-	box.addEventListener("click", function (e) {
-		e.stopPropagation();
-
-		select_field(frm, box);
-	});
 	box.addEventListener("mousedown", function (e) {
 		e.stopPropagation();
 
@@ -984,6 +986,11 @@ async function send_for_signature(frm) {
 		return;
 	}
 
+	if (!frm.doc.signature_fields.length) {
+		frappe.msgprint("Add at least one field");
+		return;
+	}
+
 	for (const email of uniqueRecipients) {
 		const hasField = frm.doc.signature_fields.some((row) => row.signer_email === email);
 
@@ -992,11 +999,6 @@ async function send_for_signature(frm) {
 
 			return;
 		}
-	}
-
-	if (!frm.doc.signature_fields.length) {
-		frappe.msgprint("Add at least one field");
-		return;
 	}
 
 	const invalidField = frm.doc.signature_fields.find((row) => {

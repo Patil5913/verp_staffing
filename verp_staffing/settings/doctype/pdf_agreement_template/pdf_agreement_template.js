@@ -201,6 +201,9 @@ frappe.ui.form.on("Pdf Agreement Template", {
 	},
 });
 
+const PDFJS_URL = "/assets/e_sign/js/vendor/pdf.min.js";
+const PDFJS_WORKER = "/assets/e_sign/js/vendor/pdf.worker.min.js";
+
 // Load pdf.js once per browser session.
 function load_pdfjs() {
 	if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);

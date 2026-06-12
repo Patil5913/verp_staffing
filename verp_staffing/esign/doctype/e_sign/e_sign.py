@@ -100,6 +100,12 @@ def complete_signing(token=None, fields=None):
         fields,
     )
 
+    # check if fields are already signed
+    if all(row.signed for row in signer_fields):
+        frappe.throw(
+            "Document already signed"
+        )
+
     save_signer_values(
         signer_fields,
         fields,
@@ -113,6 +119,13 @@ def complete_signing(token=None, fields=None):
     if all_signed:
         try:
             generate_certificate_page(agreement.name)
+            frappe.db.set_value(
+            "E Sign",
+            agreement.name,
+            "status",
+            "Fully Signed",
+        )
+
             send_final_signed_email(agreement.name)
         except Exception as e:
             frappe.log_error(str(e), "Certificate Generation Error")
@@ -161,7 +174,7 @@ def send_all_signers(agreement):
             """
 
         frappe.sendmail(
-            recipients=[email], subject=subject, message=message, delayed=False
+            recipients=[email], subject=subject, message=message,
         )
 
     doc.status = "Sent"
