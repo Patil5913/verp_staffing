@@ -56,6 +56,7 @@
 		<span id="otp-loader" class="loader" style="display: none"></span>
 	</button>
 </div>
+
 {% elif signer_completed %}
 <div class="completed-banner">
 	<h2>Document Already Signed</h2>
@@ -99,6 +100,10 @@
 	style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; z-index: 999"
 ></div>
 
+<div
+	id="pdf-container"
+	style="height: 85vh; overflow: auto; padding: 20px; background: #f3f4f6"
+></div>
 <div
 	id="pdf-container"
 	style="height: 85vh; overflow: auto; padding: 20px; background: #f3f4f6"
@@ -1267,6 +1272,7 @@
 </style>
 
 <!-- SUCCESS MODAL -->
+<!-- SUCCESS MODAL -->
 <div
 	id="success-modal"
 	style="
@@ -1317,6 +1323,12 @@
 </div>
 
 <script src="/assets/frappe/js/frappe-web.min.js"></script>
+<script type="application/json" id="esign-fields">
+	{{ fields | tojson }}
+</script>
+<script type="application/json" id="signed-fields">
+	{{ signed_fields | tojson }}
+</script>
 <script type="application/json" id="esign-fields">
 	{{ fields | tojson }}
 </script>
