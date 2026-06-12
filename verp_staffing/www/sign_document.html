@@ -1836,6 +1836,13 @@
 		if (typedInput) {
 			typedInput.addEventListener("input", renderTypedSignature);
 		}
+
+		load_pdfjs().then(() => {
+			if (window.signer_completed) {
+				// renderReadonlyPdf();
+			} else {
+			}
+		});
 	});
 
 	function initCanvas() {
