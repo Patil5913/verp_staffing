@@ -1811,9 +1811,14 @@
 
 	document.addEventListener("DOMContentLoaded", async function () {
 		if (document.getElementById("field-progress-bar")) {
-			await renderSignerPdf();
-			await fpInit();
+			if (window.signer_completed == "False") {
+				await renderSignerPdf();
+				await fpInit();
+			}
+		} else if (window.signer_completed == "True") {
+			renderReadonlyPdf();
 		}
+
 		// initFonts();
 		// initSignedImages();
 
@@ -1821,13 +1826,6 @@
 		if (typedInput) {
 			typedInput.addEventListener("input", renderTypedSignature);
 		}
-
-		load_pdfjs().then(() => {
-			if (window.signer_completed) {
-				// renderReadonlyPdf();
-			} else {
-			}
-		});
 	});
 
 	function initCanvas() {

@@ -365,9 +365,16 @@ function init_recipient_system(frm) {
 	const btn = document.getElementById("add-recipient-btn");
 
 	btn.onclick = function () {
-		const email = input.value.trim();
+		const email = input.value.trim().toLowerCase();
 
 		if (!email) return;
+
+		const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
+
+		if (!emailRegex.test(email)) {
+			frappe.msgprint("Please enter a valid email address");
+			return;
+		}
 
 		if (recipients.includes(email)) {
 			frappe.msgprint("Recipient already added");
