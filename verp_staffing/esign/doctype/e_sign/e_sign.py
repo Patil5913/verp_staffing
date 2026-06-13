@@ -1313,6 +1313,7 @@ def send_otp(token=None):
             recipients=[email],
             subject=subject,
             message=message,
+            delayed=False
         )
 
         agreement = frappe.get_doc(

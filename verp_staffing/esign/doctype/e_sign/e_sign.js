@@ -159,8 +159,8 @@ async function load_pdf_pages(frm) {
 	await render_pdf_with_pdfjs(frm);
 	render_existing_boxes(frm);
 }
-const PDFJS_URL = "/assets/e_sign/js/vendor/pdf.min.js";
-const PDFJS_WORKER = "/assets/e_sign/js/vendor/pdf.worker.min.js";
+const PDFJS_URL = "/assets/verp_staffing/js/pdf.min.js";
+const PDFJS_WORKER = "/assets/verp_staffing/js/pdf.worker.min.js";
 
 // Load pdf.js once per browser session.
 function load_pdfjs() {
