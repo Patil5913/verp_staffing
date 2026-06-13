@@ -37,6 +37,7 @@
    "fieldname": "signed_pdf",
    "fieldtype": "Attach",
    "label": "Signed PDF",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -44,13 +45,18 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Draft\nSent\nFully Signed"
+   "no_copy": 1,
+   "options": "Draft\nSent\nFully Signed",
+   "read_only": 1
   },
   {
    "fieldname": "signature_fields",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Signature Fields",
-   "options": "Signature Fields"
+   "options": "Signature Fields",
+   "print_hide": 1,
+   "report_hide": 1
   },
   {
    "fieldname": "section_break_crjn",
@@ -68,8 +74,11 @@
   {
    "fieldname": "activity",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Activity",
-   "options": "activity"
+   "options": "activity",
+   "print_hide": 1,
+   "report_hide": 1
   },
   {
    "fieldname": "section_break_mqgi",
@@ -79,7 +88,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-10 15:33:25.572711",
+ "modified": "2026-06-13 14:31:29.598870",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",

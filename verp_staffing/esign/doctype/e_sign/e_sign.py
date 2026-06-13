@@ -668,12 +668,16 @@ def generate_certificate_page(agreement_name):
     DARK_BADGE = (0.25, 0.25, 0.25)  # "SIGNED" badge
     WHITE = (1, 1, 1)
     SIG_BG = (0.97, 0.97, 0.97)  # signature box background
+    CERT_BLUE = (0.97, 0.98, 1.00)
+    CERT_BLUE_DARK = (0.83, 0.90, 1.00)
+    CERT_ACCENT = (0.30, 0.55, 0.95)
+    CERT_LINE = (0.85, 0.90, 0.98)
 
     W, H = A4
     MARGIN = 40
     COL_W = W - 2 * MARGIN
     FOOTER_H = 36
-    HEADER_H = 32  # reserved at top of each page for the title bar
+    HEADER_H = 90  # reserved at top of each page for the title bar
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -740,14 +744,38 @@ def generate_certificate_page(agreement_name):
 
     def draw_page_header(c):
         """'Signature Certificate' bar across the very top."""
-        set_fill(c, BG_PAGE)
-        c.rect(0, H - HEADER_H, W, HEADER_H, fill=1, stroke=0)
-        # left title
-        c.setFont("Helvetica-Bold", 10)
-        set_fill(c, DARK)
-        c.drawString(MARGIN, H - HEADER_H + 10, "Signature Certificate")
-        # right thin rule
-        divider(c, MARGIN, H - HEADER_H, COL_W, color=BORDER, lw=0.6)
+        c.setFont(
+            "Helvetica-Bold",
+            20,
+        )
+        set_fill(
+            c,
+            DARK,
+        )
+        c.drawString(
+            MARGIN,
+            H - 55,
+            "Signature Certificate",
+        )
+        c.setFont(
+            "Helvetica",
+            9,
+        )
+        set_fill(
+            c,
+            SUBTEXT,
+        )
+        c.drawString(
+            MARGIN,
+            H - 72,
+            "Electronic Signature Completion Certificate",
+        )
+        divider(
+            c,
+            MARGIN,
+            H - 82,
+            COL_W,
+        )
 
     def draw_page_footer(c, page_num=None):
         divider(c, MARGIN, FOOTER_H + 14, COL_W, color=BORDER)
@@ -756,7 +784,7 @@ def generate_certificate_page(agreement_name):
         c.drawString(
             MARGIN,
             FOOTER_H,
-            "This certificate records the electronic signing activity for this document.",
+            "Powered By Vrugle.",
         )
         if page_num is not None:
             c.drawRightString(W - MARGIN, FOOTER_H, f"Page {page_num}")
@@ -764,10 +792,13 @@ def generate_certificate_page(agreement_name):
     def start_page(c, page_num=1):
         """Blank page with header + footer already drawn.
         Returns cursor_y (top of usable content area)."""
-        set_fill(c, BG_PAGE)
-        c.rect(0, 0, W, H, fill=1, stroke=0)
+        draw_certificate_background(c)
         draw_page_header(c)
-        draw_page_footer(c, page_num)
+        draw_page_footer(
+            c,
+            page_num,
+        )
+
         return H - HEADER_H - 16  # top of content area
 
     # ── Document summary ─────────────────────────────────────────────────────
@@ -846,7 +877,119 @@ def generate_certificate_page(agreement_name):
         divider(c, MARGIN, top_y - 6, COL_W, color=BORDER)
         return top_y - 20
 
-    #  Participant card 
+    # certificate helper
+    def draw_certificate_background(c):
+
+        #
+        # Base soft blue page
+        #
+        c.setFillColorRGB(*CERT_BLUE)
+        c.rect(
+            0,
+            0,
+            W,
+            H,
+            fill=1,
+            stroke=0,
+        )
+
+        #
+        # Bottom decorative banner
+        #
+        c.roundRect(
+            -50,
+            -40,
+            W + 100,
+            90,
+            30,
+            fill=1,
+            stroke=0,
+        )
+
+        #
+        # Left accent strip
+        #
+        c.setFillColorRGB(*CERT_ACCENT)
+
+        c.rect(
+            0,
+            0,
+            8,
+            H,
+            fill=1,
+            stroke=0,
+        )
+
+        #
+        # Right accent strip
+        #
+        c.rect(
+            W - 8,
+            0,
+            8,
+            H,
+            fill=1,
+            stroke=0,
+        )
+        #
+        # Top-right geometric decoration
+        #
+
+        c.setStrokeColorRGB(*CERT_LINE)
+        c.setLineWidth(1)
+
+        for i in range(8):
+            offset = i * 10
+
+            c.line(
+                W - 180 + offset,
+                H - 25,
+                W - 25,
+                H - 180 + offset,
+            )
+
+        #
+        # Bottom-left geometric decoration
+        #
+
+        for i in range(8):
+            offset = i * 10
+
+            c.line(
+                25,
+                180 - offset,
+                180 - offset,
+                25,
+            )
+
+        #
+        # Thin certificate frame double border
+        #
+        c.setStrokeColorRGB(*CERT_LINE)
+
+        c.setLineWidth(1.2)
+
+        c.roundRect(
+            18,
+            18,
+            W - 36,
+            H - 36,
+            10,
+            fill=0,
+            stroke=1,
+        )
+
+        c.roundRect(
+            24,
+            24,
+            W - 48,
+            H - 48,
+            8,
+            fill=0,
+            stroke=1,
+        )
+
+    #  Participant card
 
     CARD_H = 210  # total participant card height
     SIG_BOX_W = 150
