@@ -366,6 +366,7 @@ class PaymentEntry(Document):
             company=self.company,
             posting_date=self.posting_date,
             voucher_type="Payment Entry",
+            exchange_rate=self.conversion_rate,
             voucher_no=self.name,
             remarks=self.remarks or "",
         )
