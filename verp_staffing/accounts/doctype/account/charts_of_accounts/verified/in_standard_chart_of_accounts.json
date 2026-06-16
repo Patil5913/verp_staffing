@@ -54,9 +54,6 @@
         "Sales": {
           "account_type": "Income Account"
         },
-        "Service": {
-          "account_type": "Income Account"
-        },
         "account_type": "Income Account"
       },
       "root_type": "Income"

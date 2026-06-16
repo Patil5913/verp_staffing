@@ -178,6 +178,30 @@ class Company(NestedSet):
                 {"company": self.name, "account_type": "Payable", "is_group": 0},
             ),
         )
+        self.db_set(
+            "default_income_account",
+            frappe.db.get_value(
+                "Account",
+                {"company": self.name, "account_type": "Income Account", "is_group": 0},
+            ),
+        )
+        expense_acc = frappe.db.get_value(
+            "Account",
+            {
+                "company": self.name,
+                "account_type": "Expense Account",
+                "name": ("like", "Cost of Goods and Service Sales%"),
+                "is_group": 0,
+            },
+        )
+        self.db_set(
+            "default_expense_account",
+            expense_acc,
+        )
+        self.db_set(
+            "default_discount_account",
+            expense_acc,
+        )
 
     def on_trash(self):
         """

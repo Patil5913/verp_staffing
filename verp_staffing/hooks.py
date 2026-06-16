@@ -302,6 +302,9 @@ scheduler_events = {
     },
 }
 
+# Setup
+setup_wizard_requires = "assets/verp_staffing/js/setup_wizard.js"
+setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 
 # Testing
 # -------
