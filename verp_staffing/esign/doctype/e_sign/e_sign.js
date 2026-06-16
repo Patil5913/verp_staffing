@@ -38,12 +38,14 @@ frappe.ui.form.on("E Sign", {
 
 		rebuild_recipients(frm);
 
-		if (!frm._pdf_loaded) {
-			frm._pdf_loaded = true;
-			load_pdf_pages(frm).then(() => {
-				render_existing_boxes(frm); // only AFTER pages are ready
-			});
+		const pdfContainer = document.getElementById("esign-root");
+
+		if (pdfContainer) {
+			pdfContainer.innerHTML = "";
 		}
+		load_pdf_pages(frm).then(() => {
+			render_existing_boxes(frm); // only AFTER pages are ready
+		});
 
 		// PRODUCTION SEND BUTTON
 		frm.clear_custom_buttons();
@@ -67,6 +69,19 @@ frappe.ui.form.on("E Sign", {
 
 		if (frm.doc.status === "Sent" || frm.doc.status === "Fully Signed") {
 			setTimeout(lock_editor, 500);
+		}
+	},
+	onload(frm) {
+		// Empty html code before loading anything
+		const pdfContainer = document.getElementById("esign-root");
+
+		if (pdfContainer) {
+			pdfContainer.innerHTML = "";
+		}
+		const signersPanel = frm.fields_dict.signers_panel?.$wrapper;
+
+		if (signersPanel) {
+			signersPanel.empty();
 		}
 	},
 });
@@ -186,14 +201,29 @@ function load_pdfjs() {
 
 async function render_pdf_with_pdfjs(frm) {
 	const pdfjsLib = await load_pdfjs();
+	window._current_pdf_render_id = (window._current_pdf_render_id || 0) + 1;
 
-	const pdf = await pdfjsLib.getDocument(frm.doc.original_pdf).promise;
+	const render_id = window._current_pdf_render_id;
+	if (window._current_pdf_doc) {
+		try {
+			window._current_pdf_doc.destroy();
+		} catch (e) {}
+	}
 
+	window._current_pdf_doc = null;
+
+	window._current_pdf_doc = await pdfjsLib.getDocument(frm.doc.original_pdf).promise;
+
+	const pdf = window._current_pdf_doc;
 	const container = document.getElementById("pdf-container");
 
-	container.innerHTML = "";
-
+	while (container.firstChild) {
+		container.removeChild(container.firstChild);
+	}
 	for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+		if (render_id !== window._current_pdf_render_id) {
+			return;
+		}
 		const page = await pdf.getPage(pageNumber);
 
 		const viewport = page.getViewport({
@@ -268,6 +298,12 @@ frappe.dom.set_style(`
     border-radius:8px;
     padding:12px;
     overflow:auto;
+}
+.properties-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 12px;
 }
 .toolbar-title{
     font-weight:600;
@@ -609,7 +645,15 @@ function open_property_sidebar(frm, box) {
 
 	sidebar.html(`
 		<div class="field-editor">
-
+			<div class="properties-header">
+				<h4>Field Properties</h4>
+				<button
+						id="close-properties-sidebar"
+						class="btn btn-xs btn-default"
+						type="button">
+						✕
+				</button>
+			</div>
 			<div class="form-group">
 				<label>Field Label</label>
 				<input
@@ -658,6 +702,13 @@ function open_property_sidebar(frm, box) {
 				</div>
 		</div>
 	`);
+	const close_button = document.querySelector("#close-properties-sidebar");
+	close_button.onclick = function (e) {
+		e.stopPropagation();
+		selectedField = null;
+		selectedFieldType = null;
+		$("#field-properties").hide();
+	};
 
 	// Label
 	$("#field-label").on("input", function () {
@@ -1036,7 +1087,6 @@ async function send_for_signature(frm) {
 			freeze_message: "Sending emails...",
 		})
 		.then(() => {
-			frm._pdf_loaded = false;
 			frappe.msgprint("Emails sent successfully");
 
 			lock_editor();

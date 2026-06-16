@@ -1,5 +1,7 @@
 import frappe
 import json
+from frappe.utils import now_datetime
+from datetime import datetime
 
 def get_context(context):
 
@@ -30,6 +32,22 @@ def get_context(context):
             "line_height",
         ],
     )
+    context.has_otp = False
+    context.otp_remaining = 0
+
+    cached = frappe.cache().get_value(f"otp_{token}")
+
+    if cached:
+        created_at = datetime.fromisoformat(cached["created_at"])
+
+        elapsed = int(
+            (now_datetime() - created_at).total_seconds()
+        )
+
+        remaining = max(0, 300 - elapsed)
+
+        context.has_otp = remaining > 0
+        context.otp_remaining = remaining
 
     if not fields:
         context.error = "Invalid or expired link"
@@ -105,6 +123,10 @@ def get_context(context):
         else agreement.original_pdf
     )
 
+    # get logo
+    from verp_staffing.utils.email_template import get_company_logo_url
+    logo = get_company_logo_url()
+    context.logo_url = logo
     context.is_verified = is_verified
     context.pdf_url = pdf_url
     context.fields = fields

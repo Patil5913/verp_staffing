@@ -3,7 +3,6 @@
 
 # import frappe
 import frappe
-import fitz
 import uuid
 from frappe.model.document import Document
 from frappe.utils.file_manager import save_file
@@ -12,16 +11,15 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from pdfrw import PdfReader, PdfWriter
 from pdfrw.pagemerge import PageMerge
-from datetime import datetime, timezone
 import os
-from frappe.utils.file_manager import save_file
 from frappe.utils import now_datetime
 import base64
+from datetime import datetime
+from frappe.utils import now_datetime
 
 
 import io
 from PIL import Image
-from verp_staffing.crm.api import agreement
 
 
 class ESign(Document):
@@ -48,6 +46,7 @@ class ESign(Document):
             content=content,
             dt=self.doctype,
             dn=self.name,
+            df="original_pdf",
             is_private=0,
         )
 
@@ -58,8 +57,8 @@ class ESign(Document):
         file_doc.delete(ignore_permissions=True)
 
 
-def format_timestamp_utc():
-    return now_datetime().strftime("%d-%m-%Y, %H:%M:%S UTC")
+def format_timestamp_IST():
+    return now_datetime().strftime("%d-%m-%Y, %H:%M:%S IST")
 
 
 @frappe.whitelist(allow_guest=True)
@@ -162,7 +161,7 @@ def send_all_signers(agreement):
                 if not row.sign_token:
                     row.sign_token = token
                 if not row.email_sent_on:
-                    row.email_sent_on = format_timestamp_utc()
+                    row.email_sent_on = format_timestamp_IST()
 
         link = f"{frappe.utils.get_url()}/sign_document?token={token}"
 
@@ -232,12 +231,12 @@ def send_final_signed_email(agreement_name):
     # Send individually
     # Fetch template once outside the loop
     template_name = "Final Signed Agreement Email - e_sign"
-    template = (
-        frappe.get_doc("Email Template", template_name)
-        if frappe.db.exists("Email Template", template_name)
-        else None
-    )
-    print("Send start")
+    template = None
+    try:
+        template = frappe.get_cached("Email Template", template_name)
+    except frappe.DoesNotExistError:
+        template = None
+
     # Send individually
     for email in signer_emails:
         if template:
@@ -264,7 +263,6 @@ def send_final_signed_email(agreement_name):
                 {"fname": "Final_Signed_Agreement.pdf", "fcontent": pdf_content}
             ],
         )
-    print("Send Completed")
     frappe.logger().info(f"Final signed emails sent for {agreement.name}")
 
 
@@ -276,19 +274,6 @@ def calculate_file_hash(file_path):
         for chunk in iter(lambda: f.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
-
-
-def get_pdf_source_path(agreement):
-    """
-    Returns source PDF path.
-
-    Priority:
-    signed_pdf -> original_pdf
-    """
-
-    pdf_url = agreement.signed_pdf or agreement.original_pdf
-
-    return frappe.get_site_path(pdf_url.replace("/files/", "public/files/"))
 
 
 def render_text(
@@ -416,8 +401,8 @@ def rebuild_signed_pdf(
         "E Sign",
         agreement_name,
     )
-
-    source_path = get_pdf_source_path(agreement)
+    pdf_url = agreement.signed_pdf or agreement.original_pdf
+    source_path = frappe.get_site_path(pdf_url.replace("/files/", "public/files/"))
 
     reader = PdfReader(source_path)
 
@@ -449,9 +434,6 @@ def rebuild_signed_pdf(
             )
 
             field_type = (field.field_type or "").lower()
-            print(
-                f"Rendering field {field.field_type} at page {field.page_number} with coords ({x}, {y}, {width}, {height})"
-            )
             if field_type == "signature":
                 render_signature(
                     c,
@@ -522,12 +504,12 @@ def save_rebuilt_pdf(agreement_name):
     old_pdf_url = agreement.signed_pdf
 
     pdf_bytes = rebuild_signed_pdf(agreement_name)
-    print(f"Rebuilt PDF size: {len(pdf_bytes)} bytes saving it")
     file_doc = save_file(
-        fname=f"{agreement.name}_signed2.pdf",
+        fname=f"{agreement.name}_signed.pdf",
         content=pdf_bytes,
         dt="E Sign",
         dn=agreement.name,
+        df="signed_pdf",
         is_private=0,
     )
 
@@ -538,9 +520,6 @@ def save_rebuilt_pdf(agreement_name):
         file_doc.file_url,
     )
 
-    frappe.db.commit()
-    print(f"Agreement: {agreement.name}, Signed PDF updated: {agreement.signed_pdf}")
-    print(f"New signed PDF URL: {file_doc.file_url}")
     if old_pdf_url:
         old_file = frappe.db.exists("File", {"file_url": old_pdf_url})
 
@@ -558,6 +537,7 @@ def save_rebuilt_pdf(agreement_name):
                     frappe.get_traceback(),
                     "Failed deleting old signed PDF",
                 )
+    frappe.db.commit()
 
     return file_doc.file_url
 
@@ -629,12 +609,13 @@ def save_signer_values(
             header, encoded = value.split(",", 1)
 
             filedata = base64.b64decode(encoded)
-
+            frappe.logger().info(f"SAVING SIGNATURE {field.name}")
             file_doc = save_file(
                 f"{field.name}.png",
                 filedata,
                 field.doctype,
                 field.name,
+                df="signature_image",
                 is_private=0,
             )
 
@@ -644,32 +625,24 @@ def save_signer_values(
             field.field_value = str(value)
 
         field.signed = 1
-        field.signed_on = format_timestamp_utc()
+        field.signed_on = format_timestamp_IST()
 
         field.save(ignore_permissions=True)
 
 
 def generate_certificate_page(agreement_name):
-    import os
-    import io
-    from PIL import Image
-    from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.utils import ImageReader
-    from pdfrw import PdfReader, PdfWriter
 
     # ── Palette ──────────────────────────────────────────────────────────────
     DARK = (0.12, 0.12, 0.12)  # near-black for headings / body text
     SUBTEXT = (0.45, 0.45, 0.45)  # secondary labels
     BORDER = (0.88, 0.88, 0.88)  # card borders
     BG_CARD = (1.00, 1.00, 1.00)  # card fill
-    BG_PAGE = (1.00, 1.00, 1.00)  # page background
     GREEN = (0.18, 0.62, 0.35)  # status badges
     DARK_BADGE = (0.25, 0.25, 0.25)  # "SIGNED" badge
     WHITE = (1, 1, 1)
     SIG_BG = (0.97, 0.97, 0.97)  # signature box background
     CERT_BLUE = (0.97, 0.98, 1.00)
-    CERT_BLUE_DARK = (0.83, 0.90, 1.00)
     CERT_ACCENT = (0.30, 0.55, 0.95)
     CERT_LINE = (0.85, 0.90, 0.98)
 
@@ -843,28 +816,71 @@ def generate_certificate_page(agreement_name):
     # ── Completion summary ────────────────────────────────────────────────────
 
     def draw_completion_summary(c, top_y, completed_on):
-        CARD_H = 60
+        document_hash = calculate_file_hash(signed_path)
+        CARD_H = 105
         card_y = top_y - CARD_H
         rounded_rect(
-            c, MARGIN, card_y, COL_W, CARD_H, r=6, fill=BG_CARD, stroke=BORDER, lw=0.5
+            c,
+            MARGIN,
+            card_y,
+            COL_W,
+            CARD_H,
+            r=6,
+            fill=BG_CARD,
+            stroke=BORDER,
+            lw=0.5,
         )
 
         inner_x = MARGIN + 14
+
         c.setFont("Helvetica-Bold", 7.5)
         set_fill(c, SUBTEXT)
-        c.drawString(inner_x, top_y - 14, "COMPLETION SUMMARY")
-        divider(c, inner_x, top_y - 20, COL_W - 28)
+
+        c.drawString(
+            inner_x,
+            top_y - 14,
+            "COMPLETION SUMMARY",
+        )
+
+        divider(
+            c,
+            inner_x,
+            top_y - 20,
+            COL_W - 28,
+        )
 
         c.setFont("Helvetica", 8.5)
         set_fill(c, DARK)
+
         c.drawString(
             inner_x,
             top_y - 34,
             "This document has been completed by all required participants.",
         )
+
         c.setFont("Helvetica", 8)
         set_fill(c, SUBTEXT)
-        c.drawString(inner_x, top_y - 48, f"Completion time: {completed_on or '—'}")
+
+        c.drawString(
+            inner_x,
+            top_y - 48,
+            f"Completion time: {completed_on or '—'}",
+        )
+
+        c.setFont("Helvetica-Bold", 7)
+        set_fill(c, DARK)
+
+        c.drawString(
+            inner_x,
+            top_y - 66,
+            "SHA-256 HASH",
+        )
+
+        c.setFont("Courier", 6.5)
+        set_fill(c, SUBTEXT)
+
+        c.drawString(inner_x, top_y - 79, document_hash[:32])
+        c.drawString(inner_x, top_y - 89, document_hash[32:])
 
         return card_y - 14
 
@@ -1123,7 +1139,7 @@ def generate_certificate_page(agreement_name):
         c.drawString(INNER_X, verify_y, "VERIFICATION METHOD")
         c.setFont("Helvetica-Bold", 8.5)
         set_fill(c, DARK)
-        c.drawString(INNER_X, verify_y - 13, "Email OTP Verified")
+        c.drawString(INNER_X, verify_y - 13, "Email OTP")
 
         return card_bottom - 14  # gap below card
 
@@ -1233,7 +1249,6 @@ def generate_certificate_page(agreement_name):
     for p in cert_reader.pages:
         writer.addpage(p)
 
-    print("Certificate completed")
     writer.write(signed_path)
 
 
@@ -1291,7 +1306,14 @@ def send_otp(token=None):
 
         otp = str(random.randint(100000, 999999))
 
-        frappe.cache().set_value(f"otp_{token}", otp, expires_in_sec=300)
+        frappe.cache().set_value(
+            f"otp_{token}",
+            {
+                "otp": otp,
+                "created_at": now_datetime().isoformat(),
+            },
+            expires_in_sec=300,
+        )
 
         # Fetch template
         template_name = "OTP Verification Email"
@@ -1304,16 +1326,12 @@ def send_otp(token=None):
             )
             html = frappe.render_template(template.response_html, {"otp": otp})
 
-            print(html)
         else:
             subject = "Your Verification Code"
             message = f"<p>Your OTP is: <b>{otp}</b></p>"
 
         frappe.sendmail(
-            recipients=[email],
-            subject=subject,
-            message=message,
-            delayed=False
+            recipients=[email], subject=subject, message=message, delayed=False
         )
 
         agreement = frappe.get_doc(
@@ -1347,7 +1365,14 @@ def verify_otp(token=None, otp=None):
         if not cached_otp:
             return {"status": "expired"}
 
-        if otp != cached_otp:
+        created_at = datetime.fromisoformat(cached_otp["created_at"])
+        elapsed = int((now_datetime() - created_at).total_seconds())
+        remaining = max(0, 300 - elapsed)
+        # extra time check if otp expired runtime
+        if remaining == 0:
+            return {"status": "expired"}
+
+        if otp != cached_otp["otp"]:
             return {"status": "invalid_otp"}
 
         # Generate persistent verification key
@@ -1385,7 +1410,7 @@ def verify_otp(token=None, otp=None):
             {"sign_token": token},
             {
                 "verification_key": verification_key,
-                "verified_on": format_timestamp_utc(),
+                "verified_on": format_timestamp_IST(),
             },
             update_modified=False,
         )
@@ -1435,7 +1460,7 @@ def log_activity(
             "browser": browser,
             "os": os,
             "device": device,
-            "visited_at": format_timestamp_utc(),
+            "visited_at": format_timestamp_IST(),
             "agreement": agreement.name,
         },
     )

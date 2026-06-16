@@ -65,7 +65,8 @@
   {
    "fieldname": "signers_panel",
    "fieldtype": "HTML",
-   "label": "Signers Panel"
+   "label": "Signers Panel",
+   "no_copy": 1
   },
   {
    "fieldname": "section_break_ixwc",
@@ -88,7 +89,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-13 14:31:29.598870",
+ "modified": "2026-06-16 14:00:58.210290",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",

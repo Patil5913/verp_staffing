@@ -4,7 +4,7 @@
 {% else %} {% if not is_verified %}
 <div class="header">
 	<div class="left">
-		<img src="/assets/vrugle/logo.png" class="logo" />
+		<img src="{{logo_url}}" alt="Vrugle" class="logo" />
 	</div>
 
 	<div class="right">
@@ -32,7 +32,6 @@
 		</div>
 	</div>
 </div>
-
 <!-- Verification Section -->
 <div id="verification-section" class="card">
 	<h2>Verify your identity</h2>
@@ -57,7 +56,6 @@
 		<span id="otp-loader" class="loader" style="display: none"></span>
 	</button>
 </div>
-
 {% elif signer_completed %}
 <div class="completed-banner">
 	<h2>Document Already Signed</h2>
@@ -1328,6 +1326,10 @@
 
 <script>
 	window.pdf_url = "{{ pdf_url }}";
+
+	window.otpRemaining = "{{ otp_remaining or 0 }}";
+	window.hasOtp = "{{ 'true' if has_otp else 'false' }}";
+
 	window.esign_fields = JSON.parse(document.getElementById("esign-fields").textContent);
 
 	window.signed_fields = JSON.parse(document.getElementById("signed-fields").textContent);
@@ -1636,7 +1638,7 @@
 	    <div class="landing-wrap">
 
 	      <div class="landing-header">
-	        <img src="/assets/vrugle/logo.png" class="logo" style="height:52px;">
+	        <img src="{{logo_url}}" class="logo" style="height:52px;">
 	        <span style="font-size:13px; color:#6b7280;">Secure Document Signing</span>
 	      </div>
 
@@ -1810,6 +1812,15 @@
 	}
 
 	document.addEventListener("DOMContentLoaded", async function () {
+		if (window.hasOtp == "true") {
+			const otpSection = document.getElementById("otp-section");
+
+			if (otpSection) {
+				otpSection.style.display = "block";
+			}
+
+			startOTPTimer(window.otpRemaining);
+		}
 		if (document.getElementById("field-progress-bar")) {
 			if (window.signer_completed == "False") {
 				await renderSignerPdf();
@@ -2120,11 +2131,11 @@
 		document.getElementById("fp-next-hint").style.display = "none";
 		document.getElementById("fp-fill").style.background = "#16a34a";
 
-		// ✅ Show the fixed bottom bar
+		// Show the fixed bottom bar
 		const wrap = document.getElementById("fp-submit-wrap");
 		wrap.style.display = "block";
 
-		// ✅ Also explicitly show the button inside it
+		// Also explicitly show the button inside it
 		const btn = document.getElementById("finish-btn");
 		btn.style.display = "inline-block";
 		btn.style.opacity = "1";
@@ -2246,15 +2257,22 @@
 		});
 	}
 
-	function startOTPTimer() {
-		otpTimeRemaining = 300;
+	function startOTPTimer(seconds = 300) {
+		otpTimeRemaining = seconds;
 		const timerDisplay = document.getElementById("otp-timer");
 		const verifyBtn = document.getElementById("verify-btn");
 		const sendBtn = document.getElementById("sendotp-btn");
 		const btnText = document.getElementById("otp-btn-text");
 
-		verifyBtn.disabled = false;
-		sendBtn.disabled = true;
+		const otpInput = document.getElementById("otp-input");
+
+		if (verifyBtn) {
+			verifyBtn.disabled = false;
+		}
+		if (sendBtn) {
+			sendBtn.disabled = true;
+			sendBtn.style.display = "none";
+		}
 
 		clearInterval(otpInterval);
 
@@ -2272,11 +2290,21 @@
 			if (otpTimeRemaining < 0) {
 				clearInterval(otpInterval);
 				timerDisplay.innerHTML = `<span style="color:red;">OTP expired. Please resend.</span>`;
-				verifyBtn.disabled = true;
+				if (otpInput) {
+					otpInput.style.display = "none";
+				}
+				if (verifyBtn) {
+					verifyBtn.disabled = true;
+					verifyBtn.style.display = "none";
+				}
+				if (sendBtn) {
+					sendBtn.style.display = "block";
+					sendBtn.disabled = false;
+				}
 
-				sendBtn.style.display = "block";
-				sendBtn.disabled = false;
-				btnText.innerText = "Resend OTP";
+				if (btnText) {
+					btnText.innerText = "Resend OTP";
+				}
 			}
 		}, 1000);
 	}
@@ -2403,18 +2431,28 @@
 			.then((data) => {
 				if (data.message?.status === "sent") {
 					document.getElementById("otp-section").style.display = "block";
-					startOTPTimer();
+					const verifyBtn = document.getElementById("verify-btn");
+					const otpInput = document.getElementById("otp-input");
+					console.log("otpInput: ", otpInput);
+					console.log("verifyBtn: ", verifyBtn);
+					if (otpInput) {
+						otpInput.style.display = "block";
+					}
+					if (verifyBtn) {
+						verifyBtn.style.display = "block";
+					}
 
 					// Restore button to normal state
 					loader.style.display = "none";
 					btnText.innerText = "Resend OTP";
 					btn.style.display = "none";
+					startOTPTimer();
 				} else {
 					throw new Error("Failed");
 				}
 			})
 			.catch((err) => {
-				console.error(err);
+				console.error("err sending otp: ", err);
 				alert("Failed to send OTP. Try again.");
 
 				// Reset button if failed
