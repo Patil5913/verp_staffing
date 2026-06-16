@@ -68,13 +68,13 @@
   "deductions",
   "transaction_references",
   "reference_no",
+  "remarks",
   "column_break_23",
   "reference_date",
   "clearance_date",
   "section_break_12",
   "status",
   "custom_remarks",
-  "remarks",
   "base_in_words",
   "is_opening",
   "column_break_16",
@@ -676,7 +676,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-20 12:05:50.966133",
+ "modified": "2026-06-16 16:48:47.458958",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",
@@ -700,6 +700,15 @@
    "write": 1
   },
   {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
    "amend": 1,
    "cancel": 1,
    "create": 1,
@@ -713,6 +722,51 @@
    "role": "Accounts Manager",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "CR",
+   "select": 1,
    "write": 1
   }
  ],

@@ -61,19 +61,6 @@ verp_staffing.purchase.tax.toggle_rate_amount_fields = function (frm, cdt, cdn) 
 	}
 };
 
-verp_staffing.purchase.items = {};
-
-verp_staffing.purchase.items.update_items_currency_labels = function (frm) {
-	const currency = frm.doc.currency || "";
-	if (!frm.fields_dict.items) return;
-
-	const grid = frm.fields_dict.items.grid;
-
-	grid.update_docfield_property("rate", "label", `Rate (${currency})`);
-	grid.update_docfield_property("amount", "label", `Amount (${currency})`);
-
-	grid.refresh();
-};
 
 verp_staffing.purchase.exchange = {};
 

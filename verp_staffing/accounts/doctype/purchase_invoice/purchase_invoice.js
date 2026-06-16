@@ -90,7 +90,6 @@ frappe.ui.form.on("Purchase Invoice", {
 
 	currency(frm) {
 		set_currency_labels(frm);
-		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);

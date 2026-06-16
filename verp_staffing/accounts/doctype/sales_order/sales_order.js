@@ -13,7 +13,6 @@ frappe.ui.form.on("Sales Order", {
 		};
 
 		frappe.breadcrumbs.update();
-		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 
 		const config = await load_erp_config(frm);
@@ -68,55 +67,13 @@ frappe.ui.form.on("Sales Order", {
 				method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_sales_invoice_for_order",
 				args: { sales_order: frm.doc.name },
 				callback: async (r) => {
-					if (!r.message) {
-						//Si not exists
-						frm.add_custom_button(
-							__("Sales Invoice"),
-							() => {
-								frappe.confirm(
-									"Create a Sales Invoice for all items in this Sales Order?",
-									async () => {
-										const r = await frappe.call({
-											method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_sales_invoice_from_sales_order",
-											args: { sales_order: frm.doc.name },
-										});
-										if (r.message) {
-											frappe.msgprint({
-												title: __("Invoice Created"),
-												message: `Sales Invoice <b>${r.message}</b> created.<br><br>
-                                        <a href="/app/sales-invoice/${r.message}" target="_blank">
-                                            Open Invoice →
-                                        </a>`,
-												indicator: "green",
-											});
-											// remove button after successfull invoice creation
-											frm.remove_custom_button(
-												__("Sales Invoice"),
-												__("Create"),
-											);
-											await render_invoices_tab(frm);
-											await render_payment_term_actions(frm, r.message);
-										}
-									},
-								);
-							},
-							__("Create"),
-						);
-					}
 					await render_payment_term_actions(frm, r.message);
 				},
 			});
 			toggle_payment_terms_add_button(frm);
 		}
 	},
-	// before_submit(frm) {
-	// 	frappe.dom.freeze(__("Processing submission..."));
-	// },
 
-	// on_submit(frm) {
-	// 	frappe.dom.unfreeze();
-	// 	frm.reload_doc();
-	// },
 	onload(frm) {
 		set_account_queries(frm);
 		if (!frm.doc.company) {
@@ -190,7 +147,6 @@ frappe.ui.form.on("Sales Order", {
 		}
 	},
 	currency: function (frm) {
-		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 		handle_currency(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
@@ -538,13 +494,19 @@ async function render_payment_term_actions(frm, si_name) {
 		}
 
 		if (!si_name) {
-			const $lock = $(`
-                <span class="text-muted small payment-lock-msg" 
-                      style="padding: 4px 8px; display: inline-block;">
-                    Create Invoice first
-                </span>
-            `);
-			grid_row.wrapper.find(".data-row").append($lock);
+			const $btn = $(`
+		<button class="btn btn-xs btn-primary btn-payment-action"
+				style="margin: 2px 8px;">
+			Create Invoice
+		</button>
+	`);
+
+			$btn.on("click", (e) => {
+				e.stopPropagation();
+				open_create_invoice_dialog(frm, row);
+			});
+
+			grid_row.wrapper.find(".data-row").append($btn);
 			return;
 		}
 
@@ -566,6 +528,73 @@ async function render_payment_term_actions(frm, si_name) {
 
 		grid_row.wrapper.find(".data-row").append($btn);
 	});
+}
+
+function open_create_invoice_dialog(frm, term_row) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Create Invoice"),
+
+		fields: [
+			{
+				fieldtype: "Data",
+				fieldname: "reference_no",
+				label: __("Reference / Cheque No"),
+				reqd: 1,
+			},
+			{
+				fieldtype: "Data",
+				fieldname: "remarks",
+				label: __("Add Remarks (Amount paid in which account)"),
+				reqd: 1,
+			},
+			{
+				fieldtype: "Date",
+				fieldname: "reference_date",
+				label: __("Reference Date"),
+				default: frappe.datetime.get_today(),
+				reqd: 1,
+			},
+		],
+
+		primary_action_label: __("Create Invoice"),
+
+		primary_action: async (values) => {
+			dialog.disable_primary_action();
+
+			try {
+				const r = await frappe.call({
+					method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_sales_invoice_from_sales_order",
+
+					args: {
+						sales_order: frm.doc.name,
+						payment_term_row: term_row.name,
+						reference_no: values.reference_no,
+						reference_date: values.reference_date,
+						remarks: values.remarks,
+					},
+				});
+
+				if (r.message) {
+					dialog.hide();
+
+					frappe.msgprint({
+						title: __("Invoice Created"),
+						message: `
+							Sales Invoice <b>${r.message.invoice}</b> created.<br>
+							Payment Entry <b>${r.message.payment_entry}</b> created.
+						`,
+						indicator: "green",
+					});
+
+					await frm.reload_doc();
+				}
+			} catch (e) {
+				dialog.enable_primary_action();
+			}
+		},
+	});
+
+	dialog.show();
 }
 
 function open_mark_as_paid_dialog(frm, term_row, si_name, is_rerequest = false) {
@@ -599,6 +628,12 @@ function open_mark_as_paid_dialog(frm, term_row, si_name, is_rerequest = false) 
 				reqd: 1,
 			},
 			{
+				fieldtype: "Data",
+				fieldname: "remarks",
+				label: __("Add Remarks (Amount paid in which account"),
+				reqd: 1,
+			},
+			{
 				fieldtype: "Date",
 				fieldname: "reference_date",
 				label: __("Reference Date"),
@@ -617,6 +652,7 @@ function open_mark_as_paid_dialog(frm, term_row, si_name, is_rerequest = false) 
 						payment_term_row: term_row.name,
 						reference_no: values.reference_no,
 						reference_date: values.reference_date,
+						remarks: values.remarks,
 					},
 				});
 				if (r.message) {
@@ -942,7 +978,7 @@ async function render_invoices_tab(frm) {
 	if (!invoice) {
 		wrapper.html(
 			`<p class="text-muted" style="padding:10px">
-                No invoice created yet.
+                No invoice created yet. Create a paycheck first to create invoice
             </p>`,
 		);
 		return;

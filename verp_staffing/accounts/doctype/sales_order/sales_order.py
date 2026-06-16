@@ -585,7 +585,13 @@ def send_details_form_notification(recipient, sales_order, customer):
 
 
 @frappe.whitelist()
-def create_sales_invoice_from_sales_order(sales_order):
+def create_sales_invoice_from_sales_order(
+    sales_order,
+    payment_term_row,
+    reference_no,
+    reference_date,
+    remarks,
+):
     """Create sales invoice directly from sales order
     User can create multiple sales invoice and select
     items from sales order to be included in invoice
@@ -640,7 +646,18 @@ def create_sales_invoice_from_sales_order(sales_order):
 
     si.insert(ignore_permissions=True)
     si.submit()
-    return si.name
+    pe_name = create_payment_entry_from_term(
+        sales_order=sales_order,
+        payment_term_row=payment_term_row,
+        reference_no=reference_no,
+        reference_date=reference_date,
+        remarks=remarks,
+    )
+
+    return {
+        "invoice": si.name,
+        "payment_entry": pe_name,
+    }
 
 
 @frappe.whitelist()
@@ -692,7 +709,11 @@ def get_interview_count_for_customer(customer):
 
 @frappe.whitelist()
 def create_payment_entry_from_term(
-    sales_order, payment_term_row, reference_no, reference_date
+    sales_order,
+    payment_term_row,
+    reference_no,
+    reference_date,
+    remarks=None,
 ):
     so = frappe.get_doc("Sales Order", sales_order)
 
@@ -770,6 +791,7 @@ def create_payment_entry_from_term(
             "invoice_currency": si.currency,
         },
     )
+    pe.remarks = remarks
 
     pe.insert(ignore_permissions=True)
     payment_term = frappe.get_doc(
@@ -868,8 +890,8 @@ def reject_payment_entry(payment_entry, remarks):
 
 
 def _append_verification_log(doc, message, now_str):
-    if isinstance(doc,str):
-        doc = frappe.get_doc("Customer Payment Terms",doc)
+    if isinstance(doc, str):
+        doc = frappe.get_doc("Customer Payment Terms", doc)
     existing = doc.verification_log or ""
 
     new_line = f"[{now_str}] {message}"
@@ -1027,7 +1049,6 @@ def send_payment_term_reminders():
         # Number of Days logic
         # --------------------------------------------------------------
         if row.payment_condition == "Number of Days":
-
             if row.due_date and current_date >= row.due_date:
                 should_notify = True
 
@@ -1035,13 +1056,10 @@ def send_payment_term_reminders():
         # Number of Interviews logic
         # --------------------------------------------------------------
         elif row.payment_condition == "Number of Interviews":
-
             customer = so.customer
 
             if customer not in interview_cache:
-                interview_cache[customer] = (
-                    get_interview_count_for_customer(customer)
-                )
+                interview_cache[customer] = get_interview_count_for_customer(customer)
 
             if interview_cache[customer] >= (row.counter or 0):
                 should_notify = True
@@ -1070,7 +1088,6 @@ def send_payment_term_reminders():
         # Render template
         # --------------------------------------------------------------
         if template:
-
             subject = frappe.render_template(
                 template.subject,
                 context,

@@ -3,7 +3,6 @@
 
 frappe.ui.form.on("Purchase Order", {
 	refresh: function (frm) {
-		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 		handle_currency(frm);
 		(frm.doc.taxes || []).forEach((row) =>
