@@ -1,0 +1,43 @@
+{
+ "charts": [
+  {
+   "chart_name": "Interviews Per Customer",
+   "label": "Interviews Per Customer"
+  }
+ ],
+ "content": "[{\"id\":\"Xh6Y8fltjF\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Interviews</span>\",\"col\":12}},{\"id\":\"WjtJ2HB7jT\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Interviews\",\"col\":4}},{\"id\":\"EJUjN3BAp-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"N8gKpAs6OM\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Interviews Per Customer\",\"col\":12}}]",
+ "creation": "2026-06-01 10:40:49.018791",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "list-alt",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Interviews",
+ "links": [],
+ "modified": "2026-06-16 17:03:23.146354",
+ "modified_by": "Administrator",
+ "module": "Marketing",
+ "name": "Interviews",
+ "number_cards": [
+  {
+   "label": "Interviews",
+   "number_card_name": "Interviews"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Marketings",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "_show_marketing"
+  }
+ ],
+ "sequence_id": 16.0,
+ "shortcuts": [],
+ "title": "Interviews"
+}

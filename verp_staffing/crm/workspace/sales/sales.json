@@ -1,0 +1,75 @@
+{
+ "charts": [
+  {
+   "chart_name": "Lead Conversion Funnel",
+   "label": "Lead Conversion Funnel"
+  }
+ ],
+ "content": "[{\"id\":\"kI8iGr608m\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Sales</span>\",\"col\":12}},{\"id\":\"7pU0p-amop\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Lead Conversion Funnel\",\"col\":12}},{\"id\":\"9PcpsqopZr\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Opportunities\",\"col\":4}},{\"id\":\"8og9u9HPW6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Customers\",\"col\":4}}]",
+ "creation": "2026-01-30 14:17:38.394848",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "call",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Sales",
+ "links": [],
+ "modified": "2026-06-16 17:03:23.200150",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "Sales",
+ "number_cards": [
+  {
+   "label": "Opportunities",
+   "number_card_name": "Opportunity Count"
+  },
+  {
+   "label": "Customers",
+   "number_card_name": "Total Customer"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "_show_sales"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 18.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Customers",
+   "link_to": "Customer",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Orders",
+   "link_to": "Sales Order",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Opportunitys",
+   "link_to": "Opportunity",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Sales"
+}

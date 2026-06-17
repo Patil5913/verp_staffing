@@ -1,0 +1,38 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"gA8t4u9sm0\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Customer Representative</span>\",\"col\":12}},{\"id\":\"49Vk62XfnQ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"CR\",\"col\":4}}]",
+ "creation": "2026-03-21 14:00:22.239739",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "assign",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 1,
+ "label": "Customer Representative",
+ "links": [],
+ "modified": "2026-06-16 17:03:23.283445",
+ "modified_by": "Administrator",
+ "module": "CR",
+ "name": "Customer Representative",
+ "number_cards": [
+  {
+   "label": "CR",
+   "number_card_name": "CR"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "_show_cr"
+  }
+ ],
+ "sequence_id": 21.0,
+ "shortcuts": [],
+ "title": "Customer Representative"
+}
