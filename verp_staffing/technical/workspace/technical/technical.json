@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Technical",
  "links": [],
- "modified": "2026-06-16 17:03:22.699043",
+ "modified": "2026-06-17 14:59:35.740347",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical",
@@ -55,7 +55,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 5.0,
+ "sequence_id": 6.0,
  "shortcuts": [],
  "title": "Technical"
 }

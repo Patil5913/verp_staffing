@@ -7,7 +7,7 @@ frappe.ui.form.on("Employee", {
 				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
 			};
 		});
-
+		await render_headline(frm);
 		const has_sales_department = (frm.doc.employee_assignment_details_table || []).some(
 			(row) => row.department === "Sales",
 		);
@@ -180,6 +180,60 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 });
+
+async function render_headline(frm) {
+	const r = await frappe.call({
+		method: "verp_staffing.utils.onboarding_setup_helper.get_setup_progress",
+	});
+
+	const progress = r.message;
+
+	if (
+		progress.current_step !== "erp_configuration" &&
+		progress.current_step !== "pdf_agreement_template" &&
+		progress.current_step !== "completed"
+	) {
+		return;
+	}
+
+	const configs = {
+		erp_configuration: {
+			message:
+				"Finished Creating Employee? The next step is configuring the ERP so the system can automate your workflow.",
+			button: "Configure ERP Settings",
+			route: "/app/erp-configuration",
+			color: "blue",
+		},
+		pdf_agreement_template: {
+			message:
+				"ERP configuration is complete. Create an agreement template to streamline candidate onboarding.",
+			button: "Create Agreement Template",
+			route: "/app/pdf-agreement-template/new",
+			color: "blue",
+		},
+		completed: {
+			message:
+				"Congratulations. Your organization setup is complete and ready for operations.",
+			button: "Go To Dashboard",
+			route: "/app",
+			color: "blue",
+		},
+	};
+
+	const cfg = configs[progress.current_step];
+
+	frm.dashboard.set_headline_alert(
+		__(
+			`${cfg.message}
+			<a href="${cfg.route}"
+				class="btn btn-sm btn-primary"
+				style="margin-left:8px;vertical-align:middle;">
+				${cfg.button}
+			</a>`,
+		),
+		cfg.color,
+	);
+}
 
 frappe.ui.form.on("Employee Assignment Detail", {
 	async department(frm, cdt, cdn) {

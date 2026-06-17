@@ -234,7 +234,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-16 17:03:22.860969",
+ "modified": "2026-06-17 14:59:35.890321",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
  "name": "Website",
@@ -249,7 +249,7 @@
    "role": "All"
   }
  ],
- "sequence_id": 8.0,
+ "sequence_id": 9.0,
  "shortcuts": [
   {
    "color": "Green",

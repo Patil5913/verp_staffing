@@ -44,7 +44,7 @@
   "fields": "[\"company\",\"role\"]",
   "filters": null,
   "kanban_board_name": "Interview",
-  "modified": "2026-03-25 12:06:44.806008",
+  "modified": "2026-06-17 18:05:13.609444",
   "name": "Interview",
   "private": 0,
   "reference_doctype": "Interview",

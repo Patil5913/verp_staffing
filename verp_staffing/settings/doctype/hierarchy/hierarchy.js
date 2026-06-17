@@ -102,7 +102,7 @@ async function render_headline(frm) {
 
 	frm.dashboard.set_headline_alert(
 		__(
-			`Hierarchy setup is complete.
+			`Finished Setting Hierarchy? Go To Employee.
 			<a href="#" class="btn btn-sm btn-primary setup-employee-action" style="margin-left:8px;vertical-align:middle;">
 				Open Employees →
 			</a>`,

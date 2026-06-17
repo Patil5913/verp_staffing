@@ -161,7 +161,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-16 17:03:22.924038",
+ "modified": "2026-06-17 14:59:35.946845",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounting",
@@ -204,7 +204,7 @@
    "role": "Administrator"
   }
  ],
- "sequence_id": 9.0,
+ "sequence_id": 10.0,
  "shortcuts": [],
  "title": "Accounting"
 }

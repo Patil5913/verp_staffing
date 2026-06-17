@@ -13,7 +13,7 @@
  "is_hidden": 1,
  "label": "Customer Representative",
  "links": [],
- "modified": "2026-06-16 17:03:23.283445",
+ "modified": "2026-06-17 14:59:36.287827",
  "modified_by": "Administrator",
  "module": "CR",
  "name": "Customer Representative",
@@ -32,7 +32,7 @@
    "role": "_show_cr"
   }
  ],
- "sequence_id": 21.0,
+ "sequence_id": 22.0,
  "shortcuts": [],
  "title": "Customer Representative"
 }

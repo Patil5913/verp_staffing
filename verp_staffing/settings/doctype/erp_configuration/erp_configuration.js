@@ -1,10 +1,10 @@
 let email_config_rows = [];
 
 frappe.ui.form.on("ERP Configuration", {
-	refresh(frm) {
+	async refresh(frm) {
 		set_department_role_filters(frm);
 		setup_permission_table_filters(frm);
-
+		await render_headlines(frm);
 		// Load from doc into memory, then render
 		try {
 			email_config_rows = JSON.parse(frm.doc.email_configuration_detail || "[]");
@@ -62,6 +62,57 @@ frappe.ui.form.on("ERP Configuration", {
 	},
 });
 
+async function render_headlines(frm) {
+	const r = await frappe.call({
+		method: "verp_staffing.utils.onboarding_setup_helper.get_setup_progress",
+	});
+
+	const progress = r.message;
+
+	if (!["pdf_agreement_template", "completed"].includes(progress.current_step)) {
+		return;
+	}
+
+	const configs = {
+		pdf_agreement_template: {
+			color: "blue",
+			message:
+				"Configuration is complete. Create an agreement template so candidate agreements can be generated automatically.",
+			button: "Create Agreement Template →",
+			action: () => frappe.new_doc("Pdf Agreement Template"),
+		},
+
+		completed: {
+			color: "blue",
+			message: "Excellent. Your ERP setup is complete and ready for operations.",
+			button: "Open Workspace →",
+			action: () => frappe.set_route("workspace"),
+		},
+	};
+
+	const cfg = configs[progress.current_step];
+
+	frm.dashboard.set_headline_alert(
+		__(
+			`${cfg.message}
+			<a href="#"
+				class="btn btn-sm btn-primary onboarding-next-step"
+				style="margin-left:8px;vertical-align:middle;">
+				${cfg.button}
+			</a>`,
+		),
+		cfg.color,
+	);
+
+	frm.page.wrapper
+		.find(".onboarding-next-step")
+		.off("click")
+		.on("click", function (e) {
+			e.preventDefault();
+			cfg.action();
+		});
+}
+
 const TYPE_OPTIONS = [
 	"HR",
 	"Contact",
@@ -72,7 +123,6 @@ const TYPE_OPTIONS = [
 	"Marketing",
 	"Operations",
 ];
-
 
 function render_email_configurator(frm) {
 	// Use module-level email_config_rows (already loaded in refresh)
@@ -290,7 +340,6 @@ function render_email_configurator(frm) {
 	init_multi_select(wrapper, frm);
 	init_select_all(wrapper);
 }
-
 
 function init_link_fields(wrapper, frm) {
 	wrapper.find(".link-field").each(function () {

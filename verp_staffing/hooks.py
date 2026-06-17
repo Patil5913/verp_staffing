@@ -407,12 +407,20 @@ fixtures = [
     {
         "dt": "Custom HTML Block",
         "filters": [
-            ["name", "in", ["Email Inbox", "Pending Payment Verification Requests"]]
+            [
+                "name",
+                "in",
+                [
+                    "Email Inbox",
+                    "Pending Payment Verification Requests",
+                    "Setup Workspace",
+                ],
+            ]
         ],
     },
     {
         "dt": "Workspace",
-        "filters": [["name", "in", ["Email Inbox", "Pending PE Requests"]]],
+        "filters": [["name", "in", ["Email Inbox", "Pending PE Requests", "Setup"]]],
     },
 ]
 

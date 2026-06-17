@@ -1081,7 +1081,7 @@ def after_install():
     remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
-    # seed_form_tours()
+    seed_form_tours()
 
 
 import requests

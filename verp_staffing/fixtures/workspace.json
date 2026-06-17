@@ -1,6 +1,47 @@
 [
  {
   "charts": [],
+  "content": "[{\"id\":\"1XbeGuququ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Setup</span>\",\"col\":12}},{\"id\":\"p2SEEFp5fE\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Setup Workspace\",\"col\":12}}]",
+  "custom_blocks": [
+   {
+    "custom_block_name": "Setup Workspace",
+    "label": "Setup Workspace",
+    "parent": "Setup",
+    "parentfield": "custom_blocks",
+    "parenttype": "Workspace"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "quantity-1",
+  "indicator_color": "green",
+  "is_hidden": 0,
+  "label": "Setup",
+  "links": [],
+  "modified": "2026-06-17 15:41:57.704541",
+  "module": "Vrugle Staffing ERP",
+  "name": "Setup",
+  "number_cards": [],
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "restrict_to_domain": null,
+  "roles": [
+   {
+    "parent": "Setup",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
+  "sequence_id": 1.0,
+  "shortcuts": [],
+  "title": "Setup"
+ },
+ {
+  "charts": [],
   "content": "[{\"id\":\"HV4ffu_cYW\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Email Inbox</span>\",\"col\":12}},{\"id\":\"QllJUzjW4G\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Email Inbox\",\"col\":12}}]",
   "custom_blocks": [
    {
