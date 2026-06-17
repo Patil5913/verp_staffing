@@ -16,7 +16,7 @@ from frappe.utils import now_datetime
 import base64
 from datetime import datetime
 from frappe.utils import now_datetime
-
+from datetime import timezone
 
 import io
 from PIL import Image
@@ -57,8 +57,8 @@ class ESign(Document):
         file_doc.delete(ignore_permissions=True)
 
 
-def format_timestamp_IST():
-    return now_datetime().strftime("%d-%m-%Y, %H:%M:%S IST")
+def format_timestamp_UTC():
+    return frappe.utils.get_datetime_in_timezone("UTC").strftime("%d-%m-%Y, %H:%M:%S UTC")
 
 
 @frappe.whitelist(allow_guest=True)
@@ -161,7 +161,7 @@ def send_all_signers(agreement):
                 if not row.sign_token:
                     row.sign_token = token
                 if not row.email_sent_on:
-                    row.email_sent_on = format_timestamp_IST()
+                    row.email_sent_on = format_timestamp_UTC()
 
         link = f"{frappe.utils.get_url()}/sign_document?token={token}"
 
@@ -625,7 +625,7 @@ def save_signer_values(
             field.field_value = str(value)
 
         field.signed = 1
-        field.signed_on = format_timestamp_IST()
+        field.signed_on = format_timestamp_UTC()
 
         field.save(ignore_permissions=True)
 
@@ -1410,7 +1410,7 @@ def verify_otp(token=None, otp=None):
             {"sign_token": token},
             {
                 "verification_key": verification_key,
-                "verified_on": format_timestamp_IST(),
+                "verified_on": format_timestamp_UTC(),
             },
             update_modified=False,
         )
@@ -1460,7 +1460,7 @@ def log_activity(
             "browser": browser,
             "os": os,
             "device": device,
-            "visited_at": format_timestamp_IST(),
+            "visited_at": format_timestamp_UTC(),
             "agreement": agreement.name,
         },
     )

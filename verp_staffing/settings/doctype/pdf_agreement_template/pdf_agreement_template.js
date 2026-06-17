@@ -54,37 +54,17 @@ frappe.ui.form.on("Pdf Agreement Template", {
 			childList: true,
 			subtree: true,
 		});
+		const field = frm.fields_dict.upload_pdf_template;
 
-		setTimeout(() => {
-			const file_field = frm.fields_dict["upload_pdf_template"];
-			if (!file_field) return;
+		if (!field) return;
 
-			file_field.$wrapper
-				.find(".btn-attach")
-				.off("click.pdf_only")
-				.on("click.pdf_only", function (e) {
-					e.stopImmediatePropagation();
-					e.preventDefault();
+		field.df.options = {
+			restrictions: {
+				allowed_file_types: [".pdf"],
+			},
+		};
 
-					new frappe.ui.FileUploader({
-						restrictions: {
-							allowed_file_types: [".pdf"],
-						},
-						on_success(file_doc) {
-							const url = file_doc.file_url || "";
-							if (!url.toLowerCase().endsWith(".pdf")) {
-								frappe.call({
-									method: "frappe.client.delete",
-									args: { doctype: "File", name: file_doc.name },
-								});
-								frappe.throw("Only PDF files are allowed.");
-								return;
-							}
-							frm.set_value("upload_pdf_template", url);
-						},
-					});
-				});
-		}, 500);
+		field.refresh();
 	},
 
 	// upload_pdf_template(frm) {
@@ -163,7 +143,10 @@ frappe.ui.form.on("Pdf Agreement Template", {
 		wrapper.find("#save-template").on("click", () => Save_Template(frm));
 
 		// load PDF pages and existing fields
-		load_pdf_into_builder(frm);
+		console.log(frm.doc.upload_pdf_template)
+		if (frm.doc.upload_pdf_template) {
+			load_pdf_into_builder(frm);
+		}
 		if (!frm._pdf_save_hook) {
 			frm._pdf_save_hook = true;
 			frappe.ui.form.on("Pdf Agreement Template", {

@@ -27,6 +27,7 @@
    "fieldname": "original_pdf",
    "fieldtype": "Attach",
    "label": "Original PDF",
+   "reqd": 1,
    "set_only_once": 1
   },
   {
@@ -89,7 +90,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-16 14:00:58.210290",
+ "modified": "2026-06-17 14:47:36.453621",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",

@@ -34,6 +34,17 @@ const colorPalette = [
 ];
 frappe.ui.form.on("E Sign", {
 	refresh(frm) {
+		const field = frm.fields_dict.original_pdf;
+
+		if (!field) return;
+
+		field.df.options = {
+			restrictions: {
+				allowed_file_types: [".pdf"],
+			},
+		};
+
+		field.refresh();
 		if (!frm.doc.original_pdf) return;
 
 		rebuild_recipients(frm);

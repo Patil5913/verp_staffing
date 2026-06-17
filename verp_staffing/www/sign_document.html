@@ -1411,7 +1411,6 @@
 		const pdf = await pdfjsLib.getDocument(window.pdf_url).promise;
 
 		const container = document.getElementById("pdf-container");
-		// console.log(container);
 		container.innerHTML = "";
 
 		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -2176,43 +2175,47 @@
 		img.style.pointerEvents = "none";
 	});
 
-	document.getElementById("upload-input").addEventListener("change", function (e) {
-		const file = e.target.files[0];
-		if (!file) return;
+	const upload_input = document.getElementById("upload-input")
+	if(upload_input){
 
-		if (file.size > 5 * 1024 * 1024) {
-			alert("Image too large. Max 5MB allowed.");
-			e.target.value = "";
-			return;
-		}
-
-		const img = new Image();
-		const reader = new FileReader();
-
-		reader.onload = function (event) {
-			img.src = event.target.result;
-		};
-
-		img.onload = function () {
-			const canvas = document.createElement("canvas");
-			const ctx = canvas.getContext("2d");
-
-			const maxWidth = 600;
-			const scale = maxWidth / img.width;
-
-			canvas.width = maxWidth;
-			canvas.height = img.height * scale;
-
-			ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-			uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
-
-			document.getElementById("upload-preview").innerHTML =
-				`<img src="${uploadedImageData}" style="max-width:100%;">`;
-		};
-
-		reader.readAsDataURL(file);
-	});
+		upload_input.addEventListener("change", function (e) {
+			const file = e.target.files[0];
+			if (!file) return;
+	
+			if (file.size > 5 * 1024 * 1024) {
+				alert("Image too large. Max 5MB allowed.");
+				e.target.value = "";
+				return;
+			}
+	
+			const img = new Image();
+			const reader = new FileReader();
+	
+			reader.onload = function (event) {
+				img.src = event.target.result;
+			};
+	
+			img.onload = function () {
+				const canvas = document.createElement("canvas");
+				const ctx = canvas.getContext("2d");
+	
+				const maxWidth = 600;
+				const scale = maxWidth / img.width;
+	
+				canvas.width = maxWidth;
+				canvas.height = img.height * scale;
+	
+				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+	
+				uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
+	
+				document.getElementById("upload-preview").innerHTML =
+					`<img src="${uploadedImageData}" style="max-width:100%;">`;
+			};
+	
+			reader.readAsDataURL(file);
+		});
+	}
 
 	function collectFieldValues() {
 		const data = [];
@@ -2433,8 +2436,6 @@
 					document.getElementById("otp-section").style.display = "block";
 					const verifyBtn = document.getElementById("verify-btn");
 					const otpInput = document.getElementById("otp-input");
-					console.log("otpInput: ", otpInput);
-					console.log("verifyBtn: ", verifyBtn);
 					if (otpInput) {
 						otpInput.style.display = "block";
 					}
