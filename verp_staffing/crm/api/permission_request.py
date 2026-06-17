@@ -69,53 +69,16 @@ def check_candidate_form_required_from_sales_order(so_name):
     return False
 
 
-def get_cached_erp_config_json(fieldname, cache_prefix="erp_config"):
-    cache = frappe.cache()
-    cache_key = f"{cache_prefix}:{fieldname}"
-
-    cached = cache.get_value(cache_key)
-    if cached is not None:
-        return cached
-
+def get_cached_erp_config_json(fieldname):
     try:
-        raw = frappe.db.get_single_value(
-            "ERP Configuration",
-            fieldname,
-        )
+        raw = frappe.get_cached_doc("ERP Configuration").get(fieldname)
 
-        result = (
-            {k.lower().strip(): v for k, v in json.loads(raw).items()} if raw else {}
-        )
-
+        if not raw:
+            return {}
+        return {k.lower().strip(): v for k, v in json.loads(raw).items()}
     except Exception:
-        result = {}
+        return {}
 
-    cache.set_value(
-        cache_key,
-        result,
-        expires_in_sec=3600,
-    )
-
-    return result
-
-@frappe.whitelist()
-def _get_cached_meta(doctype):
-    cache = frappe.cache()
-    cache_key = f"doctype_meta:{doctype}"
-
-    meta = cache.get_value(cache_key)
-    if meta is not None:
-        return meta
-
-    meta = frappe.get_meta(doctype)
-
-    cache.set_value(
-        cache_key,
-        meta,
-        expires_in_sec=3600,
-    )
-
-    return meta
 
 
 def _build_fields_from_fieldnames(allowed_fieldnames):
@@ -124,7 +87,7 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
     by reading Lead Detail Form meta and child doctype metas dynamically.
     """
     try:
-        lead_detail_meta = _get_cached_meta("Lead Detail Form")
+        lead_detail_meta = frappe.get_meta("Lead Detail Form")
     except Exception:
         return {"simple_fields": {}, "table_fields": {}}
 
@@ -174,7 +137,7 @@ def _build_fields_from_fieldnames(allowed_fieldnames):
             if not child_doctype:
                 continue
             try:
-                child_meta = _get_cached_meta(child_doctype)
+                child_meta = frappe.get_meta(child_doctype)
             except Exception:
                 continue
 
@@ -420,7 +383,7 @@ def get_lead_detail_field_values(customer_name):
         return {}
 
     try:
-        lead_detail_meta = _get_cached_meta("Lead Detail Form")
+        lead_detail_meta = frappe.get_meta("Lead Detail Form")
     except Exception:
         return {}
 
@@ -485,7 +448,7 @@ def get_lead_detail_field_values(customer_name):
         if not df or not df.options:
             continue
         try:
-            child_meta = _get_cached_meta(df.options)
+            child_meta = frappe.get_meta(df.options)
             col_fieldnames = [
                 cf.fieldname
                 for cf in child_meta.fields
@@ -570,7 +533,7 @@ def request_field_update(
             frappe.throw("Invalid field data received. Please try again.")
 
     # Build field labels for activity log
-    lead_detail_meta = _get_cached_meta("Lead Detail Form")
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
@@ -686,7 +649,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
         except Exception:
             frappe.throw("Invalid field data received. Please try again.")
 
-    lead_detail_meta = _get_cached_meta("Lead Detail Form")
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)
@@ -906,7 +869,7 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
     if not lead_detail_name:
         frappe.throw("No Lead Detail Form found for this Customer.")
 
-    lead_detail_meta = _get_cached_meta("Lead Detail Form")
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
     updated_fields = {}
     rejected_fields = []
 
@@ -1093,7 +1056,7 @@ def reject_field_update_request(customer_name, comment_name):
     service_name = data.get("service_name")
 
     # Build field labels
-    lead_detail_meta = _get_cached_meta("Lead Detail Form")
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
     field_labels = []
     for f in field_updates.keys():
         df = lead_detail_meta.get_field(f)

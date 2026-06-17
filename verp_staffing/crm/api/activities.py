@@ -23,7 +23,7 @@ def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
 
     user_filters = []
 
-    if "employee" in frappe.get_roles(current_user):
+    if "system manager" not in frappe.get_roles(current_user) or current_user != "Administrator":
         user_filters = [
             ["assigned_to", "=", current_user],
             ["owner", "=", current_user],

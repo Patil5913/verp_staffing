@@ -1,6 +1,5 @@
 import frappe
 from collections import defaultdict
-from verp_staffing.crm.api.permission_request import _get_cached_meta
 
 
 def get_cached_table_columns(child_doctype):
@@ -11,7 +10,7 @@ def get_cached_table_columns(child_doctype):
     if columns is not None:
         return columns
 
-    child_meta = _get_cached_meta(child_doctype)
+    child_meta = frappe.get_meta(child_doctype)
 
     columns = [
         {
@@ -42,7 +41,7 @@ def get_data_by_customer(customer, fields):
         fields = frappe.parse_json(fields)
 
     source_doctype = "Lead Detail Form"
-    meta = _get_cached_meta(source_doctype)
+    meta = frappe.get_meta(source_doctype)
 
     normal_fields = []
     table_fields = []
@@ -67,7 +66,8 @@ def get_data_by_customer(customer, fields):
         filters=[
             ["Doctype Reference", "reference_person", "=", customer],
         ],
-        order_by="creation desc",
+        order_by="`tabLead Detail Form`.creation desc",
+        distinct=True
     )
 
     if not parent_rows:
