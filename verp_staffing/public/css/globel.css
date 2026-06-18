@@ -248,882 +248,6 @@ body.verp-protected::after {
    REMOVE NAVBAR SEARCH
 ========================================= */
 
-.navbar .search-bar,
-.navbar form[role="search"] {
-    display: none !important;
-}
-
-/* =========================================
-   REMOVE HELP MENU
-========================================= */
-
-.dropdown-help {
-	display: none !important;
-}
-
-#navbar-breadcrumbs {
-	display: none !important;
-}
-
-/* =========================================
-   NAVBAR CLEANUP
-========================================= */
-
-.navbar-nav {
-	align-items: center;
-
-}
-
-/* =========================================
-   NOTIFICATION ICON
-========================================= */
-
-.dropdown-notifications {
-	margin-left: auto;
-}
-
-:root {
-	/* Brand / primary */
-	--cn-primary: #2490ef;
-	--cn-primary-light: rgba(36, 144, 239, 0.1);
-	--cn-primary-hover: rgba(36, 144, 239, 0.16);
-
-	/* Sidebar surface */
-	--cn-sidebar-bg: #ffffff;
-	--cn-sidebar-hover: #f2f2f2;
-	--cn-sidebar-active-bg: var(--cn-primary-light);
-	--cn-sidebar-active-fg: var(--cn-primary);
-
-	/* Item text */
-	--cn-text: #1f2937;
-	--cn-text-muted: #555555;
-
-	/* Typography */
-	--cn-font: var(
-		--font-stack,
-		-apple-system,
-		BlinkMacSystemFont,
-		"Segoe UI",
-		Roboto,
-		sans-serif
-	);
-	--cn-size-item: 14px;
-	--cn-weight-normal: 400;
-	--cn-weight-active: 500;
-
-	/* Geometry */
-	--cn-radius: 6px;
-	--cn-item-height: 34px;
-	--cn-icon-size: 16px;
-	--cn-indent-child: 28px;
-
-	/* Active left bar */
-	--cn-bar-width: 3px;
-	--cn-bar-color: var(--cn-primary);
-	--cn-bar-inset: 4px;
-
-	/*
-   * Child connector line — drawn on .cn-children::before.
-   * Left value = margin(6px) + bar-inset(4px) + bar-width(3px) + gap(2px) = 15px
-   * so the connector sits just to the right of the active bar.
-   * The child highlight pill starts AFTER the connector (padding-left accounts for this).
-   */
-	--cn-connector-left: 15px;
-	--cn-connector-w: 1.5px;
-	--cn-connector-color: #d1d5db;
-}
-
-/* ─────────────────────────────────────────────
-   DARK MODE
-   ───────────────────────────────────────────── */
-[data-theme="dark"],
-.frappe-dark {
-	--cn-sidebar-bg: rgba(0, 0, 0, 0);
-	--cn-sidebar-hover: rgba(255, 255, 255, 0.07);
-	--cn-sidebar-active-bg: rgba(36, 144, 239, 0.18);
-	--cn-text: #e2e8f0;
-	--cn-text-muted: #a0aec0;
-	--cn-connector-color: rgba(255, 255, 255, 0.18);
-}
-
-/* ─────────────────────────────────────────────
-   1. HIDE ALL NATIVE FRAPPE SIDEBARS
-   ───────────────────────────────────────────── */
-.desk-sidebar,
-.list-sidebar,
-.report-sidebar,
-.overlay-sidebar {
-	display: none !important;
-}
-
-.layout-side-section > *:not(#custom-nav-sidebar) {
-	display: none !important;
-}
-
-/* ─────────────────────────────────────────────
-   2. HIDE NATIVE NAVBAR SHORTCUTS
-   ───────────────────────────────────────────── */
-.navbar-shortcuts-bar,
-.page-shortcuts,
-.shortcut-widget-box,
-#navbar-breadcrumbs .navbar-breadcrumb {
-	display: none !important;
-}
-
-/* ─────────────────────────────────────────────
-   3. SIDEBAR COLUMN — sticky, independent scroll
-   ───────────────────────────────────────────── */
-.layout-side-section {
-	position: sticky !important;
-	top: 0 !important;
-	height: 100vh !important;
-	max-height: 100vh !important;
-	overflow: hidden !important;
-	align-self: flex-start !important;
-	z-index: 10;
-	transition:
-		width 0.22s ease,
-		min-width 0.22s ease;
-}
-
-#custom-nav-sidebar {
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	height: 100%;
-	min-height: 0;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding: 8px 0 24px;
-	background: var(--cn-sidebar-bg);
-	font-family: var(--cn-font);
-	font-size: var(--cn-size-item);
-	scrollbar-width: thin;
-	scrollbar-color: #d1d5db transparent;
-	box-sizing: border-box;
-}
-
-#custom-nav-sidebar::-webkit-scrollbar {
-	width: 3px;
-}
-#custom-nav-sidebar::-webkit-scrollbar-track {
-	background: transparent;
-}
-#custom-nav-sidebar::-webkit-scrollbar-thumb {
-	background: #d1d5db;
-	border-radius: 2px;
-}
-
-/*  */
-
-/* ─────────────────────────────────────────────
-   4. BASE ITEM ROW
-   ───────────────────────────────────────────── */
-.cn-item {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	min-height: var(--cn-item-height);
-	height: var(--cn-item-height);
-	padding: 0 10px 0 10px;
-	margin: 1px 6px;
-	border-radius: var(--cn-radius);
-	color: var(--cn-text);
-	font-size: var(--cn-size-item);
-	font-weight: var(--cn-weight-normal);
-	line-height: 1.3;
-	text-decoration: none;
-	white-space: nowrap;
-	overflow: hidden;
-	cursor: pointer;
-	user-select: none;
-	position: relative;
-	transition:
-		background 0.12s ease,
-		color 0.12s ease;
-	box-sizing: border-box;
-}
-
-.cn-item:hover {
-	background: var(--cn-sidebar-hover);
-	color: var(--cn-text);
-	text-decoration: none;
-}
-
-/* ─────────────────────────────────────────────
-   5. ACTIVE STATES
-   ───────────────────────────────────────────── */
-
-/*
- * CHILD ACTIVE BAR — must sit AFTER (right of) the connector line.
- *
- * Layout of a child row (margin 6px each side, padding-left 28px):
- *   [6px margin] [connector at 15px from ul left = 9px from item left]
- *   [padding starts] [icon] [label]
- *
- * The bar is drawn via ::before at left: var(--cn-bar-inset) = 4px
- * which lands BEHIND the connector. Fix: move it to left: 20px so it
- * clears the connector (15px connector pos + 1.5px width + ~3.5px gap).
- *
- * The highlight background (.cn-sidebar-active-bg) spans the full item
- * width, so we clip its left edge with a transparent left border equal
- * to the connector zone width, preventing the blue wash from bleeding
- * into the connector area.
- */
-.cn-child-link.is-active {
-	background: var(--cn-sidebar-active-bg);
-	color: var(--cn-sidebar-active-fg);
-	font-weight: var(--cn-weight-active);
-	/*
-   * Push the blue highlight to start after the connector zone.
-   * We achieve this by overriding the left padding so the background
-   * fill effectively begins at the connector right edge.
-   * Using a left transparent border of 20px "eats" the first 20px of
-   * the background so the blue wash doesn't cover the connector line.
-   */
-	border-left: 20px solid transparent;
-	/* compensate so text doesn't shift — reduce padding by same amount */
-	padding-left: calc(var(--cn-indent-child) - 20px);
-	background-clip: padding-box;
-}
-
-/* Active bar drawn on ::before, positioned AFTER the connector */
-.cn-child-link.is-active::before {
-	content: "";
-	position: absolute;
-	/* 20px = 6px(margin) + 14px — clears connector at 15px */
-	left: 3px;
-	top: 18%;
-	bottom: 18%;
-	width: var(--cn-bar-width);
-	background: var(--cn-bar-color);
-	border-radius: 2px;
-}
-
-.cn-child-link.is-active:hover {
-	background: var(--cn-primary-hover);
-	background-clip: padding-box;
-}
-
-/* ── BLUE active: type_1 parent link ── */
-.cn-parent-link.is-active,
-.cn-group--type1.has-active > .cn-parent-link {
-	background: var(--cn-sidebar-active-bg);
-	color: var(--cn-sidebar-active-fg);
-	font-weight: var(--cn-weight-active);
-}
-
-.cn-parent-link.is-active::before,
-.cn-group--type1.has-active > .cn-parent-link::before {
-	content: "";
-	position: absolute;
-	left: var(--cn-bar-inset);
-	top: 18%;
-	bottom: 18%;
-	width: var(--cn-bar-width);
-	background: var(--cn-bar-color);
-	border-radius: 2px;
-}
-
-.cn-parent-link.is-active:hover {
-	background: var(--cn-primary-hover);
-}
-
-/* ── GRAY only: type_2 toggle when expanded ── */
-.cn-group--type2.is-expanded > .cn-parent-toggle {
-	background: var(--cn-sidebar-hover);
-	color: var(--cn-text);
-}
-
-/* ─────────────────────────────────────────────
-   6. ICON
-   ───────────────────────────────────────────── */
-.cn-item-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	width: var(--cn-icon-size);
-	height: var(--cn-icon-size);
-	color: inherit;
-}
-
-.cn-item-icon .icon {
-	width: var(--cn-icon-size);
-	height: var(--cn-icon-size);
-}
-
-/* ─────────────────────────────────────────────
-   7. LABEL
-   ───────────────────────────────────────────── */
-.cn-item-label {
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	line-height: var(--cn-item-height);
-}
-
-/* ─────────────────────────────────────────────
-   8. CHEVRON
-   ───────────────────────────────────────────── */
-.cn-chevron {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin-left: auto;
-	flex-shrink: 0;
-	color: var(--cn-text-muted);
-	transition: transform 0.2s ease;
-}
-
-.cn-group--type2.is-expanded > .cn-parent-toggle .cn-chevron {
-	transform: rotate(180deg);
-}
-
-/* ─────────────────────────────────────────────
-   9. CHILDREN LIST (type_2)
-   ───────────────────────────────────────────── */
-.cn-children {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: none;
-	overflow: hidden;
-	position: relative;
-}
-
-.cn-group--type2.is-expanded > .cn-children {
-	display: block;
-	padding-bottom: 4px;
-}
-
-/*
- * Vertical connector line.
- * Positioned at --cn-connector-left (15px from the ul's own left edge).
- * The ul has no margin of its own; items inside have margin: 1px 6px.
- * So 15px from ul edge = 9px from item left edge = sits under the
- * parent's icon center (icon starts at 10px padding + icon is 16px wide,
- * center ≈ 18px from item outer — close enough visually).
- */
-.cn-group--type2.is-expanded > .cn-children::before {
-	content: "";
-	position: absolute;
-	left: var(--cn-connector-left);
-	top: 2px;
-	bottom: 8px;
-	width: var(--cn-connector-w);
-	background: var(--cn-connector-color);
-	border-radius: 1px;
-	pointer-events: none;
-}
-
-.cn-children li {
-	margin: 0;
-	padding: 0;
-}
-
-.cn-child-link {
-	padding-left: var(--cn-indent-child);
-	height: var(--cn-item-height);
-	min-height: var(--cn-item-height);
-	font-size: var(--cn-size-item);
-}
-
-
-/* ─────────────────────────────────────────────
-   11. RESPONSIVE
-   ───────────────────────────────────────────── */
-@media (max-width: 991px) {
-	.layout-side-section {
-		position: static !important;
-		height: auto !important;
-		max-height: none !important;
-		overflow: visible !important;
-	}
-
-	#custom-nav-sidebar {
-		height: auto !important;
-		max-height: 50vh;
-		overflow-y: auto !important;
-	}
-}
-
-@media (max-width: 768px) {
-	#custom-nav-navbar {
-		position: static;
-		transform: none;
-		left: auto;
-		top: auto;
-		pointer-events: auto;
-		flex-wrap: wrap;
-		padding: 4px 8px;
-		justify-content: center;
-	}
-
-	.cn-navbar-link {
-		padding: 4px 12px;
-		font-size: 12px;
-	}
-
-	.cn-item {
-		height: 36px;
-		min-height: 36px;
-	}
-}
-
-/* =========================================
-   ALWAYS FULL WIDTH
-========================================= */
-
-@media (min-width: 768px) {
-  body.full-width .container {
-    width: 100%;
-  }
-}
-
-/* =========================================
-   REMOVE NAVBAR SEARCH
-========================================= */
-
-.navbar .search-bar,
-.navbar form[role="search"] {
-    display: none !important;
-}
-
-/* =========================================
-   REMOVE HELP MENU
-========================================= */
-
-.dropdown-help {
-	display: none !important;
-}
-
-#navbar-breadcrumbs {
-	display: none !important;
-}
-
-/* =========================================
-   NAVBAR CLEANUP
-========================================= */
-
-.navbar-nav {
-	align-items: center;
-
-}
-
-/* =========================================
-   NOTIFICATION ICON
-========================================= */
-
-.dropdown-notifications {
-	margin-left: auto;
-}
-
-:root {
-	/* Brand / primary */
-	--cn-primary: #2490ef;
-	--cn-primary-light: rgba(36, 144, 239, 0.1);
-	--cn-primary-hover: rgba(36, 144, 239, 0.16);
-
-	/* Sidebar surface */
-	--cn-sidebar-bg: #ffffff;
-	--cn-sidebar-hover: #f2f2f2;
-	--cn-sidebar-active-bg: var(--cn-primary-light);
-	--cn-sidebar-active-fg: var(--cn-primary);
-
-	/* Item text */
-	--cn-text: #1f2937;
-	--cn-text-muted: #555555;
-
-	/* Typography */
-	--cn-font: var(
-		--font-stack,
-		-apple-system,
-		BlinkMacSystemFont,
-		"Segoe UI",
-		Roboto,
-		sans-serif
-	);
-	--cn-size-item: 14px;
-	--cn-weight-normal: 400;
-	--cn-weight-active: 500;
-
-	/* Geometry */
-	--cn-radius: 6px;
-	--cn-item-height: 34px;
-	--cn-icon-size: 16px;
-	--cn-indent-child: 28px;
-
-	/* Active left bar */
-	--cn-bar-width: 3px;
-	--cn-bar-color: var(--cn-primary);
-	--cn-bar-inset: 4px;
-
-	/*
-   * Child connector line — drawn on .cn-children::before.
-   * Left value = margin(6px) + bar-inset(4px) + bar-width(3px) + gap(2px) = 15px
-   * so the connector sits just to the right of the active bar.
-   * The child highlight pill starts AFTER the connector (padding-left accounts for this).
-   */
-	--cn-connector-left: 15px;
-	--cn-connector-w: 1.5px;
-	--cn-connector-color: #d1d5db;
-}
-
-/* ─────────────────────────────────────────────
-   DARK MODE
-   ───────────────────────────────────────────── */
-[data-theme="dark"],
-.frappe-dark {
-	--cn-sidebar-bg: rgba(0, 0, 0, 0);
-	--cn-sidebar-hover: rgba(255, 255, 255, 0.07);
-	--cn-sidebar-active-bg: rgba(36, 144, 239, 0.18);
-	--cn-text: #e2e8f0;
-	--cn-text-muted: #a0aec0;
-	--cn-connector-color: rgba(255, 255, 255, 0.18);
-}
-
-/* ─────────────────────────────────────────────
-   1. HIDE ALL NATIVE FRAPPE SIDEBARS
-   ───────────────────────────────────────────── */
-.desk-sidebar,
-.list-sidebar,
-.report-sidebar,
-.overlay-sidebar {
-	display: none !important;
-}
-
-.layout-side-section > *:not(#custom-nav-sidebar) {
-	display: none !important;
-}
-
-/* ─────────────────────────────────────────────
-   2. HIDE NATIVE NAVBAR SHORTCUTS
-   ───────────────────────────────────────────── */
-.navbar-shortcuts-bar,
-.page-shortcuts,
-.shortcut-widget-box,
-#navbar-breadcrumbs .navbar-breadcrumb {
-	display: none !important;
-}
-
-/* ─────────────────────────────────────────────
-   3. SIDEBAR COLUMN — sticky, independent scroll
-   ───────────────────────────────────────────── */
-.layout-side-section {
-	position: sticky !important;
-	top: 0 !important;
-	height: 100vh !important;
-	max-height: 100vh !important;
-	overflow: hidden !important;
-	align-self: flex-start !important;
-	z-index: 10;
-	transition:
-		width 0.22s ease,
-		min-width 0.22s ease;
-}
-
-#custom-nav-sidebar {
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	height: 100%;
-	min-height: 0;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding: 8px 0 24px;
-	background: var(--cn-sidebar-bg);
-	font-family: var(--cn-font);
-	font-size: var(--cn-size-item);
-	scrollbar-width: thin;
-	scrollbar-color: #d1d5db transparent;
-	box-sizing: border-box;
-}
-
-#custom-nav-sidebar::-webkit-scrollbar {
-	width: 3px;
-}
-#custom-nav-sidebar::-webkit-scrollbar-track {
-	background: transparent;
-}
-#custom-nav-sidebar::-webkit-scrollbar-thumb {
-	background: #d1d5db;
-	border-radius: 2px;
-}
-
-/*  */
-
-/* ─────────────────────────────────────────────
-   4. BASE ITEM ROW
-   ───────────────────────────────────────────── */
-.cn-item {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	min-height: var(--cn-item-height);
-	height: var(--cn-item-height);
-	padding: 0 10px 0 10px;
-	margin: 1px 6px;
-	border-radius: var(--cn-radius);
-	color: var(--cn-text);
-	font-size: var(--cn-size-item);
-	font-weight: var(--cn-weight-normal);
-	line-height: 1.3;
-	text-decoration: none;
-	white-space: nowrap;
-	overflow: hidden;
-	cursor: pointer;
-	user-select: none;
-	position: relative;
-	transition:
-		background 0.12s ease,
-		color 0.12s ease;
-	box-sizing: border-box;
-}
-
-.cn-item:hover {
-	background: var(--cn-sidebar-hover);
-	color: var(--cn-text);
-	text-decoration: none;
-}
-
-/* ─────────────────────────────────────────────
-   5. ACTIVE STATES
-   ───────────────────────────────────────────── */
-
-/*
- * CHILD ACTIVE BAR — must sit AFTER (right of) the connector line.
- *
- * Layout of a child row (margin 6px each side, padding-left 28px):
- *   [6px margin] [connector at 15px from ul left = 9px from item left]
- *   [padding starts] [icon] [label]
- *
- * The bar is drawn via ::before at left: var(--cn-bar-inset) = 4px
- * which lands BEHIND the connector. Fix: move it to left: 20px so it
- * clears the connector (15px connector pos + 1.5px width + ~3.5px gap).
- *
- * The highlight background (.cn-sidebar-active-bg) spans the full item
- * width, so we clip its left edge with a transparent left border equal
- * to the connector zone width, preventing the blue wash from bleeding
- * into the connector area.
- */
-.cn-child-link.is-active {
-	background: var(--cn-sidebar-active-bg);
-	color: var(--cn-sidebar-active-fg);
-	font-weight: var(--cn-weight-active);
-	/*
-   * Push the blue highlight to start after the connector zone.
-   * We achieve this by overriding the left padding so the background
-   * fill effectively begins at the connector right edge.
-   * Using a left transparent border of 20px "eats" the first 20px of
-   * the background so the blue wash doesn't cover the connector line.
-   */
-	border-left: 20px solid transparent;
-	/* compensate so text doesn't shift — reduce padding by same amount */
-	padding-left: calc(var(--cn-indent-child) - 20px);
-	background-clip: padding-box;
-}
-
-/* Active bar drawn on ::before, positioned AFTER the connector */
-.cn-child-link.is-active::before {
-	content: "";
-	position: absolute;
-	/* 20px = 6px(margin) + 14px — clears connector at 15px */
-	left: 3px;
-	top: 18%;
-	bottom: 18%;
-	width: var(--cn-bar-width);
-	background: var(--cn-bar-color);
-	border-radius: 2px;
-}
-
-.cn-child-link.is-active:hover {
-	background: var(--cn-primary-hover);
-	background-clip: padding-box;
-}
-
-/* ── BLUE active: type_1 parent link ── */
-.cn-parent-link.is-active,
-.cn-group--type1.has-active > .cn-parent-link {
-	background: var(--cn-sidebar-active-bg);
-	color: var(--cn-sidebar-active-fg);
-	font-weight: var(--cn-weight-active);
-}
-
-.cn-parent-link.is-active::before,
-.cn-group--type1.has-active > .cn-parent-link::before {
-	content: "";
-	position: absolute;
-	left: var(--cn-bar-inset);
-	top: 18%;
-	bottom: 18%;
-	width: var(--cn-bar-width);
-	background: var(--cn-bar-color);
-	border-radius: 2px;
-}
-
-.cn-parent-link.is-active:hover {
-	background: var(--cn-primary-hover);
-}
-
-/* ── GRAY only: type_2 toggle when expanded ── */
-.cn-group--type2.is-expanded > .cn-parent-toggle {
-	background: var(--cn-sidebar-hover);
-	color: var(--cn-text);
-}
-
-/* ─────────────────────────────────────────────
-   6. ICON
-   ───────────────────────────────────────────── */
-.cn-item-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	width: var(--cn-icon-size);
-	height: var(--cn-icon-size);
-	color: inherit;
-}
-
-.cn-item-icon .icon {
-	width: var(--cn-icon-size);
-	height: var(--cn-icon-size);
-}
-
-/* ─────────────────────────────────────────────
-   7. LABEL
-   ───────────────────────────────────────────── */
-.cn-item-label {
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	line-height: var(--cn-item-height);
-}
-
-/* ─────────────────────────────────────────────
-   8. CHEVRON
-   ───────────────────────────────────────────── */
-.cn-chevron {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin-left: auto;
-	flex-shrink: 0;
-	color: var(--cn-text-muted);
-	transition: transform 0.2s ease;
-}
-
-.cn-group--type2.is-expanded > .cn-parent-toggle .cn-chevron {
-	transform: rotate(180deg);
-}
-
-/* ─────────────────────────────────────────────
-   9. CHILDREN LIST (type_2)
-   ───────────────────────────────────────────── */
-.cn-children {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: none;
-	overflow: hidden;
-	position: relative;
-}
-
-.cn-group--type2.is-expanded > .cn-children {
-	display: block;
-	padding-bottom: 4px;
-}
-
-/*
- * Vertical connector line.
- * Positioned at --cn-connector-left (15px from the ul's own left edge).
- * The ul has no margin of its own; items inside have margin: 1px 6px.
- * So 15px from ul edge = 9px from item left edge = sits under the
- * parent's icon center (icon starts at 10px padding + icon is 16px wide,
- * center ≈ 18px from item outer — close enough visually).
- */
-.cn-group--type2.is-expanded > .cn-children::before {
-	content: "";
-	position: absolute;
-	left: var(--cn-connector-left);
-	top: 2px;
-	bottom: 8px;
-	width: var(--cn-connector-w);
-	background: var(--cn-connector-color);
-	border-radius: 1px;
-	pointer-events: none;
-}
-
-.cn-children li {
-	margin: 0;
-	padding: 0;
-}
-
-.cn-child-link {
-	padding-left: var(--cn-indent-child);
-	height: var(--cn-item-height);
-	min-height: var(--cn-item-height);
-	font-size: var(--cn-size-item);
-}
-
-
-/* ─────────────────────────────────────────────
-   11. RESPONSIVE
-   ───────────────────────────────────────────── */
-@media (max-width: 991px) {
-	.layout-side-section {
-		position: static !important;
-		height: auto !important;
-		max-height: none !important;
-		overflow: visible !important;
-	}
-
-	#custom-nav-sidebar {
-		height: auto !important;
-		max-height: 50vh;
-		overflow-y: auto !important;
-	}
-}
-
-@media (max-width: 768px) {
-	#custom-nav-navbar {
-		position: static;
-		transform: none;
-		left: auto;
-		top: auto;
-		pointer-events: auto;
-		flex-wrap: wrap;
-		padding: 4px 8px;
-		justify-content: center;
-	}
-
-	.cn-navbar-link {
-		padding: 4px 12px;
-		font-size: 12px;
-	}
-
-	.cn-item {
-		height: 36px;
-		min-height: 36px;
-	}
-}
-
-/* =========================================
-   ALWAYS FULL WIDTH
-========================================= */
-
-body.full-width .container {
-    max-width: 100% !important;
-}
-
-/* =========================================
-   REMOVE NAVBAR SEARCH
-========================================= */
-
 /* .navbar .search-bar,
 .navbar form[role="search"] {
     display: none !important;
@@ -1134,16 +258,20 @@ body.full-width .container {
 ========================================= */
 
 .dropdown-help {
-    display: none !important;
+	display: none !important;
 }
 
+#navbar-breadcrumbs {
+	display: none !important;
+}
 
 /* =========================================
    NAVBAR CLEANUP
 ========================================= */
 
 .navbar-nav {
-    align-items: center;
+	align-items: center;
+
 }
 
 /* =========================================
@@ -1151,56 +279,58 @@ body.full-width .container {
 ========================================= */
 
 .dropdown-notifications {
-    margin-left: auto;
+	margin-left: auto;
 }
 
-/* custom_navigation.css
- * ─────────────────────────────────────────────────────────────
- * CSS CUSTOM PROPERTIES (global variables)
- * All colors, shadows, radii, spacing defined here.
- * ─────────────────────────────────────────────────────────────
- */
 :root {
-  /* Brand / primary */
-  --cn-primary:           #2490ef;
-  --cn-primary-light:     rgba(36, 144, 239, 0.10);
-  --cn-primary-hover:     rgba(36, 144, 239, 0.16);
+	/* Brand / primary */
+	--cn-primary: #2490ef;
+	--cn-primary-light: rgba(36, 144, 239, 0.1);
+	--cn-primary-hover: rgba(36, 144, 239, 0.16);
 
-  /* Sidebar surface */
-  --cn-sidebar-bg:        #ffffff;
-  --cn-sidebar-hover:     #f2f2f2;
-  --cn-sidebar-active-bg: var(--cn-primary-light);
-  --cn-sidebar-active-fg: var(--cn-primary);
+	/* Sidebar surface */
+	--cn-sidebar-bg: #ffffff;
+	--cn-sidebar-hover: #f2f2f2;
+	--cn-sidebar-active-bg: var(--cn-primary-light);
+	--cn-sidebar-active-fg: var(--cn-primary);
 
-  /* Item text — solid, readable, not muted */
-  --cn-text:              #1f2937;
-  --cn-text-muted:        #555555;
+	/* Item text */
+	--cn-text: #1f2937;
+	--cn-text-muted: #555555;
 
-  /* Typography — uniform across all rows */
-  --cn-font:              var(--font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  --cn-size-item:         14px;
-  --cn-weight-normal:     400;
-  --cn-weight-active:     500;
+	/* Typography */
+	--cn-font: var(
+		--font-stack,
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		Roboto,
+		sans-serif
+	);
+	--cn-size-item: 14px;
+	--cn-weight-normal: 400;
+	--cn-weight-active: 500;
 
-  /* Geometry */
-  --cn-radius:            6px;
-  --cn-item-height:       34px;    /* tall enough so text never clips */
-  --cn-icon-size:         16px;
-  --cn-indent-child:      28px;    /* child left-padding indent */
+	/* Geometry */
+	--cn-radius: 6px;
+	--cn-item-height: 34px;
+	--cn-icon-size: 16px;
+	--cn-indent-child: 28px;
 
-  /* Active left bar — inset so it doesn't protrude outside the pill */
-  --cn-bar-width:         3px;
-  --cn-bar-color:         var(--cn-primary);
-  --cn-bar-inset:         4px;     /* gap from outer edge so bar is inside radius */
+	/* Active left bar */
+	--cn-bar-width: 3px;
+	--cn-bar-color: var(--cn-primary);
+	--cn-bar-inset: 4px;
 
-  /* Navbar */
-  --cn-navbar-bg:         #ffffff;
-  --cn-navbar-border:     #d1d5db;
-  --cn-navbar-hover-bg:   #f4f5f6;
-  --cn-navbar-link-color: #1f2937;  /* full-strength dark — readable */
-  --cn-navbar-active-bg:  var(--cn-primary-light);
-  --cn-navbar-active-fg:  #2490ef;
-  --cn-navbar-active-border: #2490ef;
+	/*
+   * Child connector line — drawn on .cn-children::before.
+   * Left value = margin(6px) + bar-inset(4px) + bar-width(3px) + gap(2px) = 15px
+   * so the connector sits just to the right of the active bar.
+   * The child highlight pill starts AFTER the connector (padding-left accounts for this).
+   */
+	--cn-connector-left: 15px;
+	--cn-connector-w: 1.5px;
+	--cn-connector-color: #d1d5db;
 }
 
 /* ─────────────────────────────────────────────
@@ -1208,34 +338,26 @@ body.full-width .container {
    ───────────────────────────────────────────── */
 [data-theme="dark"],
 .frappe-dark {
-  --cn-sidebar-bg:          rgba(0,0,0,0);
-  --cn-sidebar-hover:       rgba(255,255,255,0.07);
-  --cn-sidebar-active-bg:   rgba(36,144,239,0.18);
-  --cn-text:                #e2e8f0;
-  --cn-text-muted:          #a0aec0;
-
-  --cn-navbar-bg:           rgba(0,0,0,0);
-  --cn-navbar-border:       #4a5568;
-  --cn-navbar-hover-bg:     rgba(255,255,255,0.07);
-  --cn-navbar-link-color:   #e2e8f0;
-  --cn-navbar-active-bg:    rgba(36,144,239,0.20);
-  --cn-navbar-active-fg:    #63b3ed;
-  --cn-navbar-active-border:#63b3ed;
+	--cn-sidebar-bg: rgba(0, 0, 0, 0);
+	--cn-sidebar-hover: rgba(255, 255, 255, 0.07);
+	--cn-sidebar-active-bg: rgba(36, 144, 239, 0.18);
+	--cn-text: #e2e8f0;
+	--cn-text-muted: #a0aec0;
+	--cn-connector-color: rgba(255, 255, 255, 0.18);
 }
 
 /* ─────────────────────────────────────────────
    1. HIDE ALL NATIVE FRAPPE SIDEBARS
    ───────────────────────────────────────────── */
 .desk-sidebar,
-.form-sidebar,
 .list-sidebar,
 .report-sidebar,
 .overlay-sidebar {
-  display: none !important;
+	display: none !important;
 }
 
 .layout-side-section > *:not(#custom-nav-sidebar) {
-  display: none !important;
+	display: none !important;
 }
 
 /* ─────────────────────────────────────────────
@@ -1245,366 +367,308 @@ body.full-width .container {
 .page-shortcuts,
 .shortcut-widget-box,
 #navbar-breadcrumbs .navbar-breadcrumb {
-  display: none !important;
+	display: none !important;
 }
 
 /* ─────────────────────────────────────────────
-   3. SIDEBAR — STICKY INDEPENDENT SCROLL
-   ─────────────────────────────────────────────
-   REAL STRUCTURE (from inspected HTML):
-
-   Workspace:
-     .page-container > .page-body > .layout-main.row >
-       .col-lg-2.layout-side-section
-       .layout-main-section-wrapper > .layout-main-section
-
-   List page:
-     .page-container > .page-body > .layout-main.row >
-       .col-lg-2.layout-side-section >
-         .list-sidebar.overlay-sidebar   (Frappe native, hidden by us)
-         #custom-nav-sidebar              (ours)
-       .layout-main-section-wrapper
-
-   Form page: same as list page structure.
-
-   APPROACH:
-   - DO NOT set height/overflow on .layout-main — it is a Bootstrap .row
-     and constraining it breaks the content column's natural scroll.
-   - Instead, make .layout-side-section itself sticky with a viewport-
-     height so it never grows taller than the screen.
-   - #custom-nav-sidebar fills that sticky column and scrolls internally.
-   - The content column keeps its natural Bootstrap behaviour (scrolls
-     with the page) — we never touch it.
+   3. SIDEBAR COLUMN — sticky, independent scroll
    ───────────────────────────────────────────── */
-
-/* ------------------------------------------------------------------
-   The sidebar COLUMN — sticky, viewport-height, clips overflow.
-   This works on all page types because .layout-side-section is always
-   a direct child of the Bootstrap .row regardless of page type.
-   ------------------------------------------------------------------ */
 .layout-side-section {
-  position: sticky !important;
-  top: 0 !important;
-  /* viewport height so the column is always exactly as tall as the screen */
-  height: 100vh !important;
-  max-height: 100vh !important;
-  /* clip Frappe's native sidebars that we hide, and our own sidebar scrolls */
-  overflow: hidden !important;
-  /* stay at the top of the viewport as the page scrolls */
-  align-self: flex-start !important;
-  /* sit above page content in stacking order */
-  z-index: 10;
+	position: sticky !important;
+	top: 0 !important;
+	height: 100vh !important;
+	max-height: 100vh !important;
+	overflow: hidden !important;
+	align-self: flex-start !important;
+	z-index: 10;
+	transition:
+		width 0.22s ease,
+		min-width 0.22s ease;
 }
 
-/* ------------------------------------------------------------------
-   Our sidebar — fills the sticky column, scrolls independently.
-   ------------------------------------------------------------------ */
 #custom-nav-sidebar {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  /* min-height: 0 is CRITICAL — without it a flex child refuses to
-     shrink below its content size even when the parent has a hard height */
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 8px 0 24px;
-  background: var(--cn-sidebar-bg);
-  font-family: var(--cn-font);
-  font-size: var(--cn-size-item);
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-  box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 8px 0 24px;
+	background: var(--cn-sidebar-bg);
+	font-family: var(--cn-font);
+	font-size: var(--cn-size-item);
+	scrollbar-width: thin;
+	scrollbar-color: #d1d5db transparent;
+	box-sizing: border-box;
 }
 
-#custom-nav-sidebar::-webkit-scrollbar { width: 3px; }
-#custom-nav-sidebar::-webkit-scrollbar-track { background: transparent; }
-#custom-nav-sidebar::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
+#custom-nav-sidebar::-webkit-scrollbar {
+	width: 3px;
 }
+#custom-nav-sidebar::-webkit-scrollbar-track {
+	background: transparent;
+}
+#custom-nav-sidebar::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 2px;
+}
+
+/*  */
 
 /* ─────────────────────────────────────────────
    4. BASE ITEM ROW
-   Shared by parent links, toggles, and children.
    ───────────────────────────────────────────── */
 .cn-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  /* explicit min-height instead of fixed height so long labels wrap
-     rather than getting clipped */
-  min-height: var(--cn-item-height);
-  height: var(--cn-item-height);
-  padding: 0 10px 0 10px;
-  margin: 1px 6px;
-  border-radius: var(--cn-radius);
-  color: var(--cn-text);
-  font-size: var(--cn-size-item);
-  font-weight: var(--cn-weight-normal);
-  line-height: 1.3;
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  cursor: pointer;
-  user-select: none;
-  position: relative;
-  transition: background 0.12s ease, color 0.12s ease;
-  box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: var(--cn-item-height);
+	height: var(--cn-item-height);
+	padding: 0 10px 0 10px;
+	margin: 1px 6px;
+	border-radius: var(--cn-radius);
+	color: var(--cn-text);
+	font-size: var(--cn-size-item);
+	font-weight: var(--cn-weight-normal);
+	line-height: 1.3;
+	text-decoration: none;
+	white-space: nowrap;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+	position: relative;
+	transition:
+		background 0.12s ease,
+		color 0.12s ease;
+	box-sizing: border-box;
 }
 
 .cn-item:hover {
-  background: var(--cn-sidebar-hover);
-  color: var(--cn-text);
-  text-decoration: none;
+	background: var(--cn-sidebar-hover);
+	color: var(--cn-text);
+	text-decoration: none;
 }
 
 /* ─────────────────────────────────────────────
    5. ACTIVE STATES
-
-   RULE:
-   • type_3 parent active (single link, e.g. Employee on /employee) → BLUE
-   • type_1 parent active (redirect, e.g. Marketing on /marketing
-     OR any of its children open)                                   → BLUE
-   • type_2 child active (e.g. Resume inside Technical)             → BLUE
-   • type_2 parent toggle when OPEN/expanded (e.g. Technical ↑)    → GRAY only
-     (open ≠ selected; it's just a disclosure state)
    ───────────────────────────────────────────── */
 
-/* ── BLUE active: child link ── */
+/*
+ * CHILD ACTIVE BAR — must sit AFTER (right of) the connector line.
+ *
+ * Layout of a child row (margin 6px each side, padding-left 28px):
+ *   [6px margin] [connector at 15px from ul left = 9px from item left]
+ *   [padding starts] [icon] [label]
+ *
+ * The bar is drawn via ::before at left: var(--cn-bar-inset) = 4px
+ * which lands BEHIND the connector. Fix: move it to left: 20px so it
+ * clears the connector (15px connector pos + 1.5px width + ~3.5px gap).
+ *
+ * The highlight background (.cn-sidebar-active-bg) spans the full item
+ * width, so we clip its left edge with a transparent left border equal
+ * to the connector zone width, preventing the blue wash from bleeding
+ * into the connector area.
+ */
 .cn-child-link.is-active {
-  background: var(--cn-sidebar-active-bg);
-  color: var(--cn-sidebar-active-fg);
-  font-weight: var(--cn-weight-active);
+	background: var(--cn-sidebar-active-bg);
+	color: var(--cn-sidebar-active-fg);
+	font-weight: var(--cn-weight-active);
+	/*
+   * Push the blue highlight to start after the connector zone.
+   * We achieve this by overriding the left padding so the background
+   * fill effectively begins at the connector right edge.
+   * Using a left transparent border of 20px "eats" the first 20px of
+   * the background so the blue wash doesn't cover the connector line.
+   */
+	border-left: 20px solid transparent;
+	/* compensate so text doesn't shift — reduce padding by same amount */
+	padding-left: calc(var(--cn-indent-child) - 20px);
+	background-clip: padding-box;
 }
 
-/* Left bar for child active — inset from outer edge so it
-   sits flush with the rounded corner of the pill */
+/* Active bar drawn on ::before, positioned AFTER the connector */
 .cn-child-link.is-active::before {
-  content: "";
-  position: absolute;
-  left: var(--cn-bar-inset);
-  top: 18%;
-  bottom: 18%;
-  width: var(--cn-bar-width);
-  background: var(--cn-bar-color);
-  border-radius: 2px;
+	content: "";
+	position: absolute;
+	/* 20px = 6px(margin) + 14px — clears connector at 15px */
+	left: 3px;
+	top: 18%;
+	bottom: 18%;
+	width: var(--cn-bar-width);
+	background: var(--cn-bar-color);
+	border-radius: 2px;
 }
 
 .cn-child-link.is-active:hover {
-  background: var(--cn-primary-hover);
+	background: var(--cn-primary-hover);
+	background-clip: padding-box;
 }
 
-/* ── BLUE active: type_1 parent link (on its own route OR has active child) ── */
+/* ── BLUE active: type_1 parent link ── */
 .cn-parent-link.is-active,
 .cn-group--type1.has-active > .cn-parent-link {
-  background: var(--cn-sidebar-active-bg);
-  color: var(--cn-sidebar-active-fg);
-  font-weight: var(--cn-weight-active);
+	background: var(--cn-sidebar-active-bg);
+	color: var(--cn-sidebar-active-fg);
+	font-weight: var(--cn-weight-active);
 }
 
 .cn-parent-link.is-active::before,
 .cn-group--type1.has-active > .cn-parent-link::before {
-  content: "";
-  position: absolute;
-  left: var(--cn-bar-inset);
-  top: 18%;
-  bottom: 18%;
-  width: var(--cn-bar-width);
-  background: var(--cn-bar-color);
-  border-radius: 2px;
+	content: "";
+	position: absolute;
+	left: var(--cn-bar-inset);
+	top: 18%;
+	bottom: 18%;
+	width: var(--cn-bar-width);
+	background: var(--cn-bar-color);
+	border-radius: 2px;
 }
 
 .cn-parent-link.is-active:hover {
-  background: var(--cn-primary-hover);
+	background: var(--cn-primary-hover);
 }
 
-/* ── GRAY only: type_2 toggle when expanded (NOT selected) ── */
+/* ── GRAY only: type_2 toggle when expanded ── */
 .cn-group--type2.is-expanded > .cn-parent-toggle {
-  background: var(--cn-sidebar-hover);
-  color: var(--cn-text);
-  /* no left bar — this is expansion state, not selection */
+	background: var(--cn-sidebar-hover);
+	color: var(--cn-text);
 }
 
 /* ─────────────────────────────────────────────
    6. ICON
    ───────────────────────────────────────────── */
 .cn-item-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: var(--cn-icon-size);
-  height: var(--cn-icon-size);
-  color: inherit;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: var(--cn-icon-size);
+	height: var(--cn-icon-size);
+	color: inherit;
 }
 
 .cn-item-icon .icon {
-  width: var(--cn-icon-size);
-  height: var(--cn-icon-size);
-  /* inherit color so active/hover tinting applies automatically */
+	width: var(--cn-icon-size);
+	height: var(--cn-icon-size);
 }
 
 /* ─────────────────────────────────────────────
    7. LABEL
    ───────────────────────────────────────────── */
 .cn-item-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  /* vertically center within the flex row */
-  line-height: var(--cn-item-height);
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	line-height: var(--cn-item-height);
 }
 
 /* ─────────────────────────────────────────────
-   8. CHEVRON (type_2 only)
+   8. CHEVRON
    ───────────────────────────────────────────── */
 .cn-chevron {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: auto;
-  flex-shrink: 0;
-  color: var(--cn-text-muted);
-  transition: transform 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: auto;
+	flex-shrink: 0;
+	color: var(--cn-text-muted);
+	transition: transform 0.2s ease;
 }
 
 .cn-group--type2.is-expanded > .cn-parent-toggle .cn-chevron {
-  transform: rotate(180deg);
+	transform: rotate(180deg);
 }
 
 /* ─────────────────────────────────────────────
    9. CHILDREN LIST (type_2)
    ───────────────────────────────────────────── */
 .cn-children {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: none;
-  overflow: hidden;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: none;
+	overflow: hidden;
+	position: relative;
 }
 
 .cn-group--type2.is-expanded > .cn-children {
-  display: block;
+	display: block;
+	padding-bottom: 4px;
 }
 
-.cn-children li { margin: 0; padding: 0; }
+/*
+ * Vertical connector line.
+ * Positioned at --cn-connector-left (15px from the ul's own left edge).
+ * The ul has no margin of its own; items inside have margin: 1px 6px.
+ * So 15px from ul edge = 9px from item left edge = sits under the
+ * parent's icon center (icon starts at 10px padding + icon is 16px wide,
+ * center ≈ 18px from item outer — close enough visually).
+ */
+.cn-group--type2.is-expanded > .cn-children::before {
+	content: "";
+	position: absolute;
+	left: var(--cn-connector-left);
+	top: 2px;
+	bottom: 8px;
+	width: var(--cn-connector-w);
+	background: var(--cn-connector-color);
+	border-radius: 1px;
+	pointer-events: none;
+}
 
-/* Child rows indented; same text size as parents */
+.cn-children li {
+	margin: 0;
+	padding: 0;
+}
+
 .cn-child-link {
-  padding-left: var(--cn-indent-child);
-  height: var(--cn-item-height);
-  min-height: var(--cn-item-height);
-  font-size: var(--cn-size-item);
+	padding-left: var(--cn-indent-child);
+	height: var(--cn-item-height);
+	min-height: var(--cn-item-height);
+	font-size: var(--cn-size-item);
 }
 
-/* ─────────────────────────────────────────────
-   10. CONTEXT NAVBAR
-   Absolutely centered inside header.navbar.
-   ───────────────────────────────────────────── */
-header.navbar {
-  position: relative !important;
-}
-
-#custom-nav-navbar {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-  z-index: 1;
-  white-space: nowrap;
-}
-
-#custom-nav-navbar.is-empty {
-  display: none;
-}
-
-/* Navbar pill buttons — same look as Frappe's secondary action buttons.
-   Text is full --cn-navbar-link-color (dark) so it's always readable. */
-.cn-navbar-link {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: var(--cn-radius);
-  color: var(--cn-navbar-link-color);    /* dark, readable */
-  font-family: var(--cn-font);
-  font-size: 13px;
-  font-weight: var(--cn-weight-normal);
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
-  background: var(--cn-navbar-bg);
-  border: 1px solid var(--cn-navbar-border);
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-
-.cn-navbar-link:hover {
-  background: var(--cn-navbar-hover-bg);
-  color: var(--cn-text);
-  border-color: #9ca3af;
-  text-decoration: none;
-}
-
-.cn-navbar-link.is-active {
-  background: var(--cn-navbar-active-bg);
-  color: var(--cn-navbar-active-fg);
-  font-weight: var(--cn-weight-active);
-  border-color: var(--cn-navbar-active-border);
-}
-
-.cn-navbar-link.is-active:hover {
-  background: var(--cn-primary-hover);
-  border-color: var(--cn-primary);
-}
 
 /* ─────────────────────────────────────────────
    11. RESPONSIVE
    ───────────────────────────────────────────── */
 @media (max-width: 991px) {
-  /* Bootstrap hides the sidebar column below lg breakpoint anyway.
-     On smaller screens, revert sticky so it flows normally. */
-  .layout-side-section {
-    position: static !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
+	.layout-side-section {
+		position: static !important;
+		height: auto !important;
+		max-height: none !important;
+		overflow: visible !important;
+	}
 
-  #custom-nav-sidebar {
-    height: auto !important;
-    max-height: 50vh;
-    overflow-y: auto !important;
-  }
+	#custom-nav-sidebar {
+		height: auto !important;
+		max-height: 50vh;
+		overflow-y: auto !important;
+	}
 }
 
 @media (max-width: 768px) {
-  #custom-nav-navbar {
-    position: static;
-    transform: none;
-    left: auto;
-    top: auto;
-    pointer-events: auto;
-    flex-wrap: wrap;
-    padding: 4px 8px;
-    justify-content: center;
-  }
+	#custom-nav-navbar {
+		position: static;
+		transform: none;
+		left: auto;
+		top: auto;
+		pointer-events: auto;
+		flex-wrap: wrap;
+		padding: 4px 8px;
+		justify-content: center;
+	}
 
-  .cn-navbar-link {
-    padding: 4px 10px;
-    font-size: 12px;
-  }
+	.cn-navbar-link {
+		padding: 4px 12px;
+		font-size: 12px;
+	}
 
-  .cn-item {
-    height: 36px;
-    min-height: 36px;
-  }
+	.cn-item {
+		height: 36px;
+		min-height: 36px;
+	}
 }
