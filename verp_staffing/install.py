@@ -50,6 +50,13 @@ ROLES = [
     "_show_employees",
     "_show_onboarding",
     "_show_cr",
+    "_show_staffing_master",
+    "_show_other_service",
+    "_show_sales",
+    "_show_email_inbox",
+    "_show_e_sign",
+    "_show_item,_show_coa",
+    "_show_pe_request",
 ]
 
 PERM_FIELDS = [
@@ -1486,7 +1493,7 @@ def remove_default_workspaces():
         "Payables",
         "Pending PE Requests",
         "Interviews",
-        "Reports & KPI"
+        "Reports & KPI",
     ]
 
     # Hide all others
@@ -1612,14 +1619,14 @@ from collections import defaultdict
 TECH_PLACEHOLDER = "General"
 
 DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Sales": ["_show_sales"],
-    "Lead": ["_show_lead"],
-    "Resume": ["_show_technical"],
-    "Technical": ["_show_technical"],
-    "Marketing": ["_show_marketing"],
-    "HR": ["_show_employees"],
-    "Onboarding": ["_show_onboarding"],
-    "CR": ["_show_cr"],
+    "Sales": ["_show_sales", "_show_email_inbox"],
+    "Lead": ["_show_lead", "_show_email_inbox"],
+    "Resume": ["_show_technical", "_show_email_inbox"],
+    "Technical": ["_show_technical", "_show_email_inbox", "_show_other_service"],
+    "Marketing": ["_show_marketing", "_show_email_inbox", "_show_other_service"],
+    "HR": ["_show_employees", "_show_email_inbox"],
+    "Onboarding": ["_show_onboarding", "_show_email_inbox"],
+    "CR": ["_show_cr", "_show_email_inbox"],
 }
 
 

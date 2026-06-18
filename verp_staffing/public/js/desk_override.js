@@ -52,6 +52,13 @@
       doctype: "Hierarchy",
       icon: "icon-sort-ascending"
     },
+    "erp-configuration": {
+      name: "ERP Settings",
+      type: "doctype",
+      route: "/app/erp-configuration/ERP Configuration",
+      doctype: "ERP Configuration",
+      icon: "icon-setting-gear"
+    },
     "email-domain": {
       name: "Email domain",
       type: "doctype",
@@ -245,13 +252,12 @@
   // icon: Frappe SVG sprite id for the parent module header
   const SIDEBAR_CONFIG = [
     {
-      key: "verp-setting",
-      label: "Settings",
-      parent_type: "type_1",
-      route: "/app/erp-configuration/ERP Configuration",
-      role: "_show_verp_setting",
-      icon: "icon-setting-gear",
-      children: ["department", "hierarchy", "email-domain", "email-account", "pdf-agreement-template"]
+      key: "staffing-master",
+      label: "Staffing Master",
+      parent_type: "type_2",
+      role: "_show_staffing_master",
+      icon: "icon-keyboard",
+      children: ["department", "hierarchy", "erp-configuration", "email-domain", "email-account", "pdf-agreement-template"]
     },
     {
       key: "item",
@@ -273,10 +279,11 @@
     {
       key: "employee",
       label: "Employee",
-      parent_type: "type_3",
+      parent_type: "type_1",
       route: "/app/employee",
       role: "_show_employees",
-      icon: "icon-users"
+      icon: "icon-users",
+      children: ["department", "hierarchy"]
     },
     {
       key: "lead",
@@ -329,7 +336,7 @@
     },
     {
       key: "cr",
-      label: "Customer Representative",
+      label: "CR",
       parent_type: "type_3",
       route: "/app/cr",
       role: "_show_cr",
@@ -345,7 +352,7 @@
     },
     {
       key: "e-sign",
-      label: "E Signature",
+      label: "E Sign",
       parent_type: "type_3",
       route: "/app/e-sign",
       role: "_show_e_sign",
@@ -397,6 +404,9 @@
   ];
 
   const NAVBAR_CONTEXT = {
+    "department": ["hierarchy", "employee"],
+    "hierarchy": ["department", "employee"],
+
     "resume": ["jdc", "ruc", "training", "cover-letter", "technical-other-service"],
     "jdc": ["resume", "ruc", "training", "cover-letter", "technical-other-service"],
     "ruc": ["resume", "jdc", "training", "cover-letter", "technical-other-service"],
