@@ -15,8 +15,6 @@ import os
 from frappe.utils import now_datetime
 import base64
 from datetime import datetime
-from frappe.utils import now_datetime
-from datetime import timezone
 
 import io
 from PIL import Image
@@ -58,7 +56,9 @@ class ESign(Document):
 
 
 def format_timestamp_UTC():
-    return frappe.utils.get_datetime_in_timezone("UTC").strftime("%d-%m-%Y, %H:%M:%S UTC")
+    return frappe.utils.get_datetime_in_timezone("UTC").strftime(
+        "%d-%m-%Y, %H:%M:%S UTC"
+    )
 
 
 @frappe.whitelist(allow_guest=True)
@@ -115,7 +115,7 @@ def complete_signing(token=None, fields=None):
     )
     agreement.save(ignore_permissions=True)
 
-    save_rebuilt_pdf(agreement.name)
+    save_rebuilt_pdf(agreement)
     # Reload agreement
     agreement.reload()
     # Check if agreement complete
@@ -130,7 +130,6 @@ def complete_signing(token=None, fields=None):
                 "status",
                 "Fully Signed",
             )
-
             send_final_signed_email(agreement.name)
         except Exception as e:
             frappe.log_error(str(e), "Certificate Generation Error")
@@ -202,7 +201,14 @@ def send_all_signers(agreement):
 
 def send_final_signed_email(agreement_name):
 
-    agreement = frappe.get_doc("E Sign", agreement_name)
+    agreement = frappe.db.get_value(
+        "E Sign",
+        agreement_name,
+        ["signed_pdf", "title"],
+        as_dict=True,
+    )
+    if not agreement:
+        return
 
     if not agreement.signed_pdf:
         frappe.log_error("Signed PDF not found", "Email Send Failed")
@@ -216,7 +222,14 @@ def send_final_signed_email(agreement_name):
     # Collect unique emails
     signer_emails = list(
         set(
-            [row.signer_email for row in agreement.signature_fields if row.signer_email]
+            frappe.db.get_all(
+                "Signature Fields",
+                filters={
+                    "parent": agreement_name,
+                    "signer_email": ["is", "set"],
+                },
+                pluck="signer_email",
+            )
         )
     )
 
@@ -233,14 +246,13 @@ def send_final_signed_email(agreement_name):
     template_name = "Final Signed Agreement Email - e_sign"
     template = None
     try:
-        template = frappe.get_cached("Email Template", template_name)
+        template = frappe.get_cached_doc("Email Template", template_name)
     except frappe.DoesNotExistError:
         template = None
-
     # Send individually
     for email in signer_emails:
         if template:
-            context = {"agreement_name": agreement.title}
+            context = {"agreement_name": agreement.title or agreement_name}
             subject = frappe.render_template(template.subject, context)
             message = frappe.render_template(
                 template.response_html or template.response, context
@@ -254,7 +266,6 @@ def send_final_signed_email(agreement_name):
                 <br>
                 <p>Thank you.</p>
             """
-
         frappe.sendmail(
             recipients=[email],
             subject=subject,
@@ -263,7 +274,6 @@ def send_final_signed_email(agreement_name):
                 {"fname": "Final_Signed_Agreement.pdf", "fcontent": pdf_content}
             ],
         )
-    frappe.logger().info(f"Final signed emails sent for {agreement.name}")
 
 
 def calculate_file_hash(file_path):
@@ -390,17 +400,13 @@ def calculate_pdf_coordinates(
 
 
 def rebuild_signed_pdf(
-    agreement_name,
+    agreement,
 ):
     """
     Rebuild entire signed PDF
     from DB state.
     """
 
-    agreement = frappe.get_doc(
-        "E Sign",
-        agreement_name,
-    )
     pdf_url = agreement.signed_pdf or agreement.original_pdf
     source_path = frappe.get_site_path(pdf_url.replace("/files/", "public/files/"))
 
@@ -408,6 +414,24 @@ def rebuild_signed_pdf(
 
     writer = PdfWriter()
 
+    signature_fields = frappe.get_all(
+        "Signature Fields",
+        filters={
+            "parent": agreement.name,
+        },
+        fields=[
+            "x_percent",
+            "y_percent",
+            "height_percent",
+            "width_percent",
+            "page_number",
+            "signature_image",
+            "field_type",
+            "field_label",
+            "field_value",
+            "font_size",
+        ],
+    )
     for page_index, page in enumerate(reader.pages):
         page_width = float(page.MediaBox[2])
 
@@ -423,7 +447,7 @@ def rebuild_signed_pdf(
             ),
         )
 
-        for field in agreement.signature_fields:
+        for field in signature_fields:
             if (field.page_number or 1) - 1 != page_index:
                 continue
 
@@ -488,7 +512,7 @@ def rebuild_signed_pdf(
     return output.getvalue()
 
 
-def save_rebuilt_pdf(agreement_name):
+def save_rebuilt_pdf(agreement):
     """
     Rebuild PDF from current DB state and
     replace agreement.signed_pdf.
@@ -496,16 +520,11 @@ def save_rebuilt_pdf(agreement_name):
     Keeps only one signed PDF.
     """
 
-    agreement = frappe.get_doc(
-        "E Sign",
-        agreement_name,
-    )
-
     old_pdf_url = agreement.signed_pdf
 
-    pdf_bytes = rebuild_signed_pdf(agreement_name)
+    pdf_bytes = rebuild_signed_pdf(agreement)
     file_doc = save_file(
-        fname=f"{agreement.name}_signed.pdf",
+        fname=f"{agreement.title}_signed.pdf",
         content=pdf_bytes,
         dt="E Sign",
         dn=agreement.name,
@@ -1258,17 +1277,18 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
     if not token:
         return {"status": "invalid_token"}
 
-    fields = frappe.get_all(
+    fields = frappe.get_value(
         "Signature Fields",
-        filters={"sign_token": token},
-        fields=["parent", "signer_email"],
+        {"sign_token": token},
+        ["parent", "signer_email"],
+        as_dict=True,
     )
 
     if not fields:
         return {"status": "token_not_found"}
 
-    agreement_name = fields[0]["parent"]
-    signer_email = fields[0]["signer_email"]
+    agreement_name = fields.parent
+    signer_email = fields.signer_email
 
     agreement = frappe.get_doc("E Sign", agreement_name)
 
@@ -1293,16 +1313,17 @@ def send_otp(token=None):
         if not token:
             return {"status": "invalid_token"}
 
-        fields = frappe.get_all(
+        fields = frappe.get_value(
             "Signature Fields",
-            filters={"sign_token": token},
-            fields=["parent", "signer_email"],
+            {"sign_token": token},
+            ["parent", "signer_email"],
+            as_dict=True,
         )
 
         if not fields:
             return {"status": "token_not_found"}
 
-        email = fields[0]["signer_email"]
+        email = fields.signer_email
 
         otp = str(random.randint(100000, 999999))
 
@@ -1336,7 +1357,7 @@ def send_otp(token=None):
 
         agreement = frappe.get_doc(
             "E Sign",
-            fields[0]["parent"],
+            fields.parent,
         )
         log_activity(
             agreement=agreement,
