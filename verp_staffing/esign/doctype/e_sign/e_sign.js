@@ -1,5 +1,7 @@
 // Copyright (c) 2026, Vrugle and contributors
 // For license information, please see license.txt
+let selectedField = null;
+let boxChanged = false;
 let activeBox = null;
 let actionType = null;
 let offsetX = 0;
@@ -32,16 +34,29 @@ const colorPalette = [
 ];
 frappe.ui.form.on("E Sign", {
 	refresh(frm) {
+		const field = frm.fields_dict.original_pdf;
+
+		if (!field) return;
+
+		field.df.options = {
+			restrictions: {
+				allowed_file_types: [".pdf"],
+			},
+		};
+
+		field.refresh();
 		if (!frm.doc.original_pdf) return;
 
 		rebuild_recipients(frm);
 
-		if (!frm._pdf_loaded) {
-			frm._pdf_loaded = true;
-			load_pdf_pages(frm).then(() => {
-				render_existing_boxes(frm); // only AFTER pages are ready
-			});
+		const pdfContainer = document.getElementById("esign-root");
+
+		if (pdfContainer) {
+			pdfContainer.innerHTML = "";
 		}
+		load_pdf_pages(frm).then(() => {
+			render_existing_boxes(frm); // only AFTER pages are ready
+		});
 
 		// PRODUCTION SEND BUTTON
 		frm.clear_custom_buttons();
@@ -65,6 +80,19 @@ frappe.ui.form.on("E Sign", {
 
 		if (frm.doc.status === "Sent" || frm.doc.status === "Fully Signed") {
 			setTimeout(lock_editor, 500);
+		}
+	},
+	onload(frm) {
+		// Empty html code before loading anything
+		const pdfContainer = document.getElementById("esign-root");
+
+		if (pdfContainer) {
+			pdfContainer.innerHTML = "";
+		}
+		const signersPanel = frm.fields_dict.signers_panel?.$wrapper;
+
+		if (signersPanel) {
+			signersPanel.empty();
 		}
 	},
 });
@@ -93,10 +121,8 @@ function rebuild_recipients(frm) {
 }
 
 async function load_pdf_pages(frm) {
-	const field = frm.fields_dict.original_pdf.$wrapper;
-
-	// hide original attach field UI
-	field.find(".control-input-wrapper").hide();
+	// Loads pdf builder in html field
+	const field = frm.fields_dict.signers_panel.$wrapper;
 
 	// create full width container after it
 	if (!document.getElementById("esign-root")) {
@@ -111,7 +137,7 @@ async function load_pdf_pages(frm) {
 
   <div class="esign-toolbar">
 
-      <div class="recipient-section">
+    <div class="recipient-section">
 
           <div class="toolbar-title">ADD RECIPIENTS</div>
 
@@ -128,76 +154,134 @@ async function load_pdf_pages(frm) {
 
           <div id="recipient-list" style="margin-top:10px;"></div>
 
-      </div>
+    </div>
 
       <hr/>
 
-      <div class="toolbar-title">ADD FIELDS</div>
+    <div class="toolbar-title">ADD FIELDS</div>
       
         <div class="toolbar-subtext">
           Drag and drop fields anywhere in the document.
         </div>
 
       ${field_button("signature", "E-signature", "edit")}
-      ${field_button("text", "Text", "type")}
-      ${field_button("name", "Recipient name", "user")}
+      ${field_button("text", "Text", "pencil")}
       ${field_button("date", "Date", "calendar")}
-      ${field_button("number", "Number", "hash")}
+      ${field_button("number", "Number", "fa-hashtag")}
       ${field_button("checkbox", "Checkbox", "check")}
 
-  </div>
+  	</div>
 
-  <div id="pdf-container" class="esign-pdf-container"></div>
-
+  	<div id="pdf-container" class="esign-pdf-container"></div>
+	<div id="field-properties"
+			class="field-properties-sidebar"
+			style="display:none;">
+	</div>
 </div>
 `);
 
-	enable_toolbar_drag();
-	render_recipient_list();
+	enable_toolbar_drag(frm);
+	render_recipient_list(frm);
+	await render_pdf_with_pdfjs(frm);
+	render_existing_boxes(frm);
+}
+const PDFJS_URL = "/assets/verp_staffing/js/pdf.min.js";
+const PDFJS_WORKER = "/assets/verp_staffing/js/pdf.worker.min.js";
 
-	const response = await frappe.call({
-		method: "verp_staffing.esign.doctype.e_sign.e_sign.generate_pdf_pages",
-		args: { docname: frm.doc.name },
+// Load pdf.js once per browser session.
+function load_pdfjs() {
+	if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+	if (window._dsc_pdfjs_promise) return window._dsc_pdfjs_promise;
+
+	window._dsc_pdfjs_promise = new Promise((resolve, reject) => {
+		const s = document.createElement("script");
+		s.src = PDFJS_URL;
+		s.onload = () => {
+			if (window.pdfjsLib) {
+				window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+				resolve(window.pdfjsLib);
+			} else {
+				reject(new Error(__("pdf.js failed to initialise.")));
+			}
+		};
+		s.onerror = () => reject(new Error(__("Could not load the PDF viewer (pdf.js).")));
+		document.head.appendChild(s);
 	});
+	return window._dsc_pdfjs_promise;
+}
 
-	if (!response.message) {
-		console.error("PDF API failed", response);
-		frappe.msgprint("Failed to load PDF pages");
-		return;
+async function render_pdf_with_pdfjs(frm) {
+	const pdfjsLib = await load_pdfjs();
+	window._current_pdf_render_id = (window._current_pdf_render_id || 0) + 1;
+
+	const render_id = window._current_pdf_render_id;
+	if (window._current_pdf_doc) {
+		try {
+			window._current_pdf_doc.destroy();
+		} catch (e) {}
 	}
 
-	const pages = response.message;
+	window._current_pdf_doc = null;
 
+	window._current_pdf_doc = await pdfjsLib.getDocument(frm.doc.original_pdf).promise;
+
+	const pdf = window._current_pdf_doc;
 	const container = document.getElementById("pdf-container");
 
-	pages.forEach((page) => {
+	while (container.firstChild) {
+		container.removeChild(container.firstChild);
+	}
+	for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+		if (render_id !== window._current_pdf_render_id) {
+			return;
+		}
+		const page = await pdf.getPage(pageNumber);
+
+		const viewport = page.getViewport({
+			scale: 1.5,
+		});
+
 		const pageWrapper = document.createElement("div");
+
 		pageWrapper.style.position = "relative";
 		pageWrapper.style.marginBottom = "24px";
-		pageWrapper.style.width = "100%";
-		pageWrapper.style.maxWidth = "1200px";
-		pageWrapper.dataset.page = page.page_number;
+		pageWrapper.dataset.page = pageNumber;
 
-		const img = document.createElement("img");
-		img.src = page.url;
-		img.style.width = "100%";
-		img.style.maxWidth = "1200px";
-		img.style.borderRadius = "6px";
-		img.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
-		img.style.display = "block";
+		const canvas = document.createElement("canvas");
+
+		canvas.width = viewport.width;
+		canvas.height = viewport.height;
+
+		canvas.style.width = viewport.width + "px";
+		canvas.style.height = viewport.height + "px";
+
+		await page.render({
+			canvasContext: canvas.getContext("2d"),
+			viewport,
+		}).promise;
 
 		const overlay = document.createElement("div");
-		overlay.className = "page-overlay";
-		overlay.dataset.page = page.page_number;
-		overlay.style.position = "absolute";
-		overlay.style.inset = "0";
 
-		pageWrapper.appendChild(img);
+		overlay.className = "page-overlay";
+
+		overlay.dataset.page = pageNumber;
+
+		overlay.style.position = "absolute";
+		overlay.style.left = "0";
+		overlay.style.top = "0";
+
+		overlay.style.width = viewport.width + "px";
+
+		overlay.style.height = viewport.height + "px";
+
+		pageWrapper.appendChild(canvas);
 		pageWrapper.appendChild(overlay);
+
 		container.appendChild(pageWrapper);
 
 		enable_drop(frm, overlay);
-	});
+	}
+
 	render_existing_boxes(frm);
 }
 
@@ -217,7 +301,21 @@ frappe.dom.set_style(`
     padding:12px;
     overflow:auto;
 }
-
+.field-properties-sidebar{
+    width:280px;
+    min-width:280px;
+    background:var(--card-bg);
+    border:1px solid var(--border-color);
+    border-radius:8px;
+    padding:12px;
+    overflow:auto;
+}
+.properties-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 12px;
+}
 .toolbar-title{
     font-weight:600;
     margin-bottom:10px;
@@ -262,6 +360,12 @@ frappe.dom.set_style(`
     text-align:center;
 }
 
+.selected-field{
+    box-shadow:
+        0 0 0 3px
+        rgba(37,99,235,.25);
+}
+
 .esign-pdf-container{
     flex-grow:1;
     width:100%;
@@ -282,7 +386,7 @@ setTimeout(() => {
 	fieldWrapper.closest(".form-column").style.flex = "1";
 }, 200);
 
-function enable_toolbar_drag() {
+function enable_toolbar_drag(frm) {
 	document.querySelectorAll(".esign-field-tool").forEach((tool) => {
 		tool.addEventListener("dragstart", function (e) {
 			e.dataTransfer.setData("field_type", this.dataset.type);
@@ -300,17 +404,24 @@ function enable_toolbar_drag() {
 			selectedFieldType = this.dataset.type;
 		});
 	});
-	init_recipient_system();
+	init_recipient_system(frm);
 }
 
-function init_recipient_system() {
+function init_recipient_system(frm) {
 	const input = document.getElementById("recipient-input");
 	const btn = document.getElementById("add-recipient-btn");
 
 	btn.onclick = function () {
-		const email = input.value.trim();
+		const email = input.value.trim().toLowerCase();
 
 		if (!email) return;
+
+		const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
+
+		if (!emailRegex.test(email)) {
+			frappe.msgprint("Please enter a valid email address");
+			return;
+		}
 
 		if (recipients.includes(email)) {
 			frappe.msgprint("Recipient already added");
@@ -328,18 +439,17 @@ function init_recipient_system() {
 
 		input.value = "";
 
-		render_recipient_list();
+		render_recipient_list(frm);
 	};
 }
 
-function render_recipient_list() {
+function render_recipient_list(frm) {
 	const container = document.getElementById("recipient-list");
 
 	container.innerHTML = "";
 
 	recipients.forEach((email) => {
 		const div = document.createElement("div");
-
 		div.className = "recipient-item";
 
 		if (email === activeRecipient) {
@@ -348,6 +458,7 @@ function render_recipient_list() {
 		}
 
 		div.style.padding = "6px";
+		div.style.position = "relative";
 		div.style.borderRadius = "4px";
 		div.style.cursor = "pointer";
 		div.style.marginBottom = "4px";
@@ -358,22 +469,91 @@ function render_recipient_list() {
 		div.style.background = email === activeRecipient ? color + "22" : "transparent";
 
 		div.innerHTML = `
-  <div style="display:flex;align-items:center;gap:6px;">
-    <div style="
-      width:10px;
-      height:10px;
-      border-radius:50%;
-      background:${color};
-    "></div>
-    <span>${email}</span>
-  </div>
-`;
+		<div style="display:flex;align-items:center;gap:6px;">
+			<div style="
+			width:10px;
+			height:10px;
+			border-radius:50%;
+			background:${color};
+			"></div>
+			<span>${email}</span>
+			<div
+				class="recipient-delete-btn"
+				style="
+					position:absolute;
+					top: 8px;	
+					right:0px;
+					width: 18px;
+					height: 18px;
+					border-radius: 50%;
+					background: #ef4444;	
+					display:flex;
+					align-items: center;
+					justify-content: center;
+					z-index: 10;
+					cursor:pointer;
+					color:#fff;
+					opacity:0;
+					font-size:12px;
+					transition:opacity .15s;
+					"
+			>
+				✕
+			</div>
+		</div>
+		`;
 
 		div.onclick = function () {
 			activeRecipient = email;
-			render_recipient_list();
+			selectedField = null;
+
+			document
+				.querySelectorAll(".esign-box")
+				.forEach((box) => box.classList.remove("selected-field"));
+
+			$("#field-properties").hide().html("");
+			render_recipient_list(frm);
 		};
 
+		//add event handler to delete button
+		const deleteBtn = div.querySelector(".recipient-delete-btn");
+
+		deleteBtn.onclick = function (e) {
+			e.stopPropagation();
+
+			const hasFields = frm.doc.signature_fields.some((row) => row.signer_email === email);
+
+			if (hasFields) {
+				frappe.msgprint("Please remove fields for this recipients.");
+				return;
+			}
+
+			recipients = recipients.filter((r) => r !== email);
+
+			delete recipientColors[email];
+
+			if (activeRecipient === email) {
+				activeRecipient = recipients[0] || null;
+
+				selectedField = null;
+
+				document
+					.querySelectorAll(".esign-box")
+					.forEach((box) => box.classList.remove("selected-field"));
+
+				$("#field-properties").hide().html("");
+			}
+
+			render_recipient_list(frm);
+		};
+
+		div.addEventListener("mouseenter", () => {
+			deleteBtn.style.opacity = "1";
+		});
+
+		div.addEventListener("mouseleave", () => {
+			deleteBtn.style.opacity = "0";
+		});
 		container.appendChild(div);
 	});
 }
@@ -435,20 +615,153 @@ function field_button(type, label, icon) {
 
 const fieldIcons = {
 	signature: "fa-pencil",
-	initial: "fa-font",
 	text: "fa-keyboard-o",
-	name: "fa-user",
-	email: "fa-envelope",
 	date: "fa-calendar",
 	number: "fa-hashtag",
 	checkbox: "fa-check-square-o",
 };
+
+function select_field(frm, box) {
+	if (selectedField == box) {
+		const sidebar = $("#field-properties");
+		sidebar.hide();
+		selectedField = null;
+		return;
+	} else {
+		document
+			.querySelectorAll(".esign-box")
+			.forEach((b) => b.classList.remove("selected-field"));
+
+		box.classList.add("selected-field");
+
+		selectedField = box;
+
+		open_property_sidebar(frm, box);
+	}
+}
+
+function open_property_sidebar(frm, box) {
+	const sidebar = $("#field-properties");
+	if (cur_frm.doc.status !== "Draft") {
+		sidebar.hide();
+	}
+	const row = frm.doc.signature_fields.find((r) => r.name === box.dataset.rowname);
+	if (!row) return;
+	//no field editor for checkbox
+	if (row.field_type == "checkbox") {
+		sidebar.hide();
+		return;
+	}
+	sidebar.show();
+
+	sidebar.html(`
+		<div class="field-editor">
+			<div class="properties-header">
+				<h4>Field Properties</h4>
+				<button
+						id="close-properties-sidebar"
+						class="btn btn-xs btn-default"
+						type="button">
+						✕
+				</button>
+			</div>
+			<div class="form-group">
+				<label>Field Label</label>
+				<input
+					type="text"
+					id="field-label"
+					class="form-control"
+					value="${row.field_label || row.field_type}"
+				/>
+				<small>
+					Shown to signer.
+				</small>
+			</div>
+			
+				<div class="form-group">
+					<label>Placeholder</label>
+					<input
+						type="text"
+						id="placeholder-text"
+						class="form-control"
+						value="${row.placeholder_text || ""}"
+					/>
+					<small>
+						Preview text in builder.
+					</small>
+				</div>
+
+				<div class="form-group">
+					<label>Font Size</label>
+					<input
+						type="number"
+						id="font-size"
+						class="form-control"
+						value="${row.font_size || 12}"
+					/>
+				</div>
+
+				<div class="form-group">
+					<label>Line Height</label>
+					<input
+						type="number"
+						step="0.1"
+						id="line-height"
+						class="form-control"
+						value="${row.line_height || 1}"
+					/>
+				</div>
+		</div>
+	`);
+	const close_button = document.querySelector("#close-properties-sidebar");
+	close_button.onclick = function (e) {
+		e.stopPropagation();
+		selectedField = null;
+		selectedFieldType = null;
+		$("#field-properties").hide();
+	};
+
+	// Label
+	$("#field-label").on("input", function () {
+		row.field_label = this.value;
+
+		frm.dirty();
+	});
+	// Placeholder
+	$("#placeholder-text").on("input", function () {
+		row.placeholder_text = this.value;
+
+		frm.dirty();
+
+		refresh_box_preview(box, row);
+	});
+	// Font-Size
+	$("#font-size").on("input", function () {
+		row.font_size = parseFloat(this.value) || 12;
+
+		frm.dirty();
+
+		refresh_box_preview(box, row);
+	});
+	// Line Height
+	$("#line-height").on("input", function () {
+		row.line_height = parseFloat(this.value) || 1;
+
+		frm.dirty();
+	});
+}
 
 function create_box(frm, type = "signature") {
 	const box = document.createElement("div");
 	box.classList.add("esign-box");
 	box.dataset.field_type = type;
 	box.style.position = "absolute";
+	box.title = "Click field to edit properties";
+	box.addEventListener("click", function (e) {
+		e.stopPropagation();
+
+		select_field(frm, box);
+	});
 
 	const color = recipientColors[activeRecipient] || "#2563eb";
 
@@ -472,19 +785,19 @@ function create_box(frm, type = "signature") {
 		const checkbox = document.createElement("input");
 		checkbox.type = "checkbox";
 		checkbox.disabled = true;
+		checkbox.style.height = "28px";
+		checkbox.style.setProperty("width", "28px", "important"); //match the exact checkbox drawn by backend
 		checkbox.background = color + "22";
+		checkbox.style.border = "2px solid black";
 		checkbox.style.pointerEvents = "none";
 
 		box.appendChild(checkbox);
-	}
-
-	if (type !== "checkbox") {
+	} else {
 		const label = document.createElement("div");
 
 		label.innerHTML = `
-  <i class="fa ${fieldIcons[type] || "fa-square"}"></i>
-  ${type.replace("_", " ").toUpperCase()}
-`;
+			<div class="esign-preview"></div>
+		`;
 
 		// label.style.background = color;
 		label.style.padding = "2px 6px";
@@ -497,7 +810,6 @@ function create_box(frm, type = "signature") {
 		label.style.display = "flex";
 		label.style.alignItems = "center";
 		label.style.gap = "4px";
-		label.style.fontSize = "9px";
 		label.style.fontWeight = "600";
 		label.style.color = color;
 		label.style.pointerEvents = "none";
@@ -578,14 +890,35 @@ function create_box(frm, type = "signature") {
 	return box;
 }
 
+function refresh_box_preview(box, row) {
+	const preview = box.querySelector(".esign-preview");
+
+	if (!preview) return;
+
+	if (row.field_type === "signature") {
+		preview.innerText = row.placeholder_text || "SIGN HERE";
+	}
+
+	preview.innerText = row.placeholder_text || row.field_label || row.field_type;
+	preview.style.fontSize = (row.font_size || 12) + "px";
+
+	preview.style.lineHeight = row.line_height || 1;
+
+	preview.style.overflow = "hidden";
+
+	preview.style.whiteSpace = "nowrap";
+
+	preview.style.textOverflow = "ellipsis";
+}
+
 function attach_box_events(frm, box, overlay) {
 	const resizeHandle = box.lastChild;
-
 	box.addEventListener("mousedown", function (e) {
 		e.stopPropagation();
 
 		activeBox = box;
 		activeOverlay = overlay;
+		boxChanged = false;
 
 		if (e.target === resizeHandle) {
 			actionType = "resize";
@@ -603,11 +936,13 @@ document.addEventListener("mousemove", function (e) {
 	const rect = activeOverlay.getBoundingClientRect();
 
 	if (actionType === "drag") {
+		boxChanged = true;
 		activeBox.style.left = e.clientX - rect.left - offsetX + "px";
 		activeBox.style.top = e.clientY - rect.top - offsetY + "px";
 	}
 
 	if (actionType === "resize") {
+		boxChanged = true;
 		const boxRect = activeBox.getBoundingClientRect();
 		activeBox.style.width = e.clientX - boxRect.left + "px";
 		activeBox.style.height = e.clientY - boxRect.top + "px";
@@ -615,10 +950,11 @@ document.addEventListener("mousemove", function (e) {
 });
 
 document.addEventListener("mouseup", function () {
-	if (activeBox && activeOverlay) {
+	if (activeBox && activeOverlay && boxChanged) {
 		update_child_table(cur_frm, activeBox, activeOverlay);
 	}
 
+	boxChanged = false;
 	activeBox = null;
 	actionType = null;
 });
@@ -634,9 +970,14 @@ function save_box(frm, box, overlay) {
 		y_percent: (box.offsetTop / rect.height) * 100,
 		width_percent: (box.offsetWidth / rect.width) * 100,
 		height_percent: (box.offsetHeight / rect.height) * 100,
+		field_label: box.dataset.field_type.toUpperCase(),
+		placeholder_text: box.dataset.field_type.toUpperCase(),
+		font_size: 12,
+		line_height: 1,
 	});
 	box.dataset.rowname = child.name;
 
+	refresh_box_preview(box, child);
 	frm.refresh_field("signature_fields");
 }
 
@@ -653,7 +994,7 @@ function update_child_table(frm, box, overlay) {
 	row.y_percent = (box.offsetTop / rect.height) * 100;
 	row.width_percent = (box.offsetWidth / rect.width) * 100;
 	row.height_percent = (box.offsetHeight / rect.height) * 100;
-
+	frm.dirty();
 	frm.refresh_field("signature_fields");
 }
 
@@ -666,7 +1007,7 @@ function render_existing_boxes(frm) {
 
 		if (!overlay) return;
 
-		// 🔥 IF SIGNED → SHOW SIGNATURE IMAGE
+		// IF SIGNED → SHOW SIGNATURE IMAGE
 		if (field.signed && field.signature_image) {
 			const img = document.createElement("img");
 			img.src = field.signature_image;
@@ -682,7 +1023,7 @@ function render_existing_boxes(frm) {
 			return;
 		}
 
-		// 🔹 ELSE render editable box
+		// ELSE render editable box
 		const previousRecipient = activeRecipient;
 		activeRecipient = field.signer_email;
 
@@ -698,6 +1039,7 @@ function render_existing_boxes(frm) {
 		box.dataset.rowname = field.name;
 		box.dataset.signer_email = field.signer_email;
 
+		refresh_box_preview(box, field);
 		overlay.appendChild(box);
 		attach_box_events(frm, box, overlay);
 	});
@@ -718,6 +1060,30 @@ async function send_for_signature(frm) {
 		return;
 	}
 
+	for (const email of uniqueRecipients) {
+		const hasField = frm.doc.signature_fields.some((row) => row.signer_email === email);
+
+		if (!hasField) {
+			frappe.msgprint(`${email} has no assigned fields`);
+
+			return;
+		}
+	}
+
+	const invalidField = frm.doc.signature_fields.find((row) => {
+		if (row.field_type === "checkbox") {
+			return false;
+		}
+
+		return !row.field_label;
+	});
+
+	if (invalidField) {
+		frappe.msgprint(`Field label missing for ${invalidField.field_type} field`);
+
+		return;
+	}
+
 	if (frm.is_dirty()) {
 		await frm.save();
 	}
@@ -732,7 +1098,6 @@ async function send_for_signature(frm) {
 			freeze_message: "Sending emails...",
 		})
 		.then(() => {
-			frm._pdf_loaded = false;
 			frappe.msgprint("Emails sent successfully");
 
 			lock_editor();

@@ -1,28 +1,39 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
-import frappe,os
-import shutil
+import frappe
 from frappe.model.document import Document
+from frappe.utils.file_manager import save_file
 
 class PdfAgreementTemplate(Document):
     def validate(self):
-        if self.upload_pdf_template:
-            file_url = self.upload_pdf_template
+        if not self.upload_pdf_template:
+            return
 
-            # If private → move to public
-            if file_url.startswith("/private/files/"):
+        file_doc = frappe.get_doc("File", {"file_url": self.upload_pdf_template})
 
-                private_path = frappe.get_site_path("private", "files", os.path.basename(file_url))
-                public_path = frappe.get_site_path("public", "files", os.path.basename(file_url))
+        # If already public → nothing to do
+        if not file_doc.is_private:
+            return
 
-                # Make sure file exists
-                if os.path.exists(private_path):
-                    shutil.move(private_path, public_path)
+        # Read private file content
+        private_path = file_doc.get_full_path()
 
-                    # Set new public URL
-                    self.upload_pdf_template = f"/files/{os.path.basename(file_url)}"
+        with open(private_path, "rb") as f:
+            content = f.read()
 
-            # Final check: enforce ONLY public files
-            if not self.upload_pdf_template.startswith("/files/"):
-                frappe.throw("Please upload template PDF in Public folder only.")
+        # Create NEW public file safely
+        new_file = save_file(
+            fname=file_doc.file_name,
+            content=content,
+            dt=self.doctype,
+            dn=self.name,
+            df="upload_pdf_template",
+            is_private=0,
+        )
+
+        # Update field to new public file
+        self.upload_pdf_template = new_file.file_url
+
+        # Optional: delete old private file record
+        file_doc.delete(ignore_permissions=True)

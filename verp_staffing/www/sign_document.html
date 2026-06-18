@@ -4,7 +4,7 @@
 {% else %} {% if not is_verified %}
 <div class="header">
 	<div class="left">
-		<img src="/assets/vrugle/logo.png" class="logo" />
+		<img src="{{logo_url}}" alt="Vrugle" class="logo" />
 	</div>
 
 	<div class="right">
@@ -32,8 +32,7 @@
 		</div>
 	</div>
 </div>
-
-<!-- 🔐 Verification Section -->
+<!-- Verification Section -->
 <div id="verification-section" class="card">
 	<h2>Verify your identity</h2>
 
@@ -57,10 +56,14 @@
 		<span id="otp-loader" class="loader" style="display: none"></span>
 	</button>
 </div>
+{% elif signer_completed %}
+<div class="completed-banner">
+	<h2>Document Already Signed</h2>
+</div>
+<div id="pdf-container"></div>
 
 {% else %}
-
-<!-- ✅ PDF SECTION (ONLY AFTER VERIFIED) -->
+<!-- PDF SECTION (ONLY AFTER VERIFIED) -->
 
 <h2>Sign Document</h2>
 
@@ -96,38 +99,10 @@
 	style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; z-index: 999"
 ></div>
 
-<div style="height: 85vh; overflow: auto; padding: 20px; background: #f3f4f6">
-	{% for page in pages %}
-	<div style="position: relative; max-width: 900px; margin: 0 auto 20px">
-		<img src="{{ page.url }}" style="width: 100%; display: block" />
-
-		<div style="position: absolute; inset: 0">
-			{% for field in fields %} {% if field.page_number == page.page_number and not
-			field.signed %}
-			<div
-				class="field-box"
-				data-field="{{ field.name }}"
-				data-type="{{ field.field_type }}"
-				data-left="{{ field.x_percent }}"
-				data-top="{{ field.y_percent }}"
-				data-width="{{ field.width_percent }}"
-				data-height="{{ field.height_percent }}"
-			></div>
-			{% endif %} {% endfor %} {% for field in signed_fields %} {% if field.page_number ==
-			page.page_number and field.signature_image %}
-			<img
-				src="{{ field.signature_image }}"
-				class="signed-image"
-				data-left="{{ field.x_percent }}"
-				data-top="{{ field.y_percent }}"
-				data-width="{{ field.width_percent }}"
-				data-height="{{ field.height_percent }}"
-			/>
-			{% endif %} {% endfor %}
-		</div>
-	</div>
-	{% endfor %}
-</div>
+<div
+	id="pdf-container"
+	style="height: 85vh; overflow: auto; padding: 20px; background: #f3f4f6"
+></div>
 
 <div
 	id="fp-submit-wrap"
@@ -392,6 +367,13 @@
 		margin: 0;
 	}
 
+	#pdf-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 24px;
+	}
+
 	/* ── Field label ── */
 	.field-label-tag {
 		position: absolute;
@@ -471,13 +453,11 @@
 
 	/* ── Checkbox field ── */
 	.field-box.checkbox-field {
-		border: 1px solid #d1d5db;
-		background: #ffffff;
 		border-radius: 6px;
 	}
 
 	.field-box.checkbox-field:hover {
-		border-color: #2563eb;
+		border-color: #2563eb !important;
 		background: rgba(37, 99, 235, 0.04);
 	}
 
@@ -1286,7 +1266,7 @@
 	}
 </style>
 
-<!-- ✅ SUCCESS MODAL -->
+<!-- SUCCESS MODAL -->
 <div
 	id="success-modal"
 	style="
@@ -1337,8 +1317,272 @@
 </div>
 
 <script src="/assets/frappe/js/frappe-web.min.js"></script>
+<script type="application/json" id="esign-fields">
+	{{ fields | tojson }}
+</script>
+<script type="application/json" id="signed-fields">
+	{{ signed_fields | tojson }}
+</script>
 
 <script>
+	window.pdf_url = "{{ pdf_url }}";
+
+	window.otpRemaining = "{{ otp_remaining or 0 }}";
+	window.hasOtp = "{{ 'true' if has_otp else 'false' }}";
+
+	window.esign_fields = JSON.parse(document.getElementById("esign-fields").textContent);
+
+	window.signed_fields = JSON.parse(document.getElementById("signed-fields").textContent);
+
+	window.signer_completed = "{{ signer_completed }}";
+
+	// Load pdf.js once per browser session.
+	const PDFJS_URL = "/assets/verp_staffing/js/pdf.min.js";
+	const PDFJS_WORKER = "/assets/verp_staffing/js/pdf.worker.min.js";
+
+	function load_pdfjs() {
+		if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+		if (window._dsc_pdfjs_promise) return window._dsc_pdfjs_promise;
+
+		window._dsc_pdfjs_promise = new Promise((resolve, reject) => {
+			const s = document.createElement("script");
+			s.src = PDFJS_URL;
+			s.onload = () => {
+				if (window.pdfjsLib) {
+					window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+					resolve(window.pdfjsLib);
+				} else {
+					reject(new Error(__("pdf.js failed to initialise.")));
+				}
+			};
+			s.onerror = () => reject(new Error(__("Could not load the PDF viewer (pdf.js).")));
+			document.head.appendChild(s);
+		});
+		return window._dsc_pdfjs_promise;
+	}
+
+	// render read-only pdf for person who already signed
+	async function renderReadonlyPdf() {
+		const pdfjsLib = await load_pdfjs();
+
+		const pdf = await pdfjsLib.getDocument(window.pdf_url).promise;
+
+		const container = document.getElementById("pdf-container");
+
+		container.innerHTML = "";
+
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+
+			const viewport = page.getViewport({
+				scale: 1.5,
+			});
+
+			const pageWrapper = document.createElement("div");
+
+			pageWrapper.style.marginBottom = "24px";
+			pageWrapper.style.display = "block";
+
+			const canvas = document.createElement("canvas");
+
+			const ctx = canvas.getContext("2d");
+
+			canvas.width = viewport.width;
+			canvas.height = viewport.height;
+
+			canvas.style.display = "block";
+			canvas.style.width = "100%";
+			canvas.style.maxWidth = "900px";
+
+			await page.render({
+				canvasContext: ctx,
+				viewport,
+			}).promise;
+
+			pageWrapper.appendChild(canvas);
+
+			container.appendChild(pageWrapper);
+		}
+	}
+	// for those who have to sign pdf
+	async function renderSignerPdf() {
+		const pdfjsLib = await load_pdfjs();
+
+		const pdf = await pdfjsLib.getDocument(window.pdf_url).promise;
+
+		const container = document.getElementById("pdf-container");
+		container.innerHTML = "";
+
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+
+			const viewport = page.getViewport({
+				scale: 1.5,
+			});
+
+			const pageWrapper = document.createElement("div");
+
+			pageWrapper.style.position = "relative";
+
+			pageWrapper.style.margin = "0 auto 20px";
+
+			const canvas = document.createElement("canvas");
+
+			canvas.width = viewport.width;
+
+			canvas.height = viewport.height;
+
+			await page.render({
+				canvasContext: canvas.getContext("2d"),
+				viewport,
+			}).promise;
+
+			const overlay = document.createElement("div");
+
+			overlay.className = "page-overlay";
+
+			overlay.dataset.page = pageNum;
+
+			overlay.style.position = "absolute";
+
+			overlay.style.inset = "0";
+
+			pageWrapper.appendChild(canvas);
+
+			pageWrapper.appendChild(overlay);
+
+			renderSignedFields(overlay, pageNum);
+			renderSignerFields(overlay, pageNum);
+
+			container.appendChild(pageWrapper);
+		}
+	}
+
+	function renderSignedFields(overlay, pageNum) {
+		(window.signed_fields || []).forEach((field) => {
+			if (field.page_number !== pageNum) return;
+
+			if (field.field_type === "signature") {
+				const img = document.createElement("img");
+
+				img.src = field.signature_image;
+
+				img.style.position = "absolute";
+				img.style.left = field.x_percent + "%";
+				img.style.top = field.y_percent + "%";
+				img.style.width = field.width_percent + "%";
+				img.style.height = field.height_percent + "%";
+				img.style.objectFit = "contain";
+
+				overlay.appendChild(img);
+			}
+		});
+	}
+
+	function renderSignerFields(overlay, pageNum) {
+		(window.esign_fields || []).forEach((field) => {
+			if (field.page_number !== pageNum) {
+				return;
+			}
+
+			const element = buildFieldElement(field);
+
+			overlay.appendChild(element);
+		});
+	}
+
+	function buildFieldElement(field) {
+		let box = document.createElement("div");
+
+		box.className = "field-box";
+
+		box.dataset.field = field.name;
+		box.dataset.type = field.field_type;
+
+		box.style.position = "absolute";
+		box.style.left = field.x_percent + "%";
+		box.style.top = field.y_percent + "%";
+		box.style.width = field.width_percent + "%";
+		box.style.height = field.height_percent + "%";
+
+		const fontSize = parseInt(field.font_size || 12);
+		const lineHeight = parseFloat(field.line_height || 1);
+
+		// Signature
+		if (field.field_type === "signature") {
+			box.innerHTML = `
+			<div class="field-label-tag">
+				${field.field_label || "Signature"}
+			</div>
+
+			<div
+				style="
+					height:100%;
+					display:flex;
+					align-items:center;
+					justify-content:center;
+					font-size:${fontSize}px;
+					line-height:${lineHeight};
+					font-weight:600;
+				"
+			>
+				${field.field_label || "Sign Here"}
+			</div>
+		`;
+
+			box.onclick = () => {
+				currentField = field.name;
+				openSignatureModal();
+			};
+
+			return box;
+		}
+
+		let input;
+		input = document.createElement("input");
+		input.style.width = "100%";
+		input.style.height = "100%";
+
+		if (field.field_type === "text" || field.field_type === "name") {
+			input.type = "text";
+			box.classList.add("text-field");
+		} else if (field.field_type === "number") {
+			input.type = "number";
+			box.classList.add("text-field");
+		} else if (field.field_type === "date") {
+			input.type = "date";
+			box.classList.add("text-field");
+		} else if (field.field_type === "checkbox") {
+			box.style.display = "flex";
+			box.style.alignItems = "center";
+			box.style.justifyContent = "center";
+
+			input.type = "checkbox";
+
+			input.style.width = "50%";
+			input.style.height = "50%";
+			input.style.margin = "0";
+			box.classList.add("checkbox-field");
+		}
+
+		if (!input) {
+			return box;
+		}
+
+		input.style.border = "none";
+		input.style.background = "transparent";
+		input.style.outline = "none";
+		input.style.padding = "4px";
+		input.style.fontSize = fontSize + "px";
+		input.style.lineHeight = lineHeight;
+
+		input.placeholder = field.field_label || "";
+
+		box.appendChild(input);
+
+		return box;
+	}
+
 	let currentField = null;
 	window.csrf_token = "{{ frappe.session.csrf_token }}";
 	let currentMode = "draw";
@@ -1390,185 +1634,201 @@
 	function showLandingPage() {
 		// Replace entire page content with landing page
 		document.body.innerHTML = `
-    <div class="landing-wrap">
+	    <div class="landing-wrap">
 
-      <div class="landing-header">
-        <img src="/assets/vrugle/logo.png" class="logo" style="height:52px;">
-        <span style="font-size:13px; color:#6b7280;">Secure Document Signing</span>
-      </div>
+	      <div class="landing-header">
+	        <img src="{{logo_url}}" class="logo" style="height:52px;">
+	        <span style="font-size:13px; color:#6b7280;">Secure Document Signing</span>
+	      </div>
 
-      <div class="landing-card">
+	      <div class="landing-card">
 
-        <div class="landing-confetti">🎊</div>
+	        <div class="landing-confetti">🎊</div>
 
-        <div class="landing-check">
-          <svg viewBox="0 0 52 52" width="64" height="64">
-            <circle cx="26" cy="26" r="25" fill="#16a34a" />
-            <path fill="none" stroke="white" stroke-width="3.5"
-              stroke-linecap="round" stroke-linejoin="round"
-              d="M14 27 l8 8 l16-16"/>
-          </svg>
-        </div>
+	        <div class="landing-check">
+	          <svg viewBox="0 0 52 52" width="64" height="64">
+	            <circle cx="26" cy="26" r="25" fill="#16a34a" />
+	            <path fill="none" stroke="white" stroke-width="3.5"
+	              stroke-linecap="round" stroke-linejoin="round"
+	              d="M14 27 l8 8 l16-16"/>
+	          </svg>
+	        </div>
 
-        <h1 class="landing-title">Signing Complete!</h1>
-        <p class="landing-subtitle">Congratulations — your document has been signed successfully.</p>
+	        <h1 class="landing-title">Signing Complete!</h1>
+	        <p class="landing-subtitle">Congratulations — your document has been signed successfully.</p>
 
-        <div class="landing-info-grid">
-          <div class="landing-info-box">
-            <div class="landing-info-icon">🔐</div>
-            <div class="landing-info-label">Secured</div>
-            <div class="landing-info-text">Your document is encrypted and safely stored.</div>
-          </div>
-          <div class="landing-info-box">
-            <div class="landing-info-icon">📋</div>
-            <div class="landing-info-label">Recorded</div>
-            <div class="landing-info-text">Signing details have been logged with timestamp.</div>
-          </div>
-          <div class="landing-info-box">
-            <div class="landing-info-icon">📧</div>
-            <div class="landing-info-label">Notified</div>
-            <div class="landing-info-text">A confirmation email is on its way to you.</div>
-          </div>
-        </div>
+	        <div class="landing-info-grid">
+	          <div class="landing-info-box">
+	            <div class="landing-info-icon">🔐</div>
+	            <div class="landing-info-label">Secured</div>
+	            <div class="landing-info-text">Your document is encrypted and safely stored.</div>
+	          </div>
+	          <div class="landing-info-box">
+	            <div class="landing-info-icon">📋</div>
+	            <div class="landing-info-label">Recorded</div>
+	            <div class="landing-info-text">Signing details have been logged with timestamp.</div>
+	          </div>
+	          <div class="landing-info-box">
+	            <div class="landing-info-icon">📧</div>
+	            <div class="landing-info-label">Notified</div>
+	            <div class="landing-info-text">A confirmation email is on its way to you.</div>
+	          </div>
+	        </div>
 
-        <div class="landing-divider"></div>
+	        <div class="landing-divider"></div>
 
-        <p class="landing-note">
-          You may now safely close this window.<br>
-          If you have any questions, please contact the sender directly.
-        </p>
+	        <p class="landing-note">
+	          You may now safely close this window.<br>
+	          If you have any questions, please contact the sender directly.
+	        </p>
 
-      </div>
+	      </div>
 
-      <div class="landing-footer">
-        <p>This document was securely processed by <strong>Vrugle</strong>.</p>
-        <p style="font-size:12px; color:#9ca3af; margin-top:4px;">
-          Your information is encrypted and handled with industry-standard security practices.
-        </p>
-      </div>
+	      <div class="landing-footer">
+	        <p>This document was securely processed by <strong>Vrugle</strong>.</p>
+	        <p style="font-size:12px; color:#9ca3af; margin-top:4px;">
+	          Your information is encrypted and handled with industry-standard security practices.
+	        </p>
+	      </div>
 
-    </div>
+	    </div>
 
-    <style>
-      body { margin: 0; font-family: Inter, sans-serif; background: #f0fdf4; }
+	    <style>
+	      body { margin: 0; font-family: Inter, sans-serif; background: #f0fdf4; }
 
-      .landing-wrap {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 0 16px 40px;
-      }
+	      .landing-wrap {
+	        min-height: 100vh;
+	        display: flex;
+	        flex-direction: column;
+	        align-items: center;
+	        padding: 0 16px 40px;
+	      }
 
-      .landing-header {
-        width: 100%;
-        max-width: 600px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px 0;
-        border-bottom: 1px solid #dcfce7;
-        margin-bottom: 40px;
-      }
+	      .landing-header {
+	        width: 100%;
+	        max-width: 600px;
+	        display: flex;
+	        justify-content: space-between;
+	        align-items: center;
+	        padding: 16px 0;
+	        border-bottom: 1px solid #dcfce7;
+	        margin-bottom: 40px;
+	      }
 
-      .landing-card {
-        width: 100%;
-        max-width: 560px;
-        background: #ffffff;
-        border-radius: 20px;
-        border: 1px solid #bbf7d0;
-        box-shadow: 0 20px 50px rgba(22,163,74,0.08);
-        padding: 48px 40px 36px;
-        text-align: center;
-      }
+	      .landing-card {
+	        width: 100%;
+	        max-width: 560px;
+	        background: #ffffff;
+	        border-radius: 20px;
+	        border: 1px solid #bbf7d0;
+	        box-shadow: 0 20px 50px rgba(22,163,74,0.08);
+	        padding: 48px 40px 36px;
+	        text-align: center;
+	      }
 
-      .landing-confetti {
-        font-size: 40px;
-        margin-bottom: 16px;
-        animation: bounce 1s ease infinite alternate;
-      }
+	      .landing-confetti {
+	        font-size: 40px;
+	        margin-bottom: 16px;
+	        animation: bounce 1s ease infinite alternate;
+	      }
 
-      @keyframes bounce {
-        from { transform: translateY(0); }
-        to   { transform: translateY(-8px); }
-      }
+	      @keyframes bounce {
+	        from { transform: translateY(0); }
+	        to   { transform: translateY(-8px); }
+	      }
 
-      .landing-check {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 20px;
-      }
+	      .landing-check {
+	        display: flex;
+	        justify-content: center;
+	        margin-bottom: 20px;
+	      }
 
-      .landing-title {
-        font-size: 28px;
-        font-weight: 700;
-        color: #15803d;
-        margin: 0 0 10px;
-      }
+	      .landing-title {
+	        font-size: 28px;
+	        font-weight: 700;
+	        color: #15803d;
+	        margin: 0 0 10px;
+	      }
 
-      .landing-subtitle {
-        font-size: 15px;
-        color: #4b5563;
-        margin: 0 0 32px;
-        line-height: 1.6;
-      }
+	      .landing-subtitle {
+	        font-size: 15px;
+	        color: #4b5563;
+	        margin: 0 0 32px;
+	        line-height: 1.6;
+	      }
 
-      .landing-info-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 14px;
-        margin-bottom: 32px;
-      }
+	      .landing-info-grid {
+	        display: grid;
+	        grid-template-columns: repeat(3, 1fr);
+	        gap: 14px;
+	        margin-bottom: 32px;
+	      }
 
-      .landing-info-box {
-        background: #f0fdf4;
-        border: 1px solid #dcfce7;
-        border-radius: 12px;
-        padding: 16px 10px;
-      }
+	      .landing-info-box {
+	        background: #f0fdf4;
+	        border: 1px solid #dcfce7;
+	        border-radius: 12px;
+	        padding: 16px 10px;
+	      }
 
-      .landing-info-icon { font-size: 22px; margin-bottom: 6px; }
-      .landing-info-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #15803d;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .landing-info-text { font-size: 11px; color: #6b7280; line-height: 1.4; }
+	      .landing-info-icon { font-size: 22px; margin-bottom: 6px; }
+	      .landing-info-label {
+	        font-size: 12px;
+	        font-weight: 600;
+	        color: #15803d;
+	        margin-bottom: 4px;
+	        text-transform: uppercase;
+	        letter-spacing: 0.5px;
+	      }
+	      .landing-info-text { font-size: 11px; color: #6b7280; line-height: 1.4; }
 
-      .landing-divider {
-        height: 1px;
-        background: #f1f5f9;
-        margin-bottom: 24px;
-      }
+	      .landing-divider {
+	        height: 1px;
+	        background: #f1f5f9;
+	        margin-bottom: 24px;
+	      }
 
-      .landing-note {
-        font-size: 13px;
-        color: #9ca3af;
-        line-height: 1.8;
-      }
+	      .landing-note {
+	        font-size: 13px;
+	        color: #9ca3af;
+	        line-height: 1.8;
+	      }
 
-      .landing-footer {
-        margin-top: 32px;
-        text-align: center;
-        color: #6b7280;
-        font-size: 13px;
-      }
+	      .landing-footer {
+	        margin-top: 32px;
+	        text-align: center;
+	        color: #6b7280;
+	        font-size: 13px;
+	      }
 
-      @media (max-width: 480px) {
-        .landing-card { padding: 32px 20px 28px; }
-        .landing-info-grid { grid-template-columns: 1fr; }
-        .landing-title { font-size: 22px; }
-      }
-    </style>
-  `;
+	      @media (max-width: 480px) {
+	        .landing-card { padding: 32px 20px 28px; }
+	        .landing-info-grid { grid-template-columns: 1fr; }
+	        .landing-title { font-size: 22px; }
+	      }
+	    </style>
+	  `;
 	}
 
-	document.addEventListener("DOMContentLoaded", function () {
-		initFields();
-		fpInit();
+	document.addEventListener("DOMContentLoaded", async function () {
+		if (window.hasOtp == "true") {
+			const otpSection = document.getElementById("otp-section");
+
+			if (otpSection) {
+				otpSection.style.display = "block";
+			}
+
+			startOTPTimer(window.otpRemaining);
+		}
+		if (document.getElementById("field-progress-bar")) {
+			if (window.signer_completed == "False") {
+				await renderSignerPdf();
+				await fpInit();
+			}
+		} else if (window.signer_completed == "True") {
+			renderReadonlyPdf();
+		}
+
 		// initFonts();
 		// initSignedImages();
 
@@ -1624,94 +1884,27 @@
 		document.getElementById("modal-overlay").style.display = "block";
 		document.getElementById("signature-modal").style.display = "block";
 
-		// ✅ CLEAR upload input
+		// CLEAR upload input
 		const fileInput = document.getElementById("upload-input");
 		if (fileInput) {
 			fileInput.value = "";
 		}
 
-		// ✅ CLEAR preview
+		// CLEAR preview
 		const preview = document.getElementById("upload-preview");
 		if (preview) {
 			preview.innerHTML = "";
 		}
 
-		// ✅ RESET stored image
+		// RESET stored image
 		uploadedImageData = null;
 
 		initCanvas();
 	}
 
-	// Position unsigned boxes
-	function initFields() {
-		document.querySelectorAll(".field-box").forEach((box) => {
-			const type = box.dataset.type;
-
-			box.style.position = "absolute";
-			box.style.left = box.dataset.left + "%";
-			box.style.top = box.dataset.top + "%";
-			box.style.width = box.dataset.width + "%";
-			box.style.height = box.dataset.height + "%";
-
-			// Label tag above every field
-			const label = document.createElement("div");
-			label.className = "field-label-tag";
-			label.innerText = type.toUpperCase();
-			box.appendChild(label);
-
-			if (type === "signature") {
-				box.innerHTML += "SIGN HERE";
-				box.style.fontWeight = "600";
-				box.style.fontSize = "11px";
-				box.style.letterSpacing = "0.6px";
-				box.onclick = () => {
-					currentField = box.dataset.field;
-					openSignatureModal();
-				};
-				return;
-			}
-
-			let input;
-
-			if (type === "name" || type === "text") {
-				input = document.createElement("input");
-				input.type = "text";
-				input.placeholder = type === "name" ? "Full name" : "Enter text";
-				box.classList.add("text-field");
-			}
-			if (type === "email") {
-				input = document.createElement("input");
-				input.type = "email";
-				input.placeholder = "email@example.com";
-				box.classList.add("text-field");
-			}
-			if (type === "number") {
-				input = document.createElement("input");
-				input.type = "number";
-				input.placeholder = "0";
-				box.classList.add("text-field");
-			}
-			if (type === "date") {
-				input = document.createElement("input");
-				input.type = "date";
-				box.classList.add("text-field");
-			}
-			if (type === "checkbox") {
-				input = document.createElement("input");
-				input.type = "checkbox";
-				box.classList.add("checkbox-field");
-			}
-
-			if (input) {
-				input.style.pointerEvents = "auto";
-				box.appendChild(input);
-			}
-		});
-	}
-
 	/* ══════════════════════════════
-   FIELD PROGRESS ENGINE
-══════════════════════════════ */
+	   FIELD PROGRESS ENGINE
+	══════════════════════════════ */
 
 	let fpTotal = 0;
 	let fpCompleted = new Set();
@@ -1762,33 +1955,33 @@
 			pill.dataset.field = fieldName;
 			pill.title = "Go to field " + (idx + 1);
 			pill.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-            border: 1px solid #e2e8f0;
-            background: #ffffff;
-            color: #64748b;
-            transition: all 0.15s;
-            user-select: none;
-        `;
+	            display: inline-flex;
+	            align-items: center;
+	            gap: 5px;
+	            padding: 4px 10px;
+	            border-radius: 20px;
+	            font-size: 11px;
+	            font-weight: 500;
+	            cursor: pointer;
+	            border: 1px solid #e2e8f0;
+	            background: #ffffff;
+	            color: #64748b;
+	            transition: all 0.15s;
+	            user-select: none;
+	        `;
 
 			// Dot indicator
 			const dot = document.createElement("span");
 			dot.id = "fp-dot-" + fieldName;
 			dot.style.cssText = `
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #cbd5e1;
-            display: inline-block;
-            flex-shrink: 0;
-            transition: background 0.15s;
-        `;
+	            width: 7px;
+	            height: 7px;
+	            border-radius: 50%;
+	            background: #cbd5e1;
+	            display: inline-block;
+	            flex-shrink: 0;
+	            transition: background 0.15s;
+	        `;
 
 			const text = document.createElement("span");
 			text.innerText = idx + 1 + ". " + label;
@@ -1917,7 +2110,6 @@
 				const box = document.querySelector(`.field-box[data-field="${name}"]`);
 				if (box) {
 					box.classList.add("fp-active-field");
-					box.scrollIntoView({ behavior: "smooth", block: "center" });
 				}
 				// Highlight the pill as "current"
 				fpUpdatePill(name, "current");
@@ -1938,11 +2130,11 @@
 		document.getElementById("fp-next-hint").style.display = "none";
 		document.getElementById("fp-fill").style.background = "#16a34a";
 
-		// ✅ Show the fixed bottom bar
+		// Show the fixed bottom bar
 		const wrap = document.getElementById("fp-submit-wrap");
 		wrap.style.display = "block";
 
-		// ✅ Also explicitly show the button inside it
+		// Also explicitly show the button inside it
 		const btn = document.getElementById("finish-btn");
 		btn.style.display = "inline-block";
 		btn.style.opacity = "1";
@@ -1983,43 +2175,47 @@
 		img.style.pointerEvents = "none";
 	});
 
-	document.getElementById("upload-input").addEventListener("change", function (e) {
-		const file = e.target.files[0];
-		if (!file) return;
+	const upload_input = document.getElementById("upload-input")
+	if(upload_input){
 
-		if (file.size > 5 * 1024 * 1024) {
-			alert("Image too large. Max 5MB allowed.");
-			e.target.value = "";
-			return;
-		}
-
-		const img = new Image();
-		const reader = new FileReader();
-
-		reader.onload = function (event) {
-			img.src = event.target.result;
-		};
-
-		img.onload = function () {
-			const canvas = document.createElement("canvas");
-			const ctx = canvas.getContext("2d");
-
-			const maxWidth = 600;
-			const scale = maxWidth / img.width;
-
-			canvas.width = maxWidth;
-			canvas.height = img.height * scale;
-
-			ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-			uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
-
-			document.getElementById("upload-preview").innerHTML =
-				`<img src="${uploadedImageData}" style="max-width:100%;">`;
-		};
-
-		reader.readAsDataURL(file);
-	});
+		upload_input.addEventListener("change", function (e) {
+			const file = e.target.files[0];
+			if (!file) return;
+	
+			if (file.size > 5 * 1024 * 1024) {
+				alert("Image too large. Max 5MB allowed.");
+				e.target.value = "";
+				return;
+			}
+	
+			const img = new Image();
+			const reader = new FileReader();
+	
+			reader.onload = function (event) {
+				img.src = event.target.result;
+			};
+	
+			img.onload = function () {
+				const canvas = document.createElement("canvas");
+				const ctx = canvas.getContext("2d");
+	
+				const maxWidth = 600;
+				const scale = maxWidth / img.width;
+	
+				canvas.width = maxWidth;
+				canvas.height = img.height * scale;
+	
+				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+	
+				uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
+	
+				document.getElementById("upload-preview").innerHTML =
+					`<img src="${uploadedImageData}" style="max-width:100%;">`;
+			};
+	
+			reader.readAsDataURL(file);
+		});
+	}
 
 	function collectFieldValues() {
 		const data = [];
@@ -2046,31 +2242,40 @@
 		const name = document.getElementById("typed-name").value || "John Smith";
 		const canvas = document.getElementById("typed-preview");
 		const ctx = canvas.getContext("2d");
+		const fieldConfig = window.esign_fields.find((f) => f.name === currentField);
+		const fontSize = parseInt(fieldConfig?.font_size || 12);
 
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-		ctx.font = "40px " + selectedFont;
+		ctx.font = fontSize * 3 + "px " + selectedFont;
 		ctx.fillStyle = "#111";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 
 		ctx.fillText(name, canvas.width / 2, canvas.height / 2);
 
-		// 🔥 Update font boxes preview text
+		// Update font boxes preview text
 		document.querySelectorAll(".font-preview").forEach((el) => {
 			el.innerText = name;
 		});
 	}
 
-	function startOTPTimer() {
-		otpTimeRemaining = 300;
+	function startOTPTimer(seconds = 300) {
+		otpTimeRemaining = seconds;
 		const timerDisplay = document.getElementById("otp-timer");
 		const verifyBtn = document.getElementById("verify-btn");
 		const sendBtn = document.getElementById("sendotp-btn");
 		const btnText = document.getElementById("otp-btn-text");
 
-		verifyBtn.disabled = false;
-		sendBtn.disabled = true;
+		const otpInput = document.getElementById("otp-input");
+
+		if (verifyBtn) {
+			verifyBtn.disabled = false;
+		}
+		if (sendBtn) {
+			sendBtn.disabled = true;
+			sendBtn.style.display = "none";
+		}
 
 		clearInterval(otpInterval);
 
@@ -2088,11 +2293,21 @@
 			if (otpTimeRemaining < 0) {
 				clearInterval(otpInterval);
 				timerDisplay.innerHTML = `<span style="color:red;">OTP expired. Please resend.</span>`;
-				verifyBtn.disabled = true;
+				if (otpInput) {
+					otpInput.style.display = "none";
+				}
+				if (verifyBtn) {
+					verifyBtn.disabled = true;
+					verifyBtn.style.display = "none";
+				}
+				if (sendBtn) {
+					sendBtn.style.display = "block";
+					sendBtn.disabled = false;
+				}
 
-				sendBtn.style.display = "block";
-				sendBtn.disabled = false;
-				btnText.innerText = "Resend OTP";
+				if (btnText) {
+					btnText.innerText = "Resend OTP";
+				}
 			}
 		}, 1000);
 	}
@@ -2189,19 +2404,11 @@
 			box.appendChild(img);
 		}
 
-		storeFieldImage(currentField, "signature", imageData);
+		fieldImages[currentField] = imageData;
 
 		fpMarkSignature(currentField);
 
 		closeModal();
-	}
-
-	function storeFieldImage(field, type, image) {
-		fieldImages[field] = {
-			field: field,
-			type: type,
-			image: image,
-		};
 	}
 
 	function sendOTP() {
@@ -2227,18 +2434,26 @@
 			.then((data) => {
 				if (data.message?.status === "sent") {
 					document.getElementById("otp-section").style.display = "block";
-					startOTPTimer();
+					const verifyBtn = document.getElementById("verify-btn");
+					const otpInput = document.getElementById("otp-input");
+					if (otpInput) {
+						otpInput.style.display = "block";
+					}
+					if (verifyBtn) {
+						verifyBtn.style.display = "block";
+					}
 
 					// Restore button to normal state
 					loader.style.display = "none";
 					btnText.innerText = "Resend OTP";
 					btn.style.display = "none";
+					startOTPTimer();
 				} else {
 					throw new Error("Failed");
 				}
 			})
 			.catch((err) => {
-				console.error(err);
+				console.error("err sending otp: ", err);
 				alert("Failed to send OTP. Try again.");
 
 				// Reset button if failed
@@ -2248,36 +2463,22 @@
 			});
 	}
 
-	function textToImage(text) {
-		const canvas = document.createElement("canvas");
-		canvas.width = 400;
-		canvas.height = 80;
-
-		const ctx = canvas.getContext("2d");
-
-		ctx.fillStyle = "#000";
-		ctx.font = "20px Arial";
-		ctx.textBaseline = "middle";
-
-		ctx.fillText(text, 20, 40);
-
-		return canvas.toDataURL("image/png");
-	}
-
 	function submitFields() {
 		const boxes = document.querySelectorAll(".field-box");
 		let valid = true;
+		const payloadFields = {};
 
 		boxes.forEach((box) => {
 			const field = box.dataset.field;
 			const type = box.dataset.type;
 
 			if (type === "signature") {
-				if (!fieldImages[field] || !fieldImages[field].image) {
+				if (!fieldImages[field] || !fieldImages[field]) {
 					valid = false;
 					box.style.border = "2px solid red";
+					return;
 				}
-				return;
+				payloadFields[field] = fieldImages[field];
 			}
 
 			const input = box.querySelector("input");
@@ -2289,62 +2490,21 @@
 					box.style.border = "2px solid red";
 					return;
 				}
-
-				// const canvas = document.createElement("canvas");
-				// canvas.width = 16;
-				// canvas.height = 16;
-				// const ctx = canvas.getContext("2d");
-
-				// ctx.strokeStyle = "#000000";
-				// ctx.lineWidth = 1.5;
-				// ctx.strokeRect(1, 1, 14, 14);
-
-				// ctx.strokeStyle = "#000000";
-				// ctx.lineWidth = 1.5;
-				// ctx.lineCap = "round";
-				// ctx.lineJoin = "round";
-				// ctx.beginPath();
-				// ctx.moveTo(3, 8);
-				// ctx.lineTo(6, 11);
-				// ctx.lineTo(13, 4);
-
-				const canvas = document.createElement("canvas");
-				canvas.width = 400; // ✅ wider canvas = more horizontal whitespace
-				canvas.height = 200;
-				const ctx = canvas.getContext("2d");
-
-				// white background
-				ctx.fillStyle = "#ffffff";
-				ctx.fillRect(0, 0, 400, 200);
-
-				// checkbox centered in wide canvas
-				ctx.strokeStyle = "#000000";
-				ctx.lineWidth = 3;
-				ctx.strokeRect(185, 85, 30, 30); // ✅ centered horizontally in 400px
-
-				// slim checkmark
-				ctx.strokeStyle = "#000000";
-				ctx.lineWidth = 3;
-				ctx.lineCap = "round";
-				ctx.lineJoin = "round";
-				ctx.beginPath();
-				ctx.moveTo(191, 100);
-				ctx.lineTo(197, 107);
-				ctx.lineTo(209, 93);
-				ctx.stroke();
-
-				const image = canvas.toDataURL("image/png");
-				storeFieldImage(field, type, image); // ✅ inside forEach
+				payloadFields[field] = input.checked ? "1" : "0";
 			} else {
-				// ✅ handle text/other inputs
+				// handle text/other inputs
 				const value = input.value;
 				if (!value) {
 					valid = false;
 					box.style.border = "2px solid red";
 					return;
 				}
-				const image = textToImage(value);
-				storeFieldImage(field, type, image); // ✅ inside forEach
+				if (type == "text") {
+					payloadFields[field] = value.trim();
+				} else {
+					// date and number
+					payloadFields[field] = input.value;
+				}
 			}
 		});
 
@@ -2357,13 +2517,11 @@
 		const originalText = btn.innerText;
 		btn.disabled = true;
 		btn.innerHTML = `
-        <span style="display:inline-flex; align-items:center; gap:10px;">
-            <span class="loader" style="border-color:rgba(255,255,255,0.3); border-top-color:white;"></span>
-            Submitting...
-        </span>
-    `;
-
-		const payloadFields = Object.values(fieldImages || {});
+	        <span style="display:inline-flex; align-items:center; gap:10px;">
+	            <span class="loader" style="border-color:rgba(255,255,255,0.3); border-top-color:white;"></span>
+	            Submitting...
+	        </span>
+	    `;
 
 		fetch("/api/method/verp_staffing.esign.doctype.e_sign.e_sign.complete_signing", {
 			method: "POST",
@@ -2379,8 +2537,13 @@
 		})
 			.then((r) => r.json())
 			.then((res) => {
+				if (!res.message || res.message.status !== "success") {
+					throw new Error("Signing failed please try again");
+				}
+
 				btn.disabled = false;
 				btn.innerHTML = originalText;
+
 				showSuccessModal();
 			})
 			.catch((err) => {

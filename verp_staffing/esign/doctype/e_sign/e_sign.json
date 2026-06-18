@@ -11,10 +11,9 @@
   "status",
   "section_break_mqgi",
   "original_pdf",
+  "signers_panel",
   "section_break_crjn",
   "signature_fields",
-  "column_break_wujr",
-  "signers_panel",
   "section_break_ixwc",
   "activity"
  ],
@@ -27,7 +26,9 @@
   {
    "fieldname": "original_pdf",
    "fieldtype": "Attach",
-   "label": "Original PDF"
+   "label": "Original PDF",
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_ygal",
@@ -37,6 +38,7 @@
    "fieldname": "signed_pdf",
    "fieldtype": "Attach",
    "label": "Signed PDF",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -44,15 +46,17 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
+   "no_copy": 1,
    "options": "Draft\nSent\nFully Signed",
    "read_only": 1
   },
   {
    "fieldname": "signature_fields",
    "fieldtype": "Table",
-   "hidden": 1,
    "label": "Signature Fields",
-   "options": "Signature Fields"
+   "options": "Signature Fields",
+   "print_hide": 1,
+   "report_hide": 1
   },
   {
    "fieldname": "section_break_crjn",
@@ -61,7 +65,8 @@
   {
    "fieldname": "signers_panel",
    "fieldtype": "HTML",
-   "label": "Signers Panel"
+   "label": "Signers Panel",
+   "no_copy": 1
   },
   {
    "fieldname": "section_break_ixwc",
@@ -72,21 +77,19 @@
    "fieldtype": "Table",
    "hidden": 1,
    "label": "Activity",
-   "options": "activity"
+   "options": "activity",
+   "print_hide": 1,
+   "report_hide": 1
   },
   {
    "fieldname": "section_break_mqgi",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_wujr",
-   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 14:26:18.128167",
+ "modified": "2026-06-18 12:16:53.535176",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",
