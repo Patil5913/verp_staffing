@@ -331,16 +331,6 @@ body.verp-protected::after {
 	--cn-connector-left: 15px;
 	--cn-connector-w: 1.5px;
 	--cn-connector-color: #d1d5db;
-
-	/* Navbar — Frappe header is WHITE, so we use dark-on-light button style */
-	--cn-navbar-link-color: #344054;
-	--cn-navbar-link-border: #d0d5dd;
-	--cn-navbar-link-bg: #ffffff;
-	--cn-navbar-hover-bg: #eff6ff;
-	--cn-navbar-hover-border: #2490ef;
-	--cn-navbar-active-bg: #2490ef;
-	--cn-navbar-active-fg: #ffffff;
-	--cn-navbar-active-border: #2490ef;
 }
 
 /* ─────────────────────────────────────────────
@@ -354,15 +344,6 @@ body.verp-protected::after {
 	--cn-text: #e2e8f0;
 	--cn-text-muted: #a0aec0;
 	--cn-connector-color: rgba(255, 255, 255, 0.18);
-
-	--cn-navbar-link-color: #cbd5e1;
-	--cn-navbar-link-border: rgba(255, 255, 255, 0.18);
-	--cn-navbar-link-bg: rgba(255, 255, 255, 0.07);
-	--cn-navbar-hover-bg: rgba(36, 144, 239, 0.2);
-	--cn-navbar-hover-border: #2490ef;
-	--cn-navbar-active-bg: #2490ef;
-	--cn-navbar-active-fg: #ffffff;
-	--cn-navbar-active-border: #2490ef;
 }
 
 /* ─────────────────────────────────────────────
@@ -650,107 +631,6 @@ body.verp-protected::after {
 	font-size: var(--cn-size-item);
 }
 
-/* ─────────────────────────────────────────────
-   10. CONTEXT NAVBAR
-   ─────────────────────────────────────────────
-   Each link is a real bordered button AT REST,
-   not just on hover/active — so it reads as
-   clickable nav, not static label text.
-   ───────────────────────────────────────────── */
-header.navbar {
-	position: relative !important;
-}
-
-#custom-nav-navbar {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	transform: translate(-50%, -50%);
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	pointer-events: none;
-	z-index: 1;
-	white-space: nowrap;
-	background: rgb(243, 243, 243);
-	border: 1px solid #e5e7eb;
-	border-radius: 10px;
-	padding: 4px;
-}
-
-#custom-nav-navbar.is-empty {
-	display: none;
-}
-
-.cn-navbar-link {
-	pointer-events: auto;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 6px 14px;
-	border-radius: 7px;
-	font-family: var(--cn-font);
-	font-size: 13px;
-	white-space: nowrap;
-	cursor: pointer;
-	user-select: none;
-	text-decoration: none !important;
-	transition:
-		background 0.12s ease,
-		color 0.12s ease,
-		border-color 0.12s ease,
-		box-shadow 0.12s ease;
-	line-height: 1.2;
-
-	/* explicit + !important: Frappe's own header <a> rules
-     otherwise win on specificity and flatten this to plain text */
-	background: var(--cn-navbar-link-bg) !important;
-	border: 1px solid var(--cn-navbar-link-border) !important;
-	color: rgb(0, 0, 0) !important;
-	/* font-weight: 500 !important; */
-	/* box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); */
-}
-
-.cn-navbar-link:hover {
-	background: var(--cn-navbar-hover-bg) !important;
-	border-color: var(--cn-navbar-hover-border) !important;
-	color: var(--cn-sidebar-active-fg) !important;
-	box-shadow: 0 1px 3px rgba(36, 144, 239, 0.15);
-}
-
-/* Active = solid blue fill — unmissable, distinct from resting buttons */
-.cn-navbar-link.is-active {
-	background: var(--cn-navbar-active-bg) !important;
-	border-color: var(--cn-navbar-active-border) !important;
-	color: var(--cn-navbar-active-fg) !important;
-	box-shadow: 0 2px 5px rgba(36, 144, 239, 0.35);
-}
-
-.cn-navbar-link.is-active:hover {
-	background: #1c7dd6 !important;
-	border-color: #1c7dd6 !important;
-}
-
-/* Icon prefix — tinted to match the link's current state */
-.cn-navbar-link-icon {
-	display: flex;
-	align-items: center;
-	flex-shrink: 0;
-	color: #667085;
-}
-
-.cn-navbar-link:hover .cn-navbar-link-icon {
-	color: var(--cn-primary);
-}
-
-.cn-navbar-link.is-active .cn-navbar-link-icon {
-	color: #ffffff;
-}
-
-.cn-navbar-link-icon .icon {
-	width: 13px;
-	height: 13px;
-}
 
 /* ─────────────────────────────────────────────
    11. RESPONSIVE
