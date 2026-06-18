@@ -107,12 +107,7 @@ class Account(NestedSet):
 				parent_account_type = frappe.get_cached_value("Account", self.parent_account, ["account_type"])
 				if parent_account_type == self.account_type:
 					throw(_("Only Parent can be of type {0}").format(self.account_type))
-	def onload(self):
-		frozen_accounts_modifier = frappe.db.get_value(
-			"Accounts Settings", "Accounts Settings", "frozen_accounts_modifier"
-		)
-		if not frozen_accounts_modifier or frozen_accounts_modifier in frappe.get_roles():
-			self.set_onload("can_freeze_account", True)
+
 	def validate(self):
 		self.validate_parent()
 		self.validate_parent_child_account_type()

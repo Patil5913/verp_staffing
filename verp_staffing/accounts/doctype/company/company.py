@@ -7,7 +7,7 @@ from frappe.utils.nestedset import NestedSet
 
 
 class Company(NestedSet):
-    # don't remove it, it's for future 
+    # don't remove it, it's for future
     def on_update(self):
         NestedSet.on_update(self)
         if not frappe.db.sql(
@@ -45,7 +45,6 @@ class Company(NestedSet):
             },
         ):
             frappe.throw(_("Abbreviation already used for another company"))
-
 
     def validate_default_accounts(self):
         accounts = [
@@ -132,7 +131,7 @@ class Company(NestedSet):
             if not self.chart_of_accounts:
                 self.chart_of_accounts = "India - Chart of Accounts"
 
-    # don't remove it, it's for future 
+    # don't remove it, it's for future
     # def check_country_change(self):
     #     frappe.flags.country_change = False
 
@@ -149,7 +148,9 @@ class Company(NestedSet):
 
     def validate_parent_company(self):
         if self.parent_company:
-            is_group = frappe.get_cached_value("Company", self.parent_company, "is_group")
+            is_group = frappe.get_cached_value(
+                "Company", self.parent_company, "is_group"
+            )
 
             if not is_group:
                 frappe.throw(_("Parent Company must be a group company"))
@@ -184,14 +185,14 @@ class Company(NestedSet):
         """
         NestedSet.validate_if_child_exists(self)
         frappe.utils.nestedset.update_nsm(self)
-        
+
         gl_exists = frappe.db.exists(
             "GL Entry",
             {
                 "company": self.name,
             },
         )
-        
+
         if not gl_exists:
             frappe.db.delete(
                 "Account",
@@ -222,10 +223,11 @@ def get_company_currency(company):
     return frappe.flags.company_currency[company]
 
 
-
 @frappe.whitelist()
 def fetch_default_company():
-    default_company = frappe.db.get_single_value("Accounts Settings", "default_company")
+    default_company = frappe.get_cached_value(
+        "Accounts Settings", "Accounts Settings", "default_company"
+    )
 
     if not default_company:
         frappe.throw(_("Please set Default Company in Accounts Settings"))

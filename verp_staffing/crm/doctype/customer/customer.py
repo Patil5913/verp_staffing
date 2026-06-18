@@ -107,7 +107,7 @@ def get_forwardable_departments(customer):
     if not services:
         return ["CR"]
 
-    active_departments = get_active_departments(customer)
+    active_departments = check_CR_Onboarding_departments_active(customer)
 
     all_completed = is_all_services_completed(customer, services)
 
@@ -215,7 +215,7 @@ def is_service_completed(service, customer):
         return False
 
 
-def get_active_departments(customer):
+def check_CR_Onboarding_departments_active(customer):
     active = []
     if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
         active.append("CR")
@@ -266,7 +266,7 @@ def get_forwardable_departments_from_service(doctype, docname):
     if not services:
         return {"blocked": False, "options": ["CR"]}
 
-    active_departments = get_active_departments(customer)
+    active_departments = check_CR_Onboarding_departments_active(customer)
 
     all_completed = is_all_services_completed(customer, services)
 

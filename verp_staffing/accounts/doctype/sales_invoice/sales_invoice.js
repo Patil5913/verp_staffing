@@ -14,7 +14,7 @@ frappe.ui.form.on("Sales Invoice", {
 
 		frappe.breadcrumbs.update();
 
-		// set_currency_labels(frm);
+		set_currency_labels(frm);
 		if (frm.doc.docstatus === 1) {
 			frm.add_custom_button("View Ledger", function () {
 				frappe.route_options = {
@@ -87,7 +87,7 @@ frappe.ui.form.on("Sales Invoice", {
 	},
 
 	async onload(frm) {
-		// set_currency_labels(frm);
+		set_currency_labels(frm);
 		set_account_queries(frm);
 
 		if (!frm.doc.company) {

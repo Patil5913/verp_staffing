@@ -380,7 +380,6 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
         packet = io.BytesIO()
         c = canvas.Canvas(packet, pagesize=(page_width, page_height))
 
-        drew_anything = False
 
         for f in fields:
             if int(f.get("page", 1)) - 1 != page_index:
@@ -411,18 +410,15 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
             if ftype == "Text" and val:
                 c.setFont("Helvetica", fontsize)
                 c.drawString(x, y + (h - fontsize), str(val))
-                drew_anything = True
 
             elif ftype == "Checkbox" and val:
                 c.rect(x, y, h, h, stroke=1, fill=0)
                 c.line(x, y, x + h, y + h)
                 c.line(x, y + h, x + h, y)
-                drew_anything = True
             elif ftype == "Date" and val:
                 formatted = format_date_value(val)
                 c.setFont("Helvetica", fontsize)
                 c.drawString(x, y + (h - fontsize), formatted)
-                drew_anything = True
             elif ftype == "Signature" and val:
                 img = Image.open(val)
                 c.drawImage(
@@ -433,7 +429,6 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                     height=h,
                     mask="auto",
                 )
-                drew_anything = True
 
             elif ftype == "Payment_Terms" and val:
                 c.setFont("Helvetica", fontsize)
@@ -447,7 +442,6 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                     text_obj.textLine(f"{i}. {term}")
 
                 c.drawText(text_obj)
-                drew_anything = True
 
         # REQUIRED
         c.showPage()
