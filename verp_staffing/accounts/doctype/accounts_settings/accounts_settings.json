@@ -5,27 +5,11 @@
  "engine": "InnoDB",
  "field_order": [
   "charts_of_accounts_tab",
-  "show_balance_in_coa",
   "default_company",
-  "banking_tab",
-  "enable_party_matching",
-  "enable_fuzzy_matching",
-  "payment_request_tab",
-  "create_pr_in_draft_status",
-  "column_break_apea",
+  "show_balance_in_coa",
   "auto_send_sales_invoice_after_submission",
   "invoice_reminder_days",
-  "assets_tab",
-  "asset_settings_section",
-  "calculate_depr_using_total_days",
-  "column_break_rzzt",
-  "book_asset_depreciation_entry_automatically",
-  "invoice_and_billing_tab",
-  "currency_exchange_section",
-  "allow_stale",
-  "stale_days",
-  "column_break_hhmf",
-  "allow_pegged_currencies_exchange_rates"
+  "invoice_and_billing_tab"
  ],
  "fields": [
   {
@@ -43,22 +27,15 @@
    "description": "Select a default company to be used in orders, invoices, vounchers.",
    "fieldname": "default_company",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Default Company",
-   "options": "Company"
+   "options": "Company",
+   "reqd": 1
   },
   {
    "fieldname": "invoice_and_billing_tab",
    "fieldtype": "Tab Break",
    "label": "Invoice & Billing"
-  },
-  {
-   "fieldname": "column_break_hhmf",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "currency_exchange_section",
-   "fieldtype": "Section Break",
-   "label": "Currency Exchange Settings"
   },
   {
    "default": "0",
@@ -76,7 +53,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-06 12:07:29.507474",
+ "modified": "2026-06-18 14:29:19.273955",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",
@@ -91,6 +68,36 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "CR",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

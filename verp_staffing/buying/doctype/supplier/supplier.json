@@ -22,8 +22,7 @@
   "supplier_details",
   "tax_tab",
   "tax_id",
-  "tax_category",
-  "tax_withholding_category"
+  "tax_category"
  ],
  "fields": [
   {
@@ -107,12 +106,6 @@
    "fieldtype": "Link",
    "label": "Tax Category",
    "options": "Tax Category"
-  },
-  {
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "label": "Tax Withholding Category",
-   "options": "Tax Withholding Category"
   },
   {
    "fieldname": "tax_id",

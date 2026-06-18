@@ -776,7 +776,11 @@ def customer_query(user):
     if "Sales" in departments:
         conditions.append(
             f"""
-            `tabCustomer`.customer_owner IN ({team_sql})
+            tabLead.name IN (
+                SELECT tabOpportunity.opportunity_from_lead
+                FROM tabOpportunity
+                WHERE tabOpportunity.opportunity_owner IN ({team_sql})
+            )
         """
         )
 

@@ -116,7 +116,7 @@
       icon: "icon-folder-open"
     },
     "technical-other-services": {
-      name: "Technical Other Services",
+      name: "Tech Other Services",
       type: "doctype",
       route: "/app/technical-other-services",
       doctype: "Technical Other Services",
@@ -133,7 +133,6 @@
       name: "Marketing Other Services",
       type: "doctype",
       route: "/app/marketing-other-services",
-      doctype: "Marketing Other Services",
       icon: "icon-milestone"
     },
     "report": {
@@ -315,7 +314,7 @@
       parent_type: "type_2",
       role: "_show_technical",
       icon: "icon-website",
-      children: ["resume", "jdc", "ruc", "training", "cover-letter", "technical-other-service"]
+      children: ["resume", "jdc", "ruc", "training", "cover-letter", "technical-other-services"]
     },
     {
       key: "marketing",
@@ -366,7 +365,7 @@
       role: "_show_e_sign",
       icon: "icon-pen"
     },
-    
+
     {
       key: "account-master",
       label: "Accounts Master",
@@ -415,16 +414,15 @@
     "department": ["hierarchy", "employee"],
     "hierarchy": ["department", "employee"],
 
-    "resume": ["jdc", "ruc", "training", "cover-letter", "technical-other-service"],
-    "jdc": ["resume", "ruc", "training", "cover-letter", "technical-other-service"],
-    "ruc": ["resume", "jdc", "training", "cover-letter", "technical-other-service"],
-    "training": ["resume", "jdc", "ruc", "cover-letter", "technical-other-service"],
-    "cover-letter": ["resume", "jdc", "ruc", "training", "technical-other-service"],
-    "technical-other-service": ["resume", "jdc", "ruc", "training", "cover-letter"],
+    "resume": ["jdc", "ruc", "training", "cover-letter", "technical-other-services"],
+    "jdc": ["resume", "ruc", "training", "cover-letter", "technical-other-services"],
+    "ruc": ["resume", "jdc", "training", "cover-letter", "technical-other-services"],
+    "training": ["resume", "jdc", "ruc", "cover-letter", "technical-other-services"],
+    "cover-letter": ["resume", "jdc", "ruc", "training", "technical-other-services"],
+    "technical-other-services": ["resume", "jdc", "ruc", "training", "cover-letter"],
 
     "opportunity": ["customer", "sales-order"],
     "customer": ["opportunity", , "sales-order"],
-    "sales-order": ["opportunity", "customer"],
 
     "company": ["fiscal-year"],
     "fiscal-year": ["company"],
@@ -491,8 +489,17 @@
   // SECTION 3 — ROUTE HELPERS
   // ═══════════════════════════════════════════════════════════
 
+  // Decoded so config routes written with literal characters (e.g. a
+  // single-doctype route containing a space, "ERP Configuration") still
+  // match the browser's pathname, which encodes spaces as %20.
   function current_path() {
-    return window.location.pathname.replace(/\/+$/, "");
+    let path = window.location.pathname;
+    try {
+      path = decodeURIComponent(path);
+    } catch (e) {
+      // malformed sequence — fall back to the raw pathname
+    }
+    return path.replace(/\/+$/, "");
   }
 
   function current_slug() {
@@ -515,33 +522,68 @@
     return path === route || path.startsWith(route + "/");
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // SECTION 4 — EXPAND / COLLAPSE PERSISTENCE
-  // ═══════════════════════════════════════════════════════════
+  // Some NAV_ITEMS (e.g. "department") are referenced as a child from
+  // more than one SIDEBAR_CONFIG entry — once as a real sidebar dropdown
+  // child (Staffing Master), once purely so a type_1 parent can offer it
+  // as navbar context (Employee). Only ONE entry should ever show the
+  // "active" treatment for a given route. The first entry in declared
+  // order that matches wins — this mirrors the precedence already used
+  // by resolve_navbar_keys(), so sidebar and navbar agree on ownership.
+  function get_active_owner_key() {
+    for (const cfg of SIDEBAR_CONFIG) {
+      if (!parent_visible(cfg)) continue;
 
-  const STORAGE_KEY = "custom_nav_expanded_modules";
-
-  function load_expand_state() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
-    catch (e) { return {}; }
+      if (cfg.parent_type === "type_3") {
+        if (parent_route_is_active(cfg)) return cfg.key;
+      } else if (cfg.parent_type === "type_1") {
+        if (parent_route_is_active(cfg) || (cfg.children && cfg.children.some(key_is_active))) {
+          return cfg.key;
+        }
+      } else if (cfg.parent_type === "type_2") {
+        if (cfg.children && cfg.children.some(key_is_active)) return cfg.key;
+      }
+    }
+    return null;
   }
 
-  function save_expand_state(state) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    catch (e) {}
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 4 — EXPAND / COLLAPSE PERSISTENCE (single, exclusive)
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Only one type_2 dropdown is ever open at a time. The dropdown that
+  // contains the active route always wins; otherwise we fall back to
+  // whichever dropdown the user last opened manually.
+
+  const STORAGE_KEY = "custom_nav_expanded_module";
+
+  function load_expanded_key() {
+    try { return localStorage.getItem(STORAGE_KEY) || null; }
+    catch (e) { return null; }
   }
 
-  function set_expanded(key, expanded) {
-    const state = load_expand_state();
-    state[key] = expanded;
-    save_expand_state(state);
+  function save_expanded_key(key) {
+    try {
+      if (key) localStorage.setItem(STORAGE_KEY, key);
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
+  }
+
+  function route_forced_expand_key() {
+    for (const cfg of SIDEBAR_CONFIG) {
+      if (cfg.parent_type === "type_2" && cfg.children && cfg.children.some(key_is_active)) {
+        return cfg.key;
+      }
+    }
+    return null;
+  }
+
+  function compute_expanded_key() {
+    return route_forced_expand_key() || load_expanded_key();
   }
 
   function should_expand(parent_cfg) {
     if (parent_cfg.parent_type !== "type_2") return false;
-    if (parent_cfg.children && parent_cfg.children.some(key_is_active)) return true;
-    const state = load_expand_state();
-    return state[parent_cfg.key] !== false;
+    return compute_expanded_key() === parent_cfg.key;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -635,10 +677,10 @@
   // ── Type 1: redirect parent (no chevron, no children in sidebar) ─
   function make_type1_el(cfg) {
     const active_on_parent = parent_route_is_active(cfg);
-    const active_on_child  = cfg.children && cfg.children.some(key_is_active);
+    const is_owner = get_active_owner_key() === cfg.key;
 
     const wrap = document.createElement("div");
-    wrap.className = "cn-group cn-group--type1" + (active_on_parent || active_on_child ? " has-active" : "");
+    wrap.className = "cn-group cn-group--type1" + (is_owner ? " has-active" : "");
     wrap.dataset.parentKey = cfg.key;
 
     const a = document.createElement("a");
@@ -661,6 +703,7 @@
   // ── Type 2: dropdown parent + children in sidebar ───────
   function make_type2_el(cfg) {
     const expanded = should_expand(cfg);
+    const is_owner = get_active_owner_key() === cfg.key;
     const kids     = visible_children(cfg);
 
     const wrap = document.createElement("div");
@@ -683,10 +726,17 @@
     header.appendChild(chevron);
 
     header.addEventListener("click", function (e) {
-      const is_open = wrap.classList.contains("is-expanded");
-      wrap.classList.toggle("is-expanded", !is_open);
-      set_expanded(cfg.key, !is_open);
       e.stopPropagation();
+      const is_open = wrap.classList.contains("is-expanded");
+
+      // Accordion: at most one dropdown stays open. Collapse every
+      // other type_2 group before opening/toggling this one.
+      document.querySelectorAll(".cn-group--type2").forEach(function (other) {
+        if (other !== wrap) other.classList.remove("is-expanded");
+      });
+
+      wrap.classList.toggle("is-expanded", !is_open);
+      save_expanded_key(!is_open ? cfg.key : null);
     });
 
     wrap.appendChild(header);
@@ -700,7 +750,7 @@
       if (!item) return;
       const li = document.createElement("li");
       const a  = document.createElement("a");
-      a.className = "cn-item cn-child-link" + (key_is_active(child_key) ? " is-active" : "");
+      a.className = "cn-item cn-child-link" + (is_owner && key_is_active(child_key) ? " is-active" : "");
       a.href = item.route;
       a.dataset.navKey = child_key;
 
@@ -726,31 +776,32 @@
   }
 
   function refresh_sidebar_active() {
-    // Parent links (type_1, type_3)
+    const owner_key    = get_active_owner_key();
+    const expanded_key = compute_expanded_key();
+
+    // Parent links (type_1 own route, type_3) — exact-route match only.
     document.querySelectorAll(".cn-parent-link[data-parent-key]").forEach(function (el) {
       const cfg = SIDEBAR_CONFIG.find(c => c.key === el.dataset.parentKey);
       if (!cfg) return;
       el.classList.toggle("is-active", parent_route_is_active(cfg));
     });
 
-    // Child links (type_2)
-    document.querySelectorAll(".cn-child-link[data-nav-key]").forEach(function (el) {
-      el.classList.toggle("is-active", key_is_active(el.dataset.navKey));
-    });
-
-    // has-active on type_1 groups
+    // has-active on type_1 groups — only the single resolved owner lights
+    // up, even when another parent happens to list the same child route.
     document.querySelectorAll(".cn-group--type1[data-parent-key]").forEach(function (el) {
-      const cfg = SIDEBAR_CONFIG.find(c => c.key === el.dataset.parentKey);
-      if (!cfg) return;
-      el.classList.toggle("has-active",
-        parent_route_is_active(cfg) || (cfg.children && cfg.children.some(key_is_active)));
+      el.classList.toggle("has-active", owner_key === el.dataset.parentKey);
     });
 
-    // Auto-expand type_2 if active child inside
-    document.querySelectorAll(".cn-group--type2[data-parent-key]").forEach(function (el) {
-      const cfg = SIDEBAR_CONFIG.find(c => c.key === el.dataset.parentKey);
-      if (!cfg || !cfg.children) return;
-      if (cfg.children.some(key_is_active)) el.classList.add("is-expanded");
+    // type_2 groups: child highlight (owner-gated) + exclusive expand state.
+    document.querySelectorAll(".cn-group--type2[data-parent-key]").forEach(function (group) {
+      const key      = group.dataset.parentKey;
+      const is_owner = owner_key === key;
+
+      group.querySelectorAll(".cn-child-link[data-nav-key]").forEach(function (el) {
+        el.classList.toggle("is-active", is_owner && key_is_active(el.dataset.navKey));
+      });
+
+      group.classList.toggle("is-expanded", key === expanded_key);
     });
   }
 
@@ -816,7 +867,19 @@
       a.className = "cn-navbar-link" + (key_is_active(key) ? " is-active" : "");
       a.href = item.route;
       a.dataset.navKey = key;
-      a.textContent = item.name;
+
+      // Icon + label so a quick link reads as "go to X", not a plain tag.
+      if (item.icon) {
+        const icon_wrap = document.createElement("span");
+        icon_wrap.className = "cn-navbar-link-icon";
+        icon_wrap.appendChild(make_icon(item.icon, "xs"));
+        a.appendChild(icon_wrap);
+      }
+
+      const label = document.createElement("span");
+      label.className = "cn-navbar-link-label";
+      label.textContent = item.name;
+      a.appendChild(label);
 
       a.addEventListener("click", function (e) {
         e.preventDefault();
@@ -858,10 +921,163 @@
   }
 
   // ═══════════════════════════════════════════════════════════
-  // SECTION 9 — ROUTE CHANGE HANDLER
+  // SECTION 9 — DEFAULT ROUTE (role-aware landing page)
+  // ═══════════════════════════════════════════════════════════
+  //
+  // THREE escape hatches Frappe uses that bypass our route listener:
+  //
+  //  1. Logo click  → frappe.set_route("") → workspace
+  //  2. Post-login  → frappe.boot.default_route or "" → workspace
+  //  3. frappe.app.redirect_to_login_with_hash() on session boot
+  //
+  // FIX STRATEGY:
+  //  A. get_first_accessible_route() — pure helper, no side-effects.
+  //     Walks SIDEBAR_CONFIG and returns the first route the user
+  //     can access. Returns null if nothing found.
+  //
+  //  B. resolve_default_route() — called on every route change.
+  //     If current path is /app or empty, immediately redirects.
+  //
+  //  C. patch_frappe_default_route() — called once at init.
+  //     Overrides frappe.boot.default_route and wraps
+  //     frappe.set_route so calls with "" or "workspace" are
+  //     intercepted before Frappe acts on them.
+  //
+  //  D. Logo click interception — delegated click listener on
+  //     header.navbar that catches clicks on .navbar-home/.navbar-brand
+  //     before Frappe's own handler.
+  // ─────────────────────────────────────────────────────────────
+
+  // Returns the first route the current user can access, or null.
+  function get_first_accessible_route() {
+    for (const cfg of SIDEBAR_CONFIG) {
+      if (!parent_visible(cfg)) continue;
+
+      if (cfg.parent_type === "type_3" || cfg.parent_type === "type_1") {
+        return cfg.route;
+      }
+
+      if (cfg.parent_type === "type_2") {
+        const kids = visible_children(cfg);
+        if (kids.length) {
+          const first_item = NAV_ITEMS[kids[0]];
+          if (first_item) return first_item.route;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Redirect away from bare /app if we have a better target.
+  function resolve_default_route() {
+    const path = current_path();
+    // Only act on exactly /app or bare "" (hash-router empty state)
+    if (path !== "/app" && path !== "") return;
+
+    const target = get_first_accessible_route();
+    if (target) spa_navigate(target);
+  }
+
+  // ── Patch Frappe internals so they never land on workspace ──
+  // Called once during init(), after frappe is ready.
+  function patch_frappe_default_route() {
+    if (!window.frappe) return;
+
+    // A) Override boot default_route so post-login redirect goes to our route
+    const target = get_first_accessible_route();
+    if (target) {
+      // Frappe reads frappe.boot.default_route on startup to decide
+      // where to land after login. Override it with our target.
+      if (frappe.boot) {
+        frappe.boot.default_route = target.replace(/^\/app\//, "");
+      }
+    }
+
+    // B) Wrap frappe.set_route to intercept calls with "" or "workspace"
+    //    (logo click, breadcrumb home, programmatic redirects).
+    if (typeof frappe.set_route === "function" && !frappe.set_route.__cn_patched) {
+      const _original_set_route = frappe.set_route.bind(frappe);
+
+      frappe.set_route = function () {
+        const args = Array.prototype.slice.call(arguments);
+        const first = args[0];
+
+        // Intercept bare home calls: "", "workspace", "/", or no args
+        const is_home = (
+          args.length === 0 ||
+          first === "" ||
+          first === "/" ||
+          (typeof first === "string" && first.toLowerCase() === "workspace")
+        );
+
+        if (is_home) {
+          const route = get_first_accessible_route();
+          if (route) {
+            // Call original with our target instead
+            return _original_set_route(route.replace(/^\/app\//, ""));
+          }
+        }
+
+        // Everything else passes through unchanged
+        return _original_set_route.apply(frappe, args);
+      };
+
+      frappe.set_route.__cn_patched = true;
+    }
+
+    // C) Also patch frappe.router.push if it exists (Frappe v15+)
+    if (frappe.router && typeof frappe.router.push === "function" && !frappe.router.push.__cn_patched) {
+      const _original_push = frappe.router.push.bind(frappe.router);
+
+      frappe.router.push = function (route) {
+        const is_home = (
+          !route ||
+          route === "" ||
+          route === "/" ||
+          route === "/app" ||
+          route === "/app/" ||
+          (typeof route === "string" && route.toLowerCase().replace(/^\/app\//, "") === "workspace")
+        );
+
+        if (is_home) {
+          const target = get_first_accessible_route();
+          if (target) return _original_push(target);
+        }
+
+        return _original_push(route);
+      };
+
+      frappe.router.push.__cn_patched = true;
+    }
+  }
+
+  // ── Logo / home link click interception ──
+  // Frappe's logo <a class="navbar-home"> has its own click handler
+  // that calls frappe.set_route(""). We intercept at the DOM level
+  // with capture:true so we run before Frappe's listener.
+  function patch_logo_click() {
+    document.addEventListener("click", function (e) {
+      const link = e.target.closest(".navbar-home, .navbar-brand");
+      if (!link) return;
+
+      const target = get_first_accessible_route();
+      if (!target) return;
+
+      // Stop Frappe's own listener from also firing
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      spa_navigate(target);
+    }, true /* capture — runs before Frappe's bubble-phase handler */);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SECTION 10 — ROUTE CHANGE HANDLER
   // ═══════════════════════════════════════════════════════════
 
   function on_route_change() {
+    // Override default /app landing before doing anything else
+    resolve_default_route();
     mount_sidebar();
     refresh_sidebar_active();
     mount_navbar();
@@ -873,6 +1089,15 @@
   // ═══════════════════════════════════════════════════════════
 
   function init() {
+    // 1. Patch Frappe internals FIRST — before any navigation fires
+    patch_frappe_default_route();
+
+    // 2. Intercept logo/brand clicks at capture phase
+    patch_logo_click();
+
+    // 3. Redirect away from bare /app on this load
+    resolve_default_route();
+
     mount_sidebar();
     mount_navbar();
     render_navbar();
@@ -892,7 +1117,7 @@
       );
       if (missing) mount_sidebar();
 
-      // Also re-mount navbar if Frappe destroyed it
+      // Re-mount navbar if Frappe destroyed it
       const nav_missing = !document.getElementById(NAVBAR_ID)
         || !document.body.contains(document.getElementById(NAVBAR_ID));
       if (nav_missing) { mount_navbar(); render_navbar(); }

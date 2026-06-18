@@ -9,8 +9,6 @@
   "naming_series",
   "supplier",
   "posting_date",
-  "tax_withholding_category",
-  "apply_tds",
   "column_break_wwei",
   "schedule_date",
   "company",
@@ -32,7 +30,6 @@
   "column_break_jvoe",
   "total",
   "net_total",
-  "tax_withholding_net_total",
   "section_break_stfe",
   "tax_category",
   "section_break_iteq",
@@ -99,20 +96,6 @@
    "options": "Company",
    "remember_last_selected_value": 1,
    "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "apply_tds",
-   "fieldtype": "Check",
-   "label": "Apply Tax Withholding Amount"
-  },
-  {
-   "depends_on": "eval: doc.apply_tds",
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Tax Withholding Category",
-   "options": "Tax Withholding Category"
   },
   {
    "default": "0",
@@ -190,15 +173,6 @@
    "fieldname": "total",
    "fieldtype": "Currency",
    "label": "Total",
-   "options": "currency",
-   "read_only": 1
-  },
-  {
-   "depends_on": "apply_tds",
-   "fieldname": "tax_withholding_net_total",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Tax Withholding Net Total",
    "options": "currency",
    "read_only": 1
   },
@@ -520,7 +494,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-15 17:08:26.703526",
+ "modified": "2026-06-18 12:22:40.440258",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Purchase Order",
