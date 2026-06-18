@@ -52,7 +52,7 @@ ROLES = [
     "_show_cr",
     "_show_staffing_master",
     "_show_other_service",
-    "_show_sales",
+    "_show_setup",
     "_show_email_inbox",
     "_show_e_sign",
     "_show_item,_show_coa",
@@ -1088,7 +1088,7 @@ def after_install():
     remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
-    seed_form_tours()
+    # seed_form_tours()
 
 
 import requests

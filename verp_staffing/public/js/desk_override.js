@@ -252,6 +252,14 @@
   // icon: Frappe SVG sprite id for the parent module header
   const SIDEBAR_CONFIG = [
     {
+      key: "setup",
+      label: "Setup Guide",
+      parent_type: "type_3",
+      route: "/app/setup",
+      role: "_show_setup",
+      icon: "icon-setting-gear"
+    },
+    {
       key: "staffing-master",
       label: "Staffing Master",
       parent_type: "type_2",
