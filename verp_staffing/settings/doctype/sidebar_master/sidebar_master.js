@@ -86,18 +86,12 @@ TYPE_DEFS.forEach((d) => (TYPE_MAP[d.value] = d));
 
 const CUSTOM_PAGES = [
 	{
-		key: "permission-manager",
-		name: "Permission Manager",
-		route: "/app/permission-manager",
-		icon: "icon-setting-gear",
-		type: "page",
-	},
-	{
 		key: "setup",
 		name: "Setup Guide",
 		route: "/app/setup",
 		icon: "icon-getting-started",
 		type: "page",
+		roles: ["_show_setup"],
 	},
 	{
 		key: "email-inbox",
@@ -106,13 +100,21 @@ const CUSTOM_PAGES = [
 		icon: "icon-mail",
 		type: "page",
 	},
-	{ key: "role", name: "Roles", route: "/app/role", icon: "icon-small-file", type: "page" },
 	{
 		key: "coa",
 		name: "Chart of Accounts",
 		route: "/app/account/view/tree",
 		icon: "icon-accounting",
 		type: "page",
+		roles: ["System Manager", "_show_accounting"],
+	},
+	{
+		key: "pending-pe-requests",
+		name: "Pending PE Requests",
+		route: "/app/pending-pe-requests",
+		icon: "icon-accounting",
+		type: "page",
+		roles: ["System Manager", "_show_accounting"],
 	},
 ];
 
@@ -150,7 +152,11 @@ frappe.ui.form.on("Sidebar Master", {
 		// ── Guard: no empty labels ────────────────────────────────────────────
 		for (const s of sb_sections) {
 			if (!s.label || !s.label.trim()) {
-				frappe.throw(__("One or more sections have an empty label. Please fill in all labels before saving."));
+				frappe.throw(
+					__(
+						"One or more sections have an empty label. Please fill in all labels before saving.",
+					),
+				);
 				return false;
 			}
 		}
@@ -179,9 +185,9 @@ frappe.ui.form.on("Sidebar Master", {
 				frappe.throw(
 					__(
 						`Two sections produce the same key <strong>"${k}"</strong>: ` +
-						`<b>"${seen_keys.get(k)}"</b> and <b>"${s.label}"</b>. ` +
-						`Please rename one of them so their keys are unique.`
-					)
+							`<b>"${seen_keys.get(k)}"</b> and <b>"${s.label}"</b>. ` +
+							`Please rename one of them so their keys are unique.`,
+					),
 				);
 				return false;
 			}
@@ -201,9 +207,9 @@ frappe.ui.form.on("Sidebar Master", {
 				frappe.throw(
 					__(
 						`The group label <b>"${s.label}"</b>` +
-						`is making conflicts with the existing item <b>"${conflict.name}"</b>. ` +
-						`Please choose a different label for this group.`
-					)
+							`is making conflicts with the existing item <b>"${conflict.name}"</b>. ` +
+							`Please choose a different label for this group.`,
+					),
 				);
 				return false;
 			}
@@ -212,11 +218,13 @@ frappe.ui.form.on("Sidebar Master", {
 		save_canvas_to_json(frm);
 	},
 	after_save(frm) {
-		if (typeof window.csb_reload === "function") {
-			window.csb_reload();
-		} else {
-			window.location.reload();
-		}
+		setTimeout(() => {
+			if (typeof window.csb_reload === "function") {
+				window.csb_reload();
+			} else {
+				window.location.reload();
+			}
+		}, 300);
 	},
 });
 
@@ -551,7 +559,8 @@ function sb_used_shortcuts(exclude_id) {
 
 function sb_update_canvas_count() {
 	const el = document.getElementById("sb-canvas-count");
-	if (el) el.textContent = sb_sections.length + " section" + (sb_sections.length !== 1 ? "s" : "");
+	if (el)
+		el.textContent = sb_sections.length + " section" + (sb_sections.length !== 1 ? "s" : "");
 }
 
 function sb_palette_drag_start() {
@@ -572,7 +581,19 @@ function sb_child_zone_enter(acceptingSection) {
 function sb_child_zone_leave() {
 	const b = document.getElementById("sb-canvas-body");
 	if (b) b.classList.remove("child-zone-active");
-	document.querySelectorAll(".sb-section").forEach((el) => el.classList.remove("accepting-child"));
+	document
+		.querySelectorAll(".sb-section")
+		.forEach((el) => el.classList.remove("accepting-child"));
+}
+
+function user_has_page_access(page) {
+	if (!page.roles || !page.roles.length) {
+		return true;
+	}
+
+	const userRoles = frappe.user_roles || [];
+
+	return page.roles.some((role) => userRoles.includes(role));
 }
 
 // ─── LOAD PALETTE ────────────────────────────────────────────────────────────
@@ -600,7 +621,11 @@ async function load_palette_items() {
 			});
 		});
 	} catch (e) {
-		frappe.msgprint({ title: __("Warning"), message: __("Could not load doctypes."), indicator: "orange" });
+		frappe.msgprint({
+			title: __("Warning"),
+			message: __("Could not load doctypes."),
+			indicator: "orange",
+		});
 	}
 
 	try {
@@ -608,7 +633,12 @@ async function load_palette_items() {
 		if (admin) {
 			const res = await frappe.call({
 				method: "frappe.client.get_list",
-				args: { doctype: "Report", fields: ["name", "report_type"], limit_page_length: 300, order_by: "name asc" },
+				args: {
+					doctype: "Report",
+					fields: ["name", "report_type"],
+					limit_page_length: 300,
+					order_by: "name asc",
+				},
 			});
 			reports = res?.message || [];
 		} else {
@@ -625,9 +655,18 @@ async function load_palette_items() {
 				module: "Reports",
 			});
 		});
-	} catch (e) { /* silent */ }
+	} catch (e) {
+		/* silent */
+	}
 
-	CUSTOM_PAGES.forEach((p) => sb_palette_items.push({ ...p, module: "Pages" }));
+	CUSTOM_PAGES.forEach((p) => {
+		if (!user_has_page_access(p)) return;
+
+		sb_palette_items.push({
+			...p,
+			module: "Pages",
+		});
+	});
 
 	const cnt = document.getElementById("sb-palette-count");
 	if (cnt) cnt.textContent = sb_palette_items.length + " items";
@@ -644,7 +683,12 @@ function render_palette() {
 
 	const filtered = sb_palette_items.filter((item) => {
 		if (sb_filter !== "all" && item.type !== sb_filter) return false;
-		if (q && !item.name.toLowerCase().includes(q) && !(item.module || "").toLowerCase().includes(q)) return false;
+		if (
+			q &&
+			!item.name.toLowerCase().includes(q) &&
+			!(item.module || "").toLowerCase().includes(q)
+		)
+			return false;
 		return true;
 	});
 
@@ -660,37 +704,44 @@ function render_palette() {
 	});
 
 	list.innerHTML = "";
-	Object.keys(groups).sort().forEach((group) => {
-		const lbl = document.createElement("div");
-		lbl.className = "sb-group-label";
-		lbl.textContent = group;
-		list.appendChild(lbl);
+	Object.keys(groups)
+		.sort()
+		.forEach((group) => {
+			const lbl = document.createElement("div");
+			lbl.className = "sb-group-label";
+			lbl.textContent = group;
+			list.appendChild(lbl);
 
-		groups[group].forEach((item) => {
-			const div = document.createElement("div");
-			div.className = "sb-palette-item" + (used.has(item.key) ? " in-use" : "");
-			div.draggable = !used.has(item.key);
-			div.dataset.key = item.key;
-			const ic = item.type === "report" ? "uil uil-chart" : item.type === "page" ? "uil uil-link" : "uil uil-table";
-			div.innerHTML = `
+			groups[group].forEach((item) => {
+				const div = document.createElement("div");
+				div.className = "sb-palette-item" + (used.has(item.key) ? " in-use" : "");
+				div.draggable = !used.has(item.key);
+				div.dataset.key = item.key;
+				const ic =
+					item.type === "report"
+						? "uil uil-chart"
+						: item.type === "page"
+							? "uil uil-link"
+							: "uil uil-table";
+				div.innerHTML = `
 				<div class="pi-icon"><i class="${ic} icon"></i></div>
 				<div class="pi-info">
 					<div class="pi-name" title="${frappe.utils.escape_html(item.name)}">${frappe.utils.escape_html(item.name)}</div>
 					<div class="pi-type">${item.type}</div>
 				</div>
 			`;
-			div.addEventListener("dragstart", (e) => {
-				sb_drag = { kind: "palette", item };
-				e.dataTransfer.effectAllowed = "copy";
-				sb_palette_drag_start();
+				div.addEventListener("dragstart", (e) => {
+					sb_drag = { kind: "palette", item };
+					e.dataTransfer.effectAllowed = "copy";
+					sb_palette_drag_start();
+				});
+				div.addEventListener("dragend", () => {
+					sb_drag = null;
+					sb_palette_drag_end();
+				});
+				list.appendChild(div);
 			});
-			div.addEventListener("dragend", () => {
-				sb_drag = null;
-				sb_palette_drag_end();
-			});
-			list.appendChild(div);
 		});
-	});
 }
 
 // ─── CANVAS ──────────────────────────────────────────────────────────────────
@@ -842,7 +893,8 @@ function render_section(sec, idx, container) {
 					${typedef.icon} ${typedef.short}
 				</span>
 				<div class="sh-type-dropdown" id="td-${sec._id}">
-					${TYPE_DEFS.map((d) => `
+					${TYPE_DEFS.map(
+						(d) => `
 						<div class="sh-type-option${sec.parent_type === d.value ? " active" : ""}" data-type="${d.value}">
 							<span class="sh-type-option-icon">${d.icon}</span>
 							<div class="sh-type-option-body">
@@ -850,7 +902,8 @@ function render_section(sec, idx, container) {
 								<div class="sh-type-option-desc">${d.desc}</div>
 							</div>
 						</div>
-					`).join("")}
+					`,
+					).join("")}
 				</div>
 			</div>`;
 
@@ -872,7 +925,9 @@ function render_section(sec, idx, container) {
 	`;
 
 	// ── Icon ──────────────────────────────────────────────────────────────────
-	hdr.querySelector(".sh-icon-btn").addEventListener("click", () => open_icon_picker(sec._id, null));
+	hdr.querySelector(".sh-icon-btn").addEventListener("click", () =>
+		open_icon_picker(sec._id, null),
+	);
 
 	// ── Label ─────────────────────────────────────────────────────────────────
 	// The key is always derived from the label automatically — users never type
@@ -942,9 +997,14 @@ function render_section(sec, idx, container) {
 
 	// ── Section drag ──────────────────────────────────────────────────────────
 	const grip = hdr.querySelector(".sh-drag");
-	grip.addEventListener("mousedown", () => { div.draggable = true; });
+	grip.addEventListener("mousedown", () => {
+		div.draggable = true;
+	});
 	div.addEventListener("dragstart", (e) => {
-		if (!div.draggable) { e.preventDefault(); return; }
+		if (!div.draggable) {
+			e.preventDefault();
+			return;
+		}
 		sb_drag = { kind: "section", idx };
 		e.dataTransfer.effectAllowed = "move";
 		setTimeout(() => div.classList.add("section-dragging"), 0);
@@ -952,14 +1012,18 @@ function render_section(sec, idx, container) {
 	div.addEventListener("dragend", () => {
 		div.draggable = false;
 		div.classList.remove("section-dragging");
-		document.querySelectorAll(".sb-section").forEach((s) => s.classList.remove("drag-over-section"));
+		document
+			.querySelectorAll(".sb-section")
+			.forEach((s) => s.classList.remove("drag-over-section"));
 		if (sb_drag?.kind === "section") sb_drag = null;
 	});
 	div.addEventListener("dragover", (e) => {
 		if (!sb_drag || sb_drag.kind !== "section") return;
 		if (e.target.closest(".sb-children")) return;
 		e.preventDefault();
-		document.querySelectorAll(".sb-section").forEach((s) => s.classList.remove("drag-over-section"));
+		document
+			.querySelectorAll(".sb-section")
+			.forEach((s) => s.classList.remove("drag-over-section"));
 		div.classList.add("drag-over-section");
 	});
 	div.addEventListener("dragleave", (e) => {
@@ -970,7 +1034,8 @@ function render_section(sec, idx, container) {
 		e.preventDefault();
 		div.classList.remove("drag-over-section");
 		if (!sb_drag || sb_drag.kind !== "section") return;
-		const from = sb_drag.idx, to = idx;
+		const from = sb_drag.idx,
+			to = idx;
 		sb_drag = null;
 		if (from === to) return;
 		const [moved] = sb_sections.splice(from, 1);
@@ -990,9 +1055,13 @@ function render_section(sec, idx, container) {
 		div.appendChild(make_children_zone(sec, div));
 	}
 
-	document.addEventListener("click", () => {
-		hdr.querySelector(".sh-type-dropdown")?.classList.remove("open");
-	}, { once: false, capture: false });
+	document.addEventListener(
+		"click",
+		() => {
+			hdr.querySelector(".sh-type-dropdown")?.classList.remove("open");
+		},
+		{ once: false, capture: false },
+	);
 
 	container.appendChild(div);
 }
@@ -1010,7 +1079,9 @@ function make_children_zone(sec, sectionEl) {
 		bar.className = "sb-children-drop-bar";
 		bar.innerHTML = `<span>↓ Drop here to add child link</span>`;
 		zone.appendChild(bar);
-		sec.children.forEach((child, ci) => zone.appendChild(make_child_el(sec, child, ci, refresh_zone)));
+		sec.children.forEach((child, ci) =>
+			zone.appendChild(make_child_el(sec, child, ci, refresh_zone)),
+		);
 		const divider = sectionEl.querySelector(".sd-count");
 		if (divider) divider.textContent = sec.children.length || "none";
 	};
@@ -1025,25 +1096,38 @@ function make_children_zone(sec, sectionEl) {
 	zone.addEventListener("dragover", (e) => {
 		if (!sb_drag) return;
 		if (sb_drag.kind === "palette") {
-			e.preventDefault(); e.stopPropagation();
+			e.preventDefault();
+			e.stopPropagation();
 			zone.classList.add("drop-over");
 		} else if (sb_drag.kind === "child" && sb_drag.sec === sec) {
 			e.preventDefault();
 		}
 	});
 	zone.addEventListener("dragleave", (e) => {
-		if (!zone.contains(e.relatedTarget)) { zone.classList.remove("drop-over"); sb_child_zone_leave(); }
+		if (!zone.contains(e.relatedTarget)) {
+			zone.classList.remove("drop-over");
+			sb_child_zone_leave();
+		}
 	});
 	zone.addEventListener("drop", (e) => {
 		zone.classList.remove("drop-over");
 		sb_child_zone_leave();
 		if (!sb_drag || sb_drag.kind !== "palette") return;
-		e.preventDefault(); e.stopPropagation();
+		e.preventDefault();
+		e.stopPropagation();
 		const item = sb_drag.item;
 		sb_drag = null;
 		sb_palette_drag_end();
 		if (sb_used_keys().has(item.key)) return;
-		sec.children.push({ key: item.key, name: item.name, type: item.type, route: item.route, doctype: item.doctype || null, icon: item.icon || "icon-setting-gear", shortcut: "" });
+		sec.children.push({
+			key: item.key,
+			name: item.name,
+			type: item.type,
+			route: item.route,
+			doctype: item.doctype || null,
+			icon: item.icon || "icon-setting-gear",
+			shortcut: "",
+		});
 		refresh_zone();
 		render_palette();
 		sb_mark_dirty();
@@ -1089,9 +1173,14 @@ function make_child_el(sec, child, ci, refresh_zone) {
 	});
 
 	const grip = li.querySelector(".ci-drag");
-	grip.addEventListener("mousedown", () => { li.draggable = true; });
+	grip.addEventListener("mousedown", () => {
+		li.draggable = true;
+	});
 	li.addEventListener("dragstart", (e) => {
-		if (!li.draggable) { e.preventDefault(); return; }
+		if (!li.draggable) {
+			e.preventDefault();
+			return;
+		}
 		e.stopPropagation();
 		sb_drag = { kind: "child", sec, ci };
 		e.dataTransfer.effectAllowed = "move";
@@ -1100,20 +1189,27 @@ function make_child_el(sec, child, ci, refresh_zone) {
 	li.addEventListener("dragend", () => {
 		li.draggable = false;
 		li.classList.remove("child-dragging");
-		li.closest(".sb-children")?.querySelectorAll(".child-drag-over").forEach((el) => el.classList.remove("child-drag-over"));
+		li.closest(".sb-children")
+			?.querySelectorAll(".child-drag-over")
+			.forEach((el) => el.classList.remove("child-drag-over"));
 		if (sb_drag?.kind === "child") sb_drag = null;
 	});
 	li.addEventListener("dragover", (e) => {
 		if (!sb_drag || sb_drag.kind !== "child" || sb_drag.sec !== sec) return;
-		e.preventDefault(); e.stopPropagation();
-		li.closest(".sb-children")?.querySelectorAll(".child-drag-over").forEach((el) => el.classList.remove("child-drag-over"));
+		e.preventDefault();
+		e.stopPropagation();
+		li.closest(".sb-children")
+			?.querySelectorAll(".child-drag-over")
+			.forEach((el) => el.classList.remove("child-drag-over"));
 		if (sb_drag.ci !== ci) li.classList.add("child-drag-over");
 	});
 	li.addEventListener("drop", (e) => {
-		e.preventDefault(); e.stopPropagation();
+		e.preventDefault();
+		e.stopPropagation();
 		li.classList.remove("child-drag-over");
 		if (!sb_drag || sb_drag.kind !== "child" || sb_drag.sec !== sec) return;
-		const from = sb_drag.ci, to = ci;
+		const from = sb_drag.ci,
+			to = ci;
 		sb_drag = null;
 		if (from === to) return;
 		const [moved] = sec.children.splice(from, 1);
@@ -1176,7 +1272,9 @@ function bind_shortcut_popup() {
 			if (parts.length === 1) {
 				keysEl.innerHTML = `<span class="sb-sp-key">${parts[0]}</span>`;
 			} else {
-				keysEl.innerHTML = parts.map((p) => `<span class="sb-sp-key">${p}</span>`).join(`<span class="sb-sp-plus">+</span>`);
+				keysEl.innerHTML = parts
+					.map((p) => `<span class="sb-sp-key">${p}</span>`)
+					.join(`<span class="sb-sp-plus">+</span>`);
 			}
 			keysEl.classList.remove("error", "recording");
 			applyBtn.disabled = false;
@@ -1194,7 +1292,9 @@ function bind_shortcut_popup() {
 		reset_chord();
 		const ctx = sb_sp_context;
 		if (!ctx) return;
-		const exclude_id = ctx.child ? ctx.sec._id + ":" + ctx.sec.children.indexOf(ctx.child) : ctx.sec._id;
+		const exclude_id = ctx.child
+			? ctx.sec._id + ":" + ctx.sec.children.indexOf(ctx.child)
+			: ctx.sec._id;
 		const used = sb_used_shortcuts(exclude_id);
 		if (used.has(shortcut.toLowerCase())) {
 			show_error(`"${shortcut}" is already used by another item`);
@@ -1205,35 +1305,53 @@ function bind_shortcut_popup() {
 		errorEl.textContent = "";
 	}
 	function handle_key(e) {
-		e.preventDefault(); e.stopPropagation();
-		if (e.key === "Escape") { close_popup(); return; }
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.key === "Escape") {
+			close_popup();
+			return;
+		}
 		if (MODIFIER_KEYS.has(e.key)) return;
 		const raw_key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
 		let shortcut = "";
 		if (e.altKey) {
-			if (raw_key.toLowerCase() === "n") { show_error('"N" is reserved and cannot be used'); return; }
+			if (raw_key.toLowerCase() === "n") {
+				show_error('"N" is reserved and cannot be used');
+				return;
+			}
 			shortcut = "Alt+" + raw_key;
-			reset_chord(); commit_shortcut(shortcut); return;
+			reset_chord();
+			commit_shortcut(shortcut);
+			return;
 		}
 		if (e.ctrlKey) {
-			if (raw_key.toLowerCase() === "n") { show_error('"N" is reserved and cannot be used'); return; }
+			if (raw_key.toLowerCase() === "n") {
+				show_error('"N" is reserved and cannot be used');
+				return;
+			}
 			shortcut = "Ctrl+" + raw_key;
-			reset_chord(); commit_shortcut(shortcut); return;
+			reset_chord();
+			commit_shortcut(shortcut);
+			return;
 		}
 		if (raw_key.toLowerCase() === "n" && !chord_first) {
-			show_error('"N" alone is reserved. Use it as the second key of a chord (e.g. J+N) or with Alt/Ctrl.');
+			show_error(
+				'"N" alone is reserved. Use it as the second key of a chord (e.g. J+N) or with Alt/Ctrl.',
+			);
 			return;
 		}
 		if (chord_first) {
 			shortcut = chord_first + "+" + raw_key;
-			reset_chord(); commit_shortcut(shortcut);
+			reset_chord();
+			commit_shortcut(shortcut);
 		} else {
 			chord_first = raw_key;
 			render_waiting_for_second(chord_first);
 			chord_timer = setTimeout(() => {
 				if (!chord_first) return;
 				const single = chord_first;
-				reset_chord(); commit_shortcut(single);
+				reset_chord();
+				commit_shortcut(single);
 			}, CHORD_WAIT_MS);
 		}
 	}
@@ -1272,8 +1390,10 @@ function bind_shortcut_popup() {
 		set_keys_display(sb_sp_pending);
 		errorEl.textContent = "";
 		const r = anchor.getBoundingClientRect();
-		const pw = 340, ph = 250;
-		let left = r.left, top = r.bottom + 6;
+		const pw = 340,
+			ph = 250;
+		let left = r.left,
+			top = r.bottom + 6;
 		if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
 		if (top + ph > window.innerHeight - 10) top = r.top - ph - 6;
 		popup.style.left = Math.max(8, left) + "px";
@@ -1311,18 +1431,38 @@ function open_icon_picker(section_id, child_ctx) {
 	const dialog = new frappe.ui.Dialog({
 		title: __("Choose Icon"),
 		fields: [
-			{ fieldtype: "Data", fieldname: "icon_search", label: __("Search Icons"), placeholder: "e.g. user, mail, file…" },
-			{ fieldtype: "HTML", fieldname: "icon_grid_html", options: `<div class="sb-icon-grid" id="sb-icon-picker-grid">${build_icon_grid_html("")}</div>` },
+			{
+				fieldtype: "Data",
+				fieldname: "icon_search",
+				label: __("Search Icons"),
+				placeholder: "e.g. user, mail, file…",
+			},
+			{
+				fieldtype: "HTML",
+				fieldname: "icon_grid_html",
+				options: `<div class="sb-icon-grid" id="sb-icon-picker-grid">${build_icon_grid_html("")}</div>`,
+			},
 		],
 		primary_action_label: __("Apply"),
 		primary_action() {
-			if (!icon_picker_selected) { dialog.hide(); return; }
+			if (!icon_picker_selected) {
+				dialog.hide();
+				return;
+			}
 			if (section_id) {
 				const sec = sb_sections.find((s) => s._id === section_id);
-				if (sec) { sec.icon = icon_picker_selected; render_canvas(); sb_mark_dirty(); }
+				if (sec) {
+					sec.icon = icon_picker_selected;
+					render_canvas();
+					sb_mark_dirty();
+				}
 			} else if (child_ctx) {
 				const child = child_ctx.sec.children[child_ctx.ci];
-				if (child) { child.icon = icon_picker_selected; child_ctx.refresh_zone(); sb_mark_dirty(); }
+				if (child) {
+					child.icon = icon_picker_selected;
+					child_ctx.refresh_zone();
+					sb_mark_dirty();
+				}
 			}
 			dialog.hide();
 		},
@@ -1336,13 +1476,23 @@ function open_icon_picker(section_id, child_ctx) {
 }
 
 function build_icon_grid_html(q) {
-	const list = q ? FRAPPE_ICONS.filter((i) => i.label.toLowerCase().includes(q.toLowerCase()) || i.id.includes(q.toLowerCase())) : FRAPPE_ICONS;
-	return list.map((ic) => `
+	const list = q
+		? FRAPPE_ICONS.filter(
+				(i) =>
+					i.label.toLowerCase().includes(q.toLowerCase()) ||
+					i.id.includes(q.toLowerCase()),
+			)
+		: FRAPPE_ICONS;
+	return list
+		.map(
+			(ic) => `
 		<div class="sb-icon-chip${ic.id === icon_picker_selected ? " selected" : ""}" data-icon="${ic.id}">
 			<svg class="icon icon-md"><use href="#${ic.id}"></use></svg>
 			<span>${ic.label}</span>
 		</div>
-	`).join("");
+	`,
+		)
+		.join("");
 }
 
 function bind_icon_chips(dialog) {
@@ -1357,13 +1507,19 @@ function bind_icon_chips(dialog) {
 
 function bind_toolbar(frm) {
 	const wrapper = frm.get_field("sidebar_builder").$wrapper;
-	wrapper.find(".sb-tab").off("click").on("click", function () {
-		wrapper.find(".sb-tab").removeClass("active");
-		$(this).addClass("active");
-		sb_filter = $(this).data("filter");
-		render_palette();
-	});
-	wrapper.find("#sb-search").off("input").on("input", () => render_palette());
+	wrapper
+		.find(".sb-tab")
+		.off("click")
+		.on("click", function () {
+			wrapper.find(".sb-tab").removeClass("active");
+			$(this).addClass("active");
+			sb_filter = $(this).data("filter");
+			render_palette();
+		});
+	wrapper
+		.find("#sb-search")
+		.off("input")
+		.on("input", () => render_palette());
 	document.getElementById("sb-guide-close")?.addEventListener("click", () => {
 		document.getElementById("sb-guide-banner").style.display = "none";
 	});

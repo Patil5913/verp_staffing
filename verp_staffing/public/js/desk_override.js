@@ -14,36 +14,17 @@
 //    remains fully readable. The tooltip shows: label + shortcut badge.
 //    "N" alone is reserved.
 //
-//  NO_PLUS_DOCTYPES:
-//    Doctypes listed here will NOT show the quick-create "+" button in the sidebar.
-//    The same set is used to suppress the "New" button on those doctypes'
-//    list pages. Edit this array to add/remove items — no other code changes
-//    needed. Use the palette key format (lowercase, hyphens), e.g. "bank-account-type".
-//
 //  FEATURES:
 //    ✓ type_2 toggle is pure DOM/CSS — zero page reload
-//    ✓ "+" quick-create button on every doctype link (except NO_PLUS_DOCTYPES)
+//    ✓ "+" quick-create button on every doctype link
 //    ✓ Config cached in localStorage (TTL 5 min) per user
 //    ✓ Logo + home navigation redirected to first accessible route
 //    ✓ "Customize Sidebar" button at bottom of sidebar
 //    ✓ Full-width is on by default; "Toggle Full Width" navbar button hidden
-//    ✓ List-page New button hidden for doctypes in NO_PLUS_DOCTYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
 (function () {
 	"use strict";
-
-	// ─── NO QUICK-CREATE / NO NEW-BUTTON LIST ─────────────────────────────────
-	//
-	// Add the palette key (slug format) of any doctype/item for which you want to:
-	//   1. Hide the "+" quick-create button in the sidebar
-	//   2. Hide the "New" button on that doctype's list page
-	//
-	const NO_PLUS_DOCTYPES = new Set([
-		"Onboardings",
-		"Bank Account Type",
-		"Bank Account Subtype",
-	]);
 
 	// ─── FULL WIDTH DEFAULT ────────────────────────────────────────────────────
 	// Apply full-width immediately and hide the toggle button permanently.
@@ -251,15 +232,6 @@
 		return btn;
 	}
 
-	// Returns true if the "+" quick-create button should be shown for this key.
-	// Checks NO_PLUS_DOCTYPES — a single Set that drives both sidebar and list-page suppression.
-	function should_show_plus(doctype, item) {
-		if (NO_PLUS_DOCTYPES.has(doctype)) return false;
-		if (!item || item.type !== "doctype" || !item.doctype) return false;
-		if (item.issingle) return false;
-		return true;
-	}
-
 	// ─── SHORTCUT TOOLTIP ─────────────────────────────────────────────────────
 	// Shortcut is shown in a native-style tooltip on hover.
 	// No badge is injected into the label — labels remain full-width.
@@ -402,14 +374,7 @@
 
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => a.appendChild(el));
 
-		// Only add "+" if key is not in NO_PLUS_DOCTYPES
-		if (
-			should_show_plus(cfg.doctype, {
-				type: cfg.link_type,
-				doctype: cfg.doctype,
-				issingle: cfg.issingle,
-			})
-		) {
+		if (cfg.link_type === "doctype" && cfg.doctype && !cfg.issingle) {
 			a.appendChild(make_plus_btn(cfg.doctype));
 		}
 
@@ -464,8 +429,7 @@
 
 				make_item_inner(item.icon, item.name).forEach((el) => ca.appendChild(el));
 
-				// Only add "+" if key is not in NO_PLUS_DOCTYPES
-				if (should_show_plus(child.doctype, item)) {
+				if (item.type === "doctype" && item.doctype && !item.issingle) {
 					ca.appendChild(make_plus_btn(item.doctype));
 				}
 				attach_shortcut_tooltip(ca, item.name, item.shortcut);
@@ -551,8 +515,7 @@
 
 			make_item_inner(item.icon, item.name).forEach((el) => a.appendChild(el));
 
-			// Only add "+" if key is not in NO_PLUS_DOCTYPES
-			if (should_show_plus(child.doctype, item)) {
+			if (item.type === "doctype" && item.doctype && !item.issingle) {
 				a.appendChild(make_plus_btn(item.doctype));
 			}
 			attach_shortcut_tooltip(a, item.name, item.shortcut);

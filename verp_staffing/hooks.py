@@ -270,6 +270,12 @@ doc_events = {
     "GL Entry": {
         "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
     },
+    "Navbar Settings": {
+        "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
+    },
+    "ERP Configuration": {
+        "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
+    }
 }
 
 # Scheduled Tasks

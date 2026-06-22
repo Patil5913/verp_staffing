@@ -44,20 +44,8 @@ ROLES = [
     "OnBoarding Person",
     "CR",
     "Account Person",
-    "_show_sales",
-    "_show_lead",
-    "_show_technical",
-    "_show_marketing",
-    "_show_employees",
-    "_show_onboarding",
-    "_show_cr",
-    "_show_staffing_master",
-    "_show_other_service",
     "_show_setup",
-    "_show_email_inbox",
-    "_show_e_sign",
-    "_show_item,_show_coa",
-    "_show_pe_request",
+    "_show_accounting",
 ]
 
 PERM_FIELDS = [
@@ -486,6 +474,7 @@ ROLE_PERMISSIONS = {
     "Technical Coordinator": {
         "RUC": ["read", "write", "create", "select"],
         "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
         "Training": ["read", "write", "create", "select"],
         "JDC": ["read", "write", "create", "select"],
         "Resume": ["read", "write", "create", "select"],
@@ -498,6 +487,7 @@ ROLE_PERMISSIONS = {
     "Technical Manager": {
         "RUC": ["read", "write", "create", "select"],
         "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
         "Training": ["read", "write", "create", "select"],
         "JDC": ["read", "write", "create", "select"],
         "Resume": ["read", "write", "create", "select"],
@@ -510,6 +500,7 @@ ROLE_PERMISSIONS = {
     "Technical Master Manager": {
         "RUC": ["read", "write", "create", "select"],
         "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
         "Training": ["read", "write", "create", "select"],
         "JDC": ["read", "write", "create", "select"],
         "Resume": ["read", "write", "create", "select"],
@@ -1072,6 +1063,14 @@ ROLE_PERMISSIONS = {
         "Agreement": ["select", "read"],
         "Pdf Agreement Template": ["select", "read"],
     },
+    "_show_sidebar_master": {
+        "Sidebar Master": [
+            "select",
+            "read",
+            "write",
+            "create"
+        ],
+    }
 }
 
 
@@ -2125,6 +2124,7 @@ FORM_TOURS = {
 
 
 def after_install():
+    seed_master_sidebar_config()
     seed_services_and_departments()
     setup_navbar_settings()
     seed_website_setting()
@@ -2139,6 +2139,525 @@ def after_install():
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     # seed_form_tours()
+
+
+def seed_master_sidebar_config():
+    """
+    Create default sidebar configuration for Master user
+    if it doesn't already exist.
+    """
+
+    SIDEBAR_CONFIG = [
+        {
+            "key": "setup",
+            "label": "Setup Guide",
+            "icon": "icon-getting-started",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/setup",
+            "link_type": "page",
+            "doctype": null,  # noqa: F821
+        },
+        {
+            "key": "users",
+            "label": "Users",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "user",
+                    "name": "User",
+                    "type": "doctype",
+                    "route": "/app/user",
+                    "doctype": "User",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "employee",
+                    "name": "Employee",
+                    "type": "doctype",
+                    "route": "/app/employee",
+                    "doctype": "Employee",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "role",
+                    "name": "Role",
+                    "type": "doctype",
+                    "route": "/app/role",
+                    "doctype": "Role",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "outsource",
+                    "name": "Outsource",
+                    "type": "doctype",
+                    "route": "/app/outsource",
+                    "doctype": "Outsource",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "staffing-master",
+            "label": "Staffing Master",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "department",
+                    "name": "Department",
+                    "type": "doctype",
+                    "route": "/app/department",
+                    "doctype": "Department",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "hierarchy",
+                    "name": "Hierarchy",
+                    "type": "doctype",
+                    "route": "/app/hierarchy",
+                    "doctype": "Hierarchy",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "email-domain",
+                    "name": "Email Domain",
+                    "type": "doctype",
+                    "route": "/app/email-domain",
+                    "doctype": "Email Domain",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "email-account",
+                    "name": "Email Account",
+                    "type": "doctype",
+                    "route": "/app/email-account",
+                    "doctype": "Email Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "erp-configuration",
+                    "name": "ERP Configuration",
+                    "type": "doctype",
+                    "route": "/app/erp-configuration/ERP%20Configuration",
+                    "doctype": "ERP Configuration",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "email-inbox",
+            "label": "Email Inbox",
+            "icon": "icon-mail",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/email-inbox",
+            "link_type": "page",
+            "doctype": null,  # noqa: F821
+        },
+        {
+            "key": "lead",
+            "label": "Lead",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/lead",
+            "link_type": "doctype",
+            "doctype": "Lead",
+        },
+        {
+            "key": "sales",
+            "label": "Sales",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "opportunity",
+                    "name": "Opportunity",
+                    "type": "doctype",
+                    "route": "/app/opportunity",
+                    "doctype": "Opportunity",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "customer",
+                    "name": "Customer",
+                    "type": "doctype",
+                    "route": "/app/customer",
+                    "doctype": "Customer",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "technical",
+            "label": "Technical",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "resume",
+                    "name": "Resume",
+                    "type": "doctype",
+                    "route": "/app/resume",
+                    "doctype": "Resume",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "ruc",
+                    "name": "RUC",
+                    "type": "doctype",
+                    "route": "/app/ruc",
+                    "doctype": "RUC",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "jdc",
+                    "name": "JDC",
+                    "type": "doctype",
+                    "route": "/app/jdc",
+                    "doctype": "JDC",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "cover-letter",
+                    "name": "Cover Letter",
+                    "type": "doctype",
+                    "route": "/app/cover-letter",
+                    "doctype": "Cover Letter",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "training",
+                    "name": "Training",
+                    "type": "doctype",
+                    "route": "/app/training",
+                    "doctype": "Training",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "technical-other-services",
+                    "name": "Technical Other Services",
+                    "type": "doctype",
+                    "route": "/app/technical-other-services",
+                    "doctype": "Technical Other Services",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "marketings",
+            "label": "Marketings",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "marketing",
+                    "name": "Marketing",
+                    "type": "doctype",
+                    "route": "/app/marketing",
+                    "doctype": "Marketing",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "interview",
+                    "name": "Interview",
+                    "type": "doctype",
+                    "route": "/app/interview",
+                    "doctype": "Interview",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "marketing-other-services",
+                    "name": "Marketing Other Services",
+                    "type": "doctype",
+                    "route": "/app/marketing-other-services",
+                    "doctype": "Marketing Other Services",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "cr",
+            "label": "CR",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/cr",
+            "link_type": "doctype",
+            "doctype": "CR",
+        },
+        {
+            "key": "onboardings",
+            "label": "Onboardings",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/onboardings",
+            "link_type": "doctype",
+            "doctype": "Onboardings",
+        },
+        {
+            "key": "accounts-master",
+            "label": "Accounts Master",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "company",
+                    "name": "Company",
+                    "type": "doctype",
+                    "route": "/app/company",
+                    "doctype": "Company",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "fiscal-year",
+                    "name": "Fiscal Year",
+                    "type": "doctype",
+                    "route": "/app/fiscal-year",
+                    "doctype": "Fiscal Year",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "accounts-settings",
+                    "name": "Accounts Settings",
+                    "type": "doctype",
+                    "route": "/app/accounts-settings/Accounts%20Settings",
+                    "doctype": "Accounts Settings",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "pending-pe-requests",
+            "label": "Pending PE Requests",
+            "icon": "icon-accounting",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/pending-pe-requests",
+            "link_type": "page",
+            "doctype": null,  # noqa: F821
+        },
+        {
+            "key": "coa",
+            "label": "Chart of Accounts",
+            "icon": "icon-accounting",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/account/view/tree",
+            "link_type": "page",
+            "doctype": null,  # noqa: F821
+        },
+        {
+            "key": "accounting",
+            "label": "Accounting",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "account",
+                    "name": "Account",
+                    "type": "doctype",
+                    "route": "/app/account",
+                    "doctype": "Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "bank",
+                    "name": "Bank",
+                    "type": "doctype",
+                    "route": "/app/bank",
+                    "doctype": "Bank",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "bank-account",
+                    "name": "Bank Account",
+                    "type": "doctype",
+                    "route": "/app/bank-account",
+                    "doctype": "Bank Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "journal-entry",
+                    "name": "Journal Entry",
+                    "type": "doctype",
+                    "route": "/app/journal-entry",
+                    "doctype": "Journal Entry",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "payment-entry",
+                    "name": "Payment Entry",
+                    "type": "doctype",
+                    "route": "/app/payment-entry",
+                    "doctype": "Payment Entry",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "purchase-invoice",
+                    "name": "Purchase Invoice",
+                    "type": "doctype",
+                    "route": "/app/purchase-invoice",
+                    "doctype": "Purchase Invoice",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "sales-invoice",
+                    "name": "Sales Invoice",
+                    "type": "doctype",
+                    "route": "/app/sales-invoice",
+                    "doctype": "Sales Invoice",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "sales-order",
+                    "name": "Sales Order",
+                    "type": "doctype",
+                    "route": "/app/sales-order",
+                    "doctype": "Sales Order",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "subscription",
+                    "name": "Subscription",
+                    "type": "doctype",
+                    "route": "/app/subscription",
+                    "doctype": "Subscription",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "subscription-plan",
+                    "name": "Subscription Plan",
+                    "type": "doctype",
+                    "route": "/app/subscription-plan",
+                    "doctype": "Subscription Plan",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "purchase-order",
+                    "name": "Purchase Order",
+                    "type": "doctype",
+                    "route": "/app/purchase-order",
+                    "doctype": "Purchase Order",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "supplier",
+                    "name": "Supplier",
+                    "type": "doctype",
+                    "route": "/app/supplier",
+                    "doctype": "Supplier",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+        {
+            "key": "e-sign",
+            "label": "E Sign",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "route": "/app/e-sign",
+            "link_type": "doctype",
+            "doctype": "E Sign",
+        },
+        {
+            "key": "items",
+            "label": "Items",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "children": [
+                {
+                    "key": "item",
+                    "name": "Item",
+                    "type": "doctype",
+                    "route": "/app/item",
+                    "doctype": "Item",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "item-category",
+                    "name": "Item Category",
+                    "type": "doctype",
+                    "route": "/app/item-category",
+                    "doctype": "Item Category",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "uom",
+                    "name": "UOM",
+                    "type": "doctype",
+                    "route": "/app/uom",
+                    "doctype": "UOM",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+            ],
+        },
+    ]
+
+    if frappe.db.exists("Sidebar Master", {"sidebar_owner": "Master"}):
+        return
+
+    doc = frappe.get_doc(
+        {
+            "doctype": "Sidebar Master",
+            "sidebar_owner": "Master",
+            "config_json": json.dumps(SIDEBAR_CONFIG),
+        }
+    )
+
+    doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
 
 
 import requests
@@ -2669,22 +3188,7 @@ from collections import defaultdict
 TECH_PLACEHOLDER = "General"
 
 DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Sales": ["_show_sales", "_show_email_inbox"],
-    "Lead": ["_show_lead", "_show_email_inbox"],
-    "Resume": ["_show_technical", "_show_email_inbox"],
-    "Technical": ["_show_technical", "_show_email_inbox", "_show_other_service"],
-    "Marketing": ["_show_marketing", "_show_email_inbox", "_show_other_service"],
-    "HR": ["_show_employees", "_show_email_inbox"],
-    "Onboarding": ["_show_onboarding", "_show_email_inbox"],
-    "CR": ["_show_cr", "_show_email_inbox"],
-    "Accounting": [
-        "_show_coa",
-        "_show_pe_request",
-        "_show_item",
-        "_show_email_inbox",
-        "_show_account_master",
-        "_show_accounting",
-    ],
+    "Accounting": ["_show_accounting"],
 }
 
 

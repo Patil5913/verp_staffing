@@ -45,35 +45,41 @@ VERP_MODULES = {
     "Buying",  # add more as needed
 }
 
+FRAPPE_DOCTYPES = {
+    "Role",
+    "User",
+    "Email Account",
+    "Email Domain",
+}
 
 def _get_user_readable_doctypes():
     """
-    Return a set of DocType names the current user can read,
-    restricted to VERP_MODULES, derived purely from role permissions
-    (no per-row permission checks needed here — role-based is sufficient
-    for the palette list).
+    Return a set of DocType names the current user can access,
+    restricted to VERP modules and excluding system doctypes.
     """
-    user_roles = frappe.get_roles()  # cached, no extra query
+    user_roles = frappe.get_roles()
 
     if not user_roles:
         return set()
 
-    # Pull every DocType name where at least one of the user's roles has read=1
-    # and the DocType lives in one of our custom modules.
-    # frappe.db.sql runs as the db user (Administrator-level), which is safe here
-    # because we're only reading permission metadata, not document data.
-    in_roles = ", ".join(["%s"] * len(user_roles))
+    role_placeholders = ", ".join(["%s"] * len(user_roles))
+    module_placeholders = ", ".join(["%s"] * len(VERP_MODULES))
+    skip_placeholders = ", ".join(["%s"] * len(FRAPPE_DOCTYPES))
 
     rows = frappe.db.sql(
         f"""
-		SELECT DISTINCT dp.parent
-		FROM   `tabDocPerm` dp
-		INNER JOIN `tabDocType` dt ON dt.name = dp.parent
-		WHERE  dp.role IN ({in_roles})
-		  AND  dp.write = 1
-		  AND  dt.module IN ({", ".join(["%s"] * len(VERP_MODULES))})
-		""",
-        tuple(user_roles) + tuple(VERP_MODULES),
+        SELECT DISTINCT dp.parent
+        FROM `tabDocPerm` dp
+        INNER JOIN `tabDocType` dt
+            ON dt.name = dp.parent
+        WHERE dp.role IN ({role_placeholders})
+          AND dp.write = 1
+          AND dt.module IN ({module_placeholders})
+          OR dt.name IN ({skip_placeholders})
+        """,
+        tuple(user_roles)
+        + tuple(VERP_MODULES)
+        + tuple(FRAPPE_DOCTYPES),
         as_dict=False,
     )
 
