@@ -1,156 +1,130 @@
-// frappe.listview_settings = frappe.listview_settings || {};
+frappe.listview_settings = frappe.listview_settings || {};
 
-// /* =========================
-//    LIST VIEW (LIGHTWEIGHT)
-// ========================= */
+/* =========================
+   CACHE SELECTORS (BIG WIN)
+========================= */
 
-// frappe.views.ListView = class CustomListView extends frappe.views.ListView {
-// 	render() {
-// 		super.render();
+const CACHE = {
+	lastRoute: null,
+	newButtonHiddenFor: null,
+};
 
-// 		requestIdleCallback(() => {
-// 			this.remove_default_filters();
-// 		});
-// 	}
 
-// 	remove_default_filters() {
-// 		const $sidebar = $("body .layout-side-section");
-// 		if (!$sidebar.length) return;
+/* =========================
+   WORKSPACE BUTTON
+========================= */
 
-// 		$sidebar.find(".group-by-field").hide();
-// 		$sidebar.find(".add-group-by").hide();
-// 		$sidebar.find(".save-filter-section").hide();
-// 	}
-// };
+function hide_workspace_new_button() {
+	if (frappe.session.user === "Administrator") return;
 
-// /* =========================
-//    CACHE SELECTORS (BIG WIN)
-// ========================= */
+	$(".workspace-footer .btn-new-workspace").hide();
+}
 
-// const CACHE = {
-// 	formSidebar: null,
-// 	sidebarCleaned: false,
-// 	lastRoute: null,
-// };
+/* =========================
+   REPORT FOOTER (NEW ADDITION)
+========================= */
 
-// /* =========================
-//    CLEANERS
-// ========================= */
+function hide_report_things() {
+	$(".report-footer").hide();
+	$(".menu-btn-group").hide();
+}
 
-// function cleanSidebarOnce() {
-// 	if (CACHE.sidebarCleaned) return;
+/* =========================
+   ROUTE HELPERS
+========================= */
 
-// 	const $sidebar = $(".form-sidebar");
-// 	if (!$sidebar.length) return;
+function isFormRoute(route) {
+	return route && route.length >= 2;
+}
 
-// 	CACHE.formSidebar = $sidebar;
+function isReportRoute(route) {
+	return route && route[0] === "query-report";
+}
 
-// 	$sidebar.find(".form-follow").hide();
+function isWorkspaceRoute(route) {
+	return route && route[0] === "Workspaces";
+}
 
-// 	$sidebar.find("*").each(function () {
-// 		const text = this.textContent?.trim();
-// 		if (!text) return;
+/* =========================
+   ROUTE HANDLER (FILTERED)
+========================= */
 
-// 		if (
-// 			text.includes("Assigned") ||
-// 			text.includes("Share") ||
-// 			text.includes("Attachment")
-// 		) {
-// 			$(this).hide();
-// 		}
-// 	});
+frappe.router.on("change", () => {
+	const route = frappe.get_route();
+	if (!route) return;
 
-// 	CACHE.sidebarCleaned = true;
-// }
+	const routeKey = route.join("/");
 
-// /* =========================
-//    WORKSPACE BUTTON
-// ========================= */
+	if (CACHE.lastRoute === routeKey) return;
+	CACHE.lastRoute = routeKey;
 
-// function hide_workspace_new_button() {
-// 	if (frappe.session.user === "Administrator") return;
+	CACHE.sidebarCleaned = false;
+	CACHE.newButtonHiddenFor = null;
 
-// 	$(".workspace-footer .btn-new-workspace").hide();
-// }
+	requestIdleCallback(() => {
+		if (isWorkspaceRoute(route)) {
+			hide_workspace_new_button();
+		}
 
-// /* =========================
-//    REPORT FOOTER (NEW ADDITION)
-// ========================= */
+		if (isReportRoute(route)) {
+			hide_report_things();
+		}
+	});
+});
 
-// function hide_report_things() {
-// 	$(".report-footer").hide();
-// 	$(".menu-btn-group").hide();
-// }
+const NO_NEW_DOCTYPES = new Set([
+	"Onboardings",
+	"Bank Account Type",
+	"Bank Account Subtype",
+	"Currency"
+]);
 
-// /* =========================
-//    ROUTE HELPERS
-// ========================= */
+function hide_new_button(listview) {
+	if (!listview) return;
 
-// function isFormRoute(route) {
-// 	return route && route.length >= 2;
-// }
+	const doctype = listview.doctype;
 
-// function isReportRoute(route) {
-// 	return route && route[0] === "query-report";
-// }
+	// prevent duplicate execution
+	if (CACHE.newButtonHiddenFor === doctype) return;
+	CACHE.newButtonHiddenFor = doctype;
 
-// function isWorkspaceRoute(route) {
-// 	return route && route[0] === "Workspaces";
-// }
+	listview.page?.btn_primary?.hide();
 
-// /* =========================
-//    ROUTE HANDLER (FILTERED)
-// ========================= */
+	requestAnimationFrame(() => {
+		listview.page?.wrapper
+			?.querySelectorAll(".btn-new-doc")
+			?.forEach(btn => {
+				btn.style.display = "none";
+			});
+	});
+}
 
-// frappe.router.on("change", () => {
-// 	const route = frappe.get_route();
-// 	if (!route) return;
+NO_NEW_DOCTYPES.forEach((doctype) => {
+	frappe.listview_settings[doctype] = {
+		onload(listview) {
+			hide_new_button(listview);
+		},
+		refresh(listview) {
+			hide_new_button(listview);
+		},
+	};
+});
 
-// 	const routeKey = route.join("/");
+/* =========================
+   MUTATION OBSERVER (SAFE)
+========================= */
 
-// 	if (CACHE.lastRoute === routeKey) return;
-// 	CACHE.lastRoute = routeKey;
+const observer = new MutationObserver(() => {
+	const route = frappe.get_route();
 
-// 	// reset form cache only when leaving/entering
-// 	CACHE.sidebarCleaned = false;
+	// REPORT CLEANING (STRICT SCOPE FIX)
+	if (route && route[0] === "query-report") {
+		hide_report_things();
+	}
+});
 
-// 	requestIdleCallback(() => {
-// 		// workspace cleanup
-// 		if (isWorkspaceRoute(route)) {
-// 			hide_workspace_new_button();
-// 		}
+observer.observe(document.body, {
+	childList: true,
+	subtree: true,
+});
 
-// 		// report cleanup
-// 		if (isReportRoute(route)) {
-// 			hide_report_things();
-// 		}
-
-// 		// form cleanup
-// 		if (isFormRoute(route) && cur_frm) {
-// 			cleanSidebarOnce();
-// 		}
-// 	});
-// });
-
-// /* =========================
-//    MUTATION OBSERVER (SAFE)
-// ========================= */
-
-// const observer = new MutationObserver(() => {
-// 	const route = frappe.get_route();
-
-// 	// FORM CLEANING (only when needed)
-// 	if (!CACHE.sidebarCleaned) {
-// 		cleanSidebarOnce();
-// 	}
-
-// 	// REPORT CLEANING (STRICT SCOPE FIX)
-// 	if (route && route[0] === "query-report") {
-// 		hide_report_things();
-// 	}
-// });
-
-// observer.observe(document.body, {
-// 	childList: true,
-// 	subtree: true,
-// });

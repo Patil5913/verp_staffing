@@ -152,6 +152,7 @@ frappe.ui.form.on("Customer", {
 				method: "verp_staffing.crm.doctype.customer.customer.send_portal_link",
 				args: {
 					customer: frm.doc.name,
+					customer_name: frm.doc.name1
 				},
 				freeze: true,
 				callback: function (r) {

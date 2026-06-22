@@ -1,883 +1,3 @@
-// // THREE PARENT TYPES:
-// //   type_1 — redirect + navbar children
-// //   type_2 — dropdown (no redirect) + per-child navbar context
-// //   type_3 — single link, no children, no navbar
-// //
-// // VISIBILITY RULES:
-// //   Administrator: skip ALL role and permission checks — sees everything
-// //   Others — Parent: user must have module role; Child doctype: can_read(); Child report: free
-
-// (function () {
-//   "use strict";
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 1 — CONFIGURATION
-//   // ═══════════════════════════════════════════════════════════
-
-//   // icon: Frappe SVG sprite id (e.g. "icon-employee" → <use href="#icon-employee">)
-//   const NAV_ITEMS = {
-//     "role": {
-//       name: "Role",
-//       type: "doctype",
-//       route: "/app/role",
-//       doctype: "Role",
-//       icon: "icon-quantity-1"
-//     },
-//     "permission-manager": {
-//       name: "Permission Manager",
-//       type: "report",
-//       route: "/app/permission-manager",
-//       icon: "icon-quantity-1"
-//     },
-//     "employee": {
-//       name: "Employee",
-//       type: "doctype",
-//       route: "/app/employee",
-//       doctype: "Employee",
-//       icon: "icon-customer"
-//     },
-//     "department": {
-//       name: "Department",
-//       type: "doctype",
-//       route: "/app/department",
-//       doctype: "Department",
-//       icon: "icon-tag"
-//     },
-//     "hierarchy": {
-//       name: "Hierarchy",
-//       type: "doctype",
-//       route: "/app/hierarchy",
-//       doctype: "Hierarchy",
-//       icon: "icon-sort-ascending"
-//     },
-//     "erp-configuration": {
-//       name: "ERP Settings",
-//       type: "doctype",
-//       route: "/app/erp-configuration/ERP Configuration",
-//       doctype: "ERP Configuration",
-//       icon: "icon-setting-gear"
-//     },
-//     "email-domain": {
-//       name: "Email domain",
-//       type: "doctype",
-//       route: "/app/email-domain",
-//       doctype: "Email Domain",
-//       icon: "icon-mail"
-//     },
-//     "email-account": {
-//       name: "Email Account",
-//       type: "doctype",
-//       route: "/app/email-account",
-//       doctype: "Email Account",
-//       icon: "icon-mail"
-//     },
-//     "pdf-agreement-template": {
-//       name: "Pdf Agreement Template",
-//       type: "doctype",
-//       route: "/app/pdf-agreement-template",
-//       doctype: "Pdf Agreement Template",
-//       icon: "icon-pen"
-//     },
-//     "resume": {
-//       name: "Resume",
-//       type: "doctype",
-//       route: "/app/resume",
-//       doctype: "Resume",
-//       icon: "icon-small-file"
-//     },
-//     "ruc": {
-//       name: "RUC",
-//       type: "doctype",
-//       route: "/app/ruc",
-//       doctype: "RUC",
-//       icon: "icon-support"
-//     },
-//     "jdc": {
-//       name: "JDC",
-//       type: "doctype",
-//       route: "/app/jdc",
-//       doctype: "JDC",
-//       icon: "icon-support"
-//     },
-//     "training": {
-//       name: "Training",
-//       type: "doctype",
-//       route: "/app/training",
-//       doctype: "Training",
-//       icon: "icon-getting-started"
-//     },
-//     "cover-letter": {
-//       name: "Cover Letter",
-//       type: "doctype",
-//       route: "/app/cover-letter",
-//       doctype: "Cover Letter",
-//       icon: "icon-folder-open"
-//     },
-//     "technical-other-services": {
-//       name: "Tech Other Services",
-//       type: "doctype",
-//       route: "/app/technical-other-services",
-//       doctype: "Technical Other Services",
-//       icon: "icon-tool"
-//     },
-//     "interview": {
-//       name: "Interview",
-//       type: "doctype",
-//       route: "/app/interview",
-//       doctype: "Interview",
-//       icon: "icon-list-alt"
-//     },
-//     "marketing-other-services": {
-//       name: "Marketing Other Services",
-//       type: "doctype",
-//       route: "/app/marketing-other-services",
-//       icon: "icon-milestone"
-//     },
-//     "report": {
-//       name: "Reports",
-//       type: "report",
-//       route: "/app/report",
-//       icon: "icon-file"
-//     },
-//     "opportunity": {
-//       name: "Opportunity",
-//       type: "doctype",
-//       route: "/app/opportunity",
-//       doctype: "Opportunity",
-//       icon: "icon-assign"
-//     },
-//     "customer": {
-//       name: "Customer",
-//       type: "doctype",
-//       route: "/app/customer",
-//       doctype: "Customer",
-//       icon: "icon-customer"
-//     },
-//     "company": {
-//       name: "Company",
-//       type: "doctype",
-//       route: "/app/company",
-//       doctype: "Company",
-//       icon: "icon-organization"
-//     },
-//     "fiscal-year": {
-//       name: "Fiscal Year",
-//       type: "doctype",
-//       route: "/app/fiscal-year",
-//       doctype: "Fiscal Year",
-//       icon: "icon-calendar"
-//     },
-//     "accounts-settings": {
-//       name: "Accounts Settings",
-//       type: "doctype",
-//       route: "/app/accounts-settings/Accounts Settings",
-//       doctype: "Accounts Settings",
-//       icon: "icon-setting-gear"
-//     },
-//     "bank-account": {
-//       name: "Bank Account",
-//       type: "doctype",
-//       route: "/app/bank-account",
-//       doctype: "Bank Account",
-//       icon: "icon-number-card"
-//     },
-//     "sales-order": {
-//       name: "Sales Order",
-//       type: "doctype",
-//       route: "/app/sales-order",
-//       doctype: "Sales Order",
-//       icon: "icon-stock"
-//     },
-//     "sales-invoice": {
-//       name: "Sales Invoice",
-//       type: "doctype",
-//       route: "/app/sales-invoice",
-//       doctype: "Sales Invoice",
-//       icon: "icon-expenses"
-//     },
-//     "purchase-order": {
-//       name: "Purchase Order",
-//       type: "doctype",
-//       route: "/app/purchase-order",
-//       doctype: "Purchase Order",
-//       icon: "icon-stock"
-//     },
-//     "purchase-invoice": {
-//       name: "Purchase Invoice",
-//       type: "doctype",
-//       route: "/app/purchase-invoice",
-//       doctype: "Purchase Invoice",
-//       icon: "icon-expenses"
-//     },
-//     "journal-entry": {
-//       name: "Journal Entry",
-//       type: "doctype",
-//       route: "/app/journal-entry",
-//       doctype: "Journal Entry",
-//       icon: "icon-money-coins-1"
-//     },
-//     "payment-entry": {
-//       name: "Payment Entry",
-//       type: "doctype",
-//       route: "/app/payment-entry",
-//       doctype: "Payment Entry",
-//       icon: "icon-money-coins-1"
-//     },
-//     "supplier": {
-//       name: "Supplier",
-//       type: "doctype",
-//       route: "/app/supplier",
-//       doctype: "Supplier",
-//       icon: "icon-share"
-//     },
-//     "subscription": {
-//       name: "Subscription",
-//       type: "doctype",
-//       route: "/app/subscription",
-//       doctype: "Subscription",
-//       icon: "icon-money-coins-1"
-//     },
-//     "subscription-plan": {
-//       name: "Subscription Plan",
-//       type: "doctype",
-//       route: "/app/subscription-plan",
-//       doctype: "Subscription Plan",
-//       icon: "icon-money-coins-1"
-//     },
-//   };
-
-//   // icon: Frappe SVG sprite id for the parent module header
-//   const SIDEBAR_CONFIG = [
-//     {
-//       key: "setup",
-//       label: "Setup Guide",
-//       parent_type: "type_3",
-//       route: "/app/setup",
-//       role: "_show_setup",
-//       icon: "icon-setting-gear"
-//     },
-//     {
-//       key: "staffing-master",
-//       label: "Staffing Master",
-//       parent_type: "type_2",
-//       role: "_show_staffing_master",
-//       icon: "icon-keyboard",
-//       children: ["department", "hierarchy", "erp-configuration", "email-domain", "email-account", "pdf-agreement-template"]
-//     },
-//     {
-//       key: "item",
-//       label: "Item",
-//       parent_type: "type_3",
-//       route: "/app/item",
-//       role: "_show_item",
-//       icon: "icon-stock"
-//     },
-//     {
-//       key: "user",
-//       label: "User",
-//       parent_type: "type_1",
-//       route: "/app/user",
-//       role: "_show_employees",
-//       icon: "icon-users",
-//       children: ["role", "permission-manager"]
-//     },
-//     {
-//       key: "employee",
-//       label: "Employee",
-//       parent_type: "type_1",
-//       route: "/app/employee",
-//       role: "_show_employees",
-//       icon: "icon-users",
-//       children: ["department", "hierarchy"]
-//     },
-//     {
-//       key: "lead",
-//       label: "Lead",
-//       parent_type: "type_3",
-//       route: "/app/lead",
-//       role: "_show_lead",
-//       icon: "icon-share"
-//     },
-//     {
-//       key: "sales",
-//       label: "Sales",
-//       parent_type: "type_2",
-//       role: "_show_sales",
-//       icon: "icon-call",
-//       children: ["opportunity", "customer", "sales-order"]
-//     },
-//     {
-//       key: "technical",
-//       label: "Technical",
-//       parent_type: "type_2",
-//       role: "_show_technical",
-//       icon: "icon-website",
-//       children: ["resume", "jdc", "ruc", "training", "cover-letter", "technical-other-services"]
-//     },
-//     {
-//       key: "marketing",
-//       label: "Marketing",
-//       parent_type: "type_1",
-//       route: "/app/marketing",
-//       role: "_show_marketing",
-//       icon: "icon-users",
-//       children: ["interview", "marketing-other-services", "report"]
-//     },
-//     {
-//       key: "other-services",
-//       label: "Other Services",
-//       parent_type: "type_3",
-//       route: "/app/other-services",
-//       role: "_show_other_service",
-//       icon: "icon-setting-gear"
-//     },
-//     {
-//       key: "onboardings",
-//       label: "Onboarding",
-//       parent_type: "type_3",
-//       route: "/app/onboardings",
-//       role: "_show_onboarding",
-//       icon: "icon-branch"
-//     },
-//     {
-//       key: "cr",
-//       label: "CR",
-//       parent_type: "type_3",
-//       route: "/app/cr",
-//       role: "_show_cr",
-//       icon: "icon-assign"
-//     },
-//     {
-//       key: "email-inbox",
-//       label: "Email Inbox",
-//       parent_type: "type_3",
-//       route: "/app/email-inbox",
-//       role: "_show_email_inbox",
-//       icon: "icon-mail"
-//     },
-//     {
-//       key: "e-sign",
-//       label: "E Sign",
-//       parent_type: "type_3",
-//       route: "/app/e-sign",
-//       role: "_show_e_sign",
-//       icon: "icon-pen"
-//     },
-//     {
-//       key: "account-master",
-//       label: "Accounts Master",
-//       parent_type: "type_2",
-//       role: "_show_account_master",
-//       icon: "icon-keyboard",
-//       children: ["company", "fiscal-year", "accounts-settings", "bank-account"]
-//     },
-//     {
-//       key: "coa",
-//       label: "Charts of accounts",
-//       parent_type: "type_3",
-//       route: "/app/account/view/tree",
-//       role: "_show_coa",
-//       icon: "icon-stock"
-//     },
-//     {
-//       key: "pe_request",
-//       label: "Pending PE Request",
-//       parent_type: "type_3",
-//       route: "/app/pending-pe-request",
-//       role: "_show_pe_request",
-//       icon: "icon-expenses"
-//     },
-//     {
-//       key: "accounting",
-//       label: "Accounting",
-//       parent_type: "type_2",
-//       role: "_show_accounting",
-//       icon: "icon-accounting",
-//       children: [
-//         "sales-order",
-//         "sales-invoice",
-//         "purchase-order",
-//         "purchase-invoice",
-//         "journal-entry",
-//         "payment-entry",
-//         "supplier",
-//         "subscription",
-//         "report",
-//       ]
-//     }
-//   ];
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 2 — PERMISSION & ROLE HELPERS
-//   // ═══════════════════════════════════════════════════════════
-
-//   function is_administrator() {
-//     if (!window.frappe) return false;
-//     return (
-//       frappe.session && frappe.session.user === "Administrator"
-//     ) || (
-//       frappe.user_roles && frappe.user_roles.includes("Administrator")
-//     );
-//   }
-
-//   function user_has_role(role) {
-//     if (is_administrator()) return true;
-//     if (!window.frappe || !frappe.user_roles) return false;
-//     return frappe.user_roles.includes(role);
-//   }
-
-//   function can_read(doctype) {
-//     if (is_administrator()) return true;
-//     if (!window.frappe) return false;
-//     try {
-//       return !!frappe.model.can_read(doctype);
-//     } catch (e) {
-//       return false;
-//     }
-//   }
-
-//   function item_accessible(key) {
-//     if (is_administrator()) return true;
-//     const item = NAV_ITEMS[key];
-//     if (!item) return false;
-//     if (item.type === "doctype") return can_read(item.doctype);
-//     return true;
-//   }
-
-//   function visible_children(parent_cfg) {
-//     if (!parent_cfg.children) return [];
-//     return parent_cfg.children.filter(item_accessible);
-//   }
-
-//   function parent_visible(parent_cfg) {
-//     if (!user_has_role(parent_cfg.role)) return false;
-//     if (parent_cfg.parent_type === "type_3") return item_accessible(parent_cfg.key);
-//     return visible_children(parent_cfg).length > 0;
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 3 — ROUTE HELPERS
-//   // ═══════════════════════════════════════════════════════════
-
-//   function current_path() {
-//     let path = window.location.pathname;
-//     try {
-//       path = decodeURIComponent(path);
-//     } catch (e) {}
-//     return path.replace(/\/+$/, "");
-//   }
-
-//   function key_is_active(key) {
-//     const item = NAV_ITEMS[key];
-//     if (!item) return false;
-//     const route = item.route.replace(/\/+$/, "");
-//     const path  = current_path();
-//     return path === route || path.startsWith(route + "/");
-//   }
-
-//   function parent_route_is_active(parent_cfg) {
-//     if (!parent_cfg.route) return false;
-//     const route = parent_cfg.route.replace(/\/+$/, "");
-//     const path  = current_path();
-//     return path === route || path.startsWith(route + "/");
-//   }
-
-//   function get_active_owner_key() {
-//     for (const cfg of SIDEBAR_CONFIG) {
-//       if (!parent_visible(cfg)) continue;
-
-//       if (cfg.parent_type === "type_3") {
-//         if (parent_route_is_active(cfg)) return cfg.key;
-//       } else if (cfg.parent_type === "type_1") {
-//         if (parent_route_is_active(cfg) || (cfg.children && cfg.children.some(key_is_active))) {
-//           return cfg.key;
-//         }
-//       } else if (cfg.parent_type === "type_2") {
-//         if (cfg.children && cfg.children.some(key_is_active)) return cfg.key;
-//       }
-//     }
-//     return null;
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 4 — EXPAND / COLLAPSE PERSISTENCE (single, exclusive)
-//   // ═══════════════════════════════════════════════════════════
-
-//   const STORAGE_KEY = "custom_nav_expanded_module";
-
-//   function load_expanded_key() {
-//     try { return localStorage.getItem(STORAGE_KEY) || null; }
-//     catch (e) { return null; }
-//   }
-
-//   function save_expanded_key(key) {
-//     try {
-//       if (key) localStorage.setItem(STORAGE_KEY, key);
-//       else localStorage.removeItem(STORAGE_KEY);
-//     } catch (e) {}
-//   }
-
-//   function route_forced_expand_key() {
-//     for (const cfg of SIDEBAR_CONFIG) {
-//       if (cfg.parent_type === "type_2" && cfg.children && cfg.children.some(key_is_active)) {
-//         return cfg.key;
-//       }
-//     }
-//     return null;
-//   }
-
-//   function compute_expanded_key() {
-//     return route_forced_expand_key() || load_expanded_key();
-//   }
-
-//   function should_expand(parent_cfg) {
-//     if (parent_cfg.parent_type !== "type_2") return false;
-//     return compute_expanded_key() === parent_cfg.key;
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 5 — SIDEBAR DOM RENDERING
-//   // ═══════════════════════════════════════════════════════════
-
-//   const SIDEBAR_ID = "custom-nav-sidebar";
-
-//   function make_icon(icon_id, size) {
-//     size = size || "sm";
-//     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-//     svg.setAttribute("class", "icon icon-" + size);
-//     svg.setAttribute("aria-hidden", "true");
-//     const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-//     use.setAttribute("href", "#" + icon_id);
-//     svg.appendChild(use);
-//     return svg;
-//   }
-
-//   function build_sidebar_dom() {
-//     const wrap = document.createElement("div");
-//     wrap.id = SIDEBAR_ID;
-//     wrap.className = "custom-nav-sidebar";
-
-//     SIDEBAR_CONFIG.forEach(function (cfg) {
-//       if (!parent_visible(cfg)) return;
-//       if (cfg.parent_type === "type_3") { wrap.appendChild(make_type3_el(cfg)); return; }
-//       if (cfg.parent_type === "type_1") { wrap.appendChild(make_type1_el(cfg)); return; }
-//       if (cfg.parent_type === "type_2") { wrap.appendChild(make_type2_el(cfg)); return; }
-//     });
-
-//     return wrap;
-//   }
-
-//   function make_item_inner(icon_id, label_text) {
-//     const icon_wrap = document.createElement("span");
-//     icon_wrap.className = "cn-item-icon";
-//     if (icon_id) icon_wrap.appendChild(make_icon(icon_id, "sm"));
-
-//     const label = document.createElement("span");
-//     label.className = "cn-item-label";
-//     label.textContent = label_text;
-
-//     return [icon_wrap, label];
-//   }
-
-//   function make_type3_el(cfg) {
-//     const a = document.createElement("a");
-//     a.className = "cn-item cn-parent-link" + (parent_route_is_active(cfg) ? " is-active" : "");
-//     a.href = cfg.route;
-//     a.dataset.parentKey = cfg.key;
-//     a.dataset.parentType = "type_3";
-
-//     make_item_inner(cfg.icon, cfg.label).forEach(function (el) { a.appendChild(el); });
-
-//     a.addEventListener("click", function (e) {
-//       e.preventDefault();
-//       spa_navigate(cfg.route);
-//     });
-//     return a;
-//   }
-
-//   function make_type1_el(cfg) {
-//     const is_owner = get_active_owner_key() === cfg.key;
-
-//     const wrap = document.createElement("div");
-//     wrap.className = "cn-group cn-group--type1" + (is_owner ? " has-active" : "");
-//     wrap.dataset.parentKey = cfg.key;
-
-//     const a = document.createElement("a");
-//     a.className = "cn-item cn-parent-link" + (parent_route_is_active(cfg) ? " is-active" : "");
-//     a.href = cfg.route;
-//     a.dataset.parentKey = cfg.key;
-//     a.dataset.parentType = "type_1";
-
-//     make_item_inner(cfg.icon, cfg.label).forEach(function (el) { a.appendChild(el); });
-
-//     a.addEventListener("click", function (e) {
-//       e.preventDefault();
-//       spa_navigate(cfg.route);
-//     });
-
-//     wrap.appendChild(a);
-//     return wrap;
-//   }
-
-//   function make_type2_el(cfg) {
-//     const expanded = should_expand(cfg);
-//     const is_owner = get_active_owner_key() === cfg.key;
-//     const kids     = visible_children(cfg);
-
-//     const wrap = document.createElement("div");
-//     wrap.className = "cn-group cn-group--type2" + (expanded ? " is-expanded" : "");
-//     wrap.dataset.parentKey = cfg.key;
-
-//     const header = document.createElement("div");
-//     header.className = "cn-item cn-parent-toggle";
-//     header.dataset.parentKey = cfg.key;
-
-//     make_item_inner(cfg.icon, cfg.label).forEach(function (el) { header.appendChild(el); });
-
-//     const chevron = document.createElement("span");
-//     chevron.className = "cn-chevron";
-//     chevron.innerHTML =
-//       '<svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-//       + '<polyline points="4,6 8,10 12,6"/></svg>';
-//     header.appendChild(chevron);
-
-//     header.addEventListener("click", function (e) {
-//       e.stopPropagation();
-//       const is_open = wrap.classList.contains("is-expanded");
-
-//       document.querySelectorAll(".cn-group--type2").forEach(function (other) {
-//         if (other !== wrap) other.classList.remove("is-expanded");
-//       });
-
-//       wrap.classList.toggle("is-expanded", !is_open);
-//       save_expanded_key(!is_open ? cfg.key : null);
-//     });
-
-//     wrap.appendChild(header);
-
-//     const ul = document.createElement("ul");
-//     ul.className = "cn-children";
-
-//     kids.forEach(function (child_key) {
-//       const item = NAV_ITEMS[child_key];
-//       if (!item) return;
-//       const li = document.createElement("li");
-//       const a  = document.createElement("a");
-//       a.className = "cn-item cn-child-link" + (is_owner && key_is_active(child_key) ? " is-active" : "");
-//       a.href = item.route;
-//       a.dataset.navKey = child_key;
-
-//       make_item_inner(item.icon, item.name).forEach(function (el) { a.appendChild(el); });
-
-//       a.addEventListener("click", function (e) {
-//         e.preventDefault();
-//         spa_navigate(item.route);
-//       });
-//       li.appendChild(a);
-//       ul.appendChild(li);
-//     });
-
-//     wrap.appendChild(ul);
-//     return wrap;
-//   }
-
-//   function mount_sidebar() {
-//     document.querySelectorAll(".layout-side-section").forEach(function (section) {
-//       if (section.querySelector("#" + SIDEBAR_ID)) return;
-//       section.appendChild(build_sidebar_dom());
-//     });
-//   }
-
-//   function refresh_sidebar_active() {
-//     const owner_key    = get_active_owner_key();
-//     const expanded_key = compute_expanded_key();
-
-//     document.querySelectorAll(".cn-parent-link[data-parent-key]").forEach(function (el) {
-//       const cfg = SIDEBAR_CONFIG.find(c => c.key === el.dataset.parentKey);
-//       if (!cfg) return;
-//       el.classList.toggle("is-active", parent_route_is_active(cfg));
-//     });
-
-//     document.querySelectorAll(".cn-group--type1[data-parent-key]").forEach(function (el) {
-//       el.classList.toggle("has-active", owner_key === el.dataset.parentKey);
-//     });
-
-//     document.querySelectorAll(".cn-group--type2[data-parent-key]").forEach(function (group) {
-//       const key      = group.dataset.parentKey;
-//       const is_owner = owner_key === key;
-
-//       group.querySelectorAll(".cn-child-link[data-nav-key]").forEach(function (el) {
-//         el.classList.toggle("is-active", is_owner && key_is_active(el.dataset.navKey));
-//       });
-
-//       group.classList.toggle("is-expanded", key === expanded_key);
-//     });
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 6 — SPA NAVIGATION
-//   // ═══════════════════════════════════════════════════════════
-
-//   function spa_navigate(route) {
-//     if (window.frappe && frappe.set_route) {
-//       frappe.set_route(route.replace(/^\/app\//, ""));
-//     } else {
-//       window.location.href = route;
-//     }
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 7 — DEFAULT ROUTE (role-aware landing page)
-//   // ═══════════════════════════════════════════════════════════
-
-//   function get_first_accessible_route() {
-//     for (const cfg of SIDEBAR_CONFIG) {
-//       if (!parent_visible(cfg)) continue;
-
-//       if (cfg.parent_type === "type_3" || cfg.parent_type === "type_1") {
-//         return cfg.route;
-//       }
-
-//       if (cfg.parent_type === "type_2") {
-//         const kids = visible_children(cfg);
-//         if (kids.length) {
-//           const first_item = NAV_ITEMS[kids[0]];
-//           if (first_item) return first_item.route;
-//         }
-//       }
-//     }
-//     return null;
-//   }
-
-//   function resolve_default_route() {
-//     const path = current_path();
-//     if (path !== "/app" && path !== "") return;
-//     const target = get_first_accessible_route();
-//     if (target) spa_navigate(target);
-//   }
-
-//   function patch_frappe_default_route() {
-//     if (!window.frappe) return;
-
-//     const target = get_first_accessible_route();
-//     if (target && frappe.boot) {
-//       frappe.boot.default_route = target.replace(/^\/app\//, "");
-//     }
-
-//     if (typeof frappe.set_route === "function" && !frappe.set_route.__cn_patched) {
-//       const _original_set_route = frappe.set_route.bind(frappe);
-
-//       frappe.set_route = function () {
-//         const args = Array.prototype.slice.call(arguments);
-//         const first = args[0];
-
-//         const is_home = (
-//           args.length === 0 ||
-//           first === "" ||
-//           first === "/" ||
-//           (typeof first === "string" && first.toLowerCase() === "workspace")
-//         );
-
-//         if (is_home) {
-//           const route = get_first_accessible_route();
-//           if (route) return _original_set_route(route.replace(/^\/app\//, ""));
-//         }
-
-//         return _original_set_route.apply(frappe, args);
-//       };
-
-//       frappe.set_route.__cn_patched = true;
-//     }
-
-//     if (frappe.router && typeof frappe.router.push === "function" && !frappe.router.push.__cn_patched) {
-//       const _original_push = frappe.router.push.bind(frappe.router);
-
-//       frappe.router.push = function (route) {
-//         const is_home = (
-//           !route ||
-//           route === "" ||
-//           route === "/" ||
-//           route === "/app" ||
-//           route === "/app/" ||
-//           (typeof route === "string" && route.toLowerCase().replace(/^\/app\//, "") === "workspace")
-//         );
-
-//         if (is_home) {
-//           const target = get_first_accessible_route();
-//           if (target) return _original_push(target);
-//         }
-
-//         return _original_push(route);
-//       };
-
-//       frappe.router.push.__cn_patched = true;
-//     }
-//   }
-
-//   function patch_logo_click() {
-//     document.addEventListener("click", function (e) {
-//       const link = e.target.closest(".navbar-home, .navbar-brand");
-//       if (!link) return;
-
-//       const target = get_first_accessible_route();
-//       if (!target) return;
-
-//       e.preventDefault();
-//       e.stopImmediatePropagation();
-
-//       spa_navigate(target);
-//     }, true);
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 8 — ROUTE CHANGE HANDLER
-//   // ═══════════════════════════════════════════════════════════
-
-//   function on_route_change() {
-//     resolve_default_route();
-//     mount_sidebar();
-//     refresh_sidebar_active();
-//   }
-
-//   // ═══════════════════════════════════════════════════════════
-//   // SECTION 9 — INIT
-//   // ═══════════════════════════════════════════════════════════
-
-//   function init() {
-//     patch_frappe_default_route();
-//     patch_logo_click();
-//     resolve_default_route();
-
-//     mount_sidebar();
-
-//     if (window.frappe) {
-//       if (frappe.router && typeof frappe.router.on === "function") {
-//         frappe.router.on("change", on_route_change);
-//       }
-//       $(document).on("page-change frappe:navigate frappe:route-change", on_route_change);
-//     }
-
-//     window.addEventListener("popstate", on_route_change);
-
-//     const observer = new MutationObserver(function () {
-//       const missing = document.querySelector(
-//         ".layout-side-section:not(:has(#" + SIDEBAR_ID + "))"
-//       );
-//       if (missing) mount_sidebar();
-//     });
-//     observer.observe(document.body, { childList: true, subtree: true });
-//   }
-
-//   if (window.frappe && typeof frappe.ready === "function") {
-//     frappe.ready(init);
-//   } else if (document.readyState === "complete" || document.readyState === "interactive") {
-//     init();
-//   } else {
-//     document.addEventListener("DOMContentLoaded", init);
-//   }
-
-// })();
-
 //  Config is fetched from the "Sidebar Master" DocType (field: config_json)
 //  using a two-step lookup:
 //    1. Look for a doc where sidebar_owner = current user  → use it
@@ -890,31 +10,78 @@
 //
 //  SHORTCUT SUPPORT:
 //    Each item may carry a `shortcut` field (e.g. "J", "J+E", "Alt+P").
-//    The sidebar registers these as global keydown handlers that SPA-navigate
-//    to the relevant route when matched. "N" alone is reserved.
+//    Shortcuts are shown in a tooltip on hover (not inline) so the label
+//    remains fully readable. The tooltip shows: label + shortcut badge.
+//    "N" alone is reserved.
+//
+//  NO_PLUS_DOCTYPES:
+//    Doctypes listed here will NOT show the quick-create "+" button in the sidebar.
+//    The same set is used to suppress the "New" button on those doctypes'
+//    list pages. Edit this array to add/remove items — no other code changes
+//    needed. Use the palette key format (lowercase, hyphens), e.g. "bank-account-type".
 //
 //  FEATURES:
 //    ✓ type_2 toggle is pure DOM/CSS — zero page reload
-//    ✓ "+" quick-create button on every doctype link
+//    ✓ "+" quick-create button on every doctype link (except NO_PLUS_DOCTYPES)
 //    ✓ Config cached in localStorage (TTL 5 min) per user
 //    ✓ Logo + home navigation redirected to first accessible route
+//    ✓ "Customize Sidebar" button at bottom of sidebar
+//    ✓ Full-width is on by default; "Toggle Full Width" navbar button hidden
+//    ✓ List-page New button hidden for doctypes in NO_PLUS_DOCTYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
 (function () {
 	"use strict";
 
+	// ─── NO QUICK-CREATE / NO NEW-BUTTON LIST ─────────────────────────────────
+	//
+	// Add the palette key (slug format) of any doctype/item for which you want to:
+	//   1. Hide the "+" quick-create button in the sidebar
+	//   2. Hide the "New" button on that doctype's list page
+	//
+	const NO_PLUS_DOCTYPES = new Set([
+		"Onboardings",
+		"Bank Account Type",
+		"Bank Account Subtype",
+	]);
+
+	// ─── FULL WIDTH DEFAULT ────────────────────────────────────────────────────
+	// Apply full-width immediately and hide the toggle button permanently.
+	(function enforce_full_width() {
+		// Add class as early as possible
+		document.documentElement.classList.add("fw-patched");
+		function _apply() {
+			document.body.classList.add("full-width");
+			// Hide "Toggle Full Width" menu item
+			document.querySelectorAll(".dropdown-menu li, .dropdown-item").forEach((el) => {
+				if (el.textContent && el.textContent.trim() === "Toggle Full Width") {
+					el.style.display = "none";
+				}
+			});
+		}
+		_apply();
+		// Re-apply after DOM mutations (Frappe rebuilds the navbar dropdown on open)
+		const _fw_obs = new MutationObserver(_apply);
+		if (document.body) {
+			_fw_obs.observe(document.body, { childList: true, subtree: true });
+		} else {
+			document.addEventListener("DOMContentLoaded", () => {
+				_fw_obs.observe(document.body, { childList: true, subtree: true });
+			});
+		}
+	})();
+
 	// ─── CACHE ────────────────────────────────────────────────────────────────
-	// Keyed per user so different users sharing a browser don't cross-pollinate
 	function cache_key() {
 		return "csb_config_" + ((frappe.session && frappe.session.user) || "guest");
 	}
 	function cache_ts_key() {
 		return "csb_ts_" + ((frappe.session && frappe.session.user) || "guest");
 	}
-	const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+	const CACHE_TTL_MS = 5 * 60 * 1000;
 
-	let SIDEBAR_CONFIG = []; // [{key, label, icon, parent_type, route?, shortcut?, children?}]
-	let NAV_ITEMS = {}; // key → {name, type, route, doctype?, icon, shortcut?}
+	let SIDEBAR_CONFIG = [];
+	let NAV_ITEMS = {};
 
 	// ─── PERMISSIONS ──────────────────────────────────────────────────────────
 
@@ -1084,16 +251,64 @@
 		return btn;
 	}
 
-	// ─── SHORTCUT BADGE on sidebar items ─────────────────────────────────────
-	//  Tiny visual badge showing the assigned shortcut (e.g. "J+E")
+	// Returns true if the "+" quick-create button should be shown for this key.
+	// Checks NO_PLUS_DOCTYPES — a single Set that drives both sidebar and list-page suppression.
+	function should_show_plus(doctype, item) {
+		if (NO_PLUS_DOCTYPES.has(doctype)) return false;
+		if (!item || item.type !== "doctype" || !item.doctype) return false;
+		if (item.issingle) return false;
+		return true;
+	}
 
-	function make_shortcut_badge(shortcut) {
-		if (!shortcut) return null;
-		const span = document.createElement("span");
-		span.className = "cn-shortcut-badge";
-		span.textContent = shortcut;
-		span.title = "Shortcut: " + shortcut;
-		return span;
+	// ─── SHORTCUT TOOLTIP ─────────────────────────────────────────────────────
+	// Shortcut is shown in a native-style tooltip on hover.
+	// No badge is injected into the label — labels remain full-width.
+	// Tooltip shows: "Label Name  [shortcut]"
+
+	let _tooltip_el = null;
+
+	function get_tooltip_el() {
+		if (!_tooltip_el) {
+			_tooltip_el = document.createElement("div");
+			_tooltip_el.id = "csb-shortcut-tooltip";
+			document.body.appendChild(_tooltip_el);
+		}
+		return _tooltip_el;
+	}
+
+	function show_shortcut_tooltip(anchor, label, shortcut) {
+		const el = get_tooltip_el();
+		el.innerHTML = `<span class="csb-tt-label">${frappe.utils.escape_html(label)}</span><kbd class="csb-tt-key">${frappe.utils.escape_html(shortcut)}</kbd>`;
+		el.style.display = "flex";
+		position_tooltip(el, anchor);
+	}
+
+	function hide_shortcut_tooltip() {
+		const el = get_tooltip_el();
+		el.style.display = "none";
+	}
+
+	function position_tooltip(el, anchor) {
+		const r = anchor.getBoundingClientRect();
+		el.style.left = r.right + 8 + "px";
+		el.style.top = r.top + r.height / 2 + "px";
+		el.style.transform = "translateY(-50%)";
+		// Check overflow on right edge
+		requestAnimationFrame(() => {
+			const tw = el.offsetWidth;
+			if (r.right + 8 + tw > window.innerWidth - 8) {
+				el.style.left = r.left - tw - 8 + "px";
+			}
+		});
+	}
+
+	function attach_shortcut_tooltip(el, label, shortcut) {
+		if (!shortcut) return;
+		el.setAttribute("data-csb-shortcut", shortcut);
+		el.addEventListener("mouseenter", () => show_shortcut_tooltip(el, label, shortcut));
+		el.addEventListener("mouseleave", hide_shortcut_tooltip);
+		el.addEventListener("focus", () => show_shortcut_tooltip(el, label, shortcut));
+		el.addEventListener("blur", hide_shortcut_tooltip);
 	}
 
 	// ─── SIDEBAR DOM ──────────────────────────────────────────────────────────
@@ -1121,7 +336,61 @@
 			}
 		});
 
+		// ── "Customize Sidebar" button ────────────────────────────────────────
+		wrap.appendChild(make_customize_btn());
+
 		return wrap;
+	}
+
+	// ─── CUSTOMIZE SIDEBAR BUTTON ─────────────────────────────────────────────
+
+	function make_customize_btn() {
+		const btn = document.createElement("a");
+		btn.className = "cn-item cn-customize-btn";
+		btn.href = "#";
+		btn.title = "Customize your sidebar layout";
+
+		const icon_wrap = document.createElement("span");
+		icon_wrap.className = "cn-item-icon";
+		icon_wrap.innerHTML = `<svg class="icon icon-sm" aria-hidden="true"><use href="#icon-setting-gear"></use></svg>`;
+
+		const label = document.createElement("span");
+		label.className = "cn-item-label";
+		label.textContent = "Customize Sidebar";
+
+		btn.appendChild(icon_wrap);
+		btn.appendChild(label);
+
+		btn.addEventListener("click", async function (e) {
+			e.preventDefault();
+			const current_user = frappe.session && frappe.session.user;
+			if (!current_user) {
+				spa_navigate("/app/sidebar-master/new");
+				return;
+			}
+
+			// Check if the current user already has a Sidebar Master doc
+			try {
+				const res = await frappe.call({
+					method: "frappe.client.get_value",
+					args: {
+						doctype: "Sidebar Master",
+						fieldname: "name",
+						filters: { sidebar_owner: current_user },
+					},
+				});
+				const doc_name = res && res.message && res.message.name;
+				if (doc_name) {
+					spa_navigate("/app/sidebar-master/" + encodeURIComponent(doc_name));
+				} else {
+					spa_navigate("/app/sidebar-master/new");
+				}
+			} catch (err) {
+				spa_navigate("/app/sidebar-master/new");
+			}
+		});
+
+		return btn;
 	}
 
 	function make_type3_el(cfg) {
@@ -1133,14 +402,23 @@
 
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => a.appendChild(el));
 
-		if (cfg.link_type === "doctype" && cfg.doctype && !cfg.issingle) {
+		// Only add "+" if key is not in NO_PLUS_DOCTYPES
+		if (
+			should_show_plus(cfg.doctype, {
+				type: cfg.link_type,
+				doctype: cfg.doctype,
+				issingle: cfg.issingle,
+			})
+		) {
 			a.appendChild(make_plus_btn(cfg.doctype));
 		}
-		const badge = make_shortcut_badge(cfg.shortcut);
-		if (badge) a.appendChild(badge);
+
+		// Tooltip instead of inline badge
+		attach_shortcut_tooltip(a, cfg.label, cfg.shortcut);
 
 		a.addEventListener("click", function (e) {
 			e.preventDefault();
+			hide_shortcut_tooltip();
 			spa_navigate(cfg.route);
 		});
 		return a;
@@ -1160,11 +438,11 @@
 		a.dataset.parentType = "type_1";
 
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => a.appendChild(el));
-		const badge = make_shortcut_badge(cfg.shortcut);
-		if (badge) a.appendChild(badge);
+		attach_shortcut_tooltip(a, cfg.label, cfg.shortcut);
 
 		a.addEventListener("click", function (e) {
 			e.preventDefault();
+			hide_shortcut_tooltip();
 			spa_navigate(cfg.route);
 		});
 		wrap.appendChild(a);
@@ -1186,14 +464,15 @@
 
 				make_item_inner(item.icon, item.name).forEach((el) => ca.appendChild(el));
 
-				if (item.type === "doctype" && item.doctype && !item.issingle) {
+				// Only add "+" if key is not in NO_PLUS_DOCTYPES
+				if (should_show_plus(child.doctype, item)) {
 					ca.appendChild(make_plus_btn(item.doctype));
 				}
-				const cb = make_shortcut_badge(item.shortcut);
-				if (cb) ca.appendChild(cb);
+				attach_shortcut_tooltip(ca, item.name, item.shortcut);
 
 				ca.addEventListener("click", function (e) {
 					e.preventDefault();
+					hide_shortcut_tooltip();
 					spa_navigate(item.route);
 				});
 				li.appendChild(ca);
@@ -1222,9 +501,7 @@
 		header.dataset.parentKey = cfg.key;
 
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => header.appendChild(el));
-
-		const badge = make_shortcut_badge(cfg.shortcut);
-		if (badge) header.appendChild(badge);
+		attach_shortcut_tooltip(header, cfg.label, cfg.shortcut);
 
 		const chevron = document.createElement("span");
 		chevron.className = "cn-chevron";
@@ -1234,6 +511,7 @@
 
 		function toggle_group(e) {
 			e.stopPropagation();
+			hide_shortcut_tooltip();
 			const is_open = wrap.classList.contains("is-expanded");
 			document.querySelectorAll(".cn-group--type2").forEach(function (other) {
 				if (other !== wrap) {
@@ -1273,14 +551,15 @@
 
 			make_item_inner(item.icon, item.name).forEach((el) => a.appendChild(el));
 
-			if (item.type === "doctype" && item.doctype && !item.issingle) {
+			// Only add "+" if key is not in NO_PLUS_DOCTYPES
+			if (should_show_plus(child.doctype, item)) {
 				a.appendChild(make_plus_btn(item.doctype));
 			}
-			const cb = make_shortcut_badge(item.shortcut);
-			if (cb) a.appendChild(cb);
+			attach_shortcut_tooltip(a, item.name, item.shortcut);
 
 			a.addEventListener("click", function (e) {
 				e.preventDefault();
+				hide_shortcut_tooltip();
 				spa_navigate(item.route);
 			});
 			li.appendChild(a);
@@ -1341,15 +620,11 @@
 	}
 
 	// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────
-	//  Registers global keydown handler for all shortcut-carrying items.
-	//  Supports: single key ("J"), chord ("J+E" — J pressed then E within 1s),
-	//            Alt+key ("Alt+P"), Ctrl+key ("Ctrl+P").
 
 	let _sc_chord_first = null;
 	let _sc_chord_timer = null;
 	const SC_CHORD_MS = 1000;
 
-	// Build a flat map: normalised_shortcut → route
 	function build_shortcut_map() {
 		const map = {};
 		function add(shortcut, route) {
@@ -1358,7 +633,7 @@
 		SIDEBAR_CONFIG.forEach(function (cfg) {
 			if (cfg.parent_type === "type_3" || cfg.parent_type === "type_1")
 				add(cfg.shortcut, cfg.route);
-			if (cfg.parent_type === "type_2") add(cfg.shortcut, null); // group — no nav target
+			if (cfg.parent_type === "type_2") add(cfg.shortcut, null);
 			(cfg.children || []).forEach(function (c) {
 				const item = NAV_ITEMS[c.key];
 				if (item) add(item.shortcut, item.route);
@@ -1368,7 +643,6 @@
 	}
 
 	function register_shortcuts() {
-		// Remove previous listener if re-registered
 		if (window._csb_key_handler) {
 			document.removeEventListener("keydown", window._csb_key_handler, true);
 		}
@@ -1379,15 +653,12 @@
 		const MODS = new Set(["Alt", "Control", "Shift", "Meta", "CapsLock", "Tab"]);
 
 		function handler(e) {
-			// Don't fire while user is typing in an input/textarea/contenteditable
 			const tag = (e.target || {}).tagName || "";
 			if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
 			if ((e.target || {}).isContentEditable) return;
-
 			if (MODS.has(e.key)) return;
 
 			const raw = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-
 			let candidate = null;
 
 			if (e.altKey) {
@@ -1395,18 +666,14 @@
 			} else if (e.ctrlKey) {
 				candidate = "ctrl+" + raw.toLowerCase();
 			} else {
-				// Plain key or chord
 				if (_sc_chord_first) {
-					// Second key of chord
 					candidate = _sc_chord_first + "+" + raw.toLowerCase();
 					clearTimeout(_sc_chord_timer);
 					_sc_chord_first = null;
 					_sc_chord_timer = null;
 				} else {
-					// First key — check immediately as single, but also start chord window
 					const single = raw.toLowerCase();
 					if (map[single]) {
-						// Start chord timer; if nothing comes, fire the single
 						_sc_chord_first = raw.toLowerCase();
 						_sc_chord_timer = setTimeout(function () {
 							const route = map[_sc_chord_first];
@@ -1417,9 +684,8 @@
 								spa_navigate(route);
 							}
 						}, SC_CHORD_MS);
-						return; // don't navigate yet — wait for possible second key
+						return;
 					} else {
-						// First key of potential chord but no single match — wait for second
 						_sc_chord_first = raw.toLowerCase();
 						_sc_chord_timer = setTimeout(function () {
 							_sc_chord_first = null;
@@ -1441,8 +707,6 @@
 	}
 
 	// ─── CONFIG LOADING ───────────────────────────────────────────────────────
-	//  Two-step: user doc first → Master fallback.
-	//  Results cached in localStorage per user with 5-min TTL.
 
 	function load_from_cache() {
 		try {
@@ -1466,7 +730,6 @@
 		SIDEBAR_CONFIG = config_array;
 		NAV_ITEMS = {};
 		config_array.forEach(function (cfg) {
-			// type_3 top-level links go into the flat map
 			if (cfg.parent_type === "type_3") {
 				NAV_ITEMS[cfg.key] = {
 					name: cfg.label,
@@ -1480,7 +743,6 @@
 					),
 				};
 			}
-			// Children of type_1 / type_2
 			(cfg.children || []).forEach(function (c) {
 				NAV_ITEMS[c.key] = {
 					name: c.name,
@@ -1536,16 +798,12 @@
 	}
 
 	async function load_config() {
-		// 1. Cache hit
 		const cached = load_from_cache();
 		if (cached) {
 			apply_config(cached);
 			return;
 		}
-
-		// 2. Fetch
 		if (!window.frappe || typeof frappe.call !== "function") return;
-
 		const parsed = await fetch_config_json();
 		if (parsed) {
 			apply_config(parsed);
@@ -1555,7 +813,6 @@
 		}
 	}
 
-	// Expose a method to force-refresh (call from console or after saving config)
 	window.csb_reload = async function () {
 		try {
 			localStorage.removeItem(cache_key());
@@ -1672,9 +929,9 @@
 		const style = document.createElement("style");
 		style.id = "csb-styles";
 		style.textContent = `
-      /* ── Sidebar item base ── */
+      /* ── Sidebar item base: no extra right padding needed (no inline badge) ── */
       .cn-item.cn-parent-link,
-      .cn-item.cn-child-link { position:relative; padding-right:28px !important; }
+      .cn-item.cn-child-link { position:relative; }
 
       /* ── Quick-create "+" button ── */
       .cn-plus-btn {
@@ -1688,18 +945,43 @@
       .cn-item:hover .cn-plus-btn { opacity:.65; }
       .cn-plus-btn:hover { opacity:1 !important; background:var(--primary,#5c6bc0); border-color:var(--primary,#5c6bc0); color:#fff; }
 
-      /* ── Shortcut badge ── */
-      .cn-shortcut-badge {
-        display:inline-flex; align-items:center;
-        margin-left:auto; margin-right:28px;
-        padding:1px 5px; border-radius:4px;
-        background:var(--control-bg,rgba(0,0,0,.06));
-        border:1px solid var(--border-color,rgba(0,0,0,.1));
-        font-size:9px; font-weight:700; font-family:monospace;
-        color:var(--text-muted,#888); letter-spacing:.03em;
-        flex-shrink:0; white-space:nowrap; pointer-events:none;
+      /* ── Shortcut tooltip ── */
+      #csb-shortcut-tooltip {
+        position:fixed; z-index:99999;
+        display:none; align-items:center; gap:8px;
+        padding:5px 10px; border-radius:6px;
+        background:var(--gray-800,#1f2937); color:#fff;
+        font-size:12px; font-weight:500; line-height:1.4;
+        box-shadow:0 4px 14px rgba(0,0,0,.25);
+        pointer-events:none; white-space:nowrap;
+        max-width:260px;
       }
-      .is-active .cn-shortcut-badge { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.3); color:inherit; }
+      #csb-shortcut-tooltip .csb-tt-label {
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        flex:1; min-width:0;
+      }
+      #csb-shortcut-tooltip .csb-tt-key {
+        display:inline-flex; align-items:center;
+        padding:2px 7px; border-radius:4px;
+        background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
+        font-size:11px; font-weight:700; font-family:monospace;
+        color:#fff; flex-shrink:0; letter-spacing:.04em;
+      }
+
+      /* ── Customize Sidebar button ── */
+      .cn-customize-btn {
+        margin-top:8px !important;
+        border-top:1px solid var(--cn-connector-color, #e5e7eb);
+        padding-top:6px !important;
+        color:var(--cn-text-muted, #6b7280) !important;
+        font-size:12px !important;
+      }
+      .cn-customize-btn:hover {
+        color:var(--cn-primary, #2490ef) !important;
+        background:var(--cn-sidebar-hover, #f3f4f6) !important;
+      }
+      .cn-customize-btn .cn-item-icon svg { opacity:.7; }
+      .cn-customize-btn:hover .cn-item-icon svg { opacity:1; }
 
       /* ── type_2 smooth expand/collapse ── */
       .cn-group--type2 .cn-children {
@@ -1715,6 +997,12 @@
 
       /* ── Keyboard focus ring ── */
       .cn-parent-toggle:focus-visible { outline:2px solid var(--primary,#5c6bc0); outline-offset:-2px; border-radius:4px; }
+
+      /* ── Hide "Toggle Full Width" navbar menu item ── */
+      .dropdown-menu li a[onclick*="full_width"],
+      .dropdown-menu li:has(> a[onclick*="full_width"]) {
+        display:none !important;
+      }
     `;
 		document.head.appendChild(style);
 	}
@@ -1738,7 +1026,6 @@
 		}
 		window.addEventListener("popstate", on_route_change);
 
-		// Re-mount if Frappe swaps the layout DOM
 		const observer = new MutationObserver(function () {
 			const missing = document.querySelector(
 				".layout-side-section:not(:has(#" + SIDEBAR_ID + "))",

@@ -70,7 +70,7 @@ def _get_user_readable_doctypes():
 		FROM   `tabDocPerm` dp
 		INNER JOIN `tabDocType` dt ON dt.name = dp.parent
 		WHERE  dp.role IN ({in_roles})
-		  AND  dp.read = 1
+		  AND  dp.write = 1
 		  AND  dt.module IN ({", ".join(["%s"] * len(VERP_MODULES))})
 		""",
         tuple(user_roles) + tuple(VERP_MODULES),
