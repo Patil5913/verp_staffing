@@ -21,10 +21,12 @@ class Employee(Document):
         # Clear cached visible employee names for the user whenever an Employee is updated,
         # to ensure any changes are reflected in reports immediately
         frappe.cache().delete_key("Visible_Employee_Names")
+        frappe.cache().delete_key(f"employee_from_user::{self.user}")
 
     def on_trash(self):
         validate_employee_delete(self)
         frappe.cache().delete_key("Visible_Employee_Names")
+        frappe.cache().delete_key(f"employee_from_user::{self.user}")
 
     def validate(self):
 

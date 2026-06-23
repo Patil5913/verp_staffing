@@ -82,7 +82,7 @@ def get_data(filters):
         return []
 
     # -- Recruiter filter ----------------------------------------------------
-    conditions = ["m.assign_to IS NOT NULL", "m.docstatus = 1"]
+    conditions = ["m.assign_to IS NOT NULL"]
 
     if filters.get("recruiter"):
         # Security: non-admin cannot request a recruiter outside their scope.

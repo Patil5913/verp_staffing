@@ -68,13 +68,14 @@ def get_columns():
     ]
 
 
-def _get_marketing_employees_cached(company):
+def _get_marketing_employees_cached():
     """
     Returns all Marketing-department employees for this company.
     Cached in Redis for 1 hour, scoped by company.
     Result: list of employee name strings.
     """
-    cache_key = f"marketing_dept_employees::{company}"
+    # cache_key = f"marketing_dept_employees::{company}"
+    cache_key = "marketing_dept_employees::interview_target_report"
     cached = frappe.cache().get_value(cache_key)
     if cached is not None:
         return cached
@@ -87,7 +88,7 @@ def _get_marketing_employees_cached(company):
             ON d.parent = e.name
         WHERE d.department = 'Marketing'
         """,
-        {"company": company},
+        # {"company": company},
         as_dict=True,
     )
     names = [r.name for r in rows]
@@ -147,7 +148,7 @@ def get_data(filters):
 
     selected_date = getdate(filters["from_date"])
     user = frappe.session.user
-    company = filters.get("company") or frappe.defaults.get_user_default("company")
+    # company = filters.get("company") or frappe.defaults.get_user_default("company")
     employee_filter = filters.get("employee")
 
     # -- Resolve employee scope (Marketing dept only) -------------------------
@@ -164,12 +165,12 @@ def get_data(filters):
         )
 
     elif user == "Administrator":
-        valid_employees = _get_marketing_employees_cached(company)
+        valid_employees = _get_marketing_employees_cached()
 
     else:
         # get_visible_employee_names_cached() returns hierarchy-aware list.
         # Filter it down to Marketing dept using the cache.
-        all_marketing = set(_get_marketing_employees_cached(company))
+        all_marketing = set(_get_marketing_employees_cached())
         visible = set(get_visible_employee_names_cached())
         valid_employees = list(all_marketing & visible)
 
@@ -192,8 +193,7 @@ def get_data(filters):
         FROM `tabMarketing` m
         LEFT JOIN `tabCustomer` c
             ON c.name = m.customer
-        WHERE m.docstatus  = %(docstatus)s
-          AND m.assign_to IN ({emp_placeholders})
+        WHERE m.assign_to IN ({emp_placeholders})
         ORDER BY m.assign_to, m.start_date DESC
         """,
         m_values,
@@ -328,7 +328,7 @@ def get_marketing_hierarchy_employees(
     Uses get_cached_value for user→employee lookup (no per-keystroke DB hit).
     """
     user = frappe.session.user
-    company = frappe.defaults.get_user_default("company")
+    # company = frappe.defaults.get_user_default("company")
 
     values = {
         "txt": f"%{txt}%",

@@ -36,7 +36,7 @@ def get_columns():
     ]
 
 
-def get_sales_employees_cached(employee_list, company):
+def get_sales_employees_cached(employee_list):
     """
     Given a list of employee names, return only those in the Sales department.
     Result is cached in Redis for 1 hour, scoped by company.
@@ -44,7 +44,8 @@ def get_sales_employees_cached(employee_list, company):
     if not employee_list:
         return []
 
-    cache_key = f"sales_dept_employees::{company}"
+    # cache_key = f"sales_dept_employees::{company}"
+    cache_key = "sales_dept_employees::call_details"
     cached = frappe.cache().get_value(cache_key)
     if cached is not None:
         # Filter the cached full-Sales-list down to the requested subset.
@@ -61,7 +62,7 @@ def get_sales_employees_cached(employee_list, company):
             ON d.parent = e.name
         WHERE d.department = 'Sales'
         """,
-        {"company": company},
+        # {"company": company},
         as_dict=True,
     )
     all_sales_names = [row.name for row in all_sales]
@@ -71,9 +72,10 @@ def get_sales_employees_cached(employee_list, company):
     return [e for e in all_sales_names if e in requested]
 
 
-def _get_all_sales_employees_cached(company):
+def _get_all_sales_employees_cached():
     """Return every Sales employee for this company (admin path)."""
-    cache_key = f"sales_dept_employees::{company}"
+    # cache_key = f"sales_dept_employees::{company}"
+    cache_key = "sales_dept_employees::call_details"
     cached = frappe.cache().get_value(cache_key)
     if cached is not None:
         return cached
@@ -86,7 +88,7 @@ def _get_all_sales_employees_cached(company):
             ON d.parent = e.name
         WHERE d.department = 'Sales'
         """,
-        {"company": company},
+        # {"company": company},
         as_dict=True,
     )
     names = [row.name for row in all_sales]
@@ -94,7 +96,7 @@ def _get_all_sales_employees_cached(company):
     return names
 
 
-def _resolve_employee_scope(filters, user, company):
+def _resolve_employee_scope(filters, user):
     """
     Returns a list of employee names whose data the current user may see,
     filtered to Sales department only.
@@ -110,13 +112,13 @@ def _resolve_employee_scope(filters, user, company):
         # Security check: non-admin cannot request an employee outside their hierarchy.
         if user != "Administrator" and employee_filter not in allowed_employees:
             return []
-        return get_sales_employees_cached([employee_filter], company)
+        return get_sales_employees_cached([employee_filter])
 
     if user == "Administrator":
-        return _get_all_sales_employees_cached(company)
+        return _get_all_sales_employees_cached()
 
     # Non-admin, no explicit filter — show their full visible hierarchy.
-    return get_sales_employees_cached(allowed_employees, company)
+    return get_sales_employees_cached(allowed_employees)
 
 
 def _resolve_dates(filters):
@@ -156,9 +158,9 @@ def get_data_and_chart(filters):
     avoid a Python loop over potentially thousands of rows.
     """
     user = frappe.session.user
-    company = (filters.get("company") if filters else None) or frappe.defaults.get_user_default("company")
+    # company = (filters.get("company") if filters else None) or frappe.defaults.get_user_default("company")
 
-    valid_employees = _resolve_employee_scope(filters, user, company)
+    valid_employees = _resolve_employee_scope(filters, user)
 
     # Empty employee scope → no data.
     if valid_employees is not None and len(valid_employees) == 0:
@@ -292,14 +294,14 @@ def get_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters)
     hierarchy traversal; only the final filtered search touches the DB.
     """
     user = frappe.session.user
-    company = frappe.defaults.get_user_default("company")
+    # company = frappe.defaults.get_user_default("company")
 
     values = {
         "txt": f"%{txt}%",
         "start": int(start),
         "page_len": int(page_len),
         "dept": "Sales",
-        "company": company,
+        # "company": company,
     }
 
     conditions = [

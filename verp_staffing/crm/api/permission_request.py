@@ -32,7 +32,9 @@ def check_candidate_form_required_from_sales_order(so_name):
     if not so_name:
         return False
 
-    raw = get_cached_erp_config_json("candidate_details_form_fields")
+    raw = frappe.db.get_single_value(
+	        "ERP Configuration", "candidate_details_form_fields"
+	    )
 
     if not raw:
         return False
@@ -67,19 +69,6 @@ def check_candidate_form_required_from_sales_order(so_name):
         )
 
     return False
-
-
-def get_cached_erp_config_json(fieldname):
-    try:
-        raw = frappe.get_cached_doc("ERP Configuration").get(fieldname)
-
-        if not raw:
-            return {}
-        return {k.lower().strip(): v for k, v in json.loads(raw).items()}
-    except Exception:
-        return {}
-
-
 
 def _build_fields_from_fieldnames(allowed_fieldnames):
     """
@@ -328,7 +317,9 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
 
 @frappe.whitelist()
 def get_department_updatable_fields(doctype=None):
-    dept_access = get_cached_erp_config_json("department_access_form_fields")
+    dept_access = frappe.db.get_single_value(
+	        "ERP Configuration", "department_access_form_fields"
+	    )
     if not dept_access:
         return {"simple_fields": {}, "table_fields": {}}
 
@@ -352,7 +343,9 @@ def get_customer_owner_updatable_fields():
     using the 'customer' key in ERP Configuration → department_access_form_fields.
     Called when Update Detail dialog opens on Customer form.
     """
-    dept_access_normalized = get_cached_erp_config_json("department_access_form_fields")
+    dept_access_normalized = frappe.db.get_single_value(
+	        "ERP Configuration", "department_access_form_fields"
+	    )
     allowed_fieldnames = dept_access_normalized.get("customer", [])
     if not allowed_fieldnames:
         return {"simple_fields": {}, "table_fields": {}}
@@ -370,7 +363,9 @@ def get_lead_detail_field_values(customer_name):
     if not lead_detail_name:
         return {}
 
-    dept_access_normalized = get_cached_erp_config_json("department_access_form_fields")
+    dept_access_normalized = frappe.db.get_single_value(
+	        "ERP Configuration", "department_access_form_fields"
+	    )
 
     # Collect ALL fieldnames across ALL department keys
     all_fieldnames = set()

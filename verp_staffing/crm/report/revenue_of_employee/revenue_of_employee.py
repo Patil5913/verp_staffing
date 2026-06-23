@@ -57,7 +57,7 @@ def get_columns():
     ]
     
 
-def _get_sales_employees(employee_names, company):
+def _get_sales_employees(employee_names):
     """
     Given a list of employee names (or None for "all"), return a list of dicts:
         { name, user, employee_name, target, target_based_on, start_date }
@@ -67,7 +67,8 @@ def _get_sales_employees(employee_names, company):
 
     Cache key is scoped by company to prevent multi-tenant data bleed.
     """
-    cache_key = f"sales_emp_details::{company}"
+    # cache_key = f"sales_emp_details::{company}"
+    cache_key = "sales_emp_details::revenue_of_employee"
     cached = frappe.cache().get_value(cache_key)
 
     if cached is None:
@@ -88,7 +89,7 @@ def _get_sales_employees(employee_names, company):
               AND e.user IS NOT NULL
               AND e.user != ''
             """,
-            {"company": company},
+            # {"company": company},
             as_dict=True,
         )
         frappe.cache().set_value(cache_key, cached, expires_in_sec=3600)
@@ -123,7 +124,7 @@ def _resolve_dates(filters):
 
 def get_data(filters):
     user = frappe.session.user
-    company = filters.get("company") or frappe.defaults.get_user_default("company")
+    # company = filters.get("company") or frappe.defaults.get_user_default("company")
     employee_filter = filters.get("employee")
 
     # -- Resolve which employees are in scope --------------------------------
@@ -132,11 +133,11 @@ def get_data(filters):
     if employee_filter:
         if user != "Administrator" and employee_filter not in allowed_employees:
             return []
-        sales_employees = _get_sales_employees([employee_filter], company)
+        sales_employees = _get_sales_employees([employee_filter])
     elif user == "Administrator":
-        sales_employees = _get_sales_employees(None, company)  # all Sales
+        sales_employees = _get_sales_employees(None)  # all Sales
     else:
-        sales_employees = _get_sales_employees(allowed_employees, company)
+        sales_employees = _get_sales_employees(allowed_employees)
 
     if not sales_employees:
         return []
