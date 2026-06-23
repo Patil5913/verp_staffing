@@ -14,6 +14,12 @@
 //    remains fully readable. The tooltip shows: label + shortcut badge.
 //    "N" alone is reserved.
 //
+//  OVERFLOW TOOLTIP:
+//    Any sidebar label that is visually truncated ("...") will show a tooltip
+//    with the full label text on hover. If the item also has a shortcut, both
+//    the full label and the shortcut badge are shown together in one tooltip.
+//    Items with shortcuts always show the tooltip regardless of truncation.
+//
 //  NO_PLUS_DOCTYPES:
 //    Doctypes listed here will NOT show the quick-create "+" button in the sidebar.
 //    The same set is used to suppress the "New" button on those doctypes'
@@ -28,11 +34,10 @@
 //    ✓ "Customize Sidebar" button at bottom of sidebar
 //    ✓ Full-width is on by default; "Toggle Full Width" navbar button hidden
 //    ✓ List-page New button hidden for doctypes in NO_PLUS_DOCTYPES
+//    ✓ Overflow tooltip for truncated labels (merged with shortcut tooltip)
 // ═══════════════════════════════════════════════════════════════════════════
-
 (function () {
 	"use strict";
-
 	// ─── NO QUICK-CREATE / NO NEW-BUTTON LIST ─────────────────────────────────
 	//
 	// Add the palette key (slug format) of any doctype/item for which you want to:
@@ -65,7 +70,6 @@
 		"Bank Account Type",
 		"Bank Account Subtype",
 	]);
-
 	// ─── FULL WIDTH DEFAULT ────────────────────────────────────────────────────
 	// Apply full-width immediately and hide the toggle button permanently.
 	(function enforce_full_width() {
@@ -91,7 +95,6 @@
 			});
 		}
 	})();
-
 	// ─── CACHE ────────────────────────────────────────────────────────────────
 	function cache_key() {
 		return "csb_config_" + ((frappe.session && frappe.session.user) || "guest");
@@ -100,12 +103,9 @@
 		return "csb_ts_" + ((frappe.session && frappe.session.user) || "guest");
 	}
 	const CACHE_TTL_MS = 5 * 60 * 1000;
-
 	let SIDEBAR_CONFIG = [];
 	let NAV_ITEMS = {};
-
 	// ─── PERMISSIONS ──────────────────────────────────────────────────────────
-
 	function is_administrator() {
 		if (!window.frappe) return false;
 		return (
@@ -113,7 +113,6 @@
 			(frappe.user_roles && frappe.user_roles.includes("Administrator"))
 		);
 	}
-
 	function can_read(doctype) {
 		if (is_administrator()) return true;
 		if (!window.frappe) return false;
@@ -123,7 +122,6 @@
 			return false;
 		}
 	}
-
 	function item_accessible(key) {
 		if (is_administrator()) return true;
 		const item = NAV_ITEMS[key];
@@ -131,11 +129,9 @@
 		if (item.type === "doctype" && item.doctype) return can_read(item.doctype);
 		return true;
 	}
-
 	function visible_children(parent_cfg) {
 		return (parent_cfg.children || []).filter((c) => item_accessible(c.key));
 	}
-
 	function parent_visible(cfg) {
 		if (cfg.parent_type === "type_3") {
 			if (cfg.link_type === "doctype" && cfg.doctype) return can_read(cfg.doctype);
@@ -143,9 +139,7 @@
 		}
 		return visible_children(cfg).length > 0;
 	}
-
 	// ─── ROUTING ──────────────────────────────────────────────────────────────
-
 	function current_path() {
 		let p = window.location.pathname;
 		try {
@@ -153,7 +147,6 @@
 		} catch (e) {}
 		return p.replace(/\/+$/, "");
 	}
-
 	function key_is_active(key) {
 		const item = NAV_ITEMS[key];
 		if (!item) return false;
@@ -161,14 +154,12 @@
 		const path = current_path();
 		return path === route || path.startsWith(route + "/");
 	}
-
 	function parent_route_is_active(cfg) {
 		if (!cfg.route) return false;
 		const route = cfg.route.replace(/\/+$/, "");
 		const path = current_path();
 		return path === route || path.startsWith(route + "/");
 	}
-
 	function get_active_owner_key() {
 		for (const cfg of SIDEBAR_CONFIG) {
 			if (!parent_visible(cfg)) continue;
@@ -186,12 +177,9 @@
 		}
 		return null;
 	}
-
 	// ─── EXPAND / COLLAPSE ────────────────────────────────────────────────────
-
 	const EXP_KEY =
 		"csb_expanded_" + ((window.frappe && frappe.session && frappe.session.user) || "guest");
-
 	function load_expanded_key() {
 		try {
 			return localStorage.getItem(EXP_KEY) || null;
@@ -204,7 +192,6 @@
 			key ? localStorage.setItem(EXP_KEY, key) : localStorage.removeItem(EXP_KEY);
 		} catch (e) {}
 	}
-
 	function route_forced_expand_key() {
 		for (const cfg of SIDEBAR_CONFIG) {
 			if (
@@ -216,13 +203,10 @@
 		}
 		return null;
 	}
-
 	function compute_expanded_key() {
 		return route_forced_expand_key() || load_expanded_key();
 	}
-
 	// ─── SPA NAVIGATE ─────────────────────────────────────────────────────────
-
 	function spa_navigate(route) {
 		if (window.frappe && frappe.set_route) {
 			frappe.set_route(route.replace(/^\/app\//, ""));
@@ -230,9 +214,7 @@
 			window.location.href = route;
 		}
 	}
-
 	// ─── DOM HELPERS ──────────────────────────────────────────────────────────
-
 	function make_icon(icon_id, size) {
 		size = size || "sm";
 		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -243,7 +225,6 @@
 		svg.appendChild(use);
 		return svg;
 	}
-
 	function make_item_inner(icon_id, label_text) {
 		const icon_wrap = document.createElement("span");
 		icon_wrap.className = "cn-item-icon";
@@ -253,9 +234,7 @@
 		label.textContent = label_text;
 		return [icon_wrap, label];
 	}
-
 	// ─── "+" QUICK-CREATE BUTTON ──────────────────────────────────────────────
-
 	function make_plus_btn(doctype) {
 		const btn = document.createElement("button");
 		btn.className = "cn-plus-btn";
@@ -271,7 +250,6 @@
 		});
 		return btn;
 	}
-
 	// Returns true if the "+" quick-create button should be shown for this key.
 	// Checks NO_PLUS_DOCTYPES — a single Set that drives both sidebar and list-page suppression.
 	function should_show_plus(doctype, item) {
@@ -280,14 +258,18 @@
 		if (item.issingle) return false;
 		return true;
 	}
-
-	// ─── SHORTCUT TOOLTIP ─────────────────────────────────────────────────────
-	// Shortcut is shown in a native-style tooltip on hover.
-	// No badge is injected into the label — labels remain full-width.
-	// Tooltip shows: "Label Name  [shortcut]"
-
+	// ─── UNIFIED TOOLTIP (overflow + shortcut) ────────────────────────────────
+	//
+	// ONE tooltip element is reused for all hover events.
+	// Logic per anchor element:
+	//   - If it has a shortcut  → always show tooltip (label + shortcut badge)
+	//   - If no shortcut        → show tooltip ONLY when the .cn-item-label
+	//                             inside is overflowing (scrollWidth > offsetWidth)
+	//
+	// Both cases render the same tooltip DOM; the shortcut <kbd> is omitted
+	// when there is no shortcut to show.
+	//
 	let _tooltip_el = null;
-
 	function get_tooltip_el() {
 		if (!_tooltip_el) {
 			_tooltip_el = document.createElement("div");
@@ -296,25 +278,30 @@
 		}
 		return _tooltip_el;
 	}
-
-	function show_shortcut_tooltip(anchor, label, shortcut) {
+	// label     – full text to display
+	// shortcut  – shortcut string or "" / null
+	function show_tooltip(anchor, label, shortcut) {
 		const el = get_tooltip_el();
-		el.innerHTML = `<span class="csb-tt-label">${frappe.utils.escape_html(label)}</span><kbd class="csb-tt-key">${frappe.utils.escape_html(shortcut)}</kbd>`;
+		const safe_label = frappe.utils.escape_html(label);
+		if (shortcut) {
+			const safe_sc = frappe.utils.escape_html(shortcut);
+			el.innerHTML = `<span class="csb-tt-label">${safe_label}</span><kbd class="csb-tt-key">${safe_sc}</kbd>`;
+		} else {
+			el.innerHTML = `<span class="csb-tt-label">${safe_label}</span>`;
+		}
 		el.style.display = "flex";
 		position_tooltip(el, anchor);
 	}
-
-	function hide_shortcut_tooltip() {
+	function hide_tooltip() {
 		const el = get_tooltip_el();
 		el.style.display = "none";
 	}
-
 	function position_tooltip(el, anchor) {
 		const r = anchor.getBoundingClientRect();
 		el.style.left = r.right + 8 + "px";
 		el.style.top = r.top + r.height / 2 + "px";
 		el.style.transform = "translateY(-50%)";
-		// Check overflow on right edge
+		// Flip left if overflowing right edge
 		requestAnimationFrame(() => {
 			const tw = el.offsetWidth;
 			if (r.right + 8 + tw > window.innerWidth - 8) {
@@ -322,25 +309,37 @@
 			}
 		});
 	}
-
-	function attach_shortcut_tooltip(el, label, shortcut) {
-		if (!shortcut) return;
-		el.setAttribute("data-csb-shortcut", shortcut);
-		el.addEventListener("mouseenter", () => show_shortcut_tooltip(el, label, shortcut));
-		el.addEventListener("mouseleave", hide_shortcut_tooltip);
-		el.addEventListener("focus", () => show_shortcut_tooltip(el, label, shortcut));
-		el.addEventListener("blur", hide_shortcut_tooltip);
+	// Returns true if the .cn-item-label inside `anchor` is visually truncated.
+	function label_is_overflowing(anchor) {
+		const label_el = anchor.querySelector(".cn-item-label");
+		if (!label_el) return false;
+		// scrollWidth > offsetWidth means text is clipped with ellipsis
+		return label_el.scrollWidth > label_el.offsetWidth;
 	}
-
+	// Attach hover/focus listeners that show the tooltip when needed.
+	// shortcut may be "" or null for items without a keyboard shortcut.
+	function attach_tooltip(el, label, shortcut) {
+		// Store on the element so we can read it back in the handler
+		el.setAttribute("data-csb-label", label);
+		if (shortcut) el.setAttribute("data-csb-shortcut", shortcut);
+		function on_enter() {
+			const has_shortcut = !!shortcut;
+			const overflowing = label_is_overflowing(el);
+			if (has_shortcut || overflowing) {
+				show_tooltip(el, label, shortcut || null);
+			}
+		}
+		el.addEventListener("mouseenter", on_enter);
+		el.addEventListener("focus", on_enter);
+		el.addEventListener("mouseleave", hide_tooltip);
+		el.addEventListener("blur", hide_tooltip);
+	}
 	// ─── SIDEBAR DOM ──────────────────────────────────────────────────────────
-
 	const SIDEBAR_ID = "custom-nav-sidebar";
-
 	function build_sidebar_dom() {
 		const wrap = document.createElement("div");
 		wrap.id = SIDEBAR_ID;
 		wrap.className = "custom-nav-sidebar";
-
 		SIDEBAR_CONFIG.forEach(function (cfg) {
 			if (!parent_visible(cfg)) return;
 			if (cfg.parent_type === "type_3") {
@@ -356,32 +355,24 @@
 				return;
 			}
 		});
-
 		// ── "Customize Sidebar" button ────────────────────────────────────────
 		wrap.appendChild(make_customize_btn());
-
 		return wrap;
 	}
-
 	// ─── CUSTOMIZE SIDEBAR BUTTON ─────────────────────────────────────────────
-
 	function make_customize_btn() {
 		const btn = document.createElement("a");
 		btn.className = "cn-item cn-customize-btn";
 		btn.href = "#";
 		btn.title = "Customize your sidebar layout";
-
 		const icon_wrap = document.createElement("span");
 		icon_wrap.className = "cn-item-icon";
 		icon_wrap.innerHTML = `<svg class="icon icon-sm" aria-hidden="true"><use href="#icon-setting-gear"></use></svg>`;
-
 		const label = document.createElement("span");
 		label.className = "cn-item-label";
 		label.textContent = "Customize Sidebar";
-
 		btn.appendChild(icon_wrap);
 		btn.appendChild(label);
-
 		btn.addEventListener("click", async function (e) {
 			e.preventDefault();
 			const current_user = frappe.session && frappe.session.user;
@@ -389,7 +380,6 @@
 				spa_navigate("/app/sidebar-master/new");
 				return;
 			}
-
 			// Check if the current user already has a Sidebar Master doc
 			try {
 				const res = await frappe.call({
@@ -410,19 +400,15 @@
 				spa_navigate("/app/sidebar-master/new");
 			}
 		});
-
 		return btn;
 	}
-
 	function make_type3_el(cfg) {
 		const a = document.createElement("a");
 		a.className = "cn-item cn-parent-link" + (parent_route_is_active(cfg) ? " is-active" : "");
 		a.href = cfg.route || "#";
 		a.dataset.parentKey = cfg.key;
 		a.dataset.parentType = "type_3";
-
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => a.appendChild(el));
-
 		// Only add "+" if key is not in NO_PLUS_DOCTYPES
 		if (
 			should_show_plus(cfg.doctype, {
@@ -433,41 +419,33 @@
 		) {
 			a.appendChild(make_plus_btn(cfg.doctype));
 		}
-
-		// Tooltip instead of inline badge
-		attach_shortcut_tooltip(a, cfg.label, cfg.shortcut);
-
+		// Unified tooltip: overflow-only OR shortcut OR both
+		attach_tooltip(a, cfg.label, cfg.shortcut || "");
 		a.addEventListener("click", function (e) {
 			e.preventDefault();
-			hide_shortcut_tooltip();
+			hide_tooltip();
 			spa_navigate(cfg.route);
 		});
 		return a;
 	}
-
 	function make_type1_el(cfg) {
 		const owner_key = get_active_owner_key();
-
 		const wrap = document.createElement("div");
 		wrap.className = "cn-group cn-group--type1" + (owner_key === cfg.key ? " has-active" : "");
 		wrap.dataset.parentKey = cfg.key;
-
 		const a = document.createElement("a");
 		a.className = "cn-item cn-parent-link" + (parent_route_is_active(cfg) ? " is-active" : "");
 		a.href = cfg.route || "#";
 		a.dataset.parentKey = cfg.key;
 		a.dataset.parentType = "type_1";
-
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => a.appendChild(el));
-		attach_shortcut_tooltip(a, cfg.label, cfg.shortcut);
-
+		attach_tooltip(a, cfg.label, cfg.shortcut || "");
 		a.addEventListener("click", function (e) {
 			e.preventDefault();
-			hide_shortcut_tooltip();
+			hide_tooltip();
 			spa_navigate(cfg.route);
 		});
 		wrap.appendChild(a);
-
 		const kids = visible_children(cfg);
 		if (kids.length) {
 			const ul = document.createElement("ul");
@@ -482,18 +460,15 @@
 					(owner_key === cfg.key && key_is_active(child.key) ? " is-active" : "");
 				ca.href = item.route;
 				ca.dataset.navKey = child.key;
-
 				make_item_inner(item.icon, item.name).forEach((el) => ca.appendChild(el));
-
 				// Only add "+" if key is not in NO_PLUS_DOCTYPES
 				if (should_show_plus(child.doctype, item)) {
 					ca.appendChild(make_plus_btn(item.doctype));
 				}
-				attach_shortcut_tooltip(ca, item.name, item.shortcut);
-
+				attach_tooltip(ca, item.name, item.shortcut || "");
 				ca.addEventListener("click", function (e) {
 					e.preventDefault();
-					hide_shortcut_tooltip();
+					hide_tooltip();
 					spa_navigate(item.route);
 				});
 				li.appendChild(ca);
@@ -501,38 +476,31 @@
 			});
 			wrap.appendChild(ul);
 		}
-
 		return wrap;
 	}
-
 	function make_type2_el(cfg) {
 		const expanded = compute_expanded_key() === cfg.key;
 		const owner_key = get_active_owner_key();
 		const kids = visible_children(cfg);
-
 		const wrap = document.createElement("div");
 		wrap.className = "cn-group cn-group--type2" + (expanded ? " is-expanded" : "");
 		wrap.dataset.parentKey = cfg.key;
-
 		const header = document.createElement("div");
 		header.className = "cn-item cn-parent-toggle";
 		header.setAttribute("role", "button");
 		header.setAttribute("tabindex", "0");
 		header.setAttribute("aria-expanded", expanded ? "true" : "false");
 		header.dataset.parentKey = cfg.key;
-
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => header.appendChild(el));
-		attach_shortcut_tooltip(header, cfg.label, cfg.shortcut);
-
+		attach_tooltip(header, cfg.label, cfg.shortcut || "");
 		const chevron = document.createElement("span");
 		chevron.className = "cn-chevron";
 		chevron.innerHTML =
 			'<svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,6 8,10 12,6"/></svg>';
 		header.appendChild(chevron);
-
 		function toggle_group(e) {
 			e.stopPropagation();
-			hide_shortcut_tooltip();
+			hide_tooltip();
 			const is_open = wrap.classList.contains("is-expanded");
 			document.querySelectorAll(".cn-group--type2").forEach(function (other) {
 				if (other !== wrap) {
@@ -546,7 +514,6 @@
 			header.setAttribute("aria-expanded", next ? "true" : "false");
 			save_expanded_key(next ? cfg.key : null);
 		}
-
 		header.addEventListener("click", toggle_group);
 		header.addEventListener("keydown", function (e) {
 			if (e.key === "Enter" || e.key === " ") {
@@ -555,10 +522,8 @@
 			}
 		});
 		wrap.appendChild(header);
-
 		const ul = document.createElement("ul");
 		ul.className = "cn-children";
-
 		kids.forEach(function (child) {
 			const item = NAV_ITEMS[child.key];
 			if (!item) return;
@@ -569,51 +534,41 @@
 				(owner_key === cfg.key && key_is_active(child.key) ? " is-active" : "");
 			a.href = item.route;
 			a.dataset.navKey = child.key;
-
 			make_item_inner(item.icon, item.name).forEach((el) => a.appendChild(el));
-
 			// Only add "+" if key is not in NO_PLUS_DOCTYPES
 			if (should_show_plus(child.doctype, item)) {
 				a.appendChild(make_plus_btn(item.doctype));
 			}
-			attach_shortcut_tooltip(a, item.name, item.shortcut);
-
+			attach_tooltip(a, item.name, item.shortcut || "");
 			a.addEventListener("click", function (e) {
 				e.preventDefault();
-				hide_shortcut_tooltip();
+				hide_tooltip();
 				spa_navigate(item.route);
 			});
 			li.appendChild(a);
 			ul.appendChild(li);
 		});
-
 		wrap.appendChild(ul);
 		return wrap;
 	}
-
 	// ─── MOUNT / REFRESH ──────────────────────────────────────────────────────
-
 	function mount_sidebar() {
 		document.querySelectorAll(".layout-side-section").forEach(function (section) {
 			if (section.querySelector("#" + SIDEBAR_ID)) return;
 			section.appendChild(build_sidebar_dom());
 		});
 	}
-
 	function refresh_sidebar_active() {
 		const owner_key = get_active_owner_key();
 		const expanded_key = compute_expanded_key();
-
 		document.querySelectorAll(".cn-parent-link[data-parent-key]").forEach(function (el) {
 			const cfg = SIDEBAR_CONFIG.find((c) => c.key === el.dataset.parentKey);
 			if (!cfg) return;
 			el.classList.toggle("is-active", parent_route_is_active(cfg));
 		});
-
 		document.querySelectorAll(".cn-group--type1[data-parent-key]").forEach(function (el) {
 			el.classList.toggle("has-active", owner_key === el.dataset.parentKey);
 		});
-
 		document.querySelectorAll(".cn-group--type2[data-parent-key]").forEach(function (group) {
 			const key = group.dataset.parentKey;
 			group.querySelectorAll(".cn-child-link[data-nav-key]").forEach(function (el) {
@@ -627,7 +582,6 @@
 			const h = group.querySelector(".cn-parent-toggle");
 			if (h) h.setAttribute("aria-expanded", should_exp ? "true" : "false");
 		});
-
 		document
 			.querySelectorAll(".cn-group--type1 .cn-child-link[data-nav-key]")
 			.forEach(function (el) {
@@ -639,13 +593,10 @@
 				);
 			});
 	}
-
 	// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────
-
 	let _sc_chord_first = null;
 	let _sc_chord_timer = null;
 	const SC_CHORD_MS = 1000;
-
 	function build_shortcut_map() {
 		const map = {};
 		function add(shortcut, route) {
@@ -662,26 +613,20 @@
 		});
 		return map;
 	}
-
 	function register_shortcuts() {
 		if (window._csb_key_handler) {
 			document.removeEventListener("keydown", window._csb_key_handler, true);
 		}
-
 		const map = build_shortcut_map();
 		if (!Object.keys(map).length) return;
-
 		const MODS = new Set(["Alt", "Control", "Shift", "Meta", "CapsLock", "Tab"]);
-
 		function handler(e) {
 			const tag = (e.target || {}).tagName || "";
 			if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
 			if ((e.target || {}).isContentEditable) return;
 			if (MODS.has(e.key)) return;
-
 			const raw = e.key.length === 1 ? e.key.toUpperCase() : e.key;
 			let candidate = null;
-
 			if (e.altKey) {
 				candidate = "alt+" + raw.toLowerCase();
 			} else if (e.ctrlKey) {
@@ -716,19 +661,15 @@
 					}
 				}
 			}
-
 			if (candidate && map[candidate]) {
 				e.preventDefault();
 				spa_navigate(map[candidate]);
 			}
 		}
-
 		window._csb_key_handler = handler;
 		document.addEventListener("keydown", handler, true);
 	}
-
 	// ─── CONFIG LOADING ───────────────────────────────────────────────────────
-
 	function load_from_cache() {
 		try {
 			const ts = parseInt(localStorage.getItem(cache_ts_key()) || "0", 10);
@@ -739,14 +680,12 @@
 		} catch (e) {}
 		return null;
 	}
-
 	function save_to_cache(config) {
 		try {
 			localStorage.setItem(cache_key(), JSON.stringify(config));
 			localStorage.setItem(cache_ts_key(), String(Date.now()));
 		} catch (e) {}
 	}
-
 	function apply_config(config_array) {
 		SIDEBAR_CONFIG = config_array;
 		NAV_ITEMS = {};
@@ -777,12 +716,10 @@
 			});
 		});
 	}
-
 	async function fetch_config_json() {
 		const current_user =
 			(frappe.session && frappe.session.user) ||
 			(frappe.boot && frappe.boot.user && frappe.boot.user.name);
-
 		if (current_user) {
 			try {
 				const user_res = await frappe.call({
@@ -799,7 +736,6 @@
 				console.error("Custom Sidebar: user config fetch failed", e);
 			}
 		}
-
 		try {
 			const master_res = await frappe.call({
 				method: "frappe.client.get_value",
@@ -814,10 +750,8 @@
 		} catch (e) {
 			console.error("Custom Sidebar: failed to load Master config", e);
 		}
-
 		return null;
 	}
-
 	async function load_config() {
 		const cached = load_from_cache();
 		if (cached) {
@@ -833,7 +767,6 @@
 			console.warn("Custom Sidebar: no config found for user or Master.");
 		}
 	}
-
 	window.csb_reload = async function () {
 		try {
 			localStorage.removeItem(cache_key());
@@ -845,9 +778,7 @@
 		mount_sidebar();
 		register_shortcuts();
 	};
-
 	// ─── DEFAULT / HOME ROUTE ─────────────────────────────────────────────────
-
 	function get_first_accessible_route() {
 		for (const cfg of SIDEBAR_CONFIG) {
 			if (!parent_visible(cfg)) continue;
@@ -862,19 +793,16 @@
 		}
 		return null;
 	}
-
 	function resolve_default_route() {
 		const path = current_path();
 		if (path !== "/app" && path !== "") return;
 		const target = get_first_accessible_route();
 		if (target) spa_navigate(target);
 	}
-
 	function patch_frappe_default_route() {
 		if (!window.frappe) return;
 		const target = get_first_accessible_route();
 		if (target && frappe.boot) frappe.boot.default_route = target.replace(/^\/app\//, "");
-
 		if (typeof frappe.set_route === "function" && !frappe.set_route.__csb_patched) {
 			const _orig = frappe.set_route.bind(frappe);
 			frappe.set_route = function () {
@@ -893,7 +821,6 @@
 			};
 			frappe.set_route.__csb_patched = true;
 		}
-
 		if (
 			frappe.router &&
 			typeof frappe.router.push === "function" &&
@@ -918,7 +845,6 @@
 			frappe.router.push.__csb_patched = true;
 		}
 	}
-
 	function patch_logo_click() {
 		document.addEventListener(
 			"click",
@@ -934,25 +860,30 @@
 			true,
 		);
 	}
-
 	// ─── ROUTE CHANGE ─────────────────────────────────────────────────────────
-
 	function on_route_change() {
 		resolve_default_route();
 		mount_sidebar();
 		refresh_sidebar_active();
 	}
-
 	// ─── STYLES ───────────────────────────────────────────────────────────────
-
 	function inject_styles() {
 		if (document.getElementById("csb-styles")) return;
 		const style = document.createElement("style");
 		style.id = "csb-styles";
 		style.textContent = `
-      /* ── Sidebar item base: no extra right padding needed (no inline badge) ── */
+      /* ── Sidebar item base ── */
       .cn-item.cn-parent-link,
       .cn-item.cn-child-link { position:relative; }
+
+      /* ── Label: truncate with ellipsis so overflow is detectable ── */
+      .cn-item-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+        flex: 1 1 0%;
+      }
 
       /* ── Quick-create "+" button ── */
       .cn-plus-btn {
@@ -966,7 +897,7 @@
       .cn-item:hover .cn-plus-btn { opacity:.65; }
       .cn-plus-btn:hover { opacity:1 !important; background:var(--primary,#5c6bc0); border-color:var(--primary,#5c6bc0); color:#fff; }
 
-      /* ── Shortcut tooltip ── */
+      /* ── Unified tooltip (overflow label + optional shortcut) ── */
       #csb-shortcut-tooltip {
         position:fixed; z-index:99999;
         display:none; align-items:center; gap:8px;
@@ -975,7 +906,7 @@
         font-size:12px; font-weight:500; line-height:1.4;
         box-shadow:0 4px 14px rgba(0,0,0,.25);
         pointer-events:none; white-space:nowrap;
-        max-width:260px;
+        max-width:280px;
       }
       #csb-shortcut-tooltip .csb-tt-label {
         overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -1027,9 +958,7 @@
     `;
 		document.head.appendChild(style);
 	}
-
 	// ─── INIT ─────────────────────────────────────────────────────────────────
-
 	async function init() {
 		inject_styles();
 		await load_config();
@@ -1038,7 +967,6 @@
 		resolve_default_route();
 		mount_sidebar();
 		register_shortcuts();
-
 		if (window.frappe) {
 			if (frappe.router && typeof frappe.router.on === "function") {
 				frappe.router.on("change", on_route_change);
@@ -1046,7 +974,6 @@
 			$(document).on("page-change frappe:navigate frappe:route-change", on_route_change);
 		}
 		window.addEventListener("popstate", on_route_change);
-
 		const observer = new MutationObserver(function () {
 			const missing = document.querySelector(
 				".layout-side-section:not(:has(#" + SIDEBAR_ID + "))",
@@ -1055,7 +982,6 @@
 		});
 		observer.observe(document.body, { childList: true, subtree: true });
 	}
-
 	if (window.frappe && typeof frappe.ready === "function") {
 		frappe.ready(init);
 	} else if (document.readyState === "complete" || document.readyState === "interactive") {
