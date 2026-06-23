@@ -1064,13 +1064,8 @@ ROLE_PERMISSIONS = {
         "Pdf Agreement Template": ["select", "read"],
     },
     "_show_sidebar_master": {
-        "Sidebar Master": [
-            "select",
-            "read",
-            "write",
-            "create"
-        ],
-    }
+        "Sidebar Master": ["select", "read", "write", "create"],
+    },
 }
 
 
@@ -2252,6 +2247,15 @@ def seed_master_sidebar_config():
                     "type": "doctype",
                     "route": "/app/erp-configuration/ERP%20Configuration",
                     "doctype": "ERP Configuration",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                },
+                {
+                    "key": "pdf-agreement-template",
+                    "name": "Pdf Agreement Template",
+                    "type": "doctype",
+                    "route": "/app/pdf-agreement-template",
+                    "doctype": "Pdf Agreement Template",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
                 },

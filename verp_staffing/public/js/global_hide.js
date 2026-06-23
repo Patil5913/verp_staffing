@@ -9,7 +9,6 @@ const CACHE = {
 	newButtonHiddenFor: null,
 };
 
-
 /* =========================
    WORKSPACE BUTTON
 ========================= */
@@ -72,11 +71,31 @@ frappe.router.on("change", () => {
 	});
 });
 
-const NO_NEW_DOCTYPES = new Set([
+const NO_PLUS_DOCTYPES = new Set([
 	"Onboardings",
+	"GL Entry",
+	"Supplier Group",
+	"CR",
+	"Agreement",
+	"CRM Note",
+	"CRM Event",
+	"CRM Task",
+	"Lead Detail Form",
+	"Sales Stage",
+	"Interview Status",
+	"Type Of Interview",
+	"Other Services",
+	"Marketing Other Services",
+	"Item Category",
+	"UOM",
+	"Cover Letter",
+	"JDC",
+	"Resume",
+	"RUC",
+	"Technical Other Services",
+	"Training",
 	"Bank Account Type",
 	"Bank Account Subtype",
-	"Currency"
 ]);
 
 function hide_new_button(listview) {
@@ -91,11 +110,9 @@ function hide_new_button(listview) {
 	listview.page?.btn_primary?.hide();
 
 	requestAnimationFrame(() => {
-		listview.page?.wrapper
-			?.querySelectorAll(".btn-new-doc")
-			?.forEach(btn => {
-				btn.style.display = "none";
-			});
+		listview.page?.wrapper?.querySelectorAll(".btn-new-doc")?.forEach((btn) => {
+			btn.style.display = "none";
+		});
 	});
 }
 
@@ -127,4 +144,3 @@ observer.observe(document.body, {
 	childList: true,
 	subtree: true,
 });
-

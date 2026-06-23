@@ -11,5 +11,4 @@ Onboarding
 ESign
 Email Inbox
 Stock
-Selling
 Buying
