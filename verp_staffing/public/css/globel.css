@@ -239,15 +239,19 @@ body.verp-protected::after {
 ========================================= */
 
 @media (min-width: 768px) {
-  body.full-width .container {
-    width: 100%;
-  }
+	body.full-width .container {
+		width: 100%;
+	}
 }
 
-/* body.verp-hide-new-btn .page-actions .btn-primary,
-body.verp-hide-new-btn .btn-new-doc {
+/* =========================================
+	   REMOVE NAVBAR SEARCH
+	========================================= */
+
+.navbar .search-bar,
+.navbar form[role="search"] {
 	display: none !important;
-} */
+}
 
 /* =========================================
    REMOVE HELP MENU
@@ -314,7 +318,14 @@ body.verp-hide-new-btn .btn-new-doc {
 	--cn-text-muted: #555555;
 
 	/* Typography */
-	--cn-font: var(--font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+	--cn-font: var(
+		--font-stack,
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		Roboto,
+		sans-serif
+	);
 	--cn-size-item: 14px;
 	--cn-weight-normal: 400;
 	--cn-weight-active: 500;
@@ -383,7 +394,9 @@ body.verp-hide-new-btn .btn-new-doc {
 	overflow: hidden !important;
 	align-self: flex-start !important;
 	z-index: 10;
-	transition: width 0.22s ease, min-width 0.22s ease;
+	transition:
+		width 0.22s ease,
+		min-width 0.22s ease;
 }
 
 #custom-nav-sidebar {
@@ -403,9 +416,16 @@ body.verp-hide-new-btn .btn-new-doc {
 	box-sizing: border-box;
 }
 
-#custom-nav-sidebar::-webkit-scrollbar { width: 3px; }
-#custom-nav-sidebar::-webkit-scrollbar-track { background: transparent; }
-#custom-nav-sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+#custom-nav-sidebar::-webkit-scrollbar {
+	width: 3px;
+}
+#custom-nav-sidebar::-webkit-scrollbar-track {
+	background: transparent;
+}
+#custom-nav-sidebar::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 2px;
+}
 
 /* ─────────────────────────────────────────────
    4. BASE ITEM ROW
@@ -430,7 +450,9 @@ body.verp-hide-new-btn .btn-new-doc {
 	cursor: pointer;
 	user-select: none;
 	position: relative;
-	transition: background 0.12s ease, color 0.12s ease;
+	transition:
+		background 0.12s ease,
+		color 0.12s ease;
 	box-sizing: border-box;
 }
 
