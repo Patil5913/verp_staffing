@@ -9,6 +9,5 @@ Services
 CR
 Onboarding
 ESign
-Email Inbox
 Stock
 Buying

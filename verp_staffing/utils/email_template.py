@@ -1,28 +1,25 @@
 import frappe
 
-
-def get_company_logo_url():
-    logo = frappe.db.get_single_value("Navbar Settings", "app_logo")
-    if not logo:
-        return ""
-
-    return frappe.utils.get_url(logo)
-
-
-def get_social_links_html():
-    social_html = ""
-
+def get_email_branding():
     try:
-        config = frappe.get_single("ERP Configuration")
+        config = frappe.get_cached_doc("ERP Configuration")
+
+        logo_url = (
+            frappe.utils.get_url(config.app_logo)
+            if config.app_logo
+            else ""
+        )
+
+        social_html = ""
 
         social_links = [
-            ("linkedin", getattr(config, "linkedin", None), "in", "13px"),
-            ("facebook", getattr(config, "facebook", None), "f", "13px"),
-            ("twitter_x", getattr(config, "twitter_x", None), "X", "13px"),
-            ("youtube", getattr(config, "youtube", None), "&#9654;", "16px"),
+            (config.linkedin, "in", "13px"),
+            (config.facebook, "f", "13px"),
+            (config.twitter_x, "X", "13px"),
+            (config.youtube, "&#9654;", "16px"),
         ]
 
-        for _, url, label, font_size in social_links:
+        for url, label, font_size in social_links:
             if not url:
                 continue
 
@@ -46,24 +43,34 @@ def get_social_links_html():
             </td>
             """
 
+        social_links_html = (
+            f"""
+            <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
+                <tr>{social_html}</tr>
+            </table>
+            """
+            if social_html
+            else ""
+        )
+
+        return {
+            "logo_url": logo_url,
+            "social_links_html": social_links_html,
+        }
+
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "Email Footer Social Links")
-
-    if not social_html:
-        return ""
-
-    return f"""
-    <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
-        <tr>
-            {social_html}
-        </tr>
-    </table>
-    """
+        frappe.log_error(frappe.get_traceback(), "Email Branding")
+        return {
+            "logo_url": "",
+            "social_links_html": "",
+        }
 
 
 def seed_email_template():
-    logo_url = get_company_logo_url()
-    social_links_html = get_social_links_html()
+    branding = get_email_branding()
+    
+    logo_url = branding["logo_url"]
+    social_links_html = branding["social_links_html"]
 
     Common_Footer = """
       <!-- COMMON FOOTER -->

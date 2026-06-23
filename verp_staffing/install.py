@@ -2151,7 +2151,6 @@ def seed_master_sidebar_config():
             "shortcut": "",
             "route": "/app/setup",
             "link_type": "page",
-            "doctype": null,  # noqa: F821
         },
         {
             "key": "users",
@@ -2269,7 +2268,6 @@ def seed_master_sidebar_config():
             "shortcut": "",
             "route": "/app/email-inbox",
             "link_type": "page",
-            "doctype": null,  # noqa: F821
         },
         {
             "key": "lead",
@@ -2471,7 +2469,6 @@ def seed_master_sidebar_config():
             "shortcut": "",
             "route": "/app/pending-pe-requests",
             "link_type": "page",
-            "doctype": null,  # noqa: F821
         },
         {
             "key": "coa",
@@ -2481,7 +2478,6 @@ def seed_master_sidebar_config():
             "shortcut": "",
             "route": "/app/account/view/tree",
             "link_type": "page",
-            "doctype": null,  # noqa: F821
         },
         {
             "key": "accounting",
@@ -3047,26 +3043,8 @@ def remove_default_workspaces():
 
     # Names of workspaces to keep visible
     keep_list = [
-        "Users",
-        "Technical",
-        "Marketings",
-        "Settings",
-        "Employees",
-        "Sales",
-        "Leads",
-        "Other Service",
         "Email Inbox",
-        "CR",
-        "Onboarding",
-        "Email Inbox",
-        "ESign",
-        "Accounting",
-        "Financial Reports",
-        "Receivables",
-        "Payables",
         "Pending PE Requests",
-        "Interviews",
-        "Reports & KPI",
     ]
 
     # Hide all others

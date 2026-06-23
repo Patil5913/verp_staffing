@@ -23,6 +23,8 @@
   "section_break_ebvz",
   "email_configuration",
   "email_configuration_detail",
+  "section_break_zpyo",
+  "compnay_logo",
   "social_links_configuration_section",
   "linkedin",
   "facebook",
@@ -221,13 +223,22 @@
   {
    "fieldname": "column_break_ymvf",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_zpyo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "compnay_logo",
+   "fieldtype": "Attach",
+   "label": "Compnay Logo "
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-22 09:49:46.958686",
+ "modified": "2026-06-23 14:16:07.107205",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
@@ -235,11 +246,11 @@
  "permissions": [
   {
    "read": 1,
-   "role": "Lead Manager"
+   "role": "Lead Master Manager"
   },
   {
    "read": 1,
-   "role": "Lead Team Lead"
+   "role": "Lead Manager"
   },
   {
    "read": 1,
@@ -257,7 +268,7 @@
   },
   {
    "read": 1,
-   "role": "Lead Master Manager"
+   "role": "Lead Team Lead"
   },
   {
    "read": 1,
@@ -265,7 +276,7 @@
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Person"
   },
   {
    "read": 1,
@@ -273,15 +284,7 @@
   },
   {
    "read": 1,
-   "role": "Senior Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead"
+   "role": "Sales Manager"
   },
   {
    "read": 1,
@@ -289,11 +292,19 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Senior Recruiter"
   },
   {
    "read": 1,
-   "role": "Recruiter"
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
   },
   {
    "read": 1,
@@ -305,11 +316,19 @@
   },
   {
    "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "RUC Person"
+  },
+  {
+   "read": 1,
    "role": "Technical Coordinator"
   },
   {
    "read": 1,
-   "role": "Technical Manager"
+   "role": "Recruiter"
   },
   {
    "read": 1,
@@ -321,10 +340,6 @@
   },
   {
    "read": 1,
-   "role": "Technical Master Manager"
-  },
-  {
-   "read": 1,
    "role": "Training Person"
   },
   {
@@ -333,15 +348,11 @@
   },
   {
    "read": 1,
-   "role": "Support Person"
-  },
-  {
-   "read": 1,
-   "role": "RUC Person"
-  },
-  {
-   "read": 1,
    "role": "OnBoarding Person"
+  },
+  {
+   "read": 1,
+   "role": "Support Person"
   },
   {
    "read": 1,

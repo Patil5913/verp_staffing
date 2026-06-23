@@ -124,9 +124,9 @@ def get_context(context):
     )
 
     # get logo
-    from verp_staffing.utils.email_template import get_company_logo_url
-    logo = get_company_logo_url()
-    context.logo_url = logo
+    from verp_staffing.utils.email_template import get_email_branding
+    branding = get_email_branding()
+    context.logo_url = branding["logo_url"]
     context.is_verified = is_verified
     context.pdf_url = pdf_url
     context.fields = fields

@@ -142,7 +142,7 @@ after_migrate = [
     "verp_staffing.install.after_install",
     "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
     # "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.utils.email_template.seed_email_template",
+    "verp_staffing.utils.email_template.trigger_email_template_refresh"
 ]
 
 # Uninstallation
@@ -269,9 +269,6 @@ doc_events = {
     },
     "GL Entry": {
         "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
-    },
-    "Navbar Settings": {
-        "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
     },
     "ERP Configuration": {
         "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
