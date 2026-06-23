@@ -69,6 +69,7 @@
 		"Training",
 		"Bank Account Type",
 		"Bank Account Subtype",
+		"Sidebar Master"
 	]);
 	// ─── FULL WIDTH DEFAULT ────────────────────────────────────────────────────
 	// Apply full-width immediately and hide the toggle button permanently.

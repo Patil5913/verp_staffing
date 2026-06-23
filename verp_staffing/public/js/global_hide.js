@@ -96,6 +96,7 @@ const NO_PLUS_DOCTYPES = new Set([
 	"Training",
 	"Bank Account Type",
 	"Bank Account Subtype",
+	"Sidebar Master"
 ]);
 
 function hide_new_button(listview) {

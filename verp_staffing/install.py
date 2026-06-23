@@ -46,6 +46,7 @@ ROLES = [
     "Account Person",
     "_show_setup",
     "_show_accounting",
+    "_show_sidebar_master"
 ]
 
 PERM_FIELDS = [
