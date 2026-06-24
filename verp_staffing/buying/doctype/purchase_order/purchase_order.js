@@ -9,6 +9,11 @@ frappe.ui.form.on("Purchase Order", {
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
 		);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
+
+				frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Purchase Order";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
 	},
 
 	onload: function (frm) {

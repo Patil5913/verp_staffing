@@ -32,6 +32,11 @@ frappe.ui.form.on("Purchase Invoice", {
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
 		);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
+
+				frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Purchase Invoice";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
 	},
 
 	onload(frm) {

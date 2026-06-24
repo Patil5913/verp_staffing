@@ -25,6 +25,12 @@ frappe.ui.form.on("Sales Order", {
 				__("Send"),
 			);
 		}
+
+		frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Sales Order";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
+
 		// Apply field visibility on every grid render for existing rows
 		const grid = frm.fields_dict["payment_terms"].grid;
 		const original_refresh = grid.refresh.bind(grid);

@@ -26,10 +26,11 @@ frappe.ui.form.on("Pdf Agreement Template", {
 		}
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "PDF Agreement Template Form";
+			const tour_name = "PDF Agreement Template";
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
+
 		if (window._pdf_upload_observer) {
 			window._pdf_upload_observer.disconnect();
 			window._pdf_upload_observer = null;

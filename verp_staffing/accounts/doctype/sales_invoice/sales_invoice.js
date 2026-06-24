@@ -47,6 +47,11 @@ frappe.ui.form.on("Sales Invoice", {
 			);
 		}
 
+		frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Sales Invoice";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
+
 		(frm.doc.items || []).forEach((row) => {
 			if (!row.type) {
 				const type = frm.doctype === "Sales Invoice" ? "Sales" : "Purchase";

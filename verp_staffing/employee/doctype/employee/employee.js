@@ -143,7 +143,7 @@ frappe.ui.form.on("Employee", {
 			};
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Employee Form";
+			const tour_name = "Employee";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 	},

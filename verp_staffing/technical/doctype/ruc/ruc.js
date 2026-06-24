@@ -19,7 +19,7 @@ frappe.ui.form.on("RUC", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "RUC Form";
+			const tour_name = "RUC";
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});

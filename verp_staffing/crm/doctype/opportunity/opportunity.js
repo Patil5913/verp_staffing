@@ -38,7 +38,7 @@ frappe.ui.form.on("Opportunity", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Opportunity Form";
+			const tour_name = "Opportunity";
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});

@@ -34,7 +34,7 @@ frappe.ui.form.on("Marketing", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Marketing Form";
+			const tour_name = "Marketing";
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});

@@ -1200,7 +1200,7 @@ HIERARCHY_DATA = [
 
 FORM_TOURS = {
     "Lead": {
-        "title": "Lead Creation Guide",
+        "title": "Lead",
         "steps": [
             {
                 "title": "Lead Name",
@@ -1213,7 +1213,7 @@ FORM_TOURS = {
         ],
     },
     "Opportunity": {
-        "title": "Opportunity Creation Guide",
+        "title": "Opportunity",
         "steps": [
             {
                 "title": "Opportunity From Lead",
@@ -1234,7 +1234,7 @@ FORM_TOURS = {
         ],
     },
     "Resume": {
-        "title": "Resume Creation Guide",
+        "title": "Resume",
         "steps": [
             {
                 "title": "Select Customer",
@@ -1271,7 +1271,7 @@ FORM_TOURS = {
         ],
     },
     "Marketing": {
-        "title": "Marketing Creation Guide",
+        "title": "Marketing",
         "steps": [
             {
                 "title": "Select Customer",
@@ -1292,7 +1292,7 @@ FORM_TOURS = {
         ],
     },
     "RUC": {
-        "title": "RUC Creation Guide",
+        "title": "RUC",
         "steps": [
             {
                 "title": "Select Customer",
@@ -1337,7 +1337,7 @@ FORM_TOURS = {
         ],
     },
     "Sales Order": {
-        "title": "Sales Order Creation Guide",
+        "title": "Sales Order",
         "steps": [
             {
                 "title": "Select Customer",
@@ -1422,7 +1422,7 @@ FORM_TOURS = {
         ],
     },
     "Sales Invoice": {
-        "title": "Sales Invoice Creation Guide",
+        "title": "Sales Invoice",
         "steps": [
             {
                 "title": "Select Customer",
@@ -1507,7 +1507,7 @@ FORM_TOURS = {
         ],
     },
     "Purchase Order": {
-        "title": "Purchase Order Creation Guide",
+        "title": "Purchase Order",
         "steps": [
             {
                 "title": "Select Supplier",
@@ -1576,7 +1576,7 @@ FORM_TOURS = {
         ],
     },
     "Purchase Invoice": {
-        "title": "Purchase Invoice Creation Guide",
+        "title": "Purchase Invoice",
         "steps": [
             {
                 "title": "Select Supplier",
@@ -1661,7 +1661,7 @@ FORM_TOURS = {
         ],
     },
     "Journal Entry": {
-        "title": "Journal Entry Creation Guide",
+        "title": "Journal Entry",
         "steps": [
             {
                 "title": "Select Entry Type",
@@ -1712,7 +1712,7 @@ FORM_TOURS = {
         ],
     },
     "Payment Entry": {
-        "title": "Payment Entry Creation Guide",
+        "title": "Payment Entry",
         "steps": [
             {
                 "title": "Select Payment Type",
@@ -1797,7 +1797,7 @@ FORM_TOURS = {
         ],
     },
     "Employee": {
-        "title": "Employee Creation Guide",
+        "title": "Employee",
         "steps": [
             {
                 "title": "Select User",
@@ -1818,7 +1818,7 @@ FORM_TOURS = {
         ],
     },
     "Interview": {
-        "title": "Interview Creation Guide",
+        "title": "Interview",
         "steps": [
             {
                 "title": "Select Customer",
@@ -1847,7 +1847,7 @@ FORM_TOURS = {
         ],
     },
     "Pdf Agreement Template": {
-        "title": "PDF Agreement Template Creation Guide",
+        "title": "PDF Agreement Template",
         "steps": [
             {
                 "title": "Template Name",
@@ -1884,7 +1884,7 @@ FORM_TOURS = {
         ],
     },
     "Customer": {
-        "title": "Customer Creation Guide",
+        "title": "Customer",
         "steps": [
             {
                 "title": "Enter Customer Name",
@@ -1913,7 +1913,7 @@ FORM_TOURS = {
         ],
     },
     "Company": {
-        "title": "Company Creation Guide",
+        "title": "Company",
         "steps": [
             {
                 "title": "Enter Company Name",
@@ -1966,7 +1966,7 @@ FORM_TOURS = {
         ],
     },
     "Fiscal Year": {
-        "title": "Fiscal Year Creation Guide",
+        "title": "Fiscal Year",
         "steps": [
             {
                 "title": "Enter Fiscal Year Name",
@@ -2011,7 +2011,7 @@ FORM_TOURS = {
         ],
     },
     "Accounts Settings": {
-        "title": "Accounts Settings Guide",
+        "title": "Accounts Settings",
         "steps": [
             {
                 "title": "Select Default Company",
@@ -2048,7 +2048,7 @@ FORM_TOURS = {
         ],
     },
     "Bank Account": {
-        "title": "Bank Account Setup Guide",
+        "title": "Bank Account",
         "steps": [
             {
                 "title": "Enter Account Name",
@@ -2134,7 +2134,7 @@ def after_install():
     remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
-    # seed_form_tours()
+    seed_form_tours()
 
 
 def seed_master_sidebar_config():

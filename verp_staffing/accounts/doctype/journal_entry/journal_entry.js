@@ -41,6 +41,11 @@ frappe.ui.form.on("Journal Entry", {
 			});
 		}
 
+		frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Journal Entry";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
+
 		// hide /unhide fields based on currency
 		verp_staffing.journal_entry.toggle_fields_based_on_currency(frm);
 	},

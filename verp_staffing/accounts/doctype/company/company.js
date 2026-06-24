@@ -81,6 +81,11 @@ frappe.ui.form.on("Company", {
 			}
 		}
 		set_chart_of_accounts_options(frm.doc);
+
+				frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Company";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
 	},
 });
 

@@ -134,7 +134,7 @@ frappe.ui.form.on("Customer", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Customer Form";
+			const tour_name = "Customer";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 

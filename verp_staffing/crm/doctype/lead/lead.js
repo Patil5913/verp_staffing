@@ -70,7 +70,7 @@ frappe.ui.form.on("Lead", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Lead Form";
+			const tour_name = "Lead";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 

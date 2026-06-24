@@ -31,6 +31,11 @@ frappe.ui.form.on("Bank Account", {
 		frappe.breadcrumbs.update();
 		frappe.dynamic_link = { doc: frm.doc, fieldname: "name", doctype: "Bank Account" };
 
+				frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Bank Account";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
+
 		frm.toggle_display(["address_html", "contact_html"], !frm.doc.__islocal);
 
 		if (frm.doc.__islocal) {
