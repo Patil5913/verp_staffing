@@ -22,8 +22,7 @@ class CustomUser(User):
         if self.name == "Administrator":
             return
 
-        employee_exists = frappe.db.exists("Employee", {"user": self.name})
-        if employee_exists:
+        if frappe.db.exists("Employee", {"user": self.name}):
             return
 
         frappe.msgprint(

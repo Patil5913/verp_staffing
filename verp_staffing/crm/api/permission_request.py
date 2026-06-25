@@ -33,8 +33,8 @@ def check_candidate_form_required_from_sales_order(so_name):
         return False
 
     raw = frappe.db.get_single_value(
-        "ERP Configuration", "candidate_details_form_fields"
-    )
+	        "ERP Configuration", "candidate_details_form_fields"
+	    )
 
     if not raw:
         return False
@@ -63,22 +63,12 @@ def check_candidate_form_required_from_sales_order(so_name):
                 return True
 
     except Exception as e:
-        frappe.log_error(str(e), "Error while checking erp configuration for candidate form requirement")
+        frappe.log_error(
+            str(e),
+            "Error while checking erp configuration for candidate form requirement",
+        )
 
     return False
-
-
-def _get_dept_access_config():
-    try:
-        raw = frappe.db.get_single_value(
-            "ERP Configuration", "department_access_form_fields"
-        )
-        if not raw:
-            return {}
-        return {k.lower().strip(): v for k, v in json.loads(raw).items()}
-    except Exception:
-        return {}
-
 
 def _build_fields_from_fieldnames(allowed_fieldnames):
     """
@@ -268,6 +258,7 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
     customer_owner = frappe.db.get_cached_value(
         "Customer", customer_name, "customer_owner"
     )
+    
     is_customer_owner = employee == customer_owner
 
     lead_owner_match = False
@@ -326,7 +317,9 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_name=None):
 
 @frappe.whitelist()
 def get_department_updatable_fields(doctype=None):
-    dept_access = _get_dept_access_config()
+    dept_access = frappe.db.get_single_value(
+	        "ERP Configuration", "department_access_form_fields"
+	    )
     if not dept_access:
         return {"simple_fields": {}, "table_fields": {}}
 
@@ -350,7 +343,9 @@ def get_customer_owner_updatable_fields():
     using the 'customer' key in ERP Configuration → department_access_form_fields.
     Called when Update Detail dialog opens on Customer form.
     """
-    dept_access_normalized = _get_dept_access_config()
+    dept_access_normalized = frappe.db.get_single_value(
+	        "ERP Configuration", "department_access_form_fields"
+	    )
     allowed_fieldnames = dept_access_normalized.get("customer", [])
     if not allowed_fieldnames:
         return {"simple_fields": {}, "table_fields": {}}
@@ -368,7 +363,9 @@ def get_lead_detail_field_values(customer_name):
     if not lead_detail_name:
         return {}
 
-    dept_access_normalized = _get_dept_access_config()
+    dept_access_normalized = frappe.db.get_single_value(
+	        "ERP Configuration", "department_access_form_fields"
+	    )
 
     # Collect ALL fieldnames across ALL department keys
     all_fieldnames = set()
@@ -570,7 +567,7 @@ def request_field_update(
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    # 📧 SEND EMAIL
+    # SEND EMAIL
     template_name = "Field Update Request - permission request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)
@@ -684,7 +681,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
 
-    #  SEND EMAIL
+    # SEND EMAIL
     template_name = "Field Update Request by owner - Permission Request"
     if frappe.db.exists("Email Template", template_name):
         template = frappe.get_doc("Email Template", template_name)

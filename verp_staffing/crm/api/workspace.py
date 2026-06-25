@@ -16,8 +16,6 @@ DOCTYPE_OWNER_FIELD_MAP = {
     "Training": "assign_to",
     "Cover Letter" : "assign_to",
     "Technical Other Services": "assign_to",
-
-
 }
 
 

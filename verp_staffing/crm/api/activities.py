@@ -1,6 +1,6 @@
 from __future__ import annotations
 import frappe
-from frappe.utils import now_datetime, get_datetime
+
 
 @frappe.whitelist()
 def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
@@ -11,92 +11,114 @@ def get_open_activities(reference_doctype, reference_name, limit=50, start=0):
     if not reference_doctype or not reference_name:
         return {"tasks": [], "events": []}
 
+    limit = int(limit)
+    start = int(start)
+
     current_user = frappe.session.user
-    user_roles = frappe.get_roles(current_user)
 
-    is_employee = "employee" in user_roles
-
-   # Base AND filters
-    task_filters = {
+    filters = {
         "reference_doctype": reference_doctype,
         "related_to": reference_name,
     }
 
-    event_filters = {
-        "reference_doctype": reference_doctype,
-        "related_to": reference_name
-    }
+    user_filters = []
 
-    # OR filters ONLY if employee
-    task_or_filters = []
-    event_or_filters = []
-
-    if is_employee:
-        task_or_filters = [
+    if "system manager" not in frappe.get_roles(current_user) or current_user != "Administrator":
+        user_filters = [
             ["assigned_to", "=", current_user],
-            ["owner", "=", current_user]
-        ]
-
-        event_or_filters = [
-            ["assigned_to", "=", current_user],
-            ["owner", "=", current_user]
+            ["owner", "=", current_user],
         ]
 
     tasks = frappe.get_all(
         "CRM Task",
-        filters=task_filters,
-        or_filters=task_or_filters,    
-        fields=[ "description","name", "date", "assigned_to", "is_completed"],
+        filters=filters,
+        or_filters=user_filters,
+        fields=[
+            "description",
+            "name",
+            "date",
+            "assigned_to",
+            "is_completed",
+        ],
         order_by="date asc",
-        limit_page_length=int(limit),
-        start=int(start)
+        limit_page_length=limit,
+        start=start,
     )
 
     events = frappe.get_all(
         "CRM Event",
-        filters=event_filters,
-        or_filters=event_or_filters,    
-        fields=["category","description","name", "summary", "date", "assigned_to"],
+        filters=filters,
+        or_filters=user_filters,
+        fields=[
+            "category",
+            "description",
+            "name",
+            "summary",
+            "date",
+            "assigned_to",
+        ],
         order_by="date asc",
-        limit_page_length=int(limit),
-        start=int(start)
+        limit_page_length=limit,
+        start=start,
     )
 
-    return {"tasks": tasks, "events": events}
+    return {
+        "tasks": tasks,
+        "events": events,
+    }
 
 
 @frappe.whitelist()
-def create_task(reference_doctype, reference_name, description, date=None, assigned_to=None):
+def create_task(
+    reference_doctype, reference_name, description, date=None, assigned_to=None
+):
     """Create CRM Task linked to a reference and return the new doc"""
-    doc = frappe.get_doc({
-        "doctype": "CRM Task",
-        "description": description,
-        "date": date or None,
-        "assigned_to": assigned_to,
-        "reference_doctype": reference_doctype,
-        "related_to": reference_name,
-        "is_completed": 0
-    })
+    doc = frappe.get_doc(
+        {
+            "doctype": "CRM Task",
+            "description": description,
+            "date": date or None,
+            "assigned_to": assigned_to,
+            "reference_doctype": reference_doctype,
+            "related_to": reference_name,
+            "is_completed": 0,
+        }
+    )
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
-    return {"name": doc.name, "description": doc.description, "date": doc.date, "assigned_to": doc.assigned_to}
+    return {
+        "name": doc.name,
+        "description": doc.description,
+        "date": doc.date,
+        "assigned_to": doc.assigned_to,
+    }
 
 
 @frappe.whitelist()
-def create_event(reference_doctype, reference_name, summary, date, category="Event", assigned_to=None):
+def create_event(
+    reference_doctype, reference_name, summary, date, category="Event", assigned_to=None
+):
     """Create CRM Event linked to a reference and return the new doc"""
-    doc = frappe.get_doc({
-        "doctype": "CRM Event",
-        "summary": summary,
-        "date": date,
-        "category": category,
-        "assigned_to": assigned_to,
-        "reference_doctype": reference_doctype,
-        "related_to": reference_name
-    })
+    doc = frappe.get_doc(
+        {
+            "doctype": "CRM Event",
+            "summary": summary,
+            "date": date,
+            "category": category,
+            "assigned_to": assigned_to,
+            "reference_doctype": reference_doctype,
+            "related_to": reference_name,
+        }
+    )
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
-    return {"name": doc.name, "summary": doc.summary, "date": doc.date, "category": doc.category, "assigned_to": doc.assigned_to}
+    return {
+        "name": doc.name,
+        "summary": doc.summary,
+        "date": doc.date,
+        "category": doc.category,
+        "assigned_to": doc.assigned_to,
+    }
 
 
 @frappe.whitelist()

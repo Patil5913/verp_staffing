@@ -70,7 +70,7 @@ class Customer(Document):
 
 @frappe.whitelist()
 def get_employee_department():
-    employee_name = frappe.get_value("Employee", {"user": frappe.session.user}, "name")
+    employee_name = frappe.db.get_value("Employee", {"user": frappe.session.user}, "name")
 
     if not employee_name:
         return None
@@ -85,22 +85,21 @@ from verp_staffing.employee.doctype.employee.employee import user_belongs_to_dep
 
 @frappe.whitelist()
 def get_forwardable_departments(customer):
-
     user = frappe.session.user
 
-    # If customer already has active CR or Onboarding, block all forwarding
-    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
-    onboarding_active = frappe.db.exists(
-        "Onboardings", {"customer": customer, "status": "Active"}
-    )
-    if cr_active or onboarding_active:
-        active_in = []
-        if cr_active:
-            active_in.append("CR")
-        if onboarding_active:
-            active_in.append("Onboarding")
-        # Return a special response instead of a plain list
-        return {"blocked": True, "active_in": active_in}
+    active_in = []
+
+    if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
+        active_in.append("CR")
+
+    if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
+        active_in.append("Onboarding")
+
+    if active_in:
+        return {
+            "blocked": True,
+            "active_in": active_in,
+        }
 
     services = get_services_for_customer(customer)
 
@@ -113,52 +112,37 @@ def get_forwardable_departments(customer):
 
     options = list(services)
 
-    # CR
     if "CR" not in active_departments:
-        options.append("CR")
+        options.add("CR")
 
-    # Onboarding
     if (
         "Onboarding" not in active_departments
         and all_completed
         and can_user_forward_to_department(user, "Onboarding")
     ):
-        options.append("Onboarding")
+        options.add("Onboarding")
 
-    return options
-
+    return list(options)
 
 def get_services_for_customer(customer):
-
-    sales_orders = frappe.db.get_all(
-        "Sales Order",
-        filters={
-            "customer": customer,
-            "status": "Open",
-            "docstatus": 1,
-        },
-        pluck="name",
+    return frappe.db.sql(
+        """
+        SELECT DISTINCT i.name
+        FROM `tabSales Order` so
+        INNER JOIN `tabItems Table` it
+            ON it.parent = so.name
+        INNER JOIN `tabItem` i
+            ON i.name = it.item
+        WHERE
+            so.customer = %(customer)s
+            AND so.status = 'Open'
+            AND so.docstatus = 1
+            AND i.is_service = 1
+            AND i.disabled = 0
+        """,
+        {"customer": customer},
+        pluck=True,
     )
-
-    if not sales_orders:
-        return []
-
-    # Get all items from the sales order's Items Table
-    items = frappe.db.get_all(
-        "Items Table",
-        filters={"parent": ["in", sales_orders], "parenttype": "Sales Order"},
-        pluck="item",
-    )
-    if not items:
-        return []
-
-    # return items/services (extra check of is_service = 1)
-    return frappe.get_all(
-        "Item",
-        filters={"name": ["in", items], "is_service": 1, "disabled": 0},
-        pluck="name",
-    )
-
 
 def is_all_services_completed(customer, services):
     for service in services:
@@ -284,13 +268,6 @@ def get_forwardable_departments_from_service(doctype, docname):
     ):
         options.append("Onboarding")
     return {"blocked": False, "options": options}
-
-
-import frappe
-import json
-
-from frappe.utils import now_datetime
-from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 
 
 @frappe.whitelist()

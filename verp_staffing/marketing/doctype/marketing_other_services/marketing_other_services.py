@@ -5,6 +5,7 @@ import frappe,json
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.customer import update_customer_stage
 
 
 class MarketingOtherServices(Document):
@@ -18,35 +19,7 @@ class MarketingOtherServices(Document):
         
         
     def after_insert(self):
-        self.create_customer()
-        
-        
-    def create_customer(self):
-        service = self.service
-        parents = frappe.db.sql("""
-        SELECT parent FROM `tabDepartment Service`
-        WHERE service_name=%s
-        """, (service), as_dict=True)
-
-        customer = frappe.get_doc({
-            "doctype":  "Customer",
-            "name": self.customer
-        })
-        stage = json.loads(customer.stage) if customer.stage else {}
-
-        department = parents[0].parent
-        serice_key = service.strip().lower()
-        if serice_key not in stage:
-            stage[serice_key] = []
-        stage[serice_key].append({
-            "department": department,
-            "timestamp": str(now_datetime())
-        })
-        
-        frappe.db.set_value(
-            "Customer",
-            customer,
-            "stage",
-            json.dumps(stage)
+        update_customer_stage(
+            customer=self.customer,
+            service=self.service,
         )
-

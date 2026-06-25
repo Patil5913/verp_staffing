@@ -3,6 +3,7 @@ from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.helpers import get_reporting_subtree
+from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 
 
 class Interview(Document):
@@ -164,22 +165,6 @@ def sync_kanban(doc, method):
     kb.save(ignore_permissions=True)
 
 
-# ---------------------------------------------------------------------------
-# Utils
-# ---------------------------------------------------------------------------
-
-
-def get_logged_in_employee():
-    """Returns Employee ID linked to logged-in user."""
-    if frappe.session.user == "Administrator":
-        return None
-    return frappe.db.get_value(
-        "Employee",
-        {"user": frappe.session.user},
-        "name",
-    )
-
-
 def get_allowed_employee_ids(department):
     """
     Administrator → all employees
@@ -187,15 +172,12 @@ def get_allowed_employee_ids(department):
     """
     if frappe.session.user == "Administrator":
         return frappe.db.get_all("Employee", pluck="name")
-    employee = get_logged_in_employee()
+    employee = get_employee_from_user(frappe.session.user)
     if not employee:
         return []
     return get_reporting_subtree(employee, department)
 
 
-# ---------------------------------------------------------------------------
-# API
-# ---------------------------------------------------------------------------
 @frappe.whitelist()
 def get_default_marketing_customer_options(param=""):
     department = "Marketing"
@@ -281,7 +263,13 @@ def search_marketing_customers(
         conditions.append(f"m.assign_to IN ({', '.join(placeholders)})")
 
     conditions.append(
-        "(c.name LIKE %(txt)s OR c.name1 LIKE %(txt)s) OR m.name LIKE %(txt)s"
+        """
+    (
+        c.name LIKE %(txt)s
+        OR c.name1 LIKE %(txt)s
+        OR m.name LIKE %(txt)s
+    )
+    """
     )
 
     where_clause = " AND ".join(conditions)

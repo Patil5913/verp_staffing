@@ -17,7 +17,7 @@ from verp_staffing.marketing.doctype.marketing.marketing import (
     _is_superior_in_marketing,
 )
 from verp_staffing.crm.api.helpers import (
-    get_all_superiors_with_roles,
+    get_all_superiors_with_roles_cached,
     get_all_subordinates,
 )
 
@@ -474,7 +474,7 @@ class TestHierarchyHelpersBase(MarketingTestBase):
         )
 
 
-# ── get_all_superiors_with_roles ─────────────────────────────────────────────
+# ── get_all_superiors_with_roles_cached ─────────────────────────────────────────────
 class TestGetAllSuperiorsWithRoles(TestHierarchyHelpersBase):
     @classmethod
     def setUpClass(cls):
@@ -488,49 +488,49 @@ class TestGetAllSuperiorsWithRoles(TestHierarchyHelpersBase):
 
     # --- Basic traversal ---
     def test_bottom_employee_gets_full_chain(self):
-        result = get_all_superiors_with_roles(self.emp_d.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_d.name, department="Marketing")
         self.assertEqual(
             self._employees(result), [self.emp_a.name, self.emp_b.name, self.emp_c.name]
         )
 
     def test_mid_employee_gets_partial_chain(self):
-        result = get_all_superiors_with_roles(self.emp_a.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_a.name, department="Marketing")
         self.assertEqual(self._employees(result), [self.emp_b.name, self.emp_c.name])
 
     def test_top_employee_returns_empty(self):
-        result = get_all_superiors_with_roles(self.emp_c.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_c.name, department="Marketing")
         self.assertEqual(result, [])
 
     # --- Ordering ---
     def test_result_is_ordered_direct_manager_first(self):
-        result = get_all_superiors_with_roles(self.emp_d.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_d.name, department="Marketing")
         self.assertEqual(result[0]["employee"], self.emp_a.name)  # direct manager
 
     # --- Users attached ---
     def test_users_are_attached_correctly(self):
-        result = get_all_superiors_with_roles(self.emp_a.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_a.name, department="Marketing")
         self.assertIn(self.user_b, self._users(result))
         self.assertIn(self.user_c, self._users(result))
 
     # --- Roles attached ---
     def test_roles_key_present_on_every_result(self):
-        result = get_all_superiors_with_roles(self.emp_d.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_d.name, department="Marketing")
         for row in result:
             self.assertIn("roles", row)
             self.assertIsInstance(row["roles"], list)
 
     # --- Department filter isolation ---
     def test_department_filter_excludes_other_departments(self):
-        result = get_all_superiors_with_roles(self.emp_d.name, department="HR")
+        result = get_all_superiors_with_roles_cached(self.emp_d.name, department="HR")
         self.assertEqual(result, [])
 
     def test_no_department_filter_returns_chain(self):
-        result = get_all_superiors_with_roles(self.emp_d.name)
+        result = get_all_superiors_with_roles_cached(self.emp_d.name)
         self.assertGreater(len(result), 0)
 
     # --- Separate branch isolation ---
     def test_does_not_cross_into_separate_branch(self):
-        result = get_all_superiors_with_roles(self.emp_y.name, department="Marketing")
+        result = get_all_superiors_with_roles_cached(self.emp_y.name, department="Marketing")
         names = self._employees(result)
         self.assertNotIn(self.emp_b.name, names)
         self.assertNotIn(self.emp_c.name, names)
@@ -540,7 +540,7 @@ class TestGetAllSuperiorsWithRoles(TestHierarchyHelpersBase):
     def test_employee_with_no_assignments_returns_empty(self):
         bare_user = make_user("sup_bare@test.verp", "Sup Bare")
         bare_emp = make_employee(_uid("Sup Bare"), user=bare_user)
-        self.assertEqual(get_all_superiors_with_roles(bare_emp.name, department="Marketing"), [])
+        self.assertEqual(get_all_superiors_with_roles_cached(bare_emp.name, department="Marketing"), [])
 
 
 # ── get_all_subordinates ─────────────────────────────────────────────────────

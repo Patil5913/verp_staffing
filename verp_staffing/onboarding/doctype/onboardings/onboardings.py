@@ -18,12 +18,12 @@ class Onboardings(Document):
 @frappe.whitelist()
 def get_after_placement_details(customer):
 
-    customer_doc = frappe.get_doc("Customer", customer)
+    lead_details = frappe.db.get_value("Customer", customer, "lead_details")
 
-    if not customer_doc.lead_details:
+    if not lead_details:
         return {}
 
-    data = frappe.get_doc("Lead Detail Form", customer_doc.lead_details)
+    data = frappe.get_doc("Lead Detail Form", lead_details)
 
     return {
         "position": data.position,

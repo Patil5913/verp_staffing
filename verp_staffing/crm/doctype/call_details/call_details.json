@@ -15,7 +15,8 @@
    "fieldname": "date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Date"
+   "label": "Date",
+   "search_index": 1
   },
   {
    "fieldname": "duration",
