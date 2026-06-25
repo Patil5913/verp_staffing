@@ -64,17 +64,6 @@ PERM_FIELDS = [
     "export",
     "share",
 ]
-PROTECTED_DOCTYPES = {
-    "Role",
-    "Has Role",
-    "DocPerm",
-    "Custom DocPerm",
-    "Module Def",
-    "Page",
-    "Report",
-    "Dashboard",
-    "Workspace",
-}
 
 ROLE_PERMISSIONS = {
     "Lead Master Manager": {
@@ -3059,33 +3048,51 @@ def seed_employee_departments():
     frappe.db.commit()
 
 
+PROTECTED_DOCTYPES = {
+    "User",
+    "Role",
+    "Has Role",
+    "DocPerm",
+    "Custom DocPerm",
+    "Role Profile",
+    "Role Permission for Page and Report",
+    "Module Def",
+    "Page",
+    "Report",
+    "Dashboard",
+    "Workspace",
+}
+
+
 def assign_permissions_to_roles(role_permissions: dict):
     """
     Synchronize DocPerms from ROLE_PERMISSIONS.
 
     - Administrator permissions are never modified.
-    - Existing permissions for configured doctypes are replaced.
-    - Uses bulk insert for performance.
+    - Protected doctypes are skipped.
+    - Existing DocPerms for managed (DocType, Role) pairs are updated.
+    - Missing DocPerms are inserted.
+    - Other roles and ERPNext permissions remain untouched.
     """
 
-    roles = set(frappe.get_all("Role", pluck="name"))
+    roles = set(frappe.get_all("Role", filters={"disabled": 0}, pluck="name"))
     doctypes = set(frappe.get_all("DocType", pluck="name"))
 
-    affected_doctypes = set()
-    rows = []
-
     for role, permissions in role_permissions.items():
-        if role == "System Manager":
+
+        if role == "System Manager" or role == "Administrator":
             continue
 
         if role not in roles:
             continue
 
         for doctype, config in permissions.items():
-            if doctype in PROTECTED_DOCTYPES or doctype not in doctypes:
+
+            if doctype in PROTECTED_DOCTYPES:
                 continue
 
-            affected_doctypes.add(doctype)
+            if doctype not in doctypes:
+                continue
 
             if isinstance(config, list):
                 allowed_perms = set(config)
@@ -3098,72 +3105,54 @@ def assign_permissions_to_roles(role_permissions: dict):
             else:
                 continue
 
-            row = {
-                "parent": doctype,
-                "parenttype": "DocType",
-                "parentfield": "permissions",
-                "role": role,
-                "permlevel": 0,
+            values = {
                 "if_owner": if_owner,
             }
 
             for field in PERM_FIELDS:
-                row[field] = 1 if field in allowed_perms else 0
+                values[field] = 1 if field in allowed_perms else 0
 
-            rows.append(row)
+            existing = frappe.db.exists(
+                "DocPerm",
+                {
+                    "parent": doctype,
+                    "parenttype": "DocType",
+                    "parentfield": "permissions",
+                    "role": role,
+                    "permlevel": 0,
+                },
+            )
 
-    # Remove old permissions (except Administrator)
-    for doctype in affected_doctypes:
-        frappe.db.sql(
-            """
-            DELETE FROM `tabDocPerm`
-            WHERE parent=%s
-            AND role != 'Administrator'
-            """,
-            doctype,
-        )
-
-    if rows:
-        frappe.db.bulk_insert(
-            "DocPerm",
-            fields=[
-                "name",
-                "creation",
-                "modified",
-                "modified_by",
-                "owner",
-                "docstatus",
-                "idx",
-                "parent",
-                "parenttype",
-                "parentfield",
-                "role",
-                "permlevel",
-                "if_owner",
-                *PERM_FIELDS,
-            ],
-            values=[
-                (
-                    frappe.generate_hash(length=10),
-                    frappe.utils.now(),
-                    frappe.utils.now(),
-                    "Administrator",
-                    "Administrator",
-                    0,
-                    0,
-                    row["parent"],
-                    row["parenttype"],
-                    row["parentfield"],
-                    row["role"],
-                    row["permlevel"],
-                    row["if_owner"],
-                    *[row[field] for field in PERM_FIELDS],
+            if existing:
+                frappe.db.set_value(
+                    "DocPerm",
+                    existing,
+                    values,
+                    update_modified=False,
                 )
-                for row in rows
-            ],
-        )
+
+            else:
+                doc = frappe.get_doc(
+                    {
+                        "doctype": "DocPerm",
+                        "parent": doctype,
+                        "parenttype": "DocType",
+                        "parentfield": "permissions",
+                        "role": role,
+                        "permlevel": 0,
+                        "if_owner": if_owner,
+                        **{
+                            field: 1 if field in allowed_perms else 0
+                            for field in PERM_FIELDS
+                        },
+                    }
+                )
+
+                doc.flags.ignore_permissions = True
+                doc.insert(ignore_permissions=True)
 
     frappe.clear_cache()
+
 
 
 def seed_hierarchy():
