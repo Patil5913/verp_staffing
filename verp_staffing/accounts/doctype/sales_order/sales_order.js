@@ -4,6 +4,23 @@
 let _isSalesUser = null;
 
 frappe.ui.form.on("Sales Order", {
+	setup(frm) {
+		frm.set_query("item", "items", function (doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
+
+			const selected_items = (doc.items || [])
+				.filter((d) => d.item && d.name !== row.name)
+				.map((d) => d.item);
+
+			return {
+				filters: [
+					["is_service", "=", "1"],
+					["disabled", "=", "0"],
+					["Item", "name", "not in", selected_items],
+				],
+			};
+		});
+	},
 	async refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -55,15 +72,6 @@ frappe.ui.form.on("Sales Order", {
 				}
 			});
 		}, 0);
-		// Set query filter on items child table's item field
-		frm.fields_dict["items"].grid.get_field("item").get_query = function () {
-			return {
-				filters: {
-					is_service: 1,
-					disabled: 0,
-				},
-			};
-		};
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
 		);
@@ -233,14 +241,6 @@ frappe.ui.form.on("Items Table", {
 	items_add(frm, cdt, cdn) {
 		frappe.model.set_value(cdt, cdn, "type", "Sales");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
-		frm.fields_dict["items"].grid.get_field("item").get_query = function () {
-			return {
-				filters: {
-					is_service: 1,
-					disabled: 0,
-				},
-			};
-		};
 		update_agreement_module(frm);
 	},
 	items_remove: function (frm) {

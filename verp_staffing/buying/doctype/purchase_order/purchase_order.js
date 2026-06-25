@@ -2,6 +2,19 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase Order", {
+	setup(frm) {
+		frm.set_query("item", "items", function (doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
+
+			const selected_items = (doc.items || [])
+				.filter((d) => d.item && d.name !== row.name)
+				.map((d) => d.item);
+
+			return {
+				filters: [["Item", "name", "not in", selected_items]],
+			};
+		});
+	},
 	refresh: function (frm) {
 		verp_staffing.purchase.exchange.update_description(frm);
 		handle_currency(frm);
@@ -10,7 +23,7 @@ frappe.ui.form.on("Purchase Order", {
 		);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
 
-				frm.add_custom_button("Show Form Tour", () => {
+		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Purchase Order";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});

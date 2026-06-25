@@ -686,12 +686,12 @@ def lead_query(user):
         return ""
 
     team = get_visible_employee_names_cached()
-    
+
     if not team:
         return "1=0"
 
     departments = get_user_departments(user)
-    
+
     team_sql = ",".join([frappe.db.escape(x) for x in team])
     conditions = []
 
@@ -735,12 +735,12 @@ def opportunity_query(user):
         return ""
 
     team = get_visible_employee_names_cached()
-    
+
     if not team:
         return "1=0"
 
     departments = get_user_departments(user)
-    
+
     team_sql = ",".join([frappe.db.escape(x) for x in team])
     conditions = []
 
@@ -793,10 +793,12 @@ def customer_query(user):
 
     conditions = []
 
-    # -------------------------
-    # SALES LOGIC
-    # -------------------------
-    if "Sales" in departments:
+    if "Accounting" in departments:
+        conditions.append(f"`tabCustomer`.owner = {frappe.db.escape(user)}")
+    elif "Sales" in departments:
+        # -------------------------
+        # SALES LOGIC
+        # -------------------------
         conditions.append(
             f"""
             `tabCustomer`.customer_owner IN ({team_sql})

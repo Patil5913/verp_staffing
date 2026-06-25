@@ -2,6 +2,19 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Sales Invoice", {
+	setup(frm) {
+		frm.set_query("item", "items", function (doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
+
+			const selected_items = (doc.items || [])
+				.filter((d) => d.item && d.name !== row.name)
+				.map((d) => d.item);
+
+			return {
+				filters: [["Item", "name", "not in", selected_items]],
+			};
+		});
+	},
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
 

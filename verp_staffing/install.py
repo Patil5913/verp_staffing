@@ -161,7 +161,7 @@ ROLE_PERMISSIONS = {
         ],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create", "report"],
+        "Sales Order": ["select", "read", "write", "create", "report", "submit"],
         "Sales Invoice": ["select", "read", "write", "create", "report", "submit"],
         "Payment Entry": [
             "select",
@@ -789,12 +789,13 @@ ROLE_PERMISSIONS = {
             "read",
             "write",
             "create",
+            "cancel",
             "delete",
             "print",
             "email",
             "report",
+            "submit",
             "share",
-            "submit"
         ],
         "Mode of Payment": [
             "select",
@@ -806,6 +807,26 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+        ],
+        "Payment Entry": [
+            "select",
+            "read",
+            "write",
+            "create",
+            "print",
+            "submit",
+        ],
+        "Item Category":[
+            "select",
+            "read",
+            "create",
+            "write",
+        ],
+        "Party Type": [
+            "select",
+            "read",
+            "write",
+            "create",
         ],
         "Payment Entry Reference": [
             "select",
@@ -893,7 +914,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
-            "submit"
+            "submit",
             "share",
         ],
         "Sales Order": [
@@ -905,7 +926,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
-            "submit"
+            "submit",
             "share",
         ],
         "Sales Stage": [
@@ -928,7 +949,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
-            "submit"
+            "submit",
             "share",
         ],
         "Purchase Order": [
@@ -940,9 +961,11 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
-            "submit"
+            "submit",
             "share",
         ],
+        "Employee": ["read"],
+        "ERP Configuration": ["read"],
         "Supplier": [
             "select",
             "read",
@@ -975,6 +998,7 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+            "submit",
         ],
         "Subscription Plan": [
             "select",
@@ -985,6 +1009,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "submit",
             "share",
         ],
         "Subscription One Time Charge": [
@@ -1009,17 +1034,18 @@ ROLE_PERMISSIONS = {
             "report",
             "share",
         ],
-        "Finance Book":[
+        "Finance Book": [
             "select",
             "read",
             "write",
             "delete",
             "create",
         ],
-        "Customer":[
+        "Customer": [
             "select",
             "read",
             "create",
+            "write"
         ],
         "Agreement": ["select", "read"],
         "Pdf Agreement Template": ["select", "read"],
@@ -2935,61 +2961,107 @@ def seed_employee_departments():
 
 def assign_permissions_to_roles(role_permissions: dict):
     """
-    Assign permissions strictly from ROLE_PERMISSIONS object.
+    Synchronize DocPerms from ROLE_PERMISSIONS.
+
+    - Administrator permissions are never modified.
+    - Existing permissions for configured doctypes are replaced.
+    - Uses bulk insert for performance.
     """
 
-    for role, doctypes in role_permissions.items():
-        # Never touch Administrator
+    roles = set(frappe.get_all("Role", pluck="name"))
+    doctypes = set(frappe.get_all("DocType", pluck="name"))
+
+    affected_doctypes = set()
+    rows = []
+
+    for role, permissions in role_permissions.items():
         if role == "Administrator":
             continue
 
-        # Role must exist
-        if not frappe.db.exists("Role", role):
+        if role not in roles:
             continue
 
-        for doctype, config in doctypes.items():
-            # Doctype must exist
-            if not frappe.db.exists("DocType", doctype):
+        for doctype, config in permissions.items():
+            if doctype in PROTECTED_DOCTYPES or doctype not in doctypes:
                 continue
 
-            # Skip protected/system doctypes
-            if doctype in PROTECTED_DOCTYPES:
-                continue
+            affected_doctypes.add(doctype)
 
-            # ---- normalize config ----
             if isinstance(config, list):
-                allowed_perms = config
+                allowed_perms = set(config)
                 if_owner = 0
+
             elif isinstance(config, dict):
-                allowed_perms = config.get("perms", [])
+                allowed_perms = set(config.get("perms", []))
                 if_owner = 1 if config.get("if_owner") else 0
+
             else:
                 continue
-            # --------------------------
 
-            # Remove existing permissions for this role + doctype
-            frappe.db.delete(
-                "DocPerm",
-                {
-                    "parent": doctype,
-                    "role": role,
-                },
-            )
+            row = {
+                "parent": doctype,
+                "parenttype": "DocType",
+                "parentfield": "permissions",
+                "role": role,
+                "permlevel": 0,
+                "if_owner": if_owner,
+            }
 
-            # Create new permission row
-            perm = frappe.new_doc("DocPerm")
-            perm.parent = doctype
-            perm.parenttype = "DocType"
-            perm.parentfield = "permissions"
-            perm.role = role
-            perm.permlevel = 0
-            perm.if_owner = if_owner
-
-            # Explicitly set all permission flags
             for field in PERM_FIELDS:
-                setattr(perm, field, 1 if field in allowed_perms else 0)
+                row[field] = 1 if field in allowed_perms else 0
 
-            perm.insert(ignore_permissions=True)
+            rows.append(row)
+
+    # Remove old permissions (except Administrator)
+    for doctype in affected_doctypes:
+        frappe.db.sql(
+            """
+            DELETE FROM `tabDocPerm`
+            WHERE parent=%s
+            AND role != 'Administrator'
+            """,
+            doctype,
+        )
+
+    if rows:
+        frappe.db.bulk_insert(
+            "DocPerm",
+            fields=[
+                "name",
+                "creation",
+                "modified",
+                "modified_by",
+                "owner",
+                "docstatus",
+                "idx",
+                "parent",
+                "parenttype",
+                "parentfield",
+                "role",
+                "permlevel",
+                "if_owner",
+                *PERM_FIELDS,
+            ],
+            values=[
+                (
+                    frappe.generate_hash(length=10),
+                    frappe.utils.now(),
+                    frappe.utils.now(),
+                    "Administrator",
+                    "Administrator",
+                    0,
+                    0,
+                    row["parent"],
+                    row["parenttype"],
+                    row["parentfield"],
+                    row["role"],
+                    row["permlevel"],
+                    row["if_owner"],
+                    *[row[field] for field in PERM_FIELDS],
+                )
+                for row in rows
+            ],
+        )
 
     frappe.clear_cache()
 
