@@ -94,9 +94,9 @@ def validate_filters(filters):
 
 def get_from_to_dates(filters):
     if filters.filter_based_on == "Fiscal Year":
-        from_fy = frappe.get_doc("Fiscal Year", filters.from_fiscal_year)
-        to_fy = frappe.get_doc("Fiscal Year", filters.to_fiscal_year)
-        return getdate(from_fy.year_start_date), getdate(to_fy.year_end_date)
+        from_fy = frappe.get_cached_value("Fiscal Year", filters.from_fiscal_year, "year_start_date")
+        to_fy = frappe.get_cached_value("Fiscal Year", filters.to_fiscal_year, "year_end_date")
+        return getdate(from_fy), getdate(to_fy)
     else:
         return getdate(filters.from_date), getdate(filters.to_date)
 

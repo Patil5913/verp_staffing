@@ -136,7 +136,7 @@ def calculate_opening_balances(fiscal_year_name):
     frappe.db.commit()
 
     try:
-        fy = frappe.get_doc("Fiscal Year", fiscal_year_name)
+        fy = frappe.get_cached_doc("Fiscal Year", fiscal_year_name)
         cutoff_date = add_days(getdate(fy.year_start_date), -1)
 
         companies = [row.company for row in fy.get("included_companies", [])]
@@ -202,7 +202,7 @@ def get_opening_balances_for_company(fiscal_year_name, company):
     if not fiscal_year_name or not company:
         return {}
 
-    stored = frappe.db.get_value(
+    stored = frappe.get_cached_value(
         "Fiscal Year",
         fiscal_year_name,
         ["opening_balances", "opening_balance_status"],

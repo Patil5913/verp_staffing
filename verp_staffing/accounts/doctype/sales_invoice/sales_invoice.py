@@ -158,7 +158,7 @@ class SalesInvoice(Document):
             frappe.throw(_("Customer is required to determine receivable account"))
 
         # 2. Try Company Default
-        company_account = frappe.db.get_value(
+        company_account = frappe.get_cached_value(
             "Company", self.company, "default_receivable_account"
         )
 
@@ -208,7 +208,7 @@ class SalesInvoice(Document):
         if acc.report_type != "Balance Sheet":
             frappe.throw(_("Receivable Account must be a Balance Sheet account"))
 
-        self.party_account_currency = frappe.db.get_value(
+        self.party_account_currency = frappe.get_cached_value(
             "Account", self.debit_to, "account_currency"
         )
 
@@ -518,7 +518,7 @@ class SalesInvoice(Document):
         if not (cint(self.is_paid) and self.cash_bank_account):
             return
 
-        acc_currency = frappe.db.get_value(
+        acc_currency = frappe.get_cached_value(
             "Account", self.cash_bank_account, "account_currency"
         )
 
@@ -780,7 +780,7 @@ def get_sales_invoice_gl_map(doc):
 
     # 5. Rounding
     if doc.rounding_adjustment:
-        account = frappe.db.get_value("Company", doc.company, "round_off_account")
+        account = frappe.get_cached_value("Company", doc.company, "round_off_account")
         if not account:
             frappe.throw(
                 _("Please set Round Off Account in Company {0}").format(

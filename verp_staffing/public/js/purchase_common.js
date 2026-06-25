@@ -29,11 +29,16 @@ verp_staffing.purchase.item_handler = async function (frm, cdt, cdn) {
 	frappe.model.set_value(cdt, cdn, "qty", 1);
 	// expense account
 	if (frm.doc.company) {
-		const r = await frappe.db.get_value("Company", frm.doc.company, "default_expense_account");
-
-		if (r.message?.default_expense_account) {
-			frappe.model.set_value(cdt, cdn, "expense_account", r.message.default_expense_account);
-		}
+		frappe
+			.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+				company: frm.doc.company,
+				fieldname: "default_expense_account",
+			})
+			.then((r) => {
+				if (r.message) {
+					frappe.model.set_value(cdt, cdn, "expense_account", r.message);
+				}
+			});
 	}
 };
 

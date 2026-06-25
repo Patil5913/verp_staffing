@@ -40,15 +40,15 @@ frappe.ui.form.on("Purchase Order", {
 		set_account_queries(frm);
 
 		if (frm.doc.items && frm.doc.items.length) {
-			frappe.db
-				.get_value("Company", frm.doc.company, "default_expense_account")
+			frappe
+				.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+					company: frm.doc.company,
+					fieldname: "default_expense_account",
+				})
 				.then((r) => {
-					if (!r.message.default_expense_account) {
-						frappe.throw("Default Company Expense Account not set");
-					}
-					if (r.message && r.message.default_expense_account) {
+					if (r.message && r.message) {
 						frm.doc.items.forEach((item) => {
-							item.expense_account = r.message.default_expense_account;
+							item.expense_account = r.message;
 						});
 						frm.refresh_field("items");
 					}
@@ -57,6 +57,7 @@ frappe.ui.form.on("Purchase Order", {
 	},
 
 	currency: function (frm) {
+		update_company_currency_labels(frm);
 		verp_staffing.purchase.items.update_items_currency_labels(frm);
 		verp_staffing.purchase.exchange.update_description(frm);
 		handle_currency(frm);
@@ -112,23 +113,27 @@ async function set_exchange_rate(frm) {
 	// }
 }
 
-frappe.ui.form.on("Purchase Order Item", {
-	item: verp_staffing.purchase.item_handler,
-
-	items_add: function (frm) {
-		frappe.model.set_value(cdt, cdn, "type", "Purchase");
+frappe.ui.form.on("Items Table", {
+	item: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		row.type = "Purchase";
+		frm.refresh_field("items");
+		verp_staffing.purchase.item_handler(frm, cdt, cdn);
+	},
+	items_add: function (frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		row.type = "Purchase";
+		console.log("row: ", row);
+		frm.refresh_field("items");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-
 	items_remove: function (frm) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-
-	qty: function (frm, cdt, cdn) {
+	qty(frm, cdt, cdn) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
-
-	rate: function (frm, cdt, cdn) {
+	rate(frm, cdt, cdn) {
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},
 });
@@ -174,6 +179,8 @@ function update_currency_labels(frm) {
 }
 
 function update_company_currency_labels(frm) {
+	const company_currency = frm.doc.company_currency || "";
+
 	const company_currency_field = [
 		"base_total",
 		"base_net_total",
@@ -188,7 +195,7 @@ function update_company_currency_labels(frm) {
 		frm.set_df_property(
 			field,
 			"label",
-			`${frm.fields_dict[field].df.label.split(" (")[0]} (${frm.doc.company_currency})`,
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency})`,
 		);
 	});
 }
@@ -197,11 +204,16 @@ function handle_discount_account(frm) {
 	if (!frm.doc.company) return;
 
 	if (flt(frm.doc.discount_amount) > 0 && !frm.doc.additional_discount_account) {
-		frappe.db.get_value("Company", frm.doc.company, "default_discount_account").then((r) => {
-			if (r.message && r.message.default_discount_account) {
-				frm.set_value("additional_discount_account", r.message.default_discount_account);
-			}
-		});
+		frappe
+			.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+				company: frm.doc.company,
+				fieldname: "default_discount_account",
+			})
+			.then((r) => {
+				if (r.message) {
+					frm.set_value("additional_discount_account", r.message);
+				}
+			});
 	}
 }
 

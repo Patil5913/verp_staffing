@@ -61,21 +61,26 @@ frappe.ui.form.on("Purchase Invoice", {
 
 		set_purchase_account_queries(frm);
 
-		frappe.db.get_value("Company", frm.doc.company, "default_payable_account").then((r) => {
-			if (r.message && r.message.default_payable_account) {
-				frm.set_value("credit_to", r.message.default_payable_account);
-			}
-		});
+		frappe
+			.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+				company: frm.doc.company,
+				fieldname: "default_payable_account",
+			})
+			.then((r) => {
+				if (r.message) {
+					frm.set_value("credit_to", r.message);
+				}
+			});
 		if (frm.doc.items && frm.doc.items.length) {
-			frappe.db
-				.get_value("Company", frm.doc.company, "default_expense_account")
+			frappe
+				.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+					company: frm.doc.company,
+					fieldname: "default_expense_account",
+				})
 				.then((r) => {
-					if (!r.message.default_expense_account) {
-						frappe.throw("Default Company Expense Account not set");
-					}
-					if (r.message && r.message.default_expense_account) {
+					if (r.message) {
 						frm.doc.items.forEach((item) => {
-							item.expense_account = r.message.default_expense_account;
+							item.expense_account = r.message;
 						});
 						frm.refresh_field("items");
 					}

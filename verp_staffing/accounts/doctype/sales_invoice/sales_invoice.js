@@ -113,33 +113,38 @@ frappe.ui.form.on("Sales Invoice", {
 
 	company(frm) {
 		handle_currency_ui(frm);
+		set_currency_labels(frm);
 		handle_discount_account(frm);
 		validate_fiscal_year(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		set_account_queries(frm);
 		if (!frm.doc.company) return;
 
-		frappe.call({
-			method: "verp_staffing.accounts.doctype.company.company.get_company_receivable_account",
-			args: {
+		frappe
+			.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
 				company: frm.doc.company,
-			},
-			callback(r) {
+				fieldname: "default_receivable_account",
+			})
+			.then((r) => {
 				if (r.message) {
 					frm.set_value("debit_to", r.message);
 				}
-			},
-		});
+			});
 
 		if (frm.doc.items && frm.doc.items.length) {
-			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
-				if (r.message && r.message.default_income_account) {
-					frm.doc.items.forEach((item) => {
-						item.income_account = r.message.default_income_account;
-					});
-					frm.refresh_field("items");
-				}
-			});
+			frappe
+				.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+					company: frm.doc.company,
+					fieldname: "default_income_account",
+				})
+				.then((r) => {
+					if (r.message && r.message) {
+						frm.doc.items.forEach((item) => {
+							item.income_account = r.message;
+						});
+						frm.refresh_field("items");
+					}
+				});
 		}
 	},
 
@@ -242,13 +247,18 @@ frappe.ui.form.on("Items Table", {
 		});
 
 		if (frm.doc.company) {
-			frappe.db.get_value("Company", frm.doc.company, "default_income_account").then((r) => {
-				if (r.message?.default_income_account) {
-					row.income_account = r.message.default_income_account;
+			frappe
+				.call("verp_staffing.accounts.api.get_defaults.get_default_company_account", {
+					company: frm.doc.company,
+					fieldname: "default_income_account",
+				})
+				.then((r) => {
+					if (r.message) {
+						row.income_account = r.message;
 
-					frm.refresh_field("items");
-				}
-			});
+						frm.refresh_field("items");
+					}
+				});
 		}
 
 		verp_staffing.calculation_engine.calculate_invoice(frm);
@@ -273,10 +283,10 @@ frappe.ui.form.on("Items Table", {
 frappe.ui.form.on("Taxes and Charges", {
 	charge_type(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
-		
+
 		if (row.charge_type === "Actual") {
 			frappe.model.set_value(cdt, cdn, "rate", 0);
-			
+
 			frm.fields_dict["taxes"].grid.grid_rows_by_docname[cdn].toggle_editable("rate", false);
 			frm.fields_dict["taxes"].grid.grid_rows_by_docname[cdn].toggle_editable(
 				"tax_amount",
@@ -560,8 +570,7 @@ function set_account_queries(frm) {
 
 async function set_currency_labels(frm) {
 	const currency = frm.doc.currency || "";
-	const company_currency =
-		(await frappe.db.get_value("Company", frm.doc.company, "default_currency")) || "";
+	let company_currency = frm.doc.company_currency;
 
 	const fields = [
 		"total",
@@ -590,11 +599,7 @@ async function set_currency_labels(frm) {
 		"base_discount_amount",
 	];
 	company_currency_field.forEach((field) => {
-		if (
-			currency &&
-			company_currency &&
-			currency !== company_currency.message.default_currency
-		) {
+		if (currency && company_currency && currency !== company_currency) {
 			frm.set_df_property(field, "hidden", false);
 		} else {
 			frm.set_df_property(field, "hidden", true);
@@ -603,7 +608,7 @@ async function set_currency_labels(frm) {
 		frm.set_df_property(
 			field,
 			"label",
-			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency.message.default_currency})`,
+			`${frm.fields_dict[field].df.label.split(" (")[0]} (${company_currency})`,
 		);
 	});
 }

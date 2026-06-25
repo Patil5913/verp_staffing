@@ -490,14 +490,17 @@
    "fetch_if_empty": 1,
    "fieldname": "company_currency",
    "fieldtype": "Data",
-   "label": "Company Currency"
+   "label": "Company Currency",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-27 17:55:35.438112",
+ "modified": "2026-06-05 10:57:28.318310",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Invoice",
