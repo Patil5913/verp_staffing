@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-23 14:56:54.728257",
+ "modified": "2026-06-25 23:25:59.323316",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Target Report",
@@ -20,12 +20,6 @@
  "report_name": "Interview Target Report",
  "report_type": "Script Report",
  "roles": [
-  {
-   "role": "Lead Manager"
-  },
-  {
-   "role": "Lead Employee"
-  },
   {
    "role": "Lead Manager"
   },
@@ -63,7 +57,10 @@
    "role": "Marketing Manager"
   },
   {
-   "role": "marketing Master Manager"
+   "role": "Marketing Master Manager"
+  },
+  {
+   "role": "Lead Person"
   }
  ],
  "timeout": 0

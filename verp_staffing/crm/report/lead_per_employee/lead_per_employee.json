@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-02 14:45:24.183790",
+ "modified": "2026-06-25 23:27:22.182657",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Per Employee",
@@ -46,9 +46,6 @@
   },
   {
    "role": "System Manager"
-  },
-  {
-   "role": "Lead Employee"
   },
   {
    "role": "Sales Employee"
