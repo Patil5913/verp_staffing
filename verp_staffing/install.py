@@ -3075,7 +3075,7 @@ def assign_permissions_to_roles(role_permissions: dict):
     rows = []
 
     for role, permissions in role_permissions.items():
-        if role == "Administrator":
+        if role == "System Manager":
             continue
 
         if role not in roles:
