@@ -407,9 +407,6 @@ before_request = [
 fixtures = [
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
     {
-        "dt": "DocPerm",
-    },
-    {
         "dt": "Custom HTML Block",
         "filters": [
             [
