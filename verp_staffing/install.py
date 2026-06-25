@@ -48,6 +48,7 @@ ROLES = [
     "_show_accounting",
     "_show_sidebar_master",
     "_show_role_permission_manager",
+    "Technical Person"
 ]
 
 PERM_FIELDS = [
@@ -2150,7 +2151,7 @@ def after_install():
     seed_type_of_interview()
     create_all_roles()
     seed_employee_departments()
-    assign_permissions_to_roles(ROLE_PERMISSIONS)
+    # assign_permissions_to_roles(ROLE_PERMISSIONS)
     seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()

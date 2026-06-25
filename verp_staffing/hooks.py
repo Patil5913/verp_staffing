@@ -141,7 +141,7 @@ after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
     # "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.utils.email_template.trigger_email_template_refresh"
+    "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
 
 # Uninstallation
@@ -271,7 +271,7 @@ doc_events = {
     },
     "ERP Configuration": {
         "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
-    }
+    },
 }
 
 # Scheduled Tasks
@@ -406,6 +406,9 @@ before_request = [
 
 fixtures = [
     {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
+    {
+        "dt": "DocPerm",
+    },
     {
         "dt": "Custom HTML Block",
         "filters": [
