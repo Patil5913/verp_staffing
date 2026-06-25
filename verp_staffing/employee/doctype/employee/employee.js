@@ -2,12 +2,16 @@
 
 frappe.ui.form.on("Employee", {
 	async refresh(frm) {
+		await apply_employee_read_only_restriction(frm);
+
 		frm.set_query("user", () => {
 			return {
 				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
 			};
 		});
-		await render_headline(frm);
+		if(frappe.session.user === "Administrator"){
+			await render_headline(frm);
+		}
 		const has_sales_department = (frm.doc.employee_assignment_details_table || []).some(
 			(row) => row.department === "Sales",
 		);
@@ -180,6 +184,46 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 });
+
+async function apply_employee_read_only_restriction(frm) {
+	// Administrator / System Manager bypass
+	if (
+		frappe.session.user === "Administrator" ||
+		frappe.user.has_role("System Manager")
+	) {
+		return;
+	}
+
+	const { message: departments = [] } = await frappe.call({
+		method: "verp_staffing.crm.api.helpers.get_user_departments",
+	});
+
+	const is_hr_user = departments.some(
+		(dept) => (dept || "").toLowerCase() === "hr",
+	);
+
+	if (is_hr_user) {
+		return;
+	}
+
+	// Make form read only
+	frm.set_read_only();
+
+	// Hide save actions
+	frm.disable_save();
+
+	// Hide common action buttons
+	frm.page.btn_primary?.hide();
+
+	// Prevent child table editing
+	frm.fields.forEach((field) => {
+		if (field.df.fieldtype === "Table") {
+			field.grid.cannot_add_rows = true;
+			field.grid.only_sortable();
+			field.grid.refresh();
+		}
+	});
+}
 
 async function render_headline(frm) {
 	const r = await frappe.call({

@@ -94,8 +94,8 @@ ROLE_PERMISSIONS = {
         "CRM Task": ["read", "create", "write", "delete"],
         "CRM Event": ["read", "create", "write", "delete"],
         "CRM Note": ["read", "create", "write", "delete"],
-        "Comment": ["read", "create", "write", "delete"],
-        "File": ["read", "create", "write", "delete"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Lead Manager": {
         "Lead": ["read", "write", "create", "report"],
@@ -107,8 +107,8 @@ ROLE_PERMISSIONS = {
         "CRM Task": ["read", "create", "write", "delete"],
         "CRM Event": ["read", "create", "write", "delete"],
         "CRM Note": ["read", "create", "write", "delete"],
-        "Comment": ["read", "create", "write", "delete"],
-        "File": ["read", "create", "write", "delete"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Lead Team Lead": {
         "Lead": ["read", "write", "create", "report"],
@@ -120,8 +120,8 @@ ROLE_PERMISSIONS = {
         "CRM Task": ["read", "create", "write", "delete"],
         "CRM Event": ["read", "create", "write", "delete"],
         "CRM Note": ["read", "create", "write", "delete"],
-        "Comment": ["read", "create", "write", "delete"],
-        "File": ["read", "create", "write", "delete"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Lead Person": {
         "Lead": ["read", "write", "create", "report"],
@@ -133,8 +133,8 @@ ROLE_PERMISSIONS = {
         "CRM Task": ["read", "create", "write", "delete"],
         "CRM Event": ["read", "create", "write", "delete"],
         "CRM Note": ["read", "create", "write", "delete"],
-        "Comment": ["read", "create", "write", "delete"],
-        "File": ["read", "create", "write", "delete"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Sales Master Manager": {
         "Lead": [
@@ -197,6 +197,8 @@ ROLE_PERMISSIONS = {
         "Item": ["read", "select"],
         "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Sales Manager": {
         "Lead": ["read", "write", "create", "report"],
@@ -239,6 +241,8 @@ ROLE_PERMISSIONS = {
         "Item": ["read", "select"],
         "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Sales Team Lead": {
         "Lead": ["read", "write", "create", "report"],
@@ -281,6 +285,8 @@ ROLE_PERMISSIONS = {
         "Item": ["read", "select"],
         "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Sales Person": {
         "Lead": ["read", "write", "create", "report"],
@@ -323,6 +329,8 @@ ROLE_PERMISSIONS = {
         "Item": ["read", "select"],
         "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Marketing Master Manager": {
         "Marketing": [
@@ -349,8 +357,11 @@ ROLE_PERMISSIONS = {
         ],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
+        "Resume": ["read", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Marketing Manager": {
         "Marketing": ["read", "write", "create", "select", "report"],
@@ -360,7 +371,10 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "Resume": ["read", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Marketing Team Lead": {
         "Marketing": ["read", "write", "create", "select", "report"],
@@ -369,8 +383,11 @@ ROLE_PERMISSIONS = {
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
+        "Resume": ["read", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Senior Recruiter": {
         "Marketing": ["read", "write", "create", "select", "report"],
@@ -380,7 +397,10 @@ ROLE_PERMISSIONS = {
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "Resume": ["read", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Marketing Mentor": {
         "Marketing": ["read", "write", "create", "select", "report"],
@@ -389,7 +409,10 @@ ROLE_PERMISSIONS = {
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
+        "Resume": ["read", "select"],
         "Lead Detail Form": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Recruiter": {
         "Marketing": ["read", "write", "create", "select", "report"],
@@ -397,23 +420,32 @@ ROLE_PERMISSIONS = {
         "Other Services": ["read", "write", "create", "select", "report"],
         "Marketing Other Services": ["read", "write", "create", "select", "report"],
         "Customer": ["read", "select"],
+        "Resume": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Senior Resume Person": {
         "Resume": ["read", "write", "create", "select"],
+        "Cover Letter": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Resume Person": {
         "Resume": ["read", "write", "create", "select"],
+        "Cover Letter": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Technical Coordinator": {
         "RUC": ["read", "write", "create", "select"],
@@ -422,11 +454,30 @@ ROLE_PERMISSIONS = {
         "Training": ["read", "write", "create", "select"],
         "JDC": ["read", "write", "create", "select"],
         "Resume": ["read", "write", "create", "select"],
+        "Cover Letter": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
+        "Outsource": ["read", "write", "select"],
+        "Lead Detail Form": ["read"],
+        "Item": ["read", "select"],
+        "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
+    },
+    "Technical Person": {
+        "RUC": ["read", "write", "create", "select"],
+        "Technical Other Services": ["read", "write", "create", "select", "report"],
+        "Other Services": ["read", "write", "create", "select", "report"],
+        "Training": ["read", "write", "create", "select"],
+        "JDC": ["read", "write", "create", "select"],
+        "Customer": ["read", "select"],
+        "Employee": ["read", "select"],
+        "Item": ["read", "select"],
+        "Outsource": ["read", "write", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Technical Manager": {
         "RUC": ["read", "write", "create", "select"],
@@ -435,11 +486,14 @@ ROLE_PERMISSIONS = {
         "Training": ["read", "write", "create", "select"],
         "JDC": ["read", "write", "create", "select"],
         "Resume": ["read", "write", "create", "select"],
+        "Item": ["read", "select"],
         "Customer": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Technical Master Manager": {
         "RUC": ["read", "write", "create", "select"],
@@ -449,52 +503,27 @@ ROLE_PERMISSIONS = {
         "JDC": ["read", "write", "create", "select"],
         "Resume": ["read", "write", "create", "select"],
         "Customer": ["read", "select"],
+        "Item": ["read", "select"],
         "Employee": ["read", "select"],
         "Outsource": ["read", "write", "create", "select"],
         "Lead Detail Form": ["read"],
         "ERP Configuration": ["read"],
-    },
-    "RUC Person": {
-        "RUC": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Training Person": {
-        "Training": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Support Person": {
-        "RUC": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "JDC": {
-        "JDC": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "HR Manager": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "HR": {
         "Employee": ["read", "write", "create"],
         "User": ["read", "write", "create"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Inbox User": {
         "Communication": ["read", "create", "email"],
@@ -556,6 +585,8 @@ ROLE_PERMISSIONS = {
         "Item": ["read", "select"],
         "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "CR": {
         "Sales Invoice": [
@@ -613,6 +644,8 @@ ROLE_PERMISSIONS = {
         "Item": ["read", "select"],
         "Sales Stage": ["read", "create", "select"],
         "ERP Configuration": ["read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "Account Person": {
         "Company": [
@@ -1049,6 +1082,8 @@ ROLE_PERMISSIONS = {
         ],
         "Agreement": ["select", "read"],
         "Pdf Agreement Template": ["select", "read"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
     "_show_sidebar_master": {
         "Sidebar Master": ["select", "read", "write", "create"],
@@ -2137,6 +2172,7 @@ def seed_master_sidebar_config():
             "icon": "icon-getting-started",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": ["_show_setup"],
             "route": "/app/setup",
             "link_type": "page",
         },
@@ -2146,6 +2182,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "user",
@@ -2155,6 +2192,7 @@ def seed_master_sidebar_config():
                     "doctype": "User",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "employee",
@@ -2164,15 +2202,7 @@ def seed_master_sidebar_config():
                     "doctype": "Employee",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                },
-                {
-                    "key": "role",
-                    "name": "Role",
-                    "type": "doctype",
-                    "route": "/app/role",
-                    "doctype": "Role",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "outsource",
@@ -2182,6 +2212,26 @@ def seed_master_sidebar_config():
                     "doctype": "Outsource",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "role",
+                    "name": "Role",
+                    "type": "doctype",
+                    "route": "/app/role",
+                    "doctype": "Role",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "role-permissions-manager",
+                    "name": "Role Permissions Manager",
+                    "type": "page",
+                    "route": "/app/permission-manager",
+                    "icon": "icon-assign",
+                    "shortcut": "",
+                    "roles": ["System Manager", "_show_role_permission_manager"],
                 },
             ],
         },
@@ -2191,25 +2241,8 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
-                {
-                    "key": "department",
-                    "name": "Department",
-                    "type": "doctype",
-                    "route": "/app/department",
-                    "doctype": "Department",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
-                },
-                {
-                    "key": "hierarchy",
-                    "name": "Hierarchy",
-                    "type": "doctype",
-                    "route": "/app/hierarchy",
-                    "doctype": "Hierarchy",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
-                },
                 {
                     "key": "email-domain",
                     "name": "Email Domain",
@@ -2218,6 +2251,7 @@ def seed_master_sidebar_config():
                     "doctype": "Email Domain",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "email-account",
@@ -2227,6 +2261,27 @@ def seed_master_sidebar_config():
                     "doctype": "Email Account",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "department",
+                    "name": "Department",
+                    "type": "doctype",
+                    "route": "/app/department",
+                    "doctype": "Department",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "hierarchy",
+                    "name": "Hierarchy",
+                    "type": "doctype",
+                    "route": "/app/hierarchy",
+                    "doctype": "Hierarchy",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "erp-configuration",
@@ -2236,6 +2291,7 @@ def seed_master_sidebar_config():
                     "doctype": "ERP Configuration",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "pdf-agreement-template",
@@ -2245,6 +2301,7 @@ def seed_master_sidebar_config():
                     "doctype": "Pdf Agreement Template",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -2254,6 +2311,7 @@ def seed_master_sidebar_config():
             "icon": "icon-mail",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": [],
             "route": "/app/email-inbox",
             "link_type": "page",
         },
@@ -2263,6 +2321,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": [],
             "route": "/app/lead",
             "link_type": "doctype",
             "doctype": "Lead",
@@ -2273,6 +2332,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "opportunity",
@@ -2282,6 +2342,7 @@ def seed_master_sidebar_config():
                     "doctype": "Opportunity",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "customer",
@@ -2291,6 +2352,7 @@ def seed_master_sidebar_config():
                     "doctype": "Customer",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -2300,6 +2362,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "resume",
@@ -2309,6 +2372,7 @@ def seed_master_sidebar_config():
                     "doctype": "Resume",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "ruc",
@@ -2318,6 +2382,7 @@ def seed_master_sidebar_config():
                     "doctype": "RUC",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "jdc",
@@ -2327,6 +2392,7 @@ def seed_master_sidebar_config():
                     "doctype": "JDC",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "cover-letter",
@@ -2336,6 +2402,7 @@ def seed_master_sidebar_config():
                     "doctype": "Cover Letter",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "training",
@@ -2345,6 +2412,7 @@ def seed_master_sidebar_config():
                     "doctype": "Training",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "technical-other-services",
@@ -2354,6 +2422,7 @@ def seed_master_sidebar_config():
                     "doctype": "Technical Other Services",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -2363,6 +2432,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "marketing",
@@ -2372,6 +2442,7 @@ def seed_master_sidebar_config():
                     "doctype": "Marketing",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "interview",
@@ -2381,6 +2452,7 @@ def seed_master_sidebar_config():
                     "doctype": "Interview",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "marketing-other-services",
@@ -2390,6 +2462,7 @@ def seed_master_sidebar_config():
                     "doctype": "Marketing Other Services",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -2399,6 +2472,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": [],
             "route": "/app/cr",
             "link_type": "doctype",
             "doctype": "CR",
@@ -2409,6 +2483,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": [],
             "route": "/app/onboardings",
             "link_type": "doctype",
             "doctype": "Onboardings",
@@ -2419,6 +2494,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "company",
@@ -2428,6 +2504,7 @@ def seed_master_sidebar_config():
                     "doctype": "Company",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "fiscal-year",
@@ -2437,6 +2514,7 @@ def seed_master_sidebar_config():
                     "doctype": "Fiscal Year",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "accounts-settings",
@@ -2446,6 +2524,7 @@ def seed_master_sidebar_config():
                     "doctype": "Accounts Settings",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -2455,6 +2534,7 @@ def seed_master_sidebar_config():
             "icon": "icon-accounting",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": ["System Manager", "_show_accounting"],
             "route": "/app/pending-pe-requests",
             "link_type": "page",
         },
@@ -2464,6 +2544,7 @@ def seed_master_sidebar_config():
             "icon": "icon-accounting",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": ["System Manager", "_show_accounting"],
             "route": "/app/account/view/tree",
             "link_type": "page",
         },
@@ -2473,6 +2554,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "account",
@@ -2482,6 +2564,7 @@ def seed_master_sidebar_config():
                     "doctype": "Account",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "bank",
@@ -2491,6 +2574,7 @@ def seed_master_sidebar_config():
                     "doctype": "Bank",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "bank-account",
@@ -2500,6 +2584,7 @@ def seed_master_sidebar_config():
                     "doctype": "Bank Account",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "journal-entry",
@@ -2509,6 +2594,7 @@ def seed_master_sidebar_config():
                     "doctype": "Journal Entry",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "payment-entry",
@@ -2518,6 +2604,7 @@ def seed_master_sidebar_config():
                     "doctype": "Payment Entry",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "purchase-invoice",
@@ -2527,6 +2614,7 @@ def seed_master_sidebar_config():
                     "doctype": "Purchase Invoice",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "sales-invoice",
@@ -2536,6 +2624,7 @@ def seed_master_sidebar_config():
                     "doctype": "Sales Invoice",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "sales-order",
@@ -2545,6 +2634,7 @@ def seed_master_sidebar_config():
                     "doctype": "Sales Order",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "subscription",
@@ -2554,6 +2644,7 @@ def seed_master_sidebar_config():
                     "doctype": "Subscription",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "subscription-plan",
@@ -2563,6 +2654,7 @@ def seed_master_sidebar_config():
                     "doctype": "Subscription Plan",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "purchase-order",
@@ -2572,6 +2664,7 @@ def seed_master_sidebar_config():
                     "doctype": "Purchase Order",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "supplier",
@@ -2581,6 +2674,7 @@ def seed_master_sidebar_config():
                     "doctype": "Supplier",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -2590,6 +2684,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_3",
             "shortcut": "",
+            "roles": [],
             "route": "/app/e-sign",
             "link_type": "doctype",
             "doctype": "E Sign",
@@ -2600,6 +2695,7 @@ def seed_master_sidebar_config():
             "icon": "icon-setting-gear",
             "parent_type": "type_2",
             "shortcut": "",
+            "roles": [],
             "children": [
                 {
                     "key": "item",
@@ -2609,6 +2705,7 @@ def seed_master_sidebar_config():
                     "doctype": "Item",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "item-category",
@@ -2618,6 +2715,7 @@ def seed_master_sidebar_config():
                     "doctype": "Item Category",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
                 {
                     "key": "uom",
@@ -2627,6 +2725,7 @@ def seed_master_sidebar_config():
                     "doctype": "UOM",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
+                    "roles": [],
                 },
             ],
         },
@@ -3394,10 +3493,10 @@ SERVICE_DEPARTMENT_MAP = {
         "RUC",
         "JDC",
         "Training",
-        "Cover Letter",
     ],
     "Resume": [
         "Resume",
+        "Cover Letter",
     ],
     "Marketing": [
         "Marketing",

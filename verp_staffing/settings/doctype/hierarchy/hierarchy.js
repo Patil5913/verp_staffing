@@ -8,7 +8,9 @@ frappe.ui.form.on("Hierarchy", {
 		if (!frm.get_field("role_table_html").$wrapper.find("#role-table-wrapper").length) {
 			render_role_table_html(frm);
 		}
-		await render_headline(frm);
+		if(frappe.session.user === "Administrator"){
+			await render_headline(frm);
+		}
 		frm.department_roles = await load_department_roles(frm);
 
 		init_role_table(frm);

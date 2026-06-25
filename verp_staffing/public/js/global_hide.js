@@ -86,6 +86,7 @@ const NO_PLUS_DOCTYPES = new Set([
 	"Type Of Interview",
 	"Other Services",
 	"Marketing Other Services",
+	"Marketing",
 	"Item Category",
 	"UOM",
 	"Cover Letter",

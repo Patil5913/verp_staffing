@@ -8,7 +8,9 @@ frappe.ui.form.on("Department", {
 		if (!frm.doc.name) return;
 
 		// Show redirect buttopn in headline
-		await render_headline(frm);
+		if(frappe.session.user === "Administrator"){
+			await render_headline(frm);
+		}
 	},
 	onload(frm) {
 		set_service_query(frm);

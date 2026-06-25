@@ -505,7 +505,7 @@ def request_field_update(
 
     if not frappe.db.get_value("Customer", customer_name, "customer_owner"):
         frappe.throw(
-            _("No customer owner found for this Customer.{0}").format(customer_name)
+            _("No customer owner found for this Customer:{0}").format(customer_name)
         )
 
     department = None
