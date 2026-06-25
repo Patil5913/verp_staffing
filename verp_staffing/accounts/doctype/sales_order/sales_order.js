@@ -534,7 +534,7 @@ async function render_payment_term_actions(frm, si_name) {
 			const $btn = $(`
 		<button class="btn btn-xs btn-primary btn-payment-action"
 				style="margin: 2px 8px;">
-			Create Invoice
+			Mark as paid
 		</button>
 	`);
 
