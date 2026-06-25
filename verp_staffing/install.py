@@ -794,6 +794,7 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+            "submit"
         ],
         "Mode of Payment": [
             "select",
@@ -892,6 +893,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "submit"
             "share",
         ],
         "Sales Order": [
@@ -903,6 +905,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "submit"
             "share",
         ],
         "Sales Stage": [
@@ -925,6 +928,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "submit"
             "share",
         ],
         "Purchase Order": [
@@ -936,6 +940,7 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "submit"
             "share",
         ],
         "Supplier": [
@@ -1003,6 +1008,18 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+        ],
+        "Finance Book":[
+            "select",
+            "read",
+            "write",
+            "delete",
+            "create",
+        ],
+        "Customer":[
+            "select",
+            "read",
+            "create",
         ],
         "Agreement": ["select", "read"],
         "Pdf Agreement Template": ["select", "read"],
@@ -2078,6 +2095,7 @@ def after_install():
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     seed_form_tours()
+    seed_party_types()
 
 
 def seed_master_sidebar_config():
@@ -2784,6 +2802,25 @@ def create_interview_statuses():
     frappe.db.commit()
 
 
+def seed_party_types():
+    if not frappe.db.exists("Party Type", "Customer"):
+        frappe.get_doc(
+            {
+                "doctype": "Party Type",
+                "account_type": "Receivable",
+                "party_type": "Customer",
+            }
+        ).insert()
+    if not frappe.db.exists("Party Type", "Supplier"):
+        frappe.get_doc(
+            {
+                "doctype": "Party Type",
+                "account_type": "Payable",
+                "party_type": "Supplier",
+            }
+        ).insert()
+
+
 def seed_type_of_interview():
     doctype = "Type Of Interview"
     types = [
@@ -3114,7 +3151,7 @@ from collections import defaultdict
 TECH_PLACEHOLDER = "General"
 
 DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Accounting": ["_show_accounting"],
+    "Accounting": ["_show_accounting", "_show_sidebar_master"],
 }
 
 
