@@ -165,9 +165,9 @@ frappe.ui.form.on("Employee", {
 
 			let is_top_role = !all_child_roles.has(row.designation);
 
-			if (!is_top_role && !row.assigned_to) {
-				frappe.throw(`Row ${row.idx}: Assigned To is required`);
-			}
+			// if (!is_top_role && !row.assigned_to) {
+			// 	frappe.throw(`Row ${row.idx}: Assigned To is required`);
+			// }
 		});
 	},
 

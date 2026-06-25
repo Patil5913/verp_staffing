@@ -637,10 +637,8 @@ def create_sales_invoice_from_sales_order(
             {
                 "charge_type": tax.charge_type,
                 "account_head": tax.account_head,
-                "description": tax.description,
                 "rate": tax.rate,
                 "tax_amount": tax.tax_amount,
-                "row_id": tax.row_id,
             },
         )
 

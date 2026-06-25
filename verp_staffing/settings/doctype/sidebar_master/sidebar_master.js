@@ -99,6 +99,7 @@ const CUSTOM_PAGES = [
 		route: "/app/email-inbox",
 		icon: "icon-mail",
 		type: "page",
+		// no roles → visible to all
 	},
 	{
 		key: "coa",
@@ -109,6 +110,14 @@ const CUSTOM_PAGES = [
 		roles: ["System Manager", "_show_accounting"],
 	},
 	{
+		key: "role-permissions-manager",
+		name: "Role Permissions Manager",
+		route: "/app/permission-manager",
+		icon: "icon-assign",
+		type: "page",
+		roles: ["System Manager", "_show_role_permission_manager"],
+	},
+	{
 		key: "pending-pe-requests",
 		name: "Pending PE Requests",
 		route: "/app/pending-pe-requests",
@@ -117,6 +126,12 @@ const CUSTOM_PAGES = [
 		roles: ["System Manager", "_show_accounting"],
 	},
 ];
+
+// Build a quick lookup: page key → roles array (or empty = no restriction)
+const CUSTOM_PAGE_ROLES = {};
+CUSTOM_PAGES.forEach((p) => {
+	CUSTOM_PAGE_ROLES[p.key] = p.roles || [];
+});
 
 const IS_ADMIN = () =>
 	frappe.user_roles.includes("Administrator") || frappe.user_roles.includes("System Manager");
@@ -162,9 +177,6 @@ frappe.ui.form.on("Sidebar Master", {
 		}
 
 		// ── Auto-derive keys from labels before uniqueness check ──────────────
-		// Keys are always computed from the label at save time; the user never
-		// types a key manually. We do a final sync pass here to ensure the
-		// in-memory state is consistent with what will be written to config_json.
 		sb_sections.forEach((s) => {
 			if (!s.link_key || s._key_auto) {
 				s.link_key = sb_slug(s.label);
@@ -172,12 +184,7 @@ frappe.ui.form.on("Sidebar Master", {
 		});
 
 		// ── Unique key constraint ─────────────────────────────────────────────
-		// Each section key must be unique across the entire canvas. For group /
-		// link+children sections the key is derived from the label; for type_3
-		// sections the key is the original palette item key. Either way, if two
-		// sections end up with the same key the config would silently break
-		// sidebar routing, so we block the save here with a clear message.
-		const seen_keys = new Map(); // key → label (for the error message)
+		const seen_keys = new Map();
 		for (const s of sb_sections) {
 			const k = s.link_key;
 			if (!k) continue;
@@ -195,11 +202,8 @@ frappe.ui.form.on("Sidebar Master", {
 		}
 
 		// ── Palette key conflict check ────────────────────────────────────────
-		// A group/type_1 section whose derived key matches an existing palette
-		// item key would cause that palette item to appear greyed-out even though
-		// it is not actually on the canvas. Catch this and surface it clearly.
 		for (const s of sb_sections) {
-			if (s.parent_type === "type_3") continue; // type_3 keys ARE palette keys — that's expected
+			if (s.parent_type === "type_3") continue;
 			const k = s.link_key;
 			if (!k) continue;
 			const conflict = sb_palette_items.find((p) => p.key === k);
@@ -587,12 +591,8 @@ function sb_child_zone_leave() {
 }
 
 function user_has_page_access(page) {
-	if (!page.roles || !page.roles.length) {
-		return true;
-	}
-
+	if (!page.roles || !page.roles.length) return true;
 	const userRoles = frappe.user_roles || [];
-
 	return page.roles.some((role) => userRoles.includes(role));
 }
 
@@ -661,7 +661,6 @@ async function load_palette_items() {
 
 	CUSTOM_PAGES.forEach((p) => {
 		if (!user_has_page_access(p)) return;
-
 		sb_palette_items.push({
 			...p,
 			module: "Pages",
@@ -748,6 +747,8 @@ function render_palette() {
 
 function add_item_to_canvas(item) {
 	const is_locked = item.type === "report" || item.type === "page";
+	// Carry roles for page-type items so they are persisted in config_json
+	const page_roles = item.type === "page" ? (CUSTOM_PAGE_ROLES[item.key] || []) : [];
 	sb_sections.push({
 		_id: sb_uid(),
 		label: item.name,
@@ -757,6 +758,7 @@ function add_item_to_canvas(item) {
 		link_key: item.key,
 		link_type: item.type,
 		doctype: item.doctype || null,
+		roles: page_roles,
 		children: [],
 		_locked_type: is_locked,
 		_lock_label: is_locked ? (item.type === "report" ? "Report" : "Page") : null,
@@ -776,6 +778,14 @@ function load_canvas_from_json(frm) {
 	}
 	sb_sections = data.map((s) => {
 		const is_locked = s.link_type === "report" || s.link_type === "page";
+		// Restore roles — fall back to CUSTOM_PAGE_ROLES lookup for older configs
+		// that were saved before roles were added to the JSON.
+		const restored_roles =
+			s.roles && s.roles.length
+				? s.roles
+				: s.link_type === "page"
+					? (CUSTOM_PAGE_ROLES[s.key] || [])
+					: [];
 		return {
 			_id: sb_uid(),
 			label: s.label,
@@ -785,6 +795,7 @@ function load_canvas_from_json(frm) {
 			link_key: s.key,
 			link_type: s.link_type || "doctype",
 			doctype: s.doctype || null,
+			roles: restored_roles,
 			children: (s.children || []).map((c) => ({
 				key: c.key,
 				name: c.name,
@@ -793,6 +804,8 @@ function load_canvas_from_json(frm) {
 				doctype: c.doctype || null,
 				icon: c.icon || "icon-setting-gear",
 				shortcut: c.shortcut || "",
+				// child-level page roles (for future use)
+				roles: c.roles || (c.type === "page" ? (CUSTOM_PAGE_ROLES[c.key] || []) : []),
 			})),
 			_locked_type: is_locked,
 			_lock_label: is_locked ? (s.link_type === "report" ? "Report" : "Page") : null,
@@ -812,6 +825,8 @@ function save_canvas_to_json(frm) {
 			parent_type: sec.parent_type,
 			shortcut: sec.shortcut || "",
 		};
+		// Always persist roles array (empty array for doctype/report items)
+		o.roles = sec.roles || [];
 		if (sec.parent_type === "type_3" || sec.parent_type === "type_1") o.route = sec.route;
 		if (sec.parent_type === "type_3") {
 			o.link_type = sec.link_type;
@@ -826,6 +841,7 @@ function save_canvas_to_json(frm) {
 				doctype: c.doctype || null,
 				icon: c.icon || "icon-setting-gear",
 				shortcut: c.shortcut || "",
+				roles: c.roles || [],
 			}));
 		return o;
 	});
@@ -908,7 +924,6 @@ function render_section(sec, idx, container) {
 			</div>`;
 
 	const sc_has = !!sec.shortcut;
-	// For group sections show placeholder label when empty
 	const needs_group_label = !is_type3 && !is_locked;
 
 	hdr.innerHTML = `
@@ -924,29 +939,21 @@ function render_section(sec, idx, container) {
 		<button class="sh-del-btn" title="Remove section">✕</button>
 	`;
 
-	// ── Icon ──────────────────────────────────────────────────────────────────
 	hdr.querySelector(".sh-icon-btn").addEventListener("click", () =>
 		open_icon_picker(sec._id, null),
 	);
 
-	// ── Label ─────────────────────────────────────────────────────────────────
-	// The key is always derived from the label automatically — users never type
-	// a key manually. For group / link+children sections we keep the in-memory
-	// link_key in sync with the label as the user types, so that duplicate-key
-	// errors surfaced at save time reference the correct derived key.
 	const labelInput = hdr.querySelector(".sh-label");
 	labelInput.addEventListener("input", (e) => {
 		sec.label = e.target.value;
 		labelInput.classList.toggle("needs-input", needs_group_label && !sec.label.trim());
 		if (!is_type3) {
-			// Auto-derive key silently — no input shown, no inline error
 			sec.link_key = sb_slug(e.target.value);
-			sec._key_auto = true; // mark as auto-derived so validate() knows
+			sec._key_auto = true;
 		}
 		sb_mark_dirty();
 	});
 
-	// ── Delete ────────────────────────────────────────────────────────────────
 	hdr.querySelector(".sh-del-btn").addEventListener("click", () => {
 		sb_sections.splice(idx, 1);
 		render_canvas();
@@ -954,13 +961,11 @@ function render_section(sec, idx, container) {
 		sb_mark_dirty();
 	});
 
-	// ── Shortcut pill ─────────────────────────────────────────────────────────
 	hdr.querySelector(".sh-shortcut-pill").addEventListener("click", (e) => {
 		e.stopPropagation();
 		open_shortcut_popup(sec, null, null, e.currentTarget);
 	});
 
-	// ── Type badge & dropdown ─────────────────────────────────────────────────
 	if (!is_locked) {
 		const badge = hdr.querySelector(".sh-type-badge");
 		const dropdown = hdr.querySelector(".sh-type-dropdown");
@@ -979,8 +984,6 @@ function render_section(sec, idx, container) {
 				const old_type = sec.parent_type;
 				dropdown.classList.remove("open");
 
-				// When switching FROM type_3 TO a group type, clear label and
-				// key so the user provides their own group name.
 				if (old_type === "type_3" && new_type !== "type_3") {
 					sec.label = "";
 					sec.link_key = "";
@@ -995,7 +998,6 @@ function render_section(sec, idx, container) {
 		});
 	}
 
-	// ── Section drag ──────────────────────────────────────────────────────────
 	const grip = hdr.querySelector(".sh-drag");
 	grip.addEventListener("mousedown", () => {
 		div.draggable = true;
@@ -1046,7 +1048,6 @@ function render_section(sec, idx, container) {
 
 	div.appendChild(hdr);
 
-	// ── Children zone ─────────────────────────────────────────────────────────
 	if (!is_type3) {
 		const divider = document.createElement("div");
 		divider.className = "sb-section-divider";
@@ -1119,6 +1120,8 @@ function make_children_zone(sec, sectionEl) {
 		sb_drag = null;
 		sb_palette_drag_end();
 		if (sb_used_keys().has(item.key)) return;
+		// Carry roles for page-type children
+		const child_roles = item.type === "page" ? (CUSTOM_PAGE_ROLES[item.key] || []) : [];
 		sec.children.push({
 			key: item.key,
 			name: item.name,
@@ -1127,6 +1130,7 @@ function make_children_zone(sec, sectionEl) {
 			doctype: item.doctype || null,
 			icon: item.icon || "icon-setting-gear",
 			shortcut: "",
+			roles: child_roles,
 		});
 		refresh_zone();
 		render_palette();

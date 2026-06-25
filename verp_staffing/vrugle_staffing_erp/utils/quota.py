@@ -4,13 +4,6 @@ from datetime import datetime
 from verp_staffing.crm.api.helpers import send_notification
 
 
-@frappe.whitelist(allow_guest=True)
-def validate_required_lead_documents_config():
-    quota = frappe.get_site_config().get("quota", {})
-    if not isinstance(quota, dict):
-        frappe.throw('Missing "quota" object in site_config.json')
-
-
 # user limit validate
 def user_limit(doc=None, method=None):
     quota = frappe.get_site_config().get("quota", {})

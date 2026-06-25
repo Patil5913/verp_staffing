@@ -93,7 +93,7 @@ doctype_js = {
 }
 
 
-doctype_list_js = {"Lead": "public/js/lead_list.js"}
+# doctype_list_js = {"Lead": "public/js/lead_list.js"}
 treeviews = [
     "Account",
 ]
@@ -140,7 +140,6 @@ treeviews = [
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
     # "verp_staffing.overrides.email_template.patch",
     "verp_staffing.utils.email_template.trigger_email_template_refresh"
 ]

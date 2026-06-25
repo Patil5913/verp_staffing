@@ -1,6 +1,8 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
+let _isSalesUser = null;
+
 frappe.ui.form.on("Sales Order", {
 	async refresh(frm) {
 		frappe.breadcrumbs.clear();
@@ -387,6 +389,36 @@ frappe.ui.form.on("Customer Payment Terms", {
 	},
 });
 
+async function is_sales_user() {
+	if (_isSalesUser !== null) {
+		return _isSalesUser;
+	}
+
+	const { message: departments = [] } = await frappe.call({
+		method: "verp_staffing.crm.api.helpers.get_user_departments",
+	});
+
+	_isSalesUser = departments.includes("Sales");
+
+	return _isSalesUser;
+}
+
+async function get_document_link(doctype_route, name) {
+	if (!name) return "";
+
+	const sales_user = await is_sales_user();
+
+	if (sales_user) {
+		return name;
+	}
+
+	return `
+		<a href="/app/${doctype_route}/${name}" target="_blank">
+			${name}
+		</a>
+	`;
+}
+
 // ── Compute due_date = start_date + counter days ───────────────────────
 function compute_due_date(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
@@ -471,6 +503,11 @@ async function render_payment_term_actions(frm, si_name) {
 			}
 		}, 100);
 	});
+
+	const paymentEntryLink = row.payment_entry
+		? `— ${await get_document_link("payment-entry", row.payment_entry)}`
+		: "";
+
 	grid.grid_rows.forEach((grid_row) => {
 		const row = grid_row.doc;
 
@@ -484,13 +521,7 @@ async function render_payment_term_actions(frm, si_name) {
                 <span class="text-muted small payment-lock-msg" 
                       style="padding: 4px 8px; display: inline-block;">
                     Awaiting verification
-                    ${
-						row.payment_entry
-							? `— <a href="/app/payment-entry/${row.payment_entry}" target="_blank">
-                               ${row.payment_entry}
-                           </a>`
-							: ""
-					}
+                    ${paymentEntryLink}
                 </span>
             `);
 
@@ -992,38 +1023,36 @@ async function render_invoices_tab(frm) {
 
 	const { label, color } = get_invoice_indicator(invoice);
 
+	const invoiceNameHtml = await get_document_link("sales-invoice", invoice.name);
+
 	wrapper.html(`
-        <div style="padding: 10px">
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>Invoice</th>
-                        <th>Date</th>
-                        <th>Grand Total</th>
-                        <th>Outstanding</th>
-                        <th>Status</th>
-                    </tr>
-						</thead>
-						<tbody>
-							<tr>
-						<td>
-							<a href="/app/sales-invoice/${invoice.name}" target="_blank">
-								${invoice.name}
-							</a>
-						</td>
-						<td>${frappe.datetime.str_to_user(invoice.posting_date)}</td>
-						<td>${format_currency(invoice.grand_total, invoice.currency)}</td>
-						<td>${format_currency(invoice.outstanding_amount, invoice.currency)}</td>
-						<td>
-							<span class="indicator-pill ${color}">
-								${__(label)}
-							</span>
-						</td>
-            		</tr>
-				</tbody>
-            </table>
-        </div>
-    `);
+	<div style="padding: 10px">
+		<table class="table table-bordered table-hover">
+			<thead>
+				<tr>
+					<th>Invoice</th>
+					<th>Date</th>
+					<th>Grand Total</th>
+					<th>Outstanding</th>
+					<th>Status</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>${invoiceNameHtml}</td>
+					<td>${frappe.datetime.str_to_user(invoice.posting_date)}</td>
+					<td>${format_currency(invoice.grand_total, invoice.currency)}</td>
+					<td>${format_currency(invoice.outstanding_amount, invoice.currency)}</td>
+					<td>
+						<span class="indicator-pill ${color}">
+							${__(label)}
+						</span>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+`);
 }
 
 // ── Validates total payment terms don't exceed SO grand total ──────────

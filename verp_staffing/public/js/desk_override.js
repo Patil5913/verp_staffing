@@ -8,6 +8,12 @@
 //    type_2 — dropdown group, no redirect, SPA toggle (zero page reload)
 //    type_3 — single link, no children
 //
+//  PERMISSION MODEL:
+//    • Doctypes  → user must have WRITE permission (frappe.model.can_write)
+//    • Pages     → user must have at least one of the roles listed in the
+//                  item's `roles` array. Empty/missing `roles` = visible to all.
+//    • Reports   → always visible (already filtered server-side)
+//
 //  SHORTCUT SUPPORT:
 //    Each item may carry a `shortcut` field (e.g. "J", "J+E", "Alt+P").
 //    Shortcuts are shown in a tooltip on hover (not inline) so the label
@@ -24,7 +30,7 @@
 //    Doctypes listed here will NOT show the quick-create "+" button in the sidebar.
 //    The same set is used to suppress the "New" button on those doctypes'
 //    list pages. Edit this array to add/remove items — no other code changes
-//    needed. Use the palette key format (lowercase, hyphens), e.g. "bank-account-type".
+//    needed.
 //
 //  FEATURES:
 //    ✓ type_2 toggle is pure DOM/CSS — zero page reload
@@ -35,9 +41,12 @@
 //    ✓ Full-width is on by default; "Toggle Full Width" navbar button hidden
 //    ✓ List-page New button hidden for doctypes in NO_PLUS_DOCTYPES
 //    ✓ Overflow tooltip for truncated labels (merged with shortcut tooltip)
+//    ✓ Page visibility gated by roles array in config_json
+//    ✓ Doctype visibility gated by write permission
 // ═══════════════════════════════════════════════════════════════════════════
 (function () {
 	"use strict";
+
 	// ─── NO QUICK-CREATE / NO NEW-BUTTON LIST ─────────────────────────────────
 	//
 	// Add the palette key (slug format) of any doctype/item for which you want to:
@@ -69,16 +78,14 @@
 		"Training",
 		"Bank Account Type",
 		"Bank Account Subtype",
-		"Sidebar Master"
+		"Sidebar Master",
 	]);
+
 	// ─── FULL WIDTH DEFAULT ────────────────────────────────────────────────────
-	// Apply full-width immediately and hide the toggle button permanently.
 	(function enforce_full_width() {
-		// Add class as early as possible
 		document.documentElement.classList.add("fw-patched");
 		function _apply() {
 			document.body.classList.add("full-width");
-			// Hide "Toggle Full Width" menu item
 			document.querySelectorAll(".dropdown-menu li, .dropdown-item").forEach((el) => {
 				if (el.textContent && el.textContent.trim() === "Toggle Full Width") {
 					el.style.display = "none";
@@ -86,7 +93,6 @@
 			});
 		}
 		_apply();
-		// Re-apply after DOM mutations (Frappe rebuilds the navbar dropdown on open)
 		const _fw_obs = new MutationObserver(_apply);
 		if (document.body) {
 			_fw_obs.observe(document.body, { childList: true, subtree: true });
@@ -96,6 +102,7 @@
 			});
 		}
 	})();
+
 	// ─── CACHE ────────────────────────────────────────────────────────────────
 	function cache_key() {
 		return "csb_config_" + ((frappe.session && frappe.session.user) || "guest");
@@ -106,6 +113,7 @@
 	const CACHE_TTL_MS = 5 * 60 * 1000;
 	let SIDEBAR_CONFIG = [];
 	let NAV_ITEMS = {};
+
 	// ─── PERMISSIONS ──────────────────────────────────────────────────────────
 	function is_administrator() {
 		if (!window.frappe) return false;
@@ -114,32 +122,54 @@
 			(frappe.user_roles && frappe.user_roles.includes("Administrator"))
 		);
 	}
-	function can_read(doctype) {
+
+	// Returns true if the current user has WRITE permission on a doctype.
+	// Administrators always pass. Falls back to false on any error.
+	function can_write(doctype) {
 		if (is_administrator()) return true;
 		if (!window.frappe) return false;
 		try {
-			return !!frappe.model.can_read(doctype);
+			return !!frappe.model.can_write(doctype);
 		} catch (e) {
 			return false;
 		}
 	}
+
+	// Returns true if the current user satisfies the page's roles requirement.
+	// An empty / missing roles array means the page is visible to everyone.
+	// Administrators always pass.
+	function can_access_page(roles) {
+		if (!roles || !roles.length) return true;
+		if (is_administrator()) return true;
+		const user_roles = (window.frappe && frappe.user_roles) || [];
+		return roles.some((r) => user_roles.includes(r));
+	}
+
+	// Unified item-level access check used by both parent and child rendering.
 	function item_accessible(key) {
 		if (is_administrator()) return true;
 		const item = NAV_ITEMS[key];
 		if (!item) return false;
-		if (item.type === "doctype" && item.doctype) return can_read(item.doctype);
+		if (item.type === "doctype" && item.doctype) return can_write(item.doctype);
+		if (item.type === "page") return can_access_page(item.roles || []);
+		// reports are pre-filtered server-side
 		return true;
 	}
+
 	function visible_children(parent_cfg) {
 		return (parent_cfg.children || []).filter((c) => item_accessible(c.key));
 	}
+
 	function parent_visible(cfg) {
 		if (cfg.parent_type === "type_3") {
-			if (cfg.link_type === "doctype" && cfg.doctype) return can_read(cfg.doctype);
+			if (cfg.link_type === "doctype" && cfg.doctype) return can_write(cfg.doctype);
+			if (cfg.link_type === "page") return can_access_page(cfg.roles || []);
 			return true;
 		}
+		// Groups are visible only if at least one child is accessible
 		return visible_children(cfg).length > 0;
 	}
+
 	// ─── ROUTING ──────────────────────────────────────────────────────────────
 	function current_path() {
 		let p = window.location.pathname;
@@ -178,6 +208,7 @@
 		}
 		return null;
 	}
+
 	// ─── EXPAND / COLLAPSE ────────────────────────────────────────────────────
 	const EXP_KEY =
 		"csb_expanded_" + ((window.frappe && frappe.session && frappe.session.user) || "guest");
@@ -207,6 +238,7 @@
 	function compute_expanded_key() {
 		return route_forced_expand_key() || load_expanded_key();
 	}
+
 	// ─── SPA NAVIGATE ─────────────────────────────────────────────────────────
 	function spa_navigate(route) {
 		if (window.frappe && frappe.set_route) {
@@ -215,6 +247,7 @@
 			window.location.href = route;
 		}
 	}
+
 	// ─── DOM HELPERS ──────────────────────────────────────────────────────────
 	function make_icon(icon_id, size) {
 		size = size || "sm";
@@ -235,6 +268,7 @@
 		label.textContent = label_text;
 		return [icon_wrap, label];
 	}
+
 	// ─── "+" QUICK-CREATE BUTTON ──────────────────────────────────────────────
 	function make_plus_btn(doctype) {
 		const btn = document.createElement("button");
@@ -251,25 +285,16 @@
 		});
 		return btn;
 	}
-	// Returns true if the "+" quick-create button should be shown for this key.
-	// Checks NO_PLUS_DOCTYPES — a single Set that drives both sidebar and list-page suppression.
+
+	// Returns true if the "+" quick-create button should be shown for this item.
 	function should_show_plus(doctype, item) {
 		if (NO_PLUS_DOCTYPES.has(doctype)) return false;
 		if (!item || item.type !== "doctype" || !item.doctype) return false;
 		if (item.issingle) return false;
 		return true;
 	}
+
 	// ─── UNIFIED TOOLTIP (overflow + shortcut) ────────────────────────────────
-	//
-	// ONE tooltip element is reused for all hover events.
-	// Logic per anchor element:
-	//   - If it has a shortcut  → always show tooltip (label + shortcut badge)
-	//   - If no shortcut        → show tooltip ONLY when the .cn-item-label
-	//                             inside is overflowing (scrollWidth > offsetWidth)
-	//
-	// Both cases render the same tooltip DOM; the shortcut <kbd> is omitted
-	// when there is no shortcut to show.
-	//
 	let _tooltip_el = null;
 	function get_tooltip_el() {
 		if (!_tooltip_el) {
@@ -279,8 +304,6 @@
 		}
 		return _tooltip_el;
 	}
-	// label     – full text to display
-	// shortcut  – shortcut string or "" / null
 	function show_tooltip(anchor, label, shortcut) {
 		const el = get_tooltip_el();
 		const safe_label = frappe.utils.escape_html(label);
@@ -302,7 +325,6 @@
 		el.style.left = r.right + 8 + "px";
 		el.style.top = r.top + r.height / 2 + "px";
 		el.style.transform = "translateY(-50%)";
-		// Flip left if overflowing right edge
 		requestAnimationFrame(() => {
 			const tw = el.offsetWidth;
 			if (r.right + 8 + tw > window.innerWidth - 8) {
@@ -310,17 +332,12 @@
 			}
 		});
 	}
-	// Returns true if the .cn-item-label inside `anchor` is visually truncated.
 	function label_is_overflowing(anchor) {
 		const label_el = anchor.querySelector(".cn-item-label");
 		if (!label_el) return false;
-		// scrollWidth > offsetWidth means text is clipped with ellipsis
 		return label_el.scrollWidth > label_el.offsetWidth;
 	}
-	// Attach hover/focus listeners that show the tooltip when needed.
-	// shortcut may be "" or null for items without a keyboard shortcut.
 	function attach_tooltip(el, label, shortcut) {
-		// Store on the element so we can read it back in the handler
 		el.setAttribute("data-csb-label", label);
 		if (shortcut) el.setAttribute("data-csb-shortcut", shortcut);
 		function on_enter() {
@@ -335,6 +352,7 @@
 		el.addEventListener("mouseleave", hide_tooltip);
 		el.addEventListener("blur", hide_tooltip);
 	}
+
 	// ─── SIDEBAR DOM ──────────────────────────────────────────────────────────
 	const SIDEBAR_ID = "custom-nav-sidebar";
 	function build_sidebar_dom() {
@@ -356,10 +374,10 @@
 				return;
 			}
 		});
-		// ── "Customize Sidebar" button ────────────────────────────────────────
 		wrap.appendChild(make_customize_btn());
 		return wrap;
 	}
+
 	// ─── CUSTOMIZE SIDEBAR BUTTON ─────────────────────────────────────────────
 	function make_customize_btn() {
 		const btn = document.createElement("a");
@@ -381,7 +399,6 @@
 				spa_navigate("/app/sidebar-master/new");
 				return;
 			}
-			// Check if the current user already has a Sidebar Master doc
 			try {
 				const res = await frappe.call({
 					method: "frappe.client.get_value",
@@ -403,6 +420,7 @@
 		});
 		return btn;
 	}
+
 	function make_type3_el(cfg) {
 		const a = document.createElement("a");
 		a.className = "cn-item cn-parent-link" + (parent_route_is_active(cfg) ? " is-active" : "");
@@ -410,7 +428,6 @@
 		a.dataset.parentKey = cfg.key;
 		a.dataset.parentType = "type_3";
 		make_item_inner(cfg.icon, cfg.label).forEach((el) => a.appendChild(el));
-		// Only add "+" if key is not in NO_PLUS_DOCTYPES
 		if (
 			should_show_plus(cfg.doctype, {
 				type: cfg.link_type,
@@ -420,7 +437,6 @@
 		) {
 			a.appendChild(make_plus_btn(cfg.doctype));
 		}
-		// Unified tooltip: overflow-only OR shortcut OR both
 		attach_tooltip(a, cfg.label, cfg.shortcut || "");
 		a.addEventListener("click", function (e) {
 			e.preventDefault();
@@ -429,6 +445,7 @@
 		});
 		return a;
 	}
+
 	function make_type1_el(cfg) {
 		const owner_key = get_active_owner_key();
 		const wrap = document.createElement("div");
@@ -462,7 +479,6 @@
 				ca.href = item.route;
 				ca.dataset.navKey = child.key;
 				make_item_inner(item.icon, item.name).forEach((el) => ca.appendChild(el));
-				// Only add "+" if key is not in NO_PLUS_DOCTYPES
 				if (should_show_plus(child.doctype, item)) {
 					ca.appendChild(make_plus_btn(item.doctype));
 				}
@@ -479,6 +495,7 @@
 		}
 		return wrap;
 	}
+
 	function make_type2_el(cfg) {
 		const expanded = compute_expanded_key() === cfg.key;
 		const owner_key = get_active_owner_key();
@@ -536,7 +553,6 @@
 			a.href = item.route;
 			a.dataset.navKey = child.key;
 			make_item_inner(item.icon, item.name).forEach((el) => a.appendChild(el));
-			// Only add "+" if key is not in NO_PLUS_DOCTYPES
 			if (should_show_plus(child.doctype, item)) {
 				a.appendChild(make_plus_btn(item.doctype));
 			}
@@ -552,6 +568,7 @@
 		wrap.appendChild(ul);
 		return wrap;
 	}
+
 	// ─── MOUNT / REFRESH ──────────────────────────────────────────────────────
 	function mount_sidebar() {
 		document.querySelectorAll(".layout-side-section").forEach(function (section) {
@@ -594,6 +611,7 @@
 				);
 			});
 	}
+
 	// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────
 	let _sc_chord_first = null;
 	let _sc_chord_timer = null;
@@ -670,6 +688,7 @@
 		window._csb_key_handler = handler;
 		document.addEventListener("keydown", handler, true);
 	}
+
 	// ─── CONFIG LOADING ───────────────────────────────────────────────────────
 	function load_from_cache() {
 		try {
@@ -687,6 +706,7 @@
 			localStorage.setItem(cache_ts_key(), String(Date.now()));
 		} catch (e) {}
 	}
+
 	function apply_config(config_array) {
 		SIDEBAR_CONFIG = config_array;
 		NAV_ITEMS = {};
@@ -699,6 +719,8 @@
 					doctype: cfg.doctype || null,
 					icon: cfg.icon,
 					shortcut: cfg.shortcut || "",
+					// Preserve roles for page items so item_accessible() can check them
+					roles: cfg.roles || [],
 					issingle: !!(
 						cfg.route && cfg.route.includes("/" + encodeURIComponent(cfg.label))
 					),
@@ -712,11 +734,14 @@
 					doctype: c.doctype || null,
 					icon: c.icon || "icon-setting-gear",
 					shortcut: c.shortcut || "",
+					// Preserve roles for page-type children
+					roles: c.roles || [],
 					issingle: !!(c.route && c.route.includes("/" + encodeURIComponent(c.name))),
 				};
 			});
 		});
 	}
+
 	async function fetch_config_json() {
 		const current_user =
 			(frappe.session && frappe.session.user) ||
@@ -753,6 +778,7 @@
 		}
 		return null;
 	}
+
 	async function load_config() {
 		const cached = load_from_cache();
 		if (cached) {
@@ -768,6 +794,7 @@
 			console.warn("Custom Sidebar: no config found for user or Master.");
 		}
 	}
+
 	window.csb_reload = async function () {
 		try {
 			localStorage.removeItem(cache_key());
@@ -779,6 +806,7 @@
 		mount_sidebar();
 		register_shortcuts();
 	};
+
 	// ─── DEFAULT / HOME ROUTE ─────────────────────────────────────────────────
 	function get_first_accessible_route() {
 		for (const cfg of SIDEBAR_CONFIG) {
@@ -861,12 +889,14 @@
 			true,
 		);
 	}
+
 	// ─── ROUTE CHANGE ─────────────────────────────────────────────────────────
 	function on_route_change() {
 		resolve_default_route();
 		mount_sidebar();
 		refresh_sidebar_active();
 	}
+
 	// ─── STYLES ───────────────────────────────────────────────────────────────
 	function inject_styles() {
 		if (document.getElementById("csb-styles")) return;
@@ -959,6 +989,7 @@
     `;
 		document.head.appendChild(style);
 	}
+
 	// ─── INIT ─────────────────────────────────────────────────────────────────
 	async function init() {
 		inject_styles();
@@ -983,6 +1014,7 @@
 		});
 		observer.observe(document.body, { childList: true, subtree: true });
 	}
+
 	if (window.frappe && typeof frappe.ready === "function") {
 		frappe.ready(init);
 	} else if (document.readyState === "complete" || document.readyState === "interactive") {

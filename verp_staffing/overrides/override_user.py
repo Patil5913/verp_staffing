@@ -80,8 +80,6 @@ class CustomUser(User):
         ):
             return
 
-        self.append("roles", {"role": "Inbox User"})
-        self.append("roles", {"role": "_show_sidebar_master"})
         self.save(ignore_permissions=True)
 
         super().after_insert()

@@ -1,18 +1,24 @@
 frappe.listview_settings["Opportunity"] = {
 	onload(listview) {
-		const roles = frappe.user_roles;
 		const user = frappe.session.user;
-		if (user != "Administrator") {
-			// Only apply to Lead Employee
-			if (
-				roles.includes("Lead Employee") ||
-				roles.includes("Lead Manager") ||
-				roles.includes("Lead Master Manager")
-			) {
-				frappe.msgprint("You are not allowed to access Opportunity list.");
-				frappe.set_route("desk");
-			}
+
+		if (user === "Administrator") {
+			return;
 		}
+
+		frappe.call({
+			method: "verp_staffing.crm.doctype.opportunity.opportunity.get_lead_department_roles",
+			callback: (r) => {
+				const leadRoles = r.message || [];
+
+				const hasLeadRole = leadRoles.some((role) => frappe.user_roles.includes(role));
+
+				if (hasLeadRole) {
+					frappe.throw(__("You are not allowed to access Opportunity list."));
+					frappe.set_route("/");
+				}
+			},
+		});
 	},
 
 	refresh: function (listview) {

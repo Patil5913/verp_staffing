@@ -1,6 +1,6 @@
 from __future__ import annotations
-from pydoc import doc
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
@@ -9,26 +9,21 @@ class CRMTask(Document):
     def validate(self):
         user = frappe.session.user
 
-        # Allow System Manager full access
         if "System Manager" in frappe.get_roles(user):
             return
 
-        # Check if assigned user is allowed to update
-        if self.assigned_to != user:
+        if self.is_new():
+            return
+
+        old_doc = self.get_doc_before_save()
+
+        if old_doc.assigned_to != user:
             frappe.throw(
-                "You are not allowed to update this task. Only the assigned user or System Manager can modify it."
+                _("Only the assigned user or Admin can update this task.")
             )
 
-        # Restrict editing only to certain fields
-        if not self.is_new():
-            old = frappe.get_doc(self.doctype, self.name)
-
-            # If user tries to change anything except `date` or `is_completed`, block it
-            if (
-                old.description != self.description
-                or old.assigned_to != self.assigned_to
-            ):
-                frappe.throw("You can only update Date and Completion status.")
+        if self.has_value_changed("description"):
+            frappe.throw(_("Description cannot be changed."))
 
     def before_insert(self):
         # set owner as assigned_to if not provided

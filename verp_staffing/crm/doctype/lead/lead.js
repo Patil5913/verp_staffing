@@ -5,7 +5,9 @@ let isSaving = false;
 
 frappe.ui.form.on("Lead", {
 	onload(frm) {
-		frm.set_df_property("lead_owner", "read_only", 1);
+		if(frappe.session.user !== "Administrator") {
+			frm.set_df_property("lead_owner", "read_only", 1);
+		}
 		frm.set_df_property("status", "read_only", 1);
 	},
 
@@ -1047,10 +1049,11 @@ frappe.ui.form.on("Lead", {
 
 			const docname = res.message[0].name;
 
-			const [doc, meta] = await Promise.all([
-				frappe.db.get_doc("Lead Detail Form", docname),
-				frappe.db.get_doc("DocType", "Lead Detail Form"),
-			]);
+			await frappe.model.with_doctype("Lead Detail Form");
+
+			const [doc] = await Promise.all([frappe.db.get_doc("Lead Detail Form", docname)]);
+
+			const meta = frappe.get_meta("Lead Detail Form");
 
 			await Promise.all(
 				meta.fields
@@ -1496,33 +1499,21 @@ function open_create_opportunity_dialog(frm) {
 
 function create_opportunity(frm, owner) {
 	frappe.call({
-		method: "frappe.client.insert",
+		method: "verp_staffing.crm.doctype.lead.lead.create_opportunity_from_lead",
 		args: {
-			doc: {
-				doctype: "Opportunity",
-				opportunity_from_lead: frm.doc.name,
-				opportunity_owner: owner,
-				name1: frm.doc.name1,
-				source: frm.doc.source,
-			},
+			lead: frm.doc.name,
+			owner: owner,
 		},
-		callback: function (response) {
-			frm.reload_doc();
-			if (!response.exc && response.message) {
+		callback(response) {
+			if (response.message) {
 				frappe.msgprint({
-					title: "Success",
-					message: "Opportunity Created",
+					title: __("Success"),
+					message: __("Opportunity Created: {0}", [response.message]),
 					indicator: "green",
 				});
+
 				frm.reload_doc();
 			}
-		},
-		error: function (err) {
-			frappe.msgprint({
-				title: __("Error"),
-				message: err && err.exc ? err.exc : __("Failed to create Opportunity"),
-				indicator: "red",
-			});
 		},
 	});
 }

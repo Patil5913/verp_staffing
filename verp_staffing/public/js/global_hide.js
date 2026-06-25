@@ -117,7 +117,7 @@ function hide_new_button(listview) {
 	});
 }
 
-NO_NEW_DOCTYPES.forEach((doctype) => {
+NO_PLUS_DOCTYPES.forEach((doctype) => {
 	frappe.listview_settings[doctype] = {
 		onload(listview) {
 			hide_new_button(listview);
