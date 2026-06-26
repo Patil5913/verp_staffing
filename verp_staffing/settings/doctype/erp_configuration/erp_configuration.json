@@ -237,7 +237,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-25 20:44:56.840011",
+ "modified": "2026-06-26 19:00:17.772504",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
@@ -340,6 +340,14 @@
   {
    "read": 1,
    "role": "CR"
+  },
+  {
+   "read": 1,
+   "role": "Technical Person"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor"
   }
  ],
  "row_format": "Dynamic",

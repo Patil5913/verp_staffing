@@ -188,7 +188,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-20 11:50:23.778905",
+ "modified": "2026-06-26 16:40:54.835869",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -196,36 +196,21 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
+   "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
    "if_owner": 1,
    "read": 1,
-   "report": 1,
-   "role": "Lead Master Manager",
-   "write": 1
+   "role": "Lead Manager"
   },
   {
-   "create": 1,
    "if_owner": 1,
    "read": 1,
-   "report": 1,
-   "role": "Lead Manager",
-   "write": 1
+   "role": "Lead Team Lead"
   },
   {
    "create": 1,
-   "if_owner": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Lead Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "role": "Lead Employee"
-  },
-  {
-   "create": 1,
-   "delete": 1,
    "email": 1,
    "print": 1,
    "read": 1,
@@ -236,12 +221,9 @@
    "write": 1
   },
   {
-   "create": 1,
    "if_owner": 1,
    "read": 1,
-   "report": 1,
-   "role": "Lead Person",
-   "write": 1
+   "role": "Lead Person"
   },
   {
    "create": 1,
@@ -269,17 +251,13 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Employee",
    "write": 1
   }
  ],

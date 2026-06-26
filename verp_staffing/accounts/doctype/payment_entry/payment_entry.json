@@ -636,8 +636,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-16 16:48:47.458958",
- "modified": "2026-06-18 13:37:50.726008",
+ "modified": "2026-06-26 17:43:45.534276",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",
@@ -648,35 +647,19 @@
    "amend": 1,
    "cancel": 1,
    "create": 1,
-   "delete": 1,
    "email": 1,
-   "export": 1,
-   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Accounts User",
-   "share": 1,
+   "role": "Account Person",
+   "select": 1,
    "submit": 1,
    "write": 1
   },
   {
-   "create": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "role": "Sales Master Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "role": "Sales Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "amend": 1,
@@ -695,13 +678,9 @@
    "write": 1
   },
   {
-   "create": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "role": "Sales Team Lead",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
@@ -713,30 +692,45 @@
    "write": 1
   },
   {
-   "create": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "role": "Sales Person",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
+   "report": 1,
    "role": "CR",
    "select": 1,
+   "submit": 1,
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OnBoarding Person",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
    "email": 1,
    "print": 1,
    "read": 1,
-   "role": "OnBoarding Person",
+   "report": 1,
+   "role": "System Manager",
    "select": 1,
+   "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],

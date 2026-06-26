@@ -53,7 +53,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-18 14:29:19.273955",
+ "modified": "2026-06-26 17:44:15.332546",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",
@@ -66,6 +66,7 @@
    "print": 1,
    "read": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
@@ -98,6 +99,16 @@
    "read": 1,
    "role": "CR",
    "select": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Account Person",
+   "select": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

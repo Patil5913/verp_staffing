@@ -1112,12 +1112,9 @@ DEPARTMENTS_ROLES = {
     "Resume": ["Senior Resume Person", "Resume Person"],
     "Technical": [
         "Technical Coordinator",
-        "RUC Person",
-        "Training Person",
-        "JDC",
         "Technical Manager",
+        "Technical Person",
         "Technical Master Manager",
-        "Support Person",
     ],
     "HR": ["HR Manager", "HR"],
     "CR": ["CR"],
@@ -1182,10 +1179,7 @@ HIERARCHY_DATA = [
             {
                 "parent_role": "Technical Coordinator",
                 "child_roles": [
-                    "RUC Person",
-                    "Training Person",
-                    "JDC",
-                    "Support Person",
+                    "Technical Person"
                 ],
             },
         ],
@@ -2152,7 +2146,7 @@ def after_install():
     seed_type_of_interview()
     create_all_roles()
     seed_employee_departments()
-    assign_permissions_to_roles(ROLE_PERMISSIONS)
+    # assign_permissions_to_roles(ROLE_PERMISSIONS)
     seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
@@ -3124,16 +3118,30 @@ def assign_permissions_to_roles(role_permissions: dict):
             for field in PERM_FIELDS:
                 values[field] = 1 if field in allowed_perms else 0
 
-            existing = frappe.db.exists(
+            existing = frappe.get_all(
                 "DocPerm",
-                {
+                filters={
                     "parent": doctype,
                     "parenttype": "DocType",
                     "parentfield": "permissions",
                     "role": role,
                     "permlevel": 0,
                 },
+                order_by="creation asc",
+                pluck="name",
             )
+
+            # Remove duplicate rows if any exist
+            if len(existing) > 1:
+                for duplicate in existing[1:]:
+                    frappe.delete_doc(
+                        "DocPerm",
+                        duplicate,
+                        force=True,
+                        ignore_permissions=True,
+                    )
+
+            existing = existing[0] if existing else None
 
             if existing:
                 frappe.db.set_value(
@@ -3236,10 +3244,6 @@ ROLE_USER_COUNTS = {
     "Technical Master Manager": 1,
     "Technical Manager": 1,
     "Technical Coordinator": 1,
-    "RUC Person": 1,
-    "Training Person": 1,
-    "JDC": 1,
-    "Support Person": 1,
     "Senior Resume Person": 1,
     "Resume Person": 1,
     "HR Manager": 1,

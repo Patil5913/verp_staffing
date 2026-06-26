@@ -155,7 +155,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-05-19 16:41:37.472651",
+ "modified": "2026-06-26 17:42:13.359839",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Account",
@@ -171,7 +171,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
    "write": 1
   }
  ],

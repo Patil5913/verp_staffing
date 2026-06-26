@@ -109,7 +109,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-09 00:00:00.000000",
+ "modified": "2026-06-26 16:25:06.447514",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead",
@@ -118,14 +118,10 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
    "role": "Lead Master Manager",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {
@@ -133,18 +129,15 @@
    "read": 1,
    "report": 1,
    "role": "Lead Team Lead",
+   "select": 1,
    "write": 1
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
    "role": "Sales Master Manager",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {
@@ -152,6 +145,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Manager",
+   "select": 1,
    "write": 1
   },
   {
@@ -159,6 +153,7 @@
    "read": 1,
    "report": 1,
    "role": "Lead Person",
+   "select": 1,
    "write": 1
   },
   {
@@ -166,6 +161,7 @@
    "read": 1,
    "report": 1,
    "role": "Lead Manager",
+   "select": 1,
    "write": 1
   },
   {
@@ -173,6 +169,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Team Lead",
+   "select": 1,
    "write": 1
   },
   {
@@ -180,40 +177,21 @@
    "read": 1,
    "report": 1,
    "role": "Sales Person",
+   "select": 1,
    "write": 1
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "_show_lead"
   },
   {
    "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "_show_sales"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Lead Employee",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Employee",
    "write": 1
   }
  ],

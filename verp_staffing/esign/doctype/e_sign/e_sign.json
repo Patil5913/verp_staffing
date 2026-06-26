@@ -89,7 +89,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-18 12:16:53.535176",
+ "modified": "2026-06-26 17:47:38.993888",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",
@@ -104,6 +104,7 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   }
