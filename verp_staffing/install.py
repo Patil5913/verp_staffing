@@ -57,12 +57,15 @@ PERM_FIELDS = [
     "write",
     "create",
     "delete",
+    "submit",
+    "cancel",
+    "amend",
+    "report",
+    "export",
+    "import",
+    "share",
     "print",
     "email",
-    "report",
-    "import",
-    "export",
-    "share",
 ]
 
 ROLE_PERMISSIONS = {
@@ -283,8 +286,8 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["select", "read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create", "report"],
-        "Sales Invoice": ["select", "read", "write", "create", "report", "submit"],
+        "Sales Invoice": ["select", "read", "write", "create", "report", "submit", "amend", "cancel"],
+        "Sales Order": ["select", "read", "write", "create", "report", "submit", "amend", "cancel"],
         "Payment Entry": [
             "select",
             "read",
