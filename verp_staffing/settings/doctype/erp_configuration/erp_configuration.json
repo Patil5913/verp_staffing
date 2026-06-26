@@ -323,23 +323,7 @@
   },
   {
    "read": 1,
-   "role": "RUC Person"
-  },
-  {
-   "read": 1,
-   "role": "JDC"
-  },
-  {
-   "read": 1,
    "role": "Technical Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Training Person"
-  },
-  {
-   "read": 1,
-   "role": "Support Person"
   },
   {
    "read": 1,

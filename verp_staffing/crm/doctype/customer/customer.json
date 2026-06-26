@@ -263,21 +263,6 @@
   },
   {
    "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Support Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "JDC",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "OnBoarding Person",
    "select": 1
   },

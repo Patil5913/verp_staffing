@@ -135,13 +135,6 @@
    "role": "Technical Manager",
    "select": 1,
    "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Training Person",
-   "select": 1,
-   "write": 1
   }
  ],
  "row_format": "Dynamic",

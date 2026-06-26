@@ -456,7 +456,7 @@
   },
   {
    "read": 1,
-   "role": "marketing Master Manager"
+   "role": "Marketing Master Manager"
   },
   {
    "read": 1,
@@ -508,18 +508,6 @@
   },
   {
    "read": 1,
-   "role": "Training Person"
-  },
-  {
-   "read": 1,
-   "role": "Support Person"
-  },
-  {
-   "read": 1,
-   "role": "RUC Person"
-  },
-  {
-   "read": 1,
    "role": "OnBoarding Person"
   },
   {
@@ -528,15 +516,7 @@
   },
   {
    "read": 1,
-   "role": "JDC"
-  },
-  {
-   "read": 1,
    "role": "Sales Employee"
-  },
-  {
-   "read": 1,
-   "role": "JD"
   },
   {
    "create": 1,

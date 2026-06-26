@@ -32,15 +32,10 @@ ROLES = [
     "Senior Resume Person",
     "Resume Person",
     "Technical Coordinator",
-    "RUC Person",
-    "Training Person",
-    "Support Person",
-    "JDC",
     "Technical Manager",
     "Technical Master Manager",
     "HR Manager",
     "HR",
-    "Extra Menu Item Not Show",
     "OnBoarding Person",
     "CR",
     "Account Person",
@@ -70,15 +65,7 @@ PERM_FIELDS = [
 
 ROLE_PERMISSIONS = {
     "Lead Master Manager": {
-        "Lead": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-            "report",
-        ],
+        "Lead": ["select", "read", "write", "create", "report"],
         "Employee": ["read"],
         "Department": ["read"],
         "Opportunity": ["read"],
@@ -91,7 +78,7 @@ ROLE_PERMISSIONS = {
         "File": ["select", "read", "create", "write"],
     },
     "Lead Manager": {
-        "Lead": ["read", "write", "create", "report"],
+        "Lead": ["select", "read", "write", "create", "report"],
         "Employee": ["read"],
         "Department": ["read"],
         "Opportunity": ["read"],
@@ -104,7 +91,7 @@ ROLE_PERMISSIONS = {
         "File": ["select", "read", "create", "write"],
     },
     "Lead Team Lead": {
-        "Lead": ["read", "write", "create", "report"],
+        "Lead": ["select", "read", "write", "create", "report"],
         "Employee": ["read"],
         "Department": ["read"],
         "Opportunity": ["read"],
@@ -117,7 +104,7 @@ ROLE_PERMISSIONS = {
         "File": ["select", "read", "create", "write"],
     },
     "Lead Person": {
-        "Lead": ["read", "write", "create", "report"],
+        "Lead": ["select", "read", "write", "create", "report"],
         "Employee": ["read"],
         "Department": ["read"],
         "Opportunity": ["read"],
@@ -135,11 +122,8 @@ ROLE_PERMISSIONS = {
             "read",
             "write",
             "create",
-            "delete",
             "print",
-            "email",
             "report",
-            "share",
         ],
         "Opportunity": [
             "select",
@@ -148,14 +132,12 @@ ROLE_PERMISSIONS = {
             "create",
             "delete",
             "print",
-            "email",
             "report",
-            "share",
         ],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create", "report", "submit"],
-        "Sales Invoice": ["select", "read", "write", "create", "report", "submit"],
+        "Sales Order": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
+        "Sales Invoice": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
         "Payment Entry": [
             "select",
             "read",
@@ -198,8 +180,8 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create", "report"],
-        "Sales Invoice": ["select", "read", "write", "create", "report", "submit"],
+        "Sales Order": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
+        "Sales Invoice": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
         "Payment Entry": [
             "select",
             "read",
@@ -242,8 +224,8 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create", "report"],
-        "Sales Invoice": ["select", "read", "write", "create", "report", "submit"],
+        "Sales Order": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
+        "Sales Invoice": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
         "Payment Entry": [
             "select",
             "read",
@@ -286,8 +268,8 @@ ROLE_PERMISSIONS = {
         "Opportunity": ["read", "write", "create", "report"],
         "Customer": ["select", "read", "write", "create", "report"],
         "Employee": ["read"],
-        "Sales Invoice": ["select", "read", "write", "create", "report", "submit", "amend", "cancel"],
-        "Sales Order": ["select", "read", "write", "create", "report", "submit", "amend", "cancel"],
+        "Sales Order": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
+        "Sales Invoice": ["select", "read", "write", "create", "report", "submit", "cancel", "amend"],
         "Payment Entry": [
             "select",
             "read",
@@ -533,6 +515,9 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+            "cancel",
+            "submit",
+            "amend"
         ],
         "Payment Entry": [
             "select",
@@ -541,6 +526,9 @@ ROLE_PERMISSIONS = {
             "create",
             "print",
             "email",
+            "cancel",
+            "submit",
+            "amend"
         ],
         "Party Type": [
             "select",
@@ -592,6 +580,9 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+            "cancel",
+            "submit",
+            "amend"
         ],
         "Payment Entry": [
             "select",
@@ -600,6 +591,9 @@ ROLE_PERMISSIONS = {
             "create",
             "print",
             "email",
+            "cancel",
+            "submit",
+            "amend"
         ],
         "Party Type": [
             "select",
@@ -816,11 +810,12 @@ ROLE_PERMISSIONS = {
             "write",
             "create",
             "cancel",
+            "submit",
+            "amend"
             "delete",
             "print",
             "email",
             "report",
-            "submit",
             "share",
         ],
         "Mode of Payment": [
@@ -840,7 +835,9 @@ ROLE_PERMISSIONS = {
             "write",
             "create",
             "print",
+            "cancel",
             "submit",
+            "amend"
         ],
         "Item Category":[
             "select",
@@ -940,7 +937,9 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "cancel",
             "submit",
+            "amend"
             "share",
         ],
         "Sales Order": [
@@ -952,7 +951,9 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "cancel",
             "submit",
+            "amend"
             "share",
         ],
         "Sales Stage": [
@@ -975,8 +976,10 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
-            "submit",
             "share",
+            "cancel",
+            "submit",
+            "amend"
         ],
         "Purchase Order": [
             "select",
@@ -987,8 +990,10 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
-            "submit",
             "share",
+            "cancel",
+            "submit",
+            "amend"
         ],
         "Employee": ["read"],
         "ERP Configuration": ["read"],
@@ -1024,7 +1029,9 @@ ROLE_PERMISSIONS = {
             "email",
             "report",
             "share",
+            "cancel",
             "submit",
+            "amend"
         ],
         "Subscription Plan": [
             "select",
@@ -1035,7 +1042,9 @@ ROLE_PERMISSIONS = {
             "print",
             "email",
             "report",
+            "cancel",
             "submit",
+            "amend"
             "share",
         ],
         "Subscription One Time Charge": [

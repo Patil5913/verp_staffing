@@ -116,13 +116,6 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
-   "read": 1,
-   "role": "Training Person",
-   "select": 1,
-   "write": 1
-  },
-  {
    "read": 1,
    "role": "Sales Manager"
   },
@@ -135,13 +128,6 @@
    "role": "Sales Team Lead"
   },
   {
-   "create": 1,
-   "read": 1,
-   "role": "JDC",
-   "select": 1,
-   "write": 1
-  },
-  {
    "read": 1,
    "role": "Sales Person"
   },
@@ -149,13 +135,6 @@
    "create": 1,
    "read": 1,
    "role": "Technical Coordinator",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "RUC Person",
    "select": 1,
    "write": 1
   },
@@ -189,20 +168,6 @@
    "create": 1,
    "read": 1,
    "role": "OnBoarding Person",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Support Person",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "JD",
    "select": 1,
    "write": 1
   }

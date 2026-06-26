@@ -69,20 +69,6 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Training Person",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "RUC Person",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Onboarding Person",
    "select": 1,
    "write": 1
@@ -98,20 +84,6 @@
    "create": 1,
    "read": 1,
    "role": "Technical Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "JDC",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Support Person",
    "select": 1,
    "write": 1
   }
