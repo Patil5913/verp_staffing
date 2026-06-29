@@ -131,8 +131,7 @@ def get_context(context):
     )
 
     # get logo
-    branding = get_company_logo_url()
-    context.logo_url = branding["logo_url"]
+    context.logo_url = get_company_logo_url()
     context.is_verified = is_verified
     context.pdf_url = pdf_url
     context.fields = fields
