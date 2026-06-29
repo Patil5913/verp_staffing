@@ -40,7 +40,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 19:14:54.320847",
+ "modified": "2026-06-29 10:51:27.691987",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Outsource",
@@ -61,44 +61,46 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Technical Coordinator",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "OnBoarding Person",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Technical Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Technical Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Technical Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "CR",
+   "role": "HR Manager",
    "select": 1,
    "write": 1
   }

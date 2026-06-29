@@ -225,15 +225,8 @@ def on_sales_order_save(doc):
 
 @frappe.whitelist()
 def get_lead_detail_form_lock_status(customer_name=None, lead_detail_doc=None):
-    print(f"-----------------customer_name{customer_name}")
-    print(f"-----------------lead_detail_doc{lead_detail_doc}")
-    
     user = frappe.session.user
-    print(f"-----------------user{user}")
-    
     employee = get_employee_name(user)
-    print(f"-----------------employee{employee}")
-    
 
     if user == "Administrator":
         return {
@@ -306,7 +299,6 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_doc=None):
 
     is_owner = is_customer_owner or lead_owner_match or is_service_assignee
 
-    # ── Check candidate form required ──
     # Check ALL Sales Orders for this customer — both from Lead Detail Form and button-created ones
     candidate_form_required = _check_candidate_form_required_for_customer(
         customer_name, lead_detail_doc
@@ -315,7 +307,6 @@ def get_lead_detail_form_lock_status(customer_name=None, lead_detail_doc=None):
     return {
         "is_owner": is_owner,
         "candidate_form_required": candidate_form_required,
-        # "permission": "none",
         "customer_name": customer_name,
     }
 

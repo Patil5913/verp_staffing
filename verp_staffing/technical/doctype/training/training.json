@@ -96,13 +96,13 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-26 10:35:27.227924",
+ "modified": "2026-06-29 10:52:45.039358",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",
  "naming_rule": "By script",
  "owner": "Administrator",
-"permissions": [
+ "permissions": [
   {
    "create": 1,
    "read": 1,
@@ -171,7 +171,8 @@
    "create": 1,
    "read": 1,
    "role": "Technical Person",
-   "select": 1
+   "select": 1,
+   "write": 1
   },
   {
    "create": 1,

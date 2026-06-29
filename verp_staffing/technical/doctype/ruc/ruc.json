@@ -107,7 +107,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 19:11:41.930347",
+ "modified": "2026-06-29 10:48:01.991446",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
@@ -182,7 +182,8 @@
    "create": 1,
    "read": 1,
    "role": "Technical Person",
-   "select": 1
+   "select": 1,
+   "write": 1
   },
   {
    "create": 1,

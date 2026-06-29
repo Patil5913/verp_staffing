@@ -102,7 +102,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 19:18:16.630892",
+ "modified": "2026-06-29 10:52:21.253428",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",
@@ -167,32 +167,28 @@
    "read": 1,
    "report": 1,
    "role": "Technical Coordinator",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
    "role": "Technical Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
    "role": "Technical Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
    "role": "Technical Person",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,

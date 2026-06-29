@@ -19,9 +19,6 @@ class Employee(Document):
 
     def on_update(self):
         self.validate_employee_edit_permission()
-
-        # Clear cached visible employee names for the user whenever an Employee is updated,
-        # to ensure any changes are reflected in reports immediately
         frappe.cache().delete_key("Visible_Employee_Names")
         frappe.cache().delete_key(f"lead_user::{self.user}")
         frappe.cache().delete_key(f"opportunity_user::{self.user}")
@@ -556,26 +553,26 @@ def validate_employee_assignment_hierarchy(doc):
 
             continue
 
-        # if not assigned_to:
-        #     frappe.throw(
-        #         _("Role <b>{0}</b> must be assigned to a <b>{1}</b>.").format(
-        #             current_role,
-        #             ", ".join(sorted(allowed_parent_roles)),
-        #         )
-        # )
+        if not assigned_to:
+            frappe.throw(
+                _("Role <b>{0}</b> must be assigned to a <b>{1}</b>.").format(
+                    current_role,
+                    ", ".join(sorted(allowed_parent_roles)),
+                )
+        )
 
         assigned_roles = employee_role_map.get(
             assigned_to,
             set(),
         )
 
-        # if not assigned_roles.intersection(allowed_parent_roles):
-        #     frappe.throw(
-        #         _("Employee assigned to <b>{0}</b> must have role <b>{1}</b>.").format(
-        #             current_role,
-        #             ", ".join(sorted(allowed_parent_roles)),
-        #         )
-        #     )
+        if not assigned_roles.intersection(allowed_parent_roles):
+            frappe.throw(
+                _("Employee assigned to <b>{0}</b> must have role <b>{1}</b>.").format(
+                    current_role,
+                    ", ".join(sorted(allowed_parent_roles)),
+                )
+            )
 
 
 def validate_employee_delete(doc):

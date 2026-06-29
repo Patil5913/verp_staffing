@@ -26,8 +26,8 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "search_index": 1,
    "read_only": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -97,7 +97,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 15:54:40.240563",
+ "modified": "2026-06-29 10:53:33.847862",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Cover Letter",
@@ -162,32 +162,28 @@
    "read": 1,
    "report": 1,
    "role": "Technical Coordinator",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
    "role": "Technical Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
    "role": "Technical Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
    "report": 1,
    "role": "Technical Person",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
