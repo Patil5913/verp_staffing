@@ -16,6 +16,7 @@ def _get_ttl(cache_key):
 
     return max(int(expires_at - frappe.utils.now_datetime().timestamp()), 0)
 
+
 @frappe.whitelist(allow_guest=True)
 def send_otp_web(token, email):
     if not token or not email:
@@ -45,15 +46,28 @@ def send_otp_web(token, email):
         },
         expires_in_sec=OTP_TTL,
     )
+    message = f"Your OTP is {otp}"
+    subject= "Your Otp"
+    # Fetch template
+    template_name = "OTP Verification Email"
+    if frappe.db.exists("Email Template", template_name):
+        template = frappe.get_doc("Email Template", template_name)
+        context = {"otp": otp}
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(
+            template.response_html or template.response, context
+        )
+
 
     frappe.sendmail(
         recipients=[email],
-        subject="Your OTP",
-        message=f"Your OTP is {otp}",
+        subject=subject,
+        message=message,
         now=True,
     )
 
     return {"status": "sent", "expires_in": OTP_TTL}
+
 
 @frappe.whitelist(allow_guest=True)
 def verify_otp_web(token, otp):
@@ -94,11 +108,9 @@ def verify_otp_web(token, otp):
         expires_in_sec=VERIFIED_TTL,
     )
 
-    return {
-        "status": "verified",
-        "email": data.get("email")
-    }
-    
+    return {"status": "verified", "email": data.get("email")}
+
+
 @frappe.whitelist(allow_guest=True)
 def get_otp_status_web(token):
     if not token:
@@ -117,10 +129,7 @@ def get_otp_status_web(token):
     if data and isinstance(data, dict):
         ttl = _get_ttl(cache_key)
         if ttl > 0:
-            return {
-                "state": "otp_sent",
-                "expires_in": ttl
-            }
+            return {"state": "otp_sent", "expires_in": ttl}
         else:
             frappe.cache().delete_value(cache_key)
 
@@ -142,5 +151,5 @@ def logout_otp_web(token):
 
     # optional: also clear pending OTP
     frappe.cache().delete_value(cache_key)
-    
+
     return {"status": "logged_out"}

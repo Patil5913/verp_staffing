@@ -1,67 +1,13 @@
 frappe.listview_settings = frappe.listview_settings || {};
 
 /* =========================
-   LIST VIEW (LIGHTWEIGHT)
-========================= */
-
-frappe.views.ListView = class CustomListView extends frappe.views.ListView {
-	render() {
-		super.render();
-
-		requestIdleCallback(() => {
-			this.remove_default_filters();
-		});
-	}
-
-	remove_default_filters() {
-		const $sidebar = $("body .layout-side-section");
-		if (!$sidebar.length) return;
-
-		$sidebar.find(".group-by-field").hide();
-		$sidebar.find(".add-group-by").hide();
-		$sidebar.find(".save-filter-section").hide();
-	}
-};
-
-/* =========================
    CACHE SELECTORS (BIG WIN)
 ========================= */
 
 const CACHE = {
-	formSidebar: null,
-	sidebarCleaned: false,
 	lastRoute: null,
+	newButtonHiddenFor: null,
 };
-
-/* =========================
-   CLEANERS
-========================= */
-
-function cleanSidebarOnce() {
-	if (CACHE.sidebarCleaned) return;
-
-	const $sidebar = $(".form-sidebar");
-	if (!$sidebar.length) return;
-
-	CACHE.formSidebar = $sidebar;
-
-	$sidebar.find(".form-follow").hide();
-
-	$sidebar.find("*").each(function () {
-		const text = this.textContent?.trim();
-		if (!text) return;
-
-		if (
-			text.includes("Assigned") ||
-			text.includes("Share") ||
-			text.includes("Attachment")
-		) {
-			$(this).hide();
-		}
-	});
-
-	CACHE.sidebarCleaned = true;
-}
 
 /* =========================
    WORKSPACE BUTTON
@@ -111,25 +57,76 @@ frappe.router.on("change", () => {
 	if (CACHE.lastRoute === routeKey) return;
 	CACHE.lastRoute = routeKey;
 
-	// reset form cache only when leaving/entering
 	CACHE.sidebarCleaned = false;
+	CACHE.newButtonHiddenFor = null;
 
 	requestIdleCallback(() => {
-		// workspace cleanup
 		if (isWorkspaceRoute(route)) {
 			hide_workspace_new_button();
 		}
 
-		// report cleanup
 		if (isReportRoute(route)) {
 			hide_report_things();
 		}
-
-		// form cleanup
-		if (isFormRoute(route) && cur_frm) {
-			cleanSidebarOnce();
-		}
 	});
+});
+
+const NO_PLUS_DOCTYPES = new Set([
+	"Onboardings",
+	"GL Entry",
+	"Supplier Group",
+	"CR",
+	"Agreement",
+	"CRM Note",
+	"CRM Event",
+	"CRM Task",
+	"Lead Detail Form",
+	"Sales Stage",
+	"Interview Status",
+	"Type Of Interview",
+	"Other Services",
+	"Marketing Other Services",
+	"Marketing",
+	"Item Category",
+	"UOM",
+	"Cover Letter",
+	"JDC",
+	"Resume",
+	"RUC",
+	"Technical Other Services",
+	"Training",
+	"Bank Account Type",
+	"Bank Account Subtype",
+	"Sidebar Master"
+]);
+
+function hide_new_button(listview) {
+	if (!listview) return;
+
+	const doctype = listview.doctype;
+
+	// prevent duplicate execution
+	if (CACHE.newButtonHiddenFor === doctype) return;
+	CACHE.newButtonHiddenFor = doctype;
+
+	listview.page?.btn_primary?.hide();
+
+	requestAnimationFrame(() => {
+		listview.page?.wrapper?.querySelectorAll(".btn-new-doc")?.forEach((btn) => {
+			btn.style.display = "none";
+		});
+	});
+}
+
+NO_PLUS_DOCTYPES.forEach((doctype) => {
+	frappe.listview_settings[doctype] = {
+		onload(listview) {
+			hide_new_button(listview);
+		},
+		refresh(listview) {
+			hide_new_button(listview);
+		},
+	};
 });
 
 /* =========================
@@ -138,11 +135,6 @@ frappe.router.on("change", () => {
 
 const observer = new MutationObserver(() => {
 	const route = frappe.get_route();
-
-	// FORM CLEANING (only when needed)
-	if (!CACHE.sidebarCleaned) {
-		cleanSidebarOnce();
-	}
 
 	// REPORT CLEANING (STRICT SCOPE FIX)
 	if (route && route[0] === "query-report") {

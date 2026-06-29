@@ -48,6 +48,7 @@ app_include_js = [
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/global_hide.js",
     "/assets/verp_staffing/js/purchase_common.js",
+    "/assets/verp_staffing/js/desk_override.js",
 ]
 
 # include js, css files in header of web template
@@ -92,7 +93,7 @@ doctype_js = {
 }
 
 
-doctype_list_js = {"Lead": "public/js/lead_list.js"}
+# doctype_list_js = {"Lead": "public/js/lead_list.js"}
 treeviews = [
     "Account",
 ]
@@ -139,9 +140,8 @@ treeviews = [
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
     # "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.utils.email_template.seed_email_template",
+    "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
 
 # Uninstallation
@@ -269,6 +269,9 @@ doc_events = {
     "GL Entry": {
         "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
     },
+    "ERP Configuration": {
+        "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
+    },
 }
 
 # Scheduled Tasks
@@ -301,6 +304,9 @@ scheduler_events = {
     },
 }
 
+# Setup
+setup_wizard_requires = "assets/verp_staffing/js/setup_wizard.js"
+setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 
 # Testing
 # -------
@@ -403,12 +409,20 @@ fixtures = [
     {
         "dt": "Custom HTML Block",
         "filters": [
-            ["name", "in", ["Email Inbox", "Pending Payment Verification Requests"]]
+            [
+                "name",
+                "in",
+                [
+                    "Email Inbox",
+                    "Pending Payment Verification Requests",
+                    "Setup Workspace",
+                ],
+            ]
         ],
     },
     {
         "dt": "Workspace",
-        "filters": [["name", "in", ["Email Inbox", "Pending PE Requests"]]],
+        "filters": [["name", "in", ["Email Inbox", "Pending PE Requests", "Setup"]]],
     },
 ]
 

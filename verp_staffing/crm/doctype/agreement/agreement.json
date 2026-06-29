@@ -110,46 +110,31 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-30 14:02:16.213725",
+ "modified": "2026-06-26 16:51:15.374318",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Employee",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
    "read": 1,
    "role": "Sales Person",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Team Lead",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
@@ -158,10 +143,19 @@
    "export": 1,
    "print": 1,
    "read": 1,
-   "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Account Person",
+   "select": 1,
+   "share": 1
   }
  ],
  "row_format": "Dynamic",

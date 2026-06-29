@@ -15,7 +15,7 @@ frappe.ui.form.on("Interview", {
 		frappe.breadcrumbs.update();
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Interview Form";
+			const tour_name = "Interview";
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});

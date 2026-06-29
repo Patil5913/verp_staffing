@@ -8,7 +8,9 @@ frappe.ui.form.on("Hierarchy", {
 		if (!frm.get_field("role_table_html").$wrapper.find("#role-table-wrapper").length) {
 			render_role_table_html(frm);
 		}
-
+		if(frappe.session.user === "Administrator"){
+			await render_headline(frm);
+		}
 		frm.department_roles = await load_department_roles(frm);
 
 		init_role_table(frm);
@@ -97,6 +99,27 @@ frappe.ui.form.on("Hierarchy", {
 	},
 });
 
+async function render_headline(frm) {
+	if (frm.is_new()) return;
+
+	frm.dashboard.set_headline_alert(
+		__(
+			`Finished Setting Hierarchy? Go To Employee.
+			<a href="#" class="btn btn-sm btn-primary setup-employee-action" style="margin-left:8px;vertical-align:middle;">
+				Open Employees →
+			</a>`,
+		),
+		"blue",
+	);
+
+	frm.page.wrapper
+		.find(".setup-employee-action")
+		.off("click")
+		.on("click", function (e) {
+			e.preventDefault();
+			frappe.set_route("List", "Employee");
+		});
+}
 function load_used_departments(frm) {
 	frappe.call({
 		method: "frappe.client.get_list",

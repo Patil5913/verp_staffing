@@ -154,7 +154,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-10 14:27:16.849762",
+ "modified": "2026-06-26 16:33:43.813053",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -166,6 +166,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Master Manager",
+   "select": 1,
    "write": 1
   },
   {
@@ -173,6 +174,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Manager",
+   "select": 1,
    "write": 1
   },
   {
@@ -180,6 +182,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Team Lead",
+   "select": 1,
    "write": 1
   },
   {
@@ -187,6 +190,7 @@
    "read": 1,
    "report": 1,
    "role": "Sales Person",
+   "select": 1,
    "write": 1
   },
   {
@@ -199,10 +203,12 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
@@ -263,21 +269,6 @@
   },
   {
    "read": 1,
-   "role": "Training Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "Support Person",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "role": "JDC",
-   "select": 1
-  },
-  {
-   "read": 1,
    "role": "OnBoarding Person",
    "select": 1
   },
@@ -289,12 +280,20 @@
   {
    "read": 1,
    "report": 1,
-   "role": "_show_marketing"
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Sales Employee",
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
    "write": 1
   }
  ],

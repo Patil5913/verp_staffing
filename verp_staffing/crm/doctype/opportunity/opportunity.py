@@ -20,6 +20,32 @@ class Opportunity(Document):
             "Opportunity",
             self.name1,
         )
+        
+    def before_insert(self):
+        if frappe.session.user != "Administrator":
+            self.set_opportunity_owner()
+
+    def set_opportunity_owner(self):
+        """Assign logged-in employee as opportunity owner."""
+
+        if self.opportunity_owner:
+            return
+
+        cache_key = f"opportunity_user::{frappe.session.user}"
+
+        employee = frappe.cache().get_value(cache_key)
+
+        if employee is None:
+            employee = frappe.db.get_value(
+                "Employee",
+                {"user": frappe.session.user},
+                "name",
+            )
+
+            frappe.cache().set_value(cache_key, employee)
+
+        if employee:
+            self.opportunity_owner = employee
 
     def on_trash(self):
         unlink_and_clean_lead_detail(
@@ -125,3 +151,24 @@ class Opportunity(Document):
             )
 
         return {"customer": customer.name}
+    
+@frappe.whitelist()
+def get_lead_department_roles():
+    """
+    Return all roles configured under Department = Lead
+    """
+
+    department = frappe.db.get_value(
+        "Department",
+        {"department_name": ["in", ["Lead", "lead"]]},
+        "name",
+    )
+
+    if not department:
+        return []
+
+    return frappe.get_all(
+        "Department Role",
+        filters={"parent": department},
+        pluck="role",
+    )

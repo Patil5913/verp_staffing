@@ -55,9 +55,6 @@
   "unallocated_amount",
   "difference_amount",
   "write_off_difference_amount",
-  "taxes_and_charges_section",
-  "apply_tax_withholding_amount",
-  "tax_withholding_category",
   "section_break_56",
   "taxes",
   "section_break_60",
@@ -68,13 +65,13 @@
   "deductions",
   "transaction_references",
   "reference_no",
+  "remarks",
   "column_break_23",
   "reference_date",
   "clearance_date",
   "section_break_12",
   "status",
   "custom_remarks",
-  "remarks",
   "base_in_words",
   "is_opening",
   "column_break_16",
@@ -83,8 +80,6 @@
   "bank",
   "bank_account_no",
   "in_words",
-  "subscription_section",
-  "auto_repeat",
   "amended_from",
   "title"
  ],
@@ -449,30 +444,10 @@
    "options": "Payment Entry Deduction"
   },
   {
-   "collapsible": 1,
-   "fieldname": "taxes_and_charges_section",
-   "fieldtype": "Section Break",
-   "label": "Taxes and Charges"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.party_type == 'Supplier'",
-   "fieldname": "apply_tax_withholding_amount",
-   "fieldtype": "Check",
-   "label": "Apply Tax Withholding Amount"
-  },
-  {
-   "depends_on": "eval:doc.apply_tax_withholding_amount",
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "label": "Tax Withholding Category",
-   "mandatory_depends_on": "eval:doc.apply_tax_withholding_amount",
-   "options": "Tax Withholding Category"
-  },
-  {
    "fieldname": "section_break_56",
    "fieldtype": "Section Break",
-   "hide_border": 1
+   "hide_border": 1,
+   "label": "Taxes & Charges"
   },
   {
    "depends_on": "eval: doc.party_type == 'Supplier' || doc.party_type == 'Customer'",
@@ -583,21 +558,6 @@
    "label": "Bank Account No"
   },
   {
-   "fieldname": "subscription_section",
-   "fieldtype": "Section Break",
-   "label": "Subscription Section"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "auto_repeat",
-   "fieldtype": "Link",
-   "label": "Auto Repeat",
-   "no_copy": 1,
-   "options": "Auto Repeat",
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -676,7 +636,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-20 12:05:50.966133",
+ "modified": "2026-06-26 17:43:45.534276",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",
@@ -687,17 +647,19 @@
    "amend": 1,
    "cancel": 1,
    "create": 1,
-   "delete": 1,
    "email": 1,
-   "export": 1,
-   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Accounts User",
-   "share": 1,
+   "role": "Account Person",
+   "select": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
   },
   {
    "amend": 1,
@@ -711,6 +673,62 @@
    "read": 1,
    "report": 1,
    "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "CR",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OnBoarding Person",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
    "share": 1,
    "submit": 1,
    "write": 1

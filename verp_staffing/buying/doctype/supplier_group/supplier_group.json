@@ -6,8 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "supplier_group_name",
-  "parent_supplier_group",
   "is_group",
+  "parent_supplier_group",
   "lft",
   "rgt",
   "old_parent"
@@ -54,26 +54,9 @@
    "read_only": 1
   },
   {
-   "bold": 1,
-   "default": "0",
-   "description": "Only leaf nodes are allowed in transaction",
-   "fieldname": "is_group",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Is Group"
-  },
-  {
    "fieldname": "old_parent",
    "fieldtype": "Link",
    "label": "Old Parent",
-   "options": "Supplier Group"
-  },
-  {
-   "bold": 1,
-   "fieldname": "parent_supplier_group",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Parent Supplier Group",
    "options": "Supplier Group"
   }
  ],
@@ -81,7 +64,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-04-08 13:47:03.427436",
+ "modified": "2026-06-26 17:38:13.650036",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier Group",
@@ -97,7 +80,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
    "write": 1
   }
  ],

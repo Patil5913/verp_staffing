@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from verp_staffing.install import DEPARTMENT_WORKSPACE_ROLE_MAP
 
 
@@ -7,6 +8,7 @@ def sync_user_workspace_roles(doc, method=None):
     Sync BOTH:
     1. Workspace roles (show_*)
     2. Functional roles (designation == role)
+
     Derived ONLY from Employee Assignment Detail child table
     """
 
@@ -15,74 +17,109 @@ def sync_user_workspace_roles(doc, method=None):
 
     frappe.flags.in_employee_sync = True
 
-    user = frappe.get_doc("User", doc.user)
-    # ---- Enabled sync (Employee -> User) ----
-    if user.enabled != doc.enabled:
-        user.enabled = doc.enabled
+    try:
+        user = frappe.get_doc("User", doc.user)
 
+        # Sync User enabled status
+        if user.enabled != doc.enabled:
+            user.enabled = doc.enabled
 
-    # 1. Collect departments & designations
-    departments = set()
-    designation_roles = set()
+        # --------------------------------------------------
+        # Collect departments & designation roles
+        # --------------------------------------------------
+        departments = {
+            row.department
+            for row in doc.employee_assignment_details_table
+            if row.department
+        }
 
-    for row in doc.employee_assignment_details_table:
-        if row.department:
-            departments.add(row.department)
+        designation_roles = {
+            row.designation
+            for row in doc.employee_assignment_details_table
+            if row.designation
+        }
 
-        if row.designation:
-            designation_roles.add(row.designation)
+        # --------------------------------------------------
+        # Workspace roles from department mapping
+        # --------------------------------------------------
+        workspace_roles = set()
 
-    # 2. Workspace roles (system roles)
-    workspace_roles = set()
-    for dept in departments:
-        roles = DEPARTMENT_WORKSPACE_ROLE_MAP.get(dept)
-        if roles:
-            workspace_roles.update(roles)
+        for dept in departments:
+            workspace_roles.update(
+                DEPARTMENT_WORKSPACE_ROLE_MAP.get(dept, [])
+            )
 
-    # All system-managed workspace roles
-    system_workspace_roles = {
-        role
-        for roles in DEPARTMENT_WORKSPACE_ROLE_MAP.values()
-        for role in roles
-    }
+        # Mandatory roles for all employee users
+        mandatory_roles = {
+            "_show_sidebar_master",
+            "Inbox User",
+        }
 
-    # 3. Validate designation roles exist
-    existing_roles = set(
-        frappe.get_all("Role", pluck="name")
-    )
+        workspace_roles.update(mandatory_roles)
 
-    invalid = designation_roles - existing_roles
-    if invalid:
-        frappe.throw(
-            f"Invalid designation(s). Role not found: {', '.join(invalid)}"
+        # --------------------------------------------------
+        # All managed workspace roles
+        # --------------------------------------------------
+        system_workspace_roles = {
+            role
+            for roles in DEPARTMENT_WORKSPACE_ROLE_MAP.values()
+            for role in roles
+        }
+
+        system_workspace_roles.update(mandatory_roles)
+
+        # --------------------------------------------------
+        # Validate designation roles
+        # --------------------------------------------------
+        existing_roles = set(
+            frappe.get_all("Role", pluck="name")
         )
 
-    # 4. Current user roles
-    current_roles = {r.role for r in user.roles}
+        invalid_roles = designation_roles - existing_roles
 
-    # 5. Remove obsolete system workspace roles
-    for role in system_workspace_roles:
-        if role in current_roles and role not in workspace_roles:
-            user.remove_roles(role)
+        if invalid_roles:
+            frappe.throw(
+                _("Invalid designation(s). Role not found: {0}").format(
+                    ", ".join(sorted(invalid_roles))
+                )
+            )
 
-    # 6. Remove obsolete designation roles
-    for role in current_roles:
-        if role in existing_roles and role not in designation_roles and role not in system_workspace_roles:
-            user.remove_roles(role)
+        # --------------------------------------------------
+        # Current roles
+        # --------------------------------------------------
+        current_roles = {
+            row.role
+            for row in user.roles
+        }
 
-    # 7. Add missing workspace roles
-    for role in workspace_roles:
-        if role not in current_roles:
-            user.add_roles(role)
+        # Desired managed roles
+        desired_roles = workspace_roles | designation_roles
 
-    # 8. Add missing designation roles
-    for role in designation_roles:
-        if role not in current_roles:
-            user.add_roles(role)
+        # Roles managed by this sync
+        managed_roles = system_workspace_roles | existing_roles
 
-    user.save(ignore_permissions=True)
+        # --------------------------------------------------
+        # Remove obsolete managed roles
+        # --------------------------------------------------
+        roles_to_remove = (
+            current_roles & managed_roles
+        ) - desired_roles
 
-    frappe.flags.in_employee_sync = False
+        if roles_to_remove:
+            user.remove_roles(*roles_to_remove)
+
+        # --------------------------------------------------
+        # Add missing roles
+        # --------------------------------------------------
+        roles_to_add = desired_roles - current_roles
+
+        if roles_to_add:
+            user.add_roles(*roles_to_add)
+
+        user.save(ignore_permissions=True)
+
+    finally:
+        frappe.flags.in_employee_sync = False
 
 def remove_user_workspace_roles(doc, method=None):
     if not doc.user:

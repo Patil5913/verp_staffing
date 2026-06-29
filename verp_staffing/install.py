@@ -32,24 +32,18 @@ ROLES = [
     "Senior Resume Person",
     "Resume Person",
     "Technical Coordinator",
-    "RUC Person",
-    "Training Person",
-    "Support Person",
-    "JDC",
     "Technical Manager",
     "Technical Master Manager",
     "HR Manager",
     "HR",
-    "Extra Menu Item Not Show",
     "OnBoarding Person",
     "CR",
-    "_show_sales",
-    "_show_lead",
-    "_show_technical",
-    "_show_marketing",
-    "_show_employees",
-    "_show_onboarding",
-    "_show_cr",
+    "Account Person",
+    "_show_setup",
+    "_show_accounting",
+    "_show_sidebar_master",
+    "_show_role_permission_manager",
+    "Technical Person"
 ]
 
 PERM_FIELDS = [
@@ -58,622 +52,28 @@ PERM_FIELDS = [
     "write",
     "create",
     "delete",
+    "submit",
+    "cancel",
+    "amend",
+    "report",
+    "export",
+    "import",
+    "share",
     "print",
     "email",
-    "report",
-    "import",
-    "export",
-    "share",
 ]
-PROTECTED_DOCTYPES = {
-    "Role",
-    "Has Role",
-    "DocPerm",
-    "Custom DocPerm",
-    "Module Def",
-    "Page",
-    "Report",
-    "Dashboard",
-    "Workspace",
-}
 
 ROLE_PERMISSIONS = {
-    "Lead Master Manager": {
-        "Lead": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
-        "Employee": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Lead Manager": {
-        "Lead": ["read", "write", "create", "report"],
-        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
-        "Employee": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Lead Team Lead": {
-        "Lead": ["read", "write", "create", "report"],
-        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
-        "Employee": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Lead Person": {
-        "Lead": ["read", "write", "create", "report"],
-        "Opportunity": {"perms": ["read", "write", "create", "report"], "if_owner": 1},
-        "Employee": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Sales Master Manager": {
-        "Lead": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Opportunity": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Customer": ["read", "write", "create", "report"],
-        "Employee": ["read"],
-        "Sales Order": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Sales Invoice": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Payment Entry": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-        ],
-        "Party Type": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Fiscal Year": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Accounts Settings": [
-            "select",
-            "read",
-        ],
-        "UOM": ["select", "read", "create"],
-        "Company": ["read", "select"],
-        "Account": ["read", "select"],
-        "Agreement": ["select", "read", "write", "create"],
-        "Pdf Agreement Template": ["select", "read", "write", "create"],
-        "Lead Detail Form": ["read"],
-        "Resume": ["read"],
-        "JDC": ["read"],
-        "Cover Letter": ["read"],
-        "Training": ["read"],
-        "Technical Other Services": ["read"],
-        "RUC": ["read"],
-        "Marketing": ["read"],
-        "Marketing Other Services": ["read"],
-        "Interview": ["read"],
-        "Other Services": ["read"],
-        "Item": ["read", "select"],
-        "Sales Stage": ["read", "create", "select"],
-        "ERP Configuration": ["read"],
-    },
-    "Sales Manager": {
-        "Lead": ["read", "write", "create", "report"],
-        "Opportunity": ["read", "write", "create", "report"],
-        "Customer": ["read", "write", "create", "report"],
-        "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create"],
-        "Sales Invoice": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Payment Entry": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-        ],
-        "Party Type": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Fiscal Year": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Accounts Settings": [
-            "select",
-            "read",
-        ],
-        "UOM": ["select", "read", "create"],
-        "Company": ["read", "select"],
-        "Account": ["read", "select"],
-        "Agreement": ["select", "read", "write", "create"],
-        "Pdf Agreement Template": ["select", "read", "write", "create"],
-        "Lead Detail Form": ["read"],
-        "Resume": ["read"],
-        "JDC": ["read"],
-        "Cover Letter": ["read"],
-        "Training": ["read"],
-        "Technical Other Services": ["read"],
-        "RUC": ["read"],
-        "Marketing": ["read"],
-        "Marketing Other Services": ["read"],
-        "Interview": ["read"],
-        "Other Services": ["read"],
-        "Item": ["read", "select"],
-        "Sales Stage": ["read", "create", "select"],
-        "ERP Configuration": ["read"],
-    },
-    "Sales Team Lead": {
-        "Lead": ["read", "write", "create", "report"],
-        "Opportunity": ["read", "write", "create", "report"],
-        "Customer": ["read", "write", "create", "report"],
-        "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create"],
-        "Sales Invoice": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Payment Entry": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-        ],
-        "Party Type": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Fiscal Year": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Accounts Settings": [
-            "select",
-            "read",
-        ],
-        "UOM": ["select", "read", "create"],
-        "Company": ["read", "select"],
-        "Account": ["read", "select"],
-        "Agreement": ["select", "read", "write", "create"],
-        "Pdf Agreement Template": ["select", "read", "write", "create"],
-        "Lead Detail Form": ["read"],
-        "Resume": ["read"],
-        "JDC": ["read"],
-        "Cover Letter": ["read"],
-        "Training": ["read"],
-        "Technical Other Services": ["read"],
-        "RUC": ["read"],
-        "Marketing": ["read"],
-        "Marketing Other Services": ["read"],
-        "Interview": ["read"],
-        "Other Services": ["read"],
-        "Item": ["read", "select"],
-        "Sales Stage": ["read", "create", "select"],
-        "ERP Configuration": ["read"],
-    },
-    "Sales Person": {
-        "Lead": ["read", "write", "create", "report"],
-        "Opportunity": ["read", "write", "create", "report"],
-        "Customer": ["read", "write", "create", "report"],
-        "Employee": ["read"],
-        "Sales Order": ["select", "read", "write", "create"],
-        "Sales Invoice": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-        ],
-        "Payment Entry": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-        ],
-        "Party Type": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Fiscal Year": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Accounts Settings": [
-            "select",
-            "read",
-        ],
-        "UOM": ["select", "read", "create"],
-        "Company": ["read", "select"],
-        "Account": ["read", "select"],
-        "Agreement": ["select", "read", "write", "create"],
-        "Pdf Agreement Template": ["select", "read", "write", "create"],
-        "Lead Detail Form": ["read"],
-        "Resume": ["read"],
-        "JDC": ["read"],
-        "Cover Letter": ["read"],
-        "Training": ["read"],
-        "Technical Other Services": ["read"],
-        "RUC": ["read"],
-        "Marketing": ["read"],
-        "Marketing Other Services": ["read"],
-        "Interview": ["read"],
-        "Other Services": ["read"],
-        "Item": ["read", "select"],
-        "Sales Stage": ["read", "create", "select"],
-        "ERP Configuration": ["read"],
-    },
-    "Marketing Master Manager": {
-        "Marketing": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Interview": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Marketing Manager": {
-        "Marketing": ["read", "write", "create", "select", "report"],
-        "Interview": ["read", "write", "create", "select", "report"],
-        "Other Services": ["read", "write", "create", "select", "report"],
-        "Marketing Other Services": ["read", "write", "create", "select", "report"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Marketing Team Lead": {
-        "Marketing": ["read", "write", "create", "select", "report"],
-        "Interview": ["read", "write", "create", "select", "report"],
-        "Other Services": ["read", "write", "create", "select", "report"],
-        "Marketing Other Services": ["read", "write", "create", "select", "report"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Senior Recruiter": {
-        "Marketing": ["read", "write", "create", "select", "report"],
-        "Interview": ["read", "write", "create", "select", "report"],
-        "Other Services": ["read", "write", "create", "select", "report"],
-        "Marketing Other Services": ["read", "write", "create", "select", "report"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Marketing Mentor": {
-        "Marketing": ["read", "write", "create", "select", "report"],
-        "Interview": ["read", "write", "create", "select", "report"],
-        "Other Services": ["read", "write", "create", "select", "report"],
-        "Marketing Other Services": ["read", "write", "create", "select", "report"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-    },
-    "Recruiter": {
-        "Marketing": ["read", "write", "create", "select", "report"],
-        "Interview": ["read", "write", "create", "select", "report"],
-        "Other Services": ["read", "write", "create", "select", "report"],
-        "Marketing Other Services": ["read", "write", "create", "select", "report"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Senior Resume Person": {
-        "Resume": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Resume Person": {
-        "Resume": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Technical Coordinator": {
-        "RUC": ["read", "write", "create", "select"],
-        "Technical Other Services": ["read", "write", "create", "select", "report"],
-        "Training": ["read", "write", "create", "select"],
-        "JDC": ["read", "write", "create", "select"],
-        "Resume": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Technical Manager": {
-        "RUC": ["read", "write", "create", "select"],
-        "Technical Other Services": ["read", "write", "create", "select", "report"],
-        "Training": ["read", "write", "create", "select"],
-        "JDC": ["read", "write", "create", "select"],
-        "Resume": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Technical Master Manager": {
-        "RUC": ["read", "write", "create", "select"],
-        "Technical Other Services": ["read", "write", "create", "select", "report"],
-        "Training": ["read", "write", "create", "select"],
-        "JDC": ["read", "write", "create", "select"],
-        "Resume": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "RUC Person": {
-        "RUC": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Training Person": {
-        "Training": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "Support Person": {
-        "RUC": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "JDC": {
-        "JDC": ["read", "write", "create", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "ERP Configuration": ["read"],
-    },
-    "HR Manager": {
-        "Employee": ["read", "write", "create"],
-        "User": ["read", "write", "create"],
-        "ERP Configuration": ["read"],
-    },
-    "HR": {
-        "Employee": ["read", "write", "create"],
-        "User": ["read", "write", "create"],
-        "ERP Configuration": ["read"],
-    },
     "Inbox User": {
         "Communication": ["read", "create", "email"],
         "Email Account": ["read"],
     },
-    "OnBoarding Person": {
-        "Sales Invoice": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Payment Entry": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-        ],
-        "Party Type": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Fiscal Year": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Accounts Settings": [
-            "select",
-            "read",
-        ],
-        "UOM": ["select", "read", "create"],
-        "Company": ["read", "select"],
-        "Account": ["read", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "Resume": ["read"],
-        "JDC": ["read"],
-        "Cover Letter": ["read"],
-        "Training": ["read"],
-        "Technical Other Services": ["read"],
-        "RUC": ["read"],
-        "Marketing": ["read"],
-        "Marketing Other Services": ["read"],
-        "Interview": ["read"],
-        "Other Services": ["read"],
-        "Item": ["read", "select"],
-        "Sales Stage": ["read", "create", "select"],
-        "ERP Configuration": ["read"],
+    
+    "_show_sidebar_master": {
+        "Sidebar Master": ["select", "read", "write", "create"],
+        "Comment": ["select", "read", "create", "write", "delete"],
+        "File": ["select", "read", "create", "write"],
     },
-    "CR": {
-        "Sales Invoice": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "delete",
-            "print",
-            "email",
-            "report",
-            "share",
-        ],
-        "Payment Entry": [
-            "select",
-            "read",
-            "write",
-            "create",
-            "print",
-            "email",
-        ],
-        "Party Type": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Fiscal Year": [
-            "select",
-            "read",
-            "write",
-            "create",
-        ],
-        "Accounts Settings": [
-            "select",
-            "read",
-        ],
-        "UOM": ["select", "read", "create"],
-        "Company": ["read", "select"],
-        "Account": ["read", "select"],
-        "Customer": ["read", "select"],
-        "Employee": ["read", "select"],
-        "Outsource": ["read", "write", "create", "select"],
-        "Lead Detail Form": ["read"],
-        "Resume": ["read"],
-        "JDC": ["read"],
-        "Cover Letter": ["read"],
-        "Training": ["read"],
-        "Technical Other Services": ["read"],
-        "RUC": ["read"],
-        "Marketing": ["read"],
-        "Marketing Other Services": ["read"],
-        "Interview": ["read"],
-        "Other Services": ["read"],
-        "Item": ["read", "select"],
-        "Sales Stage": ["read", "create", "select"],
-        "ERP Configuration": ["read"],
-    },
-    "_show_marketing": {"Customer": ["read", "report"]},
-    "_show_lead": {"Lead": ["read", "report"]},
-    "_show_sales": {"Lead": ["read", "report"]},
 }
 
 
@@ -696,16 +96,14 @@ DEPARTMENTS_ROLES = {
     "Resume": ["Senior Resume Person", "Resume Person"],
     "Technical": [
         "Technical Coordinator",
-        "RUC Person",
-        "Training Person",
-        "JDC",
         "Technical Manager",
+        "Technical Person",
         "Technical Master Manager",
-        "Support Person",
     ],
     "HR": ["HR Manager", "HR"],
     "CR": ["CR"],
     "Onboarding": ["OnBoarding Person"],
+    "Accounting": ["Account Person"],
 }
 
 HIERARCHY_DATA = [
@@ -765,10 +163,7 @@ HIERARCHY_DATA = [
             {
                 "parent_role": "Technical Coordinator",
                 "child_roles": [
-                    "RUC Person",
-                    "Training Person",
-                    "JDC",
-                    "Support Person",
+                    "Technical Person"
                 ],
             },
         ],
@@ -795,11 +190,18 @@ HIERARCHY_DATA = [
         ],
         "auto_assign_config": {"role": "OnBoarding Person"},
     },
+    {
+        "department": "Accounting",
+        "role_hierarchy_json": [
+            {"parent_role": "Account Person", "child_roles": []},
+        ],
+        "auto_assign_config": {"role": "Account Person"},
+    },
 ]
 
 FORM_TOURS = {
     "Lead": {
-        "title": "Lead Form",
+        "title": "Lead",
         "steps": [
             {
                 "title": "Lead Name",
@@ -812,28 +214,28 @@ FORM_TOURS = {
         ],
     },
     "Opportunity": {
-        "title": "Opportunity Form",
+        "title": "Opportunity",
         "steps": [
             {
-                "title": "Opportunity Type",
-                "fieldname": "opportunity_from",
-                "description": "Choose whether this opportunity is coming from a Lead or an existing Customer.",
+                "title": "Opportunity From Lead",
+                "fieldname": "opportunity_from_lead",
+                "description": "Choose an existing lead and convert it into an opportunity.",
                 "position": "Top",
-                "label": "Opportunity From",
+                "label": "Opportunity From Lead",
                 "fieldtype": "Link",
             },
             {
-                "title": "Source",
-                "fieldname": "party_name",
-                "description": "Based on the selected Opportunity Type, choose the correct Lead or Customer from the list.",
+                "title": "Select the customer who referred this opportunity",
+                "fieldname": "referral_customer",
+                "description": "Choose the customer who referred this opportunity.",
                 "position": "Top",
-                "label": "Party",
-                "fieldtype": "Dynamic Link",
+                "label": "Referral Customer",
+                "fieldtype": "Link",
             },
         ],
     },
     "Resume": {
-        "title": "Resume Form",
+        "title": "Resume",
         "steps": [
             {
                 "title": "Select Customer",
@@ -870,7 +272,7 @@ FORM_TOURS = {
         ],
     },
     "Marketing": {
-        "title": "Marketing Form",
+        "title": "Marketing",
         "steps": [
             {
                 "title": "Select Customer",
@@ -891,7 +293,7 @@ FORM_TOURS = {
         ],
     },
     "RUC": {
-        "title": "RUC Form",
+        "title": "RUC",
         "steps": [
             {
                 "title": "Select Customer",
@@ -936,20 +338,467 @@ FORM_TOURS = {
         ],
     },
     "Sales Order": {
-        "title": "Sales Order Agreement Form",
+        "title": "Sales Order",
         "steps": [
             {
-                "title": "Agreement Section",
+                "title": "Select Customer",
+                "fieldname": "customer",
+                "description": "Choose the customer for whom this sales order is being created.",
+                "position": "Top",
+                "label": "Customer",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Select the company responsible for processing and managing this sales order.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Currency",
+                "fieldname": "currency",
+                "description": "Choose the currency in which the sales order will be issued.",
+                "position": "Right Center",
+                "label": "Currency",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Exchange Rate",
+                "fieldname": "conversion_rate",
+                "description": "Enter the exchange rate between the selected currency and the company's base currency.",
+                "position": "Right Center",
+                "label": "Exchange Rate",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Add Items",
+                "fieldname": "items",
+                "description": "<b>How to add items:</b><br>1. Click <b>Add Row</b> to add a new item.<br>2. Select the item to be sold.<br>3. Enter the quantity.<br>4. Update the rate.<br>5. Review the calculated amount for each row.<br>6. Repeat for all items included in this sales order.",
+                "position": "Top",
+                "label": "Items",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Configure Taxes and Charges",
+                "fieldname": "taxes",
+                "description": "<b>How to add taxes and charges:</b><br>1. Click <b>Add Row</b> to create a tax entry.<br>2. Select the tax type.<br>3. Choose the appropriate account.<br>4. Enter either the tax rate (%) or tax amount.<br>5. Review the calculated tax values before proceeding.",
+                "position": "Top",
+                "label": "Taxes and Charges",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Apply Additional Discount",
+                "fieldname": "additional_discount_percentage",
+                "description": "Enter the discount percentage to be applied to the sales order total.",
+                "position": "Top",
+                "label": "Additional Discount Percentage",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Select Discount Account",
+                "fieldname": "additional_discount_account",
+                "description": "Choose the accounting ledger where the additional discount amount will be recorded.",
+                "position": "Top",
+                "label": "Discount Account",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Agreement and Terms",
                 "fieldname": "agreement_html",
-                "description": "1. Select the template.<br>2. Preview the template by clicking the <b>“Preview”</b> button.<br>3. Click the <b>“Save & Send”</b> button to save the template and send the agreement to the customer.",
+                "description": "1. Review the sales order details and applicable terms.<br>2. Verify pricing, taxes, and discounts before submission.<br>3. Ensure all customer information is correct.<br>4. Save the sales order to continue processing.",
                 "position": "Bottom",
                 "label": "Session Details",
                 "fieldtype": "HTML",
-            }
+            },
+            {
+                "title": "Configure Payment Terms",
+                "fieldname": "payment_terms",
+                "description": "<b>How to define payment terms:</b><br>1. Click <b>Add Row</b> to create a payment schedule.<br>2. Select the payment condition or term type.<br>3. Enter the number of days based on the selected condition.<br>4. Specify the start date.<br>5. Verify the calculated due date.<br>6. Enter the payment amount or percentage.<br>7. Review the payment status and schedule before saving.",
+                "position": "Top",
+                "label": "Payment Terms",
+                "fieldtype": "Table",
+            },
+        ],
+    },
+    "Sales Invoice": {
+        "title": "Sales Invoice",
+        "steps": [
+            {
+                "title": "Select Customer",
+                "fieldname": "customer",
+                "description": "Choose the customer for whom this sales invoice is being created.",
+                "position": "Top",
+                "label": "Customer",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Select the company responsible for processing and managing this sales invoice.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Sales Order",
+                "fieldname": "sales_order",
+                "description": "Select an existing sales order to create this sales invoice against.",
+                "position": "Right Center",
+                "label": "Sales Order",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Payment Due Date",
+                "fieldname": "due_date",
+                "description": "Specify the date by which payment is expected from the customer for this transaction.",
+                "position": "Right Center",
+                "label": "Payment Due Date",
+                "fieldtype": "Date",
+            },
+            {
+                "title": "Select Currency",
+                "fieldname": "currency",
+                "description": "Choose the currency in which the sales order will be issued.",
+                "position": "Right Center",
+                "label": "Currency",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Exchange Rate",
+                "fieldname": "conversion_rate",
+                "description": "Enter the exchange rate between the selected currency and the company's base currency.",
+                "position": "Right Center",
+                "label": "Exchange Rate",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Add Items",
+                "fieldname": "items",
+                "description": "<b>How to add items:</b><br>1. Click <b>Add Row</b> to add a new item.<br>2. Select the item to be sold.<br>3. Enter the quantity.<br>4. Update the rate.<br>5. Review the calculated amount for each row.<br>6. Repeat for all items included in this sales order.",
+                "position": "Top",
+                "label": "Items",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Configure Taxes and Charges",
+                "fieldname": "taxes",
+                "description": "<b>How to add taxes and charges:</b><br>1. Click <b>Add Row</b> to create a tax entry.<br>2. Select the tax type.<br>3. Choose the appropriate account.<br>4. Enter either the tax rate (%) or tax amount.<br>5. Review the calculated tax values before proceeding.",
+                "position": "Top",
+                "label": "Taxes and Charges",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Apply Additional Discount",
+                "fieldname": "additional_discount_percentage",
+                "description": "Enter the discount percentage to be applied to the sales order total.",
+                "position": "Top",
+                "label": "Additional Discount Percentage",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Select Discount Account",
+                "fieldname": "additional_discount_account",
+                "description": "Choose the accounting ledger where the additional discount amount will be recorded.",
+                "position": "Top",
+                "label": "Discount Account",
+                "fieldtype": "Link",
+            },
+        ],
+    },
+    "Purchase Order": {
+        "title": "Purchase Order",
+        "steps": [
+            {
+                "title": "Select Supplier",
+                "fieldname": "supplier",
+                "description": "Choose the supplier from whom this purchase order is being created.",
+                "position": "Top",
+                "label": "Supplier",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Select the company responsible for processing and managing this purchase order.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Currency",
+                "fieldname": "currency",
+                "description": "Choose the currency in which the purchase order will be issued.",
+                "position": "Right Center",
+                "label": "Currency",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Exchange Rate",
+                "fieldname": "conversion_rate",
+                "description": "Enter the exchange rate between the selected currency and the company's base currency.",
+                "position": "Right Center",
+                "label": "Exchange Rate",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Add Items",
+                "fieldname": "items",
+                "description": "<b>How to add items:</b><br>1. Click <b>Add Row</b> to add a new item.<br>2. Select the item to be sold.<br>3. Enter the quantity.<br>4. Update the rate.<br>5. Review the calculated amount for each row.<br>6. Repeat for all items included in this sales order.",
+                "position": "Top",
+                "label": "Items",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Configure Taxes and Charges",
+                "fieldname": "taxes",
+                "description": "<b>How to add taxes and charges:</b><br>1. Click <b>Add Row</b> to create a tax entry.<br>2. Select the tax type.<br>3. Choose the appropriate account.<br>4. Enter either the tax rate (%) or tax amount.<br>5. Review the calculated tax values before proceeding.",
+                "position": "Top",
+                "label": "Taxes and Charges",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Apply Additional Discount",
+                "fieldname": "additional_discount_percentage",
+                "description": "Enter the discount percentage to be applied to the purchase order total.",
+                "position": "Top",
+                "label": "Additional Discount Percentage",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Select Discount Account",
+                "fieldname": "additional_discount_account",
+                "description": "Choose the accounting ledger where the additional discount amount will be recorded.",
+                "position": "Top",
+                "label": "Discount Account",
+                "fieldtype": "Link",
+            },
+        ],
+    },
+    "Purchase Invoice": {
+        "title": "Purchase Invoice",
+        "steps": [
+            {
+                "title": "Select Supplier",
+                "fieldname": "supplier",
+                "description": "Choose the supplier from whom this purchase invoice is being created.",
+                "position": "Top",
+                "label": "Supplier",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Select the company responsible for processing and managing this purchase invoice.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Purchase Order",
+                "fieldname": "purchase_order",
+                "description": "Select an existing purchase order to create this purchase invoice against.",
+                "position": "Right Center",
+                "label": "Purchase Order",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Payment Due Date",
+                "fieldname": "due_date",
+                "description": "Specify the date by which payment is expected from the customer for this transaction.",
+                "position": "Right Center",
+                "label": "Payment Due Date",
+                "fieldtype": "Date",
+            },
+            {
+                "title": "Select Currency",
+                "fieldname": "currency",
+                "description": "Choose the currency in which the purchase order will be issued.",
+                "position": "Right Center",
+                "label": "Currency",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Exchange Rate",
+                "fieldname": "conversion_rate",
+                "description": "Enter the exchange rate between the selected currency and the company's base currency.",
+                "position": "Right Center",
+                "label": "Exchange Rate",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Add Items",
+                "fieldname": "items",
+                "description": "<b>How to add items:</b><br>1. Click <b>Add Row</b> to add a new item.<br>2. Select the item to be sold.<br>3. Enter the quantity.<br>4. Update the rate.<br>5. Review the calculated amount for each row.<br>6. Repeat for all items included in this sales order.",
+                "position": "Top",
+                "label": "Items",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Configure Taxes and Charges",
+                "fieldname": "taxes",
+                "description": "<b>How to add taxes and charges:</b><br>1. Click <b>Add Row</b> to create a tax entry.<br>2. Select the tax type.<br>3. Choose the appropriate account.<br>4. Enter either the tax rate (%) or tax amount.<br>5. Review the calculated tax values before proceeding.",
+                "position": "Top",
+                "label": "Taxes and Charges",
+                "fieldtype": "Table",
+            },
+            {
+                "title": "Apply Additional Discount",
+                "fieldname": "additional_discount_percentage",
+                "description": "Enter the discount percentage to be applied to the purchase order total.",
+                "position": "Top",
+                "label": "Additional Discount Percentage",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Select Discount Account",
+                "fieldname": "additional_discount_account",
+                "description": "Choose the accounting ledger where the additional discount amount will be recorded.",
+                "position": "Top",
+                "label": "Discount Account",
+                "fieldtype": "Link",
+            },
+        ],
+    },
+    "Journal Entry": {
+        "title": "Journal Entry",
+        "steps": [
+            {
+                "title": "Select Entry Type",
+                "fieldname": "voucher_type",
+                "description": "Choose the type of Journal Entry you want to create. The selected entry type determines how the transaction will be recorded in the accounting system.",
+                "position": "Top",
+                "label": "Entry Type",
+                "fieldtype": "Select",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Select the company for which this Journal Entry is being created. All accounting transactions will be recorded under the selected company.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Posting Date",
+                "fieldname": "posting_date",
+                "description": "Specify the posting date for this Journal Entry. This date determines the accounting period in which the transaction will be recorded.",
+                "position": "Right Center",
+                "label": "Payment Due Date",
+                "fieldtype": "Date",
+            },
+            {
+                "title": "Add Accounting Entries",
+                "fieldname": "accounts",
+                "description": """
+                <div>
+                    <b>How to add accounting entries:</b>
+                    <ol style="margin-top: 8px; padding-left: 20px;">
+                        <li>Click <b>Add Row</b> to create a new accounting line.</li>
+                        <li>Select the <b>Account</b> to be debited or credited.</li>
+                        <li>If applicable, choose the <b>Party Type</b> and <b>Party</b>.</li>
+                        <li>Enter the <b>Debit</b> or <b>Credit</b> amount.</li>
+                        <li>Ensure that the total Debit amount equals the total Credit amount before saving.</li>
+                    </ol>
+                    <p style="margin-top: 8px;">
+                        <b>Note:</b> A Journal Entry can only be submitted when it is balanced.
+                    </p>
+                </div>
+            """,
+                "position": "Top",
+                "label": "Accounting Entries",
+                "fieldtype": "Table",
+            },
+        ],
+    },
+    "Payment Entry": {
+        "title": "Payment Entry",
+        "steps": [
+            {
+                "title": "Select Payment Type",
+                "fieldname": "payment_type",
+                "description": "Choose the type of payment type. Select Receive for incoming payments, Pay for outgoing payments, or Internal Transfer to move funds between company accounts.",
+                "position": "Top",
+                "label": "Payment Type",
+                "fieldtype": "Select",
+            },
+            {
+                "title": "Set Posting Date",
+                "fieldname": "posting_date",
+                "description": "Specify the posting date for this Payment Entry. This date determines the accounting period in which the transaction will be recorded.",
+                "position": "Right Center",
+                "label": "Posting Date",
+                "fieldtype": "Date",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Select the company for which this Payment Entry is being created. All accounting transactions associated with this payment will be recorded under the selected company.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Party Type",
+                "fieldname": "party_type",
+                "description": "Choose the category of party involved in this transaction, such as Customer, Supplier, or other supported party types.",
+                "position": "Top",
+                "label": "Party Type",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Source Account",
+                "fieldname": "paid_from",
+                "description": "Select the account from which the payment amount will be deducted. This is typically a bank or cash account for outgoing payments or transfers.",
+                "position": "Top",
+                "label": "Account Paid From",
+                "fieldtype": "Dynamic Link",
+            },
+            {
+                "title": "Select Destination Account",
+                "fieldname": "paid_to",
+                "description": "Select the account that will receive the payment amount. This is typically a bank, cash, or party-related account depending on the payment type.",
+                "position": "Top",
+                "label": "Account Paid To",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Party",
+                "fieldname": "party",
+                "description": "Based on the selected Party Type, choose the specific Customer, Supplier, Employee, or other party involved in this transaction.",
+                "position": "Top",
+                "label": "Party",
+                "fieldtype": "Dynamic Link",
+            },
+            {
+                "title": "Select Currency",
+                "fieldname": "currency",
+                "description": "Choose the currency in which the payment is being made or received.",
+                "position": "Right Center",
+                "label": "Currency",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Set Exchange Rate",
+                "fieldname": "conversion_rate",
+                "description": "Enter or verify the exchange rate used to convert the selected currency into the company's base currency for accounting purposes.",
+                "position": "Right Center",
+                "label": "Exchange Rate",
+                "fieldtype": "Float",
+            },
+            {
+                "title": "Configure Taxes and Charges",
+                "fieldname": "taxes",
+                "description": "<b>How to add taxes and charges:</b><br>1. Click <b>Add Row</b> to create a tax entry.<br>2. Select the tax type.<br>3. Choose the appropriate account.<br>4. Enter either the tax rate (%) or tax amount.<br>5. Review the calculated tax values before proceeding.",
+                "position": "Top",
+                "label": "Taxes and Charges",
+                "fieldtype": "Table",
+            },
         ],
     },
     "Employee": {
-        "title": "Employee Form",
+        "title": "Employee",
         "steps": [
             {
                 "title": "Select User",
@@ -970,7 +819,7 @@ FORM_TOURS = {
         ],
     },
     "Interview": {
-        "title": "Interview Form",
+        "title": "Interview",
         "steps": [
             {
                 "title": "Select Customer",
@@ -999,7 +848,7 @@ FORM_TOURS = {
         ],
     },
     "Pdf Agreement Template": {
-        "title": "PDF Agreement Template Form",
+        "title": "PDF Agreement Template",
         "steps": [
             {
                 "title": "Template Name",
@@ -1036,7 +885,7 @@ FORM_TOURS = {
         ],
     },
     "Customer": {
-        "title": "Customer Creation Guide",
+        "title": "Customer",
         "steps": [
             {
                 "title": "Enter Customer Name",
@@ -1064,10 +913,215 @@ FORM_TOURS = {
             },
         ],
     },
+    "Company": {
+        "title": "Company",
+        "steps": [
+            {
+                "title": "Enter Company Name",
+                "fieldname": "company_name",
+                "description": "Provide the official name of the company. This name will be used across all transactions and records.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Data",
+            },
+            {
+                "title": "Enter Company Abbreviation",
+                "fieldname": "abbr",
+                "description": "Provide a short abbreviation or code for the company. This helps identify the company in records and reports.",
+                "position": "Right Center",
+                "label": "Abbr",
+                "fieldtype": "Data",
+            },
+            {
+                "title": "Select Default Currency",
+                "fieldname": "default_currency",
+                "description": "Choose the default currency that will be used for transactions associated with this company.",
+                "position": "Right Center",
+                "label": "Default Currency",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Company Country",
+                "fieldname": "country",
+                "description": "Select the country in which the company operates or is registered.",
+                "position": "Right Center",
+                "label": "Country",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Mark as Group Company",
+                "fieldname": "is_group",
+                "description": "Enable this option if the company acts as a parent or group company containing multiple subsidiary companies.",
+                "position": "Right Center",
+                "label": "Is Group",
+                "fieldtype": "Check",
+            },
+            {
+                "title": "Select Parent Company",
+                "fieldname": "parent_company",
+                "description": "If this company belongs to a group, select its parent company from the list.",
+                "position": "Top",
+                "label": "Parent Company",
+                "fieldtype": "Link",
+            },
+        ],
+    },
+    "Fiscal Year": {
+        "title": "Fiscal Year",
+        "steps": [
+            {
+                "title": "Enter Fiscal Year Name",
+                "fieldname": "year",
+                "description": "Enter the fiscal year name, for example, 2025 or 2025-26.",
+                "position": "Right Center",
+                "label": "Year Name",
+                "fieldtype": "Data",
+            },
+            {
+                "title": "Select Start Date",
+                "fieldname": "year_start_date",
+                "description": "Choose the date on which the fiscal year begins.",
+                "position": "Right Center",
+                "label": "Year Start Date",
+                "fieldtype": "Date",
+            },
+            {
+                "title": "Select End Date",
+                "fieldname": "year_end_date",
+                "description": "Choose the date on which the fiscal year ends.",
+                "position": "Right Center",
+                "label": "Year End Date",
+                "fieldtype": "Date",
+            },
+            {
+                "title": "Select Included Companies",
+                "fieldname": "included_companies",
+                "description": "Choose the companies that will be associated with this fiscal year.",
+                "position": "Right Center",
+                "label": "Included Companies",
+                "fieldtype": "Table MultiSelect",
+            },
+            {
+                "title": "Mark Fiscal Year as Inactive",
+                "fieldname": "disabled",
+                "description": "Enable this option to deactivate the fiscal year and prevent it from being used in future transactions.",
+                "position": "Right Center",
+                "label": "Disabled",
+                "fieldtype": "Check",
+            },
+        ],
+    },
+    "Accounts Settings": {
+        "title": "Accounts Settings",
+        "steps": [
+            {
+                "title": "Select Default Company",
+                "fieldname": "default_company",
+                "description": "Choose the default company that will be automatically used in accounting transactions such as orders, invoices, and vouchers.",
+                "position": "Right Center",
+                "label": "Default Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Show Account Balances",
+                "fieldname": "show_balance_in_coa",
+                "description": "Enable this option to display account balances in the Chart of Accounts.",
+                "position": "Right Center",
+                "label": "Show Balances in Chart Of Accounts",
+                "fieldtype": "Check",
+            },
+            {
+                "title": "Enable Automatic Invoice Emailing",
+                "fieldname": "auto_send_sales_invoice_after_submission",
+                "description": "Enable this option to automatically send Sales Invoices to customers after they are submitted.",
+                "position": "Right Center",
+                "label": "Auto Send Sales Invoice After Submission",
+                "fieldtype": "Check",
+            },
+            {
+                "title": "Set Invoice Reminder Days",
+                "fieldname": "invoice_reminder_days",
+                "description": "Specify the number of days before the due date when invoice payment reminders should be sent.",
+                "position": "Right Center",
+                "label": "Invoice Reminder Days",
+                "fieldtype": "Int",
+            },
+        ],
+    },
+    "Bank Account": {
+        "title": "Bank Account",
+        "steps": [
+            {
+                "title": "Enter Account Name",
+                "fieldname": "account_name",
+                "description": "Provide a unique and descriptive name for the bank account.",
+                "position": "Right Center",
+                "label": "Account Name",
+                "fieldtype": "Data",
+            },
+            {
+                "title": "Select Bank",
+                "fieldname": "bank",
+                "description": "Choose the bank associated with this account.",
+                "position": "Right Center",
+                "label": "Bank",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Account Type",
+                "fieldname": "account_type",
+                "description": "Choose the type of bank account, such as Savings, Current, or Cash.",
+                "position": "Right Center",
+                "label": "Account Type",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Account Subtype",
+                "fieldname": "account_subtype",
+                "description": "Choose the appropriate subtype for the selected account type, if applicable.",
+                "position": "Right Center",
+                "label": "Account Subtype",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Mark as Company Account",
+                "fieldname": "is_company_account",
+                "description": "Enable this option if the account belongs to the company. This is required for bank reconciliation.",
+                "position": "Right Center",
+                "label": "Is Company Account",
+                "fieldtype": "Check",
+            },
+            {
+                "title": "Select Company",
+                "fieldname": "company",
+                "description": "Choose the company that owns or manages this bank account.",
+                "position": "Right Center",
+                "label": "Company",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Party Type",
+                "fieldname": "party_type",
+                "description": "Choose the type of party that owns this bank account, such as Customer or Shareholder.",
+                "position": "Top",
+                "label": "Party Type",
+                "fieldtype": "Link",
+            },
+            {
+                "title": "Select Party",
+                "fieldname": "party",
+                "description": "Based on the selected Party Type, choose the corresponding party from the available records.",
+                "position": "Top",
+                "label": "Party",
+                "fieldtype": "Dynamic Link",
+            },
+        ],
+    },
 }
 
 
 def after_install():
+    seed_master_sidebar_config()
     seed_services_and_departments()
     setup_navbar_settings()
     seed_website_setting()
@@ -1081,7 +1135,596 @@ def after_install():
     remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
-    # seed_form_tours()
+    seed_form_tours()
+    seed_party_types()
+
+
+def seed_master_sidebar_config():
+    """
+    Create default sidebar configuration for Master user
+    if it doesn't already exist.
+    """
+
+    SIDEBAR_CONFIG = [
+        {
+            "key": "setup",
+            "label": "Setup Guide",
+            "icon": "icon-getting-started",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": ["_show_setup"],
+            "route": "/app/setup",
+            "link_type": "page",
+        },
+        {
+            "key": "users",
+            "label": "Users",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "user",
+                    "name": "User",
+                    "type": "doctype",
+                    "route": "/app/user",
+                    "doctype": "User",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "employee",
+                    "name": "Employee",
+                    "type": "doctype",
+                    "route": "/app/employee",
+                    "doctype": "Employee",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "outsource",
+                    "name": "Outsource",
+                    "type": "doctype",
+                    "route": "/app/outsource",
+                    "doctype": "Outsource",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "role",
+                    "name": "Role",
+                    "type": "doctype",
+                    "route": "/app/role",
+                    "doctype": "Role",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "role-permissions-manager",
+                    "name": "Role Permissions Manager",
+                    "type": "page",
+                    "route": "/app/permission-manager",
+                    "icon": "icon-assign",
+                    "shortcut": "",
+                    "roles": ["System Manager", "_show_role_permission_manager"],
+                },
+            ],
+        },
+        {
+            "key": "staffing-master",
+            "label": "Staffing Master",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "email-domain",
+                    "name": "Email Domain",
+                    "type": "doctype",
+                    "route": "/app/email-domain",
+                    "doctype": "Email Domain",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "email-account",
+                    "name": "Email Account",
+                    "type": "doctype",
+                    "route": "/app/email-account",
+                    "doctype": "Email Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "department",
+                    "name": "Department",
+                    "type": "doctype",
+                    "route": "/app/department",
+                    "doctype": "Department",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "hierarchy",
+                    "name": "Hierarchy",
+                    "type": "doctype",
+                    "route": "/app/hierarchy",
+                    "doctype": "Hierarchy",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "erp-configuration",
+                    "name": "ERP Configuration",
+                    "type": "doctype",
+                    "route": "/app/erp-configuration/ERP%20Configuration",
+                    "doctype": "ERP Configuration",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "pdf-agreement-template",
+                    "name": "Pdf Agreement Template",
+                    "type": "doctype",
+                    "route": "/app/pdf-agreement-template",
+                    "doctype": "Pdf Agreement Template",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "email-inbox",
+            "label": "Email Inbox",
+            "icon": "icon-mail",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/email-inbox",
+            "link_type": "page",
+        },
+        {
+            "key": "lead",
+            "label": "Lead",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/lead",
+            "link_type": "doctype",
+            "doctype": "Lead",
+        },
+        {
+            "key": "sales",
+            "label": "Sales",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "opportunity",
+                    "name": "Opportunity",
+                    "type": "doctype",
+                    "route": "/app/opportunity",
+                    "doctype": "Opportunity",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "customer",
+                    "name": "Customer",
+                    "type": "doctype",
+                    "route": "/app/customer",
+                    "doctype": "Customer",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "technical",
+            "label": "Technical",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "resume",
+                    "name": "Resume",
+                    "type": "doctype",
+                    "route": "/app/resume",
+                    "doctype": "Resume",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "ruc",
+                    "name": "RUC",
+                    "type": "doctype",
+                    "route": "/app/ruc",
+                    "doctype": "RUC",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "jdc",
+                    "name": "JDC",
+                    "type": "doctype",
+                    "route": "/app/jdc",
+                    "doctype": "JDC",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "cover-letter",
+                    "name": "Cover Letter",
+                    "type": "doctype",
+                    "route": "/app/cover-letter",
+                    "doctype": "Cover Letter",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "training",
+                    "name": "Training",
+                    "type": "doctype",
+                    "route": "/app/training",
+                    "doctype": "Training",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "technical-other-services",
+                    "name": "Technical Other Services",
+                    "type": "doctype",
+                    "route": "/app/technical-other-services",
+                    "doctype": "Technical Other Services",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "marketings",
+            "label": "Marketings",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "marketing",
+                    "name": "Marketing",
+                    "type": "doctype",
+                    "route": "/app/marketing",
+                    "doctype": "Marketing",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "interview",
+                    "name": "Interview",
+                    "type": "doctype",
+                    "route": "/app/interview",
+                    "doctype": "Interview",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "marketing-other-services",
+                    "name": "Marketing Other Services",
+                    "type": "doctype",
+                    "route": "/app/marketing-other-services",
+                    "doctype": "Marketing Other Services",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "cr",
+            "label": "CR",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/cr",
+            "link_type": "doctype",
+            "doctype": "CR",
+        },
+        {
+            "key": "onboardings",
+            "label": "Onboardings",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/onboardings",
+            "link_type": "doctype",
+            "doctype": "Onboardings",
+        },
+        {
+            "key": "accounts-master",
+            "label": "Accounts Master",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "company",
+                    "name": "Company",
+                    "type": "doctype",
+                    "route": "/app/company",
+                    "doctype": "Company",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "fiscal-year",
+                    "name": "Fiscal Year",
+                    "type": "doctype",
+                    "route": "/app/fiscal-year",
+                    "doctype": "Fiscal Year",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "accounts-settings",
+                    "name": "Accounts Settings",
+                    "type": "doctype",
+                    "route": "/app/accounts-settings/Accounts%20Settings",
+                    "doctype": "Accounts Settings",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "pending-pe-requests",
+            "label": "Pending PE Requests",
+            "icon": "icon-accounting",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": ["System Manager", "_show_accounting"],
+            "route": "/app/pending-pe-requests",
+            "link_type": "page",
+        },
+        {
+            "key": "coa",
+            "label": "Chart of Accounts",
+            "icon": "icon-accounting",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": ["System Manager", "_show_accounting"],
+            "route": "/app/account/view/tree",
+            "link_type": "page",
+        },
+        {
+            "key": "accounting",
+            "label": "Accounting",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "account",
+                    "name": "Account",
+                    "type": "doctype",
+                    "route": "/app/account",
+                    "doctype": "Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "bank",
+                    "name": "Bank",
+                    "type": "doctype",
+                    "route": "/app/bank",
+                    "doctype": "Bank",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "bank-account",
+                    "name": "Bank Account",
+                    "type": "doctype",
+                    "route": "/app/bank-account",
+                    "doctype": "Bank Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "journal-entry",
+                    "name": "Journal Entry",
+                    "type": "doctype",
+                    "route": "/app/journal-entry",
+                    "doctype": "Journal Entry",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "payment-entry",
+                    "name": "Payment Entry",
+                    "type": "doctype",
+                    "route": "/app/payment-entry",
+                    "doctype": "Payment Entry",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "purchase-invoice",
+                    "name": "Purchase Invoice",
+                    "type": "doctype",
+                    "route": "/app/purchase-invoice",
+                    "doctype": "Purchase Invoice",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "sales-invoice",
+                    "name": "Sales Invoice",
+                    "type": "doctype",
+                    "route": "/app/sales-invoice",
+                    "doctype": "Sales Invoice",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "sales-order",
+                    "name": "Sales Order",
+                    "type": "doctype",
+                    "route": "/app/sales-order",
+                    "doctype": "Sales Order",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "subscription",
+                    "name": "Subscription",
+                    "type": "doctype",
+                    "route": "/app/subscription",
+                    "doctype": "Subscription",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "subscription-plan",
+                    "name": "Subscription Plan",
+                    "type": "doctype",
+                    "route": "/app/subscription-plan",
+                    "doctype": "Subscription Plan",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "purchase-order",
+                    "name": "Purchase Order",
+                    "type": "doctype",
+                    "route": "/app/purchase-order",
+                    "doctype": "Purchase Order",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "supplier",
+                    "name": "Supplier",
+                    "type": "doctype",
+                    "route": "/app/supplier",
+                    "doctype": "Supplier",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "e-sign",
+            "label": "E Sign",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/e-sign",
+            "link_type": "doctype",
+            "doctype": "E Sign",
+        },
+        {
+            "key": "items",
+            "label": "Items",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "item",
+                    "name": "Item",
+                    "type": "doctype",
+                    "route": "/app/item",
+                    "doctype": "Item",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "item-category",
+                    "name": "Item Category",
+                    "type": "doctype",
+                    "route": "/app/item-category",
+                    "doctype": "Item Category",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "uom",
+                    "name": "UOM",
+                    "type": "doctype",
+                    "route": "/app/uom",
+                    "doctype": "UOM",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+            ],
+        },
+    ]
+
+    if frappe.db.exists("Sidebar Master", {"sidebar_owner": "Master"}):
+        return
+
+    doc = frappe.get_doc(
+        {
+            "doctype": "Sidebar Master",
+            "sidebar_owner": "Master",
+            "config_json": json.dumps(SIDEBAR_CONFIG),
+        }
+    )
+
+    doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
 
 
 import requests
@@ -1264,6 +1907,25 @@ def create_interview_statuses():
     frappe.db.commit()
 
 
+def seed_party_types():
+    if not frappe.db.exists("Party Type", "Customer"):
+        frappe.get_doc(
+            {
+                "doctype": "Party Type",
+                "account_type": "Receivable",
+                "party_type": "Customer",
+            }
+        ).insert()
+    if not frappe.db.exists("Party Type", "Supplier"):
+        frappe.get_doc(
+            {
+                "doctype": "Party Type",
+                "account_type": "Payable",
+                "party_type": "Supplier",
+            }
+        ).insert()
+
+
 def seed_type_of_interview():
     doctype = "Type Of Interview"
     types = [
@@ -1376,65 +2038,125 @@ def seed_employee_departments():
     frappe.db.commit()
 
 
+PROTECTED_DOCTYPES = {
+    "User",
+    "Role",
+    "Has Role",
+    "DocPerm",
+    "Custom DocPerm",
+    "Role Profile",
+    "Role Permission for Page and Report",
+    "Module Def",
+    "Page",
+    "Report",
+    "Dashboard",
+    "Workspace",
+}
+
+
 def assign_permissions_to_roles(role_permissions: dict):
     """
-    Assign permissions strictly from ROLE_PERMISSIONS object.
+    Synchronize DocPerms from ROLE_PERMISSIONS.
+
+    - Administrator permissions are never modified.
+    - Protected doctypes are skipped.
+    - Existing DocPerms for managed (DocType, Role) pairs are updated.
+    - Missing DocPerms are inserted.
+    - Other roles and ERPNext permissions remain untouched.
     """
 
-    for role, doctypes in role_permissions.items():
-        # Never touch Administrator
-        if role == "Administrator":
+    roles = set(frappe.get_all("Role", filters={"disabled": 0}, pluck="name"))
+    doctypes = set(frappe.get_all("DocType", pluck="name"))
+
+    for role, permissions in role_permissions.items():
+
+        if role == "System Manager" or role == "Administrator":
             continue
 
-        # Role must exist
-        if not frappe.db.exists("Role", role):
+        if role not in roles:
             continue
 
-        for doctype, config in doctypes.items():
-            # Doctype must exist
-            if not frappe.db.exists("DocType", doctype):
-                continue
+        for doctype, config in permissions.items():
 
-            # Skip protected/system doctypes
             if doctype in PROTECTED_DOCTYPES:
                 continue
 
-            # ---- normalize config ----
+            if doctype not in doctypes:
+                continue
+
             if isinstance(config, list):
-                allowed_perms = config
+                allowed_perms = set(config)
                 if_owner = 0
+
             elif isinstance(config, dict):
-                allowed_perms = config.get("perms", [])
+                allowed_perms = set(config.get("perms", []))
                 if_owner = 1 if config.get("if_owner") else 0
+
             else:
                 continue
-            # --------------------------
 
-            # Remove existing permissions for this role + doctype
-            frappe.db.delete(
+            values = {
+                "if_owner": if_owner,
+            }
+
+            for field in PERM_FIELDS:
+                values[field] = 1 if field in allowed_perms else 0
+
+            existing = frappe.get_all(
                 "DocPerm",
-                {
+                filters={
                     "parent": doctype,
+                    "parenttype": "DocType",
+                    "parentfield": "permissions",
                     "role": role,
+                    "permlevel": 0,
                 },
+                order_by="creation asc",
+                pluck="name",
             )
 
-            # Create new permission row
-            perm = frappe.new_doc("DocPerm")
-            perm.parent = doctype
-            perm.parenttype = "DocType"
-            perm.parentfield = "permissions"
-            perm.role = role
-            perm.permlevel = 0
-            perm.if_owner = if_owner
+            # Remove duplicate rows if any exist
+            if len(existing) > 1:
+                for duplicate in existing[1:]:
+                    frappe.delete_doc(
+                        "DocPerm",
+                        duplicate,
+                        force=True,
+                        ignore_permissions=True,
+                    )
 
-            # Explicitly set all permission flags
-            for field in PERM_FIELDS:
-                setattr(perm, field, 1 if field in allowed_perms else 0)
+            existing = existing[0] if existing else None
 
-            perm.insert(ignore_permissions=True)
+            if existing:
+                frappe.db.set_value(
+                    "DocPerm",
+                    existing,
+                    values,
+                    update_modified=False,
+                )
+
+            else:
+                doc = frappe.get_doc(
+                    {
+                        "doctype": "DocPerm",
+                        "parent": doctype,
+                        "parenttype": "DocType",
+                        "parentfield": "permissions",
+                        "role": role,
+                        "permlevel": 0,
+                        "if_owner": if_owner,
+                        **{
+                            field: 1 if field in allowed_perms else 0
+                            for field in PERM_FIELDS
+                        },
+                    }
+                )
+
+                doc.flags.ignore_permissions = True
+                doc.insert(ignore_permissions=True)
 
     frappe.clear_cache()
+
 
 
 def seed_hierarchy():
@@ -1467,26 +2189,8 @@ def remove_default_workspaces():
 
     # Names of workspaces to keep visible
     keep_list = [
-        "Users",
-        "Technical",
-        "Marketings",
-        "Settings",
-        "Employees",
-        "Sales",
-        "Leads",
-        "Other Service",
         "Email Inbox",
-        "CR",
-        "Onboarding",
-        "Email Inbox",
-        "ESign",
-        "Accounting",
-        "Financial Reports",
-        "Receivables",
-        "Payables",
         "Pending PE Requests",
-        "Interviews",
-        "Reports & KPI"
     ]
 
     # Hide all others
@@ -1524,10 +2228,6 @@ ROLE_USER_COUNTS = {
     "Technical Master Manager": 1,
     "Technical Manager": 1,
     "Technical Coordinator": 1,
-    "RUC Person": 1,
-    "Training Person": 1,
-    "JDC": 1,
-    "Support Person": 1,
     "Senior Resume Person": 1,
     "Resume Person": 1,
     "HR Manager": 1,
@@ -1612,14 +2312,7 @@ from collections import defaultdict
 TECH_PLACEHOLDER = "General"
 
 DEPARTMENT_WORKSPACE_ROLE_MAP = {
-    "Sales": ["_show_sales"],
-    "Lead": ["_show_lead"],
-    "Resume": ["_show_technical"],
-    "Technical": ["_show_technical"],
-    "Marketing": ["_show_marketing"],
-    "HR": ["_show_employees"],
-    "Onboarding": ["_show_onboarding"],
-    "CR": ["_show_cr"],
+    "Accounting": ["_show_accounting", "_show_sidebar_master"],
 }
 
 
@@ -1790,10 +2483,10 @@ SERVICE_DEPARTMENT_MAP = {
         "RUC",
         "JDC",
         "Training",
-        "Cover Letter",
     ],
     "Resume": [
         "Resume",
+        "Cover Letter",
     ],
     "Marketing": [
         "Marketing",

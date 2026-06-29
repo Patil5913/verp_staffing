@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-15 15:59:08.761125",
+ "modified": "2026-06-25 23:26:59.179413",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Call Details",
@@ -22,9 +22,6 @@
  "roles": [
   {
    "role": "Lead Manager"
-  },
-  {
-   "role": "Lead Employee"
   },
   {
    "role": "Sales Manager"
@@ -52,6 +49,9 @@
   },
   {
    "role": "Sales Person"
+  },
+  {
+   "role": "Lead Person"
   }
  ],
  "timeout": 0

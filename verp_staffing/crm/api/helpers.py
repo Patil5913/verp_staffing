@@ -677,21 +677,6 @@ def generic_assign_query(user):
     return f"`tab{doctype}`.assign_to IN ({team_sql})"
 
 
-def opportunity_query(user):
-
-    if user == "Administrator":
-        return ""
-
-    team = get_visible_employee_names_cached()
-
-    if not team:
-        return "1=0"
-
-    team_sql = ",".join([frappe.db.escape(x) for x in team])
-
-    return f"`tabOpportunity`.opportunity_owner IN ({team_sql})"
-
-
 from verp_staffing.employee.doctype.employee.employee import get_user_departments
 
 
@@ -723,7 +708,7 @@ def lead_query(user):
         conditions.append(
             f"""
             `tabLead`.name IN (
-                SELECT `tabOpportunity`.party_name
+                SELECT `tabOpportunity`.opportunity_from_lead
                 FROM `tabOpportunity`
                 WHERE `tabOpportunity`.opportunity_owner IN ({team_sql})
             )
@@ -738,6 +723,44 @@ def lead_query(user):
         conditions.append(
             f"""
             `tabLead`.lead_owner IN ({team_sql})
+        """
+        )
+
+    return "(" + " OR ".join(conditions) + ")"
+
+
+def opportunity_query(user):
+
+    if user == "Administrator":
+        return ""
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    departments = get_user_departments(user)
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+    conditions = []
+
+    # -------------------------
+    # SALES LOGIC
+    # -------------------------
+    if "Sales" in departments:
+        conditions.append(
+            f"""
+            `tabOpportunity`.opportunity_owner IN ({team_sql})
+        """
+        )
+
+        conditions.append(
+            f"""
+            `tabOpportunity`.name IN (
+                SELECT `tabCustomer`.party_name
+                FROM `tabCustomer`
+                WHERE `tabCustomer`.customer_owner IN ({team_sql})
+            )
         """
         )
 
@@ -770,10 +793,12 @@ def customer_query(user):
 
     conditions = []
 
-    # -------------------------
-    # SALES LOGIC
-    # -------------------------
-    if "Sales" in departments:
+    if "Accounting" in departments:
+        conditions.append(f"`tabCustomer`.owner = {frappe.db.escape(user)}")
+    elif "Sales" in departments:
+        # -------------------------
+        # SALES LOGIC
+        # -------------------------
         conditions.append(
             f"""
             `tabCustomer`.customer_owner IN ({team_sql})

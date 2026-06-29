@@ -42,23 +42,35 @@ def get_auto_assign_employee(
 
     employees = get_employees_with_role(role, department)
     if not employees:
+        is_admin = frappe.session.user == "Administrator"
+
+        admin_msg = f"""
+            <b>No employees available for auto assignment.</b><br><br>
+
+            The <b>{department}</b> department is not assigned to any employee.<br><br>
+
+            Please do one of the following:<br>
+
+            1. Update Employee Assignment Details.<br>
+            2. Assign the department to an employee.<br>
+            3. Create a new employee and configure the assignment.<br><br>
+
+            <a href="/app/employee"
+            class="btn btn-primary btn-sm">
+            Open Employee List
+            </a>
+        """
+
+        user_msg = """
+            Unable to process the request because no employee is currently available
+            for assignment.
+
+            Please contact your system administrator or reporting manager
+            to complete the required configuration.
+        """
+
         frappe.throw(
-            msg=f"""
-                <b>No employees available for auto assignment.</b><br><br>
-
-                The <b>{department}</b> department is not assigned to any employee.<br><br>
-
-                Please do one of the following:<br>
-
-                1. Update the related Employee Assignment Details.<br>
-                2. Assign the <b>{department}</b> department to an existing employee.<br>
-                3. Create a new employee and configure the assignment details.<br><br>
-
-                <a href="/app/employee"
-                class="btn btn-primary btn-sm">
-                Open Employee List
-                </a>
-            """,
+            msg=admin_msg if is_admin else user_msg,
             title="Employee Assignment Required",
         )
 

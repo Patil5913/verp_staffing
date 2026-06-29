@@ -77,7 +77,7 @@ def get():
 			"root_type": "Expense",
 		},
 		_("Income"): {
-			_("Direct Income"): {_("Sales"): {}, _("Service"): {}},
+			_("Direct Income"): {_("Sales"): {}},
 			_("Indirect Income"): {"is_group": 1},
 			"root_type": "Income",
 		},

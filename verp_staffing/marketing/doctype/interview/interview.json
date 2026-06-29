@@ -73,7 +73,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-01 15:00:15.305342",
+ "modified": "2026-06-26 17:59:24.152148",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
@@ -97,12 +97,14 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Sales Master Manager",
+   "select": 1
   },
   {
    "create": 1,
@@ -114,11 +116,13 @@
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Team Lead",
+   "select": 1
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Manager",
+   "select": 1
   },
   {
    "create": 1,
@@ -130,18 +134,15 @@
   },
   {
    "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Person",
+   "select": 1
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
    "role": "Marketing Master Manager",
    "select": 1,
-   "share": 1,
    "write": 1
   },
   {

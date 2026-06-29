@@ -83,10 +83,7 @@ HIERARCHY_DATA = [
             {
                 "parent_role": "Technical Coordinator",
                 "child_roles": [
-                    "RUC Person",
-                    "Training Person",
-                    "JDC",
-                    "Support Person",
+                    "Technical Person"
                 ],
             },
         ],
@@ -942,9 +939,9 @@ class TestGetEmployeesByAssignment(EmployeeTestBase):
     def test_technical_ruc_person_is_queryable(self):
         emp = self._make_employee_raw(
             _uid("GEBA RUC"),
-            assignments=[{"department": "Technical", "designation": "RUC Person"}],
+            assignments=[{"department": "Technical", "designation": "Technical Person"}],
         )
-        names = [r[0] for r in self._call("Technical", "RUC Person")]
+        names = [r[0] for r in self._call("Technical", "Technical Person")]
         self.assertIn(emp.name, names)
 
     def test_marketing_deepest_leaf_recruiter_is_queryable(self):
@@ -1134,7 +1131,7 @@ class TestEmployeeHierarchyValidation(EmployeeTestBase):
         )
 
         coordinator.employee_assignment_details_table[0].designation = (
-            "RUC Person"
+            "Technical Person"
         )
 
         with self.assertRaises(frappe.ValidationError):

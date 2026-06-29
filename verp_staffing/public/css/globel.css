@@ -233,3 +233,428 @@ body.verp-protected::after {
 .navbar .navbar-brand {
     color: #ffffff;
 } */
+
+/* =========================================
+   ALWAYS FULL WIDTH (default on, button hidden)
+========================================= */
+
+@media (min-width: 768px) {
+	body.full-width .container {
+		width: 100%;
+	}
+}
+
+/* =========================================
+	   REMOVE NAVBAR SEARCH
+	========================================= */
+
+.navbar .search-bar,
+.navbar form[role="search"] {
+	display: none !important;
+}
+
+/* =========================================
+   REMOVE HELP MENU
+========================================= */
+
+.dropdown-help {
+	display: none !important;
+}
+
+#navbar-breadcrumbs {
+	display: none !important;
+}
+
+/* =========================================
+   HIDE "Toggle Full Width" from user dropdown
+   (full-width is always on by default)
+========================================= */
+
+/* Target by text content via JS in override.js;
+   also target common Frappe patterns as a CSS fallback */
+.dropdown-menu a[onclick*="toggle_full_width"],
+.dropdown-menu a[data-label="Toggle Full Width"],
+.dropdown-menu li.toggle-full-width {
+	display: none !important;
+}
+
+/* =========================================
+   MENU BUTTON CLEANUP
+========================================= */
+.menu-btn-group {
+	display: none;
+}
+
+/* =========================================
+   NAVBAR CLEANUP
+========================================= */
+
+.navbar-nav {
+	align-items: center;
+}
+
+/* =========================================
+   NOTIFICATION ICON
+========================================= */
+
+.dropdown-notifications {
+	margin-left: auto;
+}
+
+:root {
+	/* Brand / primary */
+	--cn-primary: #2490ef;
+	--cn-primary-light: rgba(36, 144, 239, 0.1);
+	--cn-primary-hover: rgba(36, 144, 239, 0.16);
+
+	/* Sidebar surface */
+	--cn-sidebar-bg: #ffffff;
+	--cn-sidebar-hover: #f2f2f2;
+	--cn-sidebar-active-bg: var(--cn-primary-light);
+	--cn-sidebar-active-fg: var(--cn-primary);
+
+	/* Item text */
+	--cn-text: #1f2937;
+	--cn-text-muted: #555555;
+
+	/* Typography */
+	--cn-font: var(
+		--font-stack,
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		Roboto,
+		sans-serif
+	);
+	--cn-size-item: 14px;
+	--cn-weight-normal: 400;
+	--cn-weight-active: 500;
+
+	/* Geometry */
+	--cn-radius: 6px;
+	--cn-item-height: 34px;
+	--cn-icon-size: 16px;
+	--cn-indent-child: 28px;
+
+	/* Active left bar */
+	--cn-bar-width: 3px;
+	--cn-bar-color: var(--cn-primary);
+	--cn-bar-inset: 4px;
+
+	--cn-connector-left: 15px;
+	--cn-connector-w: 1.5px;
+	--cn-connector-color: #d1d5db;
+}
+
+/* ─────────────────────────────────────────────
+   DARK MODE
+   ───────────────────────────────────────────── */
+[data-theme="dark"],
+.frappe-dark {
+	--cn-sidebar-bg: rgba(0, 0, 0, 0);
+	--cn-sidebar-hover: rgba(255, 255, 255, 0.07);
+	--cn-sidebar-active-bg: rgba(36, 144, 239, 0.18);
+	--cn-text: #e2e8f0;
+	--cn-text-muted: #a0aec0;
+	--cn-connector-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ─────────────────────────────────────────────
+   1. HIDE ALL NATIVE FRAPPE SIDEBARS
+   ───────────────────────────────────────────── */
+.desk-sidebar,
+.list-sidebar,
+.report-sidebar,
+.overlay-sidebar {
+	display: none !important;
+}
+
+.layout-side-section > *:not(#custom-nav-sidebar) {
+	display: none !important;
+}
+
+/* ─────────────────────────────────────────────
+   2. HIDE NATIVE NAVBAR SHORTCUTS
+   ───────────────────────────────────────────── */
+.navbar-shortcuts-bar,
+.page-shortcuts,
+.shortcut-widget-box,
+#navbar-breadcrumbs .navbar-breadcrumb {
+	display: none !important;
+}
+
+/* ─────────────────────────────────────────────
+   3. SIDEBAR COLUMN — sticky, independent scroll
+   ───────────────────────────────────────────── */
+.layout-side-section {
+	position: sticky !important;
+	top: 0 !important;
+	height: 100vh !important;
+	max-height: 100vh !important;
+	overflow: hidden !important;
+	align-self: flex-start !important;
+	z-index: 10;
+	transition:
+		width 0.22s ease,
+		min-width 0.22s ease;
+}
+
+#custom-nav-sidebar {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 8px 0 24px;
+	background: var(--cn-sidebar-bg);
+	font-family: var(--cn-font);
+	font-size: var(--cn-size-item);
+	scrollbar-width: thin;
+	scrollbar-color: #d1d5db transparent;
+	box-sizing: border-box;
+}
+
+#custom-nav-sidebar::-webkit-scrollbar {
+	width: 3px;
+}
+#custom-nav-sidebar::-webkit-scrollbar-track {
+	background: transparent;
+}
+#custom-nav-sidebar::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   4. BASE ITEM ROW
+   ───────────────────────────────────────────── */
+.cn-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: var(--cn-item-height);
+	height: var(--cn-item-height);
+	/* Right padding: enough for the "+" button but not wasted on a shortcut badge */
+	padding: 0 30px 0 10px;
+	margin: 1px 6px;
+	border-radius: var(--cn-radius);
+	color: var(--cn-text);
+	font-size: var(--cn-size-item);
+	font-weight: var(--cn-weight-normal);
+	line-height: 1.3;
+	text-decoration: none;
+	white-space: nowrap;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+	position: relative;
+	transition:
+		background 0.12s ease,
+		color 0.12s ease;
+	box-sizing: border-box;
+}
+
+.cn-item:hover {
+	background: var(--cn-sidebar-hover);
+	color: var(--cn-text);
+	text-decoration: none;
+}
+
+/* ─────────────────────────────────────────────
+   5. LABEL TRUNCATION + HOVER TITLE
+   ───────────────────────────────────────────── */
+
+/*
+ * Labels truncate with ellipsis. Native title= tooltip (set via JS) reveals
+ * the full name on hover. For items with a keyboard shortcut, a custom
+ * floating tooltip (#csb-shortcut-tooltip, built in override.js) shows
+ * both the full label AND the shortcut badge — it fires on mouseenter/focus.
+ */
+.cn-item-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	/* vertically center inside fixed-height row */
+	line-height: var(--cn-item-height);
+}
+
+/* ─────────────────────────────────────────────
+   6. ACTIVE STATES
+   ───────────────────────────────────────────── */
+
+/* Child active */
+.cn-child-link.is-active {
+	background: var(--cn-sidebar-active-bg);
+	color: var(--cn-sidebar-active-fg);
+	font-weight: var(--cn-weight-active);
+	border-left: 20px solid transparent;
+	padding-left: calc(var(--cn-indent-child) - 20px);
+	background-clip: padding-box;
+}
+
+.cn-child-link.is-active::before {
+	content: "";
+	position: absolute;
+	left: 3px;
+	top: 18%;
+	bottom: 18%;
+	width: var(--cn-bar-width);
+	background: var(--cn-bar-color);
+	border-radius: 2px;
+}
+
+.cn-child-link.is-active:hover {
+	background: var(--cn-primary-hover);
+	background-clip: padding-box;
+}
+
+/* Parent link active (type_3 / type_1) */
+.cn-parent-link.is-active,
+.cn-group--type1.has-active > .cn-parent-link {
+	background: var(--cn-sidebar-active-bg);
+	color: var(--cn-sidebar-active-fg);
+	font-weight: var(--cn-weight-active);
+}
+
+.cn-parent-link.is-active::before,
+.cn-group--type1.has-active > .cn-parent-link::before {
+	content: "";
+	position: absolute;
+	left: var(--cn-bar-inset);
+	top: 18%;
+	bottom: 18%;
+	width: var(--cn-bar-width);
+	background: var(--cn-bar-color);
+	border-radius: 2px;
+}
+
+.cn-parent-link.is-active:hover {
+	background: var(--cn-primary-hover);
+}
+
+/* type_2 expanded header — gray only */
+.cn-group--type2.is-expanded > .cn-parent-toggle {
+	background: var(--cn-sidebar-hover);
+	color: var(--cn-text);
+}
+
+/* ─────────────────────────────────────────────
+   7. ICON
+   ───────────────────────────────────────────── */
+.cn-item-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: var(--cn-icon-size);
+	height: var(--cn-icon-size);
+	color: inherit;
+}
+
+.cn-item-icon .icon {
+	width: var(--cn-icon-size);
+	height: var(--cn-icon-size);
+}
+
+/* ─────────────────────────────────────────────
+   8. CHEVRON
+   ───────────────────────────────────────────── */
+.cn-chevron {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: auto;
+	flex-shrink: 0;
+	color: var(--cn-text-muted);
+	transition: transform 0.2s ease;
+}
+
+.cn-group--type2.is-expanded > .cn-parent-toggle .cn-chevron {
+	transform: rotate(180deg);
+}
+
+/* ─────────────────────────────────────────────
+   9. CHILDREN LIST (type_2)
+   ───────────────────────────────────────────── */
+.cn-children {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: none;
+	overflow: hidden;
+	position: relative;
+}
+
+.cn-group--type2.is-expanded > .cn-children {
+	display: block;
+	padding-bottom: 4px;
+}
+
+.cn-group--type2.is-expanded > .cn-children::before {
+	content: "";
+	position: absolute;
+	left: var(--cn-connector-left);
+	top: 2px;
+	bottom: 8px;
+	width: var(--cn-connector-w);
+	background: var(--cn-connector-color);
+	border-radius: 1px;
+	pointer-events: none;
+}
+
+.cn-children li {
+	margin: 0;
+	padding: 0;
+}
+
+.cn-child-link {
+	padding-left: var(--cn-indent-child);
+	height: var(--cn-item-height);
+	min-height: var(--cn-item-height);
+	font-size: var(--cn-size-item);
+}
+
+/* ─────────────────────────────────────────────
+   10. RESPONSIVE
+   ───────────────────────────────────────────── */
+@media (max-width: 991px) {
+	.layout-side-section {
+		position: static !important;
+		height: auto !important;
+		max-height: none !important;
+		overflow: visible !important;
+	}
+
+	#custom-nav-sidebar {
+		height: auto !important;
+		max-height: 50vh;
+		overflow-y: auto !important;
+	}
+}
+
+@media (max-width: 768px) {
+	#custom-nav-navbar {
+		position: static;
+		transform: none;
+		left: auto;
+		top: auto;
+		pointer-events: auto;
+		flex-wrap: wrap;
+		padding: 4px 8px;
+		justify-content: center;
+	}
+
+	.cn-navbar-link {
+		padding: 4px 12px;
+		font-size: 12px;
+	}
+
+	.cn-item {
+		height: 36px;
+		min-height: 36px;
+	}
+}

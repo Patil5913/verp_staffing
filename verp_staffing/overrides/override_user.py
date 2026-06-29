@@ -80,7 +80,6 @@ class CustomUser(User):
         ):
             return
 
-        self.append("roles", {"role": "Inbox User"})
         self.save(ignore_permissions=True)
 
         super().after_insert()

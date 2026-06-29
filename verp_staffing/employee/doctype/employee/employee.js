@@ -2,12 +2,16 @@
 
 frappe.ui.form.on("Employee", {
 	async refresh(frm) {
+		await apply_employee_read_only_restriction(frm);
+
 		frm.set_query("user", () => {
 			return {
 				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
 			};
 		});
-
+		if(frappe.session.user === "Administrator"){
+			await render_headline(frm);
+		}
 		const has_sales_department = (frm.doc.employee_assignment_details_table || []).some(
 			(row) => row.department === "Sales",
 		);
@@ -143,7 +147,7 @@ frappe.ui.form.on("Employee", {
 			};
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Employee Form";
+			const tour_name = "Employee";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 	},
@@ -165,9 +169,9 @@ frappe.ui.form.on("Employee", {
 
 			let is_top_role = !all_child_roles.has(row.designation);
 
-			if (!is_top_role && !row.assigned_to) {
-				frappe.throw(`Row ${row.idx}: Assigned To is required`);
-			}
+			// if (!is_top_role && !row.assigned_to) {
+			// 	frappe.throw(`Row ${row.idx}: Assigned To is required`);
+			// }
 		});
 	},
 
@@ -180,6 +184,100 @@ frappe.ui.form.on("Employee", {
 		});
 	},
 });
+
+async function apply_employee_read_only_restriction(frm) {
+	// Administrator / System Manager bypass
+	if (
+		frappe.session.user === "Administrator" ||
+		frappe.user.has_role("System Manager")
+	) {
+		return;
+	}
+
+	const { message: departments = [] } = await frappe.call({
+		method: "verp_staffing.crm.api.helpers.get_user_departments",
+	});
+
+	const is_hr_user = departments.some(
+		(dept) => (dept || "").toLowerCase() === "hr",
+	);
+
+	if (is_hr_user) {
+		return;
+	}
+
+	// Make form read only
+	frm.set_read_only();
+
+	// Hide save actions
+	frm.disable_save();
+
+	// Hide common action buttons
+	frm.page.btn_primary?.hide();
+
+	// Prevent child table editing
+	frm.fields.forEach((field) => {
+		if (field.df.fieldtype === "Table") {
+			field.grid.cannot_add_rows = true;
+			field.grid.only_sortable();
+			field.grid.refresh();
+		}
+	});
+}
+
+async function render_headline(frm) {
+	const r = await frappe.call({
+		method: "verp_staffing.utils.onboarding_setup_helper.get_setup_progress",
+	});
+
+	const progress = r.message;
+
+	if (
+		progress.current_step !== "erp_configuration" &&
+		progress.current_step !== "pdf_agreement_template" &&
+		progress.current_step !== "completed"
+	) {
+		return;
+	}
+
+	const configs = {
+		erp_configuration: {
+			message:
+				"Finished Creating Employee? The next step is configuring the ERP so the system can automate your workflow.",
+			button: "Configure ERP Settings",
+			route: "/app/erp-configuration",
+			color: "blue",
+		},
+		pdf_agreement_template: {
+			message:
+				"ERP configuration is complete. Create an agreement template to streamline candidate onboarding.",
+			button: "Create Agreement Template",
+			route: "/app/pdf-agreement-template/new",
+			color: "blue",
+		},
+		completed: {
+			message:
+				"Congratulations. Your organization setup is complete and ready for operations.",
+			button: "Go To Dashboard",
+			route: "/app",
+			color: "blue",
+		},
+	};
+
+	const cfg = configs[progress.current_step];
+
+	frm.dashboard.set_headline_alert(
+		__(
+			`${cfg.message}
+			<a href="${cfg.route}"
+				class="btn btn-sm btn-primary"
+				style="margin-left:8px;vertical-align:middle;">
+				${cfg.button}
+			</a>`,
+		),
+		cfg.color,
+	);
+}
 
 frappe.ui.form.on("Employee Assignment Detail", {
 	async department(frm, cdt, cdn) {

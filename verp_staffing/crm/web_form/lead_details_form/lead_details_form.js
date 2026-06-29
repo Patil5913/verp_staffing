@@ -45,9 +45,10 @@ document.addEventListener(
 		}
 	},
 	true,
-); // 🔥 capture phase (important)
+); // capture phase (important)
 
 frappe.ready(async function () {
+	$(".navbar").hide();
 	function decodeToken(token) {
 		try {
 			const decoded = atob(token);

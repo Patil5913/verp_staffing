@@ -21,7 +21,7 @@ frappe.ui.form.on("Resume", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Resume Form";
+			const tour_name = "Resume";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 

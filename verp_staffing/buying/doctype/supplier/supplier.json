@@ -22,8 +22,7 @@
   "supplier_details",
   "tax_tab",
   "tax_id",
-  "tax_category",
-  "tax_withholding_category"
+  "tax_category"
  ],
  "fields": [
   {
@@ -109,12 +108,6 @@
    "options": "Tax Category"
   },
   {
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "label": "Tax Withholding Category",
-   "options": "Tax Withholding Category"
-  },
-  {
    "fieldname": "tax_id",
    "fieldtype": "Data",
    "label": "Tax ID"
@@ -138,7 +131,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-04 09:47:55.758223",
+ "modified": "2026-06-26 17:37:56.184124",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier",
@@ -154,7 +147,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
    "write": 1
   }
  ],

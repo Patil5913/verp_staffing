@@ -14,6 +14,12 @@ frappe.ui.form.on("Payment Entry", {
 			// Set immediately too
 			frm.page.set_indicator(__(status), color);
 		}
+
+				frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Payment Entry";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
+
 		if (frm.doc.verification_status === "Rejected") {
 			frm.disable_form(); // disables all fields + hides submit + clears dashboard messages
 			frm.dashboard.clear_comment();

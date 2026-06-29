@@ -18,17 +18,23 @@ class Employee(Document):
         self.name = generate_name_series("Employee", name)
 
     def on_update(self):
-        # Clear cached visible employee names for the user whenever an Employee is updated,
-        # to ensure any changes are reflected in reports immediately
+        self.validate_employee_edit_permission()
         frappe.cache().delete_key("Visible_Employee_Names")
+        frappe.cache().delete_key(f"lead_user::{self.user}")
+        frappe.cache().delete_key(f"opportunity_user::{self.user}")
         frappe.cache().delete_key(f"employee_from_user::{self.user}")
+        frappe.cache().delete_key(f"user_departments::{self.name}")
 
     def on_trash(self):
         validate_employee_delete(self)
         frappe.cache().delete_key("Visible_Employee_Names")
+        frappe.cache().delete_key(f"lead_user::{self.user}")
+        frappe.cache().delete_key(f"opportunity_user::{self.user}")
         frappe.cache().delete_key(f"employee_from_user::{self.user}")
+        frappe.cache().delete_key(f"user_departments::{self.name}")
 
     def validate(self):
+        self.validate_employee_edit_permission()
 
         rows = self.employee_assignment_details_table or []
 
@@ -152,7 +158,6 @@ def get_users_not_linked_to_employee(
 
     conditions = [
         "u.enabled = 1",
-        "u.user_type = 'System User'",
         """
     NOT EXISTS (
         SELECT 1
@@ -188,7 +193,7 @@ def get_users_not_linked_to_employee(
         SELECT
             u.name
         FROM `tabUser` u
-        WHERE {' AND '.join(conditions)}
+        WHERE {" AND ".join(conditions)}
         ORDER BY u.name ASC
         LIMIT %s OFFSET %s
         """,
@@ -311,6 +316,7 @@ def get_employee_from_user(user):
 
     return employee
 
+
 @frappe.whitelist()
 def get_user_departments(user=None):
 
@@ -342,7 +348,6 @@ def get_user_departments(user=None):
     )
 
     return departments
-
 
 
 def validate_employee_assignment_hierarchy(doc):
@@ -554,7 +559,7 @@ def validate_employee_assignment_hierarchy(doc):
                     current_role,
                     ", ".join(sorted(allowed_parent_roles)),
                 )
-            )
+        )
 
         assigned_roles = employee_role_map.get(
             assigned_to,

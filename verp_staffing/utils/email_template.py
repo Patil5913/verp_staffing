@@ -1,17 +1,77 @@
 import frappe
 
-def get_company_logo_url():
-    logo = frappe.db.get_single_value("Navbar Settings", "app_logo")
-    if not logo:
-        return ""
+def get_email_branding():
+    try:
+        config = frappe.get_cached_doc("ERP Configuration")
 
-    return frappe.utils.get_url(logo)
+        logo_url = (
+            frappe.utils.get_url(config.app_logo)
+            if config.app_logo
+            else ""
+        )
+
+        social_html = ""
+
+        social_links = [
+            (config.linkedin, "in", "13px"),
+            (config.facebook, "f", "13px"),
+            (config.twitter_x, "X", "13px"),
+            (config.youtube, "&#9654;", "16px"),
+        ]
+
+        for url, label, font_size in social_links:
+            if not url:
+                continue
+
+            social_html += f"""
+            <td style="padding:0 5px;">
+                <a href="{url}"
+                   target="_blank"
+                   style="display:inline-block;
+                          width:32px;
+                          height:32px;
+                          background:#374151;
+                          border-radius:50%;
+                          text-align:center;
+                          line-height:32px;
+                          color:#ffffff;
+                          text-decoration:none;
+                          font-size:{font_size};
+                          font-weight:700;">
+                    {label}
+                </a>
+            </td>
+            """
+
+        social_links_html = (
+            f"""
+            <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
+                <tr>{social_html}</tr>
+            </table>
+            """
+            if social_html
+            else ""
+        )
+
+        return {
+            "logo_url": logo_url,
+            "social_links_html": social_links_html,
+        }
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Email Branding")
+        return {
+            "logo_url": "",
+            "social_links_html": "",
+        }
+
 
 def seed_email_template():
-    frappe.logger().info("SEED EMAIL TEMPLATE TRIGGERED")
-    frappe.logger().info("seed_email_template CALLED")
-    logo_url = get_company_logo_url()
-  
+    branding = get_email_branding()
+    
+    logo_url = branding["logo_url"]
+    social_links_html = branding["social_links_html"]
+
     Common_Footer = """
       <!-- COMMON FOOTER -->
       <tr>
@@ -27,46 +87,7 @@ def seed_email_template():
             implementation of our Terms of Service and (or) for other legitimate matters.
           </p>
 
-          <!-- Social Icons -->
-          <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px auto;">
-            <tr>
-              <td style="padding:0 5px;">
-                <a href="#" style="display:inline-block;width:32px;height:32px;
-                                   background:#374151;border-radius:50%;
-                                   text-align:center;line-height:32px;
-                                   color:#ffffff;text-decoration:none;
-                                   font-size:13px;font-weight:700;">in</a>
-              </td>
-              <td style="padding:0 5px;">
-                <a href="#" style="display:inline-block;width:32px;height:32px;
-                                   background:#374151;border-radius:50%;
-                                   text-align:center;line-height:32px;
-                                   color:#ffffff;text-decoration:none;
-                                   font-size:13px;font-weight:700;">f</a>
-              </td>
-              <td style="padding:0 5px;">
-                <a href="#" style="display:inline-block;width:32px;height:32px;
-                                   background:#374151;border-radius:50%;
-                                   text-align:center;line-height:32px;
-                                   color:#ffffff;text-decoration:none;
-                                   font-size:13px;font-weight:700;">&#9679;</a>
-              </td>
-              <td style="padding:0 5px;">
-                <a href="#" style="display:inline-block;width:32px;height:32px;
-                                   background:#374151;border-radius:50%;
-                                   text-align:center;line-height:32px;
-                                   color:#ffffff;text-decoration:none;
-                                   font-size:13px;font-weight:700;">X</a>
-              </td>
-              <td style="padding:0 5px;">
-                <a href="#" style="display:inline-block;width:32px;height:32px;
-                                   background:#374151;border-radius:50%;
-                                   text-align:center;line-height:32px;
-                                   color:#ffffff;text-decoration:none;
-                                   font-size:16px;">&#9654;</a>
-              </td>
-            </tr>
-          </table>
+          __SOCIAL_LINKS__
 
           <!-- Policy Links -->
           <p style="font-size:13px;color:#374151;text-align:center;margin:0 0 12px 0;">
@@ -82,11 +103,16 @@ def seed_email_template():
 
         </td>
       </tr>
-    </table>  <!-- closes inner 600px wrapper -->
+    </table>
   </td>
 </tr>
-</table>  <!-- closes outer full-width table -->
+</table>
 """
+
+    Common_Footer = Common_Footer.replace("__LOGO_URL__", logo_url).replace(
+        "__SOCIAL_LINKS__", social_links_html
+    )
+
     templates = [
         {
             "name": "Welcome Email Template",
@@ -3303,6 +3329,172 @@ def seed_email_template():
             + Common_Footer,
         },
         {
+            "name": "Customer Portal Link",
+            "subject": "Access Your Customer Portal",
+            "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+
+      <!-- Outer wrapper -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- Top logo -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src="__LOGO_URL__"
+                 alt="Logo"
+                 width="140"
+                 height="36"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- Main card -->
+        <tr>
+          <td bgcolor="#ffffff"
+              style="border-radius:12px;
+                     box-shadow:0 4px 16px rgba(0,0,0,0.08);
+                     overflow:hidden;
+                     padding:40px 36px 36px 36px;">
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+
+              <!-- Title -->
+              <tr>
+                <td align="center" style="padding-bottom:24px;">
+                  <div style="font-size:26px;
+                              font-weight:800;
+                              color:#111111;
+                              line-height:1.3;
+                              font-family:Arial,sans-serif;">
+                    Customer Portal Access
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Greeting -->
+              <tr>
+                <td style="padding-bottom:12px;">
+                  <div style="font-size:14px;
+                              color:#e07b00;
+                              font-family:Arial,sans-serif;">
+                    Hi {{ customer_name or "Customer" }},
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Intro -->
+              <tr>
+                <td style="padding-bottom:24px;">
+                  <div style="font-size:14px;
+                              color:#444444;
+                              line-height:1.7;
+                              font-family:Arial,sans-serif;">
+                    Your customer portal is ready.
+
+                    Through the portal you can view and manage your information,
+                    track activities.
+                  </div>
+                </td>
+              </tr>
+
+              <!-- CTA -->
+              <tr>
+                <td align="center" style="padding-bottom:28px;">
+                  <a href="{{ portal_link }}"
+                     style="display:inline-block;
+                            background:#3b82f6;
+                            color:#ffffff;
+                            padding:13px 36px;
+                            text-decoration:none;
+                            border-radius:8px;
+                            font-weight:700;
+                            font-size:15px;
+                            font-family:Arial,sans-serif;">
+                    Open Customer Portal
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Portal Details -->
+              <tr>
+                <td style="padding-bottom:24px;">
+                  <table width="100%"
+                         cellpadding="0"
+                         cellspacing="0"
+                         style="border:1px solid #e5e7eb;
+                                border-radius:8px;
+                                overflow:hidden;
+                                font-size:14px;
+                                font-family:Arial,sans-serif;">
+
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">
+                        Customer
+                      </td>
+                      <td style="padding:12px 16px;color:#3b82f6;font-weight:600;">
+                        {{ customer_name }}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding:12px 16px;color:#555555;">
+                        Portal Access
+                      </td>
+                      <td style="padding:12px 16px;color:#333333;">
+                        Secure Login Link
+                      </td>
+                    </tr>
+
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Divider -->
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <hr style="border:none;border-top:1px solid #eeeeee;margin:0;">
+                </td>
+              </tr>
+
+              <!-- Footer Text -->
+              <tr>
+                <td>
+                  <div style="font-size:13px;
+                              color:#5b7fa6;
+                              line-height:1.7;
+                              font-style:italic;
+                              font-family:Arial,sans-serif;">
+
+                    Click the button above to access your customer portal.
+
+                    <br><br>
+
+                    If the button does not work, copy and paste this link into your browser:
+
+                    <br><br>
+
+                    <a href="{{ portal_link }}"
+                       style="color:#3b82f6;
+                              word-break:break-all;
+                              font-style:normal;">
+                      {{ portal_link }}
+                    </a>
+
+                  </div>
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+
+"""
+            + Common_Footer,
+        },
+        {
             "name": "Payment Term Reminder",
             "subject": "Payment Reminder - {{ sales_order }}",
             "html_content": """
@@ -3520,7 +3712,7 @@ def seed_email_template():
             + Common_Footer,
         },
     ]
-
+    
     for t in templates:
         html = t["html_content"].replace("__LOGO_URL__", logo_url)
 
@@ -3544,3 +3736,11 @@ def seed_email_template():
             doc.insert(ignore_permissions=True)
 
     frappe.db.commit()
+
+
+def trigger_email_template_refresh(doc=None, method=None):
+    frappe.enqueue(
+        "verp_staffing.utils.email_template.seed_email_template",
+        queue="short",
+        timeout=300,
+    )

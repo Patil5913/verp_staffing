@@ -33,6 +33,11 @@ frappe.ui.form.on("Fiscal Year", {
 
 	refresh: function (frm) {
 		_enforce_disabled_state(frm);
+
+				frm.add_custom_button("Show Form Tour", () => {
+			const tour_name = "Fiscal Year";
+			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+		});
 	},
 
 	// ─────────────────────────────────────────────────────────────

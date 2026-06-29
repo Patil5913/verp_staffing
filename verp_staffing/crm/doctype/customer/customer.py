@@ -299,7 +299,7 @@ def generate_token(email: str):
 
 
 @frappe.whitelist()
-def send_portal_link(customer):
+def send_portal_link(customer, customer_name):
     if not customer:
         frappe.throw("Customer is required")
 
@@ -335,17 +335,26 @@ def send_portal_link(customer):
 
     # STEP 4: build link
     base_url = frappe.utils.get_url()
-    link = f"{base_url}/customer?t={token}"
+    portal_link = f"{base_url}/customer?t={token}"
 
     # STEP 5: send email
+    email_template = frappe.get_doc(
+        "Email Template",
+        "Customer Portal Link"
+    )
+
+    message = frappe.render_template(
+        email_template.response_html,
+        {
+            "customer_name": customer_name,
+            "portal_link": portal_link,
+        },
+    )
+
     frappe.sendmail(
         recipients=[email],
-        subject="Your Portal Link",
-        message=f"""
-        Click below to access your portal:
-
-        {link}
-        """,
+        subject=email_template.subject,
+        message=message,
     )
 
     return True

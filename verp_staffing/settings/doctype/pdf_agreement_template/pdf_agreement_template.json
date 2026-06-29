@@ -48,7 +48,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-10 14:24:04.970288",
+ "modified": "2026-06-26 18:44:40.431786",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Pdf Agreement Template",
@@ -56,39 +56,29 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Sales Employee",
-   "select": 1,
-   "write": 1
+   "role": "Account Person",
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Team Lead",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Sales Person",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
    "create": 1,
@@ -99,6 +89,7 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   }

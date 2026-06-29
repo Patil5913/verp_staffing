@@ -2,6 +2,12 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Opportunity", {
+	onload(frm) {
+		if (frappe.session.user !== "Administrator") {
+			frm.set_df_property("opportunity_owner", "read_only", 1);
+		}
+	},
+
 	async refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -38,7 +44,7 @@ frappe.ui.form.on("Opportunity", {
 		});
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "Opportunity Form";
+			const tour_name = "Opportunity";
 
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});

@@ -3,6 +3,13 @@ import json
 from frappe.utils import now_datetime
 from datetime import datetime
 
+def get_company_logo_url():
+    logo = frappe.db.get_single_value("Navbar Settings", "app_logo")
+    if not logo:
+        return ""
+
+    return frappe.utils.get_url(logo)
+
 def get_context(context):
 
     context.no_cache = 1
@@ -124,9 +131,7 @@ def get_context(context):
     )
 
     # get logo
-    from verp_staffing.utils.email_template import get_company_logo_url
-    logo = get_company_logo_url()
-    context.logo_url = logo
+    context.logo_url = get_company_logo_url()
     context.is_verified = is_verified
     context.pdf_url = pdf_url
     context.fields = fields

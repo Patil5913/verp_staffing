@@ -9,8 +9,6 @@
   "naming_series",
   "supplier",
   "posting_date",
-  "tax_withholding_category",
-  "apply_tds",
   "column_break_wwei",
   "schedule_date",
   "company",
@@ -32,7 +30,6 @@
   "column_break_jvoe",
   "total",
   "net_total",
-  "tax_withholding_net_total",
   "section_break_stfe",
   "tax_category",
   "section_break_iteq",
@@ -65,13 +62,7 @@
   "status",
   "column_break_tmbq",
   "per_billed",
-  "per_received",
-  "subscription_section",
-  "from_date",
-  "to_date",
-  "column_break_mikv",
-  "auto_repeat",
-  "update_auto_repeat_reference"
+  "per_received"
  ],
  "fields": [
   {
@@ -99,20 +90,6 @@
    "options": "Company",
    "remember_last_selected_value": 1,
    "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "apply_tds",
-   "fieldtype": "Check",
-   "label": "Apply Tax Withholding Amount"
-  },
-  {
-   "depends_on": "eval: doc.apply_tds",
-   "fieldname": "tax_withholding_category",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Tax Withholding Category",
-   "options": "Tax Withholding Category"
   },
   {
    "default": "0",
@@ -194,17 +171,9 @@
    "read_only": 1
   },
   {
-   "depends_on": "apply_tds",
-   "fieldname": "tax_withholding_net_total",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Tax Withholding Net Total",
-   "options": "currency",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_stfe",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Taxes and Charges"
   },
   {
    "fieldname": "tax_category",
@@ -350,42 +319,6 @@
    "read_only": 1
   },
   {
-   "collapsible": 1,
-   "fieldname": "subscription_section",
-   "fieldtype": "Section Break",
-   "label": "Auto Repeat"
-  },
-  {
-   "fieldname": "from_date",
-   "fieldtype": "Date",
-   "label": "From Date",
-   "print_hide": 1
-  },
-  {
-   "fieldname": "to_date",
-   "fieldtype": "Date",
-   "label": "To Date",
-   "print_hide": 1
-  },
-  {
-   "fieldname": "column_break_mikv",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "auto_repeat",
-   "fieldtype": "Link",
-   "label": "Auto Repeat",
-   "no_copy": 1,
-   "options": "Auto Repeat",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval: doc.auto_repeat",
-   "fieldname": "update_auto_repeat_reference",
-   "fieldtype": "Button",
-   "label": "Update Auto Repeat Reference"
-  },
-  {
    "fetch_from": "company.default_currency",
    "fetch_if_empty": 1,
    "fieldname": "company_currency",
@@ -520,7 +453,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-15 17:08:26.703526",
+ "modified": "2026-06-26 17:38:52.971816",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Purchase Order",
@@ -528,6 +461,21 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -536,7 +484,9 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],

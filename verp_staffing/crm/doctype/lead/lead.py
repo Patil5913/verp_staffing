@@ -7,6 +7,7 @@ from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 from frappe.utils import cstr
+from frappe import _
 
 
 STATUS_MAP = {
@@ -27,7 +28,8 @@ class Lead(Document):
         self.name = generate_name_series("Lead", name)
 
     def before_insert(self):
-        self.set_lead_owner()
+        if frappe.session.user != "Administrator":
+            self.set_lead_owner()
 
     def after_insert(self):
         self.create_lead_detail()
@@ -41,7 +43,7 @@ class Lead(Document):
         if self.lead_owner:
             return
 
-        cache_key = f"employee_user::{frappe.session.user}"
+        cache_key = f"lead_user::{frappe.session.user}"
 
         employee = frappe.cache().get_value(cache_key)
 
@@ -97,3 +99,34 @@ def update_status_based_on_opportunity(lead_name, status):
         STATUS_MAP.get(normalized_status, "Lead"),
         update_modified=False,
     )
+    
+
+@frappe.whitelist()
+def opportunity_exists_for_lead(lead):
+    return bool(
+        frappe.get_all(
+            "Opportunity",
+            filters={"opportunity_from_lead": lead},
+            ignore_permissions=True,
+        )
+    )
+    
+    
+@frappe.whitelist()
+def create_opportunity_from_lead(lead, owner):
+    if not frappe.has_permission("Lead", "read", lead):
+        frappe.throw(_("Not permitted"))
+
+    lead_doc = frappe.get_doc("Lead", lead)
+
+    opportunity = frappe.get_doc({
+        "doctype": "Opportunity",
+        "opportunity_from_lead": lead_doc.name,
+        "opportunity_owner": owner,
+        "name1": lead_doc.name1,
+        "source": lead_doc.source,
+    })
+
+    opportunity.insert(ignore_permissions=True)
+
+    return opportunity.name

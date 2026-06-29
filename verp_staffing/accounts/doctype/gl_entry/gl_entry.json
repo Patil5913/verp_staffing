@@ -274,7 +274,7 @@
  "icon": "fa fa-list",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-04 18:04:35.273813",
+ "modified": "2026-06-26 17:41:09.341683",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "GL Entry",
@@ -290,7 +290,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
    "write": 1
   }
  ],
