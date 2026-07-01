@@ -7,13 +7,11 @@ from dateutil.relativedelta import relativedelta
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
 def execute(filters=None):
     columns = get_columns()
     data, chart_data = get_data_and_chart(filters)
     chart = build_chart(chart_data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -34,7 +32,6 @@ def get_columns():
             "width": 150,
         },
     ]
-
 
 def get_sales_employees_cached(employee_list):
     """
@@ -71,7 +68,6 @@ def get_sales_employees_cached(employee_list):
     requested = set(employee_list)
     return [e for e in all_sales_names if e in requested]
 
-
 def _get_all_sales_employees_cached():
     """Return every Sales employee for this company (admin path)."""
     # cache_key = f"sales_dept_employees::{company}"
@@ -94,7 +90,6 @@ def _get_all_sales_employees_cached():
     names = [row.name for row in all_sales]
     frappe.cache().set_value(cache_key, names, expires_in_sec=3600)
     return names
-
 
 def _resolve_employee_scope(filters, user):
     """
@@ -120,7 +115,6 @@ def _resolve_employee_scope(filters, user):
     # Non-admin, no explicit filter — show their full visible hierarchy.
     return get_sales_employees_cached(allowed_employees)
 
-
 def _resolve_dates(filters):
     start_date = filters.get("start_date") if filters else None
     end_date = filters.get("end_date") if filters else None
@@ -139,7 +133,6 @@ def _resolve_dates(filters):
             end_date = today
 
     return start_date, end_date
-
 
 def get_data_and_chart(filters):
     """
@@ -202,35 +195,40 @@ def get_data_and_chart(filters):
     #   - SEC_TO_TIME formats duration in DB, eliminating the Python loop.
     #   - FORCE INDEX on Call Details for (parent, date) — see patch below.
     # -----------------------------------------------------------------------
-    data = frappe.db.sql(
-        f"""
-        SELECT
-            o.opportunity_owner,
-            o.name                              AS name,
-            o.name1,
-            o.status,
-            cd.date,
-            SUM(cd.duration)                    AS total_seconds,
-            TIME_FORMAT(
-                SEC_TO_TIME(SUM(cd.duration)),
-                '%%Hh %%im %%ss'
-            )                                   AS total_duration,
-            ofc.first_call_date
-        FROM `tabOpportunity` o
-        INNER JOIN `tabCall Details` cd
-            ON cd.parent = o.name
-        LEFT JOIN (
-            SELECT parent, MIN(date) AS first_call_date
-            FROM `tabCall Details`
-            GROUP BY parent
-        ) ofc ON ofc.parent = o.name
-        {where_clause}
-        GROUP BY o.opportunity_owner, o.name, o.name1, o.status, cd.date, ofc.first_call_date
-        ORDER BY cd.date DESC
-        """,
-        values,
-        as_dict=True,
+    
+    detail_query = (
+        "SELECT "
+        "o.opportunity_owner, "
+        "o.name AS name, "
+        "o.name1, "
+        "o.status, "
+        "cd.date, "
+        "SUM(cd.duration) AS total_seconds, "
+        "TIME_FORMAT("
+        "SEC_TO_TIME(SUM(cd.duration)), "
+        "'%Hh %im %ss'"
+        ") AS total_duration, "
+        "ofc.first_call_date "
+        "FROM `tabOpportunity` o "
+        "INNER JOIN `tabCall Details` cd "
+        "ON cd.parent = o.name "
+        "LEFT JOIN ("
+        "SELECT parent, MIN(date) AS first_call_date "
+        "FROM `tabCall Details` "
+        "GROUP BY parent"
+        ") ofc ON ofc.parent = o.name "
+        + where_clause +
+        " GROUP BY "
+        "o.opportunity_owner, "
+        "o.name, "
+        "o.name1, "
+        "o.status, "
+        "cd.date, "
+        "ofc.first_call_date "
+        "ORDER BY cd.date DESC"
     )
+
+    data = frappe.db.sql(detail_query, values, as_dict=True)
 
     # -----------------------------------------------------------------------
     # Query 2 — chart aggregation.
@@ -239,30 +237,24 @@ def get_data_and_chart(filters):
     #   (a) DB does the GROUP BY avg — no Python second-pass over all rows.
     #   (b) The chart query is simple and fast regardless of report row count.
     # -----------------------------------------------------------------------
-    chart_data = frappe.db.sql(
-        f"""
-        SELECT
-            o.name1,
-            ROUND(AVG(cd.duration) / 60.0, 2)  AS avg_duration_minutes,
-            COUNT(cd.name)                       AS total_calls
-        FROM `tabOpportunity` o
-        INNER JOIN `tabCall Details` cd
-            ON cd.parent = o.name
-        {where_clause}
-        GROUP BY o.name1
-        HAVING total_calls > 0
-        ORDER BY avg_duration_minutes DESC
-        LIMIT 50
-        """,
-        values,
-        as_dict=True,
+    chart_query = (
+        "SELECT "
+        "o.name1, "
+        "ROUND(AVG(cd.duration) / 60.0, 2) AS avg_duration_minutes, "
+        "COUNT(cd.name) AS total_calls "
+        "FROM `tabOpportunity` o "
+        "INNER JOIN `tabCall Details` cd "
+        "ON cd.parent = o.name "
+        + where_clause +
+        " GROUP BY o.name1 "
+        "HAVING total_calls > 0 "
+        "ORDER BY avg_duration_minutes DESC "
+        "LIMIT 50"
     )
 
+    chart_data = frappe.db.sql(chart_query, values, as_dict=True)
+
     return data, chart_data
-
-
-
-
 
 def build_chart(chart_data):
     if not chart_data:
@@ -285,27 +277,26 @@ def build_chart(chart_data):
         "colors": ["#8494FF"],
     }
 
-
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
 def get_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
     """
     Link field search — returns Sales dept employees visible to the current user.
     Uses the cached employee list to avoid a per-keystroke DB hit for the
     hierarchy traversal; only the final filtered search touches the DB.
     """
+
     user = frappe.session.user
-    # company = frappe.defaults.get_user_default("company")
 
     values = {
         "txt": f"%{txt}%",
         "start": int(start),
         "page_len": int(page_len),
         "dept": "Sales",
-        # "company": company,
     }
 
     conditions = [
-        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        "tabEmployee.name LIKE %(txt)s",
         """
         EXISTS (
             SELECT 1
@@ -320,16 +311,19 @@ def get_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters)
         all_emps = get_visible_employee_names_cached()
         if not all_emps:
             return []
-        emp_placeholders = _build_in_placeholders("se", all_emps, values)
-        conditions.append(f"tabEmployee.name IN ({emp_placeholders})")
 
-    return frappe.db.sql(
-        f"""
-        SELECT tabEmployee.name, tabEmployee.employee_name
-        FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
-        ORDER BY tabEmployee.name
-        LIMIT %(start)s, %(page_len)s
-        """,
-        values,
+        placeholders = _build_in_placeholders("se", all_emps, values)
+        conditions.append(f"tabEmployee.name IN ({placeholders})")
+
+    query = (
+        "SELECT "
+        "tabEmployee.name, "
+        "tabEmployee.employee_name "
+        "FROM `tabEmployee` "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY tabEmployee.name "
+        "LIMIT %(start)s, %(page_len)s"
     )
+
+    return frappe.db.sql(query, values)

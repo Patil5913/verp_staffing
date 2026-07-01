@@ -3,15 +3,12 @@
 
 import frappe
 
-
 def execute(filters=None):
     filters = filters or {}
-
     columns = get_columns()
     data = get_data(filters)
 
     return columns, data
-
 
 def get_columns():
     return [
@@ -55,7 +52,6 @@ def get_columns():
         },
     ]
 
-
 def get_data(filters):
     conditions = []
     values = {}
@@ -76,11 +72,7 @@ def get_data(filters):
         conditions.append("l.lead_owner = %(lead_owner)s")
         values["lead_owner"] = filters["lead_owner"]
 
-    where_clause = ""
-    if conditions:
-        where_clause = "WHERE " + " AND ".join(conditions)
-
-    query = f"""
+    query = """
         SELECT
             l.name1 AS lead_name,
             l.status,
@@ -89,8 +81,10 @@ def get_data(filters):
             l.email,
             l.creation
         FROM `tabLead` l
-        {where_clause}
-        ORDER BY l.creation DESC
     """
 
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY l.creation DESC"
     return frappe.db.sql(query, values, as_dict=True)

@@ -1,13 +1,10 @@
 # Copyright (c) 2026, Vrugle and contributors
 # For license information, please see license.txt
 
-from warnings import filters
-
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate, get_last_day
 import datetime
-
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
@@ -37,12 +34,6 @@ def execute(filters=None):
 
     return columns, data, None, chart
 
-
-# ─────────────────────────────────────────────
-# AUTO-RESOLVE LATEST FISCAL YEAR FOR COMPANY
-# ─────────────────────────────────────────────
-
-
 def _get_latest_fiscal_year(company):
     if not company:
         return None
@@ -59,7 +50,6 @@ def _get_latest_fiscal_year(company):
         as_dict=True,
     )
     return rows[0].name if rows else None
-
 
 def _get_fiscal_years_in_range(from_fiscal_year, to_fiscal_year):
     """
@@ -81,12 +71,6 @@ def _get_fiscal_years_in_range(from_fiscal_year, to_fiscal_year):
         as_dict=True,
     )
     return [r.name for r in rows]
-
-
-# ─────────────────────────────────────────────
-# VALIDATION
-# ─────────────────────────────────────────────
-
 
 def validate_filters(filters):
     if not filters.company:
@@ -110,12 +94,6 @@ def validate_filters(filters):
         if getdate(filters.from_date) > getdate(filters.to_date):
             frappe.throw(_("From Date cannot be greater than To Date."))
 
-
-# ─────────────────────────────────────────────
-# DATE HELPERS  (identical to Balance Sheet)
-# ─────────────────────────────────────────────
-
-
 def get_from_to_dates(filters):
     if filters.filter_based_on == "Fiscal Year":
         from_fy = frappe.get_cached_doc("Fiscal Year", filters.from_fiscal_year)
@@ -123,7 +101,6 @@ def get_from_to_dates(filters):
         return getdate(from_fy.year_start_date), getdate(to_fy.year_end_date)
     else:
         return getdate(filters.from_date), getdate(filters.to_date)
-
 
 def get_period_date_ranges(filters):
     from_date, to_date = get_from_to_dates(filters)
@@ -145,16 +122,25 @@ def get_period_date_ranges(filters):
 
                 return [(label, from_date, to_date)]
 
-            fiscal_years = frappe.db.sql(
+            placeholders = ", ".join(["%s"] * len(fy_names))
+
+            query = (
                 """
                 SELECT
                     name,
                     year_start_date,
                     year_end_date
                 FROM `tabFiscal Year`
-                WHERE name IN ({})
+                WHERE name IN ("""
+                + placeholders
+                + """
+                )
                 ORDER BY year_start_date ASC
-                """.format(", ".join(["%s"] * len(fy_names))),
+                """
+            )
+
+            fiscal_years = frappe.db.sql(
+                query,
                 fy_names,
                 as_dict=True,
             )
@@ -217,12 +203,6 @@ def get_period_date_ranges(filters):
 
     return period_list
 
-
-# ─────────────────────────────────────────────
-# COLUMNS
-# ─────────────────────────────────────────────
-
-
 def get_columns(filters):
     columns = [
         {
@@ -276,12 +256,6 @@ def get_columns(filters):
 
     return columns
 
-
-# ─────────────────────────────────────────────
-# ACCOUNT TREE  — P&L uses Income + Expense only
-# ─────────────────────────────────────────────
-
-
 def get_accounts(company):
     """
     Fetch Income and Expense accounts for this company.
@@ -300,52 +274,49 @@ def get_accounts(company):
         as_dict=True,
     )
 
-
-# ─────────────────────────────────────────────
-# GL BALANCE QUERY  (identical to Balance Sheet)
-# ─────────────────────────────────────────────
-
-
 def get_gl_balances(filters, from_date, to_date, account_names, fiscal_years=None):
     if not account_names:
         return {}
-
-    placeholders = ", ".join(["%s"] * len(account_names))
+    
     conditions = [
         "gle.company = %s",
-        "gle.account IN ({0})".format(placeholders),
+        f"gle.account IN ({', '.join(['%s'] * len(account_names))})",
         "gle.posting_date BETWEEN %s AND %s",
     ]
-    values = [filters.company] + list(account_names) + [from_date, to_date]
+
+    values = [
+        filters.company,
+        *account_names,
+        from_date,
+        to_date,
+    ]
 
     # ── Fiscal Year filter (the core fix) ────────────────────────
     if fiscal_years:
-        fy_placeholders = ", ".join(["%s"] * len(fiscal_years))
-        conditions.append("gle.fiscal_year IN ({0})".format(fy_placeholders))
-        values += list(fiscal_years)
+        conditions.append(
+            f"gle.fiscal_year IN ({', '.join(['%s'] * len(fiscal_years))})"
+        )
+        values.extend(fiscal_years)
 
-    # ── Finance Book filter ───────────────────────────────────────
     if filters.get("finance_book"):
         conditions.append("gle.finance_book = %s")
         values.append(filters.finance_book)
     else:
         conditions.append("(gle.finance_book IS NULL OR gle.finance_book = '')")
-
-    rows = frappe.db.sql(
-        """
-    SELECT gle.account,
-           SUM(gle.debit_in_company_currency)  AS debit,
-           SUM(gle.credit_in_company_currency) AS credit
-    FROM `tabGL Entry` gle
-    WHERE {cond}
-    GROUP BY gle.account
-""".format(cond=" AND ".join(conditions)),
-        values,
-        as_dict=True,
+        
+    query = (
+        "SELECT "
+        "gle.account, "
+        "SUM(gle.debit_in_company_currency) AS debit, "
+        "SUM(gle.credit_in_company_currency) AS credit "
+        "FROM `tabGL Entry` gle "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " GROUP BY gle.account"
     )
 
+    rows = frappe.db.sql(query, values, as_dict=True)
     return {r.account: r for r in rows}
-
 
 # ─────────────────────────────────────────────
 # NET BALANCE — sign convention for P&L
@@ -356,8 +327,6 @@ def get_gl_balances(filters, from_date, to_date, account_names, fiscal_years=Non
 # This makes every row display as a positive number when the account is
 # used normally, which is the standard P&L presentation.
 # ─────────────────────────────────────────────
-
-
 def compute_net(account, gl_map, root_type):
     row = gl_map.get(account, {})
     debit = flt(row.get("debit", 0))
@@ -368,19 +337,12 @@ def compute_net(account, gl_map, root_type):
     else:
         return debit - credit  # expense is debit-normal
 
-
 def get_group_total(account_name, gl_map, children_map, acc_map):
     acc = acc_map.get(account_name)
     total = compute_net(account_name, gl_map, acc.root_type if acc else "Expense")
     for child in children_map.get(account_name, []):
         total += get_group_total(child, gl_map, children_map, acc_map)
     return total
-
-
-# ─────────────────────────────────────────────
-# MAIN DATA BUILDER
-# ─────────────────────────────────────────────
-
 
 def get_data(filters):
     accounts = get_accounts(filters.company)
@@ -571,7 +533,6 @@ def get_data(filters):
     chart = get_chart_data(data, period_list)  # ← this is the last line
     return data, chart
 
-
 def _get_fiscal_year_for_date(check_date, fy_names):
     """
     Given a list of fiscal year names, return the one whose
@@ -580,25 +541,24 @@ def _get_fiscal_year_for_date(check_date, fy_names):
     """
     if not fy_names:
         return fy_names
+    
+    placeholders = ", ".join(["%s"] * len(fy_names))
+    
+    query = (
+        "SELECT name "
+        "FROM `tabFiscal Year` "
+        "WHERE name IN (" + placeholders + ") "
+        "AND year_start_date <= %s "
+        "AND year_end_date >= %s "
+        "LIMIT 1"
+    )
+
     rows = frappe.db.sql(
-        """
-        SELECT name
-        FROM `tabFiscal Year`
-        WHERE name IN ({ph})
-          AND year_start_date <= %s
-          AND year_end_date   >= %s
-        LIMIT 1
-    """.format(ph=", ".join(["%s"] * len(fy_names))),
-        list(fy_names) + [check_date, check_date],
+        query,
+        [*fy_names, check_date, check_date],
         as_dict=True,
     )
     return [rows[0].name] if rows else fy_names
-
-
-# ─────────────────────────────────────────────
-# CHART
-# ─────────────────────────────────────────────
-
 
 def get_chart_data(data, period_list):
     labels = [p[0] for p in period_list]

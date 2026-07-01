@@ -23,36 +23,39 @@ def _get_count_for_doctype(doctype: str) -> dict:
     user = frappe.session.user
     owner_field = DOCTYPE_OWNER_FIELD_MAP.get(doctype, "owner")
 
-    frappe.logger().info(
-        f"[_get_count_for_doctype] doctype={doctype!r} | "
-        f"owner_field={owner_field!r} | user={user!r}"
-    )
-
     if user == "Administrator":
         count = frappe.db.count(doctype)
-        frappe.logger().info(f"[_get_count_for_doctype] ADMIN count={count}")
         return {"value": count, "route": ["List", doctype]}
 
     employees = get_visible_employee_names_cached()
-    frappe.logger().info(f"[_get_count_for_doctype] employees={employees}")
-
     if not employees:
         return {"value": 0, "route": ["List", doctype]}
 
-    count = frappe.db.sql(
-        f"""
-    SELECT COUNT(name)
-    FROM `tab{doctype}`
-    WHERE (
-        {owner_field} IN %(employees)s
-        OR {owner_field} IS NULL
-        OR {owner_field} = ''
+    query = (
+        "SELECT COUNT(name) "
+        f"FROM `tab{doctype}` "
+        "WHERE ("
+        f"{owner_field} IN %(employees)s "
+        f"OR {owner_field} IS NULL "
+        f"OR {owner_field} = ''"
+        ")"
     )
-    """,
-        {"employees": tuple(employees)},
+
+    count = frappe.db.sql(
+        query,
+        {
+            "employees": tuple(employees),
+        },
     )[0][0]
-    frappe.logger().info(f"[_get_count_for_doctype] FINAL count={count}")
-    return {"value": count, "route": ["List", doctype]}
+
+    frappe.logger().info(
+        f"[_get_count_for_doctype] FINAL count={count}"
+    )
+
+    return {
+        "value": count,
+        "route": ["List", doctype],
+    }
 
 
 @frappe.whitelist()

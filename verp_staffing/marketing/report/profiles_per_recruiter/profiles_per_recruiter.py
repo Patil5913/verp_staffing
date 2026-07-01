@@ -6,14 +6,12 @@ from frappe.utils import getdate
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
 def execute(filters=None):
     filters = filters or {}
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -32,7 +30,6 @@ def get_columns():
         },
     ]
 
-
 def _build_hierarchy_clause(values):
     """
     Returns an AND fragment scoping the query to the current user's visible
@@ -48,7 +45,6 @@ def _build_hierarchy_clause(values):
 
     placeholders = _build_in_placeholders("emp", allowed, values)
     return f" AND m.assign_to IN ({placeholders})"
-
 
 def get_data(filters):
     """
@@ -106,25 +102,23 @@ def get_data(filters):
 
     where_clause = "WHERE " + " AND ".join(conditions)
 
-    return frappe.db.sql(
-        f"""
-        SELECT
-            m.assign_to                     AS recruiter,
-            COUNT(DISTINCT m.customer)      AS profile_count
-        FROM `tabInterview` i
-        INNER JOIN `tabInterview Round` ir
-            ON ir.parent = i.name
-        INNER JOIN `tabMarketing` m
-            ON m.name = i.marketing_link
-        {where_clause}
-        {hierarchy_clause}
-        GROUP BY m.assign_to
-        ORDER BY profile_count DESC
-        """,
-        values,
-        as_dict=True,
+    query = (
+        "SELECT "
+        "m.assign_to AS recruiter, "
+        "COUNT(DISTINCT m.customer) AS profile_count "
+        "FROM `tabInterview` i "
+        "INNER JOIN `tabInterview Round` ir "
+        "ON ir.parent = i.name "
+        "INNER JOIN `tabMarketing` m "
+        "ON m.name = i.marketing_link "
+        + where_clause
+        + " "
+        + hierarchy_clause
+        + " GROUP BY m.assign_to "
+        "ORDER BY profile_count DESC"
     )
 
+    return frappe.db.sql(query, values, as_dict=True)
 
 def get_chart(data):
     if not data:
@@ -143,7 +137,6 @@ def get_chart(data):
         "type": "bar",
         "colors": ["#8494FF"],
     }
-
 
 @frappe.whitelist()
 def get_marketing_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
@@ -177,13 +170,19 @@ def get_marketing_hierarchy_employees(doctype, txt, searchfield, start, page_len
         placeholders = _build_in_placeholders("se", allowed, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
 
-    return frappe.db.sql(
-        f"""
-        SELECT tabEmployee.name, tabEmployee.employee_name
+    query = """
+        SELECT
+            tabEmployee.name,
+            tabEmployee.employee_name
         FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
+        WHERE
+    """
+
+    query += " AND ".join(conditions)
+
+    query += """
         ORDER BY tabEmployee.employee_name
         LIMIT %(start)s, %(page_len)s
-        """,
-        values,
-    )
+    """
+
+    return frappe.db.sql(query, values)

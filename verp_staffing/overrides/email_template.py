@@ -6,6 +6,7 @@ from frappe.utils import validate_email_address
 from frappe.utils.html_utils import escape_html
 from contextlib import suppress
 
+
 # ------------------- contact us-----------------
 @frappe.whitelist(allow_guest=True)
 def send_message(sender, message, subject="Website Query"):
@@ -15,23 +16,31 @@ def send_message(sender, message, subject="Website Query"):
 
     with suppress(frappe.OutgoingEmailError):
         # Step 2 - Forward to internal team
-        if forward_to_email := frappe.db.get_single_value("Contact Us Settings", "forward_to_email"):
-            internal_template_name = "Contact Us - Internal Forward"
+        internal_subject = subject
+        internal_content = message
+
+        if forward_to_email := frappe.db.get_single_value(
+            "Contact Us Settings", "forward_to_email"
+        ):
             context = {
                 "sender": sender,
                 "message": message,
                 "subject": subject,
             }
-            if frappe.db.exists("Email Template", internal_template_name):
-                internal_template = frappe.get_doc("Email Template", internal_template_name)
-                internal_subject  = frappe.render_template(internal_template.subject, context)
-                internal_content  = frappe.render_template(
-                    internal_template.response_html or internal_template.response, context
+
+            template = frappe.db.get_value(
+                "Email Template",
+                "Contact Us - Internal Forward",
+                ["subject", "response_html", "response"],
+                as_dict=True,
+            )
+
+            if template:
+                internal_subject = frappe.render_template(template.subject, context)
+                internal_content = frappe.render_template(
+                    template.response_html or template.response, context
                 )
-            else:
-                # Fallback
-                internal_subject = subject
-                internal_content = message
+
             frappe.sendmail(
                 recipients=forward_to_email,
                 reply_to=sender,
@@ -40,30 +49,30 @@ def send_message(sender, message, subject="Website Query"):
             )
 
         # Step 3 - Fetch your custom email template
-        template_name = "Contact Us - Customer Reply"  # your template name in Frappe desk
+        reply_subject = _("We've received your query!")
+        reply_content = _(
+            "<div style='white-space: pre-wrap'>"
+            f"Thank you for reaching out to us. We will get back to you at the earliest.\n\nYour query:\n{message}"
+            "</div>"
+        )
 
-        if frappe.db.exists("Email Template", template_name):
-            email_template = frappe.get_doc("Email Template", template_name)
+        template = frappe.db.get_value(
+            "Email Template",
+            "Contact Us - Customer Reply",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
 
+        if template:
             # Render the template with dynamic context
             context = {
                 "sender": sender,
                 "message": message,
                 "subject": subject,
-                # "company": frappe.db.get_single_value("Global Defaults", "default_company"),
             }
 
-            reply_subject = frappe.render_template(email_template.subject, context)
-            reply_content = frappe.render_template(email_template.response_html, context)
-
-           
-        else:
-            # Fallback to original if template not found
-            reply_subject = _("We've received your query!")
-            reply_content = _(
-                """Thank you for reaching out to us. We will get back to you at the earliest.\n\nYour query:\n{0}"""
-            ).format(message)
-            reply_content = f"<div style='white-space: pre-wrap'>{reply_content}</div>"
+            reply_subject = frappe.render_template(template.subject, context)
+            reply_content = frappe.render_template(template.response_html, context)
 
         # Step 4 - Send auto-reply to visitor
         frappe.sendmail(
@@ -98,8 +107,9 @@ from frappe.website.doctype.personal_data_download_request.personal_data_downloa
 )
 
 logger = frappe.logger("template_logs", allow_site=True)
-class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
 
+
+class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
     def generate_file_and_send_mail(self, personal_data):
         """Override to use custom email template"""
 
@@ -126,15 +136,14 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
         host_name = frappe.local.site
 
         # ── Your custom template logic ──
-        template_name = "Personal Data Download Request"  # your Email Template name
-        logger.info({
-         "message": "request personal data",
-        "template": template_name,
-        "template in database":frappe.db.exists("Email Template", template_name)})
+        template = frappe.db.get_value(
+            "Email Template",
+            "Personal Data Download Request",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
 
-        if frappe.db.exists("Email Template", template_name):
-            email_template = frappe.get_doc("Email Template", template_name)
-
+        if template:
             context = {
                 "user": self.user,
                 "user_name": self.user_name,
@@ -142,9 +151,9 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
                 "host_name": host_name,
             }
 
-            subject  = frappe.render_template(email_template.subject, context)
-            content  = frappe.render_template(
-                email_template.response_html or email_template.response, context
+            subject = frappe.render_template(template.subject, context)
+            content = frappe.render_template(
+                template.response_html or template.response, context
             )
 
             frappe.sendmail(
@@ -173,7 +182,6 @@ class CustomPersonalDataDownloadRequest(PersonalDataDownloadRequest):
 # personal data deletion request,confirm,deleted---------------------
 
 
-from frappe.utils.verified_command import get_signed_params
 from frappe.utils.user import get_system_managers
 from frappe.website.doctype.personal_data_deletion_request.personal_data_deletion_request import (
     PersonalDataDeletionRequest,
@@ -182,18 +190,21 @@ from frappe.website.doctype.personal_data_deletion_request.personal_data_deletio
 
 def get_rendered_template(template_name, context):
     """Helper to fetch and render an Email Template"""
-    if frappe.db.exists("Email Template", template_name):
-        email_template = frappe.get_doc("Email Template", template_name)
-        body = email_template.response_html or email_template.response or ""
+    template = frappe.db.get_value(
+            "Email Template",
+            template_name,
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
+    if template:
         return {
-            "subject": frappe.render_template(email_template.subject, context),
-            "content": frappe.render_template(body, context),
+            "subject": frappe.render_template(template.subject, context),
+            "content": frappe.render_template(template.response_html or template.response or "", context),
         }
     return None
 
 
 class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
-
     def send_verification_mail(self):
         url = self.generate_url_for_confirmation()
 
@@ -243,7 +254,9 @@ class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
             # Fallback to original
             frappe.sendmail(
                 recipients=system_managers,
-                subject=_("User {0} has requested for data deletion").format(self.email),
+                subject=_("User {0} has requested for data deletion").format(
+                    self.email
+                ),
                 template="data_deletion_approval",
                 args=context,
                 header=[_("Approval Required"), "green"],
@@ -272,6 +285,7 @@ class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
                 args=context,
                 header=[_("Your account has been deleted"), "green"],
             )
+
 
 # --------------------backup- upload successful, failed----------------
 
@@ -345,18 +359,21 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
                     <p>Please contact your system manager for more information.</p>
                 """,
             )
+
+
 def get_recipients(doctype, email_field):
-	return split_emails(frappe.db.get_value(doctype, None, email_field))
+    return split_emails(frappe.db.get_value(doctype, None, email_field))
+
 
 def patch():
     import frappe.integrations.offsite_backup_utils as backup_utils
+
     backup_utils.send_email = send_email
-
-
 
 
 from frappe.utils.backups import backup
 from frappe.desk.page.backups.backups import get_downloadable_links
+
 
 @frappe.whitelist()
 def schedule_files_backup(user_email: str):
@@ -375,9 +392,17 @@ def schedule_files_backup(user_email: str):
             queue="long",
             user_email=user_email,
         )
-        frappe.msgprint(_("Queued for backup. You will receive an email with the download link"))
+        frappe.msgprint(
+            _("Queued for backup. You will receive an email with the download link")
+        )
     else:
-        frappe.msgprint(_("Backup job is already queued. You will receive an email with the download link"))
+        frappe.msgprint(
+            _(
+                "Backup job is already queued. You will receive an email with the download link"
+            )
+        )
+
+
 def backup_files_and_notify_user(user_email=None):
     backup_files = backup(with_files=True)
     get_downloadable_links(backup_files)

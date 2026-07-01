@@ -74,8 +74,10 @@ def _get_user_readable_doctypes():
             ON dt.name = dp.parent
         WHERE dp.role IN ({role_placeholders})
           AND dp.write = 1
-          AND dt.module IN ({module_placeholders})
-          OR dt.name IN ({skip_placeholders})
+          AND (
+                dt.module IN ({module_placeholders})
+                OR dt.name IN ({skip_placeholders})
+          )
         """,
         tuple(user_roles)
         + tuple(VERP_MODULES)

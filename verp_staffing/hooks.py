@@ -280,6 +280,7 @@ doc_events = {
 # files delete from "file" doctype, time : weekly on sunday at 1 am (depends on site_config.json)
 # DB and file storage backup everyday morning, time : (depends on site_config.json)
 
+
 scheduler_events = {
     "hourly": [
         "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",

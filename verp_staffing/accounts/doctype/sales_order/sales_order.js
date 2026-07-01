@@ -503,13 +503,13 @@ async function render_payment_term_actions(frm, si_name) {
 			}
 		}, 100);
 	});
-
-	const paymentEntryLink = row.payment_entry
-		? `— ${await get_document_link("payment-entry", row.payment_entry)}`
-		: "";
-
-	grid.grid_rows.forEach((grid_row) => {
+	
+	grid.grid_rows.forEach(async(grid_row) => {
 		const row = grid_row.doc;
+
+		const paymentEntryLink = row.payment_entry
+			? `— ${await get_document_link("payment-entry", row.payment_entry)}`
+			: "";
 
 		// Clean up previously added elements
 		grid_row.wrapper.find(".btn-payment-action, .payment-lock-msg").remove();

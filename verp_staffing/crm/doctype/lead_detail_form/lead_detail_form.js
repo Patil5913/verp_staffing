@@ -78,7 +78,7 @@ function check_candidate_form_required(frm) {
 
 		frappe.call({
 			method: "verp_staffing.crm.api.permission_request.get_lead_detail_form_lock_status",
-			args: { lead_detail_name: frm.doc.name, lead_detail_doc: frm.doc },
+			args: { lead_detail_name: frm.doc.name, lead_detail_doc: frm.doc.name },
 			callback: function (r) {
 				if (!r.message) return;
 				_handle_lock_response(frm, r.message);
@@ -90,7 +90,7 @@ function check_candidate_form_required(frm) {
 function _apply_lock_from_customer(frm, customer_name) {
 	frappe.call({
 		method: "verp_staffing.crm.api.permission_request.get_lead_detail_form_lock_status",
-		args: { customer_name: customer_name, lead_detail_doc: frm.doc },
+		args: { customer_name: customer_name, lead_detail_doc: frm.doc.name },
 		callback: function (r) {
 			if (!r.message) return;
 			_handle_lock_response(frm, r.message);

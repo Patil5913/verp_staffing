@@ -151,132 +151,131 @@ function update_jv_details(doc, r) {
 	refresh_field("accounts");
 }
 
-verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Controller {
-	onload() {
-		this.load_defaults();
-		this.setup_queries();
+function load_defaults(frm) {
+	if (frm.doc.__islocal) {
+		let posting_date = frm.doc.posting_date;
+		if (!frm.doc.amended_from)
+			frm.set_value("posting_date", posting_date || frappe.datetime.get_today());
 	}
+}
 
-	onload_post_render() {
-		this.frm.get_field("accounts").grid.set_multiple_add("account");
-	}
+function setup_queries(frm) {
+	frm.set_query("account", "accounts", function (doc, cdt, cdn) {
+		return verp_staffing.journal_entry.account_query(frm);
+	});
 
-	load_defaults() {
-		if (this.frm.doc.__islocal) {
-			let posting_date = this.frm.doc.posting_date;
-			if (!this.frm.doc.amended_from)
-				this.frm.set_value("posting_date", posting_date || frappe.datetime.get_today());
-		}
-	}
+	frm.set_query("party_type", "accounts", function (doc, cdt, cdn) {
+		const row = locals[cdt][cdn];
 
-	setup_queries() {
-		let me = this;
+		return {
+			query: "verp_staffing.accounts.doctype.party_type.party_type.get_party_type",
+			filters: {
+				account: row.account,
+			},
+		};
+	});
 
-		this.frm.set_query("account", "accounts", function (doc, cdt, cdn) {
-			return verp_staffing.journal_entry.account_query(me.frm);
-		});
+	frm.set_query("reference_name", "accounts", function (doc, cdt, cdn) {
+		let jvd = frappe.get_doc(cdt, cdn);
 
-		me.frm.set_query("party_type", "accounts", function (doc, cdt, cdn) {
-			const row = locals[cdt][cdn];
-
+		if (jvd.reference_type === "Journal Entry") {
+			frappe.model.validate_missing(jvd, "account");
 			return {
-				query: "verp_staffing.accounts.doctype.party_type.party_type.get_party_type",
+				query: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_against_jv",
 				filters: {
-					account: row.account,
+					account: jvd.account,
+					party: jvd.party,
 				},
 			};
-		});
+		}
 
-		me.frm.set_query("reference_name", "accounts", function (doc, cdt, cdn) {
-			let jvd = frappe.get_doc(cdt, cdn);
+		let out = {
+			filters: [[jvd.reference_type, "docstatus", "=", 1]],
+		};
 
-			if (jvd.reference_type === "Journal Entry") {
-				frappe.model.validate_missing(jvd, "account");
-				return {
-					query: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_against_jv",
-					filters: {
-						account: jvd.account,
-						party: jvd.party,
-					},
-				};
+		if (["Sales Invoice", "Purchase Invoice"].includes(jvd.reference_type)) {
+			out.filters.push([jvd.reference_type, "outstanding_amount", "!=", 0]);
+
+			frappe.model.validate_missing(jvd, "account");
+			let party_account_field =
+				jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
+			out.filters.push([jvd.reference_type, party_account_field, "=", jvd.account]);
+		}
+
+		if (["Sales Order", "Purchase Order"].includes(jvd.reference_type)) {
+			frappe.model.validate_missing(jvd, "party_type");
+			frappe.model.validate_missing(jvd, "party");
+
+			out.filters.push([jvd.reference_type, "per_billed", "<", 100]);
+		}
+
+		if (jvd.party_type && jvd.party) {
+			let party_field = "";
+			if (jvd.reference_type.indexOf("Sales") === 0) {
+				party_field = "customer";
+			} else if (jvd.reference_type.indexOf("Purchase") === 0) {
+				party_field = "supplier";
 			}
 
-			let out = {
-				filters: [[jvd.reference_type, "docstatus", "=", 1]],
-			};
-
-			if (["Sales Invoice", "Purchase Invoice"].includes(jvd.reference_type)) {
-				out.filters.push([jvd.reference_type, "outstanding_amount", "!=", 0]);
-
-				frappe.model.validate_missing(jvd, "account");
-				let party_account_field =
-					jvd.reference_type === "Sales Invoice" ? "debit_to" : "credit_to";
-				out.filters.push([jvd.reference_type, party_account_field, "=", jvd.account]);
+			if (party_field) {
+				out.filters.push([jvd.reference_type, party_field, "=", jvd.party]);
 			}
+		}
 
-			if (["Sales Order", "Purchase Order"].includes(jvd.reference_type)) {
-				frappe.model.validate_missing(jvd, "party_type");
-				frappe.model.validate_missing(jvd, "party");
+		return out;
+	});
+}
 
-				out.filters.push([jvd.reference_type, "per_billed", "<", 100]);
+function get_outstanding(frm, doctype, docname, company, child) {
+	let args = {
+		doctype: doctype,
+		docname: docname,
+		party: child.party,
+		account: child.account,
+		account_currency: child.account_currency,
+		company: company,
+		company_currency: frm.doc.company_currency,
+	};
+
+	return frappe.call({
+		method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_outstanding",
+		args: { args: args },
+		callback: function (r) {
+			if (r.message) {
+				$.each(r.message, function (field, value) {
+					frappe.model.set_value(child.doctype, child.name, field, value);
+				});
 			}
+		},
+	});
+}
 
-			if (jvd.party_type && jvd.party) {
-				let party_field = "";
-				if (jvd.reference_type.indexOf("Sales") === 0) {
-					party_field = "customer";
-				} else if (jvd.reference_type.indexOf("Purchase") === 0) {
-					party_field = "supplier";
-				}
+frappe.ui.form.on("Journal Entry", {
+	onload: function (frm) {
+		load_defaults(frm);
+		setup_queries(frm);
+	},
+	onload_post_render: function (frm) {
+		frm.get_field("accounts").grid.set_multiple_add("account");
+	},
+});
 
-				if (party_field) {
-					out.filters.push([jvd.reference_type, party_field, "=", jvd.party]);
-				}
-			}
-
-			return out;
-		});
-	}
-
-	reference_name(doc, cdt, cdn) {
+frappe.ui.form.on("Journal Entry Account", {
+	reference_name: function (frm, cdt, cdn) {
 		let d = frappe.get_doc(cdt, cdn);
 
 		if (d.reference_name) {
 			if (d.reference_type === "Purchase Invoice" && !flt(d.debit)) {
-				this.get_outstanding("Purchase Invoice", d.reference_name, doc.company, d);
+				get_outstanding(frm, "Purchase Invoice", d.reference_name, frm.doc.company, d);
 			} else if (d.reference_type === "Sales Invoice" && !flt(d.credit)) {
-				this.get_outstanding("Sales Invoice", d.reference_name, doc.company, d);
+				get_outstanding(frm, "Sales Invoice", d.reference_name, frm.doc.company, d);
 			} else if (d.reference_type === "Journal Entry" && !flt(d.credit) && !flt(d.debit)) {
-				this.get_outstanding("Journal Entry", d.reference_name, doc.company, d);
+				get_outstanding(frm, "Journal Entry", d.reference_name, frm.doc.company, d);
 			}
 		}
-	}
+	},
 
-	get_outstanding(doctype, docname, company, child) {
-		let args = {
-			doctype: doctype,
-			docname: docname,
-			party: child.party,
-			account: child.account,
-			account_currency: child.account_currency,
-			company: company,
-			company_currency: this.frm.doc.company_currency,
-		};
-
-		return frappe.call({
-			method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.get_outstanding",
-			args: { args: args },
-			callback: function (r) {
-				if (r.message) {
-					$.each(r.message, function (field, value) {
-						frappe.model.set_value(child.doctype, child.name, field, value);
-					});
-				}
-			},
-		});
-	}
-
-	accounts_add(frm, cdt, cdn) {
+	accounts_add: function (frm, cdt, cdn) {
 		if (!frm.doc.company) {
 			show_company_warning(frm);
 			return;
@@ -284,18 +283,14 @@ verp_staffing.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.
 
 		auto_balance(frm);
 		calculate_totals(frm);
-	}
-};
+	},
+});
 
-cur_frm.script_manager.make(verp_staffing.accounts.JournalEntry);
-
-cur_frm.cscript.update_totals = function (doc) {
-	let frm = cur_frm; // bridge old → new
+function update_totals(frm) {
 	calculate_totals(frm);
-};
+}
 
-cur_frm.cscript.get_balance = function (doc) {
-	let frm = cur_frm;
+function get_balance(frm) {
 	let accounts = frm.doc.accounts || [];
 
 	if (!accounts.length) {
@@ -372,10 +367,11 @@ cur_frm.cscript.get_balance = function (doc) {
 	calculate_totals(frm);
 
 	frm.refresh_fields(["accounts", "total_debit", "total_credit", "difference"]);
-};
-cur_frm.cscript.validate = function (doc, cdt, cdn) {
-	cur_frm.cscript.update_totals(doc);
-};
+}
+
+frappe.ui.form.on("Journal Entry", "validate", function (frm) {
+	update_totals(frm);
+});
 
 function calculate_totals(frm) {
 	let total_debit = 0;
@@ -561,7 +557,7 @@ function add_invoices_to_jv(frm, invoices, based_on) {
 	frm.refresh_field("accounts");
 
 	frm.trigger("multi_currency");
-	cur_frm.cscript.get_balance(frm.doc);
+	get_balance(frm);
 }
 
 function auto_balance(frm) {
@@ -679,7 +675,7 @@ frappe.ui.form.on("Journal Entry Account", {
 });
 
 frappe.ui.form.on("Journal Entry Account", "accounts_remove", function (frm) {
-	cur_frm.cscript.update_totals(frm.doc);
+	update_totals(frm);
 });
 
 $.extend(verp_staffing.journal_entry, {
@@ -784,7 +780,6 @@ $.extend(verp_staffing.journal_entry, {
 		});
 
 		dialog.set_primary_action(__("Save"), function () {
-			let btn = this;
 			let values = dialog.get_values();
 
 			frm.set_value("posting_date", values.posting_date);
@@ -853,10 +848,10 @@ $.extend(verp_staffing.journal_entry, {
 		return { filters: filters };
 	},
 
-	reverse_journal_entry: function () {
+	reverse_journal_entry: function (frm) {
 		frappe.model.open_mapped_doc({
 			method: "verp_staffing.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry",
-			frm: cur_frm,
+			frm: frm,
 		});
 	},
 });

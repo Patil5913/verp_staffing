@@ -211,29 +211,28 @@ def get_account_balance(account, company, date=None):
     if not account or not company:
         return 0.0
 
-    conditions = ["is_cancelled = 0"]
+    conditions = ["is_cancelled = %(is_cancelled)s"]
+    params = {
+        "is_cancelled": 0,
+        "account": account,
+        "company": company,
+    }
 
-    if account:
-        conditions.append("account = %(account)s")
-
-    if company:
-        conditions.append("company = %(company)s")
+    conditions.append("account = %(account)s")
+    conditions.append("company = %(company)s")
 
     if date:
         conditions.append("posting_date <= %(date)s")
+        params["date"] = date
 
-    query = f"""
-        SELECT 
-            COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0)
-        FROM `tabGL Entry`
-        WHERE {" AND ".join(conditions)}
-    """
+    query = (
+        "SELECT "
+        "COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) "
+        "FROM `tabGL Entry` "
+        "WHERE " + " AND ".join(conditions)
+    )
 
-    result = frappe.db.sql(query, {
-        "account": account,
-        "company": company,
-        "date": date
-    })
+    result = frappe.db.sql(query, params)
 
     return result[0][0] if result else 0.0
 
@@ -283,32 +282,34 @@ def get_default_bank_cash_account(company, account_type=None, mode_of_payment=No
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_against_jv(doctype, txt, searchfield, start, page_len, filters):
-    if not frappe.db.has_column("Journal Entry", searchfield):
-        return []
-
     return frappe.db.sql(
-        f"""
-        SELECT jv.name, jv.posting_date, jv.user_remark
-        FROM `tabJournal Entry` jv, `tabJournal Entry Account` jv_detail
-        WHERE jv_detail.parent = jv.name
-            AND jv_detail.account = %(account)s
+        """
+        SELECT
+            jv.name,
+            jv.posting_date,
+            jv.user_remark
+        FROM `tabJournal Entry` jv
+        INNER JOIN `tabJournal Entry Account` jv_detail
+            ON jv_detail.parent = jv.name
+        WHERE
+            jv_detail.account = %(account)s
             AND IFNULL(jv_detail.party, '') = %(party)s
             AND (
                 jv_detail.reference_type IS NULL
                 OR jv_detail.reference_type = ''
             )
             AND jv.docstatus = 1
-            AND jv.`{searchfield}` LIKE %(txt)s
+            AND jv.name LIKE %(txt)s
         ORDER BY jv.name DESC
-        LIMIT %(limit)s offset %(offset)s
+        LIMIT %(limit)s OFFSET %(offset)s
         """,
-        dict(
-            account=filters.get("account"),
-            party=cstr(filters.get("party")),
-            txt=f"%{txt}%",
-            offset=start,
-            limit=page_len,
-        ),
+        {
+            "account": filters.get("account"),
+            "party": cstr(filters.get("party")),
+            "txt": f"%{txt}%",
+            "offset": start,
+            "limit": page_len,
+        },
     )
 
 
@@ -324,15 +325,23 @@ def get_outstanding(args):
     due_date = None
 
     if args.get("doctype") == "Journal Entry":
-        condition = " and party=%(party)s" if args.get("party") else ""
+        conditions = [
+            "parent = %(docname)s",
+            "account = %(account)s",
+            "(reference_type IS NULL OR reference_type = '')",
+        ]
 
-        against_jv_amount = frappe.db.sql(
-            f"""
-            select sum(debit_in_account_currency) - sum(credit_in_account_currency)
-            from `tabJournal Entry Account` where parent=%(docname)s and account=%(account)s {condition}
-            and (reference_type is null or reference_type = '')""",
-            args,
+        if args.get("party"):
+            conditions.append("party = %(party)s")
+
+        query = (
+            "SELECT "
+            "SUM(debit_in_account_currency) - SUM(credit_in_account_currency) "
+            "FROM `tabJournal Entry Account` "
+            "WHERE " + " AND ".join(conditions)
         )
+
+        against_jv_amount = frappe.db.sql(query, args)
 
         against_jv_amount = flt(against_jv_amount[0][0]) if against_jv_amount else 0
         amount_field = "credit_in_account_currency" if against_jv_amount > 0 else "debit_in_account_currency"
@@ -379,15 +388,24 @@ def get_outstanding(args):
     due_date = None
 
     if args.get("doctype") == "Journal Entry":
-        condition = " and party=%(party)s" if args.get("party") else ""
+        conditions = [
+            "parent = %(docname)s",
+            "account = %(account)s",
+            "(reference_type IS NULL OR reference_type = '')",
+        ]
 
-        against_jv_amount = frappe.db.sql(
-            f"""
-            select sum(debit_in_account_currency) - sum(credit_in_account_currency)
-            from `tabJournal Entry Account` where parent=%(docname)s and account=%(account)s {condition}
-            and (reference_type is null or reference_type = '')""",
-            args,
+        if args.get("party"):
+            conditions.append("party = %(party)s")
+
+        query = (
+            "SELECT "
+            "SUM(debit_in_account_currency) - "
+            "SUM(credit_in_account_currency) "
+            "FROM `tabJournal Entry Account` "
+            "WHERE " + " AND ".join(conditions)
         )
+
+        against_jv_amount = frappe.db.sql(query, args)
 
         against_jv_amount = flt(against_jv_amount[0][0]) if against_jv_amount else 0
         amount_field = "credit_in_account_currency" if against_jv_amount > 0 else "debit_in_account_currency"

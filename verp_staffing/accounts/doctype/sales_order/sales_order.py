@@ -445,16 +445,7 @@ def get_erp_config():
     Fetch and normalize ERP Configuration
     """
 
-    config = frappe.db.get_value(
-        "ERP Configuration",
-        "ERP Configuration",
-        [
-            "candidate_details_form_fields",
-            "send_candidate_form_immediatly_after_sales_order_creation",
-            "send_agreement_immediatly_after_sales_order_creation",
-        ],
-        as_dict=True,
-    )
+    config = frappe.get_single("ERP Configuration")
     raw_service_config = {}
 
     if config.candidate_details_form_fields:

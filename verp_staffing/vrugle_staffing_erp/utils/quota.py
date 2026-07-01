@@ -16,9 +16,22 @@ def user_limit(doc=None, method=None):
     # count current users
     total_users = frappe.db.count("User", filters={"enabled": 1})
     if total_users >= users_limit:
-        template_name = "User Limit Exceeded"
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc("Email Template", template_name)
+        subject = "User Limit Exceeded"
+        message = (
+            f"Your site has exceeded the allowed user limit.\n\n"
+            f"Allowed Users: {users_limit}\n"
+            f"Current Users: {total_users}\n\n"
+            f"Please upgrade your plan or remove inactive users."
+        )
+            
+        template = frappe.db.get_value(
+            "Email Template",
+            "User Limit Exceeded",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
+        
+        if template:
             context = {
                 "users_limit": users_limit,
                 "total_users": total_users,
@@ -26,14 +39,6 @@ def user_limit(doc=None, method=None):
             subject = frappe.render_template(template.subject, context)
             message = frappe.render_template(
                 template.response_html or template.response, context
-            )
-        else:
-            subject = "User Limit Exceeded"
-            message = (
-                f"Your site has exceeded the allowed user limit.\n\n"
-                f"Allowed Users: {users_limit}\n"
-                f"Current Users: {total_users}\n\n"
-                f"Please upgrade your plan or remove inactive users."
             )
 
         send_notification(
@@ -93,9 +98,22 @@ def site_space_limit(doc=None, method=None):
     total_space = get_site_storage_usage()
 
     if total_space > site_space_limit_gb:
-        template_name = "Site Storage Limit Exceeded"
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc("Email Template", template_name)
+        subject = "Site Storage Limit Exceeded"
+        message = (
+            f"Your site storage usage has exceeded the allowed limit.\n\n"
+            f"Allowed Storage: {site_space_limit_gb} GB\n"
+            f"Current Usage: {total_space} GB\n\n"
+            f"Please delete unused files or upgrade your storage plan."
+        )
+        
+        template = frappe.db.get_value(
+            "Email Template",
+            "Site Storage Limit Exceeded",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
+        
+        if template:
             context = {
                 "site_space_limit_gb": site_space_limit_gb,
                 "total_space": total_space,
@@ -103,14 +121,6 @@ def site_space_limit(doc=None, method=None):
             subject = frappe.render_template(template.subject, context)
             message = frappe.render_template(
                 template.response_html or template.response, context
-            )
-        else:
-            subject = "Site Storage Limit Exceeded"
-            message = (
-                f"Your site storage usage has exceeded the allowed limit.\n\n"
-                f"Allowed Storage: {site_space_limit_gb} GB\n"
-                f"Current Usage: {total_space} GB\n\n"
-                f"Please delete unused files or upgrade your storage plan."
             )
 
         send_notification(
@@ -178,9 +188,17 @@ def check_site_expiry():
         )
 
         if not existing:
-            template_name = "Site Expiry Notification"
-            if frappe.db.exists("Email Template", template_name):
-                template = frappe.get_doc("Email Template", template_name)
+            subject = f"Site Expiring in {days_left} Day(s)"
+            message = f"Your site will expire in {days_left} day(s). Expiry Date: {expiry_date}"
+                
+            template = frappe.db.get_value(
+                "Site Expiry Notification",
+                "Personal Data Download Request",
+                ["subject", "response_html", "response"],
+                as_dict=True,
+            )
+            
+            if template:
                 context = {
                     "days_left": days_left,
                     "expiry_date": expiry_date,
@@ -189,9 +207,6 @@ def check_site_expiry():
                 message = frappe.render_template(
                     template.response_html or template.response, context
                 )
-            else:
-                subject = f"Site Expiring in {days_left} Day(s)"
-                message = f"Your site will expire in {days_left} day(s). Expiry Date: {expiry_date}"
 
             send_notification(
                 recipients=[admin_user],

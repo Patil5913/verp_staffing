@@ -198,33 +198,28 @@ def get_default_marketing_customer_options(param=""):
             return []
 
         placeholders = ", ".join(["%s"] * len(allowed_employees))
-
         conditions.append(f"m.assign_to IN ({placeholders})")
-
         values.extend(allowed_employees)
 
-    where_clause = ""
-
-    if conditions:
-        where_clause = "WHERE " + " AND ".join(conditions)
-
-    query = f"""
+    query = """
         SELECT
             m.name AS value,
             c.name AS label
         FROM `tabMarketing` m
         LEFT JOIN `tabCustomer` c
             ON c.name = m.customer
-        {where_clause}
+    """
+
+    if conditions:
+        query += " WHERE "
+        query += " AND ".join(conditions)
+
+    query += """
         ORDER BY m.creation DESC
         LIMIT 1
     """
 
-    return frappe.db.sql(
-        query,
-        values,
-        as_dict=True,
-    )
+    return frappe.db.sql(query, values, as_dict=True)
 
 
 @frappe.whitelist()
@@ -272,9 +267,7 @@ def search_marketing_customers(
     """
     )
 
-    where_clause = " AND ".join(conditions)
-    return frappe.db.sql(
-        f"""
+    query = """
         SELECT
             m.name,
             CONCAT(
@@ -283,9 +276,14 @@ def search_marketing_customers(
         FROM `tabMarketing` m
         INNER JOIN `tabCustomer` c
             ON c.name = m.customer
-        WHERE {where_clause}
+        WHERE
+    """
+
+    query += " AND ".join(conditions)
+
+    query += """
         ORDER BY m.creation DESC
         LIMIT %(start)s, %(page_len)s
-        """,
-        values,
-    )
+    """
+    
+    return frappe.db.sql(query, values)

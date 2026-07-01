@@ -6,7 +6,6 @@ from frappe.utils import getdate, cint
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
 def execute(filters=None):
     filters = filters or {}
     periodicity = filters.get("periodicity")
@@ -15,7 +14,6 @@ def execute(filters=None):
         return _periodic_report(filters)
 
     return _customer_report(filters)
-
 
 def _build_hierarchy_clause(values):
     """
@@ -34,7 +32,6 @@ def _build_hierarchy_clause(values):
 
     placeholders = _build_in_placeholders("emp", allowed, values)
     return f" AND m.assign_to IN ({placeholders})"
-
 
 def _periodic_report(filters):
     """
@@ -101,9 +98,7 @@ def _periodic_report(filters):
             period_label="Year",
         )
 
-
 _QUARTER_LABELS = {1: "Jan-Mar", 2: "Apr-Jun", 3: "Jul-Sep", 4: "Oct-Dec"}
-
 
 def _format_quarterly(rows):
     """Convert raw year/quarter rows to labelled frappe._dict rows."""
@@ -114,7 +109,6 @@ def _format_quarterly(rows):
         )
         for row in rows
     ]
-
 
 def _build_periodic(
     values,
@@ -168,7 +162,6 @@ def _build_periodic(
 
     return columns, rows, None, chart
 
-
 def _empty_periodic(periodicity):
     period_label = {"Monthly": "Month", "Quarterly": "Quarter", "Yearly": "Year"}.get(
         periodicity, "Period"
@@ -178,7 +171,6 @@ def _empty_periodic(periodicity):
         {"label": "Interviews",  "fieldname": "interviews", "fieldtype": "Int"},
     ]
     return columns, [], None, {}
-
 
 def _customer_report(filters):
     """
@@ -255,7 +247,6 @@ def _customer_report(filters):
 
     return columns, data, None, chart
 
-
 def _customer_columns():
     return [
         {
@@ -278,7 +269,6 @@ def _customer_columns():
             "width": 160,
         },
     ]
-
 
 def _empty_customer():
     return _customer_columns()

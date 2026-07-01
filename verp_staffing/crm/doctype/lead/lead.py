@@ -99,17 +99,13 @@ def update_status_based_on_opportunity(lead_name, status):
         STATUS_MAP.get(normalized_status, "Lead"),
         update_modified=False,
     )
-    
 
+    
 @frappe.whitelist()
-def opportunity_exists_for_lead(lead):
-    return bool(
-        frappe.get_all(
-            "Opportunity",
-            filters={"opportunity_from_lead": lead},
-            ignore_permissions=True,
-        )
-    )
+def lead_has_opportunity(lead_name):
+    if not lead_name:
+        return False
+    return bool(frappe.db.exists("Opportunity", {"opportunity_from_lead": lead_name}))
     
     
 @frappe.whitelist()

@@ -212,7 +212,7 @@ function render_customer_history(frm, data, append_interviews = false) {
     </div>
 </div>
 
-<!-- ✅ SCROLLABLE CONTAINER -->
+<!-- SCROLLABLE CONTAINER -->
 <div id="interview-container"
     style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f8fafc;">
     
@@ -220,7 +220,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 
 </div>
 
-<!-- ✅ LOAD MORE OUTSIDE -->
+<!-- LOAD MORE OUTSIDE -->
 <div id="interview-load-more" style="text-align:center;margin-top:15px;"></div>
 `;
 			} else {
@@ -375,7 +375,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {
-					customer: cur_frm.doc.customer,
+					customer: frm.doc.customer,
 					interview_limit: interview_limit,
 					interview_offset: interview_offset,
 					search: $("#interview-search").val(),
@@ -395,7 +395,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 			let from_date = $("#interview-from").val();
 			let to_date = $("#interview-to").val();
 
-			// ✅ DATE VALIDATION
+			// DATE VALIDATION
 			if (from_date && to_date && from_date > to_date) {
 				frappe.msgprint("From Date cannot be greater than To Date");
 				return;
@@ -406,7 +406,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {
-					customer: cur_frm.doc.customer,
+					customer: frm.doc.customer,
 					interview_limit: interview_limit,
 					interview_offset: interview_offset,
 					search: search,
@@ -421,19 +421,19 @@ function render_customer_history(frm, data, append_interviews = false) {
 	$(document)
 		.off("click", "#interview-clear-btn")
 		.on("click", "#interview-clear-btn", function () {
-			// ✅ Reset inputs
+			// Reset inputs
 			$("#interview-search").val("");
 			$("#interview-from").val("");
 			$("#interview-to").val("");
 
-			// ✅ Reset pagination
+			// Reset pagination
 			interview_offset = 0;
 
-			// ✅ Reload default data (NO filters)
+			// Reload default data (NO filters)
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {
-					customer: cur_frm.doc.customer,
+					customer: frm.doc.customer,
 					interview_limit: interview_limit,
 					interview_offset: interview_offset,
 					search: "",
@@ -446,76 +446,6 @@ function render_customer_history(frm, data, append_interviews = false) {
 			});
 		});
 }
-window.viewFullFeedback = function (encodedText) {
-	const fullText = decodeURIComponent(encodedText);
-
-	const dialog = document.createElement("div");
-	dialog.style = `
-        position:fixed;
-        top:0;left:0;right:0;bottom:0;
-        background:rgba(0,0,0,0.5);
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        z-index:9999;
-    `;
-
-	dialog.innerHTML = `
-        <div style="
-            background:#fff;
-            padding:24px;
-            border-radius:12px;
-            width:700px;
-            max-width:95%;
-            max-height:80vh;
-            display:flex;
-            flex-direction:column;
-        ">
-            <h3 style="margin-bottom:12px;">Full Feedback</h3>
-
-            <div style="
-                overflow-y:auto;
-                padding-right:6px;
-                margin-bottom:15px;
-            ">
-                <p style="
-                    color:#334155;
-                    font-size:14px;
-                    line-height:1.6;
-                    word-break:break-word;
-                    white-space:pre-wrap;
-                "></p>
-            </div>
-
-            <div style="text-align:right;">
-                <button onclick="this.closest('[data-dialog]').remove()"
-                    style="
-                        padding:6px 14px;
-                        background:#260fea;
-                        color:#fff;
-                        border:none;
-                        border-radius:6px;
-                        cursor:pointer;
-                    ">
-                    Close
-                </button>
-            </div>
-        </div>
-    `;
-
-	dialog.setAttribute("data-dialog", "true");
-	// ✅ Close when clicking outside
-	dialog.addEventListener("click", function (e) {
-		if (!e.target.closest("#feedbackBox")) {
-			dialog.remove();
-		}
-	});
-
-	document.body.appendChild(dialog);
-
-	// ✅ Safe text injection (no HTML breaking)
-	dialog.querySelector("p").innerText = fullText;
-};
 window.viewFullFeedback = function (encodedText) {
 	const fullText = decodeURIComponent(encodedText);
 

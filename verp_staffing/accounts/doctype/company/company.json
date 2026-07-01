@@ -301,7 +301,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-06-26 17:42:03.364944",
+ "modified": "2026-07-01 16:11:16.688217",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",
@@ -331,6 +331,26 @@
    "role": "Account Person",
    "select": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

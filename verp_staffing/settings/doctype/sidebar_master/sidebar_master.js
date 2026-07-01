@@ -596,7 +596,7 @@ function user_has_page_access(page) {
 	return page.roles.some((role) => userRoles.includes(role));
 }
 
-// ─── LOAD PALETTE ────────────────────────────────────────────────────────────
+const HIDDEN_DOCTYPES = ["Lead Detail Form", "CRM Task", "Sidebar Master", "CRM Note", "CRM Event"];
 
 async function load_palette_items() {
 	sb_palette_items = [];
@@ -606,6 +606,10 @@ async function load_palette_items() {
 		const res = await frappe.call({ method: API.doctypes });
 		const doctypes = res?.message || [];
 		doctypes.forEach((dt) => {
+			if (!admin && HIDDEN_DOCTYPES.includes(dt.name)) {
+				return;
+			}
+
 			const key = sb_slug(dt.name);
 			const route = dt.issingle
 				? "/app/" + key + "/" + encodeURIComponent(dt.name)
@@ -748,7 +752,7 @@ function render_palette() {
 function add_item_to_canvas(item) {
 	const is_locked = item.type === "report" || item.type === "page";
 	// Carry roles for page-type items so they are persisted in config_json
-	const page_roles = item.type === "page" ? (CUSTOM_PAGE_ROLES[item.key] || []) : [];
+	const page_roles = item.type === "page" ? CUSTOM_PAGE_ROLES[item.key] || [] : [];
 	sb_sections.push({
 		_id: sb_uid(),
 		label: item.name,
@@ -784,7 +788,7 @@ function load_canvas_from_json(frm) {
 			s.roles && s.roles.length
 				? s.roles
 				: s.link_type === "page"
-					? (CUSTOM_PAGE_ROLES[s.key] || [])
+					? CUSTOM_PAGE_ROLES[s.key] || []
 					: [];
 		return {
 			_id: sb_uid(),
@@ -805,7 +809,7 @@ function load_canvas_from_json(frm) {
 				icon: c.icon || "icon-setting-gear",
 				shortcut: c.shortcut || "",
 				// child-level page roles (for future use)
-				roles: c.roles || (c.type === "page" ? (CUSTOM_PAGE_ROLES[c.key] || []) : []),
+				roles: c.roles || (c.type === "page" ? CUSTOM_PAGE_ROLES[c.key] || [] : []),
 			})),
 			_locked_type: is_locked,
 			_lock_label: is_locked ? (s.link_type === "report" ? "Report" : "Page") : null,
@@ -1121,7 +1125,7 @@ function make_children_zone(sec, sectionEl) {
 		sb_palette_drag_end();
 		if (sb_used_keys().has(item.key)) return;
 		// Carry roles for page-type children
-		const child_roles = item.type === "page" ? (CUSTOM_PAGE_ROLES[item.key] || []) : [];
+		const child_roles = item.type === "page" ? CUSTOM_PAGE_ROLES[item.key] || [] : [];
 		sec.children.push({
 			key: item.key,
 			name: item.name,

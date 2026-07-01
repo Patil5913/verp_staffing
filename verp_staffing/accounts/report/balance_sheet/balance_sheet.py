@@ -35,12 +35,6 @@ def execute(filters=None):
 
     return columns, data, None, chart, report_summary
 
-
-# ─────────────────────────────────────────────
-# AUTO-RESOLVE LATEST FISCAL YEAR FOR COMPANY
-# ─────────────────────────────────────────────
-
-
 def _get_latest_fiscal_year(company):
     if not company:
         return None
@@ -57,12 +51,6 @@ def _get_latest_fiscal_year(company):
         as_dict=True,
     )
     return rows[0].name if rows else None
-
-
-# ─────────────────────────────────────────────
-# VALIDATION
-# ─────────────────────────────────────────────
-
 
 def validate_filters(filters):
     if not filters.company:
@@ -86,12 +74,6 @@ def validate_filters(filters):
         if getdate(filters.from_date) > getdate(filters.to_date):
             frappe.throw(_("From Date cannot be greater than To Date."))
 
-
-# ─────────────────────────────────────────────
-# DATE RANGE HELPERS
-# ─────────────────────────────────────────────
-
-
 def get_from_to_dates(filters):
     if filters.filter_based_on == "Fiscal Year":
         from_fy = frappe.get_cached_value("Fiscal Year", filters.from_fiscal_year, "year_start_date")
@@ -99,7 +81,6 @@ def get_from_to_dates(filters):
         return getdate(from_fy), getdate(to_fy)
     else:
         return getdate(filters.from_date), getdate(filters.to_date)
-
 
 def get_fy_start_date(filters):
     """Get actual fiscal year start date for quarter/half-year labeling."""
@@ -110,7 +91,6 @@ def get_fy_start_date(filters):
             )
         )
     return getdate(filters.from_date)
-
 
 def get_period_date_ranges(filters):
     """
@@ -138,7 +118,6 @@ def get_period_date_ranges(filters):
         if periodicity == "Monthly":
             period_end = get_last_day(start)
             label = start.strftime("%b %Y")
-            delta = relativedelta(months=1)
 
         elif periodicity == "Quarterly":
             months_offset = (start.year - fy_start.year) * 12 + (
@@ -154,7 +133,6 @@ def get_period_date_ranges(filters):
                 )
             )
             label = "Q{0} {1}".format(quarter_num, fy_label)
-            delta = relativedelta(months=3)
 
         elif periodicity == "Half-Yearly":
             months_offset = (start.year - fy_start.year) * 12 + (
@@ -166,12 +144,10 @@ def get_period_date_ranges(filters):
                 datetime.date(half_end_first_day.year, half_end_first_day.month, 1)
             )
             label = "H{0} {1}".format(half_num, fy_label)
-            delta = relativedelta(months=6)
 
         else:
             period_end = end
             label = "Period"
-            delta = relativedelta(years=100)
 
         actual_end = min(getdate(period_end), end)
         period_list.append((label, start, actual_end))
@@ -181,12 +157,6 @@ def get_period_date_ranges(filters):
             break
 
     return period_list
-
-
-# ─────────────────────────────────────────────
-# COLUMNS
-# ─────────────────────────────────────────────
-
 
 def get_columns(filters):
     columns = [
@@ -225,12 +195,6 @@ def get_columns(filters):
 
     return columns
 
-
-# ─────────────────────────────────────────────
-# ACCOUNT TREE
-# ─────────────────────────────────────────────
-
-
 def get_accounts(company):
     return frappe.db.sql(
         """
@@ -245,12 +209,6 @@ def get_accounts(company):
         as_dict=True,
     )
 
-
-# ─────────────────────────────────────────────
-# GL BALANCE QUERY — company currency fields
-# ─────────────────────────────────────────────
-
-
 def get_gl_balances(filters, from_date, to_date, account_names):
     """
     Returns { account: {"debit": x, "credit": y} } in company currency.
@@ -261,14 +219,16 @@ def get_gl_balances(filters, from_date, to_date, account_names):
     if not account_names:
         return {}
 
-    placeholders = ", ".join(["%s"] * len(account_names))
+    values = [filters.company]
 
     conditions = [
         "gle.company = %s",
-        "gle.account IN ({0})".format(placeholders),
+        "gle.account IN ({', '.join(['%s'] * len(account_names))})",
         "gle.posting_date <= %s",
     ]
-    values = [filters.company] + list(account_names) + [to_date]
+    
+    values.extend(account_names)
+    values.append(to_date)
 
     if from_date:
         conditions.append("gle.posting_date >= %s")
@@ -282,28 +242,21 @@ def get_gl_balances(filters, from_date, to_date, account_names):
         else:
             conditions.append("gle.finance_book = %s")
         values.append(filters.finance_book)
-
-    rows = frappe.db.sql(
-        """
-        SELECT
-            gle.account,
-            SUM(gle.debit_in_company_currency)  AS debit,
-            SUM(gle.credit_in_company_currency) AS credit
-        FROM `tabGL Entry` gle
-        WHERE {cond}
-        GROUP BY gle.account
-    """.format(cond=" AND ".join(conditions)),
-        values,
-        as_dict=True,
+        
+    query = (
+        "SELECT "
+        "gle.account, "
+        "SUM(gle.debit_in_company_currency) AS debit, "
+        "SUM(gle.credit_in_company_currency) AS credit "
+        "FROM `tabGL Entry` gle "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " GROUP BY gle.account"
     )
 
+    rows = frappe.db.sql(query, values, as_dict=True)
+
     return {r.account: r for r in rows}
-
-
-# ─────────────────────────────────────────────
-# OPENING BALANCE MERGE  (Task 2f)
-# ─────────────────────────────────────────────
-
 
 def merge_opening_with_gl(opening_map, current_gl):
     """
@@ -337,12 +290,6 @@ def merge_opening_with_gl(opening_map, current_gl):
 
     return merged
 
-
-# ─────────────────────────────────────────────
-# NET BALANCE — sign is root_type aware
-# ─────────────────────────────────────────────
-
-
 def compute_net(account, gl_map, root_type=None):
     """
     Asset          : debit − credit  (positive = normal debit balance)
@@ -357,12 +304,6 @@ def compute_net(account, gl_map, root_type=None):
         return credit - debit
     return debit - credit
 
-
-# ─────────────────────────────────────────────
-# RECURSIVE GROUP TOTAL
-# ─────────────────────────────────────────────
-
-
 def get_group_total(account_name, gl_map, children_map, acc_map):
     acc = acc_map.get(account_name) or {}
     root_type = acc.get("root_type")
@@ -370,12 +311,6 @@ def get_group_total(account_name, gl_map, children_map, acc_map):
     for child in children_map.get(account_name, []):
         total += get_group_total(child, gl_map, children_map, acc_map)
     return total
-
-
-# ─────────────────────────────────────────────
-# REPORT SUMMARY (shown above chart)
-# ─────────────────────────────────────────────
-
 
 def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
     if not period_gl:
@@ -445,12 +380,6 @@ def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
             "indicator": "Green" if abs(balance_check) < 0.01 else "Red",
         },
     ]
-
-
-# ─────────────────────────────────────────────
-# MAIN DATA BUILDER
-# ─────────────────────────────────────────────
-
 
 def get_data(filters):
     accounts = get_accounts(filters.company)
@@ -643,12 +572,6 @@ def get_data(filters):
     chart = get_chart_data(t_assets, t_liab, t_equity, period_list)
 
     return data, chart, report_summary
-
-
-# ─────────────────────────────────────────────
-# CHART
-# ─────────────────────────────────────────────
-
 
 def get_chart_data(t_assets, t_liab, t_equity, period_list):
     labels = [p[0] for p in period_list]

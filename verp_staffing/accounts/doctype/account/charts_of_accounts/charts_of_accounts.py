@@ -6,7 +6,7 @@ import frappe
 from frappe.utils import cstr
 from frappe.utils.nestedset import rebuild_tree
 from unidecode import unidecode
-
+from pathlib import Path
 
 ACCOUNT_FIELDS = {
     "account_name",
@@ -182,35 +182,45 @@ def identify_is_group(child):
 
 @frappe.whitelist()
 def get_chart(chart_template, existing_company=None):
-    chart = {}
     if existing_company:
         return get_account_tree_from_existing_company(existing_company)
 
-    elif chart_template == "Standard":
+    if chart_template == "Standard":
         from verp_staffing.accounts.doctype.account.charts_of_accounts.verified import (
             standard_chart_of_accounts,
         )
 
         return standard_chart_of_accounts.get()
-    elif chart_template == "Standard with Numbers":
+
+    if chart_template == "Standard with Numbers":
         from verp_staffing.accounts.doctype.account.charts_of_accounts.verified import (
             standard_chart_of_accounts_with_account_number,
         )
 
         return standard_chart_of_accounts_with_account_number.get()
-    else:
-        folders = ("verified",)
-        if frappe.local.flags.allow_unverified_charts:
-            folders = ("verified", "unverified")
-        for folder in folders:
-            path = os.path.join(os.path.dirname(__file__), folder)
-            for fname in os.listdir(path):
-                fname = frappe.as_unicode(fname)
-                if fname.endswith(".json"):
-                    with open(os.path.join(path, fname)) as f:
-                        chart = f.read()
-                        if chart and json.loads(chart).get("name") == chart_template:
-                            return json.loads(chart).get("tree")
+
+    folders = ("verified",)
+    if frappe.local.flags.allow_unverified_charts:
+        folders = ("verified", "unverified")
+
+    base_dir = Path(__file__).resolve().parent
+
+    for folder in folders:
+        folder_path = (base_dir / folder).resolve()
+
+        for file_path in folder_path.iterdir():
+            if file_path.suffix != ".json":
+                continue
+
+            # Prevent path traversal / symlink escape
+            if folder_path not in file_path.resolve().parents:
+                continue
+
+            with file_path.open(encoding="utf-8") as f:
+                chart = json.load(f)
+
+            if chart.get("name") == chart_template:
+                return chart.get("tree")
 
 
 @frappe.whitelist()
@@ -230,23 +240,35 @@ def get_charts_for_country(country, with_standard=False):
         folders = ("verified",)
         if frappe.local.flags.allow_unverified_charts:
             folders = ("verified", "unverified")
+            
+        base_dir = Path(__file__).resolve().parent
 
         for folder in folders:
-            path = os.path.join(os.path.dirname(__file__), folder)
-            if not os.path.exists(path):
+            folder_path = (base_dir / folder).resolve()
+
+            if not folder_path.exists():
                 continue
 
-            for fname in os.listdir(path):
-                fname = frappe.as_unicode(fname)
+            for file_path in folder_path.iterdir():
                 if (
-                    fname.startswith(country_code) or fname.startswith(country)
-                ) and fname.endswith(".json"):
-                    with open(os.path.join(path, fname)) as f:
-                        _get_chart_name(f.read())
+                    file_path.suffix != ".json"
+                    or not (
+                        file_path.name.startswith(country_code)
+                        or file_path.name.startswith(country)
+                    )
+                ):
+                    continue
 
-    # if more than one charts, returned then add the standard
+                # Prevent path traversal / symlink escape
+                if folder_path not in file_path.resolve().parents:
+                    continue
+
+                with file_path.open(encoding="utf-8") as f:
+                    _get_chart_name(json.load(f))
+
+    # if more than one chart is returned, then add the standard charts
     if len(charts) != 1 or with_standard:
-        charts += ["Standard", "Standard with Numbers"]
+        charts.extend(["Standard", "Standard with Numbers"])
 
     return charts
 

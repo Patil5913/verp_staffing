@@ -6,7 +6,6 @@ from frappe.utils import getdate, cint
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
 def execute(filters=None):
     filters = filters or {}
     periodicity = filters.get("periodicity")
@@ -15,7 +14,6 @@ def execute(filters=None):
         return _periodic_report(filters)
 
     return _customer_report(filters)
-
 
 def _build_hierarchy_clause(values):
     """
@@ -33,9 +31,7 @@ def _build_hierarchy_clause(values):
     placeholders = _build_in_placeholders("emp", allowed, values)
     return f" AND m.assign_to IN ({placeholders})"
 
-
 _QUARTER_LABELS = {1: "Jan-Mar", 2: "Apr-Jun", 3: "Jul-Sep", 4: "Oct-Dec"}
-
 
 def _periodic_report(filters):
     """
@@ -98,7 +94,6 @@ def _periodic_report(filters):
             period_label="Year",
         )
 
-
 def _format_quarterly(rows):
     return [
         frappe._dict(
@@ -107,7 +102,6 @@ def _format_quarterly(rows):
         )
         for r in rows
     ]
-
 
 def _build_periodic(
     values,
@@ -118,20 +112,24 @@ def _build_periodic(
     period_label,
     formatter=None,
 ):
+    query = (
+        "SELECT "
+        + select_clause
+        + " FROM `tabInterview` i "
+        "INNER JOIN `tabInterview Round` ir "
+        "ON ir.parent = i.name "
+        "INNER JOIN `tabMarketing` m "
+        "ON m.name = i.marketing_link "
+        "WHERE ir.date_of_interview BETWEEN %(year_start)s AND %(year_end)s "
+        + hierarchy_clause
+        + " GROUP BY "
+        + group_by_clause
+        + " ORDER BY "
+        + order_by_clause
+    )
+
     rows = frappe.db.sql(
-        f"""
-        SELECT
-            {select_clause}
-        FROM `tabInterview` i
-        INNER JOIN `tabInterview Round` ir
-            ON ir.parent = i.name
-        INNER JOIN `tabMarketing` m
-            ON m.name = i.marketing_link
-        WHERE ir.date_of_interview BETWEEN %(year_start)s AND %(year_end)s
-        {hierarchy_clause}
-        GROUP BY {group_by_clause}
-        ORDER BY {order_by_clause}
-        """,
+        query,
         values,
         as_dict=True,
     )
@@ -161,7 +159,6 @@ def _build_periodic(
 
     return columns, rows, None, chart
 
-
 def _empty_periodic(periodicity):
     label = {"Monthly": "Month", "Quarterly": "Quarter", "Yearly": "Year"}.get(
         periodicity, "Period"
@@ -175,11 +172,6 @@ def _empty_periodic(periodicity):
         None,
         {},
     )
-
-
-# ---------------------------------------------------------------------------
-# Customer report (default view)
-# ---------------------------------------------------------------------------
 
 def _customer_report(filters):
     """
@@ -208,25 +200,23 @@ def _customer_report(filters):
     from_date = filters.get("from_date") or f"{today.year}-01-01"
     to_date   = filters.get("to_date")   or f"{today.year}-12-31"
 
+    values["from_date"] = from_date
+    values["to_date"] = to_date
+
     conditions = [
         "ir.date_of_interview >= %(from_date)s",
         "ir.date_of_interview <= %(to_date)s",
     ]
-    values["from_date"] = from_date
-    values["to_date"]   = to_date
 
     if filters.get("customer"):
         conditions.append("c.name = %(customer)s")
         values["customer"] = filters["customer"]
 
-    where_clause = "WHERE " + " AND ".join(conditions)
-
-    data = frappe.db.sql(
-        f"""
+    query = """
         SELECT
-            c.name          AS customer,
-            c.name1         AS name1,
-            COUNT(ir.name)  AS interviews
+            c.name AS customer,
+            c.name1 AS name1,
+            COUNT(ir.name) AS interviews
         FROM `tabInterview` i
         INNER JOIN `tabInterview Round` ir
             ON ir.parent = i.name
@@ -234,12 +224,26 @@ def _customer_report(filters):
             ON m.name = i.marketing_link
         INNER JOIN `tabCustomer` c
             ON c.name = m.customer
-        {where_clause}
-        {hierarchy_clause}
-        GROUP BY c.name, c.name1
-        ORDER BY interviews DESC
+    """
+
+    query += " WHERE "
+    query += " AND ".join(conditions)
+
+    if hierarchy_clause:
+        query += "\n"
+        query += hierarchy_clause
+
+    query += """
+        GROUP BY
+            c.name,
+            c.name1
+        ORDER BY
+            interviews DESC
         LIMIT %(limit)s
-        """,
+    """
+
+    data = frappe.db.sql(
+        query,
         values,
         as_dict=True,
     )
@@ -260,7 +264,6 @@ def _customer_report(filters):
     }
 
     return _customer_columns(), data, None, chart
-
 
 def _customer_columns():
     return [
@@ -285,7 +288,6 @@ def _customer_columns():
         },
     ]
 
-
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_customers_with_interviews(doctype, txt, searchfield, start, page_len, filters):
@@ -309,21 +311,19 @@ def get_customers_with_interviews(doctype, txt, searchfield, start, page_len, fi
         placeholders = _build_in_placeholders("emp", allowed, values)
         conditions.append(f"m.assign_to IN ({placeholders})")
 
-    where_clause = " AND ".join(conditions)
-
-    return frappe.db.sql(
-        f"""
-        SELECT DISTINCT
-            c.name,
-            c.name1
-        FROM `tabCustomer` c
-        INNER JOIN `tabMarketing` m
-            ON m.customer = c.name
-        INNER JOIN `tabInterview` i
-            ON i.marketing_link = m.name
-        WHERE {where_clause}
-        ORDER BY c.name1
-        LIMIT %(start)s, %(page_len)s
-        """,
-        values,
+    query = (
+        "SELECT DISTINCT "
+        "c.name, "
+        "c.name1 "
+        "FROM `tabCustomer` c "
+        "INNER JOIN `tabMarketing` m "
+        "ON m.customer = c.name "
+        "INNER JOIN `tabInterview` i "
+        "ON i.marketing_link = m.name "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY c.name1 "
+        "LIMIT %(start)s, %(page_len)s"
     )
+
+    return frappe.db.sql(query, values)

@@ -295,21 +295,29 @@ def notify_assignees(doc, service, customer):
     if not emp_user:
         return
 
-    template_name = "New Candidate Assigned"
-    if frappe.db.exists("Email Template", template_name):
-        template = frappe.get_doc("Email Template", template_name)
+    subject = f"New Candidate Assigned ({service})"
+    message = (
+        "You have been assigned a new candidate.<br><br>"
+        f"<strong>Customer:</strong> {customer}<br>"
+        f"<strong>Service:</strong> {service}"
+    )
+    
+    template = frappe.db.get_value(
+        "Email Template",
+        "New Candidate Assigned",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+    if template:
         context = {
             "service": service,
             "customer": customer,
         }
+
         subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(template.response_html or template.response, context)
-    else:
-        subject = f"New Candidate Assigned ({service})"
-        message = (
-            f"You have been assigned a new candidate.\n\n"
-            f"Customer: {customer}\n"
-            f"Service: {service}"
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
         )
 
     send_notification(

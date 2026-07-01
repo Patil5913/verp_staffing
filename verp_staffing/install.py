@@ -43,7 +43,7 @@ ROLES = [
     "_show_accounting",
     "_show_sidebar_master",
     "_show_role_permission_manager",
-    "Technical Person"
+    "Technical Person",
 ]
 
 PERM_FIELDS = [
@@ -68,11 +68,18 @@ ROLE_PERMISSIONS = {
         "Communication": ["read", "create", "email"],
         "Email Account": ["read"],
     },
-    
     "_show_sidebar_master": {
         "Sidebar Master": ["select", "read", "write", "create"],
         "Comment": ["select", "read", "create", "write", "delete"],
         "File": ["select", "read", "create", "write"],
+    },
+    "HR": {
+        "User": ["select", "read", "write", "create"],
+        "Role": ["select", "read", "write", "create"],
+    },
+    "HR Manager": {
+        "User": ["select", "read", "write", "create"],
+        "Role": ["select", "read", "write", "create"],
     },
 }
 
@@ -162,9 +169,7 @@ HIERARCHY_DATA = [
             },
             {
                 "parent_role": "Technical Coordinator",
-                "child_roles": [
-                    "Technical Person"
-                ],
+                "child_roles": ["Technical Person"],
             },
         ],
         "auto_assign_config": {"role": "Technical Coordinator"},
@@ -1724,8 +1729,6 @@ def seed_master_sidebar_config():
 
     doc.insert(ignore_permissions=True)
 
-    frappe.db.commit()
-
 
 import requests
 from frappe.utils.file_manager import save_file
@@ -1780,7 +1783,6 @@ def setup_navbar_settings():
 
     if updated:
         navbar.save(ignore_permissions=True)
-        frappe.db.commit()
 
 
 def seed_website_setting():
@@ -1859,7 +1861,6 @@ def seed_website_setting():
 
     if updated:
         website.save(ignore_permissions=True)
-        frappe.db.commit()
 
 
 def seed_sales_stages():
@@ -1903,8 +1904,6 @@ def create_interview_statuses():
                 }
             )
             doc.insert(ignore_permissions=True)
-
-    frappe.db.commit()
 
 
 def seed_party_types():
@@ -1996,8 +1995,6 @@ def seed_form_tours():
 
         tour.save(ignore_permissions=True)
 
-    frappe.db.commit()
-
 
 def create_all_roles():
     """Create role if it doesn't already exist."""
@@ -2035,7 +2032,6 @@ def seed_employee_departments():
                 doc.append("role", {"role": r})
             doc.insert(ignore_permissions=True)
             print(f"Created Department: {department_name}")
-    frappe.db.commit()
 
 
 PROTECTED_DOCTYPES = {
@@ -2069,7 +2065,6 @@ def assign_permissions_to_roles(role_permissions: dict):
     doctypes = set(frappe.get_all("DocType", pluck="name"))
 
     for role, permissions in role_permissions.items():
-
         if role == "System Manager" or role == "Administrator":
             continue
 
@@ -2077,7 +2072,6 @@ def assign_permissions_to_roles(role_permissions: dict):
             continue
 
         for doctype, config in permissions.items():
-
             if doctype in PROTECTED_DOCTYPES:
                 continue
 
@@ -2158,7 +2152,6 @@ def assign_permissions_to_roles(role_permissions: dict):
     frappe.clear_cache()
 
 
-
 def seed_hierarchy():
     doctype = "Hierarchy"
 
@@ -2181,29 +2174,30 @@ def seed_hierarchy():
             doc = frappe.get_doc(payload)
             doc.insert(ignore_permissions=True)
 
-    frappe.db.commit()
-
 
 def remove_default_workspaces():
     print("Hiding all workspaces except CRM and Users...")
 
-    # Names of workspaces to keep visible
     keep_list = [
         "Email Inbox",
         "Pending PE Requests",
     ]
 
-    # Hide all others
-    frappe.db.sql(
-        """
+    placeholders = ", ".join(["%s"] * len(keep_list))
+
+    query = """
         UPDATE `tabWorkspace`
         SET is_hidden = 1
-        WHERE name NOT IN ({})
-    """.format(", ".join(["%s"] * len(keep_list))),
+        WHERE name NOT IN (
+    """
+
+    query += placeholders
+    query += ")"
+
+    frappe.db.sql(
+        query,
         tuple(keep_list),
     )
-
-    frappe.db.commit()
 
     print("Workspaces updated successfully.")
 
@@ -2295,8 +2289,6 @@ def seed_bulk_users_with_password():
 
     finally:
         frappe.flags.in_import = False
-
-    frappe.db.commit()
 
     print(f"Created {created} users, skipped {skipped} existing users.")
     return {
@@ -2421,7 +2413,6 @@ def seed_employees_with_hierarchy(HIERARCHY_DATA):
                 workspace_roles = DEPARTMENT_WORKSPACE_ROLE_MAP.get(department, [])
                 if workspace_roles:
                     ensure_user_has_workspace_roles(child.user, workspace_roles)
-    frappe.db.commit()
 
 
 def ensure_user_has_workspace_roles(user_email: str, roles: list[str]):

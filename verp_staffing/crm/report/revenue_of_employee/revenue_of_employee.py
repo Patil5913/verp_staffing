@@ -6,14 +6,12 @@ from dateutil.relativedelta import relativedelta
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
 def execute(filters=None):
     filters = filters or {}
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -56,7 +54,6 @@ def get_columns():
         },
     ]
     
-
 def _get_sales_employees(employee_names):
     """
     Given a list of employee names (or None for "all"), return a list of dicts:
@@ -101,7 +98,6 @@ def _get_sales_employees(employee_names):
     requested = set(employee_names)
     return [e for e in cached if e["name"] in requested]
 
-
 def _resolve_dates(filters):
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
@@ -120,7 +116,6 @@ def _resolve_dates(filters):
             end_date = today
 
     return start_date, end_date
-
 
 def get_data(filters):
     user = frappe.session.user
@@ -173,18 +168,24 @@ def get_data(filters):
     # -- Revenue query -------------------------------------------------------
     # No JOIN to tabEmployee here — avoids the multi-Assignment-Detail
     # duplication bug. Employee metadata is merged from the cache in Python.
-    revenue_rows = frappe.db.sql(
-        f"""
+    query = """
         SELECT
-            so.owner                AS user,
-            SUM(cpt.amount)         AS total_revenue
+            so.owner AS user,
+            SUM(cpt.amount) AS total_revenue
         FROM `tabCustomer Payment Terms` cpt
         INNER JOIN `tabSales Order` so
             ON cpt.parent = so.name
-        {where_clause}
+    """
+
+    query += where_clause
+
+    query += """
         GROUP BY so.owner
         ORDER BY total_revenue DESC
-        """,
+    """
+
+    revenue_rows = frappe.db.sql(
+        query,
         values,
         as_dict=True,
     )
@@ -210,7 +211,6 @@ def get_data(filters):
 
     return result
 
-
 def get_chart(data):
     if not data:
         return {}
@@ -229,7 +229,6 @@ def get_chart(data):
         "colors": ["#28a745"],
     }
 
-
 @frappe.whitelist()
 def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
     """
@@ -245,7 +244,7 @@ def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, fi
     }
 
     conditions = [
-        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        "tabEmployee.name LIKE %(txt)s",
         """
         EXISTS (
             SELECT 1
@@ -263,13 +262,19 @@ def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, fi
         placeholders = _build_in_placeholders("se", allowed, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
 
-    return frappe.db.sql(
-        f"""
-        SELECT tabEmployee.name, tabEmployee.employee_name
+    query = """
+        SELECT
+            tabEmployee.name,
+            tabEmployee.employee_name
         FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
+        WHERE
+    """
+
+    query += " AND ".join(conditions)
+
+    query += """
         ORDER BY tabEmployee.employee_name
         LIMIT %(start)s, %(page_len)s
-        """,
-        values,
-    )
+    """
+
+    return frappe.db.sql(query, values)

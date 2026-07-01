@@ -75,8 +75,8 @@ def get_expiry_timestamp():
         return None
 
     try:
-        hours, minutes = map(int, value.split(":"))
-    except Exception:
+        hours, minutes = [int(part) for part in value.split(":")]
+    except (ValueError, AttributeError):
         return None
     total_seconds = hours * 3600 + minutes * 60
     expiry_dt = datetime.utcnow() + timedelta(seconds=total_seconds)
@@ -111,30 +111,55 @@ def generate_form_url(
 @frappe.whitelist()
 def send_agreement_notification(recipient, sales_order, customer, agreement):
     try:
-        doc = frappe.get_doc("Agreement", agreement)
+        # Fetch Agreement
+        agreement_doc = frappe.get_doc("Agreement", agreement)
+        
+        if not agreement_doc.pdf:
+            frappe.throw("Agreement PDF is missing.")
 
-        if not doc.pdf:
-            frappe.throw("Agreement PDF missing")
+        # Fetch File record
+        file_name = frappe.db.get_value(
+            "File",
+            {"file_url": agreement_doc.pdf},
+            "name",
+        )
 
-        file_path = frappe.get_site_path("public", doc.pdf.lstrip("/"))
+        if not file_name:
+            frappe.throw("Agreement PDF record not found.")
 
-        if not os.path.exists(file_path):
-            frappe.throw("PDF file not found on server")
+        file_doc = frappe.get_doc("File", file_name)
+        file_path = file_doc.get_full_path()
 
+        if not os.path.isfile(file_path):
+            frappe.throw("Agreement PDF file not found on the server.")
+
+        # Generate signing URL
         form_url = generate_form_url(
-            recipient, sales_order, customer, agreement, doc.pdf, ia=True
+            recipient,
+            sales_order,
+            customer,
+            agreement,
+            agreement_doc.pdf,
+            ia=True,
         )
 
         # Read PDF
-        with open(file_path, "rb") as f:
-            file_content = f.read()
+        with open(file_path, "rb") as pdf_file:
+            file_content = pdf_file.read()
 
-        # Try to use Email Template
-        template_name = "Document Signature and Certificate"
+        # Default email content
+        subject = "Agreement for Review and Signature"
+        message = f"Form: {form_url}"
 
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc("Email Template", template_name)
+        # Load email template if available
+        template = frappe.db.get_value(
+            "Email Template",
+            "Document Signature and Certificate",
+            ["subject", "response_html"],
+            as_dict=True,
+        )
 
+        if template:
             context = {
                 "recipient": recipient,
                 "sales_order": sales_order,
@@ -144,21 +169,19 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
             }
 
             subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html, context)
+            message = frappe.render_template(
+                template.response_html,
+                context,
+            )
 
-        else:
-            # Fallback (your current behavior)
-            subject = "Agreement for Review and Signature"
-            message = f"Form: {form_url}"
-
-        # Send
+        # Send notification
         send_notification(
             recipients=[recipient],
             subject=subject,
             message=message,
             attachments=[
                 {
-                    "fname": os.path.basename(doc.pdf),
+                    "fname": file_doc.file_name or os.path.basename(file_path),
                     "fcontent": file_content,
                 }
             ],
@@ -167,12 +190,14 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
             now=False,
         )
 
-        return {"success": "Agreement sent"}
+        return {"success": "Agreement sent successfully."}
 
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "Agreement Notification Error")
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Agreement Notification Error",
+        )
         raise
-
 
 @frappe.whitelist()
 def send_existing_agreement(agreement):
@@ -226,87 +251,97 @@ def send_existing_agreement(agreement):
 
         return {"success": True}
 
-    except Exception as e:
+    except Exception:
         frappe.log_error(frappe.get_traceback(), "Send Agreement Error")
         frappe.throw(
             _("Failed to send agreement {0}").format(doc.name)
         )
         raise
-
-
-import frappe
+            
 from frappe.utils import time_diff_in_hours
 
 def send_agreement_reminders():
-    frappe.logger().info("REMINDER FUNCTION STARTED")
+    current_time = now_datetime()
 
     agreements = frappe.get_all(
         "Agreement",
         filters={"status": "Sent For Signature"},
-        fields=["name", "sent_on", "last_reminder_sent", "sales_order"]
+        fields=[
+            "name",
+            "status",
+            "sent_on",
+            "last_reminder_sent",
+            "sales_order",
+        ],
     )
 
-    # fetch template once outside the loop
-    template_name = "Agreement Signature Reminder"
-    template = frappe.get_doc("Email Template", template_name) if frappe.db.exists("Email Template", template_name) else None
+    # Load email template once
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Signature Reminder",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
 
-    for ag in agreements:
-        frappe.logger().info(f"Processing Agreement: {ag.name}")
-        if not ag.sent_on:
+    for agreement in agreements:
+        if not agreement.sent_on:
             continue
 
-        doc = frappe.get_doc("Agreement", ag.name)
+        reference_time = agreement.last_reminder_sent or agreement.sent_on
 
-        # decide reference time
-        reference_time = ag.last_reminder_sent or ag.sent_on
-        hours_passed = time_diff_in_hours(now_datetime(), reference_time)
+        if time_diff_in_hours(current_time, reference_time) < 24:
+            continue
 
-        # check 24 hours passed
-        if hours_passed >= 24:
-            # safety check
-            if doc.status != "Sent For Signature":
-                continue
+        so = frappe.get_doc("Sales Order", agreement.sales_order)
+        recipient = get_customer_email(so.customer)
 
-            so = frappe.get_doc("Sales Order", doc.sales_order)
-            recipient = get_customer_email(so.customer)
+        if not recipient:
+            frappe.log_error(
+                f"No customer email found for Sales Order {agreement.sales_order}",
+                "Agreement Reminder",
+            )
+            continue
 
-            if template:
-                context = {
-                    "agreement": doc.name,
-                    "sales_order": so.name,
-                }
-                subject = frappe.render_template(template.subject, context)
-                message = frappe.render_template(template.response_html or template.response, context)
-            else:
-                subject = "Reminder: Agreement Pending Your Signature"
-                message = (
-                    f"This is a reminder that the agreement is still pending signature.\n\n"
-                    f"Agreement: {doc.name}\n"
-                    f"Sales Order: {so.name}\n\n"
-                    f"Please take necessary action."
-                )
+        subject = "Reminder: Agreement Pending Your Signature"
+        message = (
+            "This is a reminder that your agreement is still pending signature.<br><br>"
+            f"<strong>Agreement:</strong> {agreement.name}<br>"
+            f"<strong>Sales Order:</strong> {agreement.sales_order}<br><br>"
+            "Please review and sign the agreement at your earliest convenience."
+        )
 
-            # SEND EMAIL
-            send_notification(
-                recipients=[recipient],
-                subject=subject,
-                message=message,
-                reference_doctype="Sales Order",
-                reference_name=so.name,
-                send_email=1,
-                send_system=0,
+        if template:
+            context = {
+                "agreement": agreement.name,
+                "sales_order": agreement.sales_order,
+            }
+
+            subject = frappe.render_template(template.subject, context)
+            message = frappe.render_template(
+                template.response_html or template.response,
+                context,
             )
 
-            # update last reminder timestamp
-            frappe.db.set_value(
-                "Agreement",
-                doc.name,
-                "last_reminder_sent",
-                now_datetime(),
-                update_modified=False
-            )
-            frappe.db.commit()
-            frappe.logger().info(f"Reminder sent for Agreement {doc.name}")
+        send_notification(
+            recipients=[recipient],
+            subject=subject,
+            message=message,
+            reference_doctype="Sales Order",
+            reference_name=agreement.sales_order,
+            send_email=1,
+            send_system=0,
+        )
+
+        frappe.db.set_value(
+            "Agreement",
+            agreement.name,
+            "last_reminder_sent",
+            current_time,
+            update_modified=False,
+        )
+        
+from frappe.utils.file_manager import get_file_path
+
 # Final submit
 @frappe.whitelist()
 def submit_and_generate(sales_order, template, data, send_email=0):
@@ -349,9 +384,6 @@ def submit_and_generate(sales_order, template, data, send_email=0):
     # OPTIONAL SEND
     if int(send_email):
         send_existing_agreement(agreement.name)
-
-    frappe.db.commit()
-
     return {"agreement": agreement.name, "file_url": url}
 
 
@@ -363,8 +395,6 @@ def get_template_path(template):
 
 def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=False):
     import io
-    import os
-    import frappe
     from pdfrw import PdfReader, PdfWriter, PageMerge
     from reportlab.pdfgen import canvas
     from reportlab.lib.utils import ImageReader

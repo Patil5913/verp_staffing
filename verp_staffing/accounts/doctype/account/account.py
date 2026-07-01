@@ -340,19 +340,23 @@ class Account(NestedSet):
 		if not updates:
 			return
 
+		allowed_fields = {"report_type", "root_type"}
+
+		if not set(updates).issubset(allowed_fields):
+			frappe.throw(_("Invalid update fields."))
+
 		set_clause = ", ".join(f"`{field}` = %s" for field in updates)
+
+		query = (
+			"UPDATE `tabAccount` "
+			f"SET {set_clause} "
+			"WHERE lft > %s AND rgt < %s"
+		)
 
 		values.extend(updates.values())
 		values.extend([self.lft, self.rgt])
 
-		frappe.db.sql(
-			f"""
-			UPDATE `tabAccount`
-			SET {set_clause}
-			WHERE lft > %s AND rgt < %s
-			""",
-			values,
-		)
+		frappe.db.sql(query, values)
 
 	def validate_mandatory(self):
 		if not self.root_type:

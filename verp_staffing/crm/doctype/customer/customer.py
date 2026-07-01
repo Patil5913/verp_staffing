@@ -57,8 +57,7 @@ class Customer(Document):
 
         # Link Customer → Lead Details in BOTH cases
         if lead_detail_name:
-            self.lead_details = lead_detail_name
-            self.db_update()
+            self.db_set("lead_details", lead_detail_name)
 
     def validate(self):
         if self.stage:
@@ -70,7 +69,9 @@ class Customer(Document):
 
 @frappe.whitelist()
 def get_employee_department():
-    employee_name = frappe.db.get_value("Employee", {"user": frappe.session.user}, "name")
+    employee_name = frappe.db.get_value(
+        "Employee", {"user": frappe.session.user}, "name"
+    )
 
     if not employee_name:
         return None
@@ -124,6 +125,7 @@ def get_forwardable_departments(customer):
 
     return list(options)
 
+
 def get_services_for_customer(customer):
     return frappe.db.sql(
         """
@@ -144,12 +146,28 @@ def get_services_for_customer(customer):
         pluck=True,
     )
 
+
 def is_all_services_completed(customer, services):
     for service in services:
         if not is_service_completed(service, customer):
             return False
 
     return True
+
+
+ALLOWED_SERVICE_DOCTYPES = {
+    "Resume",
+    "RUC",
+    "JDC",
+    "Training",
+    "Cover Letter",
+    "Technical Other Services",
+    "Marketing Other Services",
+    "Other Services",
+    "Marketing",
+    "CR",
+    "Onboardings",
+}
 
 
 def is_service_completed(service, customer):
@@ -159,44 +177,40 @@ def is_service_completed(service, customer):
     doctype = SERVICE_DOCTYPE_MAP.get(service_key)
 
     if not doctype:
-        parents = frappe.db.sql(
-            """
-        SELECT parent FROM `tabDepartment Service`
-        WHERE service_name = %s
-        """,
-            (service,),
-            as_dict=True,
+        parent = frappe.db.get_value(
+            "Department Service",
+            {"service_name": service},
+            "parent",
         )
 
-        if not parents:
+        if not parent:
             frappe.throw(f"No department found for service {service}")
 
-        department = parents[0].parent
-
-        if department == "Technical":
+        if parent == "Technical":
             doctype = "Technical Other Services"
-        elif department == "Marketing":
+        elif parent == "Marketing":
             doctype = "Marketing Other Services"
         else:
             doctype = "Other Services"
 
-        # check if record exists
-    doc = frappe.db.sql(
-        f"""
-            SELECT status
-            FROM `tab{doctype}`
-            WHERE customer = %s
-            ORDER BY creation DESC
-            LIMIT 1
-            """,
-        customer,
+    if doctype not in ALLOWED_SERVICE_DOCTYPES:
+        frappe.throw("Invalid service DocType.")
+
+    query = (
+        "SELECT status "
+        f"FROM `tab{doctype}` "
+        "WHERE customer = %(customer)s "
+        "ORDER BY creation DESC "
+        "LIMIT 1"
+    )
+
+    result = frappe.db.sql(
+        query,
+        {"customer": customer},
         as_dict=True,
     )
 
-    if len(doc) > 0 and doc[0].status == "Completed":
-        return True
-    else:
-        return False
+    return bool(result and result[0].status == "Completed")
 
 
 def check_CR_Onboarding_departments_active(customer):
@@ -338,10 +352,7 @@ def send_portal_link(customer, customer_name):
     portal_link = f"{base_url}/customer?t={token}"
 
     # STEP 5: send email
-    email_template = frappe.get_doc(
-        "Email Template",
-        "Customer Portal Link"
-    )
+    email_template = frappe.get_doc("Email Template", "Customer Portal Link")
 
     message = frappe.render_template(
         email_template.response_html,
