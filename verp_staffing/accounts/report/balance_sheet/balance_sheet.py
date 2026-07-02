@@ -35,6 +35,7 @@ def execute(filters=None):
 
     return columns, data, None, chart, report_summary
 
+
 def _get_latest_fiscal_year(company):
     if not company:
         return None
@@ -51,6 +52,7 @@ def _get_latest_fiscal_year(company):
         as_dict=True,
     )
     return rows[0].name if rows else None
+
 
 def validate_filters(filters):
     if not filters.company:
@@ -74,13 +76,19 @@ def validate_filters(filters):
         if getdate(filters.from_date) > getdate(filters.to_date):
             frappe.throw(_("From Date cannot be greater than To Date."))
 
+
 def get_from_to_dates(filters):
     if filters.filter_based_on == "Fiscal Year":
-        from_fy = frappe.get_cached_value("Fiscal Year", filters.from_fiscal_year, "year_start_date")
-        to_fy = frappe.get_cached_value("Fiscal Year", filters.to_fiscal_year, "year_end_date")
+        from_fy = frappe.get_cached_value(
+            "Fiscal Year", filters.from_fiscal_year, "year_start_date"
+        )
+        to_fy = frappe.get_cached_value(
+            "Fiscal Year", filters.to_fiscal_year, "year_end_date"
+        )
         return getdate(from_fy), getdate(to_fy)
     else:
         return getdate(filters.from_date), getdate(filters.to_date)
+
 
 def get_fy_start_date(filters):
     """Get actual fiscal year start date for quarter/half-year labeling."""
@@ -91,6 +99,7 @@ def get_fy_start_date(filters):
             )
         )
     return getdate(filters.from_date)
+
 
 def get_period_date_ranges(filters):
     """
@@ -158,6 +167,7 @@ def get_period_date_ranges(filters):
 
     return period_list
 
+
 def get_columns(filters):
     columns = [
         {
@@ -195,6 +205,7 @@ def get_columns(filters):
 
     return columns
 
+
 def get_accounts(company):
     return frappe.db.sql(
         """
@@ -208,6 +219,7 @@ def get_accounts(company):
         company,
         as_dict=True,
     )
+
 
 def get_gl_balances(filters, from_date, to_date, account_names):
     """
@@ -223,10 +235,10 @@ def get_gl_balances(filters, from_date, to_date, account_names):
 
     conditions = [
         "gle.company = %s",
-        "gle.account IN ({', '.join(['%s'] * len(account_names))})",
+        f"gle.account IN ({', '.join(['%s'] * len(account_names))})",
         "gle.posting_date <= %s",
     ]
-    
+
     values.extend(account_names)
     values.append(to_date)
 
@@ -242,21 +254,20 @@ def get_gl_balances(filters, from_date, to_date, account_names):
         else:
             conditions.append("gle.finance_book = %s")
         values.append(filters.finance_book)
-        
+
     query = (
         "SELECT "
         "gle.account, "
         "SUM(gle.debit_in_company_currency) AS debit, "
         "SUM(gle.credit_in_company_currency) AS credit "
         "FROM `tabGL Entry` gle "
-        "WHERE "
-        + " AND ".join(conditions)
-        + " GROUP BY gle.account"
+        "WHERE " + " AND ".join(conditions) + " GROUP BY gle.account"
     )
 
     rows = frappe.db.sql(query, values, as_dict=True)
 
     return {r.account: r for r in rows}
+
 
 def merge_opening_with_gl(opening_map, current_gl):
     """
@@ -290,6 +301,7 @@ def merge_opening_with_gl(opening_map, current_gl):
 
     return merged
 
+
 def compute_net(account, gl_map, root_type=None):
     """
     Asset          : debit − credit  (positive = normal debit balance)
@@ -304,6 +316,7 @@ def compute_net(account, gl_map, root_type=None):
         return credit - debit
     return debit - credit
 
+
 def get_group_total(account_name, gl_map, children_map, acc_map):
     acc = acc_map.get(account_name) or {}
     root_type = acc.get("root_type")
@@ -311,6 +324,7 @@ def get_group_total(account_name, gl_map, children_map, acc_map):
     for child in children_map.get(account_name, []):
         total += get_group_total(child, gl_map, children_map, acc_map)
     return total
+
 
 def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
     if not period_gl:
@@ -380,6 +394,7 @@ def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
             "indicator": "Green" if abs(balance_check) < 0.01 else "Red",
         },
     ]
+
 
 def get_data(filters):
     accounts = get_accounts(filters.company)
@@ -572,6 +587,7 @@ def get_data(filters):
     chart = get_chart_data(t_assets, t_liab, t_equity, period_list)
 
     return data, chart, report_summary
+
 
 def get_chart_data(t_assets, t_liab, t_equity, period_list):
     labels = [p[0] for p in period_list]

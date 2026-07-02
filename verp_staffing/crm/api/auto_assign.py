@@ -131,6 +131,8 @@ def forward_candidate(customer, service, interview=None):
         stage = json.loads(customer_doc.stage) if customer_doc.stage else {}
     except Exception:
         stage = {}
+        
+    print("service_key***************************************",service_key)
 
     if service_key in ["cr", "onboarding"]:
         department = "CR" if service_key == "cr" else "Onboarding"
@@ -394,8 +396,7 @@ def get_department_load_employee(department,target_doctype):
         count = frappe.db.count(
             target_doctype,
             filters={
-                "assigned_to": emp,
-                "department": department,
+                "assign_to": emp,
                 "status": "Active",
             },
         )
@@ -486,7 +487,7 @@ def handle_CR_Onboarding_forward(
             "doctype": target_doctype,
             "customer": customer,
             "status": "Active",
-            "assigned_to": assignee,
+            "assign_to": assignee,
             "forwarded_by": employee[0],
             "forwarded_on": now_datetime(),
         }

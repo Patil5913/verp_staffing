@@ -228,12 +228,14 @@ def get_charts_for_country(country, with_standard=False):
     charts = []
 
     def _get_chart_name(content):
-        if content:
-            content = json.loads(content)
-            if (
-                content and content.get("disabled", "No") == "No"
-            ) or frappe.local.flags.allow_unverified_charts:
-                charts.append(content["name"])
+        if not content:
+            return
+
+        if (
+            content.get("disabled", "No") == "No"
+            or frappe.local.flags.allow_unverified_charts
+        ):
+            charts.append(content["name"])
 
     country_code = frappe.get_cached_value("Country", country, "code")
     if country_code:

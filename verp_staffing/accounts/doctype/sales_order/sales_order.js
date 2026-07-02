@@ -1015,7 +1015,7 @@ async function render_invoices_tab(frm) {
 	if (!invoice) {
 		wrapper.html(
 			`<p class="text-muted" style="padding:10px">
-                No invoice created yet. Create a paycheck first to create invoice
+                No invoice created yet. Create a paycheck first, submit sales order to create invoice
             </p>`,
 		);
 		return;

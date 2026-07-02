@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-06-25 23:26:29.105675",
+ "modified": "2026-07-02 18:24:11.397349",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Conversion Funnel",
@@ -22,9 +22,6 @@
  "roles": [
   {
    "role": "System Manager"
-  },
-  {
-   "role": "Sales Employee"
   },
   {
    "role": "Lead Master Manager"

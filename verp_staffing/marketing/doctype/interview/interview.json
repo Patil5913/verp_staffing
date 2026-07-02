@@ -12,7 +12,7 @@
   "resume",
   "column_break_ljfz",
   "status",
-  "section_break_mfnk",
+  "section_break_ryvp",
   "interview_rounds_table"
  ],
  "fields": [
@@ -57,23 +57,24 @@
    "reqd": 1
   },
   {
-   "fieldname": "section_break_mfnk",
+   "fieldname": "resume",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_ryvp",
    "fieldtype": "Section Break"
   },
   {
    "fieldname": "interview_rounds_table",
    "fieldtype": "Table",
+   "label": "Interview Rounds",
    "options": "Interview Round"
-  },
-  {
-   "fieldname": "resume",
-   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 17:59:24.152148",
+ "modified": "2026-07-02 12:39:46.480721",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",

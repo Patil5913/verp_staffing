@@ -4,7 +4,7 @@
    {
     "column_name": "Interview Scheduled",
     "indicator": "Blue",
-    "order": "[\n \"INTERVIEW_technical_test_25_06_2026\"\n]",
+    "order": "[]",
     "parent": "Interview",
     "parentfield": "columns",
     "parenttype": "Kanban Board",

@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-04-25 15:57:06.243909",
+ "modified": "2026-07-02 18:04:22.598650",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "General Ledger",
@@ -22,6 +22,9 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Account Person"
   }
  ],
  "timeout": 0

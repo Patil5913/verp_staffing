@@ -1,36 +1,14 @@
 frappe.listview_settings = frappe.listview_settings || {};
 
-/* =========================
-   CACHE SELECTORS (BIG WIN)
-========================= */
-
 const CACHE = {
 	lastRoute: null,
 	newButtonHiddenFor: null,
 };
 
-/* =========================
-   WORKSPACE BUTTON
-========================= */
-
-function hide_workspace_new_button() {
-	if (frappe.session.user === "Administrator") return;
-
-	$(".workspace-footer .btn-new-workspace").hide();
-}
-
-/* =========================
-   REPORT FOOTER (NEW ADDITION)
-========================= */
-
 function hide_report_things() {
 	$(".report-footer").hide();
 	$(".menu-btn-group").hide();
 }
-
-/* =========================
-   ROUTE HELPERS
-========================= */
 
 function isFormRoute(route) {
 	return route && route.length >= 2;
@@ -43,10 +21,6 @@ function isReportRoute(route) {
 function isWorkspaceRoute(route) {
 	return route && route[0] === "Workspaces";
 }
-
-/* =========================
-   ROUTE HANDLER (FILTERED)
-========================= */
 
 frappe.router.on("change", () => {
 	const route = frappe.get_route();
@@ -62,7 +36,7 @@ frappe.router.on("change", () => {
 
 	requestIdleCallback(() => {
 		if (isWorkspaceRoute(route)) {
-			hide_workspace_new_button();
+			$(".workspace-footer .btn-new-workspace").hide();
 		}
 
 		if (isReportRoute(route)) {
@@ -71,8 +45,8 @@ frappe.router.on("change", () => {
 	});
 });
 
-const NO_PLUS_DOCTYPES = new Set([
-	"Onboardings",
+const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
+	"OnboardiBUTTON_DISPLAY_ngs",
 	"GL Entry",
 	"Supplier Group",
 	"CR",
@@ -118,7 +92,7 @@ function hide_new_button(listview) {
 	});
 }
 
-NO_PLUS_DOCTYPES.forEach((doctype) => {
+NO_PLUS_BUTTON_DISPLAY_DOCTYPES.forEach((doctype) => {
 	frappe.listview_settings[doctype] = {
 		onload(listview) {
 			hide_new_button(listview);
@@ -128,10 +102,6 @@ NO_PLUS_DOCTYPES.forEach((doctype) => {
 		},
 	};
 });
-
-/* =========================
-   MUTATION OBSERVER (SAFE)
-========================= */
 
 const observer = new MutationObserver(() => {
 	const route = frappe.get_route();

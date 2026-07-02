@@ -41,7 +41,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-06-25 23:27:57.610420",
+ "modified": "2026-07-02 18:23:18.062656",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Details",
@@ -56,9 +56,6 @@
   },
   {
    "role": "Lead Person"
-  },
-  {
-   "role": "Sales Employee"
   },
   {
    "role": "Lead Master Manager"

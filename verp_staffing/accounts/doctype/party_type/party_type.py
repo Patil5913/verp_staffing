@@ -11,8 +11,6 @@ class PartyType(Document):
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
 def get_party_type(doctype, txt, searchfield, start, page_len, filters):
     account_type = None
 

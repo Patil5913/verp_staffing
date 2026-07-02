@@ -34,7 +34,7 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = ["/assets/verp_staffing/css/globel.css"]
+app_include_css = ["/assets/verp_staffing/css/global.css"]
 # pdflibjs Imports
 app_include_js = [
     "/assets/verp_staffing/js/calculation_engine.js",
@@ -239,16 +239,37 @@ doc_events = {
     "User": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
+        "on_update": "verp_staffing.utils.sidebar.on_user_change",
+        "validate": "verp_staffing.utils.sidebar.on_user_validate",
+        "on_trash": "verp_staffing.utils.sidebar.on_user_change",
+    },
+    "Has Role": {
+        "after_insert": "verp_staffing.utils.sidebar.on_has_role_change",
+        "on_update": "verp_staffing.utils.sidebar.on_has_role_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_has_role_change",
+    },
+    "Role": {
+        "on_update": "verp_staffing.utils.sidebar.on_role_update",
+    },
+    "DocPerm": {
+        "after_insert": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_update": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_docperm_change",
+    },
+    "Custom DocPerm": {
+        "after_insert": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_update": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_docperm_change",
+    },
+    "Employee": {
+        "on_update": "verp_staffing.utils.sidebar.on_employee_change",
+        "after_insert": "verp_staffing.utils.sidebar.on_employee_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_employee_trash",
     },
     "File": {
         "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
     },
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
-    "Employee": {
-        "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
-        "before_save": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
-        "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
-    },
     "Interview Status": {
         "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
         "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",
@@ -323,6 +344,7 @@ setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 # set query permisson for doctype
 permission_query_conditions = {
     "Customer": "verp_staffing.crm.api.helpers.customer_query",
+    "Sales Order": "verp_staffing.crm.api.helpers.sales_order_query",
     "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
     "Lead": "verp_staffing.crm.api.helpers.lead_query",
     "Resume": "verp_staffing.crm.api.helpers.generic_assign_query",

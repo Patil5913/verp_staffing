@@ -114,14 +114,14 @@ def get_forwardable_departments(customer):
     options = list(services)
 
     if "CR" not in active_departments:
-        options.add("CR")
+        options.append("CR")
 
     if (
         "Onboarding" not in active_departments
         and all_completed
         and can_user_forward_to_department(user, "Onboarding")
     ):
-        options.add("Onboarding")
+        options.append("Onboarding")
 
     return list(options)
 

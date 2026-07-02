@@ -71,6 +71,7 @@ ROLE_PERMISSIONS = {
     "_show_sidebar_master": {
         "Sidebar Master": ["select", "read", "write", "create"],
         "Comment": ["select", "read", "create", "write", "delete"],
+        "Currency": ["select", "read", "create", "write"],
         "File": ["select", "read", "create", "write"],
     },
     "HR": {

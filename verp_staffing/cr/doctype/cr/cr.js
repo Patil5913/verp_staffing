@@ -642,7 +642,7 @@ function show_sales_order(frm) {
 		args: {
 			doctype: "Sales Order",
 			filters: { customer: frm.doc.customer },
-			fields: ["name", "date", "creation"],
+			fields: ["name", "creation"],
 			limit_page_length: 50,
 			order_by: "creation desc",
 		},

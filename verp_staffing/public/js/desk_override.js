@@ -1,18 +1,29 @@
-//  Config is fetched from the "Sidebar Master" DocType (field: config_json)
-//  using a two-step lookup:
-//    1. Look for a doc where sidebar_owner = current user  → use it
-//    2. Fall back to the doc where sidebar_owner = "Master"
+//  Config is fetched, PRE-FILTERED, from a single server-driven API:
+//    verp_staffing.api.sidebar.get_sidebar_permissions
+//
+//  SERVER IS THE SOURCE OF TRUTH:
+//    The client NEVER computes write-permission or role checks itself, and
+//    there isn't even a permission flag to look up client-side — the
+//    server only ever returns the parents/children the current user can
+//    already access. Anything they can't access simply isn't in the
+//    payload. The server resolves the tree from the "Sidebar Master"
+//    DocType (field: config_json) using the same two-step lookup as
+//    before:
+//      1. Doc where sidebar_owner = current user  → use it
+//      2. Fall back to the doc where sidebar_owner = "Master"
+//    filters it down to accessible items, caches the RESULT (not the raw
+//    config) in Redis (frappe.cache()) per-user, and invalidates
+//    automatically whenever User / Has Role / Role / DocPerm /
+//    Custom DocPerm / Employee change (see hooks.py + api/sidebar.py).
+//    Shipping a pre-filtered, per-user tree instead of a flat config +
+//    permission map keeps both the Redis entry and the JSON sent to the
+//    browser as small as possible — important once this is serving
+//    1000+ distinct users each with their own shape of tree.
 //
 //  THREE PARENT TYPES:
 //    type_1 — redirect + always-visible children (no toggle)
 //    type_2 — dropdown group, no redirect, SPA toggle (zero page reload)
 //    type_3 — single link, no children
-//
-//  PERMISSION MODEL:
-//    • Doctypes  → user must have WRITE permission (frappe.model.can_write)
-//    • Pages     → user must have at least one of the roles listed in the
-//                  item's `roles` array. Empty/missing `roles` = visible to all.
-//    • Reports   → always visible (already filtered server-side)
 //
 //  SHORTCUT SUPPORT:
 //    Each item may carry a `shortcut` field (e.g. "J", "J+E", "Alt+P").
@@ -35,14 +46,15 @@
 //  FEATURES:
 //    ✓ type_2 toggle is pure DOM/CSS — zero page reload
 //    ✓ "+" quick-create button on every doctype link (except NO_PLUS_DOCTYPES)
-//    ✓ Config cached in localStorage (TTL 5 min) per user
+//    ✓ Pre-filtered, per-user tree fetched in ONE server call, cached in Redis
+//    ✓ localStorage is a short-lived UI cache only (TTL 5–15 min, jittered)
+//      — never the source of truth for access control
 //    ✓ Logo + home navigation redirected to first accessible route
 //    ✓ "Customize Sidebar" button at bottom of sidebar
 //    ✓ Full-width is on by default; "Toggle Full Width" navbar button hidden
 //    ✓ List-page New button hidden for doctypes in NO_PLUS_DOCTYPES
 //    ✓ Overflow tooltip for truncated labels (merged with shortcut tooltip)
-//    ✓ Page visibility gated by roles array in config_json
-//    ✓ Doctype visibility gated by write permission
+//    ✓ Visibility is implicit: if it's in the payload, it's accessible
 // ═══════════════════════════════════════════════════════════════════════════
 (function () {
 	"use strict";
@@ -104,71 +116,37 @@
 		}
 	})();
 
-	// ─── CACHE ────────────────────────────────────────────────────────────────
+	// ─── CACHE (localStorage — UI performance layer ONLY, not auth) ───────────
+	// This never decides access on its own; it just avoids re-fetching the
+	// server's permission payload on every page load. The server (Redis) is
+	// always the authority, and is what actually enforces permissions no
+	// matter what a user does to this local cache.
 	function cache_key() {
 		return "csb_config_" + ((frappe.session && frappe.session.user) || "guest");
 	}
 	function cache_ts_key() {
 		return "csb_ts_" + ((frappe.session && frappe.session.user) || "guest");
 	}
-	const CACHE_TTL_MS = 5 * 60 * 1000;
+	function cache_ttl_key() {
+		return "csb_ttl_" + ((frappe.session && frappe.session.user) || "guest");
+	}
+
 	let SIDEBAR_CONFIG = [];
 	let NAV_ITEMS = {};
 
-	// ─── PERMISSIONS ──────────────────────────────────────────────────────────
-	function is_administrator() {
-		if (!window.frappe) return false;
-		return (
-			(frappe.session && frappe.session.user === "Administrator") ||
-			(frappe.user_roles && frappe.user_roles.includes("Administrator"))
-		);
-	}
-
-	// Returns true if the current user has WRITE permission on a doctype.
-	// Administrators always pass. Falls back to false on any error.
-	function can_write(doctype) {
-		if (is_administrator()) return true;
-		if (!window.frappe) return false;
-		try {
-			return !!frappe.model.can_write(doctype);
-		} catch (e) {
-			return false;
-		}
-	}
-
-	// Returns true if the current user satisfies the page's roles requirement.
-	// An empty / missing roles array means the page is visible to everyone.
-	// Administrators always pass.
-	function can_access_page(roles) {
-		if (!roles || !roles.length) return true;
-		if (is_administrator()) return true;
-		const user_roles = (window.frappe && frappe.user_roles) || [];
-		return roles.some((r) => user_roles.includes(r));
-	}
-
-	// Unified item-level access check used by both parent and child rendering.
-	function item_accessible(key) {
-		if (is_administrator()) return true;
-		const item = NAV_ITEMS[key];
-		if (!item) return false;
-		if (item.type === "doctype" && item.doctype) return can_write(item.doctype);
-		if (item.type === "page") return can_access_page(item.roles || []);
-		// reports are pre-filtered server-side
-		return true;
-	}
-
+	// ─── PERMISSIONS ────────────────────────────────────────────────────────
+	// There is no client-side permission logic at all anymore, not even a
+	// flag lookup. The server only ever ships parents/children the user can
+	// already access (see api/sidebar.py) — an inaccessible item simply
+	// isn't present in SIDEBAR_CONFIG. These two helpers are kept as thin
+	// passthroughs purely so the rendering code below doesn't need two code
+	// paths; there is nothing left to check.
 	function visible_children(parent_cfg) {
-		return (parent_cfg.children || []).filter((c) => item_accessible(c.key));
+		return parent_cfg.children || [];
 	}
 
-	function parent_visible(cfg) {
-		if (cfg.parent_type === "type_3") {
-			if (cfg.link_type === "doctype" && cfg.doctype) return can_write(cfg.doctype);
-			if (cfg.link_type === "page") return can_access_page(cfg.roles || []);
-			return true;
-		}
-		// Groups are visible only if at least one child is accessible
-		return visible_children(cfg).length > 0;
+	function parent_visible(_cfg) {
+		return true;
 	}
 
 	// ─── ROUTING ──────────────────────────────────────────────────────────────
@@ -690,25 +668,41 @@
 		document.addEventListener("keydown", handler, true);
 	}
 
-	// ─── CONFIG LOADING ───────────────────────────────────────────────────────
+	// ─── CONFIG + PERMISSIONS LOADING ──────────────────────────────────────────
+	// localStorage here is a pure UI cache: it only saves us a round-trip to
+	// the server API. It is never treated as authoritative, and holding a
+	// stale/tampered copy of it changes nothing about actual access control,
+	// since every real read/write still goes through Frappe's own permission
+	// system server-side.
 	function load_from_cache() {
 		try {
 			const ts = parseInt(localStorage.getItem(cache_ts_key()) || "0", 10);
-			if (Date.now() - ts < CACHE_TTL_MS) {
-				const raw = localStorage.getItem(cache_key());
-				if (raw) return JSON.parse(raw);
-			}
+			const ttl = parseInt(localStorage.getItem(cache_ttl_key()) || "0", 10);
+			if (!ttl || Date.now() - ts >= ttl) return null;
+			const raw = localStorage.getItem(cache_key());
+			if (raw) return JSON.parse(raw);
 		} catch (e) {}
 		return null;
 	}
-	function save_to_cache(config) {
+	function save_to_cache(payload) {
 		try {
-			localStorage.setItem(cache_key(), JSON.stringify(config));
+			localStorage.setItem(cache_key(), JSON.stringify(payload));
 			localStorage.setItem(cache_ts_key(), String(Date.now()));
+			localStorage.setItem(cache_ttl_key(), String(60 * 60 * 1000)); // 1 hour
+		} catch (e) {}
+	}
+	function clear_cache() {
+		try {
+			localStorage.removeItem(cache_key());
+			localStorage.removeItem(cache_ts_key());
+			localStorage.removeItem(cache_ttl_key());
 		} catch (e) {}
 	}
 
-	function apply_config(config_array) {
+	function apply_payload(payload) {
+		// payload.config is already filtered to exactly what this user can
+		// see — no separate permissions object to merge in.
+		const config_array = (payload && payload.config) || [];
 		SIDEBAR_CONFIG = config_array;
 		NAV_ITEMS = {};
 		config_array.forEach(function (cfg) {
@@ -720,7 +714,6 @@
 					doctype: cfg.doctype || null,
 					icon: cfg.icon,
 					shortcut: cfg.shortcut || "",
-					// Preserve roles for page items so item_accessible() can check them
 					roles: cfg.roles || [],
 					issingle: !!(
 						cfg.route && cfg.route.includes("/" + encodeURIComponent(cfg.label))
@@ -735,7 +728,6 @@
 					doctype: c.doctype || null,
 					icon: c.icon || "icon-setting-gear",
 					shortcut: c.shortcut || "",
-					// Preserve roles for page-type children
 					roles: c.roles || [],
 					issingle: !!(c.route && c.route.includes("/" + encodeURIComponent(c.name))),
 				};
@@ -743,64 +735,39 @@
 		});
 	}
 
-	async function fetch_config_json() {
-		const current_user =
-			(frappe.session && frappe.session.user) ||
-			(frappe.boot && frappe.boot.user && frappe.boot.user.name);
-		if (current_user) {
-			try {
-				const user_res = await frappe.call({
-					method: "frappe.client.get_value",
-					args: {
-						doctype: "Sidebar Master",
-						fieldname: "config_json",
-						filters: { sidebar_owner: current_user },
-					},
-				});
-				const raw = user_res && user_res.message && user_res.message.config_json;
-				if (raw) return JSON.parse(raw);
-			} catch (e) {
-				console.error("Custom Sidebar: user config fetch failed", e);
-			}
-		}
+	// Single server call: no more per-doctype permission calls from the
+	// browser. The server resolves config AND computes the permission map
+	// in one whitelisted method, itself backed by frappe.cache() (Redis).
+	async function fetch_sidebar_permissions() {
+		if (!window.frappe || typeof frappe.call !== "function") return null;
 		try {
-			const master_res = await frappe.call({
-				method: "frappe.client.get_value",
-				args: {
-					doctype: "Sidebar Master",
-					fieldname: "config_json",
-					filters: { sidebar_owner: "Master" },
-				},
+			const res = await frappe.call({
+				method: "verp_staffing.utils.sidebar.get_sidebar_permissions",
 			});
-			const raw = master_res && master_res.message && master_res.message.config_json;
-			if (raw) return JSON.parse(raw);
+			return (res && res.message) || null;
 		} catch (e) {
-			console.error("Custom Sidebar: failed to load Master config", e);
+			console.error("Custom Sidebar: failed to load sidebar permissions", e);
+			return null;
 		}
-		return null;
 	}
 
 	async function load_config() {
 		const cached = load_from_cache();
 		if (cached) {
-			apply_config(cached);
+			apply_payload(cached);
 			return;
 		}
-		if (!window.frappe || typeof frappe.call !== "function") return;
-		const parsed = await fetch_config_json();
-		if (parsed) {
-			apply_config(parsed);
-			save_to_cache(parsed);
+		const payload = await fetch_sidebar_permissions();
+		if (payload) {
+			apply_payload(payload);
+			save_to_cache(payload);
 		} else {
-			console.warn("Custom Sidebar: no config found for user or Master.");
+			console.warn("Custom Sidebar: no sidebar permissions returned by server.");
 		}
 	}
 
 	window.csb_reload = async function () {
-		try {
-			localStorage.removeItem(cache_key());
-			localStorage.removeItem(cache_ts_key());
-		} catch (e) {}
+		clear_cache();
 		await load_config();
 		const old = document.getElementById(SIDEBAR_ID);
 		if (old) old.remove();

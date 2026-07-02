@@ -795,9 +795,63 @@ def customer_query(user):
 
     return "(" + " OR ".join(conditions) + ")"
 
+def sales_order_query(user):
+    if user == "Administrator":
+        return ""
+
+    departments = get_user_departments(user)
+
+    # Accounting sees everything
+    if "Accounting" in departments:
+        return ""
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+    conditions = []
+
+    if "Sales" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabCustomer`.name
+                FROM `tabCustomer`
+                WHERE `tabCustomer`.customer_owner IN ({team_sql})
+            )
+        """
+        )
+
+    if "CR" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabCR`.customer
+                FROM `tabCR`
+                WHERE `tabCR`.assign_to IN ({team_sql})
+            )
+        """
+        )
+
+    if "Onboarding" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabOnboardings`.customer
+                FROM `tabOnboardings`
+                WHERE `tabOnboardings`.assign_to IN ({team_sql})
+            )
+        """
+        )
+
+    if not conditions:
+        return "1=0"
+
+    return "(" + " OR ".join(conditions) + ")"
 
 from pathlib import Path
-
 
 @frappe.whitelist(allow_guest=True)
 def _validate_site_file_path(file_path: str) -> Path:

@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-03-07 17:16:18.630809",
+ "modified": "2026-07-02 18:27:29.021571",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Profiles Per Recruiter",
@@ -22,18 +22,6 @@
  "roles": [
   {
    "role": "System Manager"
-  },
-  {
-   "role": "Sales Master Manager"
-  },
-  {
-   "role": "Sales Manager"
-  },
-  {
-   "role": "Sales Team Lead"
-  },
-  {
-   "role": "Sales Person"
   },
   {
    "role": "Marketing Manager"
@@ -49,6 +37,9 @@
   },
   {
    "role": "Recruiter"
+  },
+  {
+   "role": "Marketing Master Manager"
   }
  ],
  "timeout": 0

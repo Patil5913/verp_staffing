@@ -344,13 +344,13 @@ frappe.query_reports["Profit and Loss Statement"] = {
 				`;
 			} else if (data.root_type === "Income") {
 				value = `
-					<span style="color:var(--red-500)">
+					<span style="color:#3b82f6">
 						${value}
 					</span>
 				`;
 			} else if (data.root_type === "Expense") {
 				value = `
-					<span style="color:#3b82f6">
+					<span style="color:var(--red-500)">
 						${value}
 					</span>
 				`;
