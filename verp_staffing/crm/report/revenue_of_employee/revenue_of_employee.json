@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-10 16:48:03.822320",
+ "modified": "2026-07-03 09:38:07.305668",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Revenue Of Employee",
@@ -19,6 +19,13 @@
  "ref_doctype": "Sales Order",
  "report_name": "Revenue Of Employee",
  "report_type": "Script Report",
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "_show_sidebar_master"
+  }
+ ],
  "timeout": 0
 }

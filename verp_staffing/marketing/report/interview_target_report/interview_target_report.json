@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-02 18:26:49.011426",
+ "modified": "2026-07-03 09:35:47.452001",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Target Report",
@@ -24,22 +24,7 @@
    "role": "System Manager"
   },
   {
-   "role": "Marketing Mentor"
-  },
-  {
-   "role": "Marketing Manager"
-  },
-  {
-   "role": "Marketing Master Manager"
-  },
-  {
-   "role": "Marketing Team Lead"
-  },
-  {
-   "role": "Recruiter"
-  },
-  {
-   "role": "Senior Recruiter"
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0

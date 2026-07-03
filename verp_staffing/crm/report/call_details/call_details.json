@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-02 18:25:18.416154",
+ "modified": "2026-07-03 09:36:03.759554",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Call Details",
@@ -21,31 +21,10 @@
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "Lead Manager"
-  },
-  {
-   "role": "Sales Manager"
-  },
-  {
    "role": "System Manager"
   },
   {
-   "role": "Lead Master Manager"
-  },
-  {
-   "role": "Lead Person"
-  },
-  {
-   "role": "Sales Master Manager"
-  },
-  {
-   "role": "Lead Team Lead"
-  },
-  {
-   "role": "Sales Team Lead"
-  },
-  {
-   "role": "Sales Person"
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0

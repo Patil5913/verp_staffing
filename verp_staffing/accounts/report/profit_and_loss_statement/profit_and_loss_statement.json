@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-02 18:04:48.249381",
+ "modified": "2026-07-03 09:37:28.364005",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Profit and Loss Statement",
@@ -21,7 +21,7 @@
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "Account Person"
+   "role": "_show_sidebar_master"
   },
   {
    "role": "System Manager"

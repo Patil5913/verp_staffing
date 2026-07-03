@@ -36,7 +36,9 @@ frappe.router.on("change", () => {
 
 	requestIdleCallback(() => {
 		if (isWorkspaceRoute(route)) {
-			$(".workspace-footer .btn-new-workspace").hide();
+			$(".workspace-footer")
+				.find(".btn-new-workspace, .btn-edit-workspace")
+				.hide();
 		}
 
 		if (isReportRoute(route)) {
@@ -71,7 +73,7 @@ const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
 	"Training",
 	"Bank Account Type",
 	"Bank Account Subtype",
-	"Sidebar Master"
+	"Sidebar Master",
 ]);
 
 function hide_new_button(listview) {

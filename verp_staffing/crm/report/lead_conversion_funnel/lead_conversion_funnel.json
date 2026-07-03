@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-02 18:24:11.397349",
+ "modified": "2026-07-03 09:36:34.243827",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Conversion Funnel",
@@ -24,31 +24,7 @@
    "role": "System Manager"
   },
   {
-   "role": "Lead Master Manager"
-  },
-  {
-   "role": "Lead Manager"
-  },
-  {
-   "role": "Lead Team Lead"
-  },
-  {
-   "role": "Lead Person"
-  },
-  {
-   "role": "Sales Master Manager"
-  },
-  {
-   "role": "Sales Manager"
-  },
-  {
-   "role": "Sales Team Lead"
-  },
-  {
-   "role": "Sales Person"
-  },
-  {
-   "role": "Lead Person"
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0

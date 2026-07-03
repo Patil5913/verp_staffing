@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-02 18:23:48.937744",
+ "modified": "2026-07-03 09:36:55.196263",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Per Employee",
@@ -21,31 +21,10 @@
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "Lead Person"
-  },
-  {
-   "role": "Lead Team Lead"
-  },
-  {
-   "role": "Lead Master Manager"
-  },
-  {
-   "role": "Sales Manager"
-  },
-  {
-   "role": "Sales Master Manager"
-  },
-  {
-   "role": "Lead Manager"
-  },
-  {
-   "role": "Sales Team Lead"
-  },
-  {
-   "role": "Sales Person"
-  },
-  {
    "role": "System Manager"
+  },
+  {
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0

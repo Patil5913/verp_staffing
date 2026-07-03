@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-07-02 18:27:29.021571",
+ "modified": "2026-07-03 09:35:29.180558",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Profiles Per Recruiter",
@@ -24,22 +24,7 @@
    "role": "System Manager"
   },
   {
-   "role": "Marketing Manager"
-  },
-  {
-   "role": "Marketing Team Lead"
-  },
-  {
-   "role": "Senior Recruiter"
-  },
-  {
-   "role": "Marketing Mentor"
-  },
-  {
-   "role": "Recruiter"
-  },
-  {
-   "role": "Marketing Master Manager"
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0
