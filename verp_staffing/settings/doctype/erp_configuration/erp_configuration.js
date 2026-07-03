@@ -1,7 +1,9 @@
 let email_config_rows = [];
+let active_frm = null; // tracks current form so document-level handlers below can reach it
 
 frappe.ui.form.on("ERP Configuration", {
 	async refresh(frm) {
+		active_frm = frm;
 		set_department_role_filters(frm);
 		setup_permission_table_filters(frm);
 		await render_headlines(frm);
@@ -410,12 +412,12 @@ function init_select_all(wrapper) {
 // ADD ROW — in-memory only
 $(document).on("click", ".add-row", function () {
 	email_config_rows.push({ email_account: "", types: [] });
-	render_email_configurator(cur_frm);
+	render_email_configurator(active_frm);
 });
 
 // DELETE SELECTED ROWS — in-memory only
 $(document).on("click", ".delete-selected", function () {
-	let frm = cur_frm;
+	let frm = active_frm;
 	let wrapper = frm.get_field("email_configuration").$wrapper;
 
 	let remaining = [];
@@ -446,7 +448,7 @@ $(document).on("click", ".remove-type", function () {
 		email_config_rows[idx].types = (email_config_rows[idx].types || []).filter(
 			(t) => t !== type,
 		);
-		render_email_configurator(cur_frm);
+		render_email_configurator(active_frm);
 	}
 });
 

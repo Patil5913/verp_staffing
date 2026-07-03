@@ -1,6 +1,5 @@
 from __future__ import annotations
 import frappe
-from frappe.model.document import Document
 from frappe.utils import now_datetime
 
 
@@ -60,7 +59,6 @@ def add_note(reference_doctype, reference_name, note , current_doctype=None):
         }
     )
     doc.insert(ignore_permissions=True)
-    frappe.db.commit()
     return {
         "name": doc.name,
         "note": doc.note,
@@ -74,12 +72,10 @@ def update_note(note_id, note):
     doc = frappe.get_doc("CRM Note", note_id)
     doc.note = note
     doc.save(ignore_permissions=True)
-    frappe.db.commit()
     return doc
 
 
 @frappe.whitelist()
 def delete_note(note_id):
     frappe.delete_doc("CRM Note", note_id, ignore_permissions=True)
-    frappe.db.commit()
     return True

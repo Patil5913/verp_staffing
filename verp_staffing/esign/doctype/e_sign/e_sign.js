@@ -11,6 +11,8 @@ let recipients = [];
 let activeRecipient = null;
 let recipientColors = {};
 let selectedFieldType = "signature";
+// Module-level frm reference — set in refresh so global listeners (mouseup)
+let currentFrm = null;
 
 const colorPalette = [
 	"#2563eb", // Royal Blue
@@ -46,6 +48,15 @@ frappe.ui.form.on("E Sign", {
 
 		field.refresh();
 		if (!frm.doc.original_pdf) return;
+
+		currentFrm = frm;
+
+		setTimeout(() => {
+			const fieldWrapper = frm.fields_dict.original_pdf.$wrapper;
+			fieldWrapper.closest(".frappe-control").style.maxWidth = "100%";
+			fieldWrapper.closest(".form-column").style.maxWidth = "100%";
+			fieldWrapper.closest(".form-column").style.flex = "1";
+		}, 200);
 
 		rebuild_recipients(frm);
 
@@ -378,13 +389,6 @@ frappe.dom.set_style(`
     align-items:flex-start;
 }`);
 
-setTimeout(() => {
-	const fieldWrapper = cur_frm.fields_dict.original_pdf.$wrapper;
-
-	fieldWrapper.closest(".frappe-control").style.maxWidth = "100%";
-	fieldWrapper.closest(".form-column").style.maxWidth = "100%";
-	fieldWrapper.closest(".form-column").style.flex = "1";
-}, 200);
 
 function enable_toolbar_drag(frm) {
 	document.querySelectorAll(".esign-field-tool").forEach((tool) => {
@@ -498,7 +502,7 @@ function render_recipient_list(frm) {
 					transition:opacity .15s;
 					"
 			>
-				✕
+				&#x2715;
 			</div>
 		</div>
 		`;
@@ -642,7 +646,7 @@ function select_field(frm, box) {
 
 function open_property_sidebar(frm, box) {
 	const sidebar = $("#field-properties");
-	if (cur_frm.doc.status !== "Draft") {
+	if (frm.doc.status !== "Draft") {
 		sidebar.hide();
 	}
 	const row = frm.doc.signature_fields.find((r) => r.name === box.dataset.rowname);
@@ -662,7 +666,7 @@ function open_property_sidebar(frm, box) {
 						id="close-properties-sidebar"
 						class="btn btn-xs btn-default"
 						type="button">
-						✕
+						&#x2715;
 				</button>
 			</div>
 			<div class="form-group">
@@ -819,7 +823,7 @@ function create_box(frm, type = "signature") {
 
 	// DELETE BUTTON
 	const deleteBtn = document.createElement("div");
-	deleteBtn.innerHTML = "✕";
+	deleteBtn.innerHTML = "&#x2715;";
 	deleteBtn.style.position = "absolute";
 	deleteBtn.style.top = "-8px";
 	deleteBtn.style.right = "-8px";
@@ -951,7 +955,7 @@ document.addEventListener("mousemove", function (e) {
 
 document.addEventListener("mouseup", function () {
 	if (activeBox && activeOverlay && boxChanged) {
-		update_child_table(cur_frm, activeBox, activeOverlay);
+		update_child_table(currentFrm, activeBox, activeOverlay);
 	}
 
 	boxChanged = false;
@@ -1007,7 +1011,7 @@ function render_existing_boxes(frm) {
 
 		if (!overlay) return;
 
-		// IF SIGNED → SHOW SIGNATURE IMAGE
+		// IF SIGNED -> SHOW SIGNATURE IMAGE
 		if (field.signed && field.signature_image) {
 			const img = document.createElement("img");
 			img.src = field.signature_image;

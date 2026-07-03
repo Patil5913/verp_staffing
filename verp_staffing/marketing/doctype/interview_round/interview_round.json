@@ -61,6 +61,7 @@
    "search_index": 1
   },
   {
+   "columns": 1,
    "default": "0",
    "fieldname": "support",
    "fieldtype": "Check",
@@ -94,14 +95,14 @@
    "options": "EDT\nEST"
   },
   {
-   "columns": 2,
+   "columns": 1,
    "fieldname": "from_time",
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "From"
   },
   {
-   "columns": 2,
+   "columns": 1,
    "fieldname": "to_time",
    "fieldtype": "Time",
    "in_list_view": 1,
@@ -146,7 +147,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-01 16:59:51.569783",
+ "modified": "2026-07-02 12:38:07.880493",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Round",

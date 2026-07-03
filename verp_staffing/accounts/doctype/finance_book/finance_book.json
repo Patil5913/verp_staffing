@@ -11,9 +11,12 @@
  ],
  "fields": [
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "finance_book_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Name",
+   "reqd": 1,
    "unique": 1
   }
  ],
@@ -21,7 +24,7 @@
  "icon": "fa fa-book",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 17:40:38.305240",
+ "modified": "2026-07-02 18:05:57.515124",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Finance Book",

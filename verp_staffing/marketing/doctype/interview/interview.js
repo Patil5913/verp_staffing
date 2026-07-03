@@ -36,8 +36,6 @@ frappe.ui.form.on("Interview Round", {
 		set_round_numbers(frm);
 
 		const row = locals[cdt][cdn];
-
-		// adding previos follow up value in state
 		row.__prev_follow_up = row.follow_up || 0;
 	},
 
@@ -48,14 +46,32 @@ frappe.ui.form.on("Interview Round", {
 	follow_up(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 
+		if (row.__reverting_follow_up) {
+			return;
+		}
+
 		const prev = row.__prev_follow_up ?? 0;
 		const curr = row.follow_up;
 
-		if (curr !== prev + 1) {
-			frappe.msgprint(`Invalid Follow Up value. Only allowed value is ${prev + 1}`);
+		if (curr === prev) {
+			return;
+		}
 
-			row.follow_up = prev;
-			frm.refresh_field("interview_rounds_table");
+		if (curr !== prev + 1) {
+			frappe.show_alert(
+				{
+					message: __("Invalid Follow Up value. Only allowed value is {0}", [prev + 1]),
+					indicator: "red",
+				},
+				5
+			);
+
+			row.__reverting_follow_up = true;
+			frappe.model
+				.set_value(cdt, cdn, "follow_up", prev)
+				.then(() => {
+					row.__reverting_follow_up = false;
+				});
 			return;
 		}
 

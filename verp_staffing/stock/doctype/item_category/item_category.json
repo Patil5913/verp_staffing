@@ -127,14 +127,74 @@
    "role": "Sales Team Lead",
    "select": 1
   },
+    {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
   {
    "read": 1,
-   "role": "OnBoarding Person",
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
    "select": 1
   },
   {
    "read": 1,
    "role": "CR",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
    "select": 1
   }
  ],

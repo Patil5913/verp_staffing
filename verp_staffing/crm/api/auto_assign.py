@@ -131,6 +131,8 @@ def forward_candidate(customer, service, interview=None):
         stage = json.loads(customer_doc.stage) if customer_doc.stage else {}
     except Exception:
         stage = {}
+        
+    print("service_key***************************************",service_key)
 
     if service_key in ["cr", "onboarding"]:
         department = "CR" if service_key == "cr" else "Onboarding"
@@ -295,21 +297,29 @@ def notify_assignees(doc, service, customer):
     if not emp_user:
         return
 
-    template_name = "New Candidate Assigned"
-    if frappe.db.exists("Email Template", template_name):
-        template = frappe.get_doc("Email Template", template_name)
+    subject = f"New Candidate Assigned ({service})"
+    message = (
+        "You have been assigned a new candidate.<br><br>"
+        f"<strong>Customer:</strong> {customer}<br>"
+        f"<strong>Service:</strong> {service}"
+    )
+    
+    template = frappe.db.get_value(
+        "Email Template",
+        "New Candidate Assigned",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+    if template:
         context = {
             "service": service,
             "customer": customer,
         }
+
         subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(template.response_html or template.response, context)
-    else:
-        subject = f"New Candidate Assigned ({service})"
-        message = (
-            f"You have been assigned a new candidate.\n\n"
-            f"Customer: {customer}\n"
-            f"Service: {service}"
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
         )
 
     send_notification(
@@ -386,8 +396,7 @@ def get_department_load_employee(department,target_doctype):
         count = frappe.db.count(
             target_doctype,
             filters={
-                "assigned_to": emp,
-                "department": department,
+                "assign_to": emp,
                 "status": "Active",
             },
         )
@@ -478,7 +487,7 @@ def handle_CR_Onboarding_forward(
             "doctype": target_doctype,
             "customer": customer,
             "status": "Active",
-            "assigned_to": assignee,
+            "assign_to": assignee,
             "forwarded_by": employee[0],
             "forwarded_on": now_datetime(),
         }

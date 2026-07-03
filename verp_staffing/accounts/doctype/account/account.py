@@ -93,21 +93,6 @@ class Account(NestedSet):
 
 		self.name = get_autoname_with_number(self.account_number, self.account_name, self.company)
 
-
-	def validate_parent_child_account_type(self):
-		if self.parent_account:
-			if self.account_type in [
-				"Direct Income",
-				"Indirect Income",
-				"Current Asset",
-				"Current Liability",
-				"Direct Expense",
-				"Indirect Expense",
-			]:
-				parent_account_type = frappe.get_cached_value("Account", self.parent_account, ["account_type"])
-				if parent_account_type == self.account_type:
-					throw(_("Only Parent can be of type {0}").format(self.account_type))
-
 	def validate(self):
 		self.validate_parent()
 		self.validate_parent_child_account_type()
@@ -244,71 +229,28 @@ class Account(NestedSet):
 	def validate_default_accounts_in_company(self):
 		default_account_fields = get_company_default_account_fields()
 
-		company_default_accounts = frappe.get_cached_value(
-			"Company", self.company, list(default_account_fields.keys()), as_dict=1
-		)
-
-		msg = _("Account {0} cannot be disabled as it is already set as {1} for {2}.")
-
-		if not self.disabled:
-			msg = _("Account {0} cannot be converted to Group as it is already set as {1} for {2}.")
-
-		for d in default_account_fields:
-			if company_default_accounts.get(d) == self.name:
-				throw(
-					msg.format(
-						frappe.bold(self.name),
-						frappe.bold(default_account_fields.get(d)),
-						frappe.bold(self.company),
-					)
-				)
 		if not default_account_fields:
 			return
 
-		fieldnames = tuple(default_account_fields.keys())
-
-		conditions = " OR ".join(
-			f"`{field}` = %s" for field in fieldnames
-		)
-
-		values = [self.name] * len(fieldnames)
-
-		matching_field = frappe.db.sql(
-			f"""
-			SELECT
-				{", ".join(f"`{field}`" for field in fieldnames)}
-			FROM `tabCompany`
-			WHERE
-				name = %s
-				AND ({conditions})
-			LIMIT 1
-			""",
-			[self.company, *values],
-			as_dict=True,
-		)
-
-		if not matching_field:
-			return
-
-		row = matching_field[0]
-
-		matched_field = next(
-			(
-				field
-				for field in fieldnames
-				if row.get(field) == self.name
-			),
-			None,
-		)
-
-		if not matched_field:
-			return
+		company = frappe.get_cached_doc("Company", self.company)
 
 		msg = (
 			_("Account {0} cannot be disabled as it is already set as {1} for {2}.")
 			if self.disabled
 			else _("Account {0} cannot be converted to Group as it is already set as {1} for {2}.")
 		)
+
+		matched_field = next(
+			(
+				field
+				for field in default_account_fields
+				if company.get(field) == self.name
+			),
+			None,
+		)
+
+		if not matched_field:
+			return
 
 		throw(
 			msg.format(
@@ -317,7 +259,7 @@ class Account(NestedSet):
 				frappe.bold(self.company),
 			)
 		)
-
+	
 	def validate_group_or_ledger(self):
 		doc_before_save = self.get_doc_before_save()
 
@@ -398,19 +340,23 @@ class Account(NestedSet):
 		if not updates:
 			return
 
+		allowed_fields = {"report_type", "root_type"}
+
+		if not set(updates).issubset(allowed_fields):
+			frappe.throw(_("Invalid update fields."))
+
 		set_clause = ", ".join(f"`{field}` = %s" for field in updates)
+
+		query = (
+			"UPDATE `tabAccount` "
+			f"SET {set_clause} "
+			"WHERE lft > %s AND rgt < %s"
+		)
 
 		values.extend(updates.values())
 		values.extend([self.lft, self.rgt])
 
-		frappe.db.sql(
-			f"""
-			UPDATE `tabAccount`
-			SET {set_clause}
-			WHERE lft > %s AND rgt < %s
-			""",
-			values,
-		)
+		frappe.db.sql(query, values)
 
 	def validate_mandatory(self):
 		if not self.root_type:

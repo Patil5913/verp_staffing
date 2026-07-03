@@ -51,8 +51,6 @@ def on_gl_entry_submit(doc, method):
 
 
 # SCHEDULED JOBS — registered in hooks.py scheduler_events → daily
-
-
 def daily_check_pending_fiscal_years():
     """
     Runs daily.
@@ -82,9 +80,6 @@ def daily_check_pending_fiscal_years():
             update_modified=False,
         )
         _enqueue_calculation(fy.name)
-
-    frappe.db.commit()
-
 
 def recalculate_dirty_fiscal_years():
     """
@@ -133,7 +128,6 @@ def calculate_opening_balances(fiscal_year_name):
         "In Progress",
         update_modified=False,
     )
-    frappe.db.commit()
 
     try:
         fy = frappe.get_cached_doc("Fiscal Year", fiscal_year_name)
@@ -270,7 +264,6 @@ def _save_result(fiscal_year_name, opening_balances):
         },
         update_modified=False,
     )
-    frappe.db.commit()
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs

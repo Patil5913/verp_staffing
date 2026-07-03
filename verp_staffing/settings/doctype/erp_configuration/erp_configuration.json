@@ -109,6 +109,7 @@
   {
    "fieldname": "candidate_details_form_fields",
    "fieldtype": "Long Text",
+   "hidden": 1,
    "label": "Candidate Details Form Fields"
   },
   {
@@ -139,14 +140,12 @@
    "label": "Department Access Fields"
   },
   {
-   "default": "{\"resume\":[\"surname\",\"first_name\",\"father_name\",\"personal_phone_number\",\"email\",\"personal_linkedin\",\"date_of_birth\",\"educational_details\",\"past_experience_table\",\"technologies\",\"additional_skills\",\"entry_date\",\"current_address\",\"address_history\",\"certificate_or_completed_course\",\"current_visa_status\",\"experience\",\"number_for_marketing\",\"marketing_linkedin\",\"remarks\",\"ead_card\",\"old_resume\"],\"ruc\":[\"first_name\",\"personal_phone_number\",\"email\",\"old_resume\"],\"Training\":[\"first_name\",\"personal_phone_number\",\"email\",\"old_resume\"],\"t-other-s\":[],\"Cover Letter\":[\"old_resume\"],\"Customer\":[\"surname\",\"first_name\",\"father_name\",\"personal_phone_number\",\"email\",\"personal_linkedin\",\"date_of_birth\",\"educational_details\",\"past_experience_table\",\"technologies\",\"additional_skills\",\"entry_date\",\"current_address\",\"address_history\",\"certificate_or_completed_course\",\"current_visa_status\",\"experience\",\"number_for_marketing\",\"marketing_linkedin\",\"passport_number\",\"ssn_digit\",\"availability_for_interview\",\"remarks\",\"visa_copy\",\"ead_card\",\"driving_licence\",\"old_resume\",\"position\",\"placement_company\",\"job_duration\",\"salary\",\"company_percentage\",\"google_voice_number\",\"linkedin_password\"],\"marketing\":[\"surname\",\"first_name\",\"father_name\",\"personal_phone_number\",\"email\",\"personal_linkedin\",\"date_of_birth\",\"educational_details\",\"past_experience_table\",\"technologies\",\"additional_skills\",\"entry_date\",\"current_address\",\"address_history\",\"certificate_or_completed_course\",\"current_visa_status\",\"experience\",\"number_for_marketing\",\"google_voice_number\",\"marketing_linkedin\",\"linkedin_password\",\"passport_number\",\"ssn_digit\",\"availability_for_interview\",\"remarks\",\"visa_copy\",\"ead_card\",\"driving_licence\",\"old_resume\",\"position\",\"placement_company\",\"job_duration\",\"salary\",\"company_percentage\"],\"m-other-s\":[],\"Lead\":[\"surname\",\"first_name\",\"email\",\"personal_phone_number\",\"personal_linkedin\",\"old_resume\",\"remarks\"],\"JDC\":[\"first_name\",\"personal_phone_number\",\"email\",\"old_resume\"]}",
    "fieldname": "department_access_form_fields",
    "fieldtype": "Long Text",
-   "hidden": 1,
    "label": "Department Access Form Fields"
   },
   {
-   "default": "01:00",
+   "default": "48:00",
    "description": "Enter duration in HH:MM format (00:01 to 23:59). Example: 02:30 = 2 hours 30 minutes",
    "fieldname": "expiry_hours_of_agreement",
    "fieldtype": "Data",
@@ -237,7 +236,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-26 19:00:17.772504",
+ "modified": "2026-07-02 17:46:51.173008",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
@@ -348,6 +347,10 @@
   {
    "read": 1,
    "role": "Marketing Mentor"
+  },
+  {
+   "read": 1,
+   "role": "Account Person"
   }
  ],
  "row_format": "Dynamic",

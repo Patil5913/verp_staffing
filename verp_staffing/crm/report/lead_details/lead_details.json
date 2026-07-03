@@ -41,7 +41,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-06-25 23:27:57.610420",
+ "modified": "2026-07-03 09:37:13.384985",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Details",
@@ -55,31 +55,7 @@
    "role": "System Manager"
   },
   {
-   "role": "Lead Person"
-  },
-  {
-   "role": "Sales Employee"
-  },
-  {
-   "role": "Lead Master Manager"
-  },
-  {
-   "role": "Lead Manager"
-  },
-  {
-   "role": "Lead Team Lead"
-  },
-  {
-   "role": "Sales Master Manager"
-  },
-  {
-   "role": "Sales Manager"
-  },
-  {
-   "role": "Sales Team Lead"
-  },
-  {
-   "role": "Sales Person"
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0

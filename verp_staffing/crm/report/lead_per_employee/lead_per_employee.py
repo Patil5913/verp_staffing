@@ -5,15 +5,12 @@ import frappe
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
-
 def execute(filters=None):
     filters = filters or {}
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -38,7 +35,6 @@ def get_columns():
         },
     ]
     
-
 def get_data(filters):
     conditions = ["l.lead_owner IS NOT NULL"]
     values = {}
@@ -89,18 +85,23 @@ def get_data(filters):
     # This keeps the main query clean and avoids GROUP_CONCAT size limits
     # on large employee sets.
     # -----------------------------------------------------------------------
-    data = frappe.db.sql(
-        f"""
+    main_query = """
         SELECT
-            l.lead_owner                    AS employee,
-            COUNT(DISTINCT l.name)          AS lead_count
+            l.lead_owner           AS employee,
+            COUNT(DISTINCT l.name) AS lead_count
         FROM `tabLead` l
         LEFT JOIN `tabLead Detail Form` ldf
             ON ldf.name = l.lead_details
-        {where_clause}
+    """
+
+    main_query += where_clause
+    main_query += """
         GROUP BY l.lead_owner
         ORDER BY lead_count DESC
-        """,
+    """
+
+    data = frappe.db.sql(
+        main_query,
         values,
         as_dict=True,
     )
@@ -118,20 +119,29 @@ def get_data(filters):
     #
     # Result shape: { employee_name: "Visa A: 3 | Visa B: 1", ... }
     # -----------------------------------------------------------------------
-    breakdown_rows = frappe.db.sql(
-        f"""
+    breakdown_query = """
         SELECT
-            l.lead_owner                        AS employee,
-            ldf.current_visa_status             AS visa_status,
-            COUNT(DISTINCT l.name)              AS cnt
+            l.lead_owner            AS employee,
+            ldf.current_visa_status AS visa_status,
+            COUNT(DISTINCT l.name)  AS cnt
         FROM `tabLead` l
         LEFT JOIN `tabLead Detail Form` ldf
             ON ldf.name = l.lead_details
-        {where_clause}
-          AND ldf.current_visa_status IS NOT NULL
-        GROUP BY l.lead_owner, ldf.current_visa_status
-        ORDER BY l.lead_owner, cnt DESC
-        """,
+    """
+
+    breakdown_query += where_clause
+    breakdown_query += """
+        AND ldf.current_visa_status IS NOT NULL
+        GROUP BY
+            l.lead_owner,
+            ldf.current_visa_status
+        ORDER BY
+            l.lead_owner,
+            cnt DESC
+    """
+
+    breakdown_rows = frappe.db.sql(
+        breakdown_query,
         values,
         as_dict=True,
     )
@@ -152,7 +162,6 @@ def get_data(filters):
         row["visa_summary"] = visa_summary_map.get(row["employee"], "")
 
     return data
-
 
 def get_chart(data):
     """
@@ -178,7 +187,6 @@ def get_chart(data):
         "colors": ["#8494FF"],
     }
 
-
 @frappe.whitelist()
 def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
     """
@@ -188,13 +196,13 @@ def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, fil
     """
     values = {
         "txt": f"%{txt}%",
-        "start": int(start),       # always cast — HTTP delivers strings
+        "start": int(start),       
         "page_len": int(page_len),
         "dept": "Lead",
     }
 
     conditions = [
-        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        "tabEmployee.name LIKE %(txt)s",
         """
         EXISTS (
             SELECT 1
@@ -211,16 +219,20 @@ def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, fil
             return []
         placeholders = _build_in_placeholders("se", allowed, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
-
-    return frappe.db.sql(
-        f"""
+        
+    query = """
         SELECT
             tabEmployee.name,
             tabEmployee.employee_name
         FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
+        WHERE
+    """
+
+    query += " AND ".join(conditions)
+
+    query += """
         ORDER BY tabEmployee.employee_name
         LIMIT %(start)s, %(page_len)s
-        """,
-        values,
-    )
+    """
+
+    return frappe.db.sql(query, values)

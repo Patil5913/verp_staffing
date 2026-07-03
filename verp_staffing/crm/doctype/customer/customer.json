@@ -82,6 +82,7 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
+   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -154,7 +155,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 16:33:43.813053",
+ "modified": "2026-07-02 11:34:29.938503",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -274,12 +275,6 @@
   },
   {
    "read": 1,
-   "role": "CR",
-   "select": 1
-  },
-  {
-   "read": 1,
-   "report": 1,
    "role": "CR",
    "select": 1
   },

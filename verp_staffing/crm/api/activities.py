@@ -85,7 +85,6 @@ def create_task(
         }
     )
     doc.insert(ignore_permissions=True)
-    frappe.db.commit()
     return {
         "name": doc.name,
         "description": doc.description,
@@ -111,7 +110,6 @@ def create_event(
         }
     )
     doc.insert(ignore_permissions=True)
-    frappe.db.commit()
     return {
         "name": doc.name,
         "summary": doc.summary,
@@ -127,7 +125,6 @@ def mark_task_complete(task_name, completed=1):
     doc = frappe.get_doc("CRM Task", task_name)
     doc.is_completed = 1 if int(completed) else 0
     doc.save(ignore_permissions=True)
-    frappe.db.commit()
     return {"name": doc.name, "is_completed": doc.is_completed}
 
 
@@ -137,5 +134,5 @@ def delete_activity(doctype, name):
     if doctype not in ("CRM Task", "CRM Event"):
         frappe.throw("Invalid doctype for delete_activity")
     frappe.delete_doc(doctype, name, ignore_permissions=True)
-    frappe.db.commit()
+    # frappe.db.commit()
     return True

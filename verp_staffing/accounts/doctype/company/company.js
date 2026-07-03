@@ -21,7 +21,7 @@ frappe.ui.form.on("Company", {
 		});
 	},
 	country: function (frm) {
-		set_chart_of_accounts_options(frm.doc);
+		set_chart_of_accounts_options(frm);
 	},
 	company_name: function (frm) {
 		if (frm.doc.__islocal) {
@@ -80,9 +80,9 @@ frappe.ui.form.on("Company", {
 				);
 			}
 		}
-		set_chart_of_accounts_options(frm.doc);
+		set_chart_of_accounts_options(frm);
 
-				frm.add_custom_button("Show Form Tour", () => {
+		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Company";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
@@ -95,24 +95,29 @@ let disbale_coa_fields = function (frm, bool = true) {
 	frm.set_df_property("existing_company", "read_only", bool);
 };
 
-const set_chart_of_accounts_options = function (doc) {
-	var selected_value = doc.chart_of_accounts;
-	if (doc.country) {
-		return frappe.call({
-			method: "verp_staffing.accounts.doctype.account.charts_of_accounts.charts_of_accounts.get_charts_for_country",
-			args: {
-				country: doc.country,
-				with_standard: true,
-			},
-			callback: function (r) {
-				if (!r.exc) {
-					set_field_options("chart_of_accounts", [""].concat(r.message).join("\n"));
-					if (in_list(r.message, selected_value))
-						cur_frm.set_value("chart_of_accounts", selected_value);
+const set_chart_of_accounts_options = function (frm) {
+	const selected_value = frm.doc.chart_of_accounts;
+	if (!frm.doc.country) return; 
+
+	return frappe.call({
+		method: "verp_staffing.accounts.doctype.account.charts_of_accounts.charts_of_accounts.get_charts_for_country",
+		args: {
+			country: frm.doc.country,
+			with_standard: true,
+		},
+		callback: function (r) {
+			if (!r.exc) {
+				set_field_options(
+					"chart_of_accounts",
+					[""].concat(r.message).join("\n")
+				);
+
+				if (in_list(r.message, selected_value)) {
+					frm.set_value("chart_of_accounts", selected_value);
 				}
-			},
-		});
-	}
+			}
+		},
+	});
 };
 
 const setup_queries = function (frm) {

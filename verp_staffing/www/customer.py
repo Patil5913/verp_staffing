@@ -49,14 +49,14 @@ def get_context(context):
 
     raw_token = str(raw_token)[:256]
 
-    # ✅ ONLY VALIDATE SIGNATURE
+    # ONLY VALIDATE SIGNATURE
     email = verify_token_and_get_email(raw_token)
 
     if not email:
         context.invalid_link = True
         return context
 
-    # ❗ DO NOT STOP HERE
+    # DO NOT STOP HERE
     # token is valid, OTP can still proceed
 
     status = get_otp_status_web(raw_token)
@@ -594,19 +594,19 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
 
 
 # Download Resume
+from verp_staffing.crm.api.helpers import _validate_site_file_path
+from frappe.utils.file_manager import get_file_path
+
 @frappe.whitelist(allow_guest=True)
 def download_resume(file_url):
-    from frappe.utils.file_manager import get_file_path
-
     if not file_url:
         frappe.throw("Missing file")
 
     # sanitize
-    file_url = file_url.replace("/private/files/", "")
+    file_path = get_file_path(file_url.replace("/private/files/", ""))
+    validated_output_path = _validate_site_file_path(file_path)
 
-    file_path = get_file_path(file_url)
-
-    with open(file_path, "rb") as f:
+    with validated_output_path.open("rb") as f:
         frappe.local.response.filename = file_url
         frappe.local.response.filecontent = f.read()
         frappe.local.response.type = "download"

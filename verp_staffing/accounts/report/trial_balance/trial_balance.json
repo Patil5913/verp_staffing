@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-04-25 14:59:41.693616",
+ "modified": "2026-07-03 09:37:40.125279",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Trial Balance",
@@ -19,6 +19,13 @@
  "ref_doctype": "GL Entry",
  "report_name": "Trial Balance",
  "report_type": "Script Report",
- "roles": [],
+ "roles": [
+  {
+   "role": "_show_sidebar_master"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "timeout": 0
 }

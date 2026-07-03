@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-04-24 16:31:24.272341",
+ "modified": "2026-07-03 09:34:49.001642",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Balance Sheet",
@@ -19,6 +19,13 @@
  "ref_doctype": "GL Entry",
  "report_name": "Balance Sheet",
  "report_type": "Script Report",
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "_show_sidebar_master"
+  }
+ ],
  "timeout": 0
 }

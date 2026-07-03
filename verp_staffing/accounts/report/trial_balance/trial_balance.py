@@ -20,11 +20,6 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate
 
-
-# ─────────────────────────────────────────────
-# ENTRY POINT
-# ─────────────────────────────────────────────
-
 def execute(filters=None):
     filters = frappe._dict(filters or {})
 
@@ -50,11 +45,6 @@ def execute(filters=None):
 
     return columns, data
 
-
-# ─────────────────────────────────────────────
-# AUTO-RESOLVE LATEST FISCAL YEAR FOR COMPANY
-# ─────────────────────────────────────────────
-
 def _get_latest_fiscal_year(company):
     if not company:
         return None
@@ -69,11 +59,6 @@ def _get_latest_fiscal_year(company):
     """, company, as_dict=True)
     return rows[0].name if rows else None
 
-
-# ─────────────────────────────────────────────
-# VALIDATION
-# ─────────────────────────────────────────────
-
 def validate_filters(filters):
     if not filters.company:
         frappe.throw(_("Please select a Company (or set a Default Company in Accounts Settings)."))
@@ -86,11 +71,6 @@ def validate_filters(filters):
         frappe.throw(_("Please select From Date and To Date."))
     if getdate(filters.from_date) > getdate(filters.to_date):
         frappe.throw(_("From Date cannot be greater than To Date."))
-
-
-# ─────────────────────────────────────────────
-# COLUMNS — dynamic based on show_net_values
-# ─────────────────────────────────────────────
 
 def get_columns(filters):
     show_net = bool(filters.get("show_net_values", 0))
@@ -187,116 +167,66 @@ def get_columns(filters):
 
     return cols
 
-
-# ─────────────────────────────────────────────
-# FINANCE BOOK SQL CONDITION
-# ─────────────────────────────────────────────
-
-def _fb_condition(filters, values):
+def _fb_condition(filters):
     """
-    Returns an SQL snippet and appended values for finance book filtering.
-    include_default_fb_entries=1 → also include entries with no finance book.
+    Returns finance book conditions and corresponding parameter values.
     """
+    conditions = []
+    values = []
+
     if not filters.get("finance_book"):
-        return "", values   # no filter at all
+        return conditions, values
 
     if filters.get("include_default_fb_entries"):
-        snippet = " AND (gle.finance_book = %s OR gle.finance_book IS NULL OR gle.finance_book = '')"
+        conditions.append(
+            "(gle.finance_book = %s OR gle.finance_book IS NULL OR gle.finance_book = '')"
+        )
     else:
-        snippet = " AND gle.finance_book = %s"
+        conditions.append("gle.finance_book = %s")
 
-    return snippet, values + [filters.finance_book]
+    values.append(filters.finance_book)
 
-
-# ─────────────────────────────────────────────
-# PERIOD CLOSING VOUCHER TYPES
-# ─────────────────────────────────────────────
+    return conditions, values
 
 CLOSING_VOUCHER_TYPES = ("Period Closing Voucher",)
 
-
-# ─────────────────────────────────────────────
-# GL QUERY HELPER
-# ─────────────────────────────────────────────
-
-def _fetch_gl(company, from_date, to_date, filters, exclude_closing=True):
+def _fetch_gl_clean(company, from_date, to_date, filters, exclude_closing):
     """
     Fetch SUM(debit), SUM(credit) per account for the given date window.
 
     exclude_closing=True  → WHERE voucher_type NOT IN (closing types)
     exclude_closing=False → include everything
     """
-    fb_sql, values = _fb_condition(filters, [company, from_date, to_date])
+    conditions = [
+        "gle.company = %s",
+        "gle.posting_date BETWEEN %s AND %s",
+        "gle.is_cancelled = 0",
+    ]
 
-    closing_filter = ""
-    if exclude_closing:
-        closing_filter = " AND gle.voucher_type NOT IN ({0})".format(
-            ", ".join(["%s"] * len(CLOSING_VOUCHER_TYPES))
-        )
-        values = values + list(CLOSING_VOUCHER_TYPES)
+    values = [company, from_date, to_date]
 
-    rows = frappe.db.sql("""
-        SELECT
-            gle.account,
-            SUM(gle.debit)  AS debit,
-            SUM(gle.credit) AS credit
-        FROM `tabGL Entry` gle
-        WHERE gle.company       = %s
-          AND gle.posting_date BETWEEN %s AND %s
-          AND gle.is_cancelled  = 0
-          {fb}
-          {closing}
-        GROUP BY gle.account
-    """.format(fb=fb_sql, closing=closing_filter),
-    [company, from_date, to_date] + ([filters.finance_book] if filters.get("finance_book") else [])
-    + (list(CLOSING_VOUCHER_TYPES) if exclude_closing else []),
-    as_dict=True)
+    fb_conditions, fb_values = _fb_condition(filters)
+    conditions.extend(fb_conditions)
+    values.extend(fb_values)
 
-    return {r.account: r for r in rows}
-
-
-def _fetch_gl_clean(company, from_date, to_date, filters, exclude_closing):
-    """
-    Cleaner GL fetcher that builds values list properly to avoid duplication.
-    """
-    fb_cond  = ""
-    fb_vals  = []
-    if filters.get("finance_book"):
-        if filters.get("include_default_fb_entries"):
-            fb_cond = " AND (gle.finance_book = %s OR gle.finance_book IS NULL OR gle.finance_book = '')"
-        else:
-            fb_cond = " AND gle.finance_book = %s"
-        fb_vals = [filters.finance_book]
-
-    closing_cond = ""
-    closing_vals = []
     if exclude_closing:
         placeholders = ", ".join(["%s"] * len(CLOSING_VOUCHER_TYPES))
-        closing_cond = " AND gle.voucher_type NOT IN ({0})".format(placeholders)
-        closing_vals = list(CLOSING_VOUCHER_TYPES)
+        conditions.append(f"gle.voucher_type NOT IN ({placeholders})")
+        values.extend(CLOSING_VOUCHER_TYPES)
 
-    sql = """
-        SELECT
-            gle.account,
-            SUM(gle.debit)  AS debit,
-            SUM(gle.credit) AS credit
-        FROM `tabGL Entry` gle
-        WHERE gle.company      = %s
-          AND gle.posting_date BETWEEN %s AND %s
-          AND gle.is_cancelled = 0
-          {fb}{closing}
-        GROUP BY gle.account
-    """.format(fb=fb_cond, closing=closing_cond)
+    query = (
+        "SELECT "
+        "gle.account, "
+        "SUM(gle.debit) AS debit, "
+        "SUM(gle.credit) AS credit "
+        "FROM `tabGL Entry` gle "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " GROUP BY gle.account"
+    )
 
-    values = [company, from_date, to_date] + fb_vals + closing_vals
-
-    rows = frappe.db.sql(sql, values, as_dict=True)
+    rows = frappe.db.sql(query, values, as_dict=True)
     return {r.account: r for r in rows}
-
-
-# ─────────────────────────────────────────────
-# PREVIOUS UNCLOSED FY P&L BALANCES
-# ─────────────────────────────────────────────
 
 def _get_unclosed_pl_accounts(company, before_date):
     """
@@ -324,11 +254,6 @@ def _get_unclosed_pl_accounts(company, before_date):
         result[r.account] = flt(r.debit) - flt(r.credit)
     return result
 
-
-# ─────────────────────────────────────────────
-# ACCOUNT TREE
-# ─────────────────────────────────────────────
-
 def get_accounts(company):
     """All accounts for this company, ordered for tree traversal."""
     return frappe.db.sql("""
@@ -338,11 +263,6 @@ def get_accounts(company):
         WHERE company = %s
         ORDER BY lft
     """, company, as_dict=True)
-
-
-# ─────────────────────────────────────────────
-# MAIN DATA BUILDER
-# ─────────────────────────────────────────────
 
 def get_data(filters):
     company   = filters.company

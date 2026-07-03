@@ -10,6 +10,16 @@ class ERPConfiguration(Document):
 
     def validate(self):
         self.validate_expiry_time()
+        
+    def clear_cache(self):
+        cache = frappe.cache()
+        cache.delete_key("dept_role_map")
+        
+    def on_update(self):
+        self.clear_cache()
+        
+    def on_trash(self):
+        self.clear_cache()
 
     def validate_expiry_time(self):
         value = self.expiry_hours_of_agreement
@@ -21,7 +31,7 @@ class ERPConfiguration(Document):
         if not re.match(r"^\d{2}:\d{2}$", value):
             frappe.throw("Invalid format. Use HH:MM (e.g., 02:30)")
 
-        hours, minutes = map(int, value.split(":"))
+        hours, minutes = [int(part) for part in value.split(":")]
 
         
         if hours == 0 and minutes == 0:

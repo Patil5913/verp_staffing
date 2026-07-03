@@ -18,8 +18,7 @@ from datetime import datetime
 
 import io
 from PIL import Image
-
-
+from verp_staffing.crm.api.helpers import _validate_site_file_path
 class ESign(Document):
     def validate(self):
 
@@ -33,11 +32,10 @@ class ESign(Document):
             return
 
         # Read private file content
-        private_path = file_doc.get_full_path()
+        validated_output_path = _validate_site_file_path(file_doc.get_full_path())
 
-        with open(private_path, "rb") as f:
+        with validated_output_path.open("rb") as f:
             content = f.read()
-
         # Create NEW public file safely
         new_file = save_file(
             fname=file_doc.file_name,
@@ -146,11 +144,17 @@ def send_all_signers(agreement):
     )
 
     # fetch template once outside the loop
-    template_name = "Document Sign Request - e_sign"
-    template = (
-        frappe.get_doc("Email Template", template_name)
-        if frappe.db.exists("Email Template", template_name)
-        else None
+    subject = "Please Sign Document"
+    message = (
+        "<p>You have a document to sign.</p>"
+        "<p><a href='{link}'>Click here to Sign</a></p>"
+    )
+            
+    template = frappe.db.get_value(
+        "Email Template",
+        "Document Sign Request - e_sign",
+        ["subject", "response_html", "response"],
+        as_dict=True,
     )
 
     for email in unique_emails:
@@ -170,12 +174,6 @@ def send_all_signers(agreement):
             message = frappe.render_template(
                 template.response_html or template.response, context
             )
-        else:
-            subject = "Please Sign Document"
-            message = f"""
-                <p>You have a document to sign.</p>
-                <p><a href="{link}">Click here to Sign</a></p>
-            """
 
         frappe.sendmail(
             recipients=[email],
@@ -195,7 +193,6 @@ def send_all_signers(agreement):
     # and audit entries together
     doc.status = "Sent"
     doc.save(ignore_permissions=True)
-    frappe.db.commit()
     return "Emails Sent"
 
 
@@ -238,17 +235,28 @@ def send_final_signed_email(agreement_name):
         return
 
     # Read file once (important)
-    with open(file_path, "rb") as f:
+    validated_output_path = _validate_site_file_path(file_path)
+
+    with validated_output_path.open("rb") as f:
         pdf_content = f.read()
 
     # Send individually
-    # Fetch template once outside the loop
-    template_name = "Final Signed Agreement Email - e_sign"
-    template = None
-    try:
-        template = frappe.get_cached_doc("Email Template", template_name)
-    except frappe.DoesNotExistError:
-        template = None
+    subject = "Final Signed Agreement"
+    message = (
+        "<p>Hello,</p>"
+        f"<p>The agreement <b>{agreement.title}</b> has been fully signed.</p>"
+        "<p>Please find the final signed document attached.</p>"
+        "<br>"
+        "<p>Thank you.</p>"
+    )
+            
+    template = frappe.db.get_value(
+        "Final Signed Agreement Email - e_sign",
+        "Document Sign Request - e_sign",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )        
+
     # Send individually
     for email in signer_emails:
         if template:
@@ -257,15 +265,7 @@ def send_final_signed_email(agreement_name):
             message = frappe.render_template(
                 template.response_html or template.response, context
             )
-        else:
-            subject = "Final Signed Agreement"
-            message = f"""
-                <p>Hello,</p>
-                <p>The agreement <b>{agreement.title}</b> has been fully signed.</p>
-                <p>Please find the final signed document attached.</p>
-                <br>
-                <p>Thank you.</p>
-            """
+            
         frappe.sendmail(
             recipients=[email],
             subject=subject,
@@ -278,10 +278,11 @@ def send_final_signed_email(agreement_name):
 
 def calculate_file_hash(file_path):
     import hashlib
+    validated_path = _validate_site_file_path(file_path)
 
     sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
+    with validated_path.open("rb") as file:
+        for chunk in iter(lambda: file.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
 
@@ -1302,8 +1303,6 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
     )
 
     agreement.save(ignore_permissions=True)
-    frappe.db.commit()
-
     return {"status": "success"}
 
 
@@ -1335,21 +1334,23 @@ def send_otp(token=None):
             },
             expires_in_sec=300,
         )
+        
+        subject = "Your Verification Code"
+        message = f"<p>Your OTP is: <b>{otp}</b></p>"
+        
+        template = frappe.db.get_value(
+            "OTP Verification Email",
+            "Document Sign Request - e_sign",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )     
 
-        # Fetch template
-        template_name = "OTP Verification Email"
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc("Email Template", template_name)
+        if template:
             context = {"otp": otp}
             subject = frappe.render_template(template.subject, context)
             message = frappe.render_template(
                 template.response_html or template.response, context
             )
-            html = frappe.render_template(template.response_html, {"otp": otp})
-
-        else:
-            subject = "Your Verification Code"
-            message = f"<p>Your OTP is: <b>{otp}</b></p>"
 
         frappe.sendmail(
             recipients=[email], subject=subject, message=message, delayed=False
@@ -1367,8 +1368,6 @@ def send_otp(token=None):
         )
 
         agreement.save(ignore_permissions=True)
-
-        frappe.db.commit()
         return {"status": "sent"}
 
     except Exception:
@@ -1437,8 +1436,6 @@ def verify_otp(token=None, otp=None):
         )
 
         # Commit only once after all DB updates succeed.
-        frappe.db.commit()
-
         frappe.local.cookie_manager.set_cookie(
             key=f"verify_{token}",
             value=verification_key,

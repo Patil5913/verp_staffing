@@ -101,45 +101,50 @@ def get_tax_rate(account_head):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def tax_account_query(doctype, txt, searchfield, start, page_len, filters):
-	doctype = "Account"
-	company_currency = get_company_currency(filters.get("company"))
+    doctype = "Account"
+    company_currency = get_company_currency(filters.get("company"))
 
-	def get_accounts(with_account_type_filter):
-		account_type_condition = ""
-		if with_account_type_filter:
-			account_type_condition = "AND account_type in %(account_types)s"
+    def get_accounts(with_account_type_filter):
+        conditions = [
+            "`tabAccount`.docstatus != 2",
+            "is_group = 0",
+            "company = %(company)s",
+            "disabled = %(disabled)s",
+            "(account_currency = %(currency)s OR IFNULL(account_currency, '') = '')",
+            "name LIKE %(txt)s",
+        ]
 
-		accounts = frappe.db.sql(
-			f"""
-			SELECT name, parent_account
-			FROM `tabAccount`
-			WHERE `tabAccount`.docstatus!=2
-				{account_type_condition}
-				AND is_group = 0
-				AND company = %(company)s
-				AND disabled = %(disabled)s
-				AND (account_currency = %(currency)s or ifnull(account_currency, '') = '')
-				AND `{searchfield}` LIKE %(txt)s
-				{get_match_cond(doctype)}
-			ORDER BY idx DESC, name
-			LIMIT %(limit)s offset %(offset)s
-		""",
-			dict(
-				account_types=filters.get("account_type"),
-				company=filters.get("company"),
-				disabled=filters.get("disabled", 0),
-				currency=company_currency,
-				txt=f"%{txt}%",
-				offset=start,
-				limit=page_len,
-			),
-		)
+        if with_account_type_filter:
+            conditions.append("account_type IN %(account_types)s")
 
-		return accounts
+        match_cond = get_match_cond(doctype)
+        if match_cond:
+            conditions.append(match_cond)
 
-	tax_accounts = get_accounts(True)
+        query = (
+            "SELECT name, parent_account "
+            "FROM `tabAccount` "
+            "WHERE "
+            + " AND ".join(conditions)
+            + " ORDER BY idx DESC, name "
+            "LIMIT %(limit)s OFFSET %(offset)s"
+        )
+        
+        values = {
+                "account_types": filters.get("account_type"),
+                "company": filters.get("company"),
+                "disabled": filters.get("disabled", 0),
+                "currency": company_currency,
+                "txt": f"%{txt}%",
+                "offset": start,
+                "limit": page_len,
+            }
 
-	if not tax_accounts:
-		tax_accounts = get_accounts(False)
+        return frappe.db.sql(query, values)
 
-	return tax_accounts
+    tax_accounts = get_accounts(True)
+
+    if not tax_accounts:
+        tax_accounts = get_accounts(False)
+
+    return tax_accounts

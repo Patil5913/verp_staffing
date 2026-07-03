@@ -16,25 +16,41 @@ class Employee(Document):
             frappe.throw(_("Employee Name is required"))
 
         self.name = generate_name_series("Employee", name)
+        
+    def clear_employee_cache(self):
+        cache = frappe.cache()
+        cache.delete_key(f"lead_user::{self.user}")
+        cache.delete_key(f"opportunity_user::{self.user}")
+        cache.delete_key(f"employee_from_user::{self.user}")
+        cache.delete_key(f"user_departments::{self.name}")
+        cache.delete_key(f"roles:{self.name}")
+
+        departments = {
+            row.department
+            for row in self.employee_assignment_details_table
+            if row.department
+        }
+
+        for department in departments:
+            cache.delete_key(f"superiors:{self.name}:{department}")
+            cache.delete_key(f"emp_tree:{self.name}:{department}")
+            cache.delete_key(f"Visible_Employee_Names:{self.user}:{department}")
+
+        # Cache without department filter
+        cache.delete_key(f"superiors:{self.name}:None")
+        cache.delete_key(f"emp_tree:{self.name}:all")
+        cache.delete_key(f"Visible_Employee_Names:{self.user}:all")
 
     def on_update(self):
-        self.validate_employee_edit_permission()
-        frappe.cache().delete_key("Visible_Employee_Names")
-        frappe.cache().delete_key(f"lead_user::{self.user}")
-        frappe.cache().delete_key(f"opportunity_user::{self.user}")
-        frappe.cache().delete_key(f"employee_from_user::{self.user}")
-        frappe.cache().delete_key(f"user_departments::{self.name}")
+        # self.validate_employee_edit_permission()
+        self.clear_employee_cache()
 
     def on_trash(self):
         validate_employee_delete(self)
-        frappe.cache().delete_key("Visible_Employee_Names")
-        frappe.cache().delete_key(f"lead_user::{self.user}")
-        frappe.cache().delete_key(f"opportunity_user::{self.user}")
-        frappe.cache().delete_key(f"employee_from_user::{self.user}")
-        frappe.cache().delete_key(f"user_departments::{self.name}")
+        self.clear_employee_cache()
 
     def validate(self):
-        self.validate_employee_edit_permission()
+        # self.validate_employee_edit_permission()
 
         rows = self.employee_assignment_details_table or []
 
@@ -180,28 +196,29 @@ def get_users_not_linked_to_employee(
                 like_txt,
             ]
         )
-
-    values.extend(
-        [
-            page_len,
-            start,
-        ]
-    )
-
-    results = frappe.db.sql(
-        f"""
+        
+    query = """
         SELECT
             u.name
         FROM `tabUser` u
-        WHERE {" AND ".join(conditions)}
+        WHERE
+    """
+
+    query += " AND ".join(conditions)
+
+    query += """
         ORDER BY u.name ASC
         LIMIT %s OFFSET %s
-        """,
-        values,
+    """
+
+    values.extend(
+        [
+            int(page_len),
+            int(start),
+        ]
     )
 
-    return list(results)
-
+    return list(frappe.db.sql(query, values))
 
 @frappe.whitelist()
 def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filters):
@@ -218,34 +235,7 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
         designation,
     ]
 
-    search_condition = ""
-
-    if txt:
-        like_txt = f"%{txt}%"
-
-        search_condition = """
-            AND (
-                e.name LIKE %s
-                OR e.employee_name LIKE %s
-            )
-        """
-
-        values.extend(
-            [
-                like_txt,
-                like_txt,
-            ]
-        )
-
-    values.extend(
-        [
-            page_len,
-            start,
-        ]
-    )
-
-    return frappe.db.sql(
-        f"""
+    query = """
         SELECT
             e.name,
             e.employee_name
@@ -255,14 +245,38 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
         WHERE
             d.department = %s
             AND d.designation = %s
-            {search_condition}
+    """
+
+    if txt:
+        query += """
+            AND (
+                e.name LIKE %s
+                OR e.employee_name LIKE %s
+            )
+        """
+
+        like_txt = f"%{txt}%"
+        values.extend(
+            [
+                like_txt,
+                like_txt,
+            ]
+        )
+
+    query += """
         GROUP BY e.name
         ORDER BY e.employee_name ASC
         LIMIT %s OFFSET %s
-        """,
-        values,
+    """
+
+    values.extend(
+        [
+            int(page_len),
+            int(start),
+        ]
     )
 
+    return frappe.db.sql(query, values)
 
 @frappe.whitelist()
 def user_belongs_to_department(user, department):

@@ -431,7 +431,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 16:49:08.394998",
+ "modified": "2026-07-01 13:53:53.626275",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -535,16 +535,14 @@
    "print": 1,
    "read": 1,
    "role": "Lead Person",
-   "share": 1
+   "share": 1,
+   "write": 1
   },
   {
    "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
    "read": 1,
    "role": "Lead Master Manager",
-   "share": 1
+   "write": 1
   },
   {
    "create": 1,
@@ -553,7 +551,8 @@
    "print": 1,
    "read": 1,
    "role": "Lead Manager",
-   "share": 1
+   "share": 1,
+   "write": 1
   },
   {
    "create": 1,
@@ -562,7 +561,8 @@
    "print": 1,
    "read": 1,
    "role": "Lead Team Lead",
-   "share": 1
+   "share": 1,
+   "write": 1
   },
   {
    "email": 1,

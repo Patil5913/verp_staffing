@@ -4,6 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils.file_manager import save_file
+from verp_staffing.crm.api.helpers import _validate_site_file_path
 
 class PdfAgreementTemplate(Document):
     def validate(self):
@@ -16,10 +17,10 @@ class PdfAgreementTemplate(Document):
         if not file_doc.is_private:
             return
 
-        # Read private file content
         private_path = file_doc.get_full_path()
+        validated_output_path = _validate_site_file_path(private_path)
 
-        with open(private_path, "rb") as f:
+        with validated_output_path.open("rb") as f:
             content = f.read()
 
         # Create NEW public file safely

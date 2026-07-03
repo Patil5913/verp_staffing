@@ -120,6 +120,8 @@ class TestSalesOrder(FrappeTestCase):
             end_date="2027-03-31",
         ).name
 
+        # Kept free of payment terms so term-validation tests (which assume
+        # a clean slate) can reuse it as-is.
         so = make_sales_order(
             company=cls.company,
             customer=cls.customer,
@@ -127,9 +129,28 @@ class TestSalesOrder(FrappeTestCase):
             do_not_submit=True,
             items=add_item(cls.item, cls.sales_account, rate=500),
         )
-        si = create_sales_invoice_from_sales_order(so.name)
-        cls.si_doc = frappe.get_cached_doc("Sales Invoice", si)
         cls.so_doc = so
+
+        # Separate order used purely to produce a Sales Invoice / Payment
+        # Entry pair for tests that need one already sitting around.
+        invoice_so = make_sales_order(
+            company=cls.company,
+            customer=cls.customer,
+            income_account=cls.sales_account,
+            do_not_submit=True,
+            items=add_item(cls.item, cls.sales_account, rate=500),
+            payment_terms=add_terms(500),
+        )
+        result = create_sales_invoice_from_sales_order(
+            sales_order=invoice_so.name,
+            payment_term_row=invoice_so.payment_terms[0].name,
+            reference_no="REF-SETUP-001",
+            reference_date=nowdate(),
+            remarks="Setup invoice",
+        )
+        cls.si_doc = frappe.get_cached_doc("Sales Invoice", result["invoice"])
+        cls.pe_name = result["payment_entry"]
+        cls.invoice_so_doc = invoice_so
 
         cls._original_commit = frappe.db.commit
         frappe.db.commit = lambda *a, **kw: None
@@ -152,9 +173,16 @@ class TestSalesInvoiceCreationFromSalesOrder(TestSalesOrder):
             income_account=self.sales_account,
             do_not_submit=True,
             items=add_item(self.item, self.sales_account, rate=500),
+            payment_terms=add_terms(500),
         )
-        si = create_sales_invoice_from_sales_order(so.name)
-        si_doc = frappe.get_cached_doc("Sales Invoice", si)
+        result = create_sales_invoice_from_sales_order(
+            sales_order=so.name,
+            payment_term_row=so.payment_terms[0].name,
+            reference_no="REF-TEST-001",
+            reference_date=nowdate(),
+            remarks="Test invoice creation",
+        )
+        si_doc = frappe.get_cached_doc("Sales Invoice", result["invoice"])
 
         self.assertEqual(si_doc.sales_order, so.name)
         self.assertEqual(si_doc.customer, so.customer)
@@ -163,6 +191,7 @@ class TestSalesInvoiceCreationFromSalesOrder(TestSalesOrder):
         self.assertEqual(si_doc.currency, so.currency)
         self.assertEqual(si_doc.conversion_rate, so.conversion_rate)
         self.assertEqual(len(si_doc.items), 1)
+        self.assertIsNotNone(result["payment_entry"])
 
     def test_duplicate_sales_invoice_blocked(self):
         "Creating a second SI for the same SO must raise ValidationError"
@@ -172,15 +201,28 @@ class TestSalesInvoiceCreationFromSalesOrder(TestSalesOrder):
             income_account=self.sales_account,
             do_not_submit=True,
             items=add_item(self.item, self.sales_account, rate=500),
+            payment_terms=add_terms(500),
         )
-        create_sales_invoice_from_sales_order(so.name)
+        create_sales_invoice_from_sales_order(
+            sales_order=so.name,
+            payment_term_row=so.payment_terms[0].name,
+            reference_no="REF-DUP-001",
+            reference_date=nowdate(),
+            remarks="First invoice",
+        )
 
         with self.assertRaises(frappe.ValidationError):
-            create_sales_invoice_from_sales_order(so.name)
+            create_sales_invoice_from_sales_order(
+                sales_order=so.name,
+                payment_term_row=so.payment_terms[0].name,
+                reference_no="REF-DUP-002",
+                reference_date=nowdate(),
+                remarks="Duplicate invoice",
+            )
 
     def test_get_sales_invoice_for_order(self):
         "get_sales_invoice_for_order must return correct SI name"
-        si = get_sales_invoice_for_order(self.so_doc.name)
+        si = get_sales_invoice_for_order(self.invoice_so_doc.name)
         self.assertEqual(si, self.si_doc.name)
 
     def test_get_sales_invoice_for_order_no_si(self):
@@ -472,13 +514,15 @@ class TestPaymentTermsDeletion(TestSalesOrder):
             items=add_item(self.item, self.sales_account, rate=1000),
             payment_terms=add_terms(700),
         )
-        create_sales_invoice_from_sales_order(so.name)
-        pe_name = create_payment_entry_from_term(
+        result = create_sales_invoice_from_sales_order(
             sales_order=so.name,
             payment_term_row=so.payment_terms[0].name,
             reference_no="REF-001",
             reference_date=nowdate(),
+            remarks="Test remarks",
         )
+        pe_name = result["payment_entry"]
+
         term_name = so.payment_terms[0].name
         so.payment_terms = [t for t in so.payment_terms if t.name != term_name]
         so.save()
@@ -495,13 +539,14 @@ class TestPaymentTermsDeletion(TestSalesOrder):
             items=add_item(self.item, self.sales_account, rate=1000),
             payment_terms=add_terms(1000),
         )
-        create_sales_invoice_from_sales_order(so.name)
-        pe_name = create_payment_entry_from_term(
+        result = create_sales_invoice_from_sales_order(
             sales_order=so.name,
             payment_term_row=so.payment_terms[0].name,
             reference_no="REF-002",
             reference_date=nowdate(),
+            remarks="Test remarks",
         )
+        pe_name = result["payment_entry"]
         # Simulate submitted PE
         frappe.db.set_value("Payment Entry", pe_name, "docstatus", 1)
 
@@ -522,22 +567,30 @@ class TestCreatePaymentEntryFromTerm(TestSalesOrder):
             customer=self.customer,
             income_account=self.sales_account,
             items=add_item(self.item, self.sales_account, rate=1000),
-            payment_terms=add_terms(700),
+            payment_terms=add_terms(300) + add_terms(700, counter=2),
         )
-        create_sales_invoice_from_sales_order(so.name)
-        pe_name = create_payment_entry_from_term(
+        # SI + first term's PE created together via the merged flow
+        create_sales_invoice_from_sales_order(
             sales_order=so.name,
             payment_term_row=so.payment_terms[0].name,
+            reference_no="REF-000",
+            reference_date=nowdate(),
+            remarks="Initial invoice",
+        )
+        # Now test create_payment_entry_from_term directly against the second term
+        pe_name = create_payment_entry_from_term(
+            sales_order=so.name,
+            payment_term_row=so.payment_terms[1].name,
             reference_no="REF-001",
             reference_date=nowdate(),
         )
         pe = frappe.get_doc("Payment Entry", pe_name)
-        term = frappe.get_doc("Customer Payment Terms", so.payment_terms[0].name)
+        term = frappe.get_doc("Customer Payment Terms", so.payment_terms[1].name)
 
         self.assertEqual(pe.verification_status, "Pending Verification")
         self.assertEqual(pe.party, so.customer)
         self.assertEqual(flt(pe.paid_amount), 700)
-        self.assertEqual(pe.payment_term_row, so.payment_terms[0].name)
+        self.assertEqual(pe.payment_term_row, so.payment_terms[1].name)
         self.assertEqual(len(pe.references), 1)
         self.assertEqual(pe.references[0].reference_doctype, "Sales Invoice")
         self.assertEqual(term.payment_status, "Pending Verification")
@@ -567,15 +620,23 @@ class TestCreatePaymentEntryFromTerm(TestSalesOrder):
             company=self.company,
             customer=self.customer,
             income_account=self.sales_account,
-            items=add_item(self.item, self.sales_account, rate=1000),
-            payment_terms=add_terms(700, payment_status="Pending Verification"),
+            items=add_item(self.item, self.sales_account, rate=1700),
+            payment_terms=add_terms(1000)
+            + add_terms(700, counter=2, payment_status="Pending Verification"),
         )
-        create_sales_invoice_from_sales_order(so.name)
+        # Create SI via the first (fresh) term so an SI exists on the SO
+        create_sales_invoice_from_sales_order(
+            sales_order=so.name,
+            payment_term_row=so.payment_terms[0].name,
+            reference_no="REF-001",
+            reference_date=nowdate(),
+            remarks="Initial invoice",
+        )
         with self.assertRaises(frappe.ValidationError):
             create_payment_entry_from_term(
                 sales_order=so.name,
-                payment_term_row=so.payment_terms[0].name,
-                reference_no="REF-001",
+                payment_term_row=so.payment_terms[1].name,
+                reference_no="REF-002",
                 reference_date=nowdate(),
             )
 
@@ -585,15 +646,22 @@ class TestCreatePaymentEntryFromTerm(TestSalesOrder):
             company=self.company,
             customer=self.customer,
             income_account=self.sales_account,
-            items=add_item(self.item, self.sales_account, rate=1000),
-            payment_terms=add_terms(1000, payment_status="Verified"),
+            items=add_item(self.item, self.sales_account, rate=1300),
+            payment_terms=add_terms(300)
+            + add_terms(1000, counter=2, payment_status="Verified"),
         )
-        create_sales_invoice_from_sales_order(so.name)
+        create_sales_invoice_from_sales_order(
+            sales_order=so.name,
+            payment_term_row=so.payment_terms[0].name,
+            reference_no="REF-001",
+            reference_date=nowdate(),
+            remarks="Initial invoice",
+        )
         with self.assertRaises(frappe.ValidationError):
             create_payment_entry_from_term(
                 sales_order=so.name,
-                payment_term_row=so.payment_terms[0].name,
-                reference_no="REF-001",
+                payment_term_row=so.payment_terms[1].name,
+                reference_no="REF-002",
                 reference_date=nowdate(),
             )
 
@@ -607,14 +675,14 @@ class TestPaymentEntryVerification(TestSalesOrder):
             items=add_item(self.item, self.sales_account, rate=rate),
             payment_terms=add_terms(term_amount),
         )
-        create_sales_invoice_from_sales_order(so.name)
-        pe_name = create_payment_entry_from_term(
+        result = create_sales_invoice_from_sales_order(
             sales_order=so.name,
             payment_term_row=so.payment_terms[0].name,
             reference_no="REF-001",
             reference_date=nowdate(),
+            remarks="Test remarks",
         )
-        return so, pe_name
+        return so, result["payment_entry"]
 
     def test_verify_already_verified_pe_blocked(self):
         "Verifying already Verified PE must raise ValidationError"
@@ -682,13 +750,16 @@ class TestPaymentEntryReferencesLock(TestSalesOrder):
             items=add_item(self.item, self.sales_account, rate=1000),
             payment_terms=add_terms(700),
         )
-        si_name = create_sales_invoice_from_sales_order(so.name)
-        pe_name = create_payment_entry_from_term(
+        result = create_sales_invoice_from_sales_order(
             sales_order=so.name,
             payment_term_row=so.payment_terms[0].name,
             reference_no="REF-001",
             reference_date=nowdate(),
+            remarks="Test remarks",
         )
+        si_name = result["invoice"]
+        pe_name = result["payment_entry"]
+
         pe = frappe.get_doc("Payment Entry", pe_name)
         pe.append(
             "references",

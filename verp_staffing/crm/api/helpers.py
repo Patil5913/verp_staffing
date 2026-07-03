@@ -27,17 +27,21 @@ def get_user(employee_name):
 
 # function to get all subordinate Employee names under root_employee
 def get_all_subordinates(root_employee: str, department: str | None = None) -> set[str]:
-    dept_filter = "AND department = %(department)s" if department else ""
-
-    # Query 1: entire reverse map at once
-    rows = frappe.db.sql(
-        f"""
+    query = """
         SELECT DISTINCT parent, assigned_to
         FROM `tabEmployee Assignment Detail`
         WHERE assigned_to IS NOT NULL
-          {dept_filter}
-        """,
-        {"department": department},
+    """
+
+    params = {}
+
+    if department:
+        query += " AND department = %(department)s"
+        params["department"] = department
+
+    rows = frappe.db.sql(
+        query,
+        params,
         as_dict=True,
     )
 
@@ -73,17 +77,19 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
     # safe LIKE filter in SQL
     placeholders = ", ".join(["%s"] * len(allowed))
 
-    return frappe.db.sql(
-        f"""
+    query = """
         SELECT name
         FROM `tabEmployee`
-        WHERE name IN ({placeholders})
+        WHERE name IN ({})
           AND name LIKE %s
         ORDER BY name
         LIMIT %s OFFSET %s
-        """,
-        list(allowed) + [f"%{txt}%", page_len, start],
-    )
+    """.format(placeholders)
+
+    params = list(allowed)
+    params.extend([f"%{txt}%", page_len, start])
+
+    return frappe.db.sql(query, params)
 
 
 def get_allowed_employees(user, department=None):
@@ -160,28 +166,37 @@ def get_all_superiors_with_roles_cached(employee: str, department: str | None = 
     cached = cache.get_value(key)
     if cached:
         return cached
-    
-    dept_filter = "AND ead.department = %(department)s" if department else ""
 
-    # Query 1: entire assignment chain + linked user in one shot
-    rows = frappe.db.sql(
-        f"""
-        SELECT ead.parent, ead.assigned_to, e.user
+    query = """
+        SELECT
+            ead.parent,
+            ead.assigned_to,
+            e.user
         FROM `tabEmployee Assignment Detail` ead
-        LEFT JOIN `tabEmployee` e ON e.name = ead.assigned_to
+        LEFT JOIN `tabEmployee` e
+            ON e.name = ead.assigned_to
         WHERE ead.assigned_to IS NOT NULL
-          {dept_filter}
-        """,
-        {"department": department},
+    """
+
+    params = {}
+
+    if department:
+        query += " AND ead.department = %(department)s"
+        params["department"] = department
+
+    # Query 1: Fetch assignment hierarchy and linked users
+    rows = frappe.db.sql(
+        query,
+        params,
         as_dict=True,
     )
 
-    # map: employee → (manager_emp, manager_user)
-    chain_map = {r.parent: (r.assigned_to, r.user) for r in rows}
+    # employee -> (manager_employee, manager_user)
+    chain_map = {row.parent: (row.assigned_to, row.user) for row in rows}
 
-    # walk upward in Python — zero DB calls
+    # Walk up the hierarchy in memory
     visited = set()
-    managers = []  # ordered: direct manager first
+    managers = []
     current = employee
     while current and current not in visited:
         visited.add(current)
@@ -210,7 +225,7 @@ def get_all_superiors_with_roles_cached(employee: str, department: str | None = 
         )
         for r in role_rows:
             roles_map.setdefault(r.parent, []).append(r.role)
-            
+
     superiors_with_roles = [
         {
             "employee": emp,
@@ -219,7 +234,7 @@ def get_all_superiors_with_roles_cached(employee: str, department: str | None = 
         }
         for emp, user in managers
     ]
-            
+
     cache.set_value(key, superiors_with_roles, expires_in_sec=600)
 
     return superiors_with_roles
@@ -257,7 +272,7 @@ def get_employee_roles_cached(employee_name):
     cached = cache.get_value(key)
     if cached:
         return cached
-    
+
     user = frappe.db.get_value("Employee", employee_name, "user")
     if not user:
         return []
@@ -266,11 +281,11 @@ def get_employee_roles_cached(employee_name):
         filters={"parent": user, "parenttype": "User"},
         pluck="role",
     )
-    
+
     employee_roles = roles or []
-    
+
     cache.set_value(key, employee_roles, expires_in_sec=3600)
-    
+
     return employee_roles
 
 
@@ -341,7 +356,7 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
         (r.get("assigned_to") for r in assignment_rows if r.get("assigned_to")),
         None,
     )
-    
+
     # Build dept → role map from ERP Configuration child table
     dept_role_map = get_dept_role_map_cached()
 
@@ -451,28 +466,18 @@ def get_visible_employee_names(user, department=None):
 
 def get_visible_employee_names_cached(department=None):
     cache = frappe.cache()
+    cache_key = f"Visible_Employee_Names:{frappe.session.user}:{department or 'all'}"
 
-    cache_key = f"{frappe.session.user}:{department or 'all'}"
-
-    employees = cache.hget(
-        "Visible_Employee_Names",
-        cache_key,
-    )
-
-    if employees is not None:
-        return employees
+    cached = cache.get_value(cache_key)
+    if cached:
+        return set(cached)
 
     employees = get_visible_employee_names(
         user=frappe.session.user,
         department=department,
     )
 
-    cache.hset(
-        "Visible_Employee_Names",
-        cache_key,
-        employees,
-    )
-
+    cache.set_value(cache_key, employees, expires_in_sec=600)
     return employees
 
 
@@ -681,7 +686,6 @@ from verp_staffing.employee.doctype.employee.employee import get_user_department
 
 
 def lead_query(user):
-
     if user == "Administrator":
         return ""
 
@@ -695,16 +699,15 @@ def lead_query(user):
     team_sql = ",".join([frappe.db.escape(x) for x in team])
     conditions = []
 
+    conditions.append(
+        f"""
+        `tabLead`.lead_owner IN ({team_sql})
+        """
+    )
     # -------------------------
     # SALES LOGIC
     # -------------------------
     if "Sales" in departments:
-        conditions.append(
-            f"""
-            `tabLead`.lead_owner IN ({team_sql})
-        """
-        )
-
         conditions.append(
             f"""
             `tabLead`.name IN (
@@ -715,22 +718,10 @@ def lead_query(user):
         """
         )
 
-    # -------------------------
-    # NON-SALES LOGIC (fallback)
-    # -------------------------
-    else:
-        # optional: restrict completely OR allow hierarchy
-        conditions.append(
-            f"""
-            `tabLead`.lead_owner IN ({team_sql})
-        """
-        )
-
     return "(" + " OR ".join(conditions) + ")"
 
 
 def opportunity_query(user):
-
     if user == "Administrator":
         return ""
 
@@ -747,13 +738,13 @@ def opportunity_query(user):
     # -------------------------
     # SALES LOGIC
     # -------------------------
-    if "Sales" in departments:
-        conditions.append(
-            f"""
+    conditions.append(
+        f"""
             `tabOpportunity`.opportunity_owner IN ({team_sql})
         """
-        )
-
+    )
+    
+    if "Sales" in departments:
         conditions.append(
             f"""
             `tabOpportunity`.name IN (
@@ -764,11 +755,13 @@ def opportunity_query(user):
         """
         )
 
+    if not conditions:
+        return "1=0"
+
     return "(" + " OR ".join(conditions) + ")"
 
 
 def customer_query(user):
-
     if user == "Administrator":
         return ""
 
@@ -777,11 +770,6 @@ def customer_query(user):
 
     if not employee:
         return "1=0"
-
-    # 2. get departments
-    departments = frappe.get_all(
-        "Employee Assignment Detail", filters={"parent": employee}, pluck="department"
-    )
 
     # 3. get team
     team = get_visible_employee_names_cached()
@@ -793,17 +781,11 @@ def customer_query(user):
 
     conditions = []
 
-    if "Accounting" in departments:
-        conditions.append(f"`tabCustomer`.owner = {frappe.db.escape(user)}")
-    elif "Sales" in departments:
-        # -------------------------
-        # SALES LOGIC
-        # -------------------------
-        conditions.append(
+    conditions.append(
             f"""
             `tabCustomer`.customer_owner IN ({team_sql})
         """
-        )
+    )
 
     # -------------------------
     # FINAL CONDITION
@@ -812,3 +794,80 @@ def customer_query(user):
         return "1=0"
 
     return "(" + " OR ".join(conditions) + ")"
+
+def sales_order_query(user):
+    if user == "Administrator":
+        return ""
+
+    departments = get_user_departments(user)
+
+    # Accounting sees everything
+    if "Accounting" in departments:
+        return ""
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+    conditions = []
+
+    if "Sales" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabCustomer`.name
+                FROM `tabCustomer`
+                WHERE `tabCustomer`.customer_owner IN ({team_sql})
+            )
+        """
+        )
+
+    if "CR" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabCR`.customer
+                FROM `tabCR`
+                WHERE `tabCR`.assign_to IN ({team_sql})
+            )
+        """
+        )
+
+    if "Onboarding" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabOnboardings`.customer
+                FROM `tabOnboardings`
+                WHERE `tabOnboardings`.assign_to IN ({team_sql})
+            )
+        """
+        )
+
+    if not conditions:
+        return "1=0"
+
+    return "(" + " OR ".join(conditions) + ")"
+
+from pathlib import Path
+
+@frappe.whitelist(allow_guest=True)
+def _validate_site_file_path(file_path: str) -> Path:
+    path = Path(file_path).resolve()
+
+    allowed_dirs = (
+        Path(frappe.get_site_path("public")).resolve(),
+        Path(frappe.get_site_path("private")).resolve(),
+    )
+
+    if not any(
+        path == directory or directory in path.parents for directory in allowed_dirs
+    ):
+        frappe.throw("Invalid file path.")
+
+    if not path.is_file():
+        frappe.throw("File not found.")
+
+    return path

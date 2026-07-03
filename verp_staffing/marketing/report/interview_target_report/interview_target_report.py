@@ -11,14 +11,12 @@ from verp_staffing.crm.api.helpers import (
 )
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
 def execute(filters=None):
     filters = filters or {}
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -67,7 +65,6 @@ def get_columns():
         },
     ]
 
-
 def _get_marketing_employees_cached():
     """
     Returns all Marketing-department employees for this company.
@@ -94,7 +91,6 @@ def _get_marketing_employees_cached():
     names = [r.name for r in rows]
     frappe.cache().set_value(cache_key, names, expires_in_sec=3600)
     return names
-
 
 def _get_period(target_based_on, start_date, selected_date):
     """
@@ -125,7 +121,6 @@ def _get_period(target_based_on, start_date, selected_date):
     # Clamp upper bound to selected_date.
     period_end = min(selected_date, period_end)
     return period_start, period_end
-
 
 def get_data(filters):
     """
@@ -181,21 +176,23 @@ def get_data(filters):
     m_values = {"docstatus": 1}
     emp_placeholders = _build_in_placeholders("emp", valid_employees, m_values)
 
+    query = (
+        "SELECT "
+        "m.name, "
+        "m.assign_to, "
+        "IFNULL(c.name1, m.customer) AS customer_name, "
+        "m.start_date, "
+        "m.target_based_on, "
+        "m.target "
+        "FROM `tabMarketing` m "
+        "LEFT JOIN `tabCustomer` c "
+        "ON c.name = m.customer "
+        "WHERE m.assign_to IN (" + emp_placeholders + ") "
+        "ORDER BY m.assign_to, m.start_date DESC"
+    )
+
     marketing_records = frappe.db.sql(
-        f"""
-        SELECT
-            m.name,
-            m.assign_to,
-            IFNULL(c.name1, m.customer)  AS customer_name,
-            m.start_date,
-            m.target_based_on,
-            m.target
-        FROM `tabMarketing` m
-        LEFT JOIN `tabCustomer` c
-            ON c.name = m.customer
-        WHERE m.assign_to IN ({emp_placeholders})
-        ORDER BY m.assign_to, m.start_date DESC
-        """,
+        query,
         m_values,
         as_dict=True,
     )
@@ -240,16 +237,18 @@ def get_data(filters):
     iv_values["min_period_start"] = min_period_start
     iv_values["selected_date_ceil"] = selected_date + timedelta(days=1)
 
+    query = (
+        "SELECT "
+        "marketing_link, "
+        "DATE(creation) AS interview_date "
+        "FROM `tabInterview` "
+        "WHERE marketing_link IN (" + mlink_placeholders + ") "
+        "AND creation >= %(min_period_start)s "
+        "AND creation < %(selected_date_ceil)s"
+    )
+
     interview_rows = frappe.db.sql(
-        f"""
-        SELECT
-            marketing_link,
-            DATE(creation) AS interview_date
-        FROM `tabInterview`
-        WHERE marketing_link IN ({mlink_placeholders})
-          AND creation >= %(min_period_start)s
-          AND creation  < %(selected_date_ceil)s
-        """,
+        query,
         iv_values,
         as_dict=True,
     )
@@ -285,7 +284,6 @@ def get_data(filters):
 
     return final_data
 
-
 def get_chart(data):
     if not data:
         return {}
@@ -317,7 +315,6 @@ def get_chart(data):
         "colors": ["#28a745"],
     }
 
-
 @frappe.whitelist()
 def get_marketing_hierarchy_employees(
     doctype, txt, searchfield, start, page_len, filters
@@ -338,7 +335,7 @@ def get_marketing_hierarchy_employees(
     }
 
     conditions = [
-        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        "tabEmployee.name LIKE %(txt)s",
         """
         EXISTS (
             SELECT 1
@@ -367,13 +364,15 @@ def get_marketing_hierarchy_employees(
         placeholders = _build_in_placeholders("se", subtree, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
 
-    return frappe.db.sql(
-        f"""
-        SELECT tabEmployee.name, tabEmployee.employee_name
-        FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
-        ORDER BY tabEmployee.employee_name
-        LIMIT %(start)s, %(page_len)s
-        """,
-        values,
+    query = (
+        "SELECT "
+        "tabEmployee.name, "
+        "tabEmployee.employee_name "
+        "FROM `tabEmployee` "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY tabEmployee.employee_name "
+        "LIMIT %(start)s, %(page_len)s"
     )
+    
+    return frappe.db.sql(query, values)

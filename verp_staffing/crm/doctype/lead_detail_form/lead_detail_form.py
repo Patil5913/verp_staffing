@@ -6,13 +6,12 @@ from PIL import Image
 from datetime import datetime
 import hmac
 import hashlib
+
 import base64
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
 from verp_staffing.crm.api.naming import generate_name_series
-
-
-
+from verp_staffing.crm.api.helpers import _validate_site_file_path
 class LeadDetailForm(Document):
 
     def autoname(self):
@@ -159,7 +158,7 @@ def apply_pdf_signature(doc, signature_image_file):
             agreement = frappe.get_doc("Agreement", agr)
             
             signer_name = " ".join(
-                filter(None, [doc.surname, doc.first_name, doc.father_name])
+                [part for part in (doc.surname, doc.first_name, doc.father_name) if part]
             )
 
             apply_signature_and_audit_to_pdf(
@@ -172,7 +171,7 @@ def apply_pdf_signature(doc, signature_image_file):
                 agreement=agreement,
                 certificate_id=certificate_id,
             )
-            return  # ✅ success — exit retry loop
+            return  #  success — exit retry loop
 
         except Exception as e:
             error_str = str(e)
@@ -228,10 +227,15 @@ def generate_certificate_id(agreement_name):
     return f"CERT-{date_part}-{agreement_name}-{random_part}"
 
 
+
+
+
 def calculate_file_hash(file_path):
+    validated_path = _validate_site_file_path(file_path)
+        
     sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
+    with validated_path.open("rb") as file:
+        for chunk in iter(lambda: file.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
 
@@ -752,32 +756,43 @@ def apply_signature_and_audit_to_pdf(
     )
     if not opp_owner_user:
         return output_path
+    
+    validated_output_path = _validate_site_file_path(output_path)
 
-    with open(output_path, "rb") as f:
+    with validated_output_path.open("rb") as f:
         content = f.read()
+
     # CUSTOMER EMAIL
-    template_name = "Agreement Signed - Customer"
-    
-    if frappe.db.exists("Email Template", template_name):
-        template = frappe.get_doc("Email Template", template_name)
-    
+    subject = "Agreement signed successfully"
+    message = (
+        "Dear Customer,\n\n"
+        "Thank you for signing the agreement. We have successfully received your signed document.\n\n"
+        "Please find the signed agreement attached along with the signing certificate for your records.\n\n"
+        "Best regards,\n"
+        "Team"
+    )
+        
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Signed - Customer",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+
+    if template:
         context = {
             "customer": customer,
             "sales_order": sales_order.name,
         }
-    
-        subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(
-            template.response_html or template.response, context
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
         )
-    else:
-        subject = "Agreement signed successfully"
-        message = (
-            "Dear Customer,\n\n"
-            "Thank you for signing the agreement. We have successfully received your signed document.\n\n"
-            "Please find the signed agreement attached along with the signing certificate for your records.\n\n"
-            "Best regards,\n"
-            "Team"
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
         )
     
     send_notification(
@@ -791,26 +806,33 @@ def apply_signature_and_audit_to_pdf(
         send_system=0,
     )
     
-    
     # INTERNAL NOTIFICATION
-    template_name = "Agreement Signed - Internal"
+    subject = "Agreement Signed by Customer"
+    message = f"The customer has signed the agreement.\n\nSales Order: {sales_order.name}"
     
-    if frappe.db.exists("Email Template", template_name):
-        template = frappe.get_doc("Email Template", template_name)
-    
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Signed - Internal",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+
+    if template:
         context = {
             "sales_order": sales_order.name,
-             "customer": sales_order.customer,
+            "customer": sales_order.customer,
             "agreement_owner": opp_owner_user,
         }
-    
-        subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(
-            template.response_html or template.response, context
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
         )
-    else:
-        subject = "Agreement Signed by Customer"
-        message = f"The customer has signed the agreement.\n\nSales Order: {sales_order.name}"
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
     
     send_notification(
         recipients=[opp_owner_user],
@@ -907,8 +929,6 @@ def add_audit_log(token, audit):
 
     doc = frappe.get_doc("Agreement", agr)
     doc.db_set("status", "Agreement signed")
-    frappe.db.commit()
-
     return {"status": "success"}
 
 
@@ -923,43 +943,69 @@ def request_new_agreement_link(sales_order, signer_email, agreementValue):
         frappe.throw("No customer owner assigned.")
 
     opp_owner_user = frappe.db.get_value("Employee", customer_owner, "user")
+    
+    subject = "Agreement Link Request Received"
+    message = (
+        "<p>Dear Customer,</p>"
+        "<p>We have received your request for a new agreement link.</p>"
+        "<p>Our team will review and send you a fresh link shortly.</p>"
+        "<p>Best regards,<br>Team</p>"
+    )
+    
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Link Request - Customer",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
 
-    # 🔹 CUSTOMER EMAIL
-    template_name = "Agreement Link Request - Customer"
-    if frappe.db.exists("Email Template", template_name):
-        template = frappe.get_doc("Email Template", template_name)
+    if template:
         context = {}
-        subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(template.response_html or template.response, context)
-    else:
-        subject = "Agreement Link Request Received"
-        message = """
-            <p>Dear Customer,</p>
-            <p>We have received your request for a new agreement link.</p>
-            <p>Our team will review and send you a fresh link shortly.</p>
-            <p>Best regards,<br>Team</p>
-        """
-    frappe.sendmail(recipients=[signer_email], subject=subject, message=message, now=True)
 
-    # 🔹 INTERNAL NOTIFICATION
-    template_name = "Agreement Link Request - Internal"
-    if frappe.db.exists("Email Template", template_name):
-        template = frappe.get_doc("Email Template", template_name)
+        subject = frappe.render_template(
+            template.subject,
+            context,
+        )
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
+
+    frappe.sendmail(recipients=[signer_email], subject=subject, message=message, now=True)
+    
+    subject = "Customer Requested a New Agreement Link"
+    message = (
+        f"The customer has requested a new agreement link.\n\n"
+        f"Agreement: {agreementValue}\n"
+        f"Sales Order: {sales_order}\n\n"
+        f"Please generate and send a new link at the earliest."
+    )
+    
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Link Request - Internal",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+
+    if template:
         context = {
             "agreementValue": agreementValue,
             "sales_order": sales_order,
             "customer_name": customer_name,
         }
-        subject = frappe.render_template(template.subject, context)
-        message = frappe.render_template(template.response_html or template.response, context)
-    else:
-        subject = "Customer Requested a New Agreement Link"
-        message = (
-            f"The customer has requested a new agreement link.\n\n"
-            f"Agreement: {agreementValue}\n"
-            f"Sales Order: {sales_order}\n\n"
-            f"Please generate and send a new link at the earliest."
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
         )
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
+
     send_notification(
         recipients=[opp_owner_user],
         subject=subject,
@@ -1076,19 +1122,34 @@ def send_otp(token, email):
 
     # ─── Send the email ──────────────────────────────────────────────────────────
     try:
-        template_name = "OTP Verification Email"
-        if frappe.db.exists("Email Template", template_name):
-            template = frappe.get_doc("Email Template", template_name)
+        
+        subject = "Your Verification Code"
+        message = (
+            "<p>Dear Customer,</p>"
+            f"<p>Your verification code is: <strong style='font-size:24px'>{otp}</strong></p>"
+            "<p>This code is valid for 5 minutes. Do not share it with anyone.</p>"
+        )
+            
+        template = frappe.db.get_value(
+            "Email Template",
+            "OTP Verification Email",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
+
+        if template:
             context = {"otp": otp}
-            subject = frappe.render_template(template.subject, context)
-            message = frappe.render_template(template.response_html or template.response, context)
-        else:
-            subject = "Your Verification Code"
-            message = f"""
-                <p>Dear Customer,</p>
-                <p>Your verification code is: <strong style="font-size:24px">{otp}</strong></p>
-                <p>This code is valid for 5 minutes. Do not share it with anyone.</p>
-            """
+
+            subject = frappe.render_template(
+                template.subject,
+                context,
+            )
+
+            message = frappe.render_template(
+                template.response_html or template.response,
+                context,
+            )
+            
         frappe.sendmail(recipients=[email], subject=subject, message=message, now=True)
     except frappe.OutgoingEmailError as e:
         # SMTP connection failed — email was never sent. Clean up and report.
@@ -1270,7 +1331,6 @@ def attach_signature(token, file_name):
         "UPDATE `tabAgreement` SET signature_image = %s WHERE name = %s",
         (file_name, agr)
     )
-    frappe.db.commit()
 
     return {"status": "ok"}
 

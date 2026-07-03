@@ -814,7 +814,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {
-					customer: cur_frm.doc.name,
+					customer: frm.doc.name,
 					interview_limit: interview_limit,
 					interview_offset: interview_offset,
 					search: $("#interview-search").val(),
@@ -834,7 +834,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 			let from_date = $("#interview-from").val();
 			let to_date = $("#interview-to").val();
 
-			// ✅ DATE VALIDATION
+			// DATE VALIDATION
 			if (from_date && to_date && from_date > to_date) {
 				frappe.msgprint("From Date cannot be greater than To Date");
 				return;
@@ -845,7 +845,7 @@ function render_customer_history(frm, data, append_interviews = false) {
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {
-					customer: cur_frm.doc.name,
+					customer: frm.doc.name,
 					interview_limit: interview_limit,
 					interview_offset: interview_offset,
 					search: search,
@@ -860,19 +860,19 @@ function render_customer_history(frm, data, append_interviews = false) {
 	$(document)
 		.off("click", "#interview-clear-btn")
 		.on("click", "#interview-clear-btn", function () {
-			// ✅ Reset inputs
+			// Reset inputs
 			$("#interview-search").val("");
 			$("#interview-from").val("");
 			$("#interview-to").val("");
 
-			// ✅ Reset pagination
+			// Reset pagination
 			interview_offset = 0;
 
-			// ✅ Reload default data (NO filters)
+			// Reload default data (NO filters)
 			frappe.call({
 				method: "verp_staffing.www.customer.get_customer_history",
 				args: {
-					customer: cur_frm.doc.name,
+					customer: frm.doc.name,
 					interview_limit: interview_limit,
 					interview_offset: interview_offset,
 					search: "",

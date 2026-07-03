@@ -5,14 +5,11 @@ import frappe
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
-
-
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -29,7 +26,6 @@ def get_columns():
             "width": 120,
         },
     ]
-
 
 def get_data(filters=None):
     """
@@ -83,31 +79,24 @@ def get_data(filters=None):
         placeholders = _build_in_placeholders("emp", allowed, values)
         conditions.append(f"l.lead_owner IN ({placeholders})")
 
-    where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-
-    row = frappe.db.sql(
-        f"""
-        SELECT
-            COUNT(l.name)                                           AS total_leads,
-
-            COUNT(DISTINCT
-                CASE WHEN o.name IS NOT NULL THEN l.name END
-            )                                                       AS leads_with_opportunity,
-
-            SUM(CASE WHEN o.status = 'Converted' THEN 1 ELSE 0 END)
-                                                                    AS converted,
-
-            SUM(CASE WHEN o.status = 'Lost'      THEN 1 ELSE 0 END)
-                                                                    AS lost
-
-        FROM `tabLead` l
-        LEFT JOIN `tabOpportunity` o
-            ON o.opportunity_from_lead = l.name
-        {where_clause}
-        """,
-        values,
-        as_dict=True,
+    query = (
+        "SELECT "
+        "COUNT(l.name) AS total_leads, "
+        "COUNT(DISTINCT CASE WHEN o.name IS NOT NULL THEN l.name END) "
+        "AS leads_with_opportunity, "
+        "SUM(CASE WHEN o.status = 'Converted' THEN 1 ELSE 0 END) "
+        "AS converted, "
+        "SUM(CASE WHEN o.status = 'Lost' THEN 1 ELSE 0 END) "
+        "AS lost "
+        "FROM `tabLead` l "
+        "LEFT JOIN `tabOpportunity` o "
+        "ON o.opportunity_from_lead = l.name "
     )
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    row = frappe.db.sql(query, values, as_dict=True)
 
     if not row:
         return _empty_funnel()
@@ -120,7 +109,6 @@ def get_data(filters=None):
         {"stage": "Lost Opportunities",       "count": r.lost or 0},
     ]
 
-
 def _empty_funnel():
     return [
         {"stage": "Total Leads",             "count": 0},
@@ -128,7 +116,6 @@ def _empty_funnel():
         {"stage": "Converted Opportunities", "count": 0},
         {"stage": "Lost Opportunities",      "count": 0},
     ]
-
 
 def get_chart(data):
     if not data:
@@ -147,7 +134,6 @@ def get_chart(data):
         "colors": ["#8494FF"],
     }
 
-
 @frappe.whitelist()
 def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
     """
@@ -161,7 +147,9 @@ def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, fil
         "start": int(start),
         "page_len": int(page_len),
     }
-    conditions = [f"(name LIKE %(txt)s OR employee_name LIKE %(txt)s)"]
+    conditions = [
+        "(name LIKE %(txt)s OR employee_name LIKE %(txt)s)"
+    ]
 
     if user != "Administrator":
         allowed = get_visible_employee_names_cached()
@@ -170,14 +158,14 @@ def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, fil
         placeholders = _build_in_placeholders("se", allowed, values)
         conditions.append(f"name IN ({placeholders})")
 
-    where = " AND ".join(conditions)
-    return frappe.db.sql(
-        f"""
-        SELECT name, employee_name
-        FROM `tabEmployee`
-        WHERE {where}
-        ORDER BY name
-        LIMIT %(start)s, %(page_len)s
-        """,
-        values,
+    query = (
+        "SELECT "
+        "name, employee_name "
+        "FROM `tabEmployee` "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY name "
+        "LIMIT %(start)s, %(page_len)s"
     )
+
+    return frappe.db.sql(query, values)

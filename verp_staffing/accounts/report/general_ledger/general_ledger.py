@@ -1,13 +1,7 @@
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, formatdate
+from frappe.utils import flt, getdate
 from itertools import groupby
-
-
-# ─────────────────────────────────────────────────────────────
-#  Entry point
-# ─────────────────────────────────────────────────────────────
-
 
 def execute(filters=None):
     if not filters:
@@ -19,12 +13,6 @@ def execute(filters=None):
     data = get_data(filters)
 
     return columns, data
-
-
-# ─────────────────────────────────────────────────────────────
-#  Validation
-# ─────────────────────────────────────────────────────────────
-
 
 def validate_filters(filters):
     if not filters.get("company"):
@@ -43,12 +31,6 @@ def validate_filters(filters):
             _("Please select an Account to show balances in Account Currency"),
             title=_("Missing Filter"),
         )
-
-
-# ─────────────────────────────────────────────────────────────
-#  Columns
-# ─────────────────────────────────────────────────────────────
-
 
 def get_columns(filters):
     company_currency = frappe.get_cached_value(
@@ -157,12 +139,6 @@ def get_columns(filters):
 
     return columns
 
-
-# ─────────────────────────────────────────────────────────────
-#  Data — main orchestrator
-# ─────────────────────────────────────────────────────────────
-
-
 def get_data(filters):
     company_currency = frappe.get_cached_value(
         "Company", filters.company, "default_currency"
@@ -228,12 +204,6 @@ def get_data(filters):
 
     return data
 
-
-# ─────────────────────────────────────────────────────────────
-#  Opening balance
-# ─────────────────────────────────────────────────────────────
-
-
 def get_opening_balance(filters, in_acc_currency):
     """
     Balance Sheet accounts (Asset / Liability / Equity):
@@ -267,24 +237,23 @@ def get_opening_balance(filters, in_acc_currency):
     conds, values = apply_scope_filters(filters, conds, values)
 
     if in_acc_currency:
-        debit_field, credit_field = "debit", "credit"
+        select_clause = "SUM(gle.debit) - SUM(gle.credit)"
     else:
-        debit_field, credit_field = (
-            "debit_in_company_currency",
-            "credit_in_company_currency",
+        select_clause = (
+            "SUM(gle.debit_in_company_currency) - "
+            "SUM(gle.credit_in_company_currency)"
         )
 
-    result = frappe.db.sql(
-        f"""
-        SELECT SUM(gle.{debit_field}) - SUM(gle.{credit_field})
-        FROM `tabGL Entry` gle
-        WHERE {" AND ".join(conds)}
-        """,
-        values,
+    query = (
+        "SELECT "
+        + select_clause
+        + " FROM `tabGL Entry` gle "
+        + "WHERE "
+        + " AND ".join(conds)
     )
 
+    result = frappe.db.sql(query, values)
     return flt(result[0][0]) if result and result[0][0] is not None else 0.0
-
 
 def get_fiscal_year_start(filters):
     result = frappe.db.sql(
@@ -305,21 +274,7 @@ def get_fiscal_year_start(filters):
     )
     return result[0][0] if result else None
 
-
-# ─────────────────────────────────────────────────────────────
-#  Main GL Entry query
-# ─────────────────────────────────────────────────────────────
-
-
 def get_gl_entries(filters, in_acc_currency=False):
-    if in_acc_currency:
-        debit_field, credit_field = "debit", "credit"
-    else:
-        debit_field, credit_field = (
-            "debit_in_company_currency",
-            "credit_in_company_currency",
-        )
-
     conds = []
     values = {}
 
@@ -335,8 +290,19 @@ def get_gl_entries(filters, in_acc_currency=False):
 
     conds, values = apply_scope_filters(filters, conds, values)
 
-    return frappe.db.sql(
-        f"""
+    if in_acc_currency:
+        select_fields = """
+            gle.debit AS debit,
+            gle.credit AS credit
+        """
+    else:
+        select_fields = """
+            gle.debit_in_company_currency AS debit,
+            gle.credit_in_company_currency AS credit
+        """
+
+    query = (
+        """
         SELECT
             gle.name,
             gle.posting_date,
@@ -354,21 +320,18 @@ def get_gl_entries(filters, in_acc_currency=False):
             gle.is_advance,
             gle.finance_book,
             gle.remarks,
-            gle.{debit_field}  AS debit,
-            gle.{credit_field} AS credit
+        """
+        + select_fields
+        + """
         FROM `tabGL Entry` gle
-        WHERE {" AND ".join(conds)}
+        WHERE """
+        + " AND ".join(conds)
+        + """
         ORDER BY gle.posting_date ASC, gle.creation ASC
-        """,
-        values,
-        as_dict=True,
+        """
     )
 
-
-# ─────────────────────────────────────────────────────────────
-#  Shared scope filters
-# ─────────────────────────────────────────────────────────────
-
+    return frappe.db.sql(query, values, as_dict=True)
 
 def apply_scope_filters(filters, conds, values):
     """Account/party/voucher filters shared between opening + main query."""
@@ -434,12 +397,6 @@ def apply_scope_filters(filters, conds, values):
 
     return conds, values
 
-
-# ─────────────────────────────────────────────────────────────
-#  Row builders
-# ─────────────────────────────────────────────────────────────
-
-
 def make_gl_row(gle, running_balance, currency, filters):
     return {
         "posting_date": gle.posting_date,
@@ -459,7 +416,6 @@ def make_gl_row(gle, running_balance, currency, filters):
         "account_currency": gle.account_currency,
     }
 
-
 def make_balance_row(label, balance, currency, row_type):
     """
     Opening / Closing row.
@@ -477,7 +433,6 @@ def make_balance_row(label, balance, currency, row_type):
         "is_closing_row": row_type == "closing",
     }
 
-
 def make_closing_row(period_debit, period_credit, closing_balance, currency):
     """Closing → period debit/credit AND closing balance, all three filled"""
     return {
@@ -488,7 +443,6 @@ def make_closing_row(period_debit, period_credit, closing_balance, currency):
         "currency": currency,
         "is_closing_row": True,
     }
-
 
 def make_total_row(period_debit, period_credit, currency):
     """
@@ -504,19 +458,12 @@ def make_total_row(period_debit, period_credit, currency):
         "is_total_row": True,
     }
 
-
-# ─────────────────────────────────────────────────────────────
-#  Grouping strategies
-# ─────────────────────────────────────────────────────────────
-
-
 def build_flat(gl_entries, running_balance, currency, filters):
     rows = []
     for gle in gl_entries:
         running_balance += flt(gle.debit) - flt(gle.credit)
         rows.append(make_gl_row(gle, running_balance, currency, filters))
     return rows
-
 
 def build_by_voucher(gl_entries, running_balance, currency, filters):
     rows = []
@@ -550,7 +497,6 @@ def build_by_voucher(gl_entries, running_balance, currency, filters):
 
     return rows
 
-
 def build_by_account(gl_entries, running_balance, currency, filters):
     rows = []
     sorted_entries = sorted(gl_entries, key=lambda x: x.account)
@@ -576,7 +522,6 @@ def build_by_account(gl_entries, running_balance, currency, filters):
 
     return rows
 
-
 def build_by_party(gl_entries, running_balance, currency, filters):
     # gl_entries here are already filtered to party-only entries by get_data
     rows = []
@@ -600,7 +545,7 @@ def build_by_party(gl_entries, running_balance, currency, filters):
                 "debit": p_debit,
                 "credit": p_credit,
                 "balance": running_balance,
-                "currency": currency,  # ← was missing, caused 0.0
+                "currency": currency, 
                 "is_group_row": True,
             }
         )

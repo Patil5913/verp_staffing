@@ -2,16 +2,12 @@ import re
 
 import frappe
 from frappe.utils import (
-	add_days,
 	cint,
-	create_batch,
 	cstr,
 	flt,
 	formatdate,
-	get_datetime,
 	get_number_format_info,
 	getdate,
-	now,
 	nowdate,
 )
 from frappe import _
@@ -59,7 +55,6 @@ def get_children(doctype, parent, company, is_root=False):
 
 	return acc
 
-
 def sort_accounts(accounts, is_root=False, key="name"):
 	"""Sort root types as Asset, Liability, Equity, Income, Expense"""
 
@@ -82,7 +77,6 @@ def sort_accounts(accounts, is_root=False, key="name"):
 		return 1
 
 	accounts.sort(key=functools.cmp_to_key(compare_accounts))
-
 
 @frappe.whitelist()
 def get_fiscal_year(
@@ -192,7 +186,6 @@ def get_currency_precision():
 
 	return precision
 
-
 @frappe.whitelist()
 def get_balance_on(
 	account=None,
@@ -203,24 +196,31 @@ def get_balance_on(
 	ignore_account_permission=False,
 	account_type=None,
 	start_date=None,
-	currency_mode="company"
+	currency_mode="company",
 ):
 	if not account and frappe.form_dict.get("account"):
 		account = frappe.form_dict.get("account")
+
 	if not date and frappe.form_dict.get("date"):
 		date = frappe.form_dict.get("date")
+
 	if not party_type and frappe.form_dict.get("party_type"):
 		party_type = frappe.form_dict.get("party_type")
+
 	if not party and frappe.form_dict.get("party"):
 		party = frappe.form_dict.get("party")
 
-	cond = []
+	conditions = []
+	values = []
+
 	if start_date:
-		cond.append("posting_date >= %s" % frappe.db.escape(cstr(start_date)))
+		conditions.append("gle.posting_date >= %s")
+		values.append(start_date)
+
 	if date:
-		cond.append("posting_date <= %s" % frappe.db.escape(cstr(date)))
+		conditions.append("gle.posting_date <= %s")
+		values.append(date)
 	else:
-		# get balance of all entries that exist
 		date = nowdate()
 
 	if account:
@@ -230,78 +230,95 @@ def get_balance_on(
 		get_fiscal_year(date, company=company, verbose=0)[1]
 	except FiscalYearNotFoundError:
 		if getdate(date) > getdate(nowdate()):
-			# if fiscal year not found and the date is greater than today
-			# get fiscal year for today's date and its corresponding year start date
 			get_fiscal_year(nowdate(), verbose=1)[1]
 		else:
-			# this indicates that it is a date older than any existing fiscal year.
-			# hence, assuming balance as 0.0
 			return 0.0
 
 	if account:
 		if not (frappe.flags.ignore_account_permission or ignore_account_permission):
 			acc.check_permission("read")
 
-		# different filter for group and ledger - improved performance
 		if acc.is_group:
-			cond.append(
-				f"""exists (
-				select name from `tabAccount` ac where ac.name = gle.account
-				and ac.lft >= {acc.lft} and ac.rgt <= {acc.rgt}
-			)"""
+			conditions.append(
+				"""
+				EXISTS (
+					SELECT 1
+					FROM `tabAccount` ac
+					WHERE ac.name = gle.account
+					  AND ac.lft >= %s
+					  AND ac.rgt <= %s
+				)
+				"""
 			)
+			values.extend([acc.lft, acc.rgt])
 		else:
-			cond.append(f"""gle.account = {frappe.db.escape(account)} """)
+			conditions.append("gle.account = %s")
+			values.append(account)
 
 	if account_type:
 		accounts = frappe.db.get_all(
 			"Account",
-			filters={"company": company, "account_type": account_type, "is_group": 0},
+			filters={
+				"company": company,
+				"account_type": account_type,
+				"is_group": 0,
+			},
 			pluck="name",
 			order_by="lft",
 		)
 
-		cond.append(
-			"""
-			gle.account in (%s)
-		"""
-			% (", ".join([frappe.db.escape(account) for account in accounts]))
-		)
+		if not accounts:
+			return 0.0
+
+		placeholders = ", ".join(["%s"] * len(accounts))
+		conditions.append(f"gle.account IN ({placeholders})")
+		values.extend(accounts)
 
 	if party_type and party:
-		cond.append(
-			f"""gle.party_type = {frappe.db.escape(party_type)} and gle.party = {frappe.db.escape(party)} """
-		)
+		conditions.append("gle.party_type = %s")
+		conditions.append("gle.party = %s")
+		values.extend([party_type, party])
 
 	if company:
-		cond.append("""gle.company = %s """ % (frappe.db.escape(company)))
+		conditions.append("gle.company = %s")
+		values.append(company)
 
-	if account or (party_type and party) or account_type:
-		precision = get_currency_precision()
-		company_currency = frappe.get_cached_value("Company", company, "default_currency")
+	if not (account or (party_type and party) or account_type):
+		return 0.0
 
-		acc_currency = None
-		if account:
-			acc_currency = acc.account_currency
+	precision = get_currency_precision()
+	company_currency = frappe.get_cached_value(
+		"Company",
+		company,
+		"default_currency",
+	)
 
-		if currency_mode == "account" and acc_currency and acc_currency != company_currency:
-			# transaction currency
-			select_field = "sum(round(debit, %s)) - sum(round(credit, %s))"
-		else:
-			# company currency
-			select_field = "sum(round(debit_in_company_currency, %s)) - sum(round(credit_in_company_currency, %s))"
+	acc_currency = acc.account_currency if account else None
 
-		bal = frappe.db.sql(
-			"""
-			SELECT {}
-			FROM `tabGL Entry` gle
-			WHERE {}""".format(select_field, " and ".join(cond)),
-			(precision, precision),
-		)[0][0]
-		# if bal is None, return 0
-		return flt(bal)
+	if currency_mode == "account" and acc_currency and acc_currency != company_currency:
+		query = (
+			"SELECT "
+			"SUM(ROUND(debit, %s)) - SUM(ROUND(credit, %s)) "
+			"FROM `tabGL Entry` gle "
+			"WHERE "
+			+ " AND ".join(conditions)
+		)
+	else:
+		query = (
+			"SELECT "
+			"SUM(ROUND(debit_in_company_currency, %s)) - "
+			"SUM(ROUND(credit_in_company_currency, %s)) "
+			"FROM `tabGL Entry` gle "
+			"WHERE "
+			+ " AND ".join(conditions)
+		)
 
+	params = [precision, precision]
+	params.extend(values)
 
+	bal = frappe.db.sql(query, params)[0][0]
+
+	return flt(bal)
 
 @frappe.whitelist()
 def get_account_balances(accounts, company):

@@ -12,16 +12,20 @@ class PartyType(Document):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_party_type(doctype, txt, searchfield, start, page_len, filters):
-
-    cond = ""
     account_type = None
 
+    params = {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": page_len,
+    }
+
+    conditions = ["name LIKE %(txt)s"]
+
     if filters:
-        # NEW SUPPORT
         if filters.get("account_type"):
             account_type = filters.get("account_type")
 
-        # OLD SUPPORT
         elif filters.get("account"):
             account_type = frappe.db.get_value(
                 "Account",
@@ -30,31 +34,24 @@ def get_party_type(doctype, txt, searchfield, start, page_len, filters):
             )
 
         if account_type:
-            if account_type in ["Receivable", "Payable"]:
-                cond = """
-					and (
-						account_type = %(account_type)s
-						or name = 'Employee'
-					)
-				"""
+            params["account_type"] = account_type
 
+            if account_type in ("Receivable", "Payable"):
+                conditions.append(
+                    "(account_type = %(account_type)s OR name = 'Employee')"
+                )
             else:
-                cond = "and account_type = %(account_type)s"
+                conditions.append("account_type = %(account_type)s")
 
-    params = {
-        "txt": "%" + txt + "%",
-        "start": start,
-        "page_len": page_len,
-    }
-
-    if account_type:
-        params["account_type"] = account_type
-
-    result = frappe.db.sql(
-        f"""select name from `tabParty Type`
-        where `{searchfield}` LIKE %(txt)s {cond}
-        order by name limit %(page_len)s offset %(start)s""",
-        params,
+    query = (
+        "SELECT name "
+        "FROM `tabParty Type` "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY name "
+        "LIMIT %(page_len)s OFFSET %(start)s"
     )
+
+    result = frappe.db.sql(query, params)
 
     return result or []
