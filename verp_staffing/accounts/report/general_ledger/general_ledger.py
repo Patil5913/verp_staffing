@@ -81,19 +81,6 @@ def get_columns(filters):
             "width": 150,
         },
         {
-            "fieldname": "voucher_type",
-            "label": _("Voucher Type"),
-            "fieldtype": "Data",
-            "width": 130,
-        },
-        {
-            "fieldname": "voucher_no",
-            "label": _("Voucher No"),
-            "fieldtype": "Dynamic Link",
-            "options": "voucher_type",
-            "width": 160,
-        },
-        {
             "fieldname": "against",
             "label": _("Against"),
             "fieldtype": "Data",
@@ -170,11 +157,7 @@ def get_data(filters):
         active_entries = gl_entries
 
     if active_entries:
-        if group_by == "Group by Voucher":
-            gl_rows = build_by_voucher(
-                active_entries, running_balance, display_currency, filters
-            )
-        elif group_by == "Group by Account":
+        if group_by == "Group by Account":
             gl_rows = build_by_account(
                 active_entries, running_balance, display_currency, filters
             )
@@ -311,10 +294,6 @@ def get_gl_entries(filters, in_acc_currency=False):
             gle.party_type,
             gle.party,
             gle.against,
-            gle.voucher_type,
-            gle.voucher_no,
-            gle.against_voucher_type,
-            gle.against_voucher,
             gle.fiscal_year,
             gle.is_opening,
             gle.is_advance,
@@ -334,7 +313,7 @@ def get_gl_entries(filters, in_acc_currency=False):
     return frappe.db.sql(query, values, as_dict=True)
 
 def apply_scope_filters(filters, conds, values):
-    """Account/party/voucher filters shared between opening + main query."""
+    """Account/party filters shared between opening + main query."""
 
     if filters.get("account"):
         acc = frappe.get_cached_doc("Account", filters.account)
@@ -363,22 +342,6 @@ def apply_scope_filters(filters, conds, values):
         conds.append("gle.party = %(party)s")
         values["party"] = filters.party
 
-    if filters.get("voucher_type"):
-        conds.append("gle.voucher_type = %(voucher_type)s")
-        values["voucher_type"] = filters.voucher_type
-
-    if filters.get("voucher_no"):
-        conds.append("gle.voucher_no = %(voucher_no)s")
-        values["voucher_no"] = filters.voucher_no
-
-    if filters.get("against_voucher_type"):
-        conds.append("gle.against_voucher_type = %(against_voucher_type)s")
-        values["against_voucher_type"] = filters.against_voucher_type
-
-    if filters.get("against_voucher"):
-        conds.append("gle.against_voucher = %(against_voucher)s")
-        values["against_voucher"] = filters.against_voucher
-
     if filters.get("fiscal_year"):
         conds.append("gle.fiscal_year = %(fiscal_year)s")
         values["fiscal_year"] = filters.fiscal_year
@@ -404,8 +367,6 @@ def make_gl_row(gle, running_balance, currency, filters):
         "party_type": gle.party_type,
         "party": gle.party,
         "against": gle.against,
-        "voucher_type": gle.voucher_type,
-        "voucher_no": gle.voucher_no,
         "debit": flt(gle.debit),
         "credit": flt(gle.credit),
         "balance": running_balance,  # "" for detail lines inside groups
@@ -463,38 +424,6 @@ def build_flat(gl_entries, running_balance, currency, filters):
     for gle in gl_entries:
         running_balance += flt(gle.debit) - flt(gle.credit)
         rows.append(make_gl_row(gle, running_balance, currency, filters))
-    return rows
-
-def build_by_voucher(gl_entries, running_balance, currency, filters):
-    rows = []
-    for voucher_no, group in groupby(gl_entries, key=lambda x: x.voucher_no):
-        group = list(group)
-        v_debit = sum(flt(r.debit) for r in group)
-        v_credit = sum(flt(r.credit) for r in group)
-        minus = v_debit - v_credit
-        running_balance += minus
-
-        # detail lines — balance blank (already on subtotal)
-        gle_balance = 0.0
-        for gle in group:
-            gle_balance += flt(gle.debit) - flt(gle.credit)
-            rows.append(make_gl_row(gle, gle_balance, currency, filters))
-        # subtotal header
-        rows.append(
-            {
-                "posting_date": "",
-                "account": "Net Total",
-                "voucher_type": group[0].voucher_type,
-                "voucher_no": voucher_no,
-                "against": group[0].against,
-                "debit": v_debit,
-                "credit": v_credit,
-                "balance": running_balance,
-                "currency": currency,
-                "is_group_row": True,
-            }
-        )
-
     return rows
 
 def build_by_account(gl_entries, running_balance, currency, filters):

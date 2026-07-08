@@ -144,55 +144,6 @@ frappe.query_reports["General Ledger"] = {
 			},
 		},
 
-		// voucher──
-		{
-			fieldname: "voucher_type",
-			label: __("Voucher Type"),
-			fieldtype: "Link",
-			options: "DocType",
-			on_change: function () {
-				frappe.query_report.set_filter_value("voucher_no", "");
-				frappe.query_report.get_filter("voucher_no").df.options =
-					frappe.query_report.get_filter_value("voucher_type") || "DocType";
-				frappe.query_report.get_filter("voucher_no").refresh();
-			},
-		},
-		{
-			fieldname: "voucher_no",
-			label: __("Voucher No"),
-			fieldtype: "Link",
-			options: "DocType",
-			get_query: function () {
-				const voucher_type = frappe.query_report.get_filter_value("voucher_type");
-				if (!voucher_type) return {};
-				return { doctype: voucher_type };
-			},
-		},
-
-		// against voucher
-		{
-			fieldname: "against_voucher_type",
-			label: __("Against Voucher Type"),
-			fieldtype: "Link",
-			options: "DocType",
-			on_change: function () {
-				frappe.query_report.set_filter_value("against_voucher", "");
-				frappe.query_report.get_filter("against_voucher").df.options =
-					frappe.query_report.get_filter_value("against_voucher_type") || "DocType";
-				frappe.query_report.get_filter("against_voucher").refresh();
-			},
-		},
-		{
-			fieldname: "against_voucher",
-			label: __("Against Voucher"),
-			fieldtype: "Link",
-			options: "DocType",
-			get_query: function () {
-				const avt = frappe.query_report.get_filter_value("against_voucher_type");
-				if (!avt) return {};
-				return { doctype: avt };
-			},
-		},
 
 		// flags────
 		{
@@ -227,7 +178,6 @@ frappe.query_reports["General Ledger"] = {
 			fieldtype: "Select",
 			options: [
 				"",
-				{ label: __("Group by Voucher"), value: "Group by Voucher" },
 				{ label: __("Group by Account"), value: "Group by Account" },
 				{ label: __("Group by Party"), value: "Group by Party" },
 			],

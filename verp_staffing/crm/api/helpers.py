@@ -1,5 +1,5 @@
 import frappe
-
+from frappe.query_builder import DocType
 
 # get employee name from user
 def get_employee_name(user):
@@ -74,23 +74,18 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
     if not allowed:
         return []
 
-    # safe LIKE filter in SQL
-    placeholders = ", ".join(["%s"] * len(allowed))
+    Employee = DocType("Employee")
 
-    query = """
-        SELECT name
-        FROM `tabEmployee`
-        WHERE name IN ({})
-          AND name LIKE %s
-        ORDER BY name
-        LIMIT %s OFFSET %s
-    """.format(placeholders)
-
-    params = list(allowed)
-    params.extend([f"%{txt}%", page_len, start])
-
-    return frappe.db.sql(query, params)
-
+    return (
+        frappe.qb.from_(Employee)
+        .select(Employee.name)
+        .where(Employee.name.isin(allowed))
+        .where(Employee.name.like(f"%{txt}%"))
+        .orderby(Employee.name)
+        .limit(page_len)
+        .offset(start)
+        .run()
+    )
 
 def get_allowed_employees(user, department=None):
     """

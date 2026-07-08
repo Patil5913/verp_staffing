@@ -27,8 +27,10 @@ def create_company(args):
     )
 
     company.insert(ignore_permissions=True)
-    frappe.db.set_value(
-        "Accounts Settings", "Accounts Settings", {"default_company": company.name}
+    frappe.db.set_single_value(
+        "Accounts Settings",
+        "default_company",
+        company.name,
     )
     return company
 

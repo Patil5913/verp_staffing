@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import base64
 from datetime import datetime, timedelta
+from verp_staffing.crm.api.helpers import _validate_site_file_path
 
 @frappe.whitelist()
 def download_agreement(agreement):
@@ -129,8 +130,10 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         file_doc = frappe.get_doc("File", file_name)
         file_path = file_doc.get_full_path()
+        
+        validated_path = _validate_site_file_path(file_path)
 
-        if not os.path.isfile(file_path):
+        if not os.path.isfile(validated_path):
             frappe.throw("Agreement PDF file not found on the server.")
 
         # Generate signing URL

@@ -161,7 +161,6 @@ def create_and_send(sales_order, template, data):
             attachments=[{"fname": fname, "fcontent": pdf}]
         )
 
-    frappe.db.commit()
     return {"agreement": agreement.name, "file_url": filedoc.file_url}
 
 @frappe.whitelist()
