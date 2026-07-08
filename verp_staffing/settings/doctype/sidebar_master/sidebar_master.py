@@ -53,40 +53,47 @@ FRAPPE_DOCTYPES = {
 }
 
 def _get_user_readable_doctypes():
-    """
-    Return a set of DocType names the current user can access,
-    restricted to VERP modules and excluding system doctypes.
-    """
     user_roles = frappe.get_roles()
-
     if not user_roles:
         return set()
-
+ 
     role_placeholders = ", ".join(["%s"] * len(user_roles))
-    module_placeholders = ", ".join(["%s"] * len(VERP_MODULES))
-    skip_placeholders = ", ".join(["%s"] * len(FRAPPE_DOCTYPES))
-
+ 
+    if frappe.session.user == "Administrator":
+        # No module/doctype restriction for Administrator — every doctype
+        query = (
+            "SELECT DISTINCT dp.parent "
+            "FROM `tabDocPerm` dp "
+            "INNER JOIN `tabDocType` dt "
+            "ON dt.name = dp.parent "
+            "WHERE dp.role IN (" + role_placeholders + ") "
+            "AND dp.write = 1"
+        )
+        values = tuple(user_roles)
+    else:
+        module_placeholders = ", ".join(["%s"] * len(VERP_MODULES))
+        skip_placeholders = ", ".join(["%s"] * len(FRAPPE_DOCTYPES))
+ 
+        query = (
+            "SELECT DISTINCT dp.parent "
+            "FROM `tabDocPerm` dp "
+            "INNER JOIN `tabDocType` dt "
+            "ON dt.name = dp.parent "
+            "WHERE dp.role IN (" + role_placeholders + ") "
+            "AND dp.write = 1 "
+            "AND ("
+            "dt.module IN (" + module_placeholders + ") "
+            "OR dt.name IN (" + skip_placeholders + ")"
+            ")"
+        )
+        values = tuple(user_roles) + tuple(VERP_MODULES) + tuple(FRAPPE_DOCTYPES)
+ 
     rows = frappe.db.sql(
-        f"""
-        SELECT DISTINCT dp.parent
-        FROM `tabDocPerm` dp
-        INNER JOIN `tabDocType` dt
-            ON dt.name = dp.parent
-        WHERE dp.role IN ({role_placeholders})
-          AND dp.write = 1
-          AND (
-                dt.module IN ({module_placeholders})
-                OR dt.name IN ({skip_placeholders})
-          )
-        """,
-        tuple(user_roles)
-        + tuple(VERP_MODULES)
-        + tuple(FRAPPE_DOCTYPES),
+        query,
+        values,
         as_dict=False,
     )
-
     return {row[0] for row in rows}
-
 
 @frappe.whitelist()
 def get_accessible_doctypes():

@@ -286,14 +286,7 @@ class CustomPersonalDataDeletionRequest(PersonalDataDeletionRequest):
                 header=[_("Your account has been deleted"), "green"],
             )
 
-
-# --------------------backup- upload successful, failed----------------
-
-# verp_staffing/overrides/offsite_backup_utils.py
-
 from frappe.integrations.offsite_backup_utils import get_recipients
-from frappe.utils import cint, split_emails
-
 
 def send_email(success, service_name, doctype, email_field, error_status=None):
     recipients = get_recipients(doctype, email_field)
@@ -361,8 +354,8 @@ def send_email(success, service_name, doctype, email_field, error_status=None):
             )
 
 
-def get_recipients(doctype, email_field):
-    return split_emails(frappe.db.get_value(doctype, None, email_field))
+# def get_recipients(doctype, email_field):
+#     return split_emails(frappe.db.get_value(doctype, None, email_field))
 
 
 def patch():

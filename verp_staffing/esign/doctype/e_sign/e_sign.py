@@ -557,7 +557,6 @@ def save_rebuilt_pdf(agreement):
                     frappe.get_traceback(),
                     "Failed deleting old signed PDF",
                 )
-    frappe.db.commit()
 
     return file_doc.file_url
 

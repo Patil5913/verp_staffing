@@ -206,7 +206,7 @@ def get_data_and_chart(filters):
         "SUM(cd.duration) AS total_seconds, "
         "TIME_FORMAT("
         "SEC_TO_TIME(SUM(cd.duration)), "
-        "'%Hh %im %ss'"
+        "'%%Hh %%im %%ss'"
         ") AS total_duration, "
         "ofc.first_call_date "
         "FROM `tabOpportunity` o "

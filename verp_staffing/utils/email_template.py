@@ -3735,9 +3735,6 @@ def seed_email_template():
             )
             doc.insert(ignore_permissions=True)
 
-    frappe.db.commit()
-
-
 def trigger_email_template_refresh(doc=None, method=None):
     frappe.enqueue(
         "verp_staffing.utils.email_template.seed_email_template",
