@@ -92,6 +92,8 @@ doctype_js = {
     for doc in validation_docs
 }
 
+doctype_js["Email Account"] = "public/js/email_account.js"
+
 
 # doctype_list_js = {"Lead": "public/js/lead_list.js"}
 treeviews = [

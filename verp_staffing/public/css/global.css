@@ -248,10 +248,10 @@ body.verp-protected::after {
 	   REMOVE NAVBAR SEARCH
 	========================================= */
 
-/* .navbar .search-bar,
+.navbar .search-bar,
 .navbar form[role="search"] {
 	display: none !important;
-} */
+}
 
 /* =========================================
    REMOVE HELP MENU
