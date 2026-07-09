@@ -1,14 +1,51 @@
 import frappe
+from frappe import _
+
+
+def _get_my_email_account() -> dict:
+    user = frappe.session.user
+    row = frappe.db.get_value(
+        "User Email",
+        {"parent": user, "parenttype": "User"},
+        ["email_account"],
+        order_by="idx asc",
+        as_dict=True,
+    )
+    if not row or not row.email_account:
+        return {}
+
+    email_account = row.email_account
+    ea = frappe.db.get_value(
+        "Email Account", email_account, ["email_id"], as_dict=True
+    )
+    full_name = frappe.db.get_value("User", user, "full_name")
+
+    return {
+        "email_account": email_account,
+        "sender_email":  (ea.email_id if ea else None) or user,
+        "sender_name":   full_name or user,
+    }
+
 
 @frappe.whitelist()
-def get_email_widget_data(email_account: str, sender_email: str = None) -> dict:
-    frappe.only_for("System User")
+def get_email_widget_data() -> dict:
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+    account_info = _get_my_email_account()
+    email_account = account_info.get("email_account")
 
     if not email_account:
-        return {"inbox": [], "sent": [], "last_synced_at": None, "sender_email": None}
+        return {
+            "email_account":  None,
+            "sender_email":   None,
+            "sender_name":    None,
+            "inbox":          [],
+            "sent":           [],
+            "last_synced_at": None,
+        }
 
-    # Always resolve sender from Email Account doc
-    resolved_sender = _resolve_sender_email(email_account, sender_email)
+    resolved_sender = account_info["sender_email"]
 
     inbox = frappe.get_list(
         "Communication",
@@ -24,6 +61,7 @@ def get_email_widget_data(email_account: str, sender_email: str = None) -> dict:
         ],
         order_by="communication_date desc",
         limit=10,
+        ignore_permissions=True,
     )
 
     sent = frappe.get_list(
@@ -40,6 +78,7 @@ def get_email_widget_data(email_account: str, sender_email: str = None) -> dict:
         ],
         order_by="communication_date desc",
         limit=5,
+        ignore_permissions=True,
     )
 
     last_synced_at = None
@@ -52,16 +91,10 @@ def get_email_widget_data(email_account: str, sender_email: str = None) -> dict:
         pass
 
     return {
+        "email_account":  email_account,
+        "sender_email":   resolved_sender,
+        "sender_name":    account_info["sender_name"],
         "inbox":          list(inbox),
         "sent":           list(sent),
         "last_synced_at": last_synced_at,
-        "sender_email":   resolved_sender,
     }
-
-
-def _resolve_sender_email(email_account: str, fallback: str = None) -> str:
-    try:
-        email_id = frappe.db.get_value("Email Account", email_account, "email_id")
-        return email_id or fallback or frappe.session.user
-    except Exception:
-        return fallback or frappe.session.user
