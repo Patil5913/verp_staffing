@@ -1,6 +1,7 @@
 import frappe
 import json
 import re
+from frappe.utils import cint
 
 SERVICE_DOCTYPE_MAP = {
     "ruc": "RUC",
@@ -66,7 +67,12 @@ PERM_FIELDS = [
 ROLE_PERMISSIONS = {
     "Inbox User": {
         "Communication": ["read", "create", "email"],
-        "Email Account": ["read"],
+        "Email Domain": ["read", "select"],
+        "Email Account": {
+            "perms": ["select", "read", "create", "write"],
+            "if_owner": 1,
+            "custom": 1,
+        },
     },
     "_show_sidebar_master": {
         "Sidebar Master": ["select", "read", "write", "create"],
@@ -2197,13 +2203,16 @@ def assign_permissions_to_roles(role_permissions: dict):
             if doctype not in doctypes:
                 continue
 
+            custom = False
+            if_owner = 0
+
             if isinstance(config, list):
                 allowed_perms = set(config)
-                if_owner = 0
 
             elif isinstance(config, dict):
                 allowed_perms = set(config.get("perms", []))
-                if_owner = 1 if config.get("if_owner") else 0
+                if_owner = cint(config.get("if_owner"))
+                custom = cint(config.get("custom"))
 
             else:
                 continue
@@ -2214,6 +2223,53 @@ def assign_permissions_to_roles(role_permissions: dict):
 
             for field in PERM_FIELDS:
                 values[field] = 1 if field in allowed_perms else 0
+
+            if custom:
+                existing = frappe.get_all(
+                    "Custom DocPerm",
+                    filters={
+                        "parent": doctype,
+                        "role": role,
+                        "permlevel": 0,
+                    },
+                    order_by="creation asc",
+                    pluck="name",
+                )
+
+                # Remove duplicate rows
+                if len(existing) > 1:
+                    for duplicate in existing[1:]:
+                        frappe.delete_doc(
+                            "Custom DocPerm",
+                            duplicate,
+                            force=True,
+                            ignore_permissions=True,
+                        )
+
+                existing = existing[0] if existing else None
+
+                if existing:
+                    frappe.db.set_value(
+                        "Custom DocPerm",
+                        existing,
+                        values,
+                        update_modified=False,
+                    )
+                else:
+                    doc = frappe.get_doc(
+                        {
+                            "doctype": "Custom DocPerm",
+                            "parent": doctype,
+                            "role": role,
+                            "permlevel": 0,
+                            **values,
+                        }
+                    )
+
+                    doc.flags.ignore_permissions = True
+                    doc.insert(ignore_permissions=True)
+
+                continue
 
             existing = frappe.get_all(
                 "DocPerm",
@@ -2228,7 +2284,7 @@ def assign_permissions_to_roles(role_permissions: dict):
                 pluck="name",
             )
 
-            # Remove duplicate rows if any exist
+            # Remove duplicate rows
             if len(existing) > 1:
                 for duplicate in existing[1:]:
                     frappe.delete_doc(
@@ -2247,7 +2303,6 @@ def assign_permissions_to_roles(role_permissions: dict):
                     values,
                     update_modified=False,
                 )
-
             else:
                 doc = frappe.get_doc(
                     {
@@ -2257,11 +2312,7 @@ def assign_permissions_to_roles(role_permissions: dict):
                         "parentfield": "permissions",
                         "role": role,
                         "permlevel": 0,
-                        "if_owner": if_owner,
-                        **{
-                            field: 1 if field in allowed_perms else 0
-                            for field in PERM_FIELDS
-                        },
+                        **values,
                     }
                 )
 

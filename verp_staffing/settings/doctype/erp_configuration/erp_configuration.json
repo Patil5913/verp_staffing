@@ -142,6 +142,7 @@
   {
    "fieldname": "department_access_form_fields",
    "fieldtype": "Long Text",
+   "hidden": 1,
    "label": "Department Access Form Fields"
   },
   {
@@ -236,7 +237,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-02 17:46:51.173008",
+ "modified": "2026-07-09 16:06:43.508258",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",
