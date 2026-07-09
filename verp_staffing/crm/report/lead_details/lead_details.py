@@ -78,7 +78,6 @@ def get_data(filters):
             l.status,
             l.lead_owner,
             l.source,
-            l.email,
             l.creation
         FROM `tabLead` l
     """
