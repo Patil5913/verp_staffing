@@ -18,7 +18,8 @@
   {
    "fieldname": "config_json",
    "fieldtype": "JSON",
-   "label": "Config JSON"
+   "label": "Config JSON",
+   "hidden": 1
   },
   {
    "fieldname": "sidebar_owner",
