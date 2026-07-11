@@ -53,6 +53,7 @@
   {
    "fieldname": "signature_fields",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Signature Fields",
    "options": "Signature Fields",
    "print_hide": 1,
@@ -89,7 +90,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 17:47:38.993888",
+ "modified": "2026-07-11 22:34:35.370324",
  "modified_by": "Administrator",
  "module": "ESign",
  "name": "E Sign",

@@ -37,8 +37,10 @@ app_license = "mit"
 app_include_css = ["/assets/verp_staffing/css/global.css"]
 # pdflibjs Imports
 app_include_js = [
+    "/assets/verp_staffing/js/psd.js",
+    "/assets/verp_staffing/js/pdf.min.js",
+    "/assets/verp_staffing/js/pdf.worker.min.js",
     "/assets/verp_staffing/js/calculation_engine.js",
-    "pdf_lib_bundle.bundle.js",
     "/assets/verp_staffing/js/reusable.js",
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
