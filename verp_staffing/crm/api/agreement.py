@@ -10,6 +10,7 @@ import base64
 from datetime import datetime, timedelta
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 
+
 @frappe.whitelist()
 def download_agreement(agreement):
     doc = frappe.get_doc("Agreement", agreement)
@@ -109,12 +110,13 @@ def generate_form_url(
         frappe.log_error(frappe.get_traceback(), "Generate Form URL Error")
         raise
 
+
 @frappe.whitelist()
 def send_agreement_notification(recipient, sales_order, customer, agreement):
     try:
         # Fetch Agreement
         agreement_doc = frappe.get_doc("Agreement", agreement)
-        
+
         if not agreement_doc.pdf:
             frappe.throw("Agreement PDF is missing.")
 
@@ -130,7 +132,7 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         file_doc = frappe.get_doc("File", file_name)
         file_path = file_doc.get_full_path()
-        
+
         validated_path = _validate_site_file_path(file_path)
 
         if not os.path.isfile(validated_path):
@@ -202,6 +204,7 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
         )
         raise
 
+
 @frappe.whitelist()
 def send_existing_agreement(agreement):
 
@@ -224,44 +227,46 @@ def send_existing_agreement(agreement):
 
         recipient = get_customer_email(so.customer)
 
-        customer_lead_details = frappe.get_cached_value("Customer", so.customer, "lead_details")
+        customer_lead_details = frappe.get_cached_value(
+            "Customer", so.customer, "lead_details"
+        )
 
         if not recipient:
             frappe.throw(
                 title="Email Missing",
-                msg=f'Email is required to send agreement.<br><br>'
-                    f'<a href="/app/lead-detail-form/{customer_lead_details}" target="_blank">'
-                    f'➜ Open Lead Detail Form</a>'
+                msg=f"Email is required to send agreement.<br><br>"
+                f'<a href="/app/lead-detail-form/{customer_lead_details}" target="_blank">'
+                f"➜ Open Lead Detail Form</a>",
             )
 
         if not doc.pdf:
             frappe.throw("Agreement PDF not generated")
 
-
         send_agreement_notification(
             recipient=recipient,
             sales_order=so.name,
             customer=so.customer,
-            agreement=doc.name
+            agreement=doc.name,
         )
 
-
-        doc.db_set({
-            "status": "Sent For Signature",
-            "sent_on": now_datetime(),
-            "last_reminder_sent": None
-        })
+        doc.db_set(
+            {
+                "status": "Sent For Signature",
+                "sent_on": now_datetime(),
+                "last_reminder_sent": None,
+            }
+        )
 
         return {"success": True}
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Send Agreement Error")
-        frappe.throw(
-            _("Failed to send agreement {0}").format(doc.name)
-        )
+        frappe.throw(_("Failed to send agreement {0}").format(doc.name))
         raise
-            
+
+
 from frappe.utils import time_diff_in_hours
+
 
 def send_agreement_reminders():
     current_time = now_datetime()
@@ -342,8 +347,10 @@ def send_agreement_reminders():
             current_time,
             update_modified=False,
         )
-        
+
+
 from frappe.utils.file_manager import get_file_path
+
 
 # Final submit
 @frappe.whitelist()
@@ -413,7 +420,6 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
         packet = io.BytesIO()
         c = canvas.Canvas(packet, pagesize=(page_width, page_height))
 
-
         for f in fields:
             if int(f.get("page", 1)) - 1 != page_index:
                 continue
@@ -441,17 +447,44 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
             fontsize = int(f.get("font_size") or 11)
             ftype = f.get("type", "Text")
             if ftype == "Text" and val:
-                c.setFont("Helvetica", fontsize)
-                c.drawString(x, y + (h - fontsize), str(val))
-
+                render_text_box(
+                    c,
+                    str(val),
+                    x,
+                    y,
+                    w,
+                    h,
+                    fontsize,
+                    f.get("line_height", 1.2),
+                )
+            elif ftype == "Number" and val:
+                render_text_box(
+                    c,
+                    str(val),
+                    x,
+                    y,
+                    w,
+                    h,
+                    fontsize,
+                    f.get("line_height", 1.2),
+                )
             elif ftype == "Checkbox" and val:
                 c.rect(x, y, h, h, stroke=1, fill=0)
                 c.line(x, y, x + h, y + h)
                 c.line(x, y + h, x + h, y)
             elif ftype == "Date" and val:
                 formatted = format_date_value(val)
-                c.setFont("Helvetica", fontsize)
-                c.drawString(x, y + (h - fontsize), formatted)
+
+                render_text_box(
+                    c,
+                    formatted,
+                    x,
+                    y,
+                    w,
+                    h,
+                    fontsize,
+                    f.get("line_height", 1.2),
+                )
             elif ftype == "Signature" and val:
                 img = Image.open(val)
                 c.drawImage(
@@ -464,17 +497,23 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 )
 
             elif ftype == "Payment_Terms" and val:
-                c.setFont("Helvetica", fontsize)
-                text_obj = c.beginText(x, y + h - fontsize)
-
-                # ensure list
                 if isinstance(val, str):
                     payment_terms = [t.strip() for t in val.split(",") if t.strip()]
 
-                for i, term in enumerate(payment_terms, 1):
-                    text_obj.textLine(f"{i}. {term}")
+                text = "\n".join(
+                    f"{i}. {term}" for i, term in enumerate(payment_terms, 1)
+                )
 
-                c.drawText(text_obj)
+                render_text_box(
+                    c,
+                    text,
+                    x,
+                    y,
+                    w,
+                    h,
+                    fontsize,
+                    f.get("line_height", 1.2),
+                )
 
         # REQUIRED
         c.showPage()
@@ -537,3 +576,96 @@ def format_date_value(value, output_format="%d-%m-%Y"):
 
     # fallback (don’t break flow)
     return value
+
+
+def wrap_text(canvas, text, max_width, font_name, font_size):
+    """
+    Wrap text based on rendered width.
+    Supports explicit newline characters.
+    """
+
+    wrapped_lines = []
+
+    paragraphs = str(text).split("\n")
+
+    for paragraph in paragraphs:
+        words = paragraph.split()
+        current = ""
+
+        for word in words:
+            test = word if not current else f"{current} {word}"
+
+            if (
+                canvas.stringWidth(
+                    test,
+                    font_name,
+                    font_size,
+                )
+                <= max_width
+            ):
+                current = test
+            else:
+                if current:
+                    wrapped_lines.append(current)
+                current = word
+
+        if current:
+            wrapped_lines.append(current)
+
+        if not words:
+            wrapped_lines.append("")
+
+    return wrapped_lines
+
+
+def render_text_box(
+    canvas,
+    value,
+    x,
+    y,
+    width,
+    height,
+    font_size=12,
+    line_height=1.2,
+    font_name="Helvetica",
+):
+    """
+    Draw wrapped text inside a fixed rectangle.
+
+    Text starts from the top-left of the box and
+    stops once the box height is exhausted.
+    """
+
+    if not value:
+        return
+
+    canvas.setFont(
+        font_name,
+        font_size,
+    )
+
+    padding = 2
+
+    lines = wrap_text(
+        canvas,
+        value,
+        width - (padding * 2),
+        font_name,
+        font_size,
+    )
+
+    line_spacing = font_size * line_height
+
+    baseline = y + height - font_size
+
+    for line in lines:
+        if baseline < y:
+            break
+
+        canvas.drawString(
+            x + padding,
+            baseline,
+            line,
+        )
+
+        baseline -= line_spacing
