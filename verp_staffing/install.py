@@ -128,7 +128,7 @@ HIERARCHY_DATA = [
             {"parent_role": "Lead Manager", "child_roles": ["Lead Team Lead"]},
             {"parent_role": "Lead Team Lead", "child_roles": ["Lead Person"]},
         ],
-        "auto_assign_config": {"role": "Lead Person"},
+        "auto_assign_config": {"role": "Lead Master Manager"},
     },
     {
         "department": "Sales",
@@ -137,7 +137,7 @@ HIERARCHY_DATA = [
             {"parent_role": "Sales Manager", "child_roles": ["Sales Team Lead"]},
             {"parent_role": "Sales Team Lead", "child_roles": ["Sales Person"]},
         ],
-        "auto_assign_config": {"role": "Sales Manager"},
+        "auto_assign_config": {"role": "Sales Master Manager"},
     },
     {
         "department": "Marketing",
@@ -154,7 +154,7 @@ HIERARCHY_DATA = [
             {"parent_role": "Senior Recruiter", "child_roles": ["Marketing Mentor"]},
             {"parent_role": "Marketing Mentor", "child_roles": ["Recruiter"]},
         ],
-        "auto_assign_config": {"role": "Marketing Manager"},
+        "auto_assign_config": {"role": "Marketing Master Manager"},
     },
     {
         "department": "Resume",
@@ -179,7 +179,7 @@ HIERARCHY_DATA = [
                 "child_roles": ["Technical Person"],
             },
         ],
-        "auto_assign_config": {"role": "Technical Coordinator"},
+        "auto_assign_config": {"role": "Technical Master Manager"},
     },
     {
         "department": "HR",
@@ -1143,7 +1143,7 @@ def after_install():
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
-    # seed_hierarchy()
+    seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)

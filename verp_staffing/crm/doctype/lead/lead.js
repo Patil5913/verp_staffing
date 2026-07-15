@@ -35,7 +35,6 @@ frappe.ui.form.on("Lead", {
 			method: "verp_staffing.crm.doctype.lead.lead.lead_has_opportunity", // match your actual module path
 			args: { lead_name: frm.doc.name },
 			callback: function (r) {
-				console.log("Opportunity exists:", r.message);
 				if (r.message) {
 					window._lead_form_locked = true;
 					frm.disable_form();

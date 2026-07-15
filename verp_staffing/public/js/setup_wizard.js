@@ -27,6 +27,22 @@ frappe.setup.on("before_load", function () {
 				fieldtype: "Date",
 				reqd: 1,
 			},
+			{
+				fieldtype: "Section Break",
+			},
+			// --- Sample data toggle, same pattern ERPNext uses on its
+			// "Add a few sample records to explore the system" checkbox ---
+			{
+				fieldname: "add_sample_data",
+				label: __("Add Sample Data"),
+				fieldtype: "Check",
+				default: 0,
+				description: __(
+					"Seeds departments, users, employees, leads, opportunities, " +
+						"customers, orders and invoices so you can explore the system " +
+						"immediately. You can safely skip this on a production setup."
+				),
+			},
 		],
 
 		validate: function () {
