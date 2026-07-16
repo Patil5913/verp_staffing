@@ -515,25 +515,17 @@ function preview(frm, wrapper) {
 
 		const data = collect_agreement_data(frm, wrapper);
 
-		frappe.call({
-			method: "verp_staffing.crm.api.agreement.preview_agreement",
-			args: { template, data: JSON.stringify(data) },
-
-			callback(r) {
-				if (!r.message) {
-					frappe.msgprint("Preview error");
-					reject();
-					return;
-				}
-				window.open(r.message.file_url);
-				resolve();
-			},
-
-			error() {
-				frappe.msgprint("Preview failed");
-				reject();
-			},
+		const params = new URLSearchParams({
+			template,
+			data: JSON.stringify(data),
 		});
+
+		window.open(
+			`/api/method/verp_staffing.crm.api.agreement.preview_agreement?${params.toString()}`,
+			"_blank",
+		);
+
+		resolve();
 	});
 }
 

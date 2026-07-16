@@ -175,10 +175,10 @@ async function load_pdf_pages(frm) {
           Drag and drop fields anywhere in the document.
         </div>
 
-      ${field_button("signature", "E-signature", "edit")}
-      ${field_button("text", "Text", "pencil")}
-      ${field_button("date", "Date", "calendar")}
-      ${field_button("number", "Number", "fa-hashtag")}
+      ${field_button("signature", "E-signature", null, "✍")}
+      ${field_button("text", "Text", null, "📝")}
+      ${field_button("date", "Date", null, "📅")}
+      ${field_button("number", "Number", null, "🔢")}
       ${field_button("checkbox", "Checkbox", "check")}
 
   	</div>
@@ -349,16 +349,17 @@ frappe.dom.set_style(`
     align-items:center;
     gap:8px;
     padding:8px 10px;
-    border:1px solid var(--border-color);
-    border-radius:6px;
     margin-bottom:6px;
-    cursor:pointer;
     font-size:13px;
-    background:var(--control-bg);
+    border:1px solid #dbe3ef;
+	border-radius:10px;
+	background:white;
+	cursor:grab;
 }
 
 .esign-field-tool:hover{
-    background:var(--gray-100);
+	background:#eff6ff;
+	border-color:#60a5fa;
 }
 
 .esign-field-tool.active{
@@ -388,7 +389,6 @@ frappe.dom.set_style(`
     flex-direction:column;
     align-items:flex-start;
 }`);
-
 
 function enable_toolbar_drag(frm) {
 	document.querySelectorAll(".esign-field-tool").forEach((tool) => {
@@ -599,14 +599,14 @@ function enable_drop(frm, overlay) {
 	});
 }
 
-function field_button(type, label, icon) {
+function field_button(type, label, frappe_icon, icon) {
 	return `
     <div class="esign-field-tool"
          draggable="true"
          data-type="${type}">
          
         <span class="field-icon">
-            <i class="fa fa-${icon}"></i>
+            ${icon ? `${icon}` : `<i class="fa fa-${frappe_icon}"></i>`}
         </span>
 
         <span class="field-label">

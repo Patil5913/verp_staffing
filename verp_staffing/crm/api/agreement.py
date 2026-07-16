@@ -9,6 +9,7 @@ import hashlib
 import base64
 from datetime import datetime, timedelta
 from verp_staffing.crm.api.helpers import _validate_site_file_path
+from frappe.utils.file_manager import save_file
 
 
 @frappe.whitelist()
@@ -30,6 +31,8 @@ def preview_agreement(template, data):
     """
     Returns a temporary filled PDF (NOT saved in agreement)
     """
+    template = template or frappe.form_dict.template
+    data = data or frappe.form_dict.data
     data_dict = json.loads(data) if isinstance(data, str) else (data or {})
     tpl = frappe.get_doc("Pdf Agreement Template", template)
 
@@ -52,12 +55,16 @@ def preview_agreement(template, data):
 
     # payment_terms might be included in data_dict as list; ensure list
     payment_terms = data_dict.get("Payment_Terms") or []
-    out_path, url = generate_pdf(
-        input_pdf_path, fields, data_dict, payment_terms=payment_terms, save_final=False
+    pdf_bytes = generate_pdf(
+        input_pdf_path,
+        fields,
+        data_dict,
+        payment_terms=payment_terms,
     )
 
-    # Save a temp File doc (preview)
-    return {"file_url": url}
+    frappe.local.response.filename = "Agreement Preview.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type = "download"
 
 
 def generate_token(data: dict):
@@ -119,7 +126,6 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
 
         if not agreement_doc.pdf:
             frappe.throw("Agreement PDF is missing.")
-
         # Fetch File record
         file_name = frappe.db.get_value(
             "File",
@@ -213,7 +219,6 @@ def send_existing_agreement(agreement):
             frappe.throw("Agreement is required")
 
         doc = frappe.get_doc("Agreement", agreement)
-
         if doc.status != "Ready To Send":
             frappe.throw("Agreement is not in sendable state")
 
@@ -349,9 +354,6 @@ def send_agreement_reminders():
         )
 
 
-from frappe.utils.file_manager import get_file_path
-
-
 # Final submit
 @frappe.whitelist()
 def submit_and_generate(sales_order, template, data, send_email=0):
@@ -375,10 +377,12 @@ def submit_and_generate(sales_order, template, data, send_email=0):
 
     payment_terms = data_dict.get("Payment_Terms")
 
-    out_path, url = generate_pdf(
-        input_pdf_path, fields, data_dict, payment_terms=payment_terms, save_final=True
+    pdf_bytes = generate_pdf(
+        input_pdf_path,
+        fields,
+        data_dict,
+        payment_terms=payment_terms,
     )
-
     # CREATE AGREEMENT (NO DUPLICATE BLOCK)
     agreement = frappe.get_doc(
         {
@@ -386,15 +390,24 @@ def submit_and_generate(sales_order, template, data, send_email=0):
             "sales_order": sales_order,
             "template": template,
             "data": json.dumps(data_dict),
-            "pdf": url,
             "status": "Ready To Send",
         }
     ).insert(ignore_permissions=True)
 
+    file_doc = save_file(
+        fname=f"{agreement.name}.pdf",
+        content=pdf_bytes,
+        dt="Agreement",
+        dn=agreement.name,
+        df="pdf",
+        is_private=0,
+    )
+    agreement.db_set("pdf", file_doc.file_url)
+
     # OPTIONAL SEND
     if int(send_email):
         send_existing_agreement(agreement.name)
-    return {"agreement": agreement.name, "file_url": url}
+    return {"agreement": agreement.name, "file_url": file_doc.file_url}
 
 
 def get_template_path(template):
@@ -403,7 +416,7 @@ def get_template_path(template):
     return file_path
 
 
-def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=False):
+def generate_pdf(input_pdf_path, fields, data_dict, payment_terms):
     import io
     from pdfrw import PdfReader, PdfWriter, PageMerge
     from reportlab.pdfgen import canvas
@@ -441,6 +454,15 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
             y = page_height - ((by + bh) * sy)
             w = bw * sx
             h = bh * sy
+            # padding = 4 in field rectangle
+            padding_x = 4 * sx
+            padding_y = 4 * sy
+
+            text_x = x + padding_x
+            text_y = y + padding_y
+
+            usable_width = w - (padding_x * 2)
+            usable_height = h - (padding_y * 2)
 
             name = f.get("name")
             val = data_dict.get(name, "")
@@ -450,10 +472,10 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 render_text_box(
                     c,
                     str(val),
-                    x,
-                    y,
-                    w,
-                    h,
+                    text_x,
+                    text_y,
+                    usable_width,
+                    usable_height,
                     fontsize,
                     f.get("line_height", 1.2),
                 )
@@ -461,27 +483,27 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 render_text_box(
                     c,
                     str(val),
-                    x,
-                    y,
-                    w,
-                    h,
+                    text_x,
+                    text_y,
+                    usable_width,
+                    usable_height,
                     fontsize,
                     f.get("line_height", 1.2),
                 )
             elif ftype == "Checkbox" and val:
-                c.rect(x, y, h, h, stroke=1, fill=0)
-                c.line(x, y, x + h, y + h)
-                c.line(x, y + h, x + h, y)
+                c.rect(text_x, text_y, usable_height, usable_height, stroke=1, fill=0)
+                c.line(text_x, text_y, x + usable_height, y + h)
+                c.line(text_x, y + usable_height, x + usable_height, y)
             elif ftype == "Date" and val:
                 formatted = format_date_value(val)
 
                 render_text_box(
                     c,
                     formatted,
-                    x,
-                    y,
-                    w,
-                    h,
+                    text_x,
+                    text_y,
+                    usable_width,
+                    usable_height,
                     fontsize,
                     f.get("line_height", 1.2),
                 )
@@ -489,9 +511,9 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 img = Image.open(val)
                 c.drawImage(
                     ImageReader(img),
-                    x,
-                    y,
-                    width=w,
+                    text_x,
+                    text_y,
+                    width=usable_width,
                     height=h,
                     mask="auto",
                 )
@@ -507,40 +529,32 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms, save_final=Fa
                 render_text_box(
                     c,
                     text,
-                    x,
-                    y,
-                    w,
-                    h,
+                    text_x,
+                    text_y,
+                    usable_width,
+                    usable_height,
                     fontsize,
                     f.get("line_height", 1.2),
                 )
 
-        # REQUIRED
         c.showPage()
         c.save()
 
         packet.seek(0)
         overlay_pdf = PdfReader(packet)
 
-        # CRITICAL SAFETY CHECK
         if overlay_pdf.pages:
             PageMerge(page).add(overlay_pdf.pages[0]).render()
 
         writer.addpage(page)
 
-    filename = f"agreement_{frappe.generate_hash(6)}.pdf"
+    output = io.BytesIO()
 
-    if save_final:
-        out_path = frappe.utils.get_files_path(filename)
-        url = f"/files/{filename}"
-    else:
-        tmp_dir = frappe.utils.get_files_path("tmp")
-        os.makedirs(tmp_dir, exist_ok=True)
-        out_path = os.path.join(tmp_dir, filename)
-        url = f"/files/tmp/{filename}"
+    writer.write(output)
 
-    writer.write(out_path)
-    return out_path, url
+    output.seek(0)
+
+    return output.getvalue()
 
 
 def format_date_value(value, output_format="%d-%m-%Y"):
@@ -644,26 +658,27 @@ def render_text_box(
         font_size,
     )
 
-    padding = 2
-
     lines = wrap_text(
         canvas,
         value,
-        width - (padding * 2),
+        width,
         font_name,
         font_size,
     )
 
     line_spacing = font_size * line_height
 
-    baseline = y + height - font_size
+    line_spacing = font_size * line_height
+    text_height = len(lines) * line_spacing
+
+    baseline = y + ((height + text_height) / 2) - font_size
 
     for line in lines:
         if baseline < y:
             break
 
         canvas.drawString(
-            x + padding,
+            x,
             baseline,
             line,
         )

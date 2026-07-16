@@ -545,7 +545,6 @@ def send_email(recipients, subject, message, attachments=None, now=None):
         )
         if user_email_accounts:
             sender = user_email_accounts[0].email_id
-
     # sender=None will fall back to Frappe's default outgoing email account
     frappe.sendmail(
         sender=sender,
