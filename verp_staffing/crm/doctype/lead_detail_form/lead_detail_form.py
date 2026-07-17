@@ -882,8 +882,7 @@ def render_signature_box(
     draw_y = y + padding_y
 
     draw_w = max(0, width - padding_x * 2)
-    draw_h = max(0, height - padding_y * 2)
-
+    draw_h = max(0, height - padding_y * 2)    
     canvas.drawImage(
         image_reader,
         draw_x,

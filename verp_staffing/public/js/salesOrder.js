@@ -425,79 +425,93 @@ function load_form_fields(wrapper) {
 			if (!blocks.length) return;
 
 			form_div.append(`
-        <div style="
-          border-top: 1px solid var(--border-color);
-          padding-top: 16px;
-          margin-top: 4px;
-        ">
-          <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:12px; letter-spacing:0.5px;">
-            TEMPLATE FIELDS
-          </div>
-        </div>
-      `);
+				<div style="
+				border-top: 1px solid var(--border-color);
+				padding-top: 16px;
+				margin-top: 4px;
+				">
+				<div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:12px; letter-spacing:0.5px;">
+					TEMPLATE FIELDS
+				</div>
+				</div>
+			`);
+
+			const groupedBlocks = [];
+			const seen = new Set();
 
 			blocks.forEach((b) => {
+				if (!b.name || !b.type) return;
+
+				const key = `${b.type.trim().toLowerCase()}|${b.name.trim().toLowerCase()}`;
+
+				if (seen.has(key)) return;
+
+				seen.add(key);
+				groupedBlocks.push(b);
+			});
+
+			groupedBlocks.forEach((b) => {
 				if (["Text", "Number", "Date"].includes(b.type)) {
 					form_div.append(`
-            <div class="form-group" style="margin-bottom:14px; max-width:400px;">
-              <label class="control-label" style="
-                font-size:12px;
-                font-weight:600;
-                color: var(--text-muted);
-                text-transform: uppercase;
-                letter-spacing: 0.4px;
-              ">
-                ${b.label || b.name}
-              </label>
-              <input
-                type="${b.type === "Number" ? "number" : b.type === "Date" ? "date" : "text"}"
-                class="form-control ag-field"
-                data-field="${b.name}"
-                placeholder="Enter ${b.label || b.name}..."
-                style="
-                  border: 1px solid var(--border-color);
-                  border-radius: var(--border-radius);
-                  background: var(--control-bg);
-                  color: var(--text-color);
-                  padding: 6px 10px;
-                  font-size: 13px;
-                  height: 34px;
-                "
-              />
-            </div>
-          `);
+						<div class="form-group" style="margin-bottom:14px; max-width:400px;">
+							<label class="control-label" style="
+								font-size:12px;
+								font-weight:600;
+								color: var(--text-muted);
+								text-transform: uppercase;
+								letter-spacing: 0.4px;
+							">
+								${b.label || b.name}
+							</label>
+							<input
+								type="${b.type === "Number" ? "number" : b.type === "Date" ? "date" : "text"}"
+								class="form-control ag-field"
+								data-field="${b.name}"
+								placeholder="Enter ${b.label || b.name}..."
+								style="
+									border: 1px solid var(--border-color);
+									border-radius: var(--border-radius);
+									background: var(--control-bg);
+									color: var(--text-color);
+									padding: 6px 10px;
+									font-size: 13px;
+									height: 34px;
+								"
+							/>
+						</div>
+					`);
 				} else if (b.type === "Payment_Terms") {
 					form_div.append(`
-            <div class="form-group" style="margin-bottom:14px; max-width:400px;">
-              <label class="control-label" style="
-                font-size:12px;
-                font-weight:600;
-                color: var(--text-muted);
-                text-transform: uppercase;
-                letter-spacing: 0.4px;
-              ">
-                ${b.label || b.name}
-              </label>
-              <textarea
-                class="form-control ag-field"
-                data-field="${b.name}"
-                placeholder="Enter comma-separated terms (e.g. 50% upfront, 50% on delivery)"
-                style="
-                  border: 1px solid var(--border-color);
-                  border-radius: var(--border-radius);
-                  background: var(--control-bg);
-                  color: var(--text-color);
-                  padding: 6px 10px;
-                  font-size: 13px;
-                  min-height: 80px;
-                  resize: vertical;
-                "
-              ></textarea>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-                Separate multiple terms with commas
-              </div>
-            </div>
-          `);
+						<div class="form-group" style="margin-bottom:14px; max-width:400px;">
+							<label class="control-label" style="
+								font-size:12px;
+								font-weight:600;
+								color: var(--text-muted);
+								text-transform: uppercase;
+								letter-spacing: 0.4px;
+							">
+								${b.label || b.name}
+							</label>
+							<textarea
+								class="form-control ag-field"
+								data-field="${b.name}"
+								placeholder="Enter comma-separated terms (e.g. 50% upfront, 50% on delivery)"
+								style="
+									border: 1px solid var(--border-color);
+									border-radius: var(--border-radius);
+									background: var(--control-bg);
+									color: var(--text-color);
+									padding: 6px 10px;
+									font-size: 13px;
+									min-height: 80px;
+									resize: vertical;
+								"
+							></textarea>
+							<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+								Separate multiple terms with commas
+							</div>
+						</div>
+					`);
 				}
 			});
 		},

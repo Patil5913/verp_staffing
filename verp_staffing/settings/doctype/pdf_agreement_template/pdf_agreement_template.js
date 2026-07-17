@@ -316,12 +316,12 @@ frappe.ui.form.on("Pdf Agreement Template", {
 					const names = frm._temp_fields
 						.map((f) => f.name && f.name.trim())
 						.filter(Boolean);
-					const dup = names.find((n, i) => names.indexOf(n) !== i);
-					if (dup) {
-						frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
-						frappe.validated = false;
-						return;
-					}
+					// const dup = names.find((n, i) => names.indexOf(n) !== i);
+					// if (dup) {
+					// 	frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
+					// 	frappe.validated = false;
+					// 	return;
+					// }
 
 					// Attach real page sizes if missing
 					frm._temp_fields = frm._temp_fields.map((f) => {
@@ -678,10 +678,7 @@ function setup_drag_drop(frm) {
 }
 
 function create_new_field(frm, type, page, x, y) {
-	if (type === "Signature" && (frm._temp_fields || []).some((f) => f.type === "Signature")) {
-		frappe.msgprint("Only one Signature field is allowed.");
-		return;
-	}
+
 	frappe.prompt(
 		[
 			{
@@ -975,11 +972,11 @@ function Save_Template(frm) {
 	if (!frm) return;
 
 	const names = (frm._temp_fields || []).map((f) => f.name && f.name.trim()).filter(Boolean);
-	const dup = names.find((n, i) => names.indexOf(n) !== i);
-	if (dup) {
-		frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
-		return;
-	}
+	// const dup = names.find((n, i) => names.indexOf(n) !== i);
+	// if (dup) {
+	// 	frappe.msgprint(`Duplicate field name found: ${dup}. Use unique names.`);
+	// 	return;
+	// }
 
 	// Attach real page sizes to any field missing them
 	frm._temp_fields = (frm._temp_fields || []).map((f) => {

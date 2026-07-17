@@ -55,6 +55,7 @@ def preview_agreement(template, data):
 
     # payment_terms might be included in data_dict as list; ensure list
     payment_terms = data_dict.get("Payment_Terms") or []
+    frappe.errprint(f"field: {fields}, data:{data_dict}")
     pdf_bytes = generate_pdf(
         input_pdf_path,
         fields,
@@ -432,11 +433,11 @@ def generate_pdf(input_pdf_path, fields, data_dict, payment_terms):
 
         packet = io.BytesIO()
         c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+        frappe.errprint(f"fieldasadsd: {fields}, data: {data_dict}")
 
         for f in fields:
             if int(f.get("page", 1)) - 1 != page_index:
                 continue
-
             px_w = float(f.get("page_width") or 0)
             px_h = float(f.get("page_height") or 0)
             if not px_w or not px_h:
