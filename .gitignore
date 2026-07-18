@@ -5,3 +5,6 @@
 tags
 node_modules
 __pycache__
+
+# Claude Code local settings (per-user permissions, not shared)
+.claude/settings.local.json

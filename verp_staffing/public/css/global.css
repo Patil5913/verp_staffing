@@ -634,6 +634,19 @@ body.verp-protected::after {
 		max-height: 50vh;
 		overflow-y: auto !important;
 	}
+
+	.sidebar-toggle-btn {
+		display: none !important;
+	}
+}
+
+/* Hide on touch devices (iPad/mobile) regardless of width/orientation —
+   width alone can't tell a resized laptop window from a large tablet
+   like iPad Pro landscape (1366px), but touch input can. */
+@media (hover: none) and (pointer: coarse) {
+	.sidebar-toggle-btn {
+		display: none !important;
+	}
 }
 
 @media (max-width: 768px) {
