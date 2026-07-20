@@ -1,4 +1,56 @@
-const BRAND_COLOR = "#3b82f6";
+window.AgreementFieldManager = class AgreementFieldManager {
+	constructor() {
+		this.controls = new Map();
+	}
+
+	makeKey(field) {
+		return `${field.type}::${field.name}`;
+	}
+
+	register(field, control) {
+		this.controls.set(this.makeKey(field), {
+			field,
+			control,
+		});
+	}
+
+	unregister(field) {
+		this.controls.delete(this.makeKey(field));
+	}
+
+	clear() {
+		this.controls.clear();
+	}
+
+	getControl(field) {
+		return this.controls.get(this.makeKey(field));
+	}
+
+	getValues() {
+		const data = {};
+
+		for (const [key, item] of this.controls.entries()) {
+			const { field, control } = item;
+
+			let value = null;
+
+			switch (field.type) {
+				case "Rich_Text":
+					value = control.get_input_value();
+					break;
+
+				default:
+					value = control.val()?.trim() ?? "";
+					break;
+			}
+
+			data[key] = value;
+		}
+		return data;
+	}
+};
+
+const agreementFieldManager = new AgreementFieldManager();
 
 window.render_agreement_module = function ({
 	frm,
@@ -379,30 +431,8 @@ function submit(frm, wrapper, sales_order, send_email) {
 	});
 }
 
-function collect_agreement_data(frm, wrapper) {
-	const data = {};
-
-	wrapper.find(".ag-field").each(function () {
-		const key = $(this).data("field");
-		let val = $(this).val();
-		if (key === "Payment_Terms" && !val.length) {
-			frappe.show_alert({
-				message: "Please enter valid payment terms",
-				indicator: "orange",
-			});
-			return;
-		}
-		// normalize Payment Terms
-		if (key === "Payment_Terms") {
-			val = val
-				.split(",")
-				.map((v) => v.trim())
-				.filter((v) => v);
-		}
-
-		data[key] = val;
-	});
-	return data;
+function collect_agreement_data() {
+	return agreementFieldManager.getValues();
 }
 
 function load_form_fields(wrapper) {
@@ -420,6 +450,7 @@ function load_form_fields(wrapper) {
 		callback(r) {
 			const tpl = r.message;
 			const blocks = JSON.parse(tpl.fields_json || "[]");
+			agreementFieldManager.clear();
 			form_div.empty();
 
 			if (!blocks.length) return;
@@ -451,7 +482,7 @@ function load_form_fields(wrapper) {
 			});
 
 			groupedBlocks.forEach((b) => {
-				if (["Text", "Number", "Date"].includes(b.type)) {
+				if (["Number", "Date"].includes(b.type)) {
 					form_div.append(`
 						<div class="form-group" style="margin-bottom:14px; max-width:400px;">
 							<label class="control-label" style="
@@ -480,9 +511,10 @@ function load_form_fields(wrapper) {
 							/>
 						</div>
 					`);
-				} else if (b.type === "Payment_Terms") {
+					agreementFieldManager.register(b, form_div.find(".ag-field").last());
+				} else if (b.type == "Text") {
 					form_div.append(`
-						<div class="form-group" style="margin-bottom:14px; max-width:400px;">
+						<div class="form-group" style="margin-bottom:14px; max-width:1000px;">
 							<label class="control-label" style="
 								font-size:12px;
 								font-weight:600;
@@ -492,10 +524,11 @@ function load_form_fields(wrapper) {
 							">
 								${b.label || b.name}
 							</label>
-							<textarea
+							<input
+								type="${b.type === "Number" ? "number" : b.type === "Date" ? "date" : "text"}"
 								class="form-control ag-field"
 								data-field="${b.name}"
-								placeholder="Enter comma-separated terms (e.g. 50% upfront, 50% on delivery)"
+								placeholder="Enter ${b.label || b.name}..."
 								style="
 									border: 1px solid var(--border-color);
 									border-radius: var(--border-radius);
@@ -503,15 +536,42 @@ function load_form_fields(wrapper) {
 									color: var(--text-color);
 									padding: 6px 10px;
 									font-size: 13px;
-									min-height: 80px;
-									resize: vertical;
+									height: 34px;
 								"
-							></textarea>
-							<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-								Separate multiple terms with commas
-							</div>
+							/>
 						</div>
 					`);
+					agreementFieldManager.register(b, form_div.find(".ag-field").last());
+				} else if (b.type === "Rich_Text") {
+					const editor_wrapper = $(`
+											<div class="form-group" style="margin-bottom:14px;">
+												<label class="control-label" style="
+													font-size:12px;
+													font-weight:600;
+													color: var(--text-muted);
+													text-transform: uppercase;
+													letter-spacing:0.4px;
+												">
+													${b.label || b.name}
+												</label>
+
+												<div id="editor-${frappe.scrub(b.name)}"></div>
+											</div>
+										`);
+
+					form_div.append(editor_wrapper);
+
+					const field = frappe.ui.form.make_control({
+						parent: editor_wrapper.find(`#editor-${frappe.scrub(b.name)}`),
+						df: {
+							fieldtype: "Text Editor",
+							fieldname: b.name,
+						},
+						render_input: true,
+					});
+
+					field.refresh();
+					agreementFieldManager.register(b, field);
 				}
 			});
 		},
@@ -520,44 +580,45 @@ function load_form_fields(wrapper) {
 
 function preview(frm, wrapper) {
 	return new Promise((resolve, reject) => {
-		const template = frm.get_field("agreement_html").$wrapper.find("#ag_template").val();
+		const template = wrapper.find("#ag_template").val();
+
 		if (!template) {
-			frappe.show_alert({ message: "Choose a template first", indicator: "orange" });
+			frappe.show_alert({
+				message: "Choose a template first",
+				indicator: "orange",
+			});
 			reject();
 			return;
 		}
 
-		const data = collect_agreement_data(frm, wrapper);
+		const data = collect_agreement_data();
 
-		const params = new URLSearchParams({
+		const form = document.createElement("form");
+		form.method = "POST";
+		form.action = "/api/method/verp_staffing.crm.api.agreement.preview_agreement";
+		form.target = "_blank";
+		form.style.display = "none";
+
+		const fields = {
 			template,
 			data: JSON.stringify(data),
+			csrf_token: frappe.csrf_token,
+		};
+
+		Object.entries(fields).forEach(([name, value]) => {
+			const input = document.createElement("input");
+			input.type = "hidden";
+			input.name = name;
+			input.value = value;
+			form.appendChild(input);
 		});
 
-		window.open(
-			`/api/method/verp_staffing.crm.api.agreement.preview_agreement?${params.toString()}`,
-			"_blank",
-		);
+		document.body.appendChild(form);
+		form.submit();
+		document.body.removeChild(form);
 
 		resolve();
 	});
-}
-
-function collect_so_agreement_data(frm, wrapper) {
-	const data = {};
-	wrapper.find(".ag-field").each(function () {
-		const key = $(this).data("field");
-		data[key] = $(this).val();
-	});
-
-	// Include payment_terms
-	data["Payment_Terms"] = (frm.doc.payment_terms || []).map((r) => ({
-		date: r.date,
-		amount: r.amount,
-		is_received: r.is_received,
-	}));
-
-	return data;
 }
 
 function setButtonState($btn, state, text) {

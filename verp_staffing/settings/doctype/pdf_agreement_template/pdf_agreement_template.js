@@ -188,8 +188,8 @@ frappe.ui.form.on("Pdf Agreement Template", {
 							📅 Date
 						</div>
 
-						<div class="builder-tool add-field" data-type="Payment_Terms">
-							📄 Payment Terms
+						<div class="builder-tool add-field" data-type="Rich_Text">
+							📄 Text Editor
 						</div>
 
 					</div>
@@ -456,7 +456,7 @@ function load_existing_fields(frm) {
 const PREVIEW_VALUES = {
 	Text: "Acme Corporation Private Limited",
 	Number: "₹ 12,45,000",
-	Payment_Terms: "Net 30 days from invoice date",
+	Rich_Text: "Net 30 days from invoice date",
 	Date: "31 March 2026",
 	Checkbox: "☑",
 	Signature: "Johnathan Smith",
@@ -678,7 +678,6 @@ function setup_drag_drop(frm) {
 }
 
 function create_new_field(frm, type, page, x, y) {
-
 	frappe.prompt(
 		[
 			{
@@ -878,7 +877,6 @@ function attach_field_select_handlers($el, frm, field) {
 				function () {
 					$el.remove();
 
-					console.log("frm._temp_fields: ", frm._temp_fields, field);
 					frm._temp_fields = (frm._temp_fields || []).filter(
 						(d) => d.field_id !== field.field_id,
 					);
