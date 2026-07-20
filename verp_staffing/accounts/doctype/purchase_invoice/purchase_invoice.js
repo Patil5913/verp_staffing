@@ -146,7 +146,7 @@ frappe.ui.form.on("Purchase Invoice", {
 
 		// ---------- Clear tables ----------
 		frm.clear_table("items");
-		// frm.clear_table("taxes");
+		frm.clear_table("taxes");
 
 		// ---------- Items ----------
 		(po.items || []).forEach((row) => {
@@ -164,7 +164,9 @@ frappe.ui.form.on("Purchase Invoice", {
 		(po.taxes || []).forEach((row) => {
 			let tax = frm.add_child("taxes");
 
-			Object.assign(tax, row);
+			tax.charge_type = row.charge_type;
+			tax.tax_amount = row.tax_amount;
+			tax.rate = row.rate;
 		});
 
 		frm.set_value("additional_discount_account", po.additional_discount_account);

@@ -201,20 +201,20 @@ frappe.ui.form.on("Sales Invoice", {
 	sales_order: async function (frm) {
 		if (!frm.doc.sales_order) return;
 
-		const po = await frappe.db.get_doc("Sales Order", frm.doc.sales_order);
+		const so = await frappe.db.get_doc("Sales Order", frm.doc.sales_order);
 
 		// ---------- Parent fields ----------
-		frm.set_value("customer", po.customer);
-		frm.set_value("company", po.company);
-		frm.set_value("currency", po.currency);
-		frm.set_value("conversion_rate", po.conversion_rate);
+		frm.set_value("customer", so.customer);
+		frm.set_value("company", so.company);
+		frm.set_value("currency", so.currency);
+		frm.set_value("conversion_rate", so.conversion_rate);
 
 		// ---------- Clear tables ----------
 		frm.clear_table("items");
-		// frm.clear_table("taxes");
+		frm.clear_table("taxes");
 
 		// ---------- Items ----------
-		(po.items || []).forEach((row) => {
+		(so.items || []).forEach((row) => {
 			let child = frm.add_child("items");
 
 			child.type = "Sales";
@@ -226,15 +226,16 @@ frappe.ui.form.on("Sales Invoice", {
 		});
 
 		// ---------- Taxes ----------
-		(po.taxes || []).forEach((row) => {
+		(so.taxes || []).forEach((row) => {
 			let tax = frm.add_child("taxes");
-
-			Object.assign(tax, row);
+			tax.charge_type = row.charge_type;
+			tax.tax_amount = row.tax_amount;
+			tax.rate = row.rate;
 		});
 
-		frm.set_value("additional_discount_account", po.additional_discount_account);
-		frm.set_value("additional_discount_percentage", po.additional_discount_percentage);
-		frm.set_value("discount_amount", po.discount_amount);
+		frm.set_value("additional_discount_account", so.additional_discount_account);
+		frm.set_value("additional_discount_percentage", so.additional_discount_percentage);
+		frm.set_value("discount_amount", so.discount_amount);
 
 		frm.refresh_fields();
 

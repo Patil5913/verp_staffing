@@ -1,5 +1,6 @@
 import frappe, json
 import os
+from frappe.utils import flt
 from frappe import _
 from verp_staffing.crm.api.helpers import send_notification
 from frappe.utils import now_datetime
@@ -10,10 +11,19 @@ import base64
 from datetime import datetime, timedelta
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 from frappe.utils.file_manager import save_file
-
-from reportlab.platypus import Paragraph, Frame
+import re
+from reportlab.platypus import (
+    ListFlowable,
+    ListItem,
+    Paragraph,
+    Frame,
+    Table,
+    TableStyle,
+)
 from reportlab.lib.styles import ParagraphStyle
 from bs4 import BeautifulSoup, NavigableString
+from reportlab.lib import colors
+
 from reportlab.lib.enums import (
     TA_LEFT,
     TA_CENTER,
@@ -751,6 +761,7 @@ def render_html_box(
     )
 
     story = build_story(html, style)
+    frappe.errprint(f"html: {html}")
     frame.addFromList(
         story,
         canvas,
@@ -763,10 +774,15 @@ ALIGNMENT_MAP = {
     "ql-align-justify": TA_JUSTIFY,
 }
 
+RENDERERS = {
+    "p": lambda node, style: render_paragraph(node, style),
+    "ol": lambda node, style: render_quill_list(node, style),
+    "table": lambda node, style: render_table(node, style),
+}
+
 
 def build_story(html, base_style):
     soup = BeautifulSoup(html, "html.parser")
-
     story = []
 
     root = soup.find(class_="ql-editor")
@@ -778,38 +794,253 @@ def build_story(html, base_style):
         if isinstance(node, NavigableString):
             continue
 
-        print(node.name)
+        renderer = RENDERERS.get(node.name)
 
-        if node.name == "p":
-            style = deepcopy(base_style)
-            style_attr = (node.get("style") or "").lower()
-
-            if "text-align:center" in style_attr or "text-align: center" in style_attr:
-                style.alignment = TA_CENTER
-
-            elif "text-align:right" in style_attr or "text-align: right" in style_attr:
-                style.alignment = TA_RIGHT
-
-            elif (
-                "text-align:justify" in style_attr
-                or "text-align: justify" in style_attr
-            ):
-                style.alignment = TA_JUSTIFY
-
-            else:
-                classes = node.get("class", [])
-
-                for cls in classes:
-                    if cls in ALIGNMENT_MAP:
-                        style.alignment = ALIGNMENT_MAP[cls]
-                        break
-
-            markup = paragraph_to_markup(node)
-
-            if markup.strip():
-                story.append(Paragraph(markup, style))
+        if renderer:
+            story.extend(renderer(node, base_style))
 
     return story
+
+
+def create_paragraph(node, base_style):
+
+    style = deepcopy(base_style)
+
+    apply_alignment(style, node)
+
+    markup = paragraph_to_markup(node)
+
+    if not markup.strip():
+        return None
+
+    return Paragraph(
+        markup,
+        style,
+    )
+
+
+def apply_alignment(style, node):
+
+    style_attr = (node.get("style") or "").lower()
+
+    if "text-align:center" in style_attr or "text-align: center" in style_attr:
+        style.alignment = TA_CENTER
+        return
+
+    if "text-align:right" in style_attr or "text-align: right" in style_attr:
+        style.alignment = TA_RIGHT
+        return
+
+    if "text-align:justify" in style_attr or "text-align: justify" in style_attr:
+        style.alignment = TA_JUSTIFY
+        return
+
+    for cls in node.get("class", []):
+        if cls in ALIGNMENT_MAP:
+            style.alignment = ALIGNMENT_MAP[cls]
+            return
+
+
+def render_paragraph(node, base_style):
+
+    paragraph = create_paragraph(
+        node,
+        base_style,
+    )
+
+    if paragraph is None:
+        return []
+
+    return [paragraph]
+
+
+def render_quill_list(node, base_style):
+
+    story = []
+
+    current_group = []
+
+    current_type = None
+
+    for li in node.find_all("li", recursive=False):
+        list_type = li.get("data-list", "ordered")
+
+        normalized_type = (
+            "bullet" if list_type in ("checked", "unchecked") else list_type
+        )
+
+        if current_type is None:
+            current_type = normalized_type
+
+        if normalized_type != current_type:
+            story.extend(
+                render_list_group(
+                    current_group,
+                    current_type,
+                    base_style,
+                )
+            )
+
+            current_group = []
+
+            current_type = normalized_type
+
+        current_group.append(li)
+
+    if current_group:
+        story.extend(
+            render_list_group(
+                current_group,
+                current_type,
+                base_style,
+            )
+        )
+
+    return story
+
+
+def render_list_group(items, list_type, base_style):
+
+    flowables = []
+
+    bullet_map = {
+        "bullet": "bullet",
+        "ordered": "1",
+    }
+
+    bullet_type = bullet_map[list_type]
+
+    for li in items:
+        style = deepcopy(base_style)
+
+        markup = paragraph_to_markup(li)
+        flowables.append(ListItem(Paragraph(markup, style)))
+
+    return [
+        ListFlowable(
+            flowables,
+            bulletType=bullet_type,
+        )
+    ]
+
+
+def render_table(node, base_style):
+
+    data = extract_table_data(
+        node,
+        base_style,
+    )
+
+    if not data:
+        return []
+
+    table = Table(data)
+
+    table.setStyle(create_table_style())
+
+    return [table]
+
+
+def extract_table_data(node, base_style):
+
+    rows = []
+
+    for tr in node.find_all("tr", recursive=True):
+        row = []
+
+        for td in tr.find_all(["td", "th"], recursive=False):
+            paragraph = create_paragraph(
+                td,
+                base_style,
+            )
+
+            if paragraph is None:
+                paragraph = Paragraph("", base_style)
+
+            row.append(paragraph)
+
+        rows.append(row)
+
+    return rows
+
+
+def create_table_style():
+
+    return TableStyle(
+        [
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("BOX", (0, 0), (-1, -1), 1, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]
+    )
+
+
+def rgb_to_hex(rgb):
+
+    match = re.search(
+        r"rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)",
+        rgb,
+        re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    r, g, b = map(int, match.groups())
+
+    return "#{:02X}{:02X}{:02X}".format(
+        r,
+        g,
+        b,
+    )
+
+
+def extract_inline_styles(style_attr):
+    attrs = {}
+
+    if not style_attr:
+        return attrs
+
+    styles = {}
+
+    for declaration in style_attr.split(";"):
+        declaration = declaration.strip()
+
+        if not declaration or ":" not in declaration:
+            continue
+
+        key, value = declaration.split(":", 1)
+
+        styles[key.strip().lower()] = value.strip()
+
+    if "color" in styles:
+        color = rgb_to_hex(styles["color"])
+        if color:
+            attrs["color"] = color
+
+    if "background-color" in styles:
+        bgcolor = rgb_to_hex(styles["background-color"])
+        if bgcolor:
+            attrs["backcolor"] = bgcolor
+    return attrs
+
+
+def span_to_markup(node):
+
+    inner = "".join(inline_to_markup(child) for child in node.children)
+
+    attrs = extract_inline_styles(node.get("style", ""))
+
+    if not attrs:
+        return inner
+
+    attr_string = " ".join(f'{k}="{v}"' for k, v in attrs.items())
+
+    return f"<font {attr_string}>{inner}</font>"
 
 
 def paragraph_to_markup(node):
@@ -842,6 +1073,12 @@ def inline_to_markup(node):
 
     if node.name in ("s", "strike"):
         return f"<strike>{inner}</strike>"
+
+    if "ql-ui" in node.get("class", []):
+        return ""
+
+    if node.name == "span":
+        return span_to_markup(node)
 
     return inner
 

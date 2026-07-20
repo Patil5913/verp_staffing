@@ -321,23 +321,6 @@ function load_templates(wrapper) {
 	});
 }
 
-// function bind_builder_events(frm, wrapper, sales_order) {
-// 	wrapper.on("change", "#ag_template", () => load_form_fields(wrapper));
-
-// 	wrapper.on("click", "#ag_preview", function () {
-// 		const $btn = $(this);
-
-// 		setButtonState($btn, "loading", "Generating Preview...");
-
-// 		preview(frm, wrapper).finally(() => {
-// 			setButtonState($btn, "reset");
-// 		});
-// 	});
-// 	wrapper.on("click", "#ag_save", () => submit(frm, wrapper, sales_order, false));
-
-// 	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
-// }
-
 function bind_builder_events(frm, wrapper, sales_order, auto_mode) {
 	// remove old bindings first (IMPORTANT)
 	wrapper.off("change", "#ag_template");
@@ -566,11 +549,40 @@ function load_form_fields(wrapper) {
 						df: {
 							fieldtype: "Text Editor",
 							fieldname: b.name,
+							get_toolbar_options() {
+								return [
+									["bold", "italic", "underline", "strike"],
+
+									[{ color: [] }, { background: [] }],
+
+									[{ align: [] }],
+
+									[{ list: "ordered" }, { list: "bullet" }],
+
+									[
+										{
+											table: [
+												"insert-table",
+												"insert-row-above",
+												"insert-row-below",
+												"insert-column-right",
+												"insert-column-left",
+												"delete-row",
+												"delete-column",
+												"delete-table",
+											],
+										},
+									],
+
+									["clean"],
+								];
+							},
 						},
 						render_input: true,
 					});
 
 					field.refresh();
+
 					agreementFieldManager.register(b, field);
 				}
 			});
