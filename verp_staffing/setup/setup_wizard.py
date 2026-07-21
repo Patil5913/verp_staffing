@@ -1,16 +1,23 @@
 import frappe
 from frappe import _
-
+from verp_staffing.setup.email_utils import setup_email
 
 def setup_complete(args=None):
 	args = frappe._dict(args or {})
 
 	company = create_company(args)
+
 	create_fiscal_year(args, company)
 
-	# Same strategy ERPNext uses: sample data is entirely opt-in, gated by
-	# the "Add Sample Data" checkbox added to the Organization Setup slide.
-	# Nothing below runs unless the user ticked that box.
+	try:
+		setup_email(args)
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			"Setup Wizard Email Configuration",
+		)
+		raise
+
 	if args.get("add_sample_data"):
 		from verp_staffing.setup.sample_data import create_sample_data
 
@@ -23,7 +30,6 @@ def create_company(args):
 	country = args.get("country")
 
 	abbr = "".join([word[0] for word in company_name.split() if word])[:10].upper()
-
 	company = frappe.get_doc(
 		{
 			"doctype": "Company",

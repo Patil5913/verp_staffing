@@ -728,26 +728,6 @@ def render_html_box(
         firstLineIndent=0,
     )
 
-    # --------------------------------------------
-    # DEBUG BOXES
-    # --------------------------------------------
-
-    canvas.saveState()
-
-    canvas.setStrokeColorRGB(1, 0, 0)
-    canvas.setLineWidth(0.8)
-
-    canvas.rect(
-        x,
-        y,
-        width,
-        height,
-        stroke=1,
-        fill=0,
-    )
-
-    canvas.restoreState()
-
     frame = Frame(
         x,
         y,
