@@ -27,7 +27,7 @@ frappe.ui.form.on("Lead", {
 		window._ftbl_state = {};
 		window._temp_files = {};
 		window._ftbl_active_dialog = null;
-		frm.set_df_property("lead_detail", "options", ""); // ← ADD THIS HERE
+		frm.set_df_property("lead_detail", "options", "");
 
 		if (frm.is_new()) return;
 
