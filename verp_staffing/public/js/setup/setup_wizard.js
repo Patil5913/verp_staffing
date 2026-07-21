@@ -3,7 +3,6 @@ frappe.provide("verp_staffing.setup");
 frappe.setup.utils.bind_email_events = function (slide) {
 	const email = slide.get_input("business_email");
 	const provider = slide.get_input("email_provider");
-	console.log("email: ", email, "provider: ", provider);
 
 	email.off(".email_provider").on("input.email_provider change.email_provider", function () {
 		update_provider_field(slide);
@@ -256,7 +255,6 @@ function detect_email_provider(email) {
 
 	for (const [key, provider] of Object.entries(verp_staffing.setup.EMAIL_PROVIDERS)) {
 		if (provider.domains.includes(domain)) {
-			console.log("provider: ", provider, key);
 			return key;
 		}
 	}
@@ -276,7 +274,6 @@ function update_provider_field(slide) {
 function apply_provider_defaults(slide, provider) {
 	const config =
 		verp_staffing.setup.EMAIL_PROVIDERS[provider.toLowerCase().split(" ").join("_")];
-	console.log("config: ", config, provider);
 	if (!config) return;
 
 	const defaults = config.defaults || {};

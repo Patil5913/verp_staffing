@@ -44,14 +44,16 @@ app_include_js = [
     "/assets/verp_staffing/js/reusable.js",
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
-    "/assets/verp_staffing/js/about_override.js",
-    # "/assets/verp_staffing/js/protection.js",
+    "/assets/verp_staffing/js/override/about_override.js",
+    "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
-    "/assets/verp_staffing/js/global_hide.js",
+    "/assets/verp_staffing/js/override/global_hide.js",
     "/assets/verp_staffing/js/purchase_common.js",
-    "/assets/verp_staffing/js/desk_override.js",
-    "/assets/verp_staffing/js/email_provider_defaults.js"
+    "/assets/verp_staffing/js/override/desk_override.js",
+    "/assets/verp_staffing/js/override/form_view_override.js",
+    "/assets/verp_staffing/js/override/list_view_override.js",
+    "/assets/verp_staffing/js/override/email_provider_defaults.js"
 ]
 
 # include js, css files in header of web template
@@ -95,7 +97,7 @@ doctype_js = {
     for doc in validation_docs
 }
 
-doctype_js["Email Account"] = "public/js/email_account.js"
+doctype_js["Email Account"] = "public/js/override/email_account.js"
 
 
 # doctype_list_js = {"Lead": "public/js/lead_list.js"}
