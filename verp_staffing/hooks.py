@@ -45,7 +45,7 @@ app_include_js = [
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/override/about_override.js",
-    "/assets/verp_staffing/js/protection.js",
+    # "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/override/global_hide.js",
@@ -53,7 +53,7 @@ app_include_js = [
     "/assets/verp_staffing/js/override/desk_override.js",
     "/assets/verp_staffing/js/override/form_view_override.js",
     "/assets/verp_staffing/js/override/list_view_override.js",
-    "/assets/verp_staffing/js/override/email_provider_defaults.js"
+    "/assets/verp_staffing/js/override/email_provider_defaults.js",
 ]
 
 # include js, css files in header of web template
@@ -239,12 +239,19 @@ doc_events = {
     "Other Services": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },
+    "Department Service": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.invalidate_department_map_cache",
+        "on_trash": "verp_staffing.accounts.utils.sales_order_status.invalidate_department_map_cache",
+    },
+    "Department": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.invalidate_department_map_cache",
+    },
     # --- Payment Terms ---
     "Sales Order": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_sales_order_update_hook"
     },
     "User": {
-        "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
+        "before_insert": "verp_staffing.quota.utils.quota.user_limit",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
         "on_update": "verp_staffing.utils.sidebar.on_user_change",
         "validate": "verp_staffing.utils.sidebar.on_user_validate",
@@ -274,7 +281,9 @@ doc_events = {
         "on_trash": "verp_staffing.utils.sidebar.on_employee_trash",
     },
     "File": {
-        "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
+        "before_insert": "verp_staffing.quota.utils.quota.site_space_limit",
+        "after_insert": "verp_staffing.quota.utils.quota.on_file_after_insert",
+        "on_trash": "verp_staffing.quota.utils.quota.on_file_after_delete",
     },
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
     "Interview Status": {
@@ -311,15 +320,16 @@ doc_events = {
 
 scheduler_events = {
     "hourly": [
-        "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
+        "verp_staffing.quota.utils.quota.site_expiry_check",
+        "verp_staffing.quota.utils.quota.block_non_admin",
     ],
     "daily": [
-        "verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry",
+        "verp_staffing.quota.utils.quota.check_site_expiry",
         "verp_staffing.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
         "verp_staffing.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
         "verp_staffing.accounts.doctype.subscription.subscription.process_due_subscriptions",
         "verp_staffing.accounts.doctype.sales_order.sales_order.send_payment_term_reminders",
+        "verp_staffing.quota.utils.quota.nightly_reconcile",
     ],
     "cron": {
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
@@ -384,8 +394,8 @@ permission_query_conditions = {
 # Request Events
 # ----------------
 before_request = [
-    "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
+    "verp_staffing.quota.utils.quota.site_expiry_check",
+    "verp_staffing.quota.utils.quota.block_non_admin",
     "verp_staffing.overrides.email_template.patch",
 ]
 

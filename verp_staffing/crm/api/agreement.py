@@ -741,7 +741,6 @@ def render_html_box(
     )
 
     story = build_story(html, style)
-    frappe.errprint(f"html: {html}")
     frame.addFromList(
         story,
         canvas,

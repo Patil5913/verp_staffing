@@ -43,9 +43,6 @@ def create_email_domain(args):
 
     if not args.get("smtp_port"):
         frappe.throw(_("SMTP Port is required."))
-    frappe.errprint(
-        f"smtp server{args.get('smtp_server')}, args.get('smtp_port'):{args.get('smtp_port')}, rgs.get('use_ssl_for_outgoing'): {args.get('use_ssl_for_outgoing')}"
-    )
     doc = frappe.get_doc(
         {
             "doctype": "Email Domain",

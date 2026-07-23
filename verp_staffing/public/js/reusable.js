@@ -49,7 +49,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 	}
 
 	frappe.call({
-		method: "verp_staffing.vrugle_staffing_erp.utils.customer_data.get_data_by_customer",
+		method: "verp_staffing.quota.utils.customer_data.get_data_by_customer",
 		args: { customer, fields },
 		callback(r) {
 			const records = r.message || [];
