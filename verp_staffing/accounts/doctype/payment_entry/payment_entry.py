@@ -136,6 +136,31 @@ class PaymentEntry(Document):
                 title=_("Invalid Account Selection"),
             )
 
+    def on_trash(self):
+        if self.payment_term_row:
+            frappe.db.set_value(
+                "Customer Payment Terms",
+                self.payment_term_row,
+                {
+                    "payment_status": "Unpaid",
+                    "payment_entry": "",
+                },
+            )
+            self.db_set("verification_status", "Rejected")
+            from verp_staffing.accounts.doctype.sales_order.sales_order import (
+                _append_verification_log,
+            )
+
+            now = frappe.utils.now_datetime()
+
+            now_str = frappe.utils.format_datetime(now)
+
+            _append_verification_log(
+                self.payment_term_row,
+                f"Payment Entry {self.name} cancelled by {frappe.session.user}",
+                now_str=now_str,
+            )
+
     def on_cancel(self):
         self.make_gl_entries(cancel=True)
         update_invoice_outstanding(self, cancel=True)
@@ -155,9 +180,14 @@ class PaymentEntry(Document):
                 _append_verification_log,
             )
 
+            now = frappe.utils.now_datetime()
+
+            now_str = frappe.utils.format_datetime(now)
+
             _append_verification_log(
                 self.payment_term_row,
                 f"Payment Entry {self.name} cancelled by {frappe.session.user}",
+                now_str=now_str,
             )
 
     def set_missing_base_amounts(self):
@@ -992,7 +1022,9 @@ def get_outstanding_reference_documents(args):
     ):
         args["get_outstanding_invoices"] = True
 
-    account_type = frappe.get_cached_value("Party Type", args.party_type, "account_type")
+    account_type = frappe.get_cached_value(
+        "Party Type", args.party_type, "account_type"
+    )
     outstanding_docs = []
 
     if args.get("get_outstanding_invoices"):
@@ -1067,7 +1099,7 @@ def get_outstanding_reference_documents(args):
             advance_paid_expr = (
                 "advance_paid" if meta.has_field("advance_paid") else "0"
             )
-           
+
             conditions = [
                 f"`{party_field}` = %(party)s",
                 "company = %(company)s",
@@ -1078,7 +1110,7 @@ def get_outstanding_reference_documents(args):
 
             if meta.has_field("per_billed"):
                 conditions.append("ABS(100 - per_billed) > 0.01")
-                
+
             query = (
                 "SELECT "
                 "name AS voucher_no, "
@@ -1089,12 +1121,8 @@ def get_outstanding_reference_documents(args):
                 "AS outstanding_amount, "
                 "1 AS exchange_rate "
                 f"FROM {table} "
-                "WHERE "
-                + " AND ".join(conditions)
-                + " ORDER BY posting_date, name"
+                "WHERE " + " AND ".join(conditions) + " ORDER BY posting_date, name"
             )
-
-
 
             orders = frappe.db.sql(
                 query,
@@ -1380,7 +1408,9 @@ def _get_party_account(party_type, party, company):
     elif party_type == "Employee":
         account = frappe.get_cached_value("Company", company, "default_payable_account")
     else:
-        pt_account_type = frappe.get_cached_value("Party Type", party_type, "account_type")
+        pt_account_type = frappe.get_cached_value(
+            "Party Type", party_type, "account_type"
+        )
         if pt_account_type in ("Receivable", "Payable"):
             account = frappe.db.get_value(
                 "Account",
@@ -1415,13 +1445,9 @@ def _get_account_balance(account, date=None):
     if date:
         conditions.append("posting_date <= %(date)s")
         params["date"] = date
-        
-    query = (
-        "SELECT "
-        "SUM(debit) - SUM(credit) "
-        "FROM `tabGL Entry` "
-        "WHERE "
-        + " AND ".join(conditions)
+
+    query = "SELECT SUM(debit) - SUM(credit) FROM `tabGL Entry` WHERE " + " AND ".join(
+        conditions
     )
 
     result = frappe.db.sql(query, params)
@@ -1439,15 +1465,11 @@ def _get_party_balance(party_type, party, company, date=None):
     if date:
         conditions.append("posting_date <= %(date)s")
         params["date"] = date
-        
-    query = (
-        "SELECT "
-        "SUM(debit) - SUM(credit) "
-        "FROM `tabGL Entry` "
-        "WHERE "
-        + " AND ".join(conditions)
+
+    query = "SELECT SUM(debit) - SUM(credit) FROM `tabGL Entry` WHERE " + " AND ".join(
+        conditions
     )
-    
+
     result = frappe.db.sql(query, params)
     return flt(result[0][0]) if result else 0.0
 
@@ -1474,10 +1496,12 @@ def _get_je_outstanding(voucher_no, party_type=None, party=None):
     extra_conditions = []
 
     if party_type and party:
-        filters.update({
-            "party_type": party_type,
-            "party": party,
-        })
+        filters.update(
+            {
+                "party_type": party_type,
+                "party": party,
+            }
+        )
         extra_conditions.append("party_type = %(party_type)s")
         extra_conditions.append("party = %(party)s")
 
@@ -1500,8 +1524,7 @@ def _get_je_outstanding(voucher_no, party_type=None, party=None):
     original = (
         frappe.db.sql(
             "SELECT SUM(debit) - SUM(credit) "
-            "FROM `tabGL Entry` WHERE "
-            + " AND ".join(original_conditions),
+            "FROM `tabGL Entry` WHERE " + " AND ".join(original_conditions),
             filters,
         )[0][0]
         or 0
@@ -1510,14 +1533,14 @@ def _get_je_outstanding(voucher_no, party_type=None, party=None):
     allocated = (
         frappe.db.sql(
             "SELECT SUM(debit) - SUM(credit) "
-            "FROM `tabGL Entry` WHERE "
-            + " AND ".join(allocated_conditions),
+            "FROM `tabGL Entry` WHERE " + " AND ".join(allocated_conditions),
             filters,
         )[0][0]
         or 0
     )
 
     return max(0, abs(original) - abs(allocated))
+
 
 @frappe.whitelist()
 def get_pending_payment_verification_requests():

@@ -13,6 +13,13 @@
 	};
 
 	function add_delete_button(listview) {
+		if (!DELETE_INCLUDED_DOCTYPES.has(listview.doctype)) {
+			return;
+		}
+
+		if (listview.meta?.is_submittable) {
+			return;
+		}
 		if (!frappe.model.can_delete(listview.doctype)) return;
 
 		const page_actions = listview.page.wrapper.find(".page-actions");
@@ -41,6 +48,14 @@
 	};
 
 	function show_delete_button(listview) {
+
+		if (!DELETE_INCLUDED_DOCTYPES.has(listview.doctype)) {
+			return;
+		}
+
+		if (listview.meta?.is_submittable) {
+			return;
+		}
 		const page_actions = listview.page.wrapper.find(".page-actions");
 
 		let btn = page_actions.find(".verp-delete-btn");
@@ -48,6 +63,13 @@
 	}
 
 	function delete_selected(listview) {
+		if (!DELETE_INCLUDED_DOCTYPES.has(listview.doctype)) {
+			return;
+		}
+
+		if (listview.meta?.is_submittable) {
+			return;
+		}
 		const docs = listview.get_checked_items();
 
 		if (!docs.length) return;
