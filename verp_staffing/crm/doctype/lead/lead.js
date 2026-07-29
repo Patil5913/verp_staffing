@@ -278,7 +278,9 @@ function setupLeadDetailForm(frm) {
 		const total = state.rows.length;
 		const uid = `${field}-${rowIdx}-${Date.now()}`;
 
-		const fieldsHtml = columns.map((col) => buildDialogInput(col, row[col.fieldname], uid)).join("");
+		const fieldsHtml = columns
+			.map((col) => buildDialogInput(col, row[col.fieldname], uid))
+			.join("");
 
 		const btnStyle = `height:30px;padding:0 12px;border:0.5px solid var(--color-border-secondary,rgba(0,0,0,0.25));background:var(--color-background-primary,#fff);color:var(--color-text-primary);border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 0.1s;`;
 
@@ -356,7 +358,9 @@ function setupLeadDetailForm(frm) {
 		});
 
 		dialog.$wrapper.find(".modal-header").hide();
-		dialog.$wrapper.find(".modal-body").css({ "padding-top": "20px", "padding-bottom": "10px" });
+		dialog.$wrapper
+			.find(".modal-body")
+			.css({ "padding-top": "20px", "padding-bottom": "10px" });
 		dialog.$wrapper.find(".modal-footer").hide();
 
 		dialog.$wrapper.on("keydown", (e) => {
@@ -587,7 +591,9 @@ function setupLeadDetailForm(frm) {
 	};
 
 	window._ftbl_toggleAll = function (field, el) {
-		document.querySelectorAll(`.ftbl-chk[data-field="${field}"]`).forEach((chk) => (chk.checked = el.checked));
+		document
+			.querySelectorAll(`.ftbl-chk[data-field="${field}"]`)
+			.forEach((chk) => (chk.checked = el.checked));
 		_ftbl_rowCheckChange(field);
 	};
 
@@ -608,12 +614,14 @@ function setupLeadDetailForm(frm) {
 	}
 
 	window._ftbl_deleteSelected = function (field) {
-		const toDelete = [...document.querySelectorAll(`.ftbl-chk[data-field="${field}"]:checked`)].map(
-			(el) => el.dataset.rowid,
-		);
+		const toDelete = [
+			...document.querySelectorAll(`.ftbl-chk[data-field="${field}"]:checked`),
+		].map((el) => el.dataset.rowid);
 		const state = window._ftbl_state[field];
 		if (!state) return;
-		state.rows = state.rows.filter((r, i) => !toDelete.includes(r.name || `new-${field}-${i}`));
+		state.rows = state.rows.filter(
+			(r, i) => !toDelete.includes(r.name || `new-${field}-${i}`),
+		);
 		rebuildFtblBody(field);
 	};
 
@@ -621,7 +629,9 @@ function setupLeadDetailForm(frm) {
 		const state = window._ftbl_state[field];
 		const el = document.getElementById(`row-count-${field}`);
 		if (el && state)
-			el.textContent = state.rows.length ? `${state.rows.length} row${state.rows.length !== 1 ? "s" : ""}` : "";
+			el.textContent = state.rows.length
+				? `${state.rows.length} row${state.rows.length !== 1 ? "s" : ""}`
+				: "";
 	}
 
 	// ─── Regular (non-table) input HTML ──────────────────────────────────────────
@@ -647,7 +657,8 @@ function setupLeadDetailForm(frm) {
         word-break: break-word;
     `;
 
-			const escape = (v) => (frappe.utils?.escape_html ? frappe.utils.escape_html(String(v)) : String(v));
+			const escape = (v) =>
+				frappe.utils?.escape_html ? frappe.utils.escape_html(String(v)) : String(v);
 
 			if (fieldtype === "Link") {
 				return `
@@ -815,29 +826,59 @@ function setupLeadDetailForm(frm) {
 			return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
 		if (isPhoneField(field))
 			return `<input type="tel" value="${value}" data-field="${field}" data-override="phone" class="${cls}" placeholder="Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx" />`;
-
 		if (fieldtype === "Link") {
-			let current_display_html = value
-				? `<a href="/app/file/${value}" target="_blank"
-        style="color:#260fea;font-weight:500;text-decoration:none;">📎 View Current File</a>`
-				: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
-			return `
-<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-    <div style="flex:1;min-width:180px;">
-        <div style="font-size:11px;color:#6b6b6b;margin-bottom:4px;">Current</div>
-        <div style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;background:#f9fafb;min-height:32px;display:flex;align-items:center;">${current_display_html}</div>
-    </div>
-    <div style="flex:1;min-width:180px;">
-        <div style="font-size:11px;color:#6b6b6b;margin-bottom:4px;">Upload New</div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-            <input type="file" class="dynamic-input fg-file-input" data-field="${field}" style="font-size:12px;" />
-            <div class="fg-file-name" data-field="${field}" style="font-size:11px;color:#667085;"></div>
-            <input type="hidden" class="dynamic-input fg-file-url" data-field="${field}" value="${frappe.utils.escape_html(value || "")}" />
-        </div>
-    </div>
-</div>`;
-		}
+			const can_remove_file = frm.doc.status === "Lead" || "Open";
 
+			let current_display_html = value
+				? `
+		<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+			<a href="/app/file/${value}" target="_blank"
+				style="color:#260fea;font-weight:500;text-decoration:none;">
+				📎 View Current File
+			</a>
+
+			${
+				can_remove_file
+					? `<button
+							type="button"
+							class="fg-remove-file"
+							data-field="${field}"
+							title="Remove File"
+							style="
+								border:none;
+								background:transparent;
+								color:#dc2626;
+								cursor:pointer;
+								font-size:16px;
+								padding:0;
+								line-height:1;
+							">
+							✕
+					   </button>`
+					: ""
+			}
+		</div>`
+				: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
+
+			return `
+		<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+			<div style="flex:1;min-width:180px;">
+				<div style="font-size:11px;color:#6b6b6b;margin-bottom:4px;">Current</div>
+				<div style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;background:#f9fafb;min-height:32px;display:flex;align-items:center;">
+					${current_display_html}
+				</div>
+			</div>
+
+			<div style="flex:1;min-width:180px;">
+				<div style="font-size:11px;color:#6b6b6b;margin-bottom:4px;">Upload New</div>
+				<div style="display:flex;flex-direction:column;gap:6px;">
+					<input type="file" class="dynamic-input fg-file-input" data-field="${field}" style="font-size:12px;" />
+					<div class="fg-file-name" data-field="${field}" style="font-size:11px;color:#667085;"></div>
+					<input type="hidden" class="dynamic-input fg-file-url" data-field="${field}" value="${frappe.utils.escape_html(value || "")}" />
+				</div>
+			</div>
+		</div>`;
+		}
 		switch (fieldtype) {
 			case "Date":
 				return `<input type="date" value="${value.split(" ")[0] || ""}" data-field="${field}" class="${cls}" />`;
@@ -858,9 +899,11 @@ function setupLeadDetailForm(frm) {
 			}
 			case "Table": {
 				const child_doctype = meta_field.options;
-				if (!child_doctype) return `<div style="color:red;">No Child Doctype configured</div>`;
+				if (!child_doctype)
+					return `<div style="color:red;">No Child Doctype configured</div>`;
 				const child_meta = frappe.get_meta(child_doctype);
-				if (!child_meta?.fields) return `<div style="color:orange;">Child meta not loaded for: ${child_doctype}</div>`;
+				if (!child_meta?.fields)
+					return `<div style="color:orange;">Child meta not loaded for: ${child_doctype}</div>`;
 				const allColumns = getTableColumns(child_meta);
 				const previewCols = allColumns.slice(0, 4);
 				const rows = Array.isArray(value) ? value : [];
@@ -930,14 +973,19 @@ function setupLeadDetailForm(frm) {
 			const value = input.type === "checkbox" ? (input.checked ? 1 : 0) : input.value;
 			const label = meta.label || frappe.model.unscrub(field);
 			const override = input.dataset.override;
-			if (meta.reqd && !value && input.type !== "checkbox") return fail(input, `${label} is required`);
+			if (meta.reqd && !value && input.type !== "checkbox")
+				return fail(input, `${label} is required`);
 			if (override === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
 				return fail(input, `${label} must be a valid email address`);
 			if (override === "month-year" && value && !isValidMonthYear(value))
 				return fail(input, `${label} must be in MM-YYYY format`);
 			if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value))
 				return fail(input, `${label} must include country code`);
-			if (meta.fieldtype === "Select" && value && !(meta.options || "").split("\n").includes(value))
+			if (
+				meta.fieldtype === "Select" &&
+				value &&
+				!(meta.options || "").split("\n").includes(value)
+			)
 				return fail(input, `${label} must be a valid option`);
 			if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value && isNaN(value))
 				return fail(input, `${label} must be a number`);
@@ -997,7 +1045,9 @@ function setupLeadDetailForm(frm) {
 				.filter((r) =>
 					Object.keys(r).some(
 						(k) =>
-							!["doctype", "parent", "parentfield", "parenttype", "name"].includes(k) &&
+							!["doctype", "parent", "parentfield", "parenttype", "name"].includes(
+								k,
+							) &&
 							r[k] !== "" &&
 							r[k] !== null &&
 							r[k] !== undefined,
@@ -1046,7 +1096,9 @@ function setupLeadDetailForm(frm) {
 		const meta = frappe.get_meta("Lead Detail Form");
 
 		await Promise.all(
-			meta.fields.filter((f) => f.fieldtype === "Table" && f.options).map((f) => frappe.model.with_doctype(f.options)),
+			meta.fields
+				.filter((f) => f.fieldtype === "Table" && f.options)
+				.map((f) => frappe.model.with_doctype(f.options)),
 		);
 
 		const field_map = Object.fromEntries(meta.fields.map((f) => [f.fieldname, f]));
@@ -1058,9 +1110,16 @@ function setupLeadDetailForm(frm) {
 				const meta_field = field_map[field];
 				if (!meta_field) return "";
 				const label = meta_field.label || frappe.model.unscrub(field);
-				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(meta_field.fieldtype);
+				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(
+					meta_field.fieldtype,
+				);
 
-				const inputHtml = getInputHTML(meta_field.fieldtype, doc[field], field, meta_field);
+				const inputHtml = getInputHTML(
+					meta_field.fieldtype,
+					doc[field],
+					field,
+					meta_field,
+				);
 
 				if (inputHtml === "__HIDE__") return "";
 
@@ -1145,7 +1204,10 @@ function setupLeadDetailForm(frm) {
 					return { saved: false, valid: false };
 				}
 
-				const latest_doc = await frappe.db.get_doc("Lead Detail Form", res.message[0].name);
+				const latest_doc = await frappe.db.get_doc(
+					"Lead Detail Form",
+					res.message[0].name,
+				);
 				Object.keys(data).forEach((key) => (latest_doc[key] = data[key]));
 
 				await frappe.call({
@@ -1212,9 +1274,43 @@ function setupLeadDetailForm(frm) {
 			window._temp_files[field] = file;
 			_lead_detail_dirty = true;
 			frm.dirty();
-			$(`.fg-file-name[data-field="${field}"]`).html(`<span style="color:#260fea;">${file.name}</span>`);
+			$(`.fg-file-name[data-field="${field}"]`).html(
+				`<span style="color:#260fea;">${file.name}</span>`,
+			);
 		});
 
+		$(document).on("click", ".fg-remove-file", function () {
+			const field = $(this).data("field");
+			const $button = $(this);
+			frappe.confirm(__("Are you sure you want to remove this file?"), () => {
+				frappe.call({
+					method: "verp_staffing.crm.doctype.lead.lead.remove_attachment",
+					args: {
+						// doctype: frm.doctype,
+						docname: frm.doc.lead_details,
+						fieldname: field,
+					},
+					callback: (r) => {
+						if (r.message?.status !== "success") return;
+
+						$(document).find(`.fg-file-url[data-field="${field}"]`).val("");
+
+						const currentBox = $button.closest(
+							'[style*="justify-content:space-between"]',
+						);
+
+						currentBox.html(
+							'<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>',
+						);
+
+						frappe.show_alert({
+							message: __("File removed"),
+							indicator: "green",
+						});
+					},
+				});
+			});
+		});
 		attachLiveValidation(field_map);
 	});
 }
@@ -1266,7 +1362,9 @@ window._ftbl_ro_view_row = function (safeField, rowIdx) {
 				const parts = String(val).split("-");
 				displayVal = parts.length >= 2 ? `${parts[1]}-${parts[0]}` : String(val);
 			} else {
-				const escaped = frappe.utils?.escape_html ? frappe.utils.escape_html(String(val)) : String(val);
+				const escaped = frappe.utils?.escape_html
+					? frappe.utils.escape_html(String(val))
+					: String(val);
 				displayVal = escaped;
 			}
 
@@ -1303,7 +1401,9 @@ window._ftbl_ro_view_row = function (safeField, rowIdx) {
 	dialog.$wrapper.find(".modal-header").hide();
 	dialog.$wrapper.find(".modal-body").css({ "padding-top": "20px", "padding-bottom": "10px" });
 	dialog.$wrapper.find(".modal-footer").hide();
-	dialog.$wrapper.find(".modal-dialog").css({ display: "flex", alignItems: "center", minHeight: "100vh", margin: "0 auto" });
+	dialog.$wrapper
+		.find(".modal-dialog")
+		.css({ display: "flex", alignItems: "center", minHeight: "100vh", margin: "0 auto" });
 
 	window._ftbl_ro_active_dialog = dialog;
 	dialog.show();

@@ -241,13 +241,32 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 						if (!f.value) return;
 
 						const value = frappe.utils.escape_html(String(f.value));
+						let current_display_html = value
+							? `<a href="/app/file/${value}" target="_blank"
+        style="color:#260fea;font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" ? value : "📎 View Current File"}</a>`
+							: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
+
+						let display_value = value;
+
+						if (f.fieldname === "email") {
+							display_value = `
+                <a href="#"
+                  class="open-email-composer"
+                  data-email="${frappe.utils.escape_html(value)}"
+                  style="color:#2563eb;font-weight:500;text-decoration:none;">
+                  ${frappe.utils.escape_html(value)}
+                </a>
+              `;
+						} else if (f.fieldtype == "Link" || f.fieldname == "personal_linkedin") {
+							display_value = current_display_html;
+						}
 
 						html += `
-                        <div class="field-row">
-                            <div class="field-label">${frappe.utils.escape_html(f.label)}</div>
-                            <div class="field-value">${value}</div>
-                        </div>
-                    `;
+              <div class="field-row">
+                <div class="field-label">${frappe.utils.escape_html(f.label)}</div>
+                <div class="field-value">${display_value}</div>
+              </div>
+            `;
 					});
 
 					html += `</div>`;
@@ -327,6 +346,22 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 			html += `</div>`;
 
 			frm.set_df_property(html_field, "options", html);
+
+			const $wrapper = frm.fields_dict[html_field].$wrapper;
+
+			// Prevent duplicate handlers on refresh
+			$wrapper.off("click", ".open-email-composer");
+
+			$wrapper.on("click", ".open-email-composer", function (e) {
+				e.preventDefault();
+
+				const email = $(this).data("email");
+
+				new frappe.views.CommunicationComposer({
+					doc: frm.doc,
+					recipients: email,
+				});
+			});
 		},
 	});
 };
