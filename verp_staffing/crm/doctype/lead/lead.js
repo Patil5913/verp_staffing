@@ -825,7 +825,6 @@ function setupLeadDetailForm(frm) {
 		if (isMonthYearField(field))
 			return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
 		if (isPhoneField(field)) {
-			value = meta_field.default;
 			return `<input type="tel" value="${value}" data-field="${field}" data-override="phone" class="${cls}" placeholder="Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx" />`;
 		}
 		if (fieldtype === "Link") {
@@ -1135,7 +1134,7 @@ function setupLeadDetailForm(frm) {
 				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(
 					meta_field.fieldtype,
 				);
-				const default_value = meta_field.default_value;
+				// const default_value =_value;
 				const inputHtml = getInputHTML(
 					meta_field.fieldtype,
 					doc[field],

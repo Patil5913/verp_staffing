@@ -242,7 +242,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
 						const value = frappe.utils.escape_html(String(f.value));
 						let current_display_html = value
-							? `<a href="/app/file/${value}" target="_blank"
+							? `<a href="https://${value}" target="_blank"
         style="color:#260fea;font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" ? value : "📎 View Current File"}</a>`
 							: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
 
