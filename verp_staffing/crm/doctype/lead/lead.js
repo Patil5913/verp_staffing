@@ -824,8 +824,10 @@ function setupLeadDetailForm(frm) {
 		}
 		if (isMonthYearField(field))
 			return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
-		if (isPhoneField(field))
+		if (isPhoneField(field)) {
+			value = meta_field.default;
 			return `<input type="tel" value="${value}" data-field="${field}" data-override="phone" class="${cls}" placeholder="Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx" />`;
+		}
 		if (fieldtype === "Link") {
 			const can_remove_file = frm.doc.status === "Lead" || "Open";
 
@@ -941,8 +943,18 @@ function setupLeadDetailForm(frm) {
 			return markInvalid(input, `${label} must be a valid email address`);
 		if (override === "month-year" && value && !isValidMonthYear(value))
 			return markInvalid(input, `${label} must be in MM-YYYY format`);
-		if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value))
-			return markInvalid(input, `${label} must include country code`);
+		if (override === "phone" && value) {
+			// Sanitize: Replace ( ) - and spaces with an empty string
+			const sanitized_phone = value.replace(/[()-\s]/g, "");
+
+			// Your original strict regex (+countrycode followed by 9 to 14 digits)
+			const phone_regex = /^\+[1-9]\d{9,14}$/;
+
+			// Validate against the sanitized version
+			if (!phone_regex.test(sanitized_phone)) {
+				return markInvalid(input, `${label} must include country code`);
+			}
+		}
 		if (["Int", "Float", "Currency"].includes(meta.fieldtype) && value && isNaN(value))
 			return markInvalid(input, `${label} must be a number`);
 		if (meta.fieldtype === "Date" && value && isNaN(Date.parse(value)))
@@ -979,8 +991,18 @@ function setupLeadDetailForm(frm) {
 				return fail(input, `${label} must be a valid email address`);
 			if (override === "month-year" && value && !isValidMonthYear(value))
 				return fail(input, `${label} must be in MM-YYYY format`);
-			if (override === "phone" && value && !/^\+\d{1,4}[-\s]?\d{6,14}$/.test(value))
-				return fail(input, `${label} must include country code`);
+			if (override === "phone" && value) {
+				// Sanitize: Replace ( ) - and spaces with an empty string
+				const sanitized_phone = value.replace(/[()-\s]/g, "");
+
+				// Your original strict regex (+countrycode followed by 9 to 14 digits)
+				const phone_regex = /^\+[1-9]\d{9,14}$/;
+
+				// Validate against the sanitized version
+				if (!phone_regex.test(sanitized_phone)) {
+					return fail(input, `${label} must include country code`);
+				}
+			}
 			if (
 				meta.fieldtype === "Select" &&
 				value &&
@@ -1113,7 +1135,7 @@ function setupLeadDetailForm(frm) {
 				const isFullWidth = ["Table", "Text Editor", "Long Text", "HTML"].includes(
 					meta_field.fieldtype,
 				);
-
+				const default_value = meta_field.default_value;
 				const inputHtml = getInputHTML(
 					meta_field.fieldtype,
 					doc[field],
@@ -1154,7 +1176,7 @@ function setupLeadDetailForm(frm) {
 			if (!_lead_detail_dirty) return { saved: false, valid: true };
 
 			if (!validateWithMeta(field_map)) {
-				frappe.msgprint("Enter Velid Values in Form");
+				frappe.msgprint("Enter Valid Values in Form");
 				return { saved: false, valid: false };
 			}
 			let data = collectFormData(field_map);

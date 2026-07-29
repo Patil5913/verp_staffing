@@ -262,24 +262,11 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 						}
 
 						html += `
-							<div class="field-row">
-								<div class="field-label">${frappe.utils.escape_html(f.label)}</div>
-						`;
-						if (f.fieldtype == "Link") {
-							html += `
-								<a href="/app/file/${value}" target="_blank"
-								style="color: var(--color-text-info, #1a73e8); text-decoration: none; font-size: 13px;">
-								📎 View File
-								</a>
-							`;
-						} else {
-							html += `
-							<div class="field-value">${value}</div>
-						`;
-						}
-						html += `
-							</div>
-						`;
+              <div class="field-row">
+                <div class="field-label">${frappe.utils.escape_html(f.label)}</div>
+                <div class="field-value">${display_value}</div>
+              </div>
+            `;
 					});
 
 					html += `</div>`;

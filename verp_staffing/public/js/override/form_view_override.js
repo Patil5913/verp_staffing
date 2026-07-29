@@ -30,14 +30,6 @@ const FORM_DELETE_INCLUDED_DOCTYPES = new Set([
 	};
 
 	function add_delete_button(frm) {
-		console.log(
-			"DELETE_INCLUDED_DOCTYPES.has(frm.doctype)",
-			DELETE_INCLUDED_DOCTYPES.has(frm.doctype),
-		);
-		console.log(
-			"FORM_DELETE_INCLUDED_DOCTYPES.has(frm.doctype)",
-			FORM_DELETE_INCLUDED_DOCTYPES.has(frm.doctype),
-		);
 		if (
 			!DELETE_INCLUDED_DOCTYPES.has(frm.doctype) &&
 			!FORM_DELETE_INCLUDED_DOCTYPES.has(frm.doctype)

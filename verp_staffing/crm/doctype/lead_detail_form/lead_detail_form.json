@@ -355,6 +355,7 @@
    "fieldtype": "Data"
   },
   {
+   "default": "+1",
    "description": "NOTE: Provide country code with number.",
    "fieldname": "personal_phone_number",
    "fieldtype": "Data",
@@ -432,7 +433,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-29 16:59:13.783216",
+ "modified": "2026-07-29 22:09:59.135865",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
