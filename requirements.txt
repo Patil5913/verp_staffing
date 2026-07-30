@@ -1,4 +1,4 @@
 pymupdf==1.23.5
-reportlab==4.4.7 #for pdf certificate generation
+reportlab==4.4.7
 pdfrw==0.4
 Pillow==12.1.0
