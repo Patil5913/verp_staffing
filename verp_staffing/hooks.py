@@ -45,7 +45,7 @@ app_include_js = [
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/override/about_override.js",
-    "/assets/verp_staffing/js/protection.js",
+    # "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/override/global_hide.js",
@@ -146,8 +146,8 @@ treeviews = [
 # after_install = "verp_staffing.install.after_install"
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
-    # "verp_staffing.install.after_install",
-    # "verp_staffing.overrides.email_template.patch",
+    "verp_staffing.install.after_install",
+    "verp_staffing.overrides.email_template.patch",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
 
@@ -344,7 +344,7 @@ scheduler_events = {
 }
 
 # Setup
-setup_wizard_requires = "assets/verp_staffing/js/setup_wizard.js"
+setup_wizard_requires = "assets/verp_staffing/js/setup/setup_wizard.js"
 setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 
 # Testing
