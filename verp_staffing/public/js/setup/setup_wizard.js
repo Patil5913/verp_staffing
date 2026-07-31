@@ -59,17 +59,17 @@ frappe.setup.on("before_load", function () {
 			{
 				fieldtype: "Section Break",
 			},
-			{
-				fieldname: "add_sample_data",
-				label: __("Add Sample Data"),
-				fieldtype: "Check",
-				default: 0,
-				description: __(
-					"Seeds departments, users, employees, leads, opportunities, " +
-						"customers, orders and invoices so you can explore the system " +
-						"immediately. You can safely skip this on a production setup.",
-				),
-			},
+			// {
+			// 	fieldname: "add_sample_data",
+			// 	label: __("Add Sample Data"),
+			// 	fieldtype: "Check",
+			// 	default: 0,
+			// 	description: __(
+			// 		"Seeds departments, users, employees, leads, opportunities, " +
+			// 			"customers, orders and invoices so you can explore the system " +
+			// 			"immediately. You can safely skip this on a production setup.",
+			// 	),
+			// },
 			{
 				fieldtype: "Section Break",
 				label: __("Email Configuration"),
@@ -286,3 +286,52 @@ function apply_provider_defaults(slide, provider) {
 		}
 	});
 }
+
+(() => {
+	const original = frappe.setup.SetupWizard.prototype.action_on_complete;
+
+	frappe.setup.SetupWizard.prototype.action_on_complete = function () {
+		frappe.telemetry.capture("initated_client_side", "setup");
+
+		if (!this.current_slide.set_values()) return;
+
+		this.update_values();
+		this.show_working_state();
+		this.disable_keyboard_nav();
+		this.listen_for_setup_stages();
+
+		const wizard = this;
+
+		frappe.call({
+			method: "verp_staffing.setup.email_utils.setup_email",
+			args: {
+				args: wizard.values,
+			},
+			freeze: true,
+			freeze_message: __("Validating Email Configuration..."),
+			callback() {
+				frappe.call({
+					method: "frappe.desk.page.setup_wizard.setup_wizard.setup_complete",
+					args: {
+						args: wizard.values,
+					},
+					callback(r) {
+						if (r.message.status === "ok") {
+							wizard.post_setup_success();
+						} else if (r.message.status === "registered") {
+							wizard.update_setup_message(__("Starting the setup..."));
+						} else if (r.message.fail !== undefined) {
+							wizard.abort_setup(r.message.fail);
+						}
+					},
+					error() {
+						wizard.abort_setup();
+					},
+				});
+			},
+			error() {
+				wizard.abort_setup();
+			},
+		});
+	};
+})();
