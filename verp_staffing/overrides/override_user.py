@@ -70,6 +70,8 @@ class CustomUser(User):
             self.set_social_login_userid("frappe", frappe.generate_hash(length=39))
 
     def after_insert(self):
+        super().after_insert()
+
         # adding role Inbox User to all users except Administrator and Guest
         if self.name in ("Administrator", "Guest"):
             return
@@ -80,9 +82,8 @@ class CustomUser(User):
         ):
             return
 
+        self.append("roles", {"role": "Inbox User"})
         self.save(ignore_permissions=True)
-
-        super().after_insert()
 
 
 def ask_pass_update():

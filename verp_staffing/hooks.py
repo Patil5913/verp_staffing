@@ -384,6 +384,7 @@ before_request = [
     "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
     "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
     "verp_staffing.overrides.email_template.patch",
+    "verp_staffing.overrides.notification_settings.ensure_notification_settings",
 ]
 
 # after_request = ["verp_staffing.utils.after_request"]
