@@ -46,6 +46,7 @@ function open_custom_dialog() {
 				fieldtype: "Data",
 				label: "Phone Number (Provide country code with number Exp: +1xxxxxxxxxx)",
 				placeholder: "Exp: +1xxxxxxxxxx or +91xxxxxxxxxx",
+				default: "+1",
 			},
 			{
 				fieldname: "email",
@@ -105,16 +106,22 @@ function open_custom_dialog() {
 }
 
 function validate_phone(phone, label) {
+	// Initialize and trim the string
 	phone = (phone || "").trim();
 
 	if (!phone) {
 		frappe.throw(`${label} is required`);
 	}
 
+	// Sanitize: Replace ( ) - and spaces with an empty string
+	const sanitized_phone = phone.replace(/[()-\s]/g, "");
+
+	// Your original strict regex (+countrycode followed by 9 to 14 digits)
 	const phone_regex = /^\+[1-9]\d{9,14}$/;
 
-	if (!phone_regex.test(phone)) {
-		frappe.throw(`${label} must be in format +countrycode followed by numbers`);
+	// Validate against the sanitized version
+	if (!phone_regex.test(sanitized_phone)) {
+		frappe.throw(`${label} must be a valid international number (e.g., +1 234-567-8900)`);
 	}
 
 	return true;

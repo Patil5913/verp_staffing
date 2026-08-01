@@ -361,7 +361,7 @@
 				}
 
 				var csrfToken = document.querySelector('[name="csrf_token"]');
-
+				token = new URLSearchParams(window.location.search).get("t");
 				fetch("/api/method/verp_staffing.www.customer.save_interview_feedback", {
 					method: "POST",
 					headers: {
@@ -369,6 +369,7 @@
 						"X-Frappe-CSRF-Token": csrfToken ? csrfToken.value : "",
 					},
 					body: JSON.stringify({
+						token: token,
 						feedback_data: JSON.stringify(feedback_list),
 					}),
 				})
@@ -425,12 +426,13 @@
 			alert("From Date cannot be greater than To Date");
 			return;
 		}
+		token = new URLSearchParams(window.location.search).get("t");
 
 		// ✅ encodeURIComponent fixes slashes and special chars in customer name
 		var url =
 			"/api/method/verp_staffing.www.customer.get_customer_history" +
-			"?customer=" +
-			encodeURIComponent(CUSTOMER_NAME) +
+			"?token=" +
+			encodeURIComponent(token) +
 			"&interview_offset=" +
 			interview_offset +
 			"&interview_limit=" +
@@ -711,7 +713,7 @@
 			<p style="margin: 4px 0; color: #334155; font-size: 13px">
 				<b>Resume:</b>
 				<a
-					href="/api/method/verp_staffing.www.customer.download_resume?file_url={{ rec.resume }}"
+					href="/api/method/verp_staffing.www.customer.download_resume?resume={{ rec.docname | urlencode }}&token={{ token | urlencode }}"
 					style="color: #260fea; font-weight: 500"
 					>Download</a
 				>

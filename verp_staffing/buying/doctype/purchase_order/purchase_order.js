@@ -140,7 +140,6 @@ frappe.ui.form.on("Items Table", {
 	items_add: function (frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		row.type = "Purchase";
-		console.log("row: ", row);
 		frm.refresh_field("items");
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 	},

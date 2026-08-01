@@ -1,8 +1,10 @@
 import frappe
 import json
 from verp_staffing.utils.customer_page import get_otp_status_web
+from frappe import _
 
 import base64
+
 
 def safe_b64decode(data):
     data += "=" * (-len(data) % 4)
@@ -12,6 +14,7 @@ def safe_b64decode(data):
 def verify_token_and_get_email(token):
     import hmac
     import hashlib
+
     try:
         decoded = safe_b64decode(token)
         payload_str, signature = decoded.rsplit("|", 1)
@@ -19,7 +22,7 @@ def verify_token_and_get_email(token):
         expected_signature = hmac.new(
             frappe.conf.get("encryption_key").encode(),
             payload_str.encode(),
-            hashlib.sha256
+            hashlib.sha256,
         ).hexdigest()
 
         if signature != expected_signature:
@@ -49,8 +52,17 @@ def get_context(context):
 
     raw_token = str(raw_token)[:256]
 
-    # ONLY VALIDATE SIGNATURE
-    email = verify_token_and_get_email(raw_token)
+    try:
+        auth = authenticate_customer_request(
+            raw_token,
+            require_verified=False,
+        )
+    except Exception:
+        context.invalid_link = True
+        return context
+
+    email = auth["email"]
+    customer_name = auth["customer"]
 
     if not email:
         context.invalid_link = True
@@ -75,98 +87,13 @@ def get_context(context):
     else:
         context.otp_state = "idle"
 
-    # return context
-
-    lead_doc = frappe.get_all(
-        "Lead Detail Form", filters={"email": email}, fields=["name"]
-    )
-
-    if not lead_doc:
-        return
-
-    lead_name = lead_doc[0].name
-
-    # =====================================================
-    # FIND CUSTOMER LINKED TO THIS LEAD DETAIL FORM
-    # via Doctype Reference child table
-    # =====================================================
-    customer_ref = frappe.db.sql(
-        """
-        SELECT reference_person
-        FROM `tabDoctype Reference`
-        WHERE parenttype = 'Lead Detail Form'
-          AND parent = %s
-          AND reference_doctype = 'Customer'
-        LIMIT 1
-        """,
-        (lead_name,),
-        as_dict=True,
-    )
-
-    if customer_ref:
-        customer_name = customer_ref[0].reference_person
-    else:
-        # Fallback: Lead Detail Form → Lead → Opportunity → Customer
-        lead_ref = frappe.db.sql(
-            """
-            SELECT reference_person
-            FROM `tabDoctype Reference`
-            WHERE parenttype = 'Lead Detail Form'
-              AND parent = %s
-              AND reference_doctype = 'Lead'
-            LIMIT 1
-            """,
-            (lead_name,),
-            as_dict=True,
-        )
-
-        if not lead_ref:
-            context.full_history = None
-            context.feedback_rounds = []
-            return
-
-        lead_person = lead_ref[0].reference_person
-
-        # Try Opportunity → Customer
-        opp = frappe.get_all(
-            "Opportunity",
-            filters={"opportunity_from_lead": lead_person},
-            fields=["name"],
-            limit=1,
-        )
-
-        customer_name = None
-
-        if opp:
-            cust = frappe.get_all(
-                "Customer",
-                filters={"party_name": opp[0].name, "customer_from": "Opportunity"},
-                fields=["name"],
-                limit=1,
-            )
-            if cust:
-                customer_name = cust[0].name
-
-        if not customer_name:
-            cust = frappe.get_all(
-                "Customer",
-                filters={"party_name": lead_person, "customer_from": "Lead"},
-                fields=["name"],
-                limit=1,
-            )
-            if cust:
-                customer_name = cust[0].name
-
         if not customer_name:
             context.full_history = None
             context.feedback_rounds = []
             return
 
-    context.full_history = get_customer_history(customer_name)
+    context.full_history = get_customer_history(token=raw_token)
 
-    # =====================================================
-    # LOAD INTERVIEWS
-    # =====================================================
     from frappe.utils import get_datetime, now_datetime
     import pytz
 
@@ -178,7 +105,9 @@ def get_context(context):
 
     interviews = frappe.get_all(
         "Interview",
-        filters={"marketing_link": ["in", marketing_names_ctx]} if marketing_names_ctx else {"name": ["in", ["__no_match__"]]},
+        filters={"marketing_link": ["in", marketing_names_ctx]}
+        if marketing_names_ctx
+        else {"name": ["in", ["__no_match__"]]},
         fields=["name", "marketing_link", "status", "role", "company"],
     )
 
@@ -194,17 +123,14 @@ def get_context(context):
     context.feedback_rounds = []
 
     for interview in interviews:
-
         doc = frappe.get_doc("Interview", interview.name)
 
         for round in doc.interview_rounds_table:
-
             if (
                 (not round.feedback or round.feedback.strip() == "")
                 and round.date_of_interview
                 and getattr(round, "to_time", None)
             ):
-
                 dt_str = f"{round.date_of_interview} {round.to_time}"
                 interview_dt = get_datetime(dt_str)
 
@@ -214,7 +140,6 @@ def get_context(context):
                     interview_dt = interview_dt.astimezone(tz)
 
                 if now_est >= interview_dt:
-
                     context.feedback_rounds.append(
                         {
                             "round_name": round.name,
@@ -226,21 +151,112 @@ def get_context(context):
                             "type": round.type_of_interview,
                         }
                     )
-                    
+
     return context
+
+
+@frappe.whitelist(allow_guest=True)
+def authenticate_customer_request(token, require_verified=True):
+    if not token:
+        frappe.throw(_("Unauthorized"))
+
+    token = str(token)[:256]
+
+    email = verify_token_and_get_email(token)
+
+    if not email:
+        frappe.throw(_("Invalid or expired link"))
+
+    if require_verified:
+        status = get_otp_status_web(token)
+
+        if status.get("state") != "verified":
+            frappe.throw(_("Please verify your email first"))
+
+    lead_name = frappe.db.get_value(
+        "Lead Detail Form",
+        {"email": email},
+        "name",
+    )
+
+    if not lead_name:
+        frappe.throw(_("Lead Detail Form not found"))
+
+    customer = frappe.db.get_value(
+        "Doctype Reference",
+        {
+            "parenttype": "Lead Detail Form",
+            "parent": lead_name,
+            "reference_doctype": "Customer",
+        },
+        "reference_person",
+    )
+
+    # fallback
+    if not customer:
+        lead_person = frappe.db.get_value(
+            "Doctype Reference",
+            {
+                "parenttype": "Lead Detail Form",
+                "parent": lead_name,
+                "reference_doctype": "Lead",
+            },
+            "reference_person",
+        )
+
+        if lead_person:
+            opportunity = frappe.db.get_value(
+                "Opportunity",
+                {"opportunity_from_lead": lead_person},
+                "name",
+            )
+
+            if opportunity:
+                customer = frappe.db.get_value(
+                    "Customer",
+                    {
+                        "party_name": opportunity,
+                        "customer_from": "Opportunity",
+                    },
+                    "name",
+                )
+
+            if not customer:
+                customer = frappe.db.get_value(
+                    "Customer",
+                    {
+                        "party_name": lead_person,
+                        "customer_from": "Lead",
+                    },
+                    "name",
+                )
+
+    if not customer:
+        frappe.throw(_("Customer not found"))
+
+    return {
+        "email": email,
+        "customer": customer,
+    }
 
 
 # ================================================================
 # CUSTOMER HISTORY
 # ===============================================================
 @frappe.whitelist(allow_guest=True)
-def save_interview_feedback(feedback_data):
-
+def save_interview_feedback(token, feedback_data):
     if not feedback_data:
-        frappe.throw("No feedback data received")
+        frappe.throw(_("No feedback data received"))
+
+    auth = authenticate_customer_request(token)
+
+    customer = auth["customer"]
 
     try:
         feedback_list = json.loads(feedback_data)
+
+        if not isinstance(feedback_list, list):
+            frappe.throw(_("Invalid feedback payload"))
 
         for item in feedback_list:
             round_name = item.get("round_name")
@@ -249,35 +265,57 @@ def save_interview_feedback(feedback_data):
             if not round_name:
                 continue
 
-            parent_id = frappe.db.get_value("Interview Round", round_name, "parent")
+            allowed = frappe.db.sql(
+                """
+                SELECT ir.name
+                FROM `tabInterview Round` ir
+                INNER JOIN `tabInterview` i
+                    ON i.name = ir.parent
+                INNER JOIN `tabMarketing` m
+                    ON m.name = i.marketing_link
+                WHERE
+                    ir.name=%s
+                    AND m.customer=%s
+                LIMIT 1
+                """,
+                (
+                    round_name,
+                    customer,
+                ),
+            )
 
-            if not parent_id:
-                continue
+            if not allowed:
+                frappe.throw(_("Unauthorized"))
 
-            parent_doc = frappe.get_doc("Interview", parent_id)
-
-            for row in parent_doc.interview_rounds_table:
-                if row.name == round_name:
-                    row.feedback = feedback
-                    break
-
-            parent_doc.save(ignore_permissions=True)
+            frappe.db.set_value(
+                "Interview Round",
+                round_name,
+                "feedback",
+                feedback,
+                update_modified=False,
+            )
 
         frappe.db.commit()
 
-        return {"status": "success", "message": "Feedback updated successfully"}
+        return {
+            "status": "success",
+            "message": "Feedback updated successfully",
+        }
 
-    except Exception as e:
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "Feedback Save Error")
-        frappe.throw(str(e))
+        raise
 
 
 @frappe.whitelist(allow_guest=True)
-def get_customer_history(customer, interview_limit=5, interview_offset=0):
-    # =====================================================
-    # get customer
-    # =====================================================
+def get_customer_history(
+    customer=None, token=None, interview_limit=5, interview_offset=0
+):
+    if frappe.session.user == "Guest":
+        auth = authenticate_customer_request(token, require_verified=False)
+        customer = auth["customer"]
+
     Customer = frappe.get_all(
         "Customer",
         filters={"name": customer},
@@ -325,12 +363,10 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
         # ------------------------------------------
 
         for stage, value in stage_data.items():
-
             # ✅ lowercase for safe matching
             doctype = departments.get(stage.lower())
 
             if not doctype:
-
                 department = None
                 if isinstance(value, list) and value:
                     department = value[0].get("department")
@@ -373,7 +409,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                 continue
 
             for d in docs:
-
                 full_doc = frappe.get_doc(doctype, d.name)
 
                 dept_entry = {
@@ -439,36 +474,6 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
                     history["departments"][doctype] = []
 
                 history["departments"][doctype].append(dept_entry)
-
-    # -------------------------------------------------
-    # SALES ORDER
-    # -------------------------------------------------
-    # sales_orders = frappe.get_all(
-    #     "Sales Order",
-    #     filters={"customer": customer},
-    #     fields=["name", "status", "agreement"],
-    # )
-
-    # if sales_orders:
-    #     history["departments"]["Sales Order"] = []
-    #     for so in sales_orders:
-    #         agreements = frappe.get_all(
-    #             "Agreement",
-    #             filters={"sales_order": so.name},
-    #             pluck="name",
-    #         )
-    #         so_entry = {
-    #             "department": "Sales Order",
-    #             "docname": so.name,
-    #             "status": so.status,
-    #             "id": so.name,
-    #             "agreement": agreements,
-    #         }
-    #         history["departments"]["Sales Order"].append(so_entry)
-
-    # -------------------------------------------------
-    # INTERVIEWS
-    # -------------------------------------------------
 
     # Step 1: Find Marketing docs linked to this customer
     marketing_names = frappe.get_all(
@@ -597,8 +602,14 @@ def get_customer_history(customer, interview_limit=5, interview_offset=0):
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 from frappe.utils.file_manager import get_file_path
 
+
 @frappe.whitelist(allow_guest=True)
-def download_resume(file_url):
+def download_resume(resume, token):
+    auth = authenticate_customer_request(token, require_verified=False)
+    res = frappe.get_value("Resume", resume, ["customer", "resume"])
+    if auth["customer"] != res[0]:
+        frappe.throw("Unauthorized customer")
+    file_url = res[1]
     if not file_url:
         frappe.throw("Missing file")
 

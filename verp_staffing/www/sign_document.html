@@ -2175,44 +2175,43 @@
 		img.style.pointerEvents = "none";
 	});
 
-	const upload_input = document.getElementById("upload-input")
-	if(upload_input){
-
+	const upload_input = document.getElementById("upload-input");
+	if (upload_input) {
 		upload_input.addEventListener("change", function (e) {
 			const file = e.target.files[0];
 			if (!file) return;
-	
+
 			if (file.size > 5 * 1024 * 1024) {
 				alert("Image too large. Max 5MB allowed.");
 				e.target.value = "";
 				return;
 			}
-	
+
 			const img = new Image();
 			const reader = new FileReader();
-	
+
 			reader.onload = function (event) {
 				img.src = event.target.result;
 			};
-	
+
 			img.onload = function () {
 				const canvas = document.createElement("canvas");
 				const ctx = canvas.getContext("2d");
-	
+
 				const maxWidth = 600;
 				const scale = maxWidth / img.width;
-	
+
 				canvas.width = maxWidth;
 				canvas.height = img.height * scale;
-	
+
 				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-	
+
 				uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
-	
+
 				document.getElementById("upload-preview").innerHTML =
 					`<img src="${uploadedImageData}" style="max-width:100%;">`;
 			};
-	
+
 			reader.readAsDataURL(file);
 		});
 	}
@@ -2448,6 +2447,11 @@
 					btnText.innerText = "Resend OTP";
 					btn.style.display = "none";
 					startOTPTimer();
+				} else if (data.message?.status == "already_sent") {
+					alert(`Otp already sent, please try resending after ${expires_in} seconds`);
+					loader.style.display = "none";
+					btnText.innerText = "Resend OTP";
+					btn.style.display = "none";
 				} else {
 					throw new Error("Failed");
 				}

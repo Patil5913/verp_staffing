@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('contextmenu', event => event.preventDefault());
 
     // Disable Copy, Cut, and Paste Events
-    ['copy', 'cut', 'paste'].forEach(event => {
+    ['copy', 'cut'].forEach(event => {
         document.addEventListener(event, e => {
             e.preventDefault();
             frappe.show_alert({
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Disable Keyboard Shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+U, F12)
     document.addEventListener('keydown', function (e) {
         if (
-            (e.ctrlKey && ['c', 'v', 'x', 'u', 'p'].includes(e.key.toLowerCase())) ||
+            (e.ctrlKey && ['c', 'x', 'u', 'p'].includes(e.key.toLowerCase())) ||
             e.key === 'F12'
         ) {
             e.preventDefault();

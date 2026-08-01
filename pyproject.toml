@@ -8,6 +8,14 @@ requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
 
+dependencies = [
+    "pymupdf==1.23.5",
+    "reportlab==4.4.7",
+    "pdfrw==0.4",
+    "Pillow==12.1.0",
+    "Unidecode==1.4.0",
+]
+
 [tool.bench.frappe-dependencies]
 frappe = ">=15.0.0,<16.0.0"
 

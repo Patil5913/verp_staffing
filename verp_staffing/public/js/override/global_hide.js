@@ -48,7 +48,7 @@ frappe.router.on("change", () => {
 });
 
 const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
-	"OnboardiBUTTON_DISPLAY_ngs",
+	"Onboardings",
 	"GL Entry",
 	"Supplier Group",
 	"CR",

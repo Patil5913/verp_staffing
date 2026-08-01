@@ -29,7 +29,12 @@ frappe.ui.form.on("CR", {
 		});
 		show_sales_order(frm);
 		if (frm.doc.status === "Completed") {
-			frm.set_df_property("status", "read_only", 1);
+			// Make the entire form read-only
+			frm.disable_form();
+
+			// Hide Save button
+			frm.disable_save();
+			// frm.set_df_property("status", "read_only", 1);
 		}
 		window.add_forward_button(frm);
 

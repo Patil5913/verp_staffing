@@ -1,6 +1,7 @@
 import frappe
 from frappe.query_builder import DocType
 
+
 # get employee name from user
 def get_employee_name(user):
     try:
@@ -86,6 +87,7 @@ def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filter
         .offset(start)
         .run()
     )
+
 
 def get_allowed_employees(user, department=None):
     """
@@ -533,18 +535,30 @@ def send_email(recipients, subject, message, attachments=None, now=None):
 
     # Check if the logged-in user has a sendable email account
     logged_in_user = frappe.session.user
+
     if logged_in_user and logged_in_user != "Guest":
-        user_email_accounts = frappe.get_all(
-            "Email Account",
+        email_account = frappe.get_all(
+            "User Email",
             filters={
-                "email_id": logged_in_user,
+                "parent": logged_in_user,
+                "parenttype": "User",
                 "enable_outgoing": 1,
             },
-            fields=["email_id"],
+            fields=["email_account"],
+            order_by="creation desc",
             limit=1,
         )
-        if user_email_accounts:
-            sender = user_email_accounts[0].email_id
+
+        if email_account:
+            sender = frappe.db.get_value(
+                "Email Account",
+                {
+                    "name": email_account[0].email_account,
+                    "enable_outgoing": 1,
+                },
+                "email_id",
+            )
+
     # sender=None will fall back to Frappe's default outgoing email account
     frappe.sendmail(
         sender=sender,
@@ -737,7 +751,7 @@ def opportunity_query(user):
             `tabOpportunity`.opportunity_owner IN ({team_sql})
         """
     )
-    
+
     if "Sales" in departments:
         conditions.append(
             f"""
@@ -776,7 +790,7 @@ def customer_query(user):
     conditions = []
 
     conditions.append(
-            f"""
+        f"""
             `tabCustomer`.customer_owner IN ({team_sql})
         """
     )
@@ -788,6 +802,7 @@ def customer_query(user):
         return "1=0"
 
     return "(" + " OR ".join(conditions) + ")"
+
 
 def sales_order_query(user):
     if user == "Administrator":
@@ -845,7 +860,9 @@ def sales_order_query(user):
 
     return "(" + " OR ".join(conditions) + ")"
 
+
 from pathlib import Path
+
 
 @frappe.whitelist(allow_guest=True)
 def _validate_site_file_path(file_path: str) -> Path:

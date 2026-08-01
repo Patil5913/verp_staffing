@@ -67,7 +67,6 @@ window.__perm_open_row_ = function (tableId, rowIdx) {
 window.__perm_addrow_ = function (tableId) {
 	const state = window._perm_ftbl_state[tableId];
 	if (!state) {
-		console.error("STATE NOT FOUND", tableId);
 		return;
 	}
 	state.rows.push({});
@@ -422,18 +421,13 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 			if (col.options) {
 				if (Array.isArray(col.options)) {
 					opts = col.options;
-				}
-				else if (typeof col.options === "string" && col.options.includes("\n")) {
+				} else if (typeof col.options === "string" && col.options.includes("\n")) {
 					opts = col.options.split(/\r?\n/).filter((o) => o && o.trim());
-				}
-				else if (typeof col.options === "string" && col.options.includes(",")) {
+				} else if (typeof col.options === "string" && col.options.includes(",")) {
 					opts = col.options.split(",").map((o) => o.trim());
-				}
-				else if (frappe.meta.docfield_map[col.options]) {
+				} else if (frappe.meta.docfield_map[col.options]) {
 					opts = [];
-				}
-
-				else {
+				} else {
 					opts = [col.options];
 				}
 			}
@@ -819,8 +813,10 @@ ${tableWidgetHtml}
 					return false;
 				}
 				if (isPhoneField(fn)) {
+					// Sanitize: Replace ( ) - and spaces with an empty string
+					const sanitized_phone = nv.replace(/[()-\s]/g, "");
 					const phone_regex = /^\+[1-9]\d{9,14}$/;
-					if (!phone_regex.test((nv || "").trim())) {
+					if (!phone_regex.test((sanitized_phone || "").trim())) {
 						frappe.msgprint(
 							__(
 								`${label} must be in format +countrycode followed by numbers (e.g. +91xxxxxxxxxx or +1xxxxxxxxxx)`,
@@ -1181,7 +1177,6 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 		const options = fm?.options || "";
 		const old_val = current_values[fn] != null ? String(current_values[fn]) : "";
 		const saved_val = saved[fn] != null ? String(saved[fn]) : "";
-
 		let inp_html = "";
 		if (fieldtype === "Select") {
 			const opts = options.split("\n").filter((o) => o);
@@ -1207,6 +1202,7 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 		} else if (fieldtype === "Date") {
 			inp_html = `<input class="fg-new-input" type="date" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
 		} else {
+
 			inp_html = `<input class="fg-new-input" type="text" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" placeholder="${__("Enter new value for")} ${frappe.utils.escape_html(label)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
 		}
 

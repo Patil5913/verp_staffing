@@ -21,10 +21,10 @@ STATUS_MAP = {
 class Lead(Document):
     def autoname(self):
         name = self.name1
-        
+
         if not name:
             frappe.throw("Lead Name is required")
-            
+
         self.name = generate_name_series("Lead", name)
 
     def before_insert(self):
@@ -100,14 +100,14 @@ def update_status_based_on_opportunity(lead_name, status):
         update_modified=False,
     )
 
-    
+
 @frappe.whitelist()
 def lead_has_opportunity(lead_name):
     if not lead_name:
         return False
     return bool(frappe.db.exists("Opportunity", {"opportunity_from_lead": lead_name}))
-    
-    
+
+
 @frappe.whitelist()
 def create_opportunity_from_lead(lead, owner):
     if not frappe.has_permission("Lead", "read", lead):
@@ -115,14 +115,37 @@ def create_opportunity_from_lead(lead, owner):
 
     lead_doc = frappe.get_doc("Lead", lead)
 
-    opportunity = frappe.get_doc({
-        "doctype": "Opportunity",
-        "opportunity_from_lead": lead_doc.name,
-        "opportunity_owner": owner,
-        "name1": lead_doc.name1,
-        "source": lead_doc.source,
-    })
+    opportunity = frappe.get_doc(
+        {
+            "doctype": "Opportunity",
+            "opportunity_from_lead": lead_doc.name,
+            "opportunity_owner": owner,
+            "name1": lead_doc.name1,
+            "source": lead_doc.source,
+        }
+    )
 
     opportunity.insert(ignore_permissions=True)
 
     return opportunity.name
+
+
+@frappe.whitelist()
+def remove_attachment(docname, fieldname):
+    doc = frappe.get_doc("Lead Detail Form", docname)
+
+    file_name = doc.get(fieldname)
+
+    if not file_name:
+        return {"status": "success"}
+
+    # 1. Remove the reference from the Upload field
+    doc.db_set(fieldname, None, update_modified=False)
+
+    # 2. Delete the File document
+    if frappe.db.exists("File", file_name):
+        frappe.delete_doc("File", file_name)
+
+    frappe.db.commit()
+
+    return {"status": "success"}

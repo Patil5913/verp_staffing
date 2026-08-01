@@ -19,6 +19,8 @@ from datetime import datetime
 import io
 from PIL import Image
 from verp_staffing.crm.api.helpers import _validate_site_file_path
+
+
 class ESign(Document):
     def validate(self):
 
@@ -149,7 +151,7 @@ def send_all_signers(agreement):
         "<p>You have a document to sign.</p>"
         "<p><a href='{link}'>Click here to Sign</a></p>"
     )
-            
+
     template = frappe.db.get_value(
         "Email Template",
         "Document Sign Request - e_sign",
@@ -249,13 +251,13 @@ def send_final_signed_email(agreement_name):
         "<br>"
         "<p>Thank you.</p>"
     )
-            
+
     template = frappe.db.get_value(
         "Final Signed Agreement Email - e_sign",
         "Document Sign Request - e_sign",
         ["subject", "response_html", "response"],
         as_dict=True,
-    )        
+    )
 
     # Send individually
     for email in signer_emails:
@@ -265,7 +267,7 @@ def send_final_signed_email(agreement_name):
             message = frappe.render_template(
                 template.response_html or template.response, context
             )
-            
+
         frappe.sendmail(
             recipients=[email],
             subject=subject,
@@ -278,6 +280,7 @@ def send_final_signed_email(agreement_name):
 
 def calculate_file_hash(file_path):
     import hashlib
+
     validated_path = _validate_site_file_path(file_path)
 
     sha256 = hashlib.sha256()
@@ -1320,29 +1323,40 @@ def send_otp(token=None):
 
         if not fields:
             return {"status": "token_not_found"}
-
+        cache_key = f"otp_{token}"
         email = fields.signer_email
 
-        otp = str(random.randint(100000, 999999))
+        existing = frappe.cache().get_value(cache_key)
+        if existing and isinstance(existing, dict):
+            expires_at = existing.get("_expires_at")
+            ttl = int(expires_at - frappe.utils.now_datetime().timestamp())
+            if ttl > 0:
+                return {"status": "already_sent", "expires_in": ttl}
+            else:
+                # Stale entry — remove it and send fresh
+                frappe.cache().delete_value(cache_key)
 
+        otp = str(random.randint(100000, 999999))
+        expires_at = frappe.utils.now_datetime().timestamp() + 300
         frappe.cache().set_value(
-            f"otp_{token}",
+            cache_key,
             {
                 "otp": otp,
                 "created_at": now_datetime().isoformat(),
+                "expires_at": expires_at,
             },
             expires_in_sec=300,
         )
-        
+
         subject = "Your Verification Code"
         message = f"<p>Your OTP is: <b>{otp}</b></p>"
-        
+
         template = frappe.db.get_value(
             "OTP Verification Email",
             "Document Sign Request - e_sign",
             ["subject", "response_html", "response"],
             as_dict=True,
-        )     
+        )
 
         if template:
             context = {"otp": otp}

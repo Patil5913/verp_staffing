@@ -35,39 +35,9 @@ class CustomUser(User):
                 "hide_on_success": True,
             },
         )
-        
-    def validate(self):
-        self.__new_password = self.new_password
-        self.new_password = ""
-
-        if not frappe.flags.in_test:
-            self.password_strength_test()
-
-        if self.name not in STANDARD_USERS:
-            self.email = self.name
-            self.validate_email_type(self.name)
-
-        self.populate_role_profile_roles()
-		# self.check_roles_added() # to avoid has no role message
-        self.set_system_user()
-        self.clean_name()
-        self.set_full_name()
-        self.check_enable_disable()
-        self.ensure_unique_roles()
-        self.remove_all_roles_for_guest()
-        self.validate_username()
-        self.remove_disabled_roles()
-        self.validate_user_email_inbox()
-        ask_pass_update()
-        self.validate_allowed_modules()
-        self.validate_user_image()
-        self.set_time_zone()
-
-        if self.language == "Loading...":
-            self.language = None
-
-        if (self.name not in ["Administrator", "Guest"]) and (not self.get_social_login_userid("frappe")):
-            self.set_social_login_userid("frappe", frappe.generate_hash(length=39))
+    def check_roles_added(self):
+        "Override this core validation function as it is breaking our flow"
+        return    
 
     def after_insert(self):
         # adding role Inbox User to all users except Administrator and Guest

@@ -94,7 +94,7 @@
   {
    "fieldname": "technologies",
    "fieldtype": "Small Text",
-   "label": "Technology In which You are looking make your resume"
+   "label": "Technology "
   },
   {
    "fieldname": "entry_date",
@@ -136,9 +136,10 @@
    "label": "LinkedIn ID"
   },
   {
+   "description": "please paste full linkedin link",
    "fieldname": "personal_linkedin",
    "fieldtype": "Data",
-   "label": "LinkedIn ID"
+   "label": "LinkedIn Profile link"
   },
   {
    "fieldname": "passport_number",
@@ -354,6 +355,7 @@
    "fieldtype": "Data"
   },
   {
+   "default": "+1",
    "description": "NOTE: Provide country code with number.",
    "fieldname": "personal_phone_number",
    "fieldtype": "Data",
@@ -431,7 +433,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-01 13:53:53.626275",
+ "modified": "2026-07-29 22:09:59.135865",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
