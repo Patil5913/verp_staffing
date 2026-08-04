@@ -142,6 +142,7 @@ frappe.ui.form.on("Employee", {
 					filters: {
 						department: row.department,
 						designation: parent_roles,
+						current_emp: frm.doc.name
 					},
 				};
 			};

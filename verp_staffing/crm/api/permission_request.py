@@ -816,7 +816,7 @@ def get_all_pending_field_update_requests(customer_name):
     if not current_employee:
         return []
 
-    comments = comments = get_comments(
+    comments = get_comments(
         reference_doctype="Customer",
         reference_name=customer_name,
     )

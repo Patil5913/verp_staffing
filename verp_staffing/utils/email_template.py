@@ -5,8 +5,8 @@ def get_email_branding():
         config = frappe.get_cached_doc("ERP Configuration")
 
         logo_url = (
-            frappe.utils.get_url(config.app_logo)
-            if config.app_logo
+            frappe.utils.get_url(config.compnay_logo)
+            if config.compnay_logo
             else ""
         )
 
@@ -68,7 +68,6 @@ def get_email_branding():
 
 def seed_email_template():
     branding = get_email_branding()
-    
     logo_url = branding["logo_url"]
     social_links_html = branding["social_links_html"]
 
@@ -88,19 +87,6 @@ def seed_email_template():
           </p>
 
           __SOCIAL_LINKS__
-
-          <!-- Policy Links -->
-          <p style="font-size:13px;color:#374151;text-align:center;margin:0 0 12px 0;">
-            <a href="#" style="color:#374151;text-decoration:underline;">Privacy policy</a>
-            &nbsp;|&nbsp;
-            <a href="#" style="color:#374151;text-decoration:underline;">Help center</a>
-          </p>
-
-          <!-- Copyright -->
-          <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0;">
-            &copy; 2025 Your Company International Ltd.
-          </p>
-
         </td>
       </tr>
     </table>

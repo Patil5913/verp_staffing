@@ -252,10 +252,10 @@ function render_agreement_cards(wrapper, agreements, sales_order) {
 					: ""
 			}
           ${
-				ag.status === "Ready To Send"
+				ag.status != "Agreement signed"
 					? `
             <button class="btn btn-xs  btn-primary send-agreement" data-name="${ag.name}">
-              Send
+              ${ag.status === "Ready To Send" ? "Send" : "Resend"}
             </button>
           `
 					: ""

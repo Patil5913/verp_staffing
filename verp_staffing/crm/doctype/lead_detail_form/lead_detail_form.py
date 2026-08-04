@@ -12,6 +12,7 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.helpers import _validate_site_file_path
+import re
 
 
 class LeadDetailForm(Document):
@@ -22,6 +23,16 @@ class LeadDetailForm(Document):
             frappe.throw("Lead Name is required")
 
         self.name = generate_name_series("Lead Detail Form", name)
+
+    def validate(self):
+        if self.personal_phone_number:
+            self.personal_phone_number = re.sub(
+                r"[()\s-]", "", self.personal_phone_number
+            )
+        if self.number_for_marketing:
+            self.number_for_marketing = re.sub(
+                r"[()\s-]", "", self.number_for_marketing
+            )
 
 
 def process_drawn_signature_and_apply(doc, token):
@@ -882,7 +893,7 @@ def render_signature_box(
     draw_y = y + padding_y
 
     draw_w = max(0, width - padding_x * 2)
-    draw_h = max(0, height - padding_y * 2)    
+    draw_h = max(0, height - padding_y * 2)
     canvas.drawImage(
         image_reader,
         draw_x,
@@ -1471,6 +1482,11 @@ def upsert_lead_detail_form(data, token, signature_method=None):
         # NORMAL
         else:
             if value not in (None, "", []):
+                if fieldname in {
+                    "personal_phone_number",
+                    "number_for_marketing",
+                } and isinstance(value, str):
+                    value = re.sub(r"[()\s-]", "", value)
                 doc.set(fieldname, value)
 
     # 🔹 Save

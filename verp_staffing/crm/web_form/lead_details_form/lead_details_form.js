@@ -124,7 +124,6 @@ frappe.ready(async function () {
 		"driving_licence",
 		"old_resume",
 	];
-
 	fields_to_hide.forEach((fieldname) => {
 		frappe.web_form.set_df_property(fieldname, "hidden", 1);
 	});
@@ -767,7 +766,9 @@ async function custom_submit_handler() {
 
 		if (shouldValidate("personal_phone_number", candidateFields)) {
 			let personal_phone = frappe.web_form.get_value("personal_phone_number");
+			personal_phone = personal_phone.replace(/[()-\s]/g, "");
 			if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
+			frappe.web_form.set_value("personal_phone_number", personal_phone);
 		}
 
 		if (shouldValidate("entry_date", candidateFields)) {
@@ -797,6 +798,8 @@ async function custom_submit_handler() {
 
 		if (shouldValidate("number_for_marketing", candidateFields)) {
 			let marketing_phone = frappe.web_form.get_value("number_for_marketing");
+			marketing_phone = marketing_phone.replace(/[()-\s]/g, "");
+			frappe.web_form.set_value("number_for_marketing", marketing_phone);
 			if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
 		}
 	}
@@ -1392,9 +1395,7 @@ function validate_phone(phone, label) {
 	}
 
 	phone = phone.trim();
-
-	const phone_regex = /^[+]\d{10,15}$/;
-
+	const phone_regex = /^\+[1-9]\d{9,14}$/;
 	if (!phone_regex.test(phone)) {
 		frappe.msgprint(`${label} must be in format +countrycode followed by numbers`);
 		return false;
@@ -2088,12 +2089,11 @@ async function initRequiredLeadDocsConfig() {
 	});
 
 	const doc = r.message || {};
-
 	REQUIRED_LEAD_DOCS_CONFIG = {
-		driving_licence: doc.driving_licence || 0,
-		ead_card: doc.ead_card || 0,
-		old_resume: doc.old_resume || 0,
-		visa_copy: doc.visa_copy || 0,
+		driving_licence: doc.driving_licence ?? 0,
+		ead_card: doc.ead_card ?? 0,
+		old_resume: doc.old_resume ?? 0,
+		visa_copy: doc.visa_copy ?? 0,
 	};
 }
 

@@ -327,6 +327,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		"mobile",
 		"mobile_no",
 		"personal_phone_number",
+		"number_for_marketing"
 	]);
 	const isPhoneField = (f) => PHONE_FIELDS.has(f.toLowerCase());
 	const isEmailField = (f) => EMAIL_FIELDS.has(f.toLowerCase());
@@ -411,7 +412,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		if (isEmailField(col.fieldname)) {
 			inputHtml = `<input id="${id}" type="email" value="${val}" data-override="email" style="${baseStyle}" placeholder="Exp: example@email.com" />`;
 		} else if (isPhoneField(col.fieldname)) {
-			inputHtml = `<input id="${id}" type="tel" value="${val}" data-override="phone" style="${baseStyle}" placeholder="+91-9876543210" />`;
+			inputHtml = `<input id="${id}" type="tel" value="${val ? val : "+1"}" data-override="phone" style="${baseStyle}" placeholder="+91-9876543210" />`;
 		} else if (isMonthYearField(col.fieldname)) {
 			inputHtml = `<input id="${id}" type="text" value="${toMonthYear(val)}" data-override="month-year" maxlength="7" style="${baseStyle}" placeholder="MM-YYYY" />`;
 			noteHtml = `<div style="font-size:11px;color:var(--color-text-secondary,#888);margin-top:3px;">NOTE: Use date format: MM-YYYY</div>`;
@@ -814,9 +815,9 @@ ${tableWidgetHtml}
 				}
 				if (isPhoneField(fn)) {
 					// Sanitize: Replace ( ) - and spaces with an empty string
-					const sanitized_phone = nv.replace(/[()-\s]/g, "");
+					nv = nv.replace(/[()-\s]/g, "");
 					const phone_regex = /^\+[1-9]\d{9,14}$/;
-					if (!phone_regex.test((sanitized_phone || "").trim())) {
+					if (!phone_regex.test(nv.trim())) {
 						frappe.msgprint(
 							__(
 								`${label} must be in format +countrycode followed by numbers (e.g. +91xxxxxxxxxx or +1xxxxxxxxxx)`,
@@ -1202,7 +1203,6 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 		} else if (fieldtype === "Date") {
 			inp_html = `<input class="fg-new-input" type="date" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
 		} else {
-
 			inp_html = `<input class="fg-new-input" type="text" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" placeholder="${__("Enter new value for")} ${frappe.utils.escape_html(label)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
 		}
 

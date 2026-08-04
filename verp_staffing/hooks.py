@@ -45,7 +45,7 @@ app_include_js = [
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/override/about_override.js",
-    "/assets/verp_staffing/js/protection.js",
+    # "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/override/global_hide.js",
@@ -143,11 +143,14 @@ treeviews = [
 # ------------
 
 # before_install = "verp_staffing.install.before_install"
-# after_install = "verp_staffing.install.after_install"
-after_migrate = [
-    # "verp_staffing.install.remove_default_workspaces",
+after_install = [
     "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
+]
+after_migrate = [
+    # "verp_staffing.install.remove_default_workspaces",
+    # "verp_staffing.install.after_install",
+    # "verp_staffing.overrides.email_template.patch",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
 

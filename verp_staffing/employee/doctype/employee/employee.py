@@ -224,6 +224,7 @@ def get_users_not_linked_to_employee(
 def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filters):
     department = filters.get("department")
     designation = filters.get("designation")  # list of parent roles
+    current_emp = filters.get("current_emp")
 
     if not department or not designation:
         return []
@@ -233,6 +234,7 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
     values = [
         department,
         designation,
+        current_emp,
     ]
 
     query = """
@@ -245,6 +247,7 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
         WHERE
             d.department = %s
             AND d.designation = %s
+            AND NOT e.name = %s
     """
 
     if txt:

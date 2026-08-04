@@ -1,4 +1,4 @@
-const DELETE_INCLUDED_DOCTYPES = new Set(["Lead", "Customer", "Opportunity", "User", "Employee"]);
+const DELETE_INCLUDED_DOCTYPES = new Set(["Lead", "Customer", "Opportunity", "User", "Employee","Email Account"]);
 
 const FORM_DELETE_INCLUDED_DOCTYPES = new Set([
 	"Sales Order",
@@ -15,6 +15,7 @@ const FORM_DELETE_INCLUDED_DOCTYPES = new Set([
 	"Item",
 	"Item Category",
 	"UOM",
+	"Email Account"
 ]);
 (() => {
 	if (frappe.__verp_form_override) return;

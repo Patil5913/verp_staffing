@@ -62,7 +62,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Ready To Send\nSent"
+   "options": "Ready To Send\nSent\nAgreement signed"
   },
   {
    "fieldname": "section_break_yapn",
@@ -110,7 +110,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 16:51:15.374318",
+ "modified": "2026-08-04 14:18:50.094011",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",

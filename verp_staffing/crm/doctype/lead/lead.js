@@ -235,7 +235,7 @@ function setupLeadDetailForm(frm) {
 		if (isEmailField(col.fieldname)) {
 			inputHtml = `<input id="${id}" type="email" value="${val}" data-override="email" style="${baseStyle}" placeholder="${label}" />`;
 		} else if (isPhoneField(col.fieldname)) {
-			inputHtml = `<input id="${id}" type="tel" value="${val}" data-override="phone" style="${baseStyle}" placeholder="${label} (e.g. Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx)" />`;
+			inputHtml = `<input id="${id}" type="tel" value="${val ? val : "+1"}" data-override="phone" style="${baseStyle}" placeholder="${label} (e.g. Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx)" />`;
 		} else if (isMonthYearField(col.fieldname)) {
 			inputHtml = `<input id="${id}" type="text" value="${toMonthYear(val)}" data-override="month-year" maxlength="7" style="${baseStyle}" placeholder="MM-YYYY (e.g. 01-2025)" />`;
 			noteHtml = `<div style="font-size:11px;color:var(--color-text-secondary,#888);margin-top:3px;">NOTE: Use date format: MM-YYYY</div>`;
@@ -825,7 +825,7 @@ function setupLeadDetailForm(frm) {
 		if (isMonthYearField(field))
 			return `<input type="text" value="${toMonthYear(value)}" data-field="${field}" data-override="month-year" class="${cls}" placeholder="MM-YYYY" maxlength="7" />`;
 		if (isPhoneField(field)) {
-			return `<input type="tel" value="${value}" data-field="${field}" data-override="phone" class="${cls}" placeholder="Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx" />`;
+			return `<input type="tel" value="${value ? value : "+1"}" data-field="${field}" data-override="phone" class="${cls}" placeholder="Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx" />`;
 		}
 		if (fieldtype === "Link") {
 			const can_remove_file = frm.doc.status === "Lead" || "Open";
@@ -945,7 +945,6 @@ function setupLeadDetailForm(frm) {
 		if (override === "phone" && value) {
 			// Sanitize: Replace ( ) - and spaces with an empty string
 			const sanitized_phone = value.replace(/[()-\s]/g, "");
-
 			// Your original strict regex (+countrycode followed by 9 to 14 digits)
 			const phone_regex = /^\+[1-9]\d{9,14}$/;
 
@@ -1056,6 +1055,11 @@ function setupLeadDetailForm(frm) {
 
 			if (override === "ssn" && val) {
 				val = parseInt(val, 10);
+			}
+			if (override === "phone" && val) {
+				// Sanitize: Replace ( ) - and spaces with an empty string
+				const sanitized_phone = val.replace(/[()-\s]/g, "");
+				val = sanitized_phone;
 			}
 			if (input.dataset.override === "month-year" && val) val = fromMonthYear(val);
 			data[input.dataset.field] = val;

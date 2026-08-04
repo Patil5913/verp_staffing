@@ -59,6 +59,7 @@ function open_custom_dialog() {
 
 		primary_action(values) {
 			if (values.personal_phone_number) {
+				values.personal_phone_number = values.personal_phone_number.replace(/[()-\s]/g, "");
 				validate_phone(values.personal_phone_number, "Phone Number");
 			}
 
@@ -113,14 +114,11 @@ function validate_phone(phone, label) {
 		frappe.throw(`${label} is required`);
 	}
 
-	// Sanitize: Replace ( ) - and spaces with an empty string
-	const sanitized_phone = phone.replace(/[()-\s]/g, "");
-
 	// Your original strict regex (+countrycode followed by 9 to 14 digits)
 	const phone_regex = /^\+[1-9]\d{9,14}$/;
 
 	// Validate against the sanitized version
-	if (!phone_regex.test(sanitized_phone)) {
+	if (!phone_regex.test(phone)) {
 		frappe.throw(`${label} must be a valid international number (e.g., +1 234-567-8900)`);
 	}
 

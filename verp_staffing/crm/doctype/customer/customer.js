@@ -55,9 +55,6 @@ frappe.ui.form.on("Customer", {
 					fieldname: "name",
 				},
 				callback: function (r) {
-					if (frappe.session.user === "Administrator") {
-						return;
-					}
 					const current_employee = r.message && r.message.name;
 					const is_customer_owner = current_employee === frm.doc.customer_owner;
 
@@ -86,7 +83,6 @@ frappe.ui.form.on("Customer", {
 											);
 											return;
 										}
-
 										// Show Update Detail button
 										frm.add_custom_button(__("Update Detail"), () => {
 											customer_owner_open_update_detail_dialog(frm);
@@ -95,10 +91,8 @@ frappe.ui.form.on("Customer", {
 								});
 							},
 						});
-					} else {
-						// Manager — show Accept Updates if pending
-						customer_show_accept_updates(frm);
 					}
+					customer_show_accept_updates(frm);
 				},
 			});
 		}
@@ -152,7 +146,7 @@ frappe.ui.form.on("Customer", {
 				method: "verp_staffing.crm.doctype.customer.customer.send_portal_link",
 				args: {
 					customer: frm.doc.name,
-					customer_name: frm.doc.name1
+					customer_name: frm.doc.name1,
 				},
 				freeze: true,
 				callback: function (r) {

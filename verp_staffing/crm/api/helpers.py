@@ -558,6 +558,35 @@ def send_email(recipients, subject, message, attachments=None, now=None):
                 },
                 "email_id",
             )
+    if not sender:
+        has_default_outgoing = frappe.db.exists(
+            "Email Account",
+            {
+                "default_outgoing": 1,
+                "enable_outgoing": 1,
+            },
+        )
+
+        if not has_default_outgoing:
+            if "System Manager" in frappe.get_roles():
+                frappe.throw(
+                    msg=(
+                        "No default outgoing email account is configured.<br><br>"
+                        "Please create an <b>Email Account</b>, enable <b>Outgoing</b>, "
+                        "mark it as <b>Default Outgoing</b>, and optionally link it to users "
+                        "from the <b>Email Accounts</b> section."
+                    ),
+                    primary_action={
+                        "label": "Open Email Accounts",
+                        "client_action": "frappe.set_route",
+                        "args": ["List", "Email Account"],
+                    },
+                )
+            else:
+                frappe.throw(
+                    "Unable to send email because no outgoing email account is configured. "
+                    "Please contact your System Administrator to configure a default outgoing email account."
+                )
 
     # sender=None will fall back to Frappe's default outgoing email account
     frappe.sendmail(

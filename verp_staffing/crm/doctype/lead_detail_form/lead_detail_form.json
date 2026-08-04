@@ -31,6 +31,7 @@
   "educational_details_section",
   "educational_details",
   "past_experience_details_section",
+  "experience",
   "past_experience_table",
   "technical_information_section",
   "technologies",
@@ -45,7 +46,6 @@
   "certificate_or_completed_course",
   "column_break_ylcw",
   "current_visa_status",
-  "experience",
   "details_for_marketing_purpose_section",
   "number_for_marketing",
   "google_voice_number",
@@ -336,7 +336,8 @@
   {
    "fieldname": "files_custom_html",
    "fieldtype": "Data",
-   "label": "Files Upload HTML"
+   "label": "Files Upload HTML",
+   "read_only": 1
   },
   {
    "fieldname": "agreement_section",
@@ -433,7 +434,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-29 22:09:59.135865",
+ "modified": "2026-08-04 16:47:49.662175",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
