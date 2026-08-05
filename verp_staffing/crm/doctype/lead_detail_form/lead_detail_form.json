@@ -136,7 +136,7 @@
    "label": "LinkedIn ID"
   },
   {
-   "description": "please paste full linkedin link",
+   "description": "please paste full linkedin link starting with https://",
    "fieldname": "personal_linkedin",
    "fieldtype": "Data",
    "label": "LinkedIn Profile link"
@@ -434,7 +434,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-04 16:47:49.662175",
+ "modified": "2026-08-05 13:57:53.340939",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

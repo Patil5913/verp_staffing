@@ -20,7 +20,6 @@ def create_company(args):
     country = args.get("country")
 
     abbr = "".join([word[0] for word in company_name.split() if word])[:10].upper()
-    frappe.errprint(f"currency:{currency}")
     company = frappe.get_doc(
         {
             "doctype": "Company",

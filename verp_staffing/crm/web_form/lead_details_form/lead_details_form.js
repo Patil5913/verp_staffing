@@ -2,7 +2,7 @@ let AUDIT_KEY = null;
 // max file size
 const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
 
-let REQUIRED_LEAD_DOCS_CONFIG = null;
+let REQUIRED_LEAD_DOCS_CONFIG = {};
 let SIGNATURE_CACHE = null;
 
 let customerEmail = null;
@@ -187,7 +187,9 @@ frappe.ready(async function () {
 			"i_consent_to_receive_sign_and_store_documents_electronically",
 			"i_confirm_my_identity_and_signing_this_document_intentionally",
 		];
-
+		const LDF_FIELDS = [
+			"files_custom_html"
+		]
 		if (!isAgreement) {
 			const res = await getCandidateFieldsFromSalesOrder(salesOrder);
 			candidateFields = res.fields || [];
@@ -198,13 +200,13 @@ frappe.ready(async function () {
 			if (needsDocConfig) {
 				await initRequiredLeadDocsConfig();
 			}
+			render_file_upload_buttons();
 
 			apply_prefill(values, tableColumns); // 🔥 pass tableColumns
 		}
 
-		const allowed = new Set(candidateFields || []);
+		const allowed = new Set(candidateFields.filter((f) => !DOC_FIELDS.has(f)) || []);
 		const visibleFields = new Set();
-
 		// build section map
 		let sectionMap = {};
 		let currentSection = null;
@@ -254,7 +256,15 @@ frappe.ready(async function () {
 					visibleFields.add(fieldname);
 				}
 			});
+			LDF_FIELDS.forEach((fieldname) => {
+				if (frappe.web_form.fields_dict[fieldname]) {
+					frappe.web_form.set_df_property(fieldname, "hidden", 0);
+					visibleFields.add(fieldname);
+				}
+			});
 		}
+
+
 
 		// show sections only if needed
 		Object.keys(sectionMap).forEach((section) => {
@@ -371,8 +381,6 @@ frappe.ready(async function () {
 	if (frappe.web_form.get_value("signature_method") === "Text") {
 		show_text_button();
 	}
-
-	render_file_upload_buttons();
 
 	// check if already filled
 	if (localStorage.getItem(token) === "1") {
@@ -2084,17 +2092,22 @@ let label_map = {
 };
 
 async function initRequiredLeadDocsConfig() {
+	console.trace();
 	const r = await frappe.call({
 		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_erp_config_safe",
 	});
 
 	const doc = r.message || {};
-	REQUIRED_LEAD_DOCS_CONFIG = {
-		driving_licence: doc.driving_licence ?? 0,
-		ead_card: doc.ead_card ?? 0,
-		old_resume: doc.old_resume ?? 0,
-		visa_copy: doc.visa_copy ?? 0,
-	};
+	REQUIRED_LEAD_DOCS_CONFIG["driving_licence"] = doc.driving_licence ?? 0;
+	REQUIRED_LEAD_DOCS_CONFIG["ead_card"] = doc.ead_card ?? 0;
+	REQUIRED_LEAD_DOCS_CONFIG["old_resume"] = doc.old_resume ?? 0;
+	REQUIRED_LEAD_DOCS_CONFIG["visa_copy"] = doc.visa_copy ?? 0;
+	// REQUIRED_LEAD_DOCS_CONFIG = {
+	// 	driving_licence: doc.driving_licence ?? 0,
+	// 	ead_card: doc.ead_card ?? 0,
+	// 	old_resume: doc.old_resume ?? 0,
+	// 	visa_copy: doc.visa_copy ?? 0,
+	// };
 }
 
 function validate_concerns() {
@@ -2153,14 +2166,13 @@ async function render_file_upload_buttons() {
 
 	Object.entries(REQUIRED_LEAD_DOCS_CONFIG).forEach(([fieldname, is_required]) => {
 		const label = label_map[fieldname] || fieldname;
-
 		html += `
           <div id="${fieldname}_container" style="margin-bottom:15px;">
             <button class="btn btn-primary file-btn" data-field="${fieldname}">
               Upload ${label}
             </button>
             ${
-				is_required
+				!!is_required
 					? `<p style="color:red;font-size:12px;margin-top:5px;">
                     * ${label} is compulsory
                   </p>`

@@ -70,7 +70,6 @@ def seed_email_template():
     branding = get_email_branding()
     logo_url = branding["logo_url"]
     social_links_html = branding["social_links_html"]
-
     Common_Footer = """
       <!-- COMMON FOOTER -->
       <tr>
@@ -98,7 +97,6 @@ def seed_email_template():
     Common_Footer = Common_Footer.replace("__LOGO_URL__", logo_url).replace(
         "__SOCIAL_LINKS__", social_links_html
     )
-
     templates = [
         {
             "name": "Welcome Email Template",

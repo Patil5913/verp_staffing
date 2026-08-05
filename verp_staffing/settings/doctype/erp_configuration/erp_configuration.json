@@ -200,21 +200,25 @@
    "label": "Social Links Configuration"
   },
   {
+   "description": "please paste full link starting with https://",
    "fieldname": "linkedin",
    "fieldtype": "Data",
    "label": "LinkedIn"
   },
   {
+   "description": "please paste full link starting with https://",
    "fieldname": "facebook",
    "fieldtype": "Data",
    "label": "Facebook"
   },
   {
+   "description": "please paste full link starting with https://",
    "fieldname": "twitter_x",
    "fieldtype": "Data",
    "label": "Twitter (X)"
   },
   {
+   "description": "please paste full link starting with https://",
    "fieldname": "youtube",
    "fieldtype": "Data",
    "label": "YouTube"
@@ -237,7 +241,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-03 17:54:09.253374",
+ "modified": "2026-08-05 14:25:09.439126",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

@@ -6,7 +6,7 @@ from PIL import Image
 from datetime import datetime
 import hmac
 import hashlib
-
+from frappe import _
 import base64
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
@@ -33,6 +33,13 @@ class LeadDetailForm(Document):
             self.number_for_marketing = re.sub(
                 r"[()\s-]", "", self.number_for_marketing
             )
+        if self.personal_linkedin:
+            pattern = re.compile(
+                r"^https?://(www\.)?linkedin\.com/.+$",
+                re.IGNORECASE,
+            )
+            if not pattern.match(self.personal_linkedin):
+                frappe.throw(_("Please enter a valid LinkedIn profile URL."))
 
 
 def process_drawn_signature_and_apply(doc, token):
