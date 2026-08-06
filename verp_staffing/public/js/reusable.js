@@ -239,7 +239,6 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
 					record.fields.forEach((f) => {
 						if (!f.value) return;
-						console.log("f: ", f);
 						const value = frappe.utils.escape_html(String(f.value));
 						let current_display_html = value
 							? `<a href="${f.fieldtype == "Link" ? `/app/file/${value}` : value.startsWith("http") ? value : `https://${value}`}" target="_blank"

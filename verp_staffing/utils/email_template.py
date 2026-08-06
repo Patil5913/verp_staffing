@@ -3,10 +3,10 @@ import frappe
 def get_email_branding():
     try:
         config = frappe.get_single("ERP Configuration")
-        company_logo = frappe.get_cached_value("Company", config.default_company, "company_logo")
+        company = frappe.get_cached_value("Company", config.default_company, ["company_logo", "company_name"], as_dict=True)
         logo_url = (
-            frappe.utils.get_url(company_logo)
-            if company_logo
+            frappe.utils.get_url(company.company_logo)
+            if company.company_logo
             else ""
         )
 
@@ -56,6 +56,7 @@ def get_email_branding():
         return {
             "logo_url": logo_url,
             "social_links_html": social_links_html,
+            "company_name": company.company_name if company else "",
         }
 
     except Exception:
@@ -63,20 +64,23 @@ def get_email_branding():
         return {
             "logo_url": "",
             "social_links_html": "",
+            "company_name": "",
         }
 
 
 def seed_email_template():
     branding = get_email_branding()
+    frappe.errprint(f"branding: {branding}")
     logo_url = branding["logo_url"]
     social_links_html = branding["social_links_html"]
+    company_name = branding["company_name"]
     Common_Footer = """
       <!-- COMMON FOOTER -->
       <tr>
         <td align="center" style="padding:28px 16px 20px 16px;">
 
           <!-- Logo -->
-          <img src="__LOGO_URL__" width="140" style="display:block;margin:auto;">
+          <img src="__LOGO_URL__" alt="__COMPANY_NAME__" width="140" style="display:block;margin:auto;">
 
           <!-- Tagline -->
           <p style="font-size:13px;color:#6b7280;text-align:center;
@@ -96,7 +100,7 @@ def seed_email_template():
 
     Common_Footer = Common_Footer.replace("__LOGO_URL__", logo_url).replace(
         "__SOCIAL_LINKS__", social_links_html
-    )
+    ).replace("__COMPANY_NAME__", branding["company_name"])
     templates = [
         {
             "name": "Welcome Email Template",
@@ -260,7 +264,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="140"
                  height="36"
                  style="display:block;object-fit:contain;" />
@@ -422,7 +426,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -559,7 +563,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -639,7 +643,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -694,7 +698,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -756,7 +760,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -814,7 +818,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -874,7 +878,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  style="display:block;" />
           </td>
@@ -952,7 +956,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1025,7 +1029,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1084,7 +1088,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1160,7 +1164,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1240,7 +1244,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1332,7 +1336,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1407,7 +1411,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1499,7 +1503,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1591,7 +1595,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1664,7 +1668,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -1752,7 +1756,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;" />
@@ -1943,7 +1947,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2025,7 +2029,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2093,7 +2097,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2187,7 +2191,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2281,7 +2285,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2363,7 +2367,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2452,7 +2456,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2537,7 +2541,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2633,7 +2637,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2724,7 +2728,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -2880,7 +2884,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -3145,7 +3149,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="200"
                  height="52"
                  style="display:block;object-fit:contain;" />
@@ -3327,7 +3331,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="140"
                  height="36"
                  style="display:block;object-fit:contain;" />
@@ -3493,7 +3497,7 @@ def seed_email_template():
         <tr>
           <td style="padding:0 0 20px 0;">
             <img src="__LOGO_URL__"
-                 alt="Logo"
+                 alt="__COMPANY_NAME__"
                  width="140"
                  height="36"
                  style="display:block;object-fit:contain;" />
@@ -3698,7 +3702,7 @@ def seed_email_template():
     ]
     
     for t in templates:
-        html = t["html_content"].replace("__LOGO_URL__", logo_url)
+        html = t["html_content"].replace("__LOGO_URL__", logo_url).replace("__COMPANY_NAME__", company_name)
 
         if frappe.db.exists("Email Template", t["name"]):
             doc = frappe.get_doc("Email Template", t["name"])

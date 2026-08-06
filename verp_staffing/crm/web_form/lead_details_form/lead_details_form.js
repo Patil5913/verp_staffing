@@ -779,11 +779,7 @@ async function custom_submit_handler() {
 		if (shouldValidate("marketing_linkedin", candidateFields)) {
 			let marketing_linkedin = frappe.web_form.get_value("marketing_linkedin");
 			const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
-			console.log(
-				"Marketing LinkedIn:",
-				marketing_linkedin,
-				pattern.test(marketing_linkedin),
-			);
+
 			if (!pattern.test(marketing_linkedin)) {
 				frappe.msgprint(__("Please enter a valid LinkedIn profile URL for marketing."));
 				return false;
