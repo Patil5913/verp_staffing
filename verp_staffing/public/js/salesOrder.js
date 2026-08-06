@@ -157,17 +157,29 @@ window.render_agreement_module = function ({
 
 function fetch_and_render_agreements(wrapper, sales_order) {
 	frappe.call({
-		method: "frappe.client.get_list",
+		method: "verp_staffing.crm.api.agreement.get_agreement_cards",
 		args: {
-			doctype: "Agreement",
-			filters: { sales_order },
-			fields: ["name", "template", "status", "pdf", "creation"],
-			order_by: "creation desc",
+			sales_order,
 		},
 		callback(r) {
 			render_agreement_cards(wrapper, r.message || [], sales_order);
 		},
 	});
+}
+
+function formatRemaining(seconds) {
+	if (seconds <= 0) {
+		return "now";
+	}
+
+	const mins = Math.floor(seconds / 60);
+	const secs = seconds % 60;
+
+	if (mins > 0) {
+		return `${mins} min${mins > 1 ? "s" : ""}`;
+	}
+
+	return `${secs} sec`;
 }
 
 function render_agreement_cards(wrapper, agreements, sales_order) {
@@ -228,9 +240,39 @@ function render_agreement_cards(wrapper, agreements, sales_order) {
             <div style="font-size:12px; color: var(--text-muted); margin-bottom:2px;">
               Template: <span style="color: var(--text-color);">${ag.template || "—"}</span>
             </div>
-            <div style="font-size:11px; color: var(--text-muted);">
-              ${frappe.datetime.str_to_user(ag.creation)}
-            </div>
+            <div style="font-size:11px;color:var(--text-muted);">
+				Agreement:
+				<span class="indicator-pill ${status_color}">
+					${ag.status}
+				</span>
+			</div>
+
+			${
+				ag.email_status
+					? `
+				<div style="font-size:11px;margin-top:4px;">
+					Email Status:
+					<span class="indicator-pill ${
+						ag.email_status === "Sent"
+							? "green"
+							: ag.email_status === "Error"
+								? "red"
+								: "orange"
+					}">
+						${ag.email_status}
+					</span>
+				</div>
+
+				<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+					${frappe.datetime.comment_when(ag.email_modified)}
+				</div>
+				`
+					: `
+				<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+					Email Status: Not Sent
+				</div>
+				`
+			}
           </div>
 
           <span class="indicator-pill ${status_color}" style="flex-shrink:0; margin-left:12px; font-size:11px;">
@@ -252,12 +294,30 @@ function render_agreement_cards(wrapper, agreements, sales_order) {
 					: ""
 			}
           ${
-				ag.status != "Agreement signed"
-					? `
-            <button class="btn btn-xs  btn-primary send-agreement" data-name="${ag.name}">
-              ${ag.status === "Ready To Send" ? "Send" : "Resend"}
-            </button>
-          `
+				ag.status !== "Agreement signed"
+					? ag.can_resend
+						? `
+		<button
+			class="btn btn-xs btn-primary send-agreement"
+			data-name="${ag.name}">
+			${ag.email_status ? "Resend Email" : "Send Email"}
+		</button>
+		`
+						: ag.email_status
+							? `
+		<button
+			class="btn btn-xs btn-default"
+			disabled>
+			Resend Available in ${formatRemaining(ag.resend_after)}
+		</button>
+		`
+							: `
+		<button
+			class="btn btn-xs btn-primary send-agreement"
+			data-name="${ag.name}">
+			Send Email
+		</button>
+		`
 					: ""
 			}
         </div>
@@ -353,7 +413,19 @@ function bind_builder_events(frm, wrapper, sales_order, auto_mode) {
 
 		submit(frm, wrapper, sales_order, false);
 	});
+	wrapper.off("click", "#ag_refresh_btn");
 
+	wrapper.on("click", "#ag_refresh_btn", function () {
+		const $btn = $(this);
+
+		setButtonState($btn, "loading", "Refreshing...");
+
+		fetch_and_render_agreements(wrapper, sales_order);
+
+		setTimeout(() => {
+			setButtonState($btn, "reset");
+		}, 300);
+	});
 	wrapper.on("click", "#ag_save_send", () => submit(frm, wrapper, sales_order, true));
 }
 

@@ -2,11 +2,11 @@ import frappe
 
 def get_email_branding():
     try:
-        config = frappe.get_cached_doc("ERP Configuration")
-
+        config = frappe.get_single("ERP Configuration")
+        company_logo = frappe.get_cached_value("Company", config.default_company, "company_logo")
         logo_url = (
-            frappe.utils.get_url(config.compnay_logo)
-            if config.compnay_logo
+            frappe.utils.get_url(company_logo)
+            if company_logo
             else ""
         )
 

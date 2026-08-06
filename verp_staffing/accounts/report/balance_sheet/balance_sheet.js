@@ -89,8 +89,8 @@ frappe.query_reports["Balance Sheet"] = {
 		frappe.query_report.toggle_filter_display("exchange_rate", true);
 
 		frappe.db.get_value(
-			"Accounts Settings",
-			"Accounts Settings",
+			"ERP Configuration",
+			"ERP Configuration",
 			"default_company",
 			function (r) {
 				let company =

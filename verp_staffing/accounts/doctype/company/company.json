@@ -17,8 +17,8 @@
   "column_break_uuzm",
   "date_of_establishment",
   "parent_company",
-  "address_and_contact_section",
   "company_logo",
+  "address_and_contact_section",
   "date_of_incorporation",
   "phone_no",
   "email",
@@ -139,7 +139,7 @@
   {
    "fieldname": "company_logo",
    "fieldtype": "Attach Image",
-   "label": "Logo"
+   "label": "Company Logo"
   },
   {
    "fieldname": "column_break_zbxy",
@@ -301,7 +301,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-07-01 16:11:16.688217",
+ "modified": "2026-08-06 17:17:40.618197",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",

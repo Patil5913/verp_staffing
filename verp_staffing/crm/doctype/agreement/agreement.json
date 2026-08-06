@@ -62,7 +62,8 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Ready To Send\nSent\nAgreement signed"
+   "options": "Ready To Send\nSent\nAgreement signed",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_yapn",
@@ -99,18 +100,20 @@
   {
    "fieldname": "sent_on",
    "fieldtype": "Datetime",
-   "label": "Sent on"
+   "label": "Sent on",
+   "read_only": 1
   },
   {
    "fieldname": "last_reminder_sent",
    "fieldtype": "Datetime",
-   "label": "Last Reminder Sent"
+   "label": "Last Reminder Sent",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-04 14:18:50.094011",
+ "modified": "2026-08-06 16:07:04.544896",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",

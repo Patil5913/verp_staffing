@@ -78,14 +78,14 @@ frappe.query_reports["Profit and Loss Statement"] = {
 	},
 
 	// ─────────────────────────────────────────────────────────────
-	// ONLOAD – auto-populate from Accounts Settings → Company
+	// ONLOAD – auto-populate from ERP Configuration → Company
 	// ─────────────────────────────────────────────────────────────
 	onload: function (report) {
 		let me = frappe.query_reports["Profit and Loss Statement"];
 
 		frappe.db.get_value(
-			"Accounts Settings",
-			"Accounts Settings",
+			"ERP Configuration",
+			"ERP Configuration",
 			"default_company",
 			function (r) {
 				let company =

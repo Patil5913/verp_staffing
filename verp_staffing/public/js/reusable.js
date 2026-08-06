@@ -239,11 +239,11 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
 					record.fields.forEach((f) => {
 						if (!f.value) return;
-
+						console.log("f: ", f);
 						const value = frappe.utils.escape_html(String(f.value));
 						let current_display_html = value
-							? `<a href="${value.startsWith("https://") ? value : `https://${value}`}" target="_blank"
-        style="color:#260fea;font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" ? value : "📎 View Current File"}</a>`
+							? `<a href="${f.fieldtype == "Link" ? `/app/file/${value}` : value.startsWith("http") ? value : `https://${value}`}" target="_blank"
+        style="color:#260fea;font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin" ? value : "📎 View Current File"}</a>`
 							: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
 
 						let display_value = value;
@@ -257,7 +257,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                   ${frappe.utils.escape_html(value)}
                 </a>
               `;
-						} else if (f.fieldtype == "Link" || f.fieldname == "personal_linkedin") {
+						} else if (f.fieldtype == "Link" || f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin") {
 							display_value = current_display_html;
 						}
 

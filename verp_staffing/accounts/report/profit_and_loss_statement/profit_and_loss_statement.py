@@ -12,7 +12,7 @@ def execute(filters=None):
     # ── Server-side defaults (identical to Balance Sheet) ─────────
     if not filters.company:
         filters.company = frappe.db.get_single_value(
-            "Accounts Settings", "default_company"
+            "ERP Configuration", "default_company"
         )
 
     if not filters.filter_based_on:
@@ -76,7 +76,7 @@ def validate_filters(filters):
     if not filters.company:
         frappe.throw(
             _(
-                "Please select a Company (or set a Default Company in Accounts Settings)."
+                "Please select a Company (or set a Default Company in ERP Configuration)."
             )
         )
 

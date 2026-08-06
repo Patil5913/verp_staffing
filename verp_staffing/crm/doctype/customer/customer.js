@@ -290,8 +290,8 @@ function show_sales_order(frm) {
 		method: "frappe.client.get_list",
 		args: {
 			doctype: "Sales Order",
-			filters: { customer: frm.doc.name, docstatus: 1 },
-			fields: ["name", "posting_date", "status", "grand_total", "currency"],
+			filters: { customer: frm.doc.name },
+			fields: ["name", "posting_date", "docstatus", "status", "grand_total", "currency"],
 			limit_page_length: 50,
 			order_by: "creation desc",
 		},
@@ -315,8 +315,18 @@ function show_sales_order(frm) {
 					{
 						Open: "orange",
 						Closed: "green",
+						Cancelled: "red",
+						Draft: "Orange",
 					}[so.status] || "grey";
-
+				const doc_status_color =
+					{
+						2: "red",
+						0: "orange",
+					}[so.docstatus] || "grey";
+				const doc_status_label = {
+					0: "Draft",
+					2: "Cancelled",
+				}[so.docstatus];
 				html += `
                     <div style="border:1px solid var(--border-color);
                                 padding:15px; border-radius:6px; margin-bottom:15px;">
@@ -331,6 +341,16 @@ function show_sales_order(frm) {
                                       style="margin-left:8px; font-size:11px;">
                                     ${so.status}
                                 </span>
+								${
+									so.docstatus != 1
+										? `
+									<span class="indicator-pill ${doc_status_color}"
+									style="margin-left:8px; font-size:11px;">
+                                    ${doc_status_label}
+                                	</span>
+									`
+										: ""
+								}
                             </div>
                             <span class="text-muted" style="font-size:12px;">
                                 ${frappe.datetime.str_to_user(so.posting_date) || ""}

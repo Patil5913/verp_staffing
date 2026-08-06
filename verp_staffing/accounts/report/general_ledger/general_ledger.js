@@ -3,7 +3,7 @@
 
 frappe.query_reports["General Ledger"] = {
 	onload: function (report) {
-		frappe.db.get_single_value("Accounts Settings", "default_company").then((company) => {
+		frappe.db.get_single_value("ERP Configuration", "default_company").then((company) => {
 			const current_company = report.get_filter_value("company");
 
 			if (!current_company && company) {

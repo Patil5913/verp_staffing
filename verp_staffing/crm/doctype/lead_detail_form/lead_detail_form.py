@@ -39,7 +39,16 @@ class LeadDetailForm(Document):
                 re.IGNORECASE,
             )
             if not pattern.match(self.personal_linkedin):
-                frappe.throw(_("Please enter a valid LinkedIn profile URL."))
+                frappe.throw(_("Please enter a valid LinkedIn Profile URL."))
+        if self.marketing_linkedin:
+            pattern = re.compile(
+                r"^https?://(www\.)?linkedin\.com/.+$",
+                re.IGNORECASE,
+            )
+            if not pattern.match(self.marketing_linkedin):
+                frappe.throw(
+                    _("Please enter a valid LinkedIn Profile URL For Marketing.")
+                )
 
 
 def process_drawn_signature_and_apply(doc, token):
@@ -404,6 +413,9 @@ def apply_signature_and_audit_to_pdf(
         except Exception:
             return ts
 
+    audit_pdf = None
+    certificate_start_index = None
+
     if audit_trail_text:
         NAVY = (0.08, 0.18, 0.36)  # headings / accents
         ACCENT = (0.13, 0.43, 0.72)  # section titles
@@ -439,11 +451,12 @@ def apply_signature_and_audit_to_pdf(
                 new_page()
 
         def new_page():
-            nonlocal y
+            nonlocal y, page_has_content
             draw_footer()
             c.showPage()
             y = H
             draw_page_header_band()
+            page_has_content = False
 
         def draw_footer():
             c.saveState()
@@ -469,7 +482,8 @@ def apply_signature_and_audit_to_pdf(
             y = H - 6 - 20
 
         def section_title(title):
-            nonlocal y
+            nonlocal y, page_has_content
+            page_has_content = True
             ensure_space(38)
             y -= 18
 
@@ -488,7 +502,8 @@ def apply_signature_and_audit_to_pdf(
             y -= 18
 
         def row(label, value, bold_value=False):
-            nonlocal y
+            nonlocal y, page_has_content
+            page_has_content = True
             ensure_space(20)
             c.saveState()
             rgb(LABEL_CLR)
@@ -503,7 +518,8 @@ def apply_signature_and_audit_to_pdf(
 
         def device_chip_row(label, ua, ip):
             """One compact row: label | ip | browser | os | device — as chips."""
-            nonlocal y
+            nonlocal y, page_has_content
+            page_has_content = True
             ensure_space(22)
             browser, os_name, device = parse_user_agent(ua)
 
@@ -526,7 +542,8 @@ def apply_signature_and_audit_to_pdf(
             y -= 17
 
         def mini_divider():
-            nonlocal y
+            nonlocal y, page_has_content
+            page_has_content = True
             c.saveState()
             srgb((0.90, 0.92, 0.95))
             c.setLineWidth(0.3)
@@ -537,6 +554,8 @@ def apply_signature_and_audit_to_pdf(
         # PAGE 1  — header
         # ════════════════════════════════════════════════════════════════════════
         draw_page_header_band()
+        # Track whether the current page already contains content.
+        page_has_content = False
         y -= 28
 
         # Big title block
@@ -725,12 +744,13 @@ def apply_signature_and_audit_to_pdf(
         c.drawString(ML, y, cert_line)
         c.restoreState()
 
-        draw_footer()
-        c.showPage()
+        if page_has_content:
+            draw_footer()
         c.save()
 
         packet.seek(0)
         audit_pdf = PdfReader(packet)
+        certificate_start_index = len(writer.pagearray)
         for p in audit_pdf.pages:
             writer.addpage(p)
 
@@ -750,17 +770,19 @@ def apply_signature_and_audit_to_pdf(
     reader = PdfReader(output_path)
     writer = PdfWriter()
 
-    last_page_index = len(reader.pages) - 1
+    certificate_last_page = certificate_start_index + len(audit_pdf.pages) - 1
 
     for i, page in enumerate(reader.pages):
-        if i == last_page_index:
+        if certificate_last_page is not None and i == certificate_last_page:
             packet = io.BytesIO()
             page_w = float(page.MediaBox[2])
             page_h = float(page.MediaBox[3])
 
             c = canvas.Canvas(packet, pagesize=(page_w, page_h))
             c.setFont("Helvetica", 9)
-            c.drawString(50, 140, f"Document Hash (SHA-256): {document_hash}")
+            left_margin = 45
+            hash_y = page_h * 0.16
+            c.drawString(left_margin, hash_y, f"Document Hash (SHA-256): {document_hash}")
             c.showPage()
             c.save()
             packet.seek(0)

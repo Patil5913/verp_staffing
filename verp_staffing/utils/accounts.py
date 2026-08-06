@@ -15,8 +15,6 @@ def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=No
 	if not transaction_date:
 		transaction_date = nowdate()
 
-	currency_settings = frappe.get_cached_doc("Accounts Settings")
-
 	filters = [
 		["date", "<=", get_datetime_str(transaction_date)],
 		["from_currency", "=", from_currency],

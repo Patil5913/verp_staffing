@@ -24,7 +24,7 @@
   "email_configuration",
   "email_configuration_detail",
   "section_break_zpyo",
-  "compnay_logo",
+  "default_company",
   "social_links_configuration_section",
   "linkedin",
   "facebook",
@@ -232,16 +232,18 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "compnay_logo",
-   "fieldtype": "Attach",
-   "label": "Compnay Logo "
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-05 14:25:09.439126",
+ "modified": "2026-08-06 17:01:54.592071",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

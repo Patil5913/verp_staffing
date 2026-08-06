@@ -530,7 +530,15 @@ def send_system_notification(
     ).insert(ignore_permissions=True)
 
 
-def send_email(recipients, subject, message, attachments=None, now=None):
+def send_email(
+    recipients,
+    subject,
+    message,
+    attachments=None,
+    now=None,
+    reference_doctype=None,
+    reference_name=None,
+):
     sender = None
 
     # Check if the logged-in user has a sendable email account
@@ -597,6 +605,8 @@ def send_email(recipients, subject, message, attachments=None, now=None):
         attachments=attachments,
         delayed=(not now) if now is not None else True,
         retry=3,
+        reference_doctype=reference_doctype,
+        reference_name=reference_name,
     )
 
 
@@ -636,6 +646,8 @@ def notify(
             message=message,
             attachments=attachments,
             now=now,
+            reference_doctype=reference_doctype,
+            reference_name=reference_name,
         )
 
 

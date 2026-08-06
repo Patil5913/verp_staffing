@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils.file_manager import save_file
+from frappe.utils.file_manager import save_file 
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 
 class PdfAgreementTemplate(Document):

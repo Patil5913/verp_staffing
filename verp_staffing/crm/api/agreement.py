@@ -214,6 +214,8 @@ def send_agreement_notification(recipient, sales_order, customer, agreement):
                     "fcontent": file_content,
                 }
             ],
+            reference_doctype="Agreement",
+            reference_name=agreement_doc.name,
             send_email=1,
             send_system=0,
             now=False,
@@ -237,7 +239,7 @@ def send_existing_agreement(agreement):
             frappe.throw("Agreement is required")
 
         doc = frappe.get_doc("Agreement", agreement)
-        if doc.status != "Ready To Send":
+        if doc.status != "Ready To Send" and doc.status != "Sent For Signature":
             frappe.throw("Agreement is not in sendable state")
 
         if not doc.sales_order:
@@ -1073,3 +1075,75 @@ def normalize_html(html):
         tag.decompose()
 
     return str(soup)
+
+
+@frappe.whitelist()
+def get_agreement_cards(sales_order):
+    STATUS_LABEL = {
+        "Not Sent": "Pending in queue",
+        "Sending": "Sending",
+        "Sent": "Sent",
+        "Error": "Error",
+    }
+    from frappe.utils import now_datetime, time_diff_in_seconds
+
+    agreements = frappe.get_all(
+        "Agreement",
+        filters={"sales_order": sales_order},
+        fields=[
+            "name",
+            "template",
+            "status",
+            "pdf",
+            "creation",
+        ],
+        order_by="creation desc",
+    )
+
+    now = now_datetime()
+
+    for ag in agreements:
+        email = frappe.get_all(
+            "Email Queue",
+            filters={
+                "reference_doctype": "Agreement",
+                "reference_name": ag.name,
+            },
+            fields=[
+                "name",
+                "status",
+                "modified",
+                "error",
+            ],
+            order_by="creation desc",
+            limit=1,
+        )
+
+        if not email:
+            ag.email_status = None
+            ag.email_modified = None
+            ag.can_resend = False
+            continue
+
+        email = email[0]
+
+        ag.email_error = email.error
+        ag.email_modified = email.modified
+        ag.email_status = STATUS_LABEL.get(email.status, email.status)
+
+        age = time_diff_in_seconds(now, email.modified)
+
+        remaining = max(0, 600 - int(age))
+
+        ag.resend_after = remaining
+
+        if email.status == "Error":
+            ag.can_resend = True
+
+        elif email.status in ("Not Sent", "Sent"):
+            ag.can_resend = remaining == 0
+
+        else:
+            ag.can_resend = False
+
+    return agreements

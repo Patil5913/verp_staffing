@@ -1,15 +1,24 @@
 # Copyright (c) 2026, Vrugle and contributors
 # For license information, please see license.txt
 
+from annotated_types import doc
 import frappe
 from frappe import _
 from frappe.utils.nestedset import NestedSet
+from verp_staffing.utils.email_template import trigger_email_template_refresh
+from verp_staffing.crm.api.helpers import _validate_site_file_path
+from frappe.utils.file_manager import save_file
 
 
 class Company(NestedSet):
-    # don't remove it, it's for future
     def on_update(self):
         NestedSet.on_update(self)
+        frappe.errprint(
+            f'_______________+_+self.has_value_changed("company_logo"): {self.has_value_changed("company_logo")}'
+        )
+        if self.has_value_changed("company_logo"):
+            trigger_email_template_refresh()
+
         if not frappe.db.sql(
             """select name from tabAccount
 				where company=%s and docstatus<2 limit 1""",
@@ -27,6 +36,36 @@ class Company(NestedSet):
         # self.check_country_change()
         self.set_chart_of_accounts()
         self.validate_parent_company()
+        if not self.company_logo:
+            return
+
+        file_doc = frappe.get_doc("File", {"file_url": self.company_logo})
+
+        # If already public → nothing to do
+        if not file_doc.is_private:
+            return
+
+        private_path = file_doc.get_full_path()
+        validated_output_path = _validate_site_file_path(private_path)
+
+        with validated_output_path.open("rb") as f:
+            content = f.read()
+
+        # Create NEW public file safely
+        new_file = save_file(
+            fname=file_doc.file_name,
+            content=content,
+            dt=self.doctype,
+            dn=self.name,
+            df="company_logo",
+            is_private=0,
+        )
+
+        # Update field to new public file
+        self.company_logo = new_file.file_url
+
+        # Optional: delete old private file record
+        file_doc.delete(ignore_permissions=True)
 
     def validate_abbr(self):
         if not self.abbr:
@@ -229,7 +268,7 @@ class Company(NestedSet):
 
         frappe.db.sql(
             """update `tabSingles` set value=''
-                where doctype='Accounts Settings' and field='default_company'
+                where doctype='ERP Configuration' and field='default_company'
                 and value=%s""",
             self.name,
         )
@@ -250,10 +289,10 @@ def get_company_currency(company):
 @frappe.whitelist()
 def fetch_default_company():
     default_company = frappe.get_cached_value(
-        "Accounts Settings", "Accounts Settings", "default_company"
+        "ERP Configuration", "ERP Configuration", "default_company"
     )
 
     if not default_company:
-        frappe.throw(_("Please set Default Company in Accounts Settings"))
+        frappe.throw(_("Please set Default Company in ERP Configuration"))
 
     return default_company

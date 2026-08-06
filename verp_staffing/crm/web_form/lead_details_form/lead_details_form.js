@@ -187,9 +187,7 @@ frappe.ready(async function () {
 			"i_consent_to_receive_sign_and_store_documents_electronically",
 			"i_confirm_my_identity_and_signing_this_document_intentionally",
 		];
-		const LDF_FIELDS = [
-			"files_custom_html"
-		]
+		const LDF_FIELDS = ["files_custom_html"];
 		if (!isAgreement) {
 			const res = await getCandidateFieldsFromSalesOrder(salesOrder);
 			candidateFields = res.fields || [];
@@ -263,8 +261,6 @@ frappe.ready(async function () {
 				}
 			});
 		}
-
-
 
 		// show sections only if needed
 		Object.keys(sectionMap).forEach((section) => {
@@ -770,6 +766,28 @@ async function custom_submit_handler() {
 		if (shouldValidate("email", candidateFields)) {
 			let email = frappe.web_form.get_value("email");
 			if (!validate_email(email, "Email")) return false;
+		}
+		if (shouldValidate("personal_linkedin", candidateFields)) {
+			let personal_linkedin = frappe.web_form.get_value("personal_linkedin");
+			const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
+
+			if (!pattern.test(personal_linkedin)) {
+				frappe.msgprint(__("Please enter a valid LinkedIn profile URL."));
+				return false;
+			}
+		}
+		if (shouldValidate("marketing_linkedin", candidateFields)) {
+			let marketing_linkedin = frappe.web_form.get_value("marketing_linkedin");
+			const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
+			console.log(
+				"Marketing LinkedIn:",
+				marketing_linkedin,
+				pattern.test(marketing_linkedin),
+			);
+			if (!pattern.test(marketing_linkedin)) {
+				frappe.msgprint(__("Please enter a valid LinkedIn profile URL for marketing."));
+				return false;
+			}
 		}
 
 		if (shouldValidate("personal_phone_number", candidateFields)) {

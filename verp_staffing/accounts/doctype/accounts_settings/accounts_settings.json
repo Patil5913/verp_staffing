@@ -5,7 +5,6 @@
  "engine": "InnoDB",
  "field_order": [
   "charts_of_accounts_tab",
-  "default_company",
   "show_balance_in_coa",
   "auto_send_sales_invoice_after_submission",
   "invoice_reminder_days",
@@ -22,15 +21,6 @@
    "fieldname": "show_balance_in_coa",
    "fieldtype": "Check",
    "label": "Show Balances in Chart Of Accounts"
-  },
-  {
-   "description": "Select a default company to be used in orders, invoices, vounchers.",
-   "fieldname": "default_company",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Default Company",
-   "options": "Company",
-   "reqd": 1
   },
   {
    "fieldname": "invoice_and_billing_tab",
@@ -53,7 +43,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-26 17:44:15.332546",
+ "modified": "2026-08-06 17:09:17.551870",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",
