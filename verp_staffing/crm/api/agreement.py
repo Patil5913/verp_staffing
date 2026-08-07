@@ -79,6 +79,7 @@ def preview_agreement(template, data):
         fields,
         data_dict,
     )
+    frappe.errprint(f"Generated PDF bytes length: {len(pdf_bytes)}")
 
     frappe.local.response.filename = "Agreement Preview.pdf"
     frappe.local.response.filecontent = pdf_bytes
@@ -391,7 +392,7 @@ def submit_and_generate(sales_order, template, data, send_email=0):
 
     filename = os.path.basename(tpl.upload_pdf_template)
     input_pdf_path = frappe.get_site_path("public", "files", filename)
-
+    frappe.errprint(f"Input PDF Path: {input_pdf_path}")
     if not os.path.exists(input_pdf_path):
         frappe.throw("Template PDF not found on disk")
 
@@ -400,6 +401,7 @@ def submit_and_generate(sales_order, template, data, send_email=0):
         fields,
         data_dict,
     )
+    frappe.errprint(f"Generated PDF bytes length: {len(pdf_bytes)}")
     # CREATE AGREEMENT (NO DUPLICATE BLOCK)
     agreement = frappe.get_doc(
         {
@@ -442,7 +444,9 @@ def generate_pdf(input_pdf_path, fields, data_dict):
 
     reader = PdfReader(input_pdf_path)
     writer = PdfWriter()
-
+    frappe.errprint(
+        f"Generating PDF for {len(reader.pages)} pages with {len(fields)} fields"
+    )
     for page_index, page in enumerate(reader.pages):
         page_width = float(page.MediaBox[2])
         page_height = float(page.MediaBox[3])
