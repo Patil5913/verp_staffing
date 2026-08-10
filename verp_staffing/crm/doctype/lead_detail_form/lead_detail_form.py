@@ -13,6 +13,7 @@ from verp_staffing.crm.api.helpers import send_notification
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 import re
+from frappe.utils.file_manager import get_content_hash
 
 
 class LeadDetailForm(Document):
@@ -39,16 +40,7 @@ class LeadDetailForm(Document):
                 re.IGNORECASE,
             )
             if not pattern.match(self.personal_linkedin):
-                frappe.throw(_("Please enter a valid LinkedIn Profile URL."))
-        if self.marketing_linkedin:
-            pattern = re.compile(
-                r"^https?://(www\.)?linkedin\.com/.+$",
-                re.IGNORECASE,
-            )
-            if not pattern.match(self.marketing_linkedin):
-                frappe.throw(
-                    _("Please enter a valid LinkedIn Profile URL For Marketing.")
-                )
+                frappe.throw(_("Please enter a valid LinkedIn profile URL."))
 
 
 def process_drawn_signature_and_apply(doc, token):
@@ -305,29 +297,39 @@ def apply_signature_and_audit_to_pdf(
     writer = PdfWriter()
 
     sig_reader = None
+
     if signature_image_path:
         img_path = resolve_file_path(signature_image_path)
+
         if not img_path or not os.path.exists(img_path):
             raise FileNotFoundError("Signature image not found")
 
         sig_img = Image.open(img_path).convert("RGBA")
+
         img_buf = io.BytesIO()
         sig_img.save(img_buf, format="PNG")
         img_buf.seek(0)
+
         sig_reader = ImageReader(img_buf)
 
     for page_index, page in enumerate(reader.pages):
         packet = io.BytesIO()
+
         page_w = float(page.MediaBox[2])
         page_h = float(page.MediaBox[3])
 
-        c = canvas.Canvas(packet, pagesize=(page_w, page_h))
+        c = canvas.Canvas(
+            packet,
+            pagesize=(page_w, page_h),
+        )
+
         drew = False
 
         if sig_reader:
             for f in fields:
                 if f.get("type") != "Signature":
                     continue
+
                 if int(f["page"]) - 1 != page_index:
                     continue
 
@@ -336,18 +338,10 @@ def apply_signature_and_audit_to_pdf(
 
                 x = float(f["x"]) * sx
                 y = page_h - ((float(f["y"]) + float(f["height"])) * sy)
+
                 w = float(f["width"]) * sx
                 h = float(f["height"]) * sy
 
-                # c.drawImage(
-                #     sig_reader,
-                #     x,
-                #     y,
-                #     width=w,
-                #     height=h,
-                #     preserveAspectRatio=True,
-                #     mask="auto",
-                # )
                 render_signature_box(
                     c,
                     sig_reader,
@@ -358,10 +352,12 @@ def apply_signature_and_audit_to_pdf(
                     padding_x=2 * sx,
                     padding_y=2 * sy,
                 )
+
                 drew = True
 
         c.showPage()
         c.save()
+
         packet.seek(0)
 
         if drew:
@@ -371,7 +367,7 @@ def apply_signature_and_audit_to_pdf(
         writer.addpage(page)
 
     # ---------------------------------------------------------
-    # STEP 2: BUILD AUDIT PAGES (REPORTLAB ONLY)
+    # STEP 2: BUILD AUDIT / CERTIFICATE PAGES
     # ---------------------------------------------------------
     def parse_user_agent(ua):
         browser = "Unknown"
@@ -406,38 +402,70 @@ def apply_signature_and_audit_to_pdf(
         return browser, os_name, device
 
     def fmt_ts(ts):
-        """Reformat timestamp to a cleaner display."""
         try:
-            dt = datetime.strptime(ts, "%d-%m-%Y, %H:%M:%S UTC")
+            dt = datetime.strptime(
+                ts,
+                "%d-%m-%Y, %H:%M:%S UTC",
+            )
             return dt.strftime("%d %b %Y, %H:%M:%S UTC")
         except Exception:
             return ts
 
-    audit_pdf = None
-    certificate_start_index = None
-
     if audit_trail_text:
-        NAVY = (0.08, 0.18, 0.36)  # headings / accents
-        ACCENT = (0.13, 0.43, 0.72)  # section titles
+        # =====================================================
+        # E-SIGN CERTIFICATE VISUAL SYSTEM
+        # =====================================================
+
+        DARK = (0.12, 0.12, 0.12)
+        SUBTEXT = (0.45, 0.45, 0.45)
+        BORDER = (0.88, 0.88, 0.88)
+
+        CERT_BLUE = (0.97, 0.98, 1.00)
+        CERT_ACCENT = (0.30, 0.55, 0.95)
+        CERT_LINE = (0.85, 0.90, 0.98)
+
+        W, H = A4
+
+        MARGIN = 40
+        COL_W = W - (2 * MARGIN)
+
+        FOOTER_H = 36
+        HEADER_H = 90
+
+        # =====================================================
+        # EXISTING AGREEMENT CERTIFICATE COLORS
+        # =====================================================
+
+        ACCENT = (0.13, 0.43, 0.72)
         LABEL_CLR = (0.30, 0.30, 0.30)
         VALUE_CLR = (0.08, 0.08, 0.08)
+
         RULE_CLR = (0.82, 0.86, 0.92)
-        CHIP_BG = (0.93, 0.96, 1.00)  # light-blue badge background
+
+        CHIP_BG = (0.93, 0.96, 1.00)
         CHIP_TXT = (0.08, 0.28, 0.56)
+
         FOOTER_CLR = (0.55, 0.55, 0.55)
+
         WHITE = (1, 1, 1)
         SUCCESS = (0.07, 0.53, 0.35)
 
         packet = io.BytesIO()
-        c = canvas.Canvas(packet, pagesize=A4)
-        W, H = A4
-        ML = 45  # margin left
-        MR = W - 45  # margin right
-        COL2 = ML + 195  # value column x
+
+        c = canvas.Canvas(
+            packet,
+            pagesize=A4,
+        )
+
+        ML = 45
+        MR = W - 45
+        COL2 = ML + 195
 
         y = H
 
-        # ── helpers ─────────────────────────────────────────────────────────────
+        # =====================================================
+        # BASIC COLOR HELPERS
+        # =====================================================
 
         def rgb(t):
             c.setFillColorRGB(*t)
@@ -445,372 +473,1234 @@ def apply_signature_and_audit_to_pdf(
         def srgb(t):
             c.setStrokeColorRGB(*t)
 
+        # =====================================================
+        # E-SIGN CERTIFICATE BACKGROUND
+        # =====================================================
+
+        def draw_certificate_background():
+            """
+            Same visual background used by the E-Sign
+            certificate.
+            """
+
+            # -------------------------------------------------
+            # Soft blue page background
+            # -------------------------------------------------
+            c.setFillColorRGB(*CERT_BLUE)
+
+            c.rect(
+                0,
+                0,
+                W,
+                H,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Bottom decorative banner
+            # -------------------------------------------------
+            c.setFillColorRGB(*CERT_BLUE)
+
+            c.roundRect(
+                -50,
+                -40,
+                W + 100,
+                90,
+                30,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Left accent strip
+            # -------------------------------------------------
+            c.setFillColorRGB(*CERT_ACCENT)
+
+            c.rect(
+                0,
+                0,
+                8,
+                H,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Right accent strip
+            # -------------------------------------------------
+            c.rect(
+                W - 8,
+                0,
+                8,
+                H,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Top-right geometric decoration
+            # -------------------------------------------------
+            c.setStrokeColorRGB(*CERT_LINE)
+            c.setLineWidth(1)
+
+            for i in range(8):
+                offset = i * 10
+
+                c.line(
+                    W - 180 + offset,
+                    H - 25,
+                    W - 25,
+                    H - 180 + offset,
+                )
+
+            # -------------------------------------------------
+            # Bottom-left geometric decoration
+            # -------------------------------------------------
+            for i in range(8):
+                offset = i * 10
+
+                c.line(
+                    25,
+                    180 - offset,
+                    180 - offset,
+                    25,
+                )
+
+            # -------------------------------------------------
+            # Double certificate frame
+            # -------------------------------------------------
+            c.setStrokeColorRGB(*CERT_LINE)
+            c.setLineWidth(1.2)
+
+            c.roundRect(
+                18,
+                18,
+                W - 36,
+                H - 36,
+                10,
+                fill=0,
+                stroke=1,
+            )
+
+            c.roundRect(
+                24,
+                24,
+                W - 48,
+                H - 48,
+                8,
+                fill=0,
+                stroke=1,
+            )
+
+        # =====================================================
+        # E-SIGN HEADER
+        # =====================================================
+
+        def draw_page_header():
+            """
+            Header copied from E-Sign certificate.
+            """
+
+            c.setFont(
+                "Helvetica-Bold",
+                20,
+            )
+
+            set_fill = c.setFillColorRGB
+
+            set_fill(
+                DARK[0],
+                DARK[1],
+                DARK[2],
+            )
+
+            c.drawString(
+                MARGIN,
+                H - 55,
+                "Signature Certificate",
+            )
+
+            c.setFont(
+                "Helvetica",
+                9,
+            )
+
+            set_fill(
+                SUBTEXT[0],
+                SUBTEXT[1],
+                SUBTEXT[2],
+            )
+
+            c.drawString(
+                MARGIN,
+                H - 72,
+                "Electronic Signature Completion Certificate",
+            )
+
+            c.setStrokeColorRGB(
+                BORDER[0],
+                BORDER[1],
+                BORDER[2],
+            )
+
+            c.setLineWidth(0.4)
+
+            c.line(
+                MARGIN,
+                H - 82,
+                MARGIN + COL_W,
+                H - 82,
+            )
+
+        # =====================================================
+        # E-SIGN FOOTER
+        # =====================================================
+
+        def draw_page_footer(page_num):
+            """
+            Footer copied from E-Sign certificate.
+            """
+
+            c.setStrokeColorRGB(
+                BORDER[0],
+                BORDER[1],
+                BORDER[2],
+            )
+
+            c.setLineWidth(0.4)
+
+            c.line(
+                MARGIN,
+                FOOTER_H + 14,
+                MARGIN + COL_W,
+                FOOTER_H + 14,
+            )
+
+            c.setFont(
+                "Helvetica",
+                7,
+            )
+
+            c.setFillColorRGB(
+                SUBTEXT[0],
+                SUBTEXT[1],
+                SUBTEXT[2],
+            )
+
+            c.drawString(
+                MARGIN,
+                FOOTER_H,
+                "Powered By Vrugle.",
+            )
+
+            c.drawRightString(
+                W - MARGIN,
+                FOOTER_H,
+                f"Page {page_num}",
+            )
+
+        # =====================================================
+        # START CERTIFICATE PAGE
+        # =====================================================
+
+        def start_certificate_page(page_num):
+            """
+            Creates the E-Sign visual shell and returns the
+            usable content cursor.
+            """
+
+            draw_certificate_background()
+
+            draw_page_header()
+
+            draw_page_footer(page_num)
+
+            return H - HEADER_H - 16
+
+        # =====================================================
+        # PAGE MANAGEMENT
+        # =====================================================
+
         def ensure_space(needed=40):
             nonlocal y
-            if y < 55 + needed:
+
+            content_bottom = FOOTER_H + 24
+
+            if y < content_bottom + needed:
                 new_page()
 
         def new_page():
-            nonlocal y, page_has_content
-            draw_footer()
-            c.showPage()
-            y = H
-            draw_page_header_band()
-            page_has_content = False
-
-        def draw_footer():
-            c.saveState()
-            srgb(RULE_CLR)
-            c.setLineWidth(0.5)
-            c.line(ML, 42, MR, 42)
-            rgb(FOOTER_CLR)
-            c.setFont("Helvetica-Oblique", 7.5)
-            c.drawString(
-                ML,
-                30,
-                "This signature certificate is an electronically generated record. "
-                "Retain with the signed document.",
-            )
-            c.restoreState()
-
-        def draw_page_header_band():
             nonlocal y
-            c.saveState()
-            rgb(NAVY)
-            c.rect(0, H - 6, W, 6, fill=1, stroke=0)
-            c.restoreState()
-            y = H - 6 - 20
+            nonlocal page_num
+
+            c.showPage()
+
+            page_num += 1
+
+            y = start_certificate_page(page_num)
+
+        # =====================================================
+        # SECTION TITLE
+        # =====================================================
 
         def section_title(title):
-            nonlocal y, page_has_content
-            page_has_content = True
+            nonlocal y
+
             ensure_space(38)
+
             y -= 18
 
-            # coloured left bar
             c.saveState()
-            rgb(ACCENT)
-            c.rect(ML, y - 3, 3, 14, fill=1, stroke=0)
 
-            c.setFont("Helvetica-Bold", 10.5)
-            c.drawString(ML + 9, y, title)
+            # Existing Agreement section styling
+            c.setFillColorRGB(
+                ACCENT[0],
+                ACCENT[1],
+                ACCENT[2],
+            )
 
-            srgb(RULE_CLR)
+            c.rect(
+                ML,
+                y - 3,
+                3,
+                14,
+                fill=1,
+                stroke=0,
+            )
+
+            c.setFont(
+                "Helvetica-Bold",
+                10.5,
+            )
+
+            c.setFillColorRGB(
+                VALUE_CLR[0],
+                VALUE_CLR[1],
+                VALUE_CLR[2],
+            )
+
+            c.drawString(
+                ML + 9,
+                y,
+                title,
+            )
+
+            c.setStrokeColorRGB(
+                RULE_CLR[0],
+                RULE_CLR[1],
+                RULE_CLR[2],
+            )
+
             c.setLineWidth(0.5)
-            c.line(ML + 9, y - 5, MR, y - 5)
+
+            c.line(
+                ML + 9,
+                y - 5,
+                MR,
+                y - 5,
+            )
+
             c.restoreState()
+
             y -= 18
 
-        def row(label, value, bold_value=False):
-            nonlocal y, page_has_content
-            page_has_content = True
-            ensure_space(20)
-            c.saveState()
-            rgb(LABEL_CLR)
-            c.setFont("Helvetica", 8.5)
-            c.drawString(ML + 8, y, label)
+        # =====================================================
+        # NORMAL ROW
+        # =====================================================
 
-            rgb(VALUE_CLR)
-            c.setFont("Helvetica-Bold" if bold_value else "Helvetica", 8.5)
-            c.drawString(COL2, y, str(value)[:110])
+        def row(
+            label,
+            value,
+            bold_value=False,
+        ):
+            nonlocal y
+
+            ensure_space(20)
+
+            c.saveState()
+
+            c.setFillColorRGB(
+                LABEL_CLR[0],
+                LABEL_CLR[1],
+                LABEL_CLR[2],
+            )
+
+            c.setFont(
+                "Helvetica",
+                8.5,
+            )
+
+            c.drawString(
+                ML + 8,
+                y,
+                label,
+            )
+
+            c.setFillColorRGB(
+                VALUE_CLR[0],
+                VALUE_CLR[1],
+                VALUE_CLR[2],
+            )
+
+            c.setFont(
+                "Helvetica-Bold" if bold_value else "Helvetica",
+                8.5,
+            )
+
+            c.drawString(
+                COL2,
+                y,
+                str(value)[:110],
+            )
+
             c.restoreState()
+
             y -= 15
 
-        def device_chip_row(label, ua, ip):
-            """One compact row: label | ip | browser | os | device — as chips."""
-            nonlocal y, page_has_content
-            page_has_content = True
+        # =====================================================
+        # DEVICE CHIP ROW
+        # =====================================================
+
+        def device_chip_row(
+            label,
+            ua,
+            ip,
+        ):
+            nonlocal y
+
             ensure_space(22)
+
             browser, os_name, device = parse_user_agent(ua)
 
             c.saveState()
-            rgb(LABEL_CLR)
-            c.setFont("Helvetica", 8.5)
-            c.drawString(ML + 8, y, label)
 
-            chips = [ip or "N/A", browser, os_name, device]
+            c.setFillColorRGB(
+                LABEL_CLR[0],
+                LABEL_CLR[1],
+                LABEL_CLR[2],
+            )
+
+            c.setFont(
+                "Helvetica",
+                8.5,
+            )
+
+            c.drawString(
+                ML + 8,
+                y,
+                label,
+            )
+
+            chips = [
+                ip or "N/A",
+                browser,
+                os_name,
+                device,
+            ]
+
             cx = COL2
+
             for chip in chips:
-                cw = c.stringWidth(chip, "Helvetica", 7.5) + 10
-                rgb(CHIP_BG)
-                c.roundRect(cx, y - 3, cw, 13, 3, fill=1, stroke=0)
-                rgb(CHIP_TXT)
-                c.setFont("Helvetica", 7.5)
-                c.drawString(cx + 5, y + 1, chip)
-                cx += cw + 5
-            c.restoreState()
-            y -= 17
-
-        def mini_divider():
-            nonlocal y, page_has_content
-            page_has_content = True
-            c.saveState()
-            srgb((0.90, 0.92, 0.95))
-            c.setLineWidth(0.3)
-            c.line(ML + 8, y + 4, MR, y + 4)
-            c.restoreState()
-
-        # ════════════════════════════════════════════════════════════════════════
-        # PAGE 1  — header
-        # ════════════════════════════════════════════════════════════════════════
-        draw_page_header_band()
-        # Track whether the current page already contains content.
-        page_has_content = False
-        y -= 28
-
-        # Big title block
-        c.saveState()
-        rgb(NAVY)
-        c.setFont("Helvetica-Bold", 26)
-        c.drawString(ML, y, "SIGNATURE CERTIFICATE")
-        y -= 14
-        rgb(ACCENT)
-        c.setFont("Helvetica", 9)
-        c.drawString(ML, y, "Electronic Signature Verification Record")
-        y -= 8
-        srgb(ACCENT)
-        c.setLineWidth(1.5)
-        c.line(ML, y, ML + 260, y)
-        c.restoreState()
-        y -= 20
-
-        # Certificate ID badge (top-right)
-        badge_text = f"Cert ID: {certificate_id}"
-        bw = c.stringWidth(badge_text, "Helvetica-Bold", 8) + 20
-        bx = MR - bw
-        c.saveState()
-        rgb(CHIP_BG)
-        c.roundRect(bx, y + 10, bw, 18, 4, fill=1, stroke=0)
-        srgb(ACCENT)
-        c.setLineWidth(0.5)
-        c.roundRect(bx, y + 10, bw, 18, 4, fill=0, stroke=1)
-        rgb(CHIP_TXT)
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(bx + 10, y + 16, badge_text)
-        c.restoreState()
-
-        # ── SIGNER INFORMATION ───────────────────────────────────────────────────
-        section_title("SIGNER INFORMATION")
-
-        row("Full Name", signer_name, bold_value=True)
-        row("Email Address", signer_email)
-        row("Agreement ID", agreement.name if agreement else "N/A")
-
-        # ── USER VERIFICATION (OTP) ──────────────────────────────────────────────
-        auth_logs = audit_trail_text.get("authentication logs", [])
-        otp_logs = [l for l in auth_logs if l.get("event") == "otp_verified"]
-        if otp_logs:
-            section_title("USER VERIFICATION")
-            for log in otp_logs:
-                ts = fmt_ts(log.get("timestamp", ""))
-                row("Verified At", ts)
-                device_chip_row(
-                    "  ↳ Device",
-                    log.get("user_agent", ""),
-                    log.get("ip_address") or log.get("ip", ""),
+                cw = (
+                    c.stringWidth(
+                        chip,
+                        "Helvetica",
+                        7.5,
+                    )
+                    + 10
                 )
 
-        # ── CONSENTS ─────────────────────────────────────────────────────────────
-        concern_logs = audit_trail_text.get("concern accepted", [])
-        # De-duplicate by fieldname — keep earliest per fieldname
+                c.setFillColorRGB(
+                    CHIP_BG[0],
+                    CHIP_BG[1],
+                    CHIP_BG[2],
+                )
+
+                c.roundRect(
+                    cx,
+                    y - 3,
+                    cw,
+                    13,
+                    3,
+                    fill=1,
+                    stroke=0,
+                )
+
+                c.setFillColorRGB(
+                    CHIP_TXT[0],
+                    CHIP_TXT[1],
+                    CHIP_TXT[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    7.5,
+                )
+
+                c.drawString(
+                    cx + 5,
+                    y + 1,
+                    chip,
+                )
+
+                cx += cw + 5
+
+            c.restoreState()
+
+            y -= 17
+
+        # =====================================================
+        # DIVIDER
+        # =====================================================
+
+        def mini_divider():
+            nonlocal y
+
+            c.saveState()
+
+            c.setStrokeColorRGB(
+                0.90,
+                0.92,
+                0.95,
+            )
+
+            c.setLineWidth(0.3)
+
+            c.line(
+                ML + 8,
+                y + 4,
+                MR,
+                y + 4,
+            )
+
+            c.restoreState()
+
+        # =====================================================
+        # FIRST CERTIFICATE PAGE
+        # =====================================================
+
+        page_num = 1
+
+        y = start_certificate_page(page_num)
+
+        # -----------------------------------------------------
+        # EXISTING AGREEMENT CERTIFICATE CONTENT
+        # -----------------------------------------------------
+        #
+        # The old Agreement-specific large header:
+        #
+        # SIGNATURE CERTIFICATE
+        # Electronic Signature Verification Record
+        #
+        # has intentionally been removed.
+        #
+        # The E-Sign header above now replaces it.
+        #
+        # Certificate ID remains part of the Agreement content.
+        # -----------------------------------------------------
+
+        y -= 20
+
+        # =====================================================
+        # CERTIFICATE ID
+        # =====================================================
+
+        badge_text = f"Cert ID: {certificate_id}"
+
+        bw = (
+            c.stringWidth(
+                badge_text,
+                "Helvetica-Bold",
+                8,
+            )
+            + 20
+        )
+
+        bx = MR - bw
+
+        c.saveState()
+
+        c.setFillColorRGB(
+            CHIP_BG[0],
+            CHIP_BG[1],
+            CHIP_BG[2],
+        )
+
+        c.roundRect(
+            bx,
+            y + 10,
+            bw,
+            18,
+            4,
+            fill=1,
+            stroke=0,
+        )
+
+        c.setStrokeColorRGB(
+            ACCENT[0],
+            ACCENT[1],
+            ACCENT[2],
+        )
+
+        c.setLineWidth(0.5)
+
+        c.roundRect(
+            bx,
+            y + 10,
+            bw,
+            18,
+            4,
+            fill=0,
+            stroke=1,
+        )
+
+        c.setFillColorRGB(
+            CHIP_TXT[0],
+            CHIP_TXT[1],
+            CHIP_TXT[2],
+        )
+
+        c.setFont(
+            "Helvetica-Bold",
+            8,
+        )
+
+        c.drawString(
+            bx + 10,
+            y + 16,
+            badge_text,
+        )
+
+        c.restoreState()
+
+        # =====================================================
+        # SIGNER INFORMATION
+        # =====================================================
+
+        section_title("SIGNER INFORMATION")
+
+        row(
+            "Full Name",
+            signer_name,
+            bold_value=True,
+        )
+
+        row(
+            "Email Address",
+            signer_email,
+        )
+
+        row(
+            "Agreement ID",
+            agreement.name if agreement else "N/A",
+        )
+
+        # =====================================================
+        # USER VERIFICATION
+        # =====================================================
+
+        auth_logs = audit_trail_text.get(
+            "authentication logs",
+            [],
+        )
+
+        otp_logs = [l for l in auth_logs if l.get("event") == "otp_verified"]
+
+        if otp_logs:
+            section_title("USER VERIFICATION")
+
+            for log in otp_logs:
+                ts = fmt_ts(
+                    log.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
+                row(
+                    "Verified At",
+                    ts,
+                )
+
+                device_chip_row(
+                    "  ↳ Device",
+                    log.get(
+                        "user_agent",
+                        "",
+                    ),
+                    log.get("ip_address")
+                    or log.get(
+                        "ip",
+                        "",
+                    ),
+                )
+
+        # =====================================================
+        # CONSENTS
+        # =====================================================
+
+        concern_logs = audit_trail_text.get(
+            "concern accepted",
+            [],
+        )
+
         seen_fields = {}
-        for cl in sorted(concern_logs, key=lambda x: x.get("timestamp", "")):
+
+        for cl in sorted(
+            concern_logs,
+            key=lambda x: x.get(
+                "timestamp",
+                "",
+            ),
+        ):
             fn = cl.get("fieldname")
+
             if fn and fn not in seen_fields:
                 seen_fields[fn] = cl
 
         if seen_fields:
             section_title("CONSENT DECLARATIONS")
+
             for fn, cl in seen_fields.items():
-                label_text = cl.get("label", fn)
-                ts = fmt_ts(cl.get("timestamp", ""))
+                label_text = cl.get(
+                    "label",
+                    fn,
+                )
+
+                ts = fmt_ts(
+                    cl.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
                 ensure_space(32)
-                # tick mark
+
                 c.saveState()
-                rgb(SUCCESS)
-                c.setFont("Helvetica-Bold", 9)
-                c.drawString(ML + 8, y, "✓")
-                rgb(VALUE_CLR)
-                c.setFont("Helvetica", 8.5)
-                # wrap label if long
+
+                c.setFillColorRGB(
+                    SUCCESS[0],
+                    SUCCESS[1],
+                    SUCCESS[2],
+                )
+
+                c.setFont(
+                    "Helvetica-Bold",
+                    9,
+                )
+
+                c.drawString(
+                    ML + 8,
+                    y,
+                    "✓",
+                )
+
+                c.setFillColorRGB(
+                    VALUE_CLR[0],
+                    VALUE_CLR[1],
+                    VALUE_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    8.5,
+                )
+
                 max_w = MR - ML - 30
-                if c.stringWidth(label_text, "Helvetica", 8.5) > max_w:
+
+                if (
+                    c.stringWidth(
+                        label_text,
+                        "Helvetica",
+                        8.5,
+                    )
+                    > max_w
+                ):
                     label_text = label_text[:90] + "…"
-                c.drawString(ML + 20, y, label_text)
-                rgb(LABEL_CLR)
-                c.setFont("Helvetica", 7.5)
-                c.drawString(ML + 20, y - 11, f"Accepted: {ts}")
+
+                c.drawString(
+                    ML + 20,
+                    y,
+                    label_text,
+                )
+
+                c.setFillColorRGB(
+                    LABEL_CLR[0],
+                    LABEL_CLR[1],
+                    LABEL_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    7.5,
+                )
+
+                c.drawString(
+                    ML + 20,
+                    y - 11,
+                    f"Accepted: {ts}",
+                )
+
                 c.restoreState()
+
                 y -= 24
+
                 mini_divider()
+
                 y -= 4
 
-        # ── SIGNATURE ACTIVITY LOG ───────────────────────────────────────────────
-        sig_logs = audit_trail_text.get("signature update logs", [])
+        # =====================================================
+        # SIGNATURE ACTIVITY
+        # =====================================================
+
+        sig_logs = audit_trail_text.get(
+            "signature update logs",
+            [],
+        )
+
         if sig_logs:
             section_title("SIGNATURE ACTIVITY")
+
             sorted_sigs = sorted(
                 sig_logs,
                 key=lambda x: datetime.strptime(
-                    x["timestamp"], "%d-%m-%Y, %H:%M:%S UTC"
+                    x["timestamp"],
+                    "%d-%m-%Y, %H:%M:%S UTC",
                 ),
             )
-            for i, log in enumerate(sorted_sigs, 1):
-                ensure_space(80)  # enough space for bubble + text + device + divider
-                ts = fmt_ts(log.get("timestamp", ""))
-                method = log.get("method", "N/A")
+
+            for i, log in enumerate(
+                sorted_sigs,
+                1,
+            ):
+                ensure_space(80)
+
+                ts = fmt_ts(
+                    log.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
+                method = log.get(
+                    "method",
+                    "N/A",
+                )
+
                 event_label = (
-                    log.get("event", "signature_added").replace("_", " ").title()
+                    log.get(
+                        "event",
+                        "signature_added",
+                    )
+                    .replace(
+                        "_",
+                        " ",
+                    )
+                    .title()
                 )
 
                 c.saveState()
-                # index bubble
-                rgb(ACCENT)
-                c.circle(ML + 13, y + 1, 8, fill=1, stroke=0)
-                rgb(WHITE)
-                c.setFont("Helvetica-Bold", 8)
-                c.drawCentredString(ML + 13, y - 2, str(i))
 
-                rgb(VALUE_CLR)
-                c.setFont("Helvetica-Bold", 8.5)
-                c.drawString(ML + 28, y, f"{event_label}  —  {ts}")
+                # Number bubble
+                c.setFillColorRGB(
+                    ACCENT[0],
+                    ACCENT[1],
+                    ACCENT[2],
+                )
+
+                c.circle(
+                    ML + 13,
+                    y + 1,
+                    8,
+                    fill=1,
+                    stroke=0,
+                )
+
+                c.setFillColorRGB(
+                    WHITE[0],
+                    WHITE[1],
+                    WHITE[2],
+                )
+
+                c.setFont(
+                    "Helvetica-Bold",
+                    8,
+                )
+
+                c.drawCentredString(
+                    ML + 13,
+                    y - 2,
+                    str(i),
+                )
+
+                c.setFillColorRGB(
+                    VALUE_CLR[0],
+                    VALUE_CLR[1],
+                    VALUE_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica-Bold",
+                    8.5,
+                )
+
+                c.drawString(
+                    ML + 28,
+                    y,
+                    f"{event_label}  —  {ts}",
+                )
+
                 y -= 14
-                rgb(LABEL_CLR)
-                c.setFont("Helvetica", 8)
-                c.drawString(ML + 28, y, f"Method: {method}")
+
+                c.setFillColorRGB(
+                    LABEL_CLR[0],
+                    LABEL_CLR[1],
+                    LABEL_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    8,
+                )
+
+                c.drawString(
+                    ML + 28,
+                    y,
+                    f"Method: {method}",
+                )
+
                 c.restoreState()
-                y -= 16  # breathing room before device row
+
+                y -= 16
 
                 ensure_space(22)
-                browser, os_name, device = parse_user_agent(log.get("user_agent", ""))
-                ip = log.get("ip_address") or log.get("ip", "")
+
+                browser, os_name, device = parse_user_agent(
+                    log.get(
+                        "user_agent",
+                        "",
+                    )
+                )
+
+                ip = log.get("ip_address") or log.get(
+                    "ip",
+                    "",
+                )
 
                 c.saveState()
-                rgb(LABEL_CLR)
-                c.setFont("Helvetica", 8.5)
-                c.drawString(ML + 28, y, "Device")
 
-                chips = [ip or "N/A", browser, os_name, device]
+                c.setFillColorRGB(
+                    LABEL_CLR[0],
+                    LABEL_CLR[1],
+                    LABEL_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    8.5,
+                )
+
+                c.drawString(
+                    ML + 28,
+                    y,
+                    "Device",
+                )
+
+                chips = [
+                    ip or "N/A",
+                    browser,
+                    os_name,
+                    device,
+                ]
+
                 cx = ML + 28 + 50
+
                 for chip in chips:
-                    cw = c.stringWidth(chip, "Helvetica", 7.5) + 10
-                    rgb(CHIP_BG)
-                    c.roundRect(cx, y - 3, cw, 13, 3, fill=1, stroke=0)
-                    rgb(CHIP_TXT)
-                    c.setFont("Helvetica", 7.5)
-                    c.drawString(cx + 5, y + 1, chip)
+                    cw = (
+                        c.stringWidth(
+                            chip,
+                            "Helvetica",
+                            7.5,
+                        )
+                        + 10
+                    )
+
+                    c.setFillColorRGB(
+                        CHIP_BG[0],
+                        CHIP_BG[1],
+                        CHIP_BG[2],
+                    )
+
+                    c.roundRect(
+                        cx,
+                        y - 3,
+                        cw,
+                        13,
+                        3,
+                        fill=1,
+                        stroke=0,
+                    )
+
+                    c.setFillColorRGB(
+                        CHIP_TXT[0],
+                        CHIP_TXT[1],
+                        CHIP_TXT[2],
+                    )
+
+                    c.setFont(
+                        "Helvetica",
+                        7.5,
+                    )
+
+                    c.drawString(
+                        cx + 5,
+                        y + 1,
+                        chip,
+                    )
+
                     cx += cw + 5
+
                 c.restoreState()
-                y -= 12
-                mini_divider()
+
                 y -= 12
 
-        # ── DOCUMENT ACCESS LOG (form_submit only) ───────────────────────────────
-        visit_logs = audit_trail_text.get("form visit logs", [])
+                mini_divider()
+
+                y -= 12
+
+        # =====================================================
+        # FORM SUBMISSION LOG
+        # =====================================================
+
+        visit_logs = audit_trail_text.get(
+            "form visit logs",
+            [],
+        )
+
         submit_logs = [l for l in visit_logs if l.get("event") == "form_submit"]
 
         if submit_logs:
             section_title("FORM SUBMISSION LOG")
+
             for log in submit_logs:
-                ts = fmt_ts(log.get("timestamp", ""))
-                row("Submitted At", ts)
-                device_chip_row(
-                    "  ↳ Device",
-                    log.get("user_agent", ""),
-                    log.get("ip") or log.get("ip_address", ""),
+                ts = fmt_ts(
+                    log.get(
+                        "timestamp",
+                        "",
+                    )
                 )
 
-        # ── HASH BLOCK — pinned just above footer ────────────────────────────────
-        # Force to bottom: drop y to just above footer zone
-        hash_block_height = 55  # label + cert line + divider + padding
-        footer_zone = 55  # footer line is at y=42, text at y=30
+                row(
+                    "Submitted At",
+                    ts,
+                )
 
-        # If there's too much space, jump y down to pin hash near footer
+                device_chip_row(
+                    "  ↳ Device",
+                    log.get(
+                        "user_agent",
+                        "",
+                    ),
+                    log.get("ip")
+                    or log.get(
+                        "ip_address",
+                        "",
+                    ),
+                )
+
+        # =====================================================
+        # HASH / DOCUMENT INTEGRITY BLOCK
+        # =====================================================
+
+        hash_block_height = 55
+
+        footer_zone = FOOTER_H + 24
+
         if y > footer_zone + hash_block_height + 10:
             y = footer_zone + hash_block_height + 10
 
         c.saveState()
-        srgb(RULE_CLR)
+
+        c.setStrokeColorRGB(
+            RULE_CLR[0],
+            RULE_CLR[1],
+            RULE_CLR[2],
+        )
+
         c.setLineWidth(0.5)
-        c.line(ML, y, MR, y)
+
+        c.line(
+            ML,
+            y,
+            MR,
+            y,
+        )
+
         y -= 14
-        rgb(LABEL_CLR)
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(ML, y, "Document Integrity")
-        y -= 12
-        c.setFont("Helvetica", 7.5)
-        rgb(FOOTER_CLR)
-        cert_line = f"Certificate ID: {certificate_id}"
-        c.drawString(ML, y, cert_line)
+
+
         c.restoreState()
 
-        if page_has_content:
-            draw_footer()
+        # The first page footer was already drawn by
+        # start_certificate_page().
+        #
+        # We intentionally do NOT draw it again here.
+
+        c.showPage()
         c.save()
 
+        # =====================================================
+        # APPEND CERTIFICATE PAGES TO WRITER
+        # =====================================================
+
         packet.seek(0)
+
         audit_pdf = PdfReader(packet)
-        certificate_start_index = len(writer.pagearray)
+
         for p in audit_pdf.pages:
             writer.addpage(p)
 
-    # ---------------------------------------------------------
-    # STEP 3: WRITE ONCE (CRITICAL)
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 3: WRITE SIGNED PDF + CERTIFICATE
+    # =========================================================
+
     writer.write(output_path)
 
-    # ---------------------------------------------------------
-    # STEP 4: HASH FINAL DOCUMENT
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 4: CALCULATE DOCUMENT SHA-256
+    # =========================================================
+
     document_hash = calculate_file_hash(output_path)
 
-    # ---------------------------------------------------------
-    # STEP 5: STAMP HASH INTO CERTIFICATE PAGE (SECOND PASS)
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 5: STAMP DOCUMENT SHA-256
+    # =========================================================
+
     reader = PdfReader(output_path)
+
     writer = PdfWriter()
 
-    certificate_last_page = certificate_start_index + len(audit_pdf.pages) - 1
+    last_page_index = len(reader.pages) - 1
 
     for i, page in enumerate(reader.pages):
-        if certificate_last_page is not None and i == certificate_last_page:
+        if i == last_page_index:
             packet = io.BytesIO()
+
             page_w = float(page.MediaBox[2])
+
             page_h = float(page.MediaBox[3])
 
-            c = canvas.Canvas(packet, pagesize=(page_w, page_h))
-            c.setFont("Helvetica", 9)
-            left_margin = 45
-            hash_y = page_h * 0.16
-            c.drawString(left_margin, hash_y, f"Document Hash (SHA-256): {document_hash}")
+            c = canvas.Canvas(
+                packet,
+                pagesize=(
+                    page_w,
+                    page_h,
+                ),
+            )
+
+            c.setFont(
+                "Helvetica",
+                9,
+            )
+
+            c.drawString(
+                50,
+                140,
+                f"Document Hash (SHA-256): {document_hash}",
+            )
+
             c.showPage()
             c.save()
+
             packet.seek(0)
 
             overlay = PdfReader(packet).pages[0]
+
             PageMerge(page).add(overlay).render()
 
         writer.addpage(page)
 
+    # Final physical write
     writer.write(output_path)
 
-    # ---------------------------------------------------------
-    # STEP 6: NOTIFICATIONS
-    # ---------------------------------------------------------
-    agreement = frappe.get_doc("Agreement", agreement.name)
+    # =========================================================
+    # STEP 6: READ FINAL PDF
+    # =========================================================
+
+    with open(
+        output_path,
+        "rb",
+    ) as f:
+        final_bytes = f.read()
+
+    # =========================================================
+    # STEP 7: SYNC FRAPPE FILE RECORD
+    # =========================================================
+
+    if agreement:
+        agreement_pdf_url = frappe.db.get_value(
+            "Agreement",
+            agreement.name,
+            "pdf",
+        )
+
+        if agreement_pdf_url:
+            file_name = frappe.db.get_value(
+                "File",
+                {
+                    "file_url": agreement_pdf_url,
+                    "attached_to_doctype": "Agreement",
+                    "attached_to_name": agreement.name,
+                },
+                "name",
+            )
+
+            if file_name:
+                frappe.db.set_value(
+                    "File",
+                    file_name,
+                    {
+                        "content_hash": get_content_hash(final_bytes),
+                        "file_size": len(final_bytes),
+                    },
+                    update_modified=False,
+                )
+
+    # =========================================================
+    # STEP 8: NOTIFICATIONS
+    # =========================================================
+
+    agreement = frappe.get_doc(
+        "Agreement",
+        agreement.name,
+    )
 
     if not agreement or not agreement.sales_order:
         return output_path
 
-    sales_order = frappe.get_doc("Sales Order", agreement.sales_order)
+    sales_order = frappe.get_doc(
+        "Sales Order",
+        agreement.sales_order,
+    )
+
     if not sales_order.customer:
         return output_path
 
-    customer = frappe.get_doc("Customer", sales_order.customer)
+    customer = frappe.get_doc(
+        "Customer",
+        sales_order.customer,
+    )
+
     if not customer.customer_owner:
         return output_path
 
-    opp_owner_user = frappe.db.get_value("Employee", customer.customer_owner, "user")
+    opp_owner_user = frappe.db.get_value(
+        "Employee",
+        customer.customer_owner,
+        "user",
+    )
+
     if not opp_owner_user:
         return output_path
 
@@ -819,12 +1709,18 @@ def apply_signature_and_audit_to_pdf(
     with validated_output_path.open("rb") as f:
         content = f.read()
 
+    # =====================================================
     # CUSTOMER EMAIL
+    # =====================================================
+
     subject = "Agreement signed successfully"
+
     message = (
         "Dear Customer,\n\n"
-        "Thank you for signing the agreement. We have successfully received your signed document.\n\n"
-        "Please find the signed agreement attached along with the signing certificate for your records.\n\n"
+        "Thank you for signing the agreement. "
+        "We have successfully received your signed document.\n\n"
+        "Please find the signed agreement attached "
+        "along with the signing certificate for your records.\n\n"
         "Best regards,\n"
         "Team"
     )
@@ -832,7 +1728,11 @@ def apply_signature_and_audit_to_pdf(
     template = frappe.db.get_value(
         "Email Template",
         "Agreement Signed - Customer",
-        ["subject", "response_html", "response"],
+        [
+            "subject",
+            "response_html",
+            "response",
+        ],
         as_dict=True,
     )
 
@@ -851,19 +1751,29 @@ def apply_signature_and_audit_to_pdf(
             template.response_html or template.response,
             context,
         )
+
     send_notification(
         recipients=[signer_email],
         subject=subject,
         message=message,
         reference_doctype="Agreement",
         reference_name=agreement.name,
-        attachments=[{"fname": os.path.basename(output_path), "fcontent": content}],
+        attachments=[
+            {
+                "fname": os.path.basename(output_path),
+                "fcontent": content,
+            }
+        ],
         send_email=1,
         send_system=0,
     )
 
+    # =====================================================
     # INTERNAL NOTIFICATION
+    # =====================================================
+
     subject = "Agreement Signed by Customer"
+
     message = (
         f"The customer has signed the agreement.\n\nSales Order: {sales_order.name}"
     )
@@ -871,7 +1781,11 @@ def apply_signature_and_audit_to_pdf(
     template = frappe.db.get_value(
         "Email Template",
         "Agreement Signed - Internal",
-        ["subject", "response_html", "response"],
+        [
+            "subject",
+            "response_html",
+            "response",
+        ],
         as_dict=True,
     )
 
