@@ -45,7 +45,7 @@ app_include_js = [
     "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/override/about_override.js",
-    # "/assets/verp_staffing/js/protection.js",
+    "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/override/global_hide.js",
