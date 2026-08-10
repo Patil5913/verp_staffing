@@ -79,10 +79,6 @@ def preview_agreement(template, data):
         fields,
         data_dict,
     )
-    frappe.errprint(
-        f"===========================hashlib.sha256(pdf_bytes).hexdigest() in preview: {hashlib.sha256(pdf_bytes).hexdigest()}"
-    )
-    frappe.errprint(f"Generated PDF bytes length: {len(pdf_bytes)}")
 
     frappe.local.response.filename = "Agreement Preview.pdf"
     frappe.local.response.filecontent = pdf_bytes
@@ -395,7 +391,6 @@ def submit_and_generate(sales_order, template, data, send_email=0):
 
     filename = os.path.basename(tpl.upload_pdf_template)
     input_pdf_path = frappe.get_site_path("public", "files", filename)
-    frappe.errprint(f"Input PDF Path: {input_pdf_path}")
     if not os.path.exists(input_pdf_path):
         frappe.throw("Template PDF not found on disk")
 
@@ -404,9 +399,7 @@ def submit_and_generate(sales_order, template, data, send_email=0):
         fields,
         data_dict,
     )
-    frappe.errprint(
-        f"===========================hashlib.sha256(pdf_bytes).hexdigest() in submit and generate: {hashlib.sha256(pdf_bytes).hexdigest()}"
-    )
+
     # CREATE AGREEMENT (NO DUPLICATE BLOCK)
     agreement = frappe.get_doc(
         {
@@ -417,9 +410,7 @@ def submit_and_generate(sales_order, template, data, send_email=0):
             "status": "Ready To Send",
         }
     ).insert(ignore_permissions=True)
-    frappe.errprint(
-        f"before save file===========================hashlib.sha256(pdf_bytes).hexdigest(): {hashlib.sha256(pdf_bytes).hexdigest()}"
-    )
+
     file_doc = save_file(
         fname=f"{agreement.name}.pdf",
         content=pdf_bytes,
@@ -428,24 +419,6 @@ def submit_and_generate(sales_order, template, data, send_email=0):
         df="pdf",
         is_private=0,
     )
-    path = file_doc.get_full_path()
-
-    with open(path, "rb") as f:
-        saved_hash = hashlib.sha256(f.read()).hexdigest()
-
-    frappe.errprint(f"==============================File URL  : {file_doc.file_url}")
-    frappe.errprint(f"==============================File Name : {file_doc.file_name}")
-    frappe.errprint(f"==============================Is Private: {file_doc.is_private}")
-
-    path = file_doc.get_full_path()
-    frappe.errprint(f"==============================Disk Path : {path}")
-
-    with open(path, "rb") as f:
-        disk_bytes = f.read()
-
-    frappe.errprint(f"==============================Disk Hash : {hashlib.sha256(disk_bytes).hexdigest()}")
-
-    frappe.errprint(f"==============================Memory Hash : {hashlib.sha256(pdf_bytes).hexdigest()}")
 
     agreement.db_set("pdf", file_doc.file_url)
 
@@ -470,9 +443,7 @@ def generate_pdf(input_pdf_path, fields, data_dict):
 
     reader = PdfReader(input_pdf_path)
     writer = PdfWriter()
-    frappe.errprint(
-        f"Generating PDF for {len(reader.pages)} pages with {len(fields)} fields"
-    )
+
     for page_index, page in enumerate(reader.pages):
         page_width = float(page.MediaBox[2])
         page_height = float(page.MediaBox[3])

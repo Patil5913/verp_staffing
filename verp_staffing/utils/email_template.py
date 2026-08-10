@@ -70,7 +70,6 @@ def get_email_branding():
 
 def seed_email_template():
     branding = get_email_branding()
-    frappe.errprint(f"branding: {branding}")
     logo_url = branding["logo_url"]
     social_links_html = branding["social_links_html"]
     company_name = branding["company_name"]

@@ -13,9 +13,6 @@ from frappe.utils.file_manager import save_file
 class Company(NestedSet):
     def on_update(self):
         NestedSet.on_update(self)
-        frappe.errprint(
-            f'_______________+_+self.has_value_changed("company_logo"): {self.has_value_changed("company_logo")}'
-        )
         if self.has_value_changed("company_logo"):
             trigger_email_template_refresh()
 
