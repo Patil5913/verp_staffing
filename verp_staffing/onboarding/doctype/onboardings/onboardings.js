@@ -28,7 +28,9 @@ frappe.ui.form.on("Onboardings", {
 			},
 		});
 		showOnboarding_tab(frm);
-		show_sales_order(frm);
+		// show_sales_order(frm);
+		window.render_owned_sales_orders(frm, "sales_content", frm.doc.customer);
+
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
 		}
@@ -36,7 +38,7 @@ frappe.ui.form.on("Onboardings", {
 
 		window.render_customer_related_html({
 			frm: frm,
-			html_field: "lead_details",
+			html_field: "lead_details_html",
 			customer: frm.doc.customer,
 			fields: [
 				"agreement_link",
@@ -74,6 +76,9 @@ frappe.ui.form.on("Onboardings", {
 				"old_resume",
 			],
 		});
+	},
+	sales_order: function (frm) {
+		frappe.new_doc("Sales Order", { customer: frm.doc.customer });
 	},
 	status: function (frm) {
 		if (frm.doc.status === "Completed") {
@@ -713,134 +718,3 @@ function showOnboarding_tab(frm) {
 	});
 }
 
-function customer_owner_open_update_detail_dialog(frm, custom_fields) {
-	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
-		args: { customer_name: frm.doc.customer },
-		callback: function (r) {
-			const current_values = r.message || {};
-			const all_fields = custom_fields || {
-				surname: "Surname",
-				first_name: "First Name",
-				father_name: "Father Name",
-				email: "Email",
-				address_history: "table",
-			};
-
-			const simple_fields = {};
-			const table_fields = {};
-
-			Object.entries(all_fields).forEach(([fieldname, label]) => {
-				if (SERVICE_UPDATABLE_TABLE_FIELDS[fieldname]) {
-					table_fields[fieldname] = SERVICE_UPDATABLE_TABLE_FIELDS[fieldname];
-				} else {
-					simple_fields[fieldname] = label;
-				}
-			});
-
-			_open_update_detail_dialog(frm, current_values, simple_fields, table_fields, "owner");
-		},
-	});
-}
-
-function customer_show_accept_updates(frm) {
-	$(`button:contains("Accept Updates")`).closest(".btn-group").remove();
-	frappe.call({
-		method: "verp_staffing.crm.api.permission_request.get_all_pending_field_update_requests",
-		args: { customer_name: frm.doc.customer },
-		callback(r) {
-			$(`button:contains("Accept Updates")`).closest(".btn-group").remove();
-			if (!r.message || !r.message.length) return;
-
-			frm.add_custom_button(__("Accept Updates"), () => {
-				_open_accept_updates_dialog(frm, r.message, "owner");
-			});
-		},
-	});
-}
-
-function show_sales_order(frm) {
-	frappe.call({
-		method: "frappe.client.get_list",
-		args: {
-			doctype: "Sales Order",
-			filters: { customer: frm.doc.customer },
-			fields: ["name", "creation"],
-			limit_page_length: 50,
-			order_by: "creation desc",
-		},
-		callback(r) {
-			let sales_orders = r.message || [];
-
-			if (sales_orders.length === 0) {
-				frm.fields_dict.sales_content.$wrapper.html("<p>No Sales Orders found</p>");
-				return;
-			}
-
-			let html = `<div style="padding: 10px;">`;
-			html += `<h3>Sales Orders (${sales_orders.length})</h3><hr/>`;
-
-			sales_orders.forEach((so) => {
-				let safe_id = make_safe_id(so.name);
-				html += `
-                    <div style="border:1px solid #ddd; padding:15px; border-radius:6px; margin-bottom:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h4>Sales Order: ${so.name}</h4>
-                            <button class="btn btn-primary go-to-so-btn"
-                                data-so="${so.name}" style="font-size:13px;">
-                                go to Sales Order
-                            </button>
-                        </div>
-                        <p><b>Date:</b> ${so.date || ""}</p>
-                        <div id="terms_${safe_id}"><i>Loading Payment Terms...</i></div>
-                    </div>
-                `;
-				load_payment_terms(so.name, frm);
-			});
-
-			html += `</div>`;
-			frm.fields_dict.sales_content.$wrapper.html(html);
-
-			frm.fields_dict.sales_content.$wrapper.find(".go-to-so-btn").on("click", function () {
-				frappe.set_route("Form", "Sales Order", $(this).data("so"));
-			});
-		},
-	});
-}
-
-function load_payment_terms(so_name, frm) {
-	frappe.call({
-		method: "frappe.client.get",
-		args: { doctype: "Sales Order", name: so_name },
-		callback: function (r) {
-			if (!r.message) return;
-			let so = r.message;
-			let html = `
-                <h5>Payment Terms</h5>
-                <table class="table table-bordered" style="width:100%; margin-top:10px;">
-                    <thead>
-                        <tr><th>#</th><th>Date</th><th>Amount</th><th>Received?</th></tr>
-                    </thead>
-                    <tbody>
-            `;
-			(so.payment_terms || []).forEach((row, i) => {
-				html += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td>${row.date || ""}</td>
-                        <td>${row.amount || ""}</td>
-                        <td>${row.is_received ? "Yes" : "No"}</td>
-                    </tr>
-                `;
-			});
-			html += `</tbody></table>`;
-			let safe_id = make_safe_id(so_name);
-
-			frm.fields_dict.sales_content.$wrapper.find(`#terms_${safe_id}`).html(html);
-		},
-	});
-}
-
-function make_safe_id(name) {
-	return name.replace(/[^a-zA-Z0-9_-]/g, "_");
-}

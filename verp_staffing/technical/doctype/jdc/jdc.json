@@ -39,7 +39,7 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "status",
@@ -104,7 +104,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-29 10:48:13.095621",
+ "modified": "2026-08-11 14:42:35.742024",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

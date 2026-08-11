@@ -16,6 +16,7 @@ from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
 from verp_staffing.crm.api.agreement import send_existing_agreement, generate_form_url
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
 class SalesOrder(Document):
@@ -1136,3 +1137,116 @@ def send_payment_term_reminders():
                 frappe.get_traceback(),
                 f"Payment Reminder Failed | SO: {so.name} | Payment Term: {row.name}",
             )
+
+
+@frappe.whitelist()
+def get_owned_sales_orders(customer):
+    if not customer:
+        return []
+
+
+    visible_employee_names = get_visible_employee_names_cached()
+
+    if not visible_employee_names:
+        return []
+
+    visible_users = frappe.db.get_all(
+        "Employee",
+        filters={
+            "name": ["in", list(visible_employee_names)],
+            "user": ["is", "set"],
+        },
+        pluck="user",
+    )
+
+
+    if not visible_users:
+        return []
+
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            so.name,
+            so.owner,
+            so.creation,
+            so.posting_date,
+            so.docstatus,
+            so.status,
+            so.grand_total,
+            so.currency,
+
+            cpt.name AS payment_term_name,
+            cpt.payment_condition,
+            cpt.counter,
+            cpt.start_date,
+            cpt.due_date,
+            cpt.last_reminder_date,
+            cpt.amount,
+            cpt.payment_status,
+            cpt.current_interview_count,
+            cpt.payment_entry,
+            cpt.description,
+            cpt.verification_log,
+            cpt.idx AS payment_term_idx
+
+        FROM `tabSales Order` AS so
+
+        LEFT JOIN `tabCustomer Payment Terms` AS cpt
+            ON cpt.parent = so.name
+            AND cpt.parenttype = 'Sales Order'
+
+        WHERE
+            so.customer = %(customer)s
+            AND so.owner IN %(owners)s
+
+        ORDER BY
+            so.creation DESC,
+            cpt.idx ASC
+        """,
+        {
+            "customer": customer,
+            "owners": tuple(visible_users),
+        },
+        as_dict=True,
+    )
+
+
+    sales_orders = {}
+
+    for row in rows:
+        sales_order_name = row.name
+
+        if sales_order_name not in sales_orders:
+            sales_orders[sales_order_name] = {
+                "name": row.name,
+                "owner": row.owner,
+                "creation": row.creation,
+                "posting_date": row.posting_date,
+                "docstatus": row.docstatus,
+                "status": row.status,
+                "grand_total": row.grand_total,
+                "currency": row.currency,
+                "payment_terms": [],
+            }
+
+        if row.payment_term_name:
+            sales_orders[sales_order_name]["payment_terms"].append(
+                {
+                    "name": row.payment_term_name,
+                    "payment_condition": row.payment_condition,
+                    "counter": row.counter,
+                    "start_date": row.start_date,
+                    "due_date": row.due_date,
+                    "last_reminder_date": row.last_reminder_date,
+                    "amount": row.amount,
+                    "payment_status": row.payment_status,
+                    "current_interview_count": row.current_interview_count,
+                    "payment_entry": row.payment_entry,
+                    "description": row.description,
+                    "verification_log": row.verification_log,
+                    "idx": row.payment_term_idx,
+                }
+            )
+
+    return list(sales_orders.values())

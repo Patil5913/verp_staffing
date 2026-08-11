@@ -301,7 +301,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-08-06 17:17:40.618197",
+ "modified": "2026-08-11 15:46:10.563314",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Company",
@@ -350,6 +350,11 @@
   {
    "read": 1,
    "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
    "select": 1
   }
  ],

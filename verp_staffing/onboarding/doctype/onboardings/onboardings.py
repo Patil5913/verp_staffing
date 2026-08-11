@@ -7,13 +7,14 @@ from verp_staffing.crm.api.naming import generate_name_series
 
 
 class Onboardings(Document):
-	def autoname(self):
-		if not self.customer:
-			frappe.throw("Customer is required")
+    def autoname(self):
+        if not self.customer:
+            frappe.throw("Customer is required")
 
-		customer_name = frappe.db.get_value("Customer", self.customer, "name1")
+        customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
-		self.name = generate_name_series("Onboardings", customer_name)   
+        self.name = generate_name_series("Onboardings", customer_name)
+
 
 @frappe.whitelist()
 def get_after_placement_details(customer):
