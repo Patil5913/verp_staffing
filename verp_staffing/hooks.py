@@ -358,9 +358,18 @@ setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-#     "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
-# }
+
+override_whitelisted_methods = {
+	"frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card": (
+		"verp_staffing.overrides.kanban_board.update_order_for_single_card"
+	),
+	"frappe.desk.doctype.kanban_board.kanban_board.update_order": (
+		"verp_staffing.overrides.kanban_board.update_order"
+	),
+ 
+    "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
+    "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
+}
 # set query permisson for doctype
 permission_query_conditions = {
     "Customer": "verp_staffing.crm.api.helpers.customer_query",
@@ -470,10 +479,7 @@ fixtures = [
     },
 ]
 
-override_whitelisted_methods = {
-    "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
-    "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
-}
+
 # # verp_staffing/hooks.py
 
 # override_doctype_class = {

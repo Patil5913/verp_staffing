@@ -2014,10 +2014,7 @@ def seed_sales_stages():
 
 def create_interview_statuses():
     statuses = [
-        "Interview Scheduled",
-        "Ongoing Interview",
-        "Accepted",
-        "Rejected",
+        "Rejected", "Get The Offer", "Rescheduled", "Cancelled", "Completed", "Today", "Scheduled",
     ]
 
     for name in statuses:
@@ -2026,6 +2023,7 @@ def create_interview_statuses():
                 {
                     "doctype": "Interview Status",
                     "status_name": name,
+                    "is_system_generated": 1,
                 }
             )
             doc.insert(ignore_permissions=True)
