@@ -356,3 +356,109 @@ def search_marketing_customers(doctype, txt, searchfield, start, page_len, filte
 	"""
 
 	return frappe.db.sql(query, values)
+
+def _build_conditions(filters):
+	conditions, values = "", {}
+	if filters:
+		if isinstance(filters, str):
+			filters = json.loads(filters)
+		for f in filters or []:
+			if len(f) == 4:
+				fieldname, operator, value = f[1], f[2], f[3]
+			elif len(f) == 3:
+				fieldname, operator, value = f[0], f[1], f[2]
+			else:
+				continue
+			if fieldname in ("company", "role", "status") and operator == "=":
+				conditions += f" AND i.{fieldname} = %({fieldname})s"
+				values[fieldname] = value
+	return conditions, values
+
+
+@frappe.whitelist()
+def get_interview_round_events(start, end, filters=None):
+	"""Calendar event source (unchanged)."""
+	conditions, values = _build_conditions(filters)
+	values.update({"start": start, "end": end})
+
+	rounds = frappe.db.sql(f"""
+		SELECT ir.name AS round_name, ir.parent AS interview, ir.round,
+			ir.date_of_interview, ir.from_time, ir.to_time,
+			ir.status AS round_status, i.company, i.role, i.status AS interview_status
+		FROM `tabInterview Round` ir
+		INNER JOIN `tabInterview` i ON i.name = ir.parent
+		WHERE ir.date_of_interview BETWEEN %(start)s AND %(end)s
+		{conditions}
+		ORDER BY ir.date_of_interview, ir.from_time
+	""", values, as_dict=True)
+
+	events = []
+	for r in rounds:
+		has_time = bool(r.from_time and r.to_time)
+		status = r.round_status or r.interview_status or ""
+		events.append({
+			"name": r.interview,
+			"subject": f"{r.company} — {r.role} (Round {r.round})",
+			"start": f"{r.date_of_interview} {r.from_time or '09:00:00'}",
+			"end": f"{r.date_of_interview} {r.to_time or '10:00:00'}",
+			"allDay": 0 if has_time else 1,
+			"status": status,
+		})
+	return events
+
+
+@frappe.whitelist()
+def get_interview_gantt_rows(filters=None):
+	"""
+	One row per Interview Round, with a GLOBALLY UNIQUE id (the round's
+	own child-table name). This is deliberate: Frappe's list-row keying
+	collapses rows that share the same `name`, which is exactly why
+	multiple rounds under one Interview were previously rendering as a
+	single bar. Because the id is now a Round's id (not a valid
+	Interview document name), the client side handles click-routing
+	itself via the bar's data-id attribute rather than relying on
+	Gantt's default navigate-by-id behaviour.
+	"""
+	conditions, values = _build_conditions(filters)
+
+	rows = frappe.db.sql(f"""
+		SELECT
+			ir.name AS round_id, ir.parent AS interview, ir.round,
+			ir.date_of_interview, ir.from_time, ir.to_time,
+			ir.status AS round_status,
+			i.company, i.role, i.status AS interview_status,
+			i.docstatus AS docstatus, i.owner AS owner
+		FROM `tabInterview Round` ir
+		INNER JOIN `tabInterview` i ON i.name = ir.parent
+		WHERE ir.date_of_interview IS NOT NULL
+		{conditions}
+		ORDER BY ir.date_of_interview, ir.from_time
+	""", values, as_dict=True)
+
+	out = []
+	for r in rows:
+		status = r.round_status or r.interview_status or ""
+		start_dt = f"{r.date_of_interview} {r.from_time or '09:00:00'}"
+		end_dt = f"{r.date_of_interview} {r.to_time or '10:00:00'}"
+		if end_dt <= start_dt:
+			end_dt = f"{r.date_of_interview} 23:59:00"
+
+		out.append({
+			"name": r.round_id,              # unique per bar (fixes collapsing)
+			"interview": r.interview,        # for client-side click routing
+			"owner": r.owner,
+			"docstatus": r.docstatus or 0,
+			"status": status,
+			"company": r.company,
+			"role": r.role,
+			"round": r.round,
+			"date_of_interview": str(r.date_of_interview),
+			"subject": f"{r.company} — {r.role} · Round {r.round} · {status}",
+			"start": start_dt,
+			"end": end_dt,
+			"_assign": "[]",
+			"_liked_by": "[]",
+			"_comments": "[]",
+			"_user_tags": "",
+		})
+	return out

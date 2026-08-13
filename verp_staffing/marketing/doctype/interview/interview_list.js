@@ -60,6 +60,7 @@
 			};
 			frappe.breadcrumbs.update();
 		},
+
 		refresh(listview) {
 			const page = listview.page;
 			if (!page) return;
@@ -116,105 +117,292 @@
 			.attr("id", "interview-kanban-overrides")
 			.html(
 				`
-					.kanban {
-						overflow-x: auto;
-					}
-					.kanban-column {
-						width: 360px !important;
-						min-width: 360px !important;
-						flex: 0 0 360px !important;
-					}
-					.kanban-cards {
-						width: 100%;
-						box-sizing: border-box;
-					}
-					.kanban-card-wrapper {
-						width: 100% !important;
-						box-sizing: border-box;
-					}
-					.kanban-card.content {
-						width: 100% !important;
-						box-sizing: border-box;
-					}
+				/* =========================================================
+				   BOARD
+				   ========================================================= */
 
-					.add-card { display: none !important; }
-					.kanban-card-meta { display: none !important; }
+				.kanban {
+					overflow-x: auto !important;
+					overflow-y: hidden !important;
+					box-sizing: border-box !important;
+				}
 
-					.kanban-card-body { width: 100%; box-sizing: border-box; }
-					.kanban-card-doc {
-						width: 100%;
-						max-width: 100% !important;
-						box-sizing: border-box;
-					}
+				/* =========================================================
+				   COLUMNS
+				   ========================================================= */
 
-					.kanban-card-wrapper:not(.sortable-drag):not(.sortable-fallback) {
-						width: 100% !important;
-						box-sizing: border-box;
-					}
-					.kanban-card.content:not(.sortable-drag):not(.sortable-fallback) {
-						width: 100% !important;
-						box-sizing: border-box;
-					}
+				.kanban-column {
+					width: 360px !important;
+					min-width: 360px !important;
+					max-width: 360px !important;
+					flex: 0 0 360px !important;
+					box-sizing: border-box !important;
+				}
 
-					.kanban-rounds-summary {
-						width: 100%;
-						box-sizing: border-box;
-						margin-top: 8px;
-						padding-top: 6px;
-						border-top: 1px solid var(--border-color, #e0e0e0);
-						display: flex;
-						flex-direction: column;
-						gap: 5px;
-					}
-					.kanban-rounds-summary.expanded {
-						max-height: 220px;
-						overflow-y: auto;
-					}
-					.kanban-round-row {
-						display: flex;
-						align-items: center;
-						gap: 8px;
-						font-size: 12px;
-						width: 100%;
-						box-sizing: border-box;
-					}
-					.kanban-round-badge {
-						flex: 0 0 auto;
-						font-weight: 600;
-						color: var(--text-muted, #5d6472);
-						min-width: 20px;
-					}
-					.kanban-round-date {
-						flex: 1 1 auto;
-						min-width: 0;
-						color: var(--text-muted, #5d6472);
-						white-space: nowrap;
-						overflow: hidden;
-						text-overflow: ellipsis;
-					}
-					.kanban-round-status {
-						flex: 0 0 auto;
-						margin-left: auto;
-						font-size: 11px;
-						padding: 1px 8px;
-					}
-					.kanban-rounds-empty {
-						margin-top: 8px;
-						font-size: 12px;
-						color: var(--text-muted, #5d6472);
-						font-style: italic;
-					}
-					.kanban-rounds-toggle {
-						margin-top: 2px;
-						font-size: 12px;
-						font-weight: 600;
-						color: var(--text-brand, #5570f1);
-						cursor: pointer;
-						text-align: right;
-					}
-					.kanban-rounds-toggle:hover { text-decoration: underline; }
-					
-				`,
+				/* =========================================================
+				   CARD CONTAINER
+				   ========================================================= */
+
+				.kanban-cards {
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   NORMAL SORTABLE ITEM
+				   ========================================================= */
+
+				.kanban-card-wrapper {
+					display: block !important;
+
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   ACTUAL CARD
+				   ========================================================= */
+
+				.kanban-card-wrapper > .kanban-card {
+					display: block !important;
+
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+
+					box-sizing: border-box !important;
+				}
+
+				.kanban-card-body {
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
+				}
+
+				.kanban-card-doc {
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   IMPORTANT:
+				   SORTABLE DRAG ELEMENT
+				   =========================================================
+
+				   The wrapper is the sortable item.
+
+				   When Sortable starts dragging, the wrapper can lose
+				   its normal .kanban-cards parent. Therefore 100% can
+				   become the width of the board/body.
+
+				   Force the dragged wrapper to remain exactly the same
+				   width as a Kanban column.
+				   ========================================================= */
+
+				.kanban-card-wrapper.sortable-drag,
+				.kanban-card-wrapper.sortable-fallback {
+					width: 360px !important;
+					min-width: 360px !important;
+					max-width: 360px !important;
+
+					flex: 0 0 360px !important;
+
+					box-sizing: border-box !important;
+				}
+
+				.kanban-card-wrapper.sortable-drag > .kanban-card,
+				.kanban-card-wrapper.sortable-fallback > .kanban-card {
+					width: 360px !important;
+					min-width: 360px !important;
+					max-width: 360px !important;
+
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   SORTABLE GHOST
+				   =========================================================
+
+				   The ghost remains inside the target column, so it
+				   should follow the normal column width.
+				   ========================================================= */
+
+				.kanban-card-wrapper.sortable-ghost {
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+
+					box-sizing: border-box !important;
+				}
+
+				.kanban-card-wrapper.sortable-ghost > .kanban-card {
+					width: 100% !important;
+					min-width: 0 !important;
+					max-width: 100% !important;
+
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   PREVENT DRAGGED CARD CONTENT FROM EXPANDING IT
+				   ========================================================= */
+
+				.sortable-drag .kanban-card-title,
+				.sortable-fallback .kanban-card-title,
+				.sortable-drag .kanban-card-doc,
+				.sortable-fallback .kanban-card-doc {
+					min-width: 0 !important;
+					max-width: 100% !important;
+					overflow: hidden !important;
+				}
+
+				.sortable-drag .kanban-title-area,
+				.sortable-fallback .kanban-title-area {
+					min-width: 0 !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   HOVER
+				   ========================================================= */
+
+				.kanban-card-wrapper:hover {
+					width: 100% !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
+				}
+
+				.kanban-card-wrapper:hover > .kanban-card {
+					width: 100% !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
+				}
+
+				/* =========================================================
+				   DEFAULT FRAPPE CARD UI
+				   ========================================================= */
+
+				.add-card {
+					display: none !important;
+				}
+
+				.kanban-card-meta {
+					display: none !important;
+				}
+
+				/* =========================================================
+				   ROUND SUMMARY
+				   ========================================================= */
+
+				.kanban-rounds-summary {
+					width: 100%;
+					min-width: 0;
+					max-width: 100%;
+
+					box-sizing: border-box;
+
+					margin-top: 8px;
+					padding-top: 6px;
+
+					border-top: 1px solid var(--border-color, #e0e0e0);
+
+					display: flex;
+					flex-direction: column;
+					gap: 5px;
+				}
+
+				.kanban-rounds-summary.expanded {
+					max-height: 220px;
+					overflow-y: auto;
+				}
+
+				.kanban-round-row {
+					display: flex;
+					align-items: center;
+
+					gap: 8px;
+
+					width: 100%;
+					min-width: 0;
+					max-width: 100%;
+
+					font-size: 12px;
+
+					box-sizing: border-box;
+				}
+
+				.kanban-round-badge {
+					flex: 0 0 auto;
+
+					font-weight: 600;
+					color: var(--text-muted, #5d6472);
+
+					min-width: 20px;
+				}
+
+				.kanban-round-date {
+					flex: 1 1 auto;
+
+					min-width: 0;
+					max-width: 100%;
+
+					color: var(--text-muted, #5d6472);
+
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+
+				.kanban-round-status {
+					flex: 0 0 auto;
+
+					margin-left: auto;
+
+					max-width: 45%;
+
+					font-size: 11px;
+					padding: 1px 8px;
+
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+
+				.kanban-rounds-empty {
+					margin-top: 8px;
+
+					font-size: 12px;
+
+					color: var(--text-muted, #5d6472);
+
+					font-style: italic;
+				}
+
+				.kanban-rounds-toggle {
+					margin-top: 2px;
+
+					font-size: 12px;
+					font-weight: 600;
+
+					color: var(--text-brand, #5570f1);
+
+					cursor: pointer;
+					text-align: right;
+				}
+
+				.kanban-rounds-toggle:hover {
+					text-decoration: underline;
+				}
+			`,
 			)
 			.appendTo("head");
 	}
@@ -595,7 +783,9 @@
 						schedule_board_refresh(listview);
 						return Promise.reject(new Error("Cancelled by user"));
 					}
-					return Promise.resolve(apply_status_change(listview, interview_name, new_status, values));
+					return Promise.resolve(
+						apply_status_change(listview, interview_name, new_status, values),
+					);
 				},
 			);
 		}
@@ -607,7 +797,9 @@
 						schedule_board_refresh(listview);
 						return Promise.reject(new Error("Cancelled by user"));
 					}
-					return Promise.resolve(apply_status_change(listview, interview_name, new_status));
+					return Promise.resolve(
+						apply_status_change(listview, interview_name, new_status),
+					);
 				},
 			);
 		}

@@ -220,6 +220,49 @@ window.setup_service_permission_button = function (frm) {
 	});
 };
 
+// window._service_open_update_detail_dialog = function (frm) {
+// 	if (!frm.doc.customer) {
+// 		frappe.msgprint("Customer not linked.");
+// 		return;
+// 	}
+// 	frappe.call({
+// 		method: "verp_staffing.crm.api.permission_request.get_lead_detail_field_values",
+// 		args: { customer_name: frm.doc.customer },
+// 		callback: function (r) {
+// 			const current_values = r.message || {};
+// 			frappe.call({
+// 				method: "verp_staffing.crm.api.permission_request.get_department_updatable_fields",
+// 				args: { doctype: frm.doc.service || frm.doctype },
+// 				callback: function (fields_res) {
+// 					const dept = fields_res.message || { simple_fields: {}, table_fields: {} };
+// 					_open_update_detail_dialog(
+// 						frm,
+// 						current_values,
+// 						dept.simple_fields || {},
+// 						dept.table_fields || {},
+// 						"service",
+// 					);
+// 				},
+// 				error: function (err) {
+// 					frappe.msgprint({
+// 						title: __("Error"),
+// 						message: err.message || __("Failed to load updatable fields."),
+// 						indicator: "red",
+// 					});
+// 				},
+// 			});
+// 		},
+// 		error: function (err) {
+// 			frappe.msgprint({
+// 				title: __("Error"),
+// 				message: err.message || __("Failed to load field values."),
+// 				indicator: "red",
+// 			});
+// 		},
+// 	});
+// };
+
+
 window._service_open_update_detail_dialog = function (frm) {
 	if (!frm.doc.customer) {
 		frappe.msgprint("Customer not linked.");
@@ -235,13 +278,32 @@ window._service_open_update_detail_dialog = function (frm) {
 				args: { doctype: frm.doc.service || frm.doctype },
 				callback: function (fields_res) {
 					const dept = fields_res.message || { simple_fields: {}, table_fields: {} };
-					_open_update_detail_dialog(
-						frm,
-						current_values,
-						dept.simple_fields || {},
-						dept.table_fields || {},
-						"service",
-					);
+					frappe.call({
+						method: "verp_staffing.crm.api.permission_request.get_higher_authority_status",
+						args: {
+							service_doctype: frm.doctype,
+							extra_info: frm.doctype === "Other Services" ? frm.doc.service : null,
+						},
+						callback: function (auth_res) {
+							const is_higher_authority = !!(
+								auth_res.message && auth_res.message.is_higher_authority
+							);
+							_open_update_detail_dialog(
+								frm,
+								current_values,
+								dept.simple_fields || {},
+								dept.table_fields || {},
+								"service",
+								is_higher_authority,
+							);
+						},
+						error: function () {
+							_open_update_detail_dialog(
+								frm, current_values, dept.simple_fields || {},
+								dept.table_fields || {}, "service", false,
+							);
+						},
+					});
 				},
 				error: function (err) {
 					frappe.msgprint({
@@ -261,6 +323,7 @@ window._service_open_update_detail_dialog = function (frm) {
 		},
 	});
 };
+
 
 window._service_show_accept_updates = function (frm) {
 	frappe.call({
@@ -305,7 +368,7 @@ window._service_show_accept_updates = function (frm) {
 };
 
 // ─── _open_update_detail_dialog ───────────────────────────────────────────────
-function _open_update_detail_dialog(frm, current_values, fields, table_fields, mode) {
+function _open_update_detail_dialog(frm, current_values, fields, table_fields, mode, is_higher_authority = false) {
 	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
 	const api_method =
 		mode === "service"
@@ -747,8 +810,16 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		})
 		.join("");
 
+		const higherAuthorityBannerHtml = is_higher_authority
+		? `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;margin-bottom:14px;border:1px solid #f0b429;background:#fff8e6;border-radius:8px;font-size:12.5px;color:#7a5b00;line-height:1.5;">
+			<span style="font-size:15px;line-height:1;">⚠</span>
+			<span>${__("You are the top of your department's hierarchy, so on save the data will be directly updated — Please be sure before confirming.")}</span>
+		</div>`
+		: "";
+
 	// ── simple fields grid ────────────────────────────────────────────────────
 	const simpleHtml = `
+	${higherAuthorityBannerHtml}
 <p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;">${__("Select fields to update")}</p>
 <div id="fg-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
 	${Object.entries(fields)
@@ -781,7 +852,7 @@ ${tableWidgetHtml}
 				description: __("Explain why you need to update these fields."),
 			},
 		],
-		primary_action_label: __("Send"),
+		primary_action_label: is_higher_authority ? __("Update") : __("Send"),
 		primary_action(values) {
 			if (!values.reason) {
 				frappe.msgprint(__("Please enter a reason."));
@@ -859,15 +930,22 @@ ${tableWidgetHtml}
 				},
 				callback(res) {
 					if (res.message?.status === "success") {
-						frappe.show_alert(
-							{
-								message: __(
-									`Request sent to manager <b>${res.message.manager_employee}</b>.`,
-								),
-								indicator: "blue",
-							},
-							7,
-						);
+						if (res.message.applied_directly) {
+							frappe.show_alert(
+								{ message: __("Changes applied directly."), indicator: "green" },
+								5,
+							);
+						} else {
+							frappe.show_alert(
+								{
+									message: __(
+										`Request sent to manager <b>${res.message.manager_employee}</b>.`,
+									),
+									indicator: "blue",
+								},
+								7,
+							);
+						}
 						frm.reload_doc();
 					}
 				},

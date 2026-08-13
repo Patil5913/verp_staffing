@@ -12,16 +12,17 @@ frappe.ui.form.on("Marketing", {
 		}
 
 		frappe.call({
-			method: "verp_staffing.marketing.doctype.marketing.marketing._is_superior_in_marketing",
+			method: "verp_staffing.crm.api.helpers._is_superior_in_department",
 			args: {
 				assign_to: frm.doc.assign_to,
 				current_user: frappe.session.user,
+				department: "Marketing",
 			},
 			callback(r) {
 				if (!r.message) return;
 				const is_superior = r.message.is_superior;
 				frm.set_df_property("target", "read_only", !is_superior);
-				if(frm.doc.start_date){
+				if (frm.doc.start_date) {
 					frm.set_df_property("start_date", "read_only", !is_superior);
 				}
 				const jobGrid = frm.fields_dict["job_application_count"].grid;

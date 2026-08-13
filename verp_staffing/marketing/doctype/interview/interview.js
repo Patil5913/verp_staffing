@@ -20,7 +20,8 @@ frappe.ui.form.on("Interview", {
 		});
 
 		hide_interview_round_no_column(frm);
-		apply_round_row_lock(frm);
+		apply_round_delete_restriction(frm); 
+		check_marketing_superiority(frm); 
 		capture_status_snapshots(frm);
 
 		if (!frm.is_new()) {
@@ -59,8 +60,6 @@ frappe.ui.form.on("Interview Round", {
 
 		row.__prev_follow_up = row.follow_up || 0;
 
-		// Default Round to the row's current position.
-		// User can freely edit this afterwards.
 		if (!row.round) {
 			frappe.model.set_value(cdt, cdn, "round", String(row.idx));
 		}
@@ -180,11 +179,6 @@ function hide_interview_round_no_column() {
 	`);
 }
 
-// Records each row's last-SAVED status. Only refreshed on frm.refresh
-// (initial load and post-save reload) — never during in-progress edits —
-// so it always reflects what's actually persisted in the DB, giving us a
-// reliable "was this already finalized before?" check independent of
-// whatever the user is currently typing.
 function capture_status_snapshots(frm) {
 	(frm.doc.interview_rounds_table || []).forEach((row) => {
 		row.__status_snapshot = row.status;
@@ -195,36 +189,82 @@ function is_round_finalized(row) {
 	return !!row && FINAL_ROUND_STATUSES.has(row.__status_snapshot);
 }
 
-// Locks every Interview Round row except the last one — both the inline
-// grid cells and, if open, the expanded row-edit dialog. Only the most
-// recent round should ever be editable; earlier rounds are historical.
+function check_marketing_superiority(frm) {
+	if (!frm.doc.marketing_link) {
+		frm.__is_superior = false;
+		apply_round_row_lock(frm);
+		return;
+	}
+
+	frappe.db
+		.get_value("Marketing", frm.doc.marketing_link, "assign_to")
+		.then(({ message }) => {
+			const assign_to = message?.assign_to;
+			if (!assign_to) {
+				frm.__is_superior = false;
+				apply_round_row_lock(frm);
+				return;
+			}
+
+			frappe.call({
+				method: "verp_staffing.crm.api.helpers._is_superior_in_department",
+				args: {
+					assign_to,
+					current_user: frappe.session.user,
+					department: "Marketing",
+				},
+				callback(r) {
+					frm.__is_superior = !!(r.message && r.message.is_superior);
+					apply_round_row_lock(frm);
+				},
+				error(err) {
+					console.error("Permission check failed", err);
+					frm.__is_superior = false; // fail closed
+					apply_round_row_lock(frm);
+				},
+			});
+		})
+		.catch((err) => {
+			console.error("Failed to fetch Marketing's assign_to", err);
+			frm.__is_superior = false; // fail closed
+			apply_round_row_lock(frm);
+		});
+}
+
 function apply_round_row_lock(frm) {
 	const rows = frm.doc.interview_rounds_table || [];
 	if (!rows.length) return;
 
 	const grid = frm.fields_dict.interview_rounds_table.grid;
 	const last_idx = rows.length;
+	const is_superior = !!frm.__is_superior;
 
 	rows.forEach((row) => {
-		const is_last = row.idx === last_idx;
+		const is_editable = row.idx === last_idx || is_superior;
 		const grid_row = grid.grid_rows_by_docname[row.name];
 		if (!grid_row) return;
 
 		// Inline (in-table) editable cells
 		(grid_row.docfields || []).forEach((df) => {
-			df.read_only = is_last ? 0 : 1;
+			df.read_only = is_editable ? 0 : 1;
 		});
 
 		// Expanded row-edit dialog, if currently open for this row
 		if (grid_row.grid_form && grid_row.grid_form.fields_dict) {
 			Object.values(grid_row.grid_form.fields_dict).forEach((field) => {
-				field.df.read_only = is_last ? 0 : 1;
+				field.df.read_only = is_editable ? 0 : 1;
 				field.refresh();
 			});
 		}
 	});
 
 	grid.refresh();
+}
+
+function apply_round_delete_restriction(frm) {
+	const restrict = frappe.session.user !== "Administrator";
+	frm.set_df_property("interview_rounds_table", "cannot_delete_rows", restrict);
+	frm.fields_dict.interview_rounds_table.grid.refresh();
 }
 
 function toggle_cancellation_fields(frm, cdt, cdn) {
