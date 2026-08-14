@@ -12,6 +12,8 @@
   "status",
   "section_break_zoqd",
   "proof_of_work",
+  "proof_of_work_html",
+  "section_break_gqmv",
   "lead_details",
   "notes_section",
   "notes_html",
@@ -112,13 +114,21 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_gqmv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-11 14:42:35.488255",
+ "modified": "2026-08-13 17:46:18.595876",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",

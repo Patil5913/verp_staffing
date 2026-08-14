@@ -11,6 +11,8 @@
   "resume",
   "section_break_xjvc",
   "proof_of_work",
+  "proof_of_work_html",
+  "section_break_qysf",
   "lead_details",
   "notes_section",
   "notes_html",
@@ -90,13 +92,21 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_qysf",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-11 14:42:35.616486",
+ "modified": "2026-08-13 17:42:21.558756",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",

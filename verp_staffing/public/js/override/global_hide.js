@@ -70,6 +70,7 @@ const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
 	"Resume",
 	"RUC",
 	"Technical Other Services",
+	"Interview Support",
 	"Training",
 	"Bank Account Type",
 	"Bank Account Subtype",

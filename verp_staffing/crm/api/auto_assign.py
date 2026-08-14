@@ -122,7 +122,7 @@ from verp_staffing.install import SERVICE_DOCTYPE_MAP
 
 
 @frappe.whitelist()
-def forward_candidate(customer, service, interview=None):
+def forward_candidate(customer, service, interview_round=None):
 
     customer_doc = frappe.get_doc("Customer", customer)
     service_key = service.strip().lower()
@@ -131,8 +131,6 @@ def forward_candidate(customer, service, interview=None):
         stage = json.loads(customer_doc.stage) if customer_doc.stage else {}
     except Exception:
         stage = {}
-        
-    print("service_key***************************************",service_key)
 
     if service_key in ["cr", "onboarding"]:
         department = "CR" if service_key == "cr" else "Onboarding"
@@ -148,7 +146,6 @@ def forward_candidate(customer, service, interview=None):
             company_percentage=frappe.form_dict.get("company_percentage"),
         )
     if service_key in stage:
-
         doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
         department = stage[service_key][0].get("department")
 
@@ -157,15 +154,30 @@ def forward_candidate(customer, service, interview=None):
                 doctype = "Technical Other Services"
             elif department == "Marketing":
                 doctype = "Marketing Other Services"
+        filters = {"customer": customer}
+        if service_key == "jdc" or service_key == "interview support":
+            filters["interview_round"] = interview_round
 
-        docs = frappe.get_all(
-            doctype, filters={"customer": customer}, fields=["name", "assign_to"]
-        )
-        if not docs:
-            return None
+        docs = frappe.get_all(doctype, filters=filters, fields=["name", "assign_to"])
 
-        if service_key == "jdc" and interview:
-            frappe.db.set_value(doctype, docs[0].name, "interview", interview)
+        if not docs and (service_key == "jdc" or service_key == "interview support"):
+            assignee = get_auto_assign_employee(
+                department=department, target_doctype=doctype, owner_field="assign_to"
+            )
+            service_doc = frappe.get_doc(
+                {
+                    "doctype": doctype,
+                    "customer": customer,
+                    "assign_to": assignee,
+                    "status": "Pending",
+                    "interview_round": interview_round,
+                }
+            )
+            service_doc.insert(ignore_permissions=True)
+            stage[service_key].append(
+                {"department": department, "timestamp": str(now_datetime())}
+            )
+            return {"reforward": False, "doctype": doctype, "name": service_doc.name}
 
         if department == "Marketing":
             if doctype == "Marketing Other Services":
@@ -272,8 +284,8 @@ def forward_candidate(customer, service, interview=None):
         }
     )
 
-    if service_key == "jdc" and interview:
-        service_doc.interview = interview
+    if (service_key == "jdc" or service_key == "interview support") and interview_round:
+        service_doc.interview_round = interview_round
 
     service_doc.insert(ignore_permissions=True)
 
@@ -303,7 +315,7 @@ def notify_assignees(doc, service, customer):
         f"<strong>Customer:</strong> {customer}<br>"
         f"<strong>Service:</strong> {service}"
     )
-    
+
     template = frappe.db.get_value(
         "Email Template",
         "New Candidate Assigned",
@@ -337,37 +349,29 @@ def get_customer_interviews(customer):
     if not customer:
         return []
 
-    marketing_list = frappe.get_all(
-        "Marketing", filters={"customer": customer}, pluck="name"
-    )
+    marketing = frappe.get_value("Marketing", {"customer": customer}, "name")
 
-    if not marketing_list:
+    if not marketing:
         return []
 
-    interviews = frappe.get_all(
-        "Interview",
-        filters={"marketing_link": ["in", marketing_list]},
-        fields=["name", "company"],
+    interviews = frappe.db.sql(
+        """
+        SELECT
+            ir.name AS value,
+            CONCAT(ir.round,' ','(', i.company, ')') AS label
+        FROM `tabInterview` i
+        INNER JOIN `tabInterview Round` ir ON ir.parent = i.name
+        WHERE i.marketing_link = %s
+        """,
+        (marketing,),
+        as_dict=True,
     )
 
-    formatted = []
-
-    for d in interviews:
-        if d.company:
-            formatted.append(
-                {
-                    "label": d.company,
-                    "value": d.name,
-                }
-            )
-        else:
-            formatted.append({"label": d.name, "value": d.name})
-
-    return formatted
+    return interviews
 
 
 # CR/Onboarding Load analyzer
-def get_department_load_employee(department,target_doctype):
+def get_department_load_employee(department, target_doctype):
     hierarchy = frappe.get_all(
         "Hierarchy",
         filters={"department": department},
@@ -408,10 +412,13 @@ def get_department_load_employee(department,target_doctype):
     return load[0]["employee"]
 
     # Map department name to its doctype
+
+
 DEPARTMENT_DOCTYPE = {
-        "CR": "CR",
-        "Onboarding": "Onboardings",
-    }
+    "CR": "CR",
+    "Onboarding": "Onboardings",
+}
+
 
 def handle_CR_Onboarding_forward(
     customer,
@@ -453,7 +460,9 @@ def handle_CR_Onboarding_forward(
                 frappe.throw(f"{label} is required for onboarding")
 
     # Determine assignee
-    assignee = assign_employee or get_department_load_employee(department,target_doctype)
+    assignee = assign_employee or get_department_load_employee(
+        department, target_doctype
+    )
 
     # Get Customer + Lead Detail
     customer_doc = frappe.get_doc("Customer", customer)

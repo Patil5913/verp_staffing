@@ -393,16 +393,25 @@ def get_customer_history(
                 )
 
             else:
-                interview_name = frappe.get_all(
-                    "Interview",
-                    filters={"marketing_link": customer},
-                    pluck="name",
-                )
+                
+                marketing = frappe.get_value("Marketing", {"customer": customer}, "name")
 
+                interviews = frappe.db.sql(
+                        """
+                        SELECT
+                            ir.name
+                        FROM `tabInterview` i
+                        INNER JOIN `tabInterview Round` ir ON ir.parent = i.name
+                        WHERE i.marketing_link = %s
+                        """,
+                        (marketing,),
+                        as_dict=True,
+                    )
+                interview_rounds = [i.name for i in interviews]
                 docs = frappe.get_all(
                     "JDC",
-                    filters={"interview": ["in", interview_name]},
-                    fields=["name", "assign_to", "interview", "status"],
+                    filters={"interview_round": ["in", interview_rounds]},
+                    fields=["name", "assign_to", "interview_round", "status"],
                 )
 
             if not docs:
@@ -457,7 +466,7 @@ def get_customer_history(
                     for row in full_doc.proof_of_work:
                         dept_entry["proof_of_work"].append(
                             {
-                                "attachments": row.attachments,
+                                "document": row.document,
                                 "description": row.description,
                                 "date": row.date,
                             }
@@ -465,7 +474,7 @@ def get_customer_history(
 
                 if doctype == "JDC":
                     dept_entry["marketing_customer"] = customer
-                    dept_entry["interview"] = d.interview
+                    dept_entry["interview_round"] = d.interview_round
 
                 if doctype == "Resume" and d.get("resume"):
                     dept_entry["resume"] = d.get("resume")

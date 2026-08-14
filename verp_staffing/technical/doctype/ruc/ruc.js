@@ -9,6 +9,7 @@ frappe.ui.form.on("RUC", {
 
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
+			frm.set_df_property("assign_to", "read_only", 1);
 		}
 
 		frappe.call({

@@ -65,34 +65,6 @@
 	//   1. Hide the "+" quick-create button in the sidebar
 	//   2. Hide the "New" button on that doctype's list page
 	//
-	const NO_PLUS_DOCTYPES = new Set([
-		"Onboardings",
-		"GL Entry",
-		"Supplier Group",
-		"CR",
-		"Agreement",
-		"CRM Note",
-		"CRM Event",
-		"CRM Task",
-		"Lead Detail Form",
-		"Sales Stage",
-		"Interview Status",
-		"Type Of Interview",
-		"Other Services",
-		"Marketing Other Services",
-		"Marketing",
-		"Item Category",
-		"UOM",
-		"Cover Letter",
-		"JDC",
-		"Resume",
-		"RUC",
-		"Technical Other Services",
-		"Training",
-		"Bank Account Type",
-		"Bank Account Subtype",
-		"Sidebar Master",
-	]);
 
 	// ─── FULL WIDTH DEFAULT ────────────────────────────────────────────────────
 	(function enforce_full_width() {
@@ -267,7 +239,7 @@
 
 	// Returns true if the "+" quick-create button should be shown for this item.
 	function should_show_plus(doctype, item) {
-		if (NO_PLUS_DOCTYPES.has(doctype)) return false;
+		if (NO_PLUS_BUTTON_DISPLAY_DOCTYPES.has(doctype)) return false;
 		if (!item || item.type !== "doctype" || !item.doctype) return false;
 		if (item.issingle) return false;
 		return true;

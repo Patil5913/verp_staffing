@@ -152,7 +152,6 @@ def update_customer_stage(
         prevent_duplicate (bool): Avoid duplicate department entry
         timestamp (str|None): Custom timestamp override
     """
-
     if not customer or not service:
         return
 

@@ -1144,7 +1144,7 @@ def get_owned_sales_orders(customer):
     if not customer:
         return []
 
-
+    
     visible_employee_names = get_visible_employee_names_cached()
 
     if not visible_employee_names:

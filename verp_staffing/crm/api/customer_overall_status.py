@@ -1,7 +1,32 @@
 import frappe
 import json
 from datetime import datetime
-from verp_staffing.install import SERVICE_DOCTYPE_MAP  
+from verp_staffing.install import SERVICE_DOCTYPE_MAP
+
+PRIORITY_SERVICES = {"cr", "onboarding", "marketing", "resume", "ruc"}
+
+STATUS_LABELS = {
+    "Request for Update": "Rework",
+    "Pending": "Pending",
+    "In Progress": "In Progress",
+    "Started": "In Progress",
+}
+
+# Doctypes where a customer can have more than one row (e.g. one per
+# interview round). Everything else is guaranteed a single row per
+# customer (or per customer+service+department for the "Other Services"
+# family), so a plain status lookup is enough for those.
+MULTI_ROW_DOCTYPES = {"JDC", "Interview Support"}
+
+
+def _resolve_status(docs):
+    """Given rows sorted latest-modified-first, skip Completed ones and
+    return the first still-open status; 'Completed' if all are done."""
+    for d in docs:
+        if d.status and d.status != "Completed":
+            return d.status
+    return "Completed" if docs else None
+
 
 def compute_customer_status(customer):
     """
@@ -9,170 +34,149 @@ def compute_customer_status(customer):
         overall_status (str)
     """
 
-    # STEP 1: Fetch all required data (MIN QUERIES)
-    marketing_docs = frappe.get_all(
-        "Marketing",
-        filters={"customer": customer},
-        fields=["status", "creation"],
-        order_by="creation desc",
-        limit=1,
-    )
+    # Hard overrides checked before anything else, so we skip fetching
+    # stage entirely when they apply.
+    if frappe.db.exists("CR", {"customer": customer}):
+        return "Moved To CR"
+    if frappe.db.exists("Onboardings", {"customer": customer}):
+        return "Moved To Onboarding"
 
-    onboarding = frappe.db.exists("Onboardings", {"customer": customer})
-    cr = frappe.db.exists("CR", {"customer": customer})
-
-    # Stage JSON
     stage_json = frappe.db.get_value("Customer", customer, "stage")
-
     try:
         stage = json.loads(stage_json) if stage_json else {}
     except Exception:
         stage = {}
 
-    # STEP 2: HARD OVERRIDE (TOP PRIORITY)
-    if cr:
-        return "Moved To CR"
-    if onboarding:
-        return "Moved To Onboarding"
+    marketing_completed = False
 
-    # STEP 3: MARKETING PRIORITY
-
-    if marketing_docs:
-        m = marketing_docs[0]
-
-        if m.status == "Request for Update":
-            return "Marketing Rework"
-
-        if m.status == "Pending":
+    if "marketing" in stage:
+        status = frappe.db.get_value("Marketing", {"customer": customer}, "status")
+        if not status or status == "Request for Update":
+            return "Marketing Rework" if status else "Marketing Pending"
+        if status == "Pending":
             return "Marketing Pending"
-
-        if m.status == "Started":
+        if status == "Started":
             return "Marketing In Progress"
+        if status == "Completed":
+            marketing_completed = True  # fall through to other services
 
-        if m.status == "Completed":
-            # Do NOT return immediately
-            # allow fallback to stage services
-            marketing_completed = True
-        else:
-            marketing_completed = False
-    else:
-        marketing_completed = False
-
-    # STEP 4: RESUME → RUC CHAIN
     if "resume" in stage:
-        resume_doc = frappe.db.get_value("Resume", {"customer": customer}, ["status"])
-
-        if not resume_doc:
+        status = frappe.db.get_value("Resume", {"customer": customer}, "status")
+        if not status:
             return "Resume Pending"
-
-        if resume_doc == "Request for Update":
+        if status == "Request for Update":
             return "Resume Rework"
-
-        if resume_doc == "Pending":
+        if status == "Pending":
             return "Resume Pending"
-
-        if resume_doc == "Completed":
-            pass  # continue
+        # Completed -> fall through
 
     if "ruc" in stage:
-        ruc_doc = frappe.db.get_value("RUC", {"customer": customer}, ["status"])
-
-        if not ruc_doc:
+        status = frappe.db.get_value("RUC", {"customer": customer}, "status")
+        if not status:
             return "RUC Pending"
-
-        if ruc_doc == "Request for Update":
+        if status == "Request for Update":
             return "RUC Rework"
-
-        if ruc_doc == "Pending":
+        if status == "Pending":
             return "RUC Pending"
 
-        if ruc_doc == "Completed":
-            pass
 
-    # STEP 5: STAGE-BASED SERVICES (LOW PRIORITY)
-
-    events = []
+    latest_event = {}
 
     for service, entries in stage.items():
+        service_key = service.lower()
+        if service_key in PRIORITY_SERVICES:
+            continue
+
         for e in entries:
             try:
                 ts = datetime.fromisoformat(e["timestamp"])
             except Exception:
                 continue
 
-            events.append({
-                "service": service.lower(),
-                "timestamp": ts,
-                "department": e.get("department")
-            })
+            current = latest_event.get(service_key)
+            if not current or ts > current["timestamp"]:
+                latest_event[service_key] = {
+                    "timestamp": ts,
+                    "department": e.get("department"),
+                }
 
-    # Sort latest first
-    events.sort(key=lambda x: x["timestamp"], reverse=True)
+    if not latest_event:
+        return "Marketing Completed" if marketing_completed else "Ready"
 
-    # STEP 6: Batch fetch all service docs
+    mapped_services = {}
+    technical_services = []
+    marketing_services = []
+    other_dept_services = []
 
-    service_docs_map = {}
-
-    # Collect all unique services
-    services = set([e["service"] for e in events])
-
-    for service in services:
-        doctype = SERVICE_DOCTYPE_MAP.get(service, "Other Services")
-
-        if doctype == "Other Services":
-            # handle dynamic mapping
-            # fetch both technical + marketing
-            tech_docs = frappe.get_all(
-                "Technical Other Services",
-                filters={"customer": customer, "service": service},
-                fields=["status", "modified"]
-            )
-
-            mkt_docs = frappe.get_all(
-                "Marketing Other Services",
-                filters={"customer": customer, "service": service},
-                fields=["status", "modified"]
-            )
-
-            service_docs_map[service] = tech_docs + mkt_docs
-
-        else:
-            docs = frappe.get_all(
-                doctype,
-                filters={"customer": customer},
-                fields=["status", "modified"]
-            )
-            service_docs_map[service] = docs
-
-    # STEP 7: Resolve latest ACTIVE service
-
-    for event in events:
-        service = event["service"]
-        docs = service_docs_map.get(service, [])
-
-        if not docs:
+    for service_key, info in latest_event.items():
+        if service_key in SERVICE_DOCTYPE_MAP:
+            doctype = SERVICE_DOCTYPE_MAP[service_key]
+            mapped_services.setdefault(doctype, []).append(service_key)
             continue
 
-        # pick latest doc
-        doc = sorted(docs, key=lambda x: x["modified"], reverse=True)[0]
+        department = (info.get("department") or "").strip().lower()
+        if department == "technical":
+            technical_services.append(service_key)
+        elif department == "marketing":
+            marketing_services.append(service_key)
+        else:
+            other_dept_services.append(service_key)
 
-        status = doc.get("status")
+    service_status_map = {}  
 
-        if status == "Completed":
-            continue  # skip
+    # One query per distinct doctype forwarded to (bounded by SERVICE_DOCTYPE_MAP
+    # size). For JDC/Interview Support this can return multiple rows (one per
+    # round), which _resolve_status collapses to a single effective status.
+    for doctype, service_keys in mapped_services.items():
+        docs = frappe.get_all(
+            doctype,
+            filters={"customer": customer},
+            fields=["status", "modified"],
+            order_by="modified desc",
+        )
+        resolved = _resolve_status(docs)
+        for service_key in service_keys:
+            service_status_map[service_key] = resolved
 
-        if status == "Request for Update":
-            return f"{service.title()} Rework"
+    # customer+service(+department) is unique for these three doctypes, so a
+    # single batched "in" query per bucket gives one row per service.
+    if technical_services:
+        docs = frappe.get_all(
+            "Technical Other Services",
+            filters={"customer": customer, "service": ["in", technical_services]},
+            fields=["service", "status"],
+        )
+        for d in docs:
+            service_status_map[d.service] = d.status
 
-        if status == "Pending":
-            return f"{service.title()} Pending"
+    if marketing_services:
+        docs = frappe.get_all(
+            "Marketing Other Services",
+            filters={"customer": customer, "service": ["in", marketing_services]},
+            fields=["service", "status"],
+        )
+        for d in docs:
+            service_status_map[d.service] = d.status
 
-        if status == "In Progress":
-            return f"{service.title()} In Progress"
+    if other_dept_services:
+        docs = frappe.get_all(
+            "Other Services",
+            filters={"customer": customer, "service": ["in", other_dept_services]},
+            fields=["service", "department", "status"],
+        )
+        for d in docs:
+            service_status_map[d.service] = d.status
 
-    # STEP 8: FINAL FALLBACK
+    ordered_services = sorted(
+        latest_event.keys(), key=lambda s: latest_event[s]["timestamp"], reverse=True
+    )
 
-    if marketing_completed:
-        return "Marketing Completed"
+    for service_key in ordered_services:
+        status = service_status_map.get(service_key)
+        if not status or status == "Completed":
+            continue
+        label = STATUS_LABELS.get(status)
+        if label:
+            return f"{service_key.title()} {label}"
 
-    return "Ready"
+    return "Marketing Completed" if marketing_completed else "Ready"

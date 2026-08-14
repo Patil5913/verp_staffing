@@ -609,8 +609,8 @@ function render_customer_history(frm, data, append_interviews = false) {
 											<td style="${td}">${row.description || "-"}</td>
 											<td style="${td}">
 												${
-													row.attachments
-														? `<a href="${row.attachments}" target="_blank" style="color:#260fea;">View</a>`
+													row.document
+														? `<a href="${row.document}" target="_blank" style="color:#260fea;">View</a>`
 														: "-"
 												}
 											</td>

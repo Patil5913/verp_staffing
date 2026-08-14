@@ -12,6 +12,7 @@ SERVICE_DOCTYPE_MAP = {
     "marketing": "Marketing",
     "cr": "CR",
     "onboarding": "Onboarding",
+    "interview support": "Interview Support",
 }
 
 
@@ -1399,6 +1400,16 @@ def seed_master_sidebar_config():
                     "roles": [],
                 },
                 {
+                    "key": "interview_support",
+                    "name": "Interview Support",
+                    "type": "doctype",
+                    "route": "/app/interview-support",
+                    "doctype": "Interview Support",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
                     "key": "technical-other-services",
                     "name": "Technical Other Services",
                     "type": "doctype",
@@ -1661,6 +1672,17 @@ def seed_master_sidebar_config():
                     "roles": [],
                 },
             ],
+        },
+        {
+            "key": "other-services",
+            "label": "Other Services",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/other-services",
+            "link_type": "doctype",
+            "doctype": "Other Services",
         },
         {
             "key": "e-sign",
@@ -2634,6 +2656,7 @@ SERVICE_DEPARTMENT_MAP = {
         "RUC",
         "JDC",
         "Training",
+        "Interview Support"
     ],
     "Resume": [
         "Resume",

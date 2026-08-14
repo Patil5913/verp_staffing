@@ -8,6 +8,8 @@ const FINAL_ROUND_STATUSES = new Set(["Cancelled", "Rescheduled", "Completed"]);
 frappe.ui.form.on("Interview", {
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
+
+		// Define the breadcrumb structure
 		frappe.breadcrumbs.all[frappe.get_route_str()] = {
 			workspace: "Interviews",
 			doctype: frm.doctype,
@@ -293,31 +295,46 @@ function toggle_cancellation_fields(frm, cdt, cdn) {
 function fetch_and_render_resume(frm) {
 	const set_html = (html) => frm.set_df_property("resume", "options", html);
 
-	frappe.db
-		.get_value("Marketing", frm.doc.marketing_link, "customer")
-		.then(({ message }) => {
-			const customer = message?.customer;
-			if (!customer) {
-				set_html('<div style="color:#888">No customer selected</div>');
-				return null;
-			}
-			return frappe.db.get_value("Resume", { customer }, ["resume"]);
-		})
-		.then((r) => {
-			const file_url = r?.message?.resume;
-			if (!file_url) {
-				set_html('<div style="color:#888">No resume uploaded</div>');
-				return;
-			}
-			set_html(`
+	const clear_resume = () => set_html("");
+
+	frappe.db.get_value("Marketing", frm.doc.marketing_link, "customer").then(({ message }) => {
+		const customer = message?.customer;
+		if (!customer) {
+			clear_resume();
+			return;
+		}
+		frappe.call({
+			method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
+			args: {
+				customer: customer,
+			},
+			callback(r) {
+				const resume = r.message;
+
+				if (!resume?.document) {
+					clear_resume();
+					return;
+				}
+
+				set_html(`
 				<div style="padding:8px">
-					<a href="${file_url}" target="_blank" style="color:#1a73e8;font-weight:600;text-decoration:none;">
+					<a
+						href="${resume.document}"
+						target="_blank"
+						style="
+							color:#1a73e8;
+							font-weight:600;
+							text-decoration:none;
+						"
+					>
 						📄 View Resume
 					</a>
 				</div>
 			`);
-		})
-		.catch(() => {
-			set_html('<div style="color:#888">No resume uploaded</div>');
+			},
+			error() {
+				clear_resume();
+			},
 		});
+	});
 }

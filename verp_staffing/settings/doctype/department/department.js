@@ -8,7 +8,7 @@ frappe.ui.form.on("Department", {
 		if (!frm.doc.name) return;
 
 		// Show redirect buttopn in headline
-		if(frappe.session.user === "Administrator"){
+		if (frappe.session.user === "Administrator") {
 			await render_headline(frm);
 		}
 	},
@@ -20,6 +20,10 @@ frappe.ui.form.on("Department", {
 
 async function render_headline(frm) {
 	if (frm.is_new()) return;
+	if (frm.__headline_rendered_for === frm.doc.name) return;
+	frm.__headline_rendered_for = frm.doc.name;
+
+	frm.dashboard.clear_headline();
 
 	const r = await frappe.db.get_value("Hierarchy", { department: frm.doc.name }, "name");
 
