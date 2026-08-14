@@ -25,7 +25,7 @@ def execute(filters=None):
 
     # ── Server-side defaults (same pattern as Balance Sheet / P&L) ─
     if not filters.company:
-        filters.company = frappe.db.get_single_value("Accounts Settings", "default_company")
+        filters.company = frappe.db.get_single_value("ERP Configuration", "default_company")
 
     if not filters.fiscal_year:
         filters.fiscal_year = _get_latest_fiscal_year(filters.company)
@@ -61,7 +61,7 @@ def _get_latest_fiscal_year(company):
 
 def validate_filters(filters):
     if not filters.company:
-        frappe.throw(_("Please select a Company (or set a Default Company in Accounts Settings)."))
+        frappe.throw(_("Please select a Company (or set a Default Company in ERP Configuration)."))
     if not filters.fiscal_year:
         frappe.throw(_(
             "Could not determine a Fiscal Year for company '{0}'. "

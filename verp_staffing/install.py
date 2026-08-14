@@ -1027,14 +1027,6 @@ FORM_TOURS = {
         "title": "Accounts Settings",
         "steps": [
             {
-                "title": "Select Default Company",
-                "fieldname": "default_company",
-                "description": "Choose the default company that will be automatically used in accounting transactions such as orders, invoices, and vouchers.",
-                "position": "Right Center",
-                "label": "Default Company",
-                "fieldtype": "Link",
-            },
-            {
                 "title": "Show Account Balances",
                 "fieldname": "show_balance_in_coa",
                 "description": "Enable this option to display account balances in the Chart of Accounts.",

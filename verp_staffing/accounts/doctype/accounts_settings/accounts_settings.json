@@ -7,8 +7,7 @@
   "charts_of_accounts_tab",
   "show_balance_in_coa",
   "auto_send_sales_invoice_after_submission",
-  "invoice_reminder_days",
-  "invoice_and_billing_tab"
+  "invoice_reminder_days"
  ],
  "fields": [
   {
@@ -21,11 +20,6 @@
    "fieldname": "show_balance_in_coa",
    "fieldtype": "Check",
    "label": "Show Balances in Chart Of Accounts"
-  },
-  {
-   "fieldname": "invoice_and_billing_tab",
-   "fieldtype": "Tab Break",
-   "label": "Invoice & Billing"
   },
   {
    "default": "0",
@@ -43,7 +37,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-06 17:09:17.551870",
+ "modified": "2026-08-14 11:32:03.974011",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",

@@ -68,7 +68,7 @@
     "docstatus": 0,
     "doctype": "Kanban Board",
     "field_name": "status",
-    "fields": "[\"company\",\"role\"]",
+    "fields": "[\"role\"]",
     "filters": null,
     "kanban_board_name": "Interview",
     "modified": "2026-06-17 18:05:13.609444",

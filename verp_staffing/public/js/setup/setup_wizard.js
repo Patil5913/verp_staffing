@@ -59,17 +59,17 @@ frappe.setup.on("before_load", function () {
 			{
 				fieldtype: "Section Break",
 			},
-			// {
-			// 	fieldname: "add_sample_data",
-			// 	label: __("Add Sample Data"),
-			// 	fieldtype: "Check",
-			// 	default: 0,
-			// 	description: __(
-			// 		"Seeds departments, users, employees, leads, opportunities, " +
-			// 			"customers, orders and invoices so you can explore the system " +
-			// 			"immediately. You can safely skip this on a production setup.",
-			// 	),
-			// },
+			{
+				fieldname: "add_sample_data",
+				label: __("Add Sample Data"),
+				fieldtype: "Check",
+				default: 0,
+				description: __(
+					"Seeds departments, users, employees, leads, opportunities, " +
+						"customers, orders and invoices so you can explore the system " +
+						"immediately. You can safely skip this on a production setup.",
+				),
+			},
 			{
 				fieldtype: "Section Break",
 				label: __("Email Configuration"),

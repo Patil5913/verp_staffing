@@ -5,69 +5,23 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "supplier_group_name",
-  "is_group",
-  "parent_supplier_group",
-  "lft",
-  "rgt",
-  "old_parent"
+  "supplier_group_name"
  ],
  "fields": [
   {
    "allow_in_quick_entry": 1,
    "fieldname": "supplier_group_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Supplier Group Name",
    "reqd": 1,
    "unique": 1
-  },
-  {
-   "allow_in_quick_entry": 1,
-   "bold": 1,
-   "fieldname": "parent_supplier_group",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Parent Supplier Group",
-   "options": "Supplier Group"
-  },
-  {
-   "allow_in_quick_entry": 1,
-   "bold": 1,
-   "default": "0",
-   "description": "Only leaf nodes are allowed in transaction",
-   "fieldname": "is_group",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Is Group"
-  },
-  {
-   "fieldname": "lft",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "Left",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "rgt",
-   "fieldtype": "Int",
-   "hidden": 1,
-   "label": "Right",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "old_parent",
-   "fieldtype": "Link",
-   "label": "Old Parent",
-   "options": "Supplier Group"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_tree": 1,
  "links": [],
- "modified": "2026-07-02 18:01:18.333068",
+ "modified": "2026-08-13 16:17:33.682846",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier Group",
