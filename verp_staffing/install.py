@@ -1899,7 +1899,7 @@ def setup_navbar_settings():
             },
         )
 
-    url = "https://drive.usercontent.google.com/uc?id=1QDOhV8V4IeOCHaj22ydoWATFSqJkAgH5&export=download"
+    url = "https://drive.usercontent.google.com/uc?id=1CnwkrRH7n7OGdbsbNwkRENaMQn4sqmY-&export=download"
 
     existing = frappe.db.get_value(
         "File",
@@ -1949,7 +1949,7 @@ def seed_website_setting():
         updated = True
 
     # App logo (reuse if exists, else download)
-    url = "https://drive.usercontent.google.com/uc?id=1QDOhV8V4IeOCHaj22ydoWATFSqJkAgH5&export=download"
+    url = "https://drive.usercontent.google.com/uc?id=1CnwkrRH7n7OGdbsbNwkRENaMQn4sqmY-&export=download"
     existing = frappe.db.get_value(
         "File",
         {"attached_to_doctype": "Website Settings"},

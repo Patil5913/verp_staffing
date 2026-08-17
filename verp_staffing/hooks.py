@@ -51,6 +51,7 @@ app_include_js = [
     "/assets/verp_staffing/js/override/list_view_override.js",
     "/assets/verp_staffing/js/override/email_provider_defaults.js",
     "/assets/verp_staffing/js/document_references_widget.js",
+    "/assets/verp_staffing/js/customer_history.js",
 ]
 
 # include js, css files in header of web template

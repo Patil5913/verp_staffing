@@ -13,6 +13,7 @@
   "section_break_mtyr",
   "proof_of_work",
   "proof_of_work_html",
+  "customer_feedback",
   "section_break_trra",
   "lead_details",
   "notes_section",
@@ -109,13 +110,20 @@
    "label": "Interview Round",
    "options": "Interview Round",
    "read_only": 1
+  },
+  {
+   "fieldname": "customer_feedback",
+   "fieldtype": "Table",
+   "label": "Customer Feedback",
+   "options": "Customer Feedback",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-14 12:35:09.293162",
+ "modified": "2026-08-17 15:12:27.778739",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

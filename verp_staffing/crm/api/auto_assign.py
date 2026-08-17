@@ -145,10 +145,11 @@ def forward_candidate(customer, service, interview_round=None):
             salary=frappe.form_dict.get("salary"),
             company_percentage=frappe.form_dict.get("company_percentage"),
         )
+    frappe.errprint(f"_______servicekey in satge: {service_key in stage}")
     if service_key in stage:
         doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
         department = stage[service_key][0].get("department")
-
+        frappe.errprint(f"department:{department}")
         if doctype == "Other Services":
             if department == "Technical":
                 doctype = "Technical Other Services"
@@ -175,8 +176,15 @@ def forward_candidate(customer, service, interview_round=None):
             )
             service_doc.insert(ignore_permissions=True)
             stage[service_key].append(
-                {"department": department, "timestamp": str(now_datetime())}
+                {
+                    "department": department,
+                    "timestamp": str(now_datetime()),
+                    "interview_round": interview_round,
+                }
             )
+            frappe.errprint(f"stage: {stage}")
+            frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
+
             return {"reforward": False, "doctype": doctype, "name": service_doc.name}
 
         if department == "Marketing":
@@ -233,9 +241,15 @@ def forward_candidate(customer, service, interview_round=None):
         for d in docs:
             frappe.db.set_value(doctype, d.name, "status", "Request for Update")
 
-        stage[service_key].append(
-            {"department": department, "timestamp": str(now_datetime())}
-        )
+        stage_entry = {
+            "department": department,
+            "timestamp": str(now_datetime()),
+        }
+
+        if interview_round:
+            stage_entry["interview_round"] = interview_round
+
+        stage[service_key].append(stage_entry)
 
         frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
 
@@ -289,7 +303,15 @@ def forward_candidate(customer, service, interview_round=None):
 
     service_doc.insert(ignore_permissions=True)
 
-    stage[service_key] = [{"department": department, "timestamp": str(now_datetime())}]
+    stage_entry = {
+        "department": department,
+        "timestamp": str(now_datetime()),
+    }
+
+    if interview_round:
+        stage_entry["interview_round"] = interview_round
+
+    stage[service_key] = [stage_entry]
 
     frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
 

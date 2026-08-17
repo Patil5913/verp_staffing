@@ -12,6 +12,7 @@
   "section_break_xjvc",
   "proof_of_work",
   "proof_of_work_html",
+  "customer_feedback",
   "section_break_qysf",
   "lead_details",
   "notes_section",
@@ -100,13 +101,20 @@
   {
    "fieldname": "section_break_qysf",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "customer_feedback",
+   "fieldtype": "Table",
+   "label": "Customer Feedback",
+   "options": "Customer Feedback",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-13 17:42:21.558756",
+ "modified": "2026-08-17 12:21:54.857014",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",

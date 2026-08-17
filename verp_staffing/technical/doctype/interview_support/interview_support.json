@@ -14,6 +14,7 @@
   "random_section",
   "proof_of_work",
   "proof_of_work_html",
+  "candidate_feedback",
   "section_break_yeoz",
   "lead_details"
  ],
@@ -83,12 +84,18 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "candidate_feedback",
+   "fieldtype": "Small Text",
+   "label": "Candidate Feedback",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-14 12:37:24.553505",
+ "modified": "2026-08-17 11:44:06.854907",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Interview Support",
