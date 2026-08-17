@@ -720,3 +720,317 @@ function setButtonState($btn, state, text) {
 		$btn.html($btn.data("original-text"));
 	}
 }
+
+window.render_owned_sales_orders = function (frm, html_field, customer) {
+	const wrapper = frm.fields_dict?.[html_field]?.$wrapper;
+
+	if (!wrapper) {
+		console.error(`[Sales Orders] HTML field '${html_field}' was not found on ${frm.doctype}`);
+		return;
+	}
+
+	if (!customer) {
+		wrapper.html(`
+            <p class="text-muted" style="padding:10px">
+                No customer selected.
+            </p>
+        `);
+		return;
+	}
+
+	wrapper.html(`
+        <div style="padding:10px">
+            <span class="text-muted">
+                Loading Sales Orders...
+            </span>
+        </div>
+    `);
+
+	frappe.call({
+		method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_owned_sales_orders",
+
+		args: {
+			customer: customer,
+		},
+
+		callback(r) {
+			const sales_orders = r.message || [];
+
+			if (!sales_orders.length) {
+				wrapper.html(`
+                    <p
+                        class="text-muted"
+                        style="padding:10px"
+                    >
+                        No Sales Orders found. If you have created a
+                        Sales Order against this customer, it may not
+                        be visible to you due to ownership permissions.
+                    </p>
+                `);
+
+				return;
+			}
+
+			let html = `<div style="padding:10px">`;
+
+			sales_orders.forEach((so) => {
+				const safe_id = make_safe_id(so.name);
+
+				const status_color =
+					{
+						Open: "orange",
+						Closed: "green",
+						Cancelled: "red",
+						Draft: "orange",
+					}[so.status] || "grey";
+
+				const doc_status_color =
+					{
+						2: "red",
+						0: "orange",
+					}[so.docstatus] || "grey";
+
+				const doc_status_label =
+					{
+						0: "Draft",
+						2: "Cancelled",
+					}[so.docstatus] || "";
+
+				html += `
+                    <div
+                        style="
+                            border:1px solid var(--border-color);
+                            padding:15px;
+                            border-radius:6px;
+                            margin-bottom:15px;
+                        "
+                    >
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:center;
+                                margin-bottom:8px;
+                            "
+                        >
+                            <div>
+                                <a
+                                    href="/app/sales-order/${so.name}"
+                                    target="_blank"
+                                    style="
+                                        font-size:15px;
+                                        font-weight:600;
+                                    "
+                                >
+                                    ${so.name}
+                                </a>
+
+                                <span
+                                    class="indicator-pill ${status_color}"
+                                    style="
+                                        margin-left:8px;
+                                        font-size:11px;
+                                    "
+                                >
+                                    ${so.status || "-"}
+                                </span>
+
+                                ${
+									so.docstatus != 1
+										? `
+                                    <span
+                                        class="indicator-pill ${doc_status_color}"
+                                        style="
+                                            margin-left:8px;
+                                            font-size:11px;
+                                        "
+                                    >
+                                        ${doc_status_label}
+                                    </span>
+                                `
+										: ""
+								}
+                            </div>
+
+                            <span
+                                class="text-muted"
+                                style="font-size:12px;"
+                            >
+                                ${
+									so.posting_date
+										? frappe.datetime.str_to_user(so.posting_date)
+										: ""
+								}
+                            </span>
+                        </div>
+
+                        <div
+                            style="
+                                margin-bottom:8px;
+                                font-size:12px;
+                                color:var(--text-muted);
+                            "
+                        >
+                            Owner: ${so.owner || "-"}
+                        </div>
+
+                        <div id="terms_${safe_id}">
+                            ${render_payment_terms_html(so)}
+                        </div>
+                    </div>
+                `;
+			});
+
+			html += `</div>`;
+
+			wrapper.html(html);
+		},
+
+		error(err) {
+			console.error("[Sales Orders] Failed to load Sales Orders:", err);
+
+			wrapper.html(`
+                <p
+                    class="text-danger"
+                    style="padding:10px"
+                >
+                    Unable to load Sales Orders.
+                </p>
+            `);
+		},
+	});
+};
+
+function make_safe_id(name) {
+	return name.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function render_payment_terms_html(so) {
+	const terms = so.payment_terms || [];
+
+	if (!terms.length) {
+		return `
+            <p
+                class="text-muted"
+                style="font-size:12px; margin:0"
+            >
+                No payment terms added.
+            </p>
+        `;
+	}
+
+	const status_config = {
+		Unpaid: {
+			color: "orange",
+		},
+
+		"Pending Verification": {
+			color: "yellow",
+		},
+
+		Verified: {
+			color: "green",
+		},
+
+		Rejected: {
+			color: "red",
+		},
+	};
+
+	const rows = terms
+		.map((row, i) => {
+			const status = status_config[row.payment_status] || {
+				color: "grey",
+			};
+
+			const condition_label =
+				row.payment_condition === "Number of Days"
+					? `${row.counter} day(s) from ${
+							row.start_date ? frappe.datetime.str_to_user(row.start_date) : "?"
+						}`
+					: row.payment_condition === "Number of Interviews"
+						? `After ${row.counter} interview(s)`
+						: "Not Applied";
+
+			return `
+                <tr>
+                    <td style="text-align:center">
+                        ${i + 1}
+                    </td>
+
+                    <td>
+                        ${condition_label}
+                    </td>
+
+                    <td>
+                        ${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "—"}
+                    </td>
+
+                    <td style="text-align:right">
+                        ${format_currency(row.amount, so.currency)}
+                    </td>
+
+                    <td>
+                        <span
+                            class="indicator-pill ${status.color}"
+                            style="font-size:11px;"
+                        >
+                            ${row.payment_status || "Unpaid"}
+                        </span>
+                    </td>
+
+                    <td>
+                        ${
+							row.payment_entry
+								? `
+                                    <a
+                                        href="/app/payment-entry/${row.payment_entry}"
+                                        target="_blank"
+                                        style="font-size:11px;"
+                                    >
+                                        ${row.payment_entry}
+                                    </a>
+                                `
+								: `
+                                    <span
+                                        class="text-muted"
+                                        style="font-size:11px;"
+                                    >
+                                        —
+                                    </span>
+                                `
+						}
+                    </td>
+                </tr>
+            `;
+		})
+		.join("");
+
+	return `
+        <table
+            class="table table-bordered table-condensed"
+            style="
+                margin-top:8px;
+                margin-bottom:0;
+                font-size:12px;
+            "
+        >
+            <thead
+                style="background:var(--bg-light-gray)"
+            >
+                <tr>
+                    <th style="width:30px">#</th>
+                    <th>Condition</th>
+                    <th>Due Date</th>
+                    <th style="text-align:right">Amount</th>
+                    <th>Status</th>
+                    <th>Payment Entry</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+}

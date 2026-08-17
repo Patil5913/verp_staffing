@@ -9,7 +9,7 @@ frappe.ui.form.on("Employee", {
 				query: "verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee",
 			};
 		});
-		if(frappe.session.user === "Administrator"){
+		if (frappe.session.user === "Administrator") {
 			await render_headline(frm);
 		}
 		const has_sales_department = (frm.doc.employee_assignment_details_table || []).some(
@@ -142,7 +142,7 @@ frappe.ui.form.on("Employee", {
 					filters: {
 						department: row.department,
 						designation: parent_roles,
-						current_emp: frm.doc.name
+						current_emp: frm.doc.name,
 					},
 				};
 			};
@@ -188,10 +188,7 @@ frappe.ui.form.on("Employee", {
 
 async function apply_employee_read_only_restriction(frm) {
 	// Administrator / System Manager bypass
-	if (
-		frappe.session.user === "Administrator" ||
-		frappe.user.has_role("System Manager")
-	) {
+	if (frappe.session.user === "Administrator" || frappe.user.has_role("System Manager")) {
 		return;
 	}
 
@@ -199,9 +196,7 @@ async function apply_employee_read_only_restriction(frm) {
 		method: "verp_staffing.crm.api.helpers.get_user_departments",
 	});
 
-	const is_hr_user = departments.some(
-		(dept) => (dept || "").toLowerCase() === "hr",
-	);
+	const is_hr_user = departments.some((dept) => (dept || "").toLowerCase() === "hr");
 
 	if (is_hr_user) {
 		return;
@@ -227,6 +222,13 @@ async function apply_employee_read_only_restriction(frm) {
 }
 
 async function render_headline(frm) {
+	console.log("frm.is_new(): ", frm.is_new());
+	if (frm.is_new()) return;
+	if (frm.__headline_rendered_for === frm.doc.name) return;
+	frm.__headline_rendered_for = frm.doc.name;
+
+	frm.dashboard.clear_headline();
+
 	const r = await frappe.call({
 		method: "verp_staffing.utils.onboarding_setup_helper.get_setup_progress",
 	});

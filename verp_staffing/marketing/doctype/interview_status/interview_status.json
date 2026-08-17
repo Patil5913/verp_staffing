@@ -5,22 +5,32 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "status_name"
+  "status_name",
+  "is_system_generated"
  ],
  "fields": [
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "status_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Status Name",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_system_generated",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is System Generated",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 17:51:11.075012",
+ "modified": "2026-08-12 17:23:41.398059",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Status",
@@ -41,48 +51,37 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Marketing Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Marketing Master Manager",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Marketing Mentor",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Marketing Team Lead",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Recruiter",
-   "select": 1,
-   "write": 1
+   "select": 1
   },
   {
-   "create": 1,
    "read": 1,
    "role": "Senior Recruiter",
-   "select": 1,
-   "write": 1
+   "select": 1
   }
  ],
+ "quick_entry": 1,
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",

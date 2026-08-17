@@ -2,7 +2,7 @@ import frappe
 import json
 from verp_staffing.utils.customer_page import get_otp_status_web
 from frappe import _
-
+from verp_staffing.install import SERVICE_DOCTYPE_MAP
 import base64
 
 
@@ -308,6 +308,121 @@ def save_interview_feedback(token, feedback_data):
         raise
 
 
+_DOCTYPE_TO_STAGE_KEY = {v: k for k, v in SERVICE_DOCTYPE_MAP.items()}
+
+FEEDBACK_ALLOWED_DOCTYPES = {"JDC", "Interview Support", "Training"}
+
+
+EXCLUDED_SERVICES = {"cr", "onboarding"}
+
+INTERVIEW_LINKED_DOCTYPES = {"JDC", "Interview Support"}
+FEEDBACK_TRACKED_DOCTYPES = {"JDC", "Interview Support", "Training"}
+DOCUMENT_REFERENCE_DOCTYPES = {
+    "Resume",
+    "JDC",
+    "Interview Support",
+    "Cover Letter",
+    "Training",
+    "Technical Other Services",
+    "Marketing Other Services",
+    "Other Services",
+}
+
+COMPLETED_STATUS = "Completed"
+
+DOC_FIELDS_BY_DOCTYPE = {
+    "RUC": ["name", "assign_to", "status"],
+    "Resume": ["name", "assign_to", "status"],
+    "Training": ["name", "assign_to", "status"],
+    "Cover Letter": ["name", "assign_to", "status"],
+    "Marketing": ["name", "assign_to", "status"],
+    "Technical Other Services": ["name", "assign_to", "status"],
+    "Marketing Other Services": ["name", "assign_to", "status"],
+    "Other Services": ["name", "assign_to", "status"],
+    "JDC": ["name", "assign_to", "interview_round", "status"],
+    "Interview Support": ["name", "assign_to", "interview_round", "status"],
+}
+
+
+def _resolve_doctype(stage_key, events):
+    doctype = SERVICE_DOCTYPE_MAP.get(stage_key)
+    if doctype:
+        return doctype
+
+    department = None
+    if isinstance(events, list) and events:
+        department = events[0].get("department")
+
+    if department == "Technical":
+        return "Technical Other Services"
+    if department == "Marketing":
+        return "Marketing Other Services"
+    return "Other Services"
+
+
+def _group_by_parent(rows):
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(row["parent"], []).append(row)
+    return grouped
+
+
+def _customer_for_interview_round(round_name):
+    """Walk Interview Round -> Interview -> Marketing -> Customer."""
+    interview_name = frappe.db.get_value("Interview Round", round_name, "parent")
+    if not interview_name:
+        return None
+    marketing_link = frappe.db.get_value("Interview", interview_name, "marketing_link")
+    if not marketing_link:
+        return None
+    return frappe.db.get_value("Marketing", marketing_link, "customer")
+
+
+def _verify_doc_belongs_to_customer(doctype, docname, customer):
+    if doctype in ("Training", "RUC"):
+        return frappe.db.get_value(doctype, docname, "customer") == customer
+
+    if doctype == "Interview Round":
+        return _customer_for_interview_round(docname) == customer
+
+    if doctype in INTERVIEW_LINKED_DOCTYPES:  # JDC, Interview Support
+        interview_round = frappe.db.get_value(doctype, docname, "interview_round")
+        if not interview_round:
+            return False
+        return _customer_for_interview_round(interview_round) == customer
+
+    return False
+
+
+def _get_pending_feedback_info(doctype, docname, customer):
+    """Recompute forward_count / feedback_count / status server-side —
+    same logic as get_customer_history, used to validate writes rather
+    than trusting whatever the client reports."""
+    raw_stage = frappe.db.get_value("Customer", customer, "stage")
+    stage_data = (
+        json.loads(raw_stage) if isinstance(raw_stage, str) else (raw_stage or {})
+    )
+
+    stage_key = _DOCTYPE_TO_STAGE_KEY.get(doctype)
+    events = stage_data.get(stage_key, []) if stage_key else []
+
+    if doctype in INTERVIEW_LINKED_DOCTYPES:
+        interview_round = frappe.db.get_value(doctype, docname, "interview_round")
+        events = [e for e in events if e.get("interview_round") == interview_round]
+
+    feedback_count = frappe.db.count(
+        "Customer Feedback", filters={"parent": docname, "parenttype": doctype}
+    )
+    status = frappe.db.get_value(doctype, docname, "status")
+
+    return len(events), feedback_count, status
+
+
+# ---------------------------------------------------------------------
+# get_customer_history
+# ---------------------------------------------------------------------
+
+
 @frappe.whitelist(allow_guest=True)
 def get_customer_history(
     customer=None, token=None, interview_limit=5, interview_offset=0
@@ -316,202 +431,332 @@ def get_customer_history(
         auth = authenticate_customer_request(token, require_verified=False)
         customer = auth["customer"]
 
-    Customer = frappe.get_all(
+    customer_doc = frappe.get_doc(
         "Customer",
-        filters={"name": customer},
+        customer,
         fields=["name", "stage", "owner"],
     )
-    if not Customer:
+    if not customer_doc:
         return {"customer": {}, "departments": {}}
 
     history = {
         "customer": {
-            "owner": Customer[0].owner,
-            "customer_name": Customer[0].name,
+            "owner": customer_doc.owner,
+            "customer_name": customer_doc.name,
         },
         "departments": {},
     }
 
-    # --------------------------------------------------
-    # Department Workflow History
-    # --------------------------------------------------
-
-    departments = {
-        "ruc": "RUC",
-        "training": "Training",
-        "resume": "Resume",
-        "cover letter": "Cover Letter",
-        "jdc": "JDC",
-        "marketing": "Marketing",
-    }
-    # ------------------------------------
-    # get stage data
-    # ------------------------------------
-    if Customer:
-        customer_doc = Customer[0]
-        stage_data = customer_doc["stage"]
-
-    if not stage_data:
-        # no stage data — still load sales orders and interviews
-        pass
-    else:
+    stage_data = customer_doc.stage
+    if stage_data:
         if isinstance(stage_data, str):
             stage_data = json.loads(stage_data)
+        _populate_department_history(history, stage_data, customer)
 
-        # ------------------------------------------
-        # get each services
-        # ------------------------------------------
+    _populate_interview_history(history, customer, interview_limit, interview_offset)
 
-        for stage, value in stage_data.items():
-            # ✅ lowercase for safe matching
-            doctype = departments.get(stage.lower())
+    return history
 
-            if not doctype:
-                department = None
-                if isinstance(value, list) and value:
-                    department = value[0].get("department")
 
-                if department == "Technical":
-                    doctype = "Technical Other Services"
-                elif department == "Marketing":
-                    doctype = "Marketing Other Services"
-                elif department == "Resume":
-                    doctype = "Other Services"
+def _populate_department_history(history, stage_data, customer):
+    doctype_events = {}  # doctype -> list of raw forward-event dicts
 
-                if not doctype:
-                    continue
+    for stage_key, events in stage_data.items():
+        if stage_key in EXCLUDED_SERVICES:
+            continue
+        if not isinstance(events, list) or not events:
+            continue
 
-            if doctype != "JDC":
-                fields = ["name", "assign_to", "status"]
-                if doctype == "Resume":
-                    fields.append("resume")
+        doctype = _resolve_doctype(stage_key, events)
+        doctype_events.setdefault(doctype, []).extend(events)
 
-                docs = frappe.get_all(
-                    doctype,
-                    filters={"customer": customer},
-                    fields=fields,
-                )
+    if not doctype_events:
+        return
 
-            else:
-                interview_name = frappe.get_all(
-                    "Interview",
-                    filters={"marketing_link": customer},
-                    pluck="name",
-                )
+    interview_doctypes = [d for d in doctype_events if d in INTERVIEW_LINKED_DOCTYPES]
+    simple_doctypes = [d for d in doctype_events if d not in INTERVIEW_LINKED_DOCTYPES]
 
-                docs = frappe.get_all(
-                    "JDC",
-                    filters={"interview": ["in", interview_name]},
-                    fields=["name", "assign_to", "interview", "status"],
-                )
-
-            if not docs:
+    # ---- batch-fetch Interview + Interview Round info, once -------------
+    round_ids = set()
+    events_by_round = {}  # doctype -> {interview_round: [events]}
+    for doctype in interview_doctypes:
+        events_by_round[doctype] = {}
+        for event in doctype_events[doctype]:
+            rid = event.get("interview_round")
+            if not rid:
                 continue
+            round_ids.add(rid)
+            events_by_round[doctype].setdefault(rid, []).append(event)
 
-            for d in docs:
-                full_doc = frappe.get_doc(doctype, d.name)
+    interview_round_map = {}
+    if round_ids:
+        rows = frappe.db.sql(
+            """
+            SELECT
+                ir.name              AS round_name,
+                ir.parent             AS interview_name,
+                ir.round              AS round,
+                ir.date_of_interview  AS date_of_interview,
+                ir.from_time          AS from_time,
+                ir.to_time            AS to_time,
+                ir.type_of_interview  AS type_of_interview,
+                ir.feedback           AS feedback,
+                i.company              AS company,
+                i.role                 AS role,
+                i.status               AS interview_status
+            FROM `tabInterview Round` ir
+            INNER JOIN `tabInterview` i ON i.name = ir.parent
+            WHERE ir.name IN %(round_ids)s
+            """,
+            {"round_ids": list(round_ids)},
+            as_dict=True,
+        )
+        interview_round_map = {row.round_name: row for row in rows}
 
-                dept_entry = {
-                    "department": doctype,
-                    "docname": d.name,
-                    "assign_to": d.assign_to,
-                    "status": d.status,
-                    "id": d.name,
+    # ---- fetch docs, one query per doctype touched -----------------------
+    docs_by_doctype = {}
+
+    for doctype in interview_doctypes:
+        rids = list(events_by_round[doctype].keys())
+        docs_by_doctype[doctype] = frappe.get_all(
+            doctype,
+            filters={"interview_round": ["in", rids or ["__no_match__"]]},
+            fields=DOC_FIELDS_BY_DOCTYPE[doctype],
+        )
+
+    for doctype in simple_doctypes:
+        docs_by_doctype[doctype] = frappe.get_all(
+            doctype,
+            filters={"customer": customer},
+            fields=DOC_FIELDS_BY_DOCTYPE[doctype],
+        )
+
+    all_doctypes = interview_doctypes + simple_doctypes
+
+    # ---- batch-fetch every child table across every doc, once each ------
+    doc_ref_parents = [
+        d.name
+        for doctype in all_doctypes
+        if doctype in DOCUMENT_REFERENCE_DOCTYPES
+        for d in docs_by_doctype[doctype]
+    ]
+    doc_refs_map = {}
+    if doc_ref_parents:
+        rows = frappe.get_all(
+            "Document References",
+            filters={"parent": ["in", doc_ref_parents]},
+            fields=["parent", "document", "document_title", "description", "date"],
+        )
+        doc_refs_map = _group_by_parent(rows)
+
+    feedback_parents = [
+        d.name
+        for doctype in all_doctypes
+        if doctype in FEEDBACK_TRACKED_DOCTYPES
+        for d in docs_by_doctype[doctype]
+    ]
+    feedback_map = {}
+    if feedback_parents:
+        rows = frappe.get_all(
+            "Customer Feedback",
+            filters={"parent": ["in", feedback_parents]},
+            fields=["parent", "feedback", "date"],
+            order_by="date asc",
+        )
+        feedback_map = _group_by_parent(rows)
+
+    session_map = {}
+    if docs_by_doctype.get("RUC"):
+        ruc_names = [d.name for d in docs_by_doctype["RUC"]]
+        rows = frappe.get_all(
+            "Session Details",
+            filters={"parent": ["in", ruc_names]},
+            fields=[
+                "parent",
+                "session_duration_in_hour",
+                "date",
+                "projects",
+                "quality",
+                "candidate_doubts",
+                "remarks",
+                "candidate_feedback",
+            ],
+            order_by="date asc",
+        )
+        session_map = _group_by_parent(rows)
+
+    job_app_map = {}
+    if docs_by_doctype.get("Marketing"):
+        mkt_names = [d.name for d in docs_by_doctype["Marketing"]]
+        rows = frappe.get_all(
+            "Job Application Count",
+            filters={"parent": ["in", mkt_names]},
+            fields=[
+                "parent",
+                "small_application",
+                "large_application",
+                "total_application",
+                "date",
+            ],
+            order_by="date asc",
+        )
+        job_app_map = _group_by_parent(rows)
+
+    # ---- assemble dept_entry per doc --------------------------------------
+    for doctype in all_doctypes:
+        for d in docs_by_doctype[doctype]:
+            dept_entry = {
+                "department": doctype,
+                "docname": d.name,
+                "assign_to": d.assign_to,
+                "status": d.status,
+                "id": d.name,
+            }
+
+            if doctype in DOCUMENT_REFERENCE_DOCTYPES:
+                refs = doc_refs_map.get(d.name, [])
+                if doctype == "Resume":
+                    dept_entry["document_references"] = [
+                        {"document": r["document"], "date": r["date"]} for r in refs
+                    ]
+                else:
+                    dept_entry["document_references"] = [
+                        {
+                            "document": r["document"],
+                            "document_title": r["document_title"],
+                            "description": r["description"],
+                            "date": r["date"],
+                        }
+                        for r in refs
+                    ]
+
+            if doctype == "RUC":
+                sessions = session_map.get(d.name, [])
+                dept_entry["session_details"] = [
+                    {
+                        "date": s["date"],
+                        "session_duration_in_hour": s["session_duration_in_hour"],
+                        "projects": s["projects"],
+                        "quality": s["quality"],
+                        "candidate_feedback": s["candidate_feedback"],
+                        "feedback_due": not bool(s["candidate_feedback"]),
+                    }
+                    for s in sessions
+                ]
+                dept_entry["forward_events"] = sorted(
+                    doctype_events[doctype], key=lambda e: e["timestamp"]
+                )
+
+            if doctype == "Marketing":
+                dept_entry["job_application_count"] = [
+                    {
+                        "small_application": j["small_application"],
+                        "large_application": j["large_application"],
+                        "total_application": j["total_application"],
+                        "date": j["date"],
+                    }
+                    for j in job_app_map.get(d.name, [])
+                ]
+                dept_entry["forward_events"] = sorted(
+                    doctype_events[doctype], key=lambda e: e["timestamp"]
+                )
+
+            if doctype in INTERVIEW_LINKED_DOCTYPES:
+                round_events = events_by_round[doctype].get(d.interview_round, [])
+                fb_rows = feedback_map.get(d.name, [])
+                forward_count = len(round_events)
+                feedback_count = len(fb_rows)
+                pending_count = max(forward_count - feedback_count, 0)
+
+                dept_entry["marketing_customer"] = customer
+                dept_entry["interview_round"] = d.interview_round
+                dept_entry["forward_events"] = sorted(
+                    round_events, key=lambda e: e["timestamp"]
+                )
+                dept_entry["feedback_entries"] = fb_rows
+                dept_entry["feedback_status"] = {
+                    "forward_count": forward_count,
+                    "feedback_count": feedback_count,
+                    "pending_count": pending_count,
+                    "due": pending_count > 0 and d.status == COMPLETED_STATUS,
                 }
 
-                if doctype == "RUC":
-                    dept_entry["session_details"] = []
-                    for row in full_doc.session_details:
-                        dept_entry["session_details"].append(
-                            {
-                                "date": row.date,
-                                "session_duration_in_hour": row.session_duration_in_hour,
-                                "projects": row.projects,
-                                "quality": row.quality,
-                            }
-                        )
+                round_info = interview_round_map.get(d.interview_round)
+                if round_info:
+                    dept_entry["interview"] = {
+                        "name": round_info.interview_name,
+                        "company": round_info.company,
+                        "role": round_info.role,
+                        "status": round_info.interview_status,
+                    }
+                    dept_entry["interview_round_detail"] = {
+                        "round": round_info.round,
+                        "date_of_interview": round_info.date_of_interview,
+                        "from_time": round_info.from_time,
+                        "to_time": round_info.to_time,
+                        "type_of_interview": round_info.type_of_interview,
+                        "feedback": round_info.feedback,
+                    }
+                else:
+                    dept_entry["interview"] = None
+                    dept_entry["interview_round_detail"] = None
 
-                if doctype == "Marketing":
-                    dept_entry["job_application_count"] = []
-                    for row in full_doc.job_application_count:
-                        dept_entry["job_application_count"].append(
-                            {
-                                "small_application": row.small_application,
-                                "large_application": row.large_application,
-                                "total_application": row.total_application,
-                                "date": row.date,
-                            }
-                        )
+            elif doctype == "Training":
+                events = doctype_events[doctype]
+                fb_rows = feedback_map.get(d.name, [])
+                forward_count = len(events)
+                feedback_count = len(fb_rows)
+                pending_count = max(forward_count - feedback_count, 0)
 
-                if doctype in [
-                    "JDC",
-                    "Cover Letter",
-                    "Training",
-                    "Marketing Other Services",
-                    "Technical Other Services",
-                    "Other Services",
-                ]:
-                    dept_entry["proof_of_work"] = []
-                    dept_entry["source_doctype"] = doctype
+                dept_entry["forward_events"] = sorted(
+                    events, key=lambda e: e["timestamp"]
+                )
+                dept_entry["feedback_entries"] = fb_rows
+                dept_entry["feedback_status"] = {
+                    "forward_count": forward_count,
+                    "feedback_count": feedback_count,
+                    "pending_count": pending_count,
+                    "due": pending_count > 0 and d.status == COMPLETED_STATUS,
+                    "next_feedback_ordinal": feedback_count + 1
+                    if pending_count > 0
+                    else None,
+                }
 
-                    for row in full_doc.proof_of_work:
-                        dept_entry["proof_of_work"].append(
-                            {
-                                "attachments": row.attachments,
-                                "description": row.description,
-                                "date": row.date,
-                            }
-                        )
+            elif doctype not in ("RUC", "Marketing"):
+                dept_entry["forward_events"] = sorted(
+                    doctype_events[doctype], key=lambda e: e["timestamp"]
+                )
 
-                if doctype == "JDC":
-                    dept_entry["marketing_customer"] = customer
-                    dept_entry["interview"] = d.interview
+            history["departments"].setdefault(doctype, []).append(dept_entry)
 
-                if doctype == "Resume" and d.get("resume"):
-                    dept_entry["resume"] = d.get("resume")
 
-                if doctype not in history["departments"]:
-                    history["departments"][doctype] = []
-
-                history["departments"][doctype].append(dept_entry)
-
-    # Step 1: Find Marketing docs linked to this customer
+def _populate_interview_history(history, customer, interview_limit, interview_offset):
     marketing_names = frappe.get_all(
-        "Marketing",
-        filters={"customer": customer},
-        pluck="name",
+        "Marketing", filters={"customer": customer}, pluck="name"
     )
 
-    # Step 2: Also check via Lead Detail Form if no marketing found
     if not marketing_names:
         ldf_ref = frappe.db.sql(
             """
             SELECT parent FROM `tabDoctype Reference`
             WHERE parenttype = 'Lead Detail Form'
-            AND reference_doctype = 'Customer'
-            AND reference_person = %s
+              AND reference_doctype = 'Customer'
+              AND reference_person = %s
             LIMIT 1
             """,
             (customer,),
             as_dict=True,
         )
         if ldf_ref:
-            lead_detail_form_name = ldf_ref[0].parent
             marketing_names = frappe.get_all(
-                "Marketing",
-                filters={"customer": lead_detail_form_name},
-                pluck="name",
+                "Marketing", filters={"customer": ldf_ref[0].parent}, pluck="name"
             )
 
     search = frappe.form_dict.get("search")
     from_date = frappe.form_dict.get("from_date")
     to_date = frappe.form_dict.get("to_date")
 
-    if marketing_names:
-        filters = {"marketing_link": ["in", marketing_names]}
-    else:
-        filters = {"marketing_link": ["in", ["__no_match__"]]}
-
+    filters = {"marketing_link": ["in", marketing_names or ["__no_match__"]]}
     or_filters = []
 
     if search:
@@ -522,24 +767,20 @@ def get_customer_history(
         ]
 
     if from_date and to_date:
-        date_filtered_names = frappe.get_all(
+        round_filtered_names = frappe.get_all(
             "Interview Round",
             filters={"date_of_interview": ["between", [from_date, to_date]]},
             pluck="parent",
         )
-        if marketing_names:
-            all_interview_names_for_customer = frappe.get_all(
-                "Interview",
-                filters={"marketing_link": ["in", marketing_names]},
-                pluck="name",
-            )
-            date_filtered_names = list(
-                set(date_filtered_names) & set(all_interview_names_for_customer)
-            )
-        if date_filtered_names:
-            filters = {"name": ["in", date_filtered_names]}
-        else:
-            filters = {"name": ["in", ["__no_match__"]]}
+        customer_interview_names = frappe.get_all(
+            "Interview",
+            filters={"marketing_link": ["in", marketing_names or ["__no_match__"]]},
+            pluck="name",
+        )
+        date_filtered_names = list(
+            set(round_filtered_names) & set(customer_interview_names)
+        )
+        filters = {"name": ["in", date_filtered_names or ["__no_match__"]]}
 
     interviews = frappe.get_all(
         "Interview",
@@ -561,33 +802,53 @@ def get_customer_history(
     )
 
     if interviews:
-        history["departments"]["Interview"] = []
-        for iv in interviews:
-            iv_doc = frappe.get_doc("Interview", iv.name)
-            iv_entry = {
+        interview_names = [iv.name for iv in interviews]
+
+        # single batched query instead of frappe.get_doc() per interview
+        rounds = frappe.get_all(
+            "Interview Round",
+            filters={"parent": ["in", interview_names]},
+            fields=[
+                "name",
+                "parent",
+                "round",
+                "date",
+                "type_of_interview",
+                "date_of_interview",
+                "from_time",
+                "to_time",
+                "edt_est",
+                "feedback",
+            ],
+            order_by="date_of_interview asc",
+        )
+        rounds_by_interview = _group_by_parent(rounds)
+
+        history["departments"]["Interview"] = [
+            {
                 "department": "Interview",
                 "docname": iv.name,
                 "status": iv.status,
                 "id": iv.name,
                 "company": iv.company,
-                "role": iv_doc.role,
-                "interview_rounds_table": [],
-            }
-            for row in iv_doc.interview_rounds_table:
-                iv_entry["interview_rounds_table"].append(
+                "role": iv.role,
+                "interview_rounds_table": [
                     {
-                        "name": row.name,
-                        "round": row.round,
-                        "date": row.date,
-                        "type_of_interview": row.type_of_interview,
-                        "date_of_interview": row.date_of_interview,
-                        "from_time": row.from_time,
-                        "to_time": row.to_time,
-                        "edt_est": row.edt_est,
-                        "feedback": row.feedback,
+                        "name": r["name"],
+                        "round": r["round"],
+                        "date": r["date"],
+                        "type_of_interview": r["type_of_interview"],
+                        "date_of_interview": r["date_of_interview"],
+                        "from_time": r["from_time"],
+                        "to_time": r["to_time"],
+                        "edt_est": r["edt_est"],
+                        "feedback": r["feedback"],
                     }
-                )
-            history["departments"]["Interview"].append(iv_entry)
+                    for r in rounds_by_interview.get(iv.name, [])
+                ],
+            }
+            for iv in interviews
+        ]
 
     history["interview_meta"] = {
         "total": total_interviews,
@@ -595,7 +856,68 @@ def get_customer_history(
         "offset": int(interview_offset),
     }
 
-    return history
+
+FEEDBACK_DOCTYPES = {"Interview Round", "JDC", "Interview Support", "Training", "RUC"}
+ 
+ 
+@frappe.whitelist(allow_guest=True)
+def save_customer_feedback(token, doctype, docname, feedback, session_row_name=None):
+    auth = authenticate_customer_request(token)
+    customer = auth["customer"]
+ 
+    if doctype not in FEEDBACK_DOCTYPES:
+        frappe.throw(_("Invalid doctype"))
+ 
+    if not feedback or not str(feedback).strip():
+        frappe.throw(_("Feedback cannot be empty"))
+ 
+    if not _verify_doc_belongs_to_customer(doctype, docname, customer):
+        frappe.throw(_("Unauthorized"))
+ 
+    if doctype == "Interview Round":
+        frappe.db.set_value("Interview Round", docname, "feedback", feedback, update_modified=False)
+        frappe.db.commit()
+        return {"status": "success", "message": "Feedback updated successfully"}
+ 
+    if doctype == "RUC":
+        if not session_row_name:
+            frappe.throw(_("session_row_name is required for RUC feedback"))
+ 
+        session = frappe.db.get_value(
+            "Session Details",
+            {"name": session_row_name, "parent": docname, "parenttype": "RUC"},
+            ["name", "candidate_feedback"],
+            as_dict=True,
+        )
+        if not session:
+            frappe.throw(_("Session not found"))
+        if session.candidate_feedback:
+            frappe.throw(_("Feedback already submitted for this session"))
+ 
+        frappe.db.set_value(
+            "Session Details", session_row_name, "candidate_feedback", feedback,
+            update_modified=False,
+        )
+        frappe.db.commit()
+        return {"status": "success", "message": "Feedback submitted successfully"}
+ 
+    # JDC / Interview Support / Training — child table append, count-gated
+    forward_count, feedback_count, status = _get_pending_feedback_info(doctype, docname, customer)
+ 
+    if feedback_count >= forward_count:
+        frappe.throw(_("No pending feedback for this item"))
+    if status != COMPLETED_STATUS:
+        frappe.throw(_("Feedback can only be submitted once this is marked Completed"))
+ 
+    doc = frappe.get_doc(doctype, docname)
+    doc.append("customer_feedback", {
+        "feedback": feedback,
+        "date": frappe.utils.now_datetime(),
+    })
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+ 
+    return {"status": "success", "message": "Feedback submitted successfully"}
 
 
 # Download Resume

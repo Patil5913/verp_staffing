@@ -1,53 +1,80 @@
 [
- {
-  "columns": [
-   {
-    "column_name": "Interview Scheduled",
-    "indicator": "Blue",
-    "order": "[]",
-    "parent": "Interview",
-    "parentfield": "columns",
-    "parenttype": "Kanban Board",
-    "status": "Active"
-   },
-   {
-    "column_name": "Ongoing Interview",
-    "indicator": "Yellow",
-    "order": "[]",
-    "parent": "Interview",
-    "parentfield": "columns",
-    "parenttype": "Kanban Board",
-    "status": "Active"
-   },
-   {
-    "column_name": "Accepted",
-    "indicator": "Green",
-    "order": "[]",
-    "parent": "Interview",
-    "parentfield": "columns",
-    "parenttype": "Kanban Board",
-    "status": "Active"
-   },
-   {
-    "column_name": "Rejected",
-    "indicator": "Red",
-    "order": "[]",
-    "parent": "Interview",
-    "parentfield": "columns",
-    "parenttype": "Kanban Board",
-    "status": "Active"
-   }
-  ],
-  "docstatus": 0,
-  "doctype": "Kanban Board",
-  "field_name": "status",
-  "fields": "[\"company\",\"role\"]",
-  "filters": null,
-  "kanban_board_name": "Interview",
-  "modified": "2026-06-17 18:05:13.609444",
-  "name": "Interview",
-  "private": 0,
-  "reference_doctype": "Interview",
-  "show_labels": 1
- }
+  {
+    "columns": [
+      {
+        "column_name": "Scheduled",
+        "indicator": "Cyan",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      },
+      {
+        "column_name": "Today",
+        "indicator": "Yellow",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      },
+      {
+        "column_name": "Completed",
+        "indicator": "Blue",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      },
+      {
+        "column_name": "Cancelled",
+        "indicator": "Gray",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      },
+      {
+        "column_name": "Rescheduled",
+        "indicator": "Orange",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      },
+      {
+        "column_name": "Get The Offer",
+        "indicator": "Green",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      },
+      {
+        "column_name": "Rejected",
+        "indicator": "Red",
+        "order": "[]",
+        "parent": "Interview",
+        "parentfield": "columns",
+        "parenttype": "Kanban Board",
+        "status": "Active"
+      }
+    ],
+    "docstatus": 0,
+    "doctype": "Kanban Board",
+    "field_name": "status",
+    "fields": "[\"role\"]",
+    "filters": null,
+    "kanban_board_name": "Interview",
+    "modified": "2026-06-17 18:05:13.609444",
+    "name": "Interview",
+    "private": 0,
+    "reference_doctype": "Interview",
+    "show_labels": 1
+  }
 ]

@@ -12,6 +12,8 @@
   "status",
   "section_break_zoqd",
   "proof_of_work",
+  "proof_of_work_html",
+  "section_break_gqmv",
   "lead_details",
   "notes_section",
   "notes_html",
@@ -107,10 +109,18 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "lead_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_gqmv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "proof_of_work_html",
    "fieldtype": "HTML"
   }
  ],
@@ -118,7 +128,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-29 10:53:02.779520",
+ "modified": "2026-08-13 17:46:18.595876",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",

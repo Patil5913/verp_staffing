@@ -48,7 +48,7 @@ frappe.ui.misc.about = function () {
 
 				<div id='about-app-versions'>${__("Loading versions...")}</div>
 
-			</div>`
+			</div>`,
 	);
 
 	frappe.ui.misc.about_dialog = dialog;
@@ -69,7 +69,7 @@ frappe.ui.misc.about = function () {
 	const show_versions = function (versions) {
 		const $wrap = $("#about-app-versions").empty();
 		let app = {};
-
+		console.log("versions: ", versions);
 		function get_version_text(app) {
 			if (app.branch) {
 				return `v${app.branch_version || app.version} (${app.branch})`;
@@ -79,12 +79,14 @@ frappe.ui.misc.about = function () {
 		}
 
 		for (const app_name in versions) {
-			app = versions[app_name];
-			const title = `${app_name}: ${app.branch_version || app.version}`;
-			const text = `<p class='app-version' role='button' title='${title}'>
-							<b>${app.title}:</b> ${get_version_text(app)}
-						</p>`;
-			$(text).appendTo($wrap);
+			if (app_name != "frappe") {
+				app = versions[app_name];
+				const title = `${app_name}: ${app.branch_version || app.version}`;
+				const text = `<p class='app-version' role='button' title='${title}'>
+				<b>${app.title}:</b> ${get_version_text(app)}
+				</p>`;
+				$(text).appendTo($wrap);
+			}
 		}
 
 		frappe.versions = versions;

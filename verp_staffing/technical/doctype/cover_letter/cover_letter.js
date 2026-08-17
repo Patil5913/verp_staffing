@@ -13,13 +13,20 @@ frappe.ui.form.on("Cover Letter", {
 			frm.set_df_property("status", "read_only", 1);
 		}
 
+		window.verp_staffing.render_document_references_table(frm, {
+			fieldname: "proof_of_work",
+			wrapper_field: "proof_of_work_html",
+			show_fields: ["document", "document_title", "description", "date"],
+			locked_statuses: ["Completed"],
+		});
+
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details",
 			customer: frm.doc.customer,
 			fields: display_fields,
 		});
-		
+
 		window.setup_service_permission_button(frm);
 	},
 });

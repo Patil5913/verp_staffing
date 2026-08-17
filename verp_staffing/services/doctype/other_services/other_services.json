@@ -15,6 +15,8 @@
   "completed_on",
   "section_break_bvrs",
   "proof_of_work",
+  "proof_of_work_html",
+  "section_break_krnv",
   "lead_details",
   "notes_tab",
   "notes_html",
@@ -31,7 +33,8 @@
    "label": "Customer",
    "options": "Customer",
    "reqd": 1,
-   "search_index": 1
+   "search_index": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "department",
@@ -39,7 +42,8 @@
    "in_list_view": 1,
    "label": "Department",
    "options": "Department",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "service",
@@ -49,7 +53,8 @@
    "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
    "options": "Item",
    "reqd": 1,
-   "search_index": 1
+   "search_index": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_xbfz",
@@ -90,7 +95,7 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "notes_tab",
@@ -128,13 +133,21 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_krnv",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 18:42:51.164404",
+ "modified": "2026-08-13 18:06:17.511580",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",

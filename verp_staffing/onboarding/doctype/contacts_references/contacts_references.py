@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class ProofOfWork(Document):
+class ContactsReferences(Document):
 	pass

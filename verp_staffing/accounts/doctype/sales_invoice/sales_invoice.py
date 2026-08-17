@@ -659,7 +659,7 @@ def validate_fiscal_year(company, posting_date):
         FROM `tabFiscal Year` fy
         INNER JOIN `tabFiscal Year Company` fyc
             ON fy.name = fyc.parent
-        WHERE fyc.company = %s
+        WHERE fyc.company = %s AND fy.disabled = 0
         ORDER BY fy.year_start_date DESC
         LIMIT 1
     """,

@@ -444,6 +444,58 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
                 return superior.get("employee")
 
         return direct_manager
+    
+    
+def resolve_field_update_routing(employee_name, department):
+    """
+    Determines how a field-update request should route for this department,
+    reusing the existing assign_to-chain infrastructure:
+      - get_all_superiors_with_roles_cached: walks UP the chain for `department`
+      - get_dept_role_map_cached / get_employee_roles_cached: same role lookups
+        already used by get_approver_by_department
+
+    No separate Hierarchy-doc parsing is needed — employee.js already
+    enforces that an employee's `assigned_to` can only be the employee
+    holding the exact parent role above them in that department's
+    Hierarchy, so superiors[0] IS "one level up" by construction.
+
+    Returns:
+        {"mode": "direct"}                          — no superior recorded → save immediately
+        {"mode": "escalate", "manager_employee": X}  — requester holds the configured role →
+                                                        route to their direct superior
+        {"mode": "normal"}                           — below the configured role →
+                                                        caller should use get_approver_by_department as before
+        {"mode": "unresolved"}                       — no ERP Configuration role set for this department
+    """
+    if not employee_name or not department:
+        return {"mode": "unresolved"}
+
+    dept_role_map = get_dept_role_map_cached()
+    dept_key = next(
+        (k for k in dept_role_map if k.strip().lower() == department.strip().lower()),
+        None,
+    )
+    configured_role = dept_role_map.get(dept_key) if dept_key else None
+    if not configured_role:
+        return {"mode": "unresolved"}
+
+    superiors = get_all_superiors_with_roles_cached(employee_name, department)
+
+    # No one above them in this department's assign_to chain — top of hierarchy.
+    if not superiors:
+        return {"mode": "direct"}
+
+    own_roles = get_employee_roles_cached(employee_name)
+
+    # Requester already holds the configured approver role — escalate to
+    # their direct superior, which is guaranteed to hold the next role up.
+    if configured_role in own_roles:
+        direct_superior = superiors[0].get("employee")
+        if not direct_superior:
+            return {"mode": "direct"}
+        return {"mode": "escalate", "manager_employee": direct_superior}
+
+    return {"mode": "normal"}
 
 
 # to get visible employee names for a user
@@ -923,3 +975,42 @@ def _validate_site_file_path(file_path: str) -> Path:
         frappe.throw("File not found.")
 
     return path
+
+@frappe.whitelist()
+def _is_superior_in_department(assign_to: str, current_user: str, department: str) -> dict:
+    """
+    Returns True if current_user is anywhere above assign_to
+    in the given department's assignment hierarchy.
+    """
+    if current_user == "Administrator":
+        return {"is_superior": True}
+    if current_user == frappe.db.get_value("Employee", assign_to, "user"):
+        return {"is_superior": False}
+
+    # Single query — entire chain at once
+    rows = frappe.db.sql(
+        """
+        SELECT ead.parent, ead.assigned_to, e.user
+        FROM `tabEmployee Assignment Detail` ead
+        JOIN `tabEmployee` e ON e.name = ead.assigned_to
+        WHERE ead.department = %(department)s
+          AND ead.assigned_to IS NOT NULL
+        """,
+        {"department": department},
+        as_dict=True,
+    )
+    chain_map = {r.parent: (r.assigned_to, r.user) for r in rows}
+
+    visited = set()
+    current = assign_to
+    while current and current not in visited:
+        visited.add(current)
+        entry = chain_map.get(current)
+        if not entry:
+            break
+        manager_emp, manager_user = entry
+        if manager_user == current_user:
+            return {"is_superior": True}
+        current = manager_emp
+
+    return {"is_superior": False}

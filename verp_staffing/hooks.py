@@ -11,25 +11,21 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "verp_staffing",
-# 		"logo": "/assets/verp_staffing/logo.png",
-# 		"title": "Vrugle Staffing ERP",
-# 		"route": "/verp_staffing",
-# 		"has_permission": "verp_staffing.api.permission.has_app_permission"
-# 	}
-# ]
-# scheduler_events = {
-#     "cron": {
-#         "* * * * *": [
-#             "verp_staffing.crm.api.agreement.send_agreement_reminders"
-#         ],
-# "0 8 * * *": [  # This cron expression runs daily at midnight
-#         "verp_staffing.accounts.doctype.sales_invoice.send_dynamic_payment_reminders"
-#     ],
-#     }
-# }
+add_to_apps_screen = [
+	{
+		"name": "verp_staffing",
+		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png",
+		"title": "Vrugle Staffing ERP",
+		"route": "/app",
+		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"
+	}
+]
+
+website_context = {
+	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
+	"splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",
+}
+
 # Includes in <head>
 # ------------------
 
@@ -54,6 +50,8 @@ app_include_js = [
     "/assets/verp_staffing/js/override/form_view_override.js",
     "/assets/verp_staffing/js/override/list_view_override.js",
     "/assets/verp_staffing/js/override/email_provider_defaults.js",
+    "/assets/verp_staffing/js/document_references_widget.js",
+    "/assets/verp_staffing/js/customer_history.js",
 ]
 
 # include js, css files in header of web template
@@ -87,6 +85,7 @@ validation_docs = [
     "Other Services",
     "Sales Order",
     "Agreement",
+    "Onboardings"
 ]
 doctype_js = {
     doc: [
@@ -149,7 +148,7 @@ after_install = [
 ]
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
-    # "verp_staffing.install.after_install",
+    "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
@@ -346,6 +345,10 @@ scheduler_events = {
     },
 }
 
+override_scheduled_jobs = {
+    "frappe.utils.change_log.check_for_update": "verp_staffing.overrides.notification_settings.override_updates_notification"
+}
+
 # Setup
 setup_wizard_requires = "assets/verp_staffing/js/setup/setup_wizard.js"
 setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
@@ -358,9 +361,18 @@ setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-#     "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
-# }
+
+override_whitelisted_methods = {
+	"frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card": (
+		"verp_staffing.overrides.kanban_board.update_order_for_single_card"
+	),
+	"frappe.desk.doctype.kanban_board.kanban_board.update_order": (
+		"verp_staffing.overrides.kanban_board.update_order"
+	),
+ 
+    "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
+    "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
+}
 # set query permisson for doctype
 permission_query_conditions = {
     "Customer": "verp_staffing.crm.api.helpers.customer_query",
@@ -470,10 +482,7 @@ fixtures = [
     },
 ]
 
-override_whitelisted_methods = {
-    "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
-    "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
-}
+
 # # verp_staffing/hooks.py
 
 # override_doctype_class = {

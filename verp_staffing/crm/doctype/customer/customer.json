@@ -82,7 +82,6 @@
   {
    "fieldname": "stage",
    "fieldtype": "Text",
-   "hidden": 1,
    "label": "Stage"
   },
   {
@@ -155,7 +154,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-02 11:34:29.938503",
+ "modified": "2026-08-17 14:55:10.587204",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

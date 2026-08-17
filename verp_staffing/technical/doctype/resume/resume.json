@@ -10,7 +10,9 @@
   "assign_to",
   "column_break_gfsq",
   "status",
-  "resume",
+  "section_break_uiue",
+  "resume_table",
+  "resume_html",
   "customer_details_section",
   "lead_details",
   "notes_tab",
@@ -32,6 +34,8 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
+   "read_only": 1,
+   "set_only_once": 1,
    "unique": 1
   },
   {
@@ -53,12 +57,6 @@
    "label": "Status",
    "options": "Pending\nCompleted\nRequest for Update",
    "read_only": 1
-  },
-  {
-   "description": "upload new resume here",
-   "fieldname": "resume",
-   "fieldtype": "Attach",
-   "label": "Upload Resume"
   },
   {
    "fieldname": "customer_details_section",
@@ -96,13 +94,27 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "section_break_uiue",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resume_table",
+   "fieldtype": "Table",
+   "label": "Attach Resume",
+   "options": "Document References"
+  },
+  {
+   "fieldname": "resume_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-29 10:52:21.253428",
+ "modified": "2026-08-13 16:35:03.800602",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",

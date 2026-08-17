@@ -167,6 +167,7 @@ ALLOWED_SERVICE_DOCTYPES = {
     "Marketing",
     "CR",
     "Onboardings",
+    "Interview Support"
 }
 
 

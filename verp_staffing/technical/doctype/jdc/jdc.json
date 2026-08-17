@@ -8,10 +8,13 @@
   "assign_to",
   "customer",
   "status",
-  "interview",
+  "interview_round",
   "resume",
   "section_break_mtyr",
   "proof_of_work",
+  "proof_of_work_html",
+  "customer_feedback",
+  "section_break_trra",
   "lead_details",
   "notes_section",
   "notes_html",
@@ -39,7 +42,7 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "status",
@@ -56,7 +59,7 @@
    "fieldname": "assign_to",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Employee",
+   "label": "Assign To",
    "options": "Employee"
   },
   {
@@ -68,12 +71,6 @@
    "fieldname": "notes_section",
    "fieldtype": "Tab Break",
    "label": "Notes"
-  },
-  {
-   "fieldname": "interview",
-   "fieldtype": "Link",
-   "label": "Interview",
-   "options": "Interview"
   },
   {
    "fieldname": "activites_tab",
@@ -98,13 +95,35 @@
   {
    "fieldname": "resume",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_trra",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "interview_round",
+   "fieldtype": "Link",
+   "label": "Interview Round",
+   "options": "Interview Round",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_feedback",
+   "fieldtype": "Table",
+   "label": "Customer Feedback",
+   "options": "Customer Feedback",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-29 10:48:13.095621",
+ "modified": "2026-08-17 15:12:27.778739",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

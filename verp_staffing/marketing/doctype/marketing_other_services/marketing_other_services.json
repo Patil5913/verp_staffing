@@ -12,6 +12,8 @@
   "status",
   "section_break_izli",
   "proof_of_work",
+  "proof_of_work_html",
+  "section_break_rtcu",
   "lead_details",
   "tab_2_tab",
   "notes_html",
@@ -70,7 +72,7 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "tab_2_tab",
@@ -108,13 +110,21 @@
   {
    "fieldname": "lead_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_rtcu",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 17:56:43.656572",
+ "modified": "2026-08-13 17:47:11.578332",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing Other Services",

@@ -12,6 +12,7 @@ SERVICE_DOCTYPE_MAP = {
     "marketing": "Marketing",
     "cr": "CR",
     "onboarding": "Onboarding",
+    "interview support": "Interview Support",
 }
 
 
@@ -1027,14 +1028,6 @@ FORM_TOURS = {
         "title": "Accounts Settings",
         "steps": [
             {
-                "title": "Select Default Company",
-                "fieldname": "default_company",
-                "description": "Choose the default company that will be automatically used in accounting transactions such as orders, invoices, and vouchers.",
-                "position": "Right Center",
-                "label": "Default Company",
-                "fieldtype": "Link",
-            },
-            {
                 "title": "Show Account Balances",
                 "fieldname": "show_balance_in_coa",
                 "description": "Enable this option to display account balances in the Chart of Accounts.",
@@ -1407,6 +1400,16 @@ def seed_master_sidebar_config():
                     "roles": [],
                 },
                 {
+                    "key": "interview_support",
+                    "name": "Interview Support",
+                    "type": "doctype",
+                    "route": "/app/interview-support",
+                    "doctype": "Interview Support",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
                     "key": "technical-other-services",
                     "name": "Technical Other Services",
                     "type": "doctype",
@@ -1671,6 +1674,17 @@ def seed_master_sidebar_config():
             ],
         },
         {
+            "key": "other-services",
+            "label": "Other Services",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [],
+            "route": "/app/other-services",
+            "link_type": "doctype",
+            "doctype": "Other Services",
+        },
+        {
             "key": "e-sign",
             "label": "E Sign",
             "icon": "icon-setting-gear",
@@ -1868,13 +1882,24 @@ def setup_navbar_settings():
         if row.item_label == "Session Defaults":
             row.hidden = 1
             updated = True
-
+    has_vrugle_support = False
     for row in navbar.help_dropdown:
         if row.item_label == "Frappe Support":
             row.hidden = 1
             updated = True
+        if row.item_label == "Vrugle Support":
+            has_vrugle_support = True
+    if not has_vrugle_support:
+        navbar.append(
+            "help_dropdown",
+            {
+                "item_label": "Vrugle Support",
+                "item_type": "Route",
+                "route": "mailto:support@vrugle.com",
+            },
+        )
 
-    url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
+    url = "https://drive.usercontent.google.com/uc?id=1CnwkrRH7n7OGdbsbNwkRENaMQn4sqmY-&export=download"
 
     existing = frappe.db.get_value(
         "File",
@@ -1924,7 +1949,7 @@ def seed_website_setting():
         updated = True
 
     # App logo (reuse if exists, else download)
-    url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
+    url = "https://drive.usercontent.google.com/uc?id=1CnwkrRH7n7OGdbsbNwkRENaMQn4sqmY-&export=download"
     existing = frappe.db.get_value(
         "File",
         {"attached_to_doctype": "Website Settings"},
@@ -1970,7 +1995,7 @@ def seed_website_setting():
     footer_html = """
     <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
         <span>Made with</span>
-        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Blue%20Heart.png"
+        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Blue%20Heart.png" alt="Love"
              width="18" height="18" />
         <span>by <b>Vrugle</b></span>
     </div>
@@ -2014,10 +2039,13 @@ def seed_sales_stages():
 
 def create_interview_statuses():
     statuses = [
-        "Interview Scheduled",
-        "Ongoing Interview",
-        "Accepted",
         "Rejected",
+        "Get The Offer",
+        "Rescheduled",
+        "Cancelled",
+        "Completed",
+        "Today",
+        "Scheduled",
     ]
 
     for name in statuses:
@@ -2026,6 +2054,7 @@ def create_interview_statuses():
                 {
                     "doctype": "Interview Status",
                     "status_name": name,
+                    "is_system_generated": 1,
                 }
             )
             doc.insert(ignore_permissions=True)
@@ -2640,11 +2669,7 @@ def get_primary_business_role(user_email: str) -> str | None:
 
 
 SERVICE_DEPARTMENT_MAP = {
-    "Technical": [
-        "RUC",
-        "JDC",
-        "Training",
-    ],
+    "Technical": ["RUC", "JDC", "Training", "Interview Support"],
     "Resume": [
         "Resume",
         "Cover Letter",

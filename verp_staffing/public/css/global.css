@@ -257,9 +257,9 @@ body.verp-protected::after {
    REMOVE HELP MENU
 ========================================= */
 
-.dropdown-help {
+/* .dropdown-help {
 	display: none !important;
-}
+} */
 
 #navbar-breadcrumbs {
 	display: none !important;

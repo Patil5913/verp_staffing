@@ -253,8 +253,8 @@ def send_final_signed_email(agreement_name):
     )
 
     template = frappe.db.get_value(
+        "Email Template",
         "Final Signed Agreement Email - e_sign",
-        "Document Sign Request - e_sign",
         ["subject", "response_html", "response"],
         as_dict=True,
     )
@@ -1352,8 +1352,8 @@ def send_otp(token=None):
         message = f"<p>Your OTP is: <b>{otp}</b></p>"
 
         template = frappe.db.get_value(
+            "Email Template",
             "OTP Verification Email",
-            "Document Sign Request - e_sign",
             ["subject", "response_html", "response"],
             as_dict=True,
         )

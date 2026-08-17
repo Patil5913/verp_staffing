@@ -53,7 +53,6 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 		args: { customer, fields },
 		callback(r) {
 			const records = r.message || [];
-
 			if (!Array.isArray(records) || !records.length) {
 				frm.set_df_property(
 					html_field,
@@ -256,7 +255,11 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                   ${frappe.utils.escape_html(value)}
                 </a>
               `;
-						} else if (f.fieldtype == "Link" || f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin") {
+						} else if (
+							f.fieldtype == "Link" ||
+							f.fieldname == "personal_linkedin" ||
+							f.fieldname == "marketing_linkedin"
+						) {
 							display_value = current_display_html;
 						}
 
@@ -469,9 +472,9 @@ function open_forward_prompt(frm, services) {
 				},
 			},
 			{
-				fieldname: "interview",
+				fieldname: "interview_round",
 				fieldtype: "Select",
-				label: "Select Interview",
+				label: "Select Interview Round",
 				hidden: 1,
 				options: [],
 			},
@@ -548,8 +551,11 @@ function open_forward_prompt(frm, services) {
 				return;
 			}
 
-			if (values.service === "JDC" && !values.interview) {
-				frappe.msgprint("Please select Interview for JDC.");
+			if (
+				(values.service === "JDC" || values.service === "Interview Support") &&
+				!values.interview_round
+			) {
+				frappe.msgprint(`Please select Interview Round for ${values.service}`);
 				return;
 			}
 			if (values.service?.toLowerCase() === "onboarding") {
@@ -584,7 +590,7 @@ function toggle_fields(dialog, frm) {
 	// reset everything first
 	const fields_to_hide = [
 		"note",
-		"interview",
+		"interview_round",
 		"manual_assign",
 		"assign_employee",
 		"position",
@@ -638,31 +644,32 @@ function toggle_fields(dialog, frm) {
 
 	dialog.set_df_property("note", "hidden", 0);
 
-	if (serviceLower === "jdc") {
+	if (serviceLower === "jdc" || serviceLower === "interview support") {
 		frappe.call({
 			method: "verp_staffing.crm.api.auto_assign.get_customer_interviews",
 			args: {
 				customer: frm.doc.customer || frm.doc.name,
 			},
 			callback(r) {
-				const interviews = r.message || [];
-
-				if (!interviews.length) {
+				const interview_rounds = r.message || [];
+				if (!interview_rounds.length) {
 					frappe.msgprint({
-						title: __("No Interview"),
-						message: __("This customer does not have any interview."),
+						title: __("No Interview Round"),
+						message: __(
+							"This customer does not have any interview round scheduled yet.",
+						),
 						indicator: "orange",
 					});
 
-					dialog.set_df_property("interview", "hidden", 1);
-					dialog.set_df_property("interview", "reqd", 0);
+					dialog.set_df_property("interview_round", "hidden", 1);
+					dialog.set_df_property("interview_round", "reqd", 0);
 					dialog.refresh();
 					return;
 				}
 
-				dialog.set_df_property("interview", "options", interviews);
-				dialog.set_df_property("interview", "hidden", 0);
-				dialog.set_df_property("interview", "reqd", 1);
+				dialog.set_df_property("interview_round", "options", interview_rounds);
+				dialog.set_df_property("interview_round", "hidden", 0);
+				dialog.set_df_property("interview_round", "reqd", 1);
 				dialog.refresh();
 			},
 		});
@@ -708,7 +715,7 @@ function forward_candidate(frm, values) {
 		args: {
 			customer: frm.doc.customer || frm.doc.name,
 			service: values.service,
-			interview: values.interview || null,
+			interview_round: values.interview_round || null,
 			assign_employee: values.assign_employee || null,
 			// Onboarding Fields
 			position: values.position || null,
@@ -719,7 +726,7 @@ function forward_candidate(frm, values) {
 		},
 		callback(r) {
 			const noteDoctype = r.message.doctype;
-			if (values.note) {
+			if (values.note.trim()) {
 				frappe.call({
 					method: "verp_staffing.crm.api.notes.add_note",
 					args: {
@@ -1462,39 +1469,40 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 		);
 		return;
 	}
-	frappe.db
-		.get_list("Resume", {
-			filters: {
-				customer: frm.doc.customer,
-			},
-			fields: ["name", "resume"],
-			order_by: "creation desc",
-			limit: 1,
-		})
-		.then((res) => {
-			if (!res || !res.length || !res[0].resume) {
-				frm.set_df_property(
-					"resume",
-					"options",
-					'<div style="color:#888">No resume uploaded</div>',
-				);
+	const set_html = (html) => frm.set_df_property("resume", "options", html);
+
+	const clear_resume = () => set_html("");
+	frappe.call({
+		method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
+		args: {
+			customer: frm.doc.customer,
+		},
+		callback(r) {
+			const resume = r.message;
+
+			if (!resume?.document) {
+				clear_resume();
 				return;
 			}
 
-			const file_url = res[0].resume;
-
-			const html = `
-            <div style="padding:8px">
-                <a href="${file_url}" target="_blank" style="
-                    color:#1a73e8;
-                    font-weight:600;
-                    text-decoration:none;
-                ">
-                    📄 View Resume
-                </a>
-            </div>
-        `;
-
-			frm.set_df_property("resume", "options", html);
-		});
+			set_html(`
+				<div style="padding:8px">
+					<a
+						href="${resume.document}"
+						target="_blank"
+						style="
+							color:#1a73e8;
+							font-weight:600;
+							text-decoration:none;
+						"
+					>
+						📄 View Resume
+					</a>
+				</div>
+			`);
+		},
+		error() {
+			clear_resume();
+		},
+	});
 };

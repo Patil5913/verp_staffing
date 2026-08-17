@@ -2,14 +2,45 @@ import frappe
 import json
 from datetime import datetime, timezone
 from frappe import _
-
 from verp_staffing.crm.api.helpers import (
     get_employee_name,
     get_user,
     send_notification,
     get_approver_by_department,
+    resolve_field_update_routing,
 )
 
+@frappe.whitelist()
+def get_higher_authority_status(service_doctype=None, extra_info=None):
+    """
+    Tells the client how this request will route: 'direct' (top of the
+    department chain — save immediately, no approval), 'escalate' (requester
+    holds the configured role — routes to their superior), or normal.
+    """
+    user = frappe.session.user
+    employee = get_employee_name(user)
+    if not employee:
+        return {"is_higher_authority": False, "mode": "unresolved"}
+
+    if service_doctype in ("Resume", "Cover Letter"):
+        return {"is_higher_authority": False, "mode": "unresolved"}
+
+    department = None
+    if extra_info:
+        department = get_department_from_service(extra_info)
+    elif service_doctype:
+        department = get_department_from_service(service_doctype)
+
+    if not department:
+        return {"is_higher_authority": False, "mode": "unresolved"}
+
+    routing = resolve_field_update_routing(employee, department)
+
+    return {
+        "is_higher_authority": routing["mode"] == "direct",
+        "mode": routing["mode"],
+        "department": department,
+    }
 
 def _add_activity_log(doctype, docname, message, user):
     """Add a comment as activity log on a document."""
@@ -486,6 +517,68 @@ def get_department_from_service(service_name):
 
     return None
 
+def _apply_lead_detail_field_updates(lead_detail_name, field_updates, fields_to_apply):
+    """
+    Applies `fields_to_apply` (subset of field_updates keys) onto the given
+    Lead Detail Form. Returns {field: new_value} for whatever was applied.
+    """
+    lead_detail_meta = frappe.get_meta("Lead Detail Form")
+    updated_fields = {}
+
+    for field in fields_to_apply:
+        if field not in field_updates:
+            continue
+
+        df = lead_detail_meta.get_field(field)
+        if not df:
+            frappe.log_error(
+                f"Field '{field}' not found in Lead Detail Form", "apply_field_updates"
+            )
+            continue
+
+        if df.fieldtype == "Table":
+            child_doctype = df.options
+            if not child_doctype:
+                continue
+            new_rows = field_updates[field].get("new", [])
+
+            frappe.db.delete(
+                child_doctype,
+                {
+                    "parent": lead_detail_name,
+                    "parenttype": "Lead Detail Form",
+                    "parentfield": field,
+                },
+            )
+            for idx, row in enumerate(new_rows):
+                frappe.get_doc(
+                    {
+                        "doctype": child_doctype,
+                        "parent": lead_detail_name,
+                        "parenttype": "Lead Detail Form",
+                        "parentfield": field,
+                        "idx": idx + 1,
+                        **row,
+                    }
+                ).insert(ignore_permissions=True)
+
+            updated_fields[field] = new_rows
+
+        elif df.fieldtype in [
+            "Data", "Text", "Small Text", "Long Text", "Date", "Datetime",
+            "Int", "Float", "Currency", "Check", "Select", "Link",
+        ]:
+            new_value = field_updates[field].get("new")
+            try:
+                frappe.db.set_value("Lead Detail Form", lead_detail_name, field, new_value)
+            except Exception as e:
+                frappe.log_error(str(e), f"Field Update Error: {field}")
+                frappe.throw(
+                    f"Failed to update field '{df.label or field}'. Please contact Administrator."
+                )
+            updated_fields[field] = new_value
+
+    return updated_fields
 
 @frappe.whitelist()
 def request_field_update(
@@ -498,10 +591,62 @@ def request_field_update(
 ):
     user = frappe.session.user
     employee = get_employee_name(user)
-    
+
     if not employee:
         frappe.throw("No Employee record found for the current user.")
-        
+
+    if isinstance(field_updates, str):
+        try:
+            field_updates = json.loads(field_updates)
+        except Exception:
+            frappe.throw("Invalid field data received. Please try again.")
+
+    department = None
+    if extra_info:
+        department = get_department_from_service(extra_info)
+    elif service_doctype:
+        department = get_department_from_service(service_doctype)
+
+    is_resume_or_cover_letter = service_doctype in ("Resume", "Cover Letter")
+
+    routing = (
+        resolve_field_update_routing(employee, department)
+        if department and not is_resume_or_cover_letter
+        else {"mode": "unresolved"}
+    )
+
+    # ── Top of the department hierarchy — save directly, no approver ──────
+    if routing["mode"] == "direct":
+        lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
+        if not lead_detail_name:
+            frappe.throw("No Lead Detail Form found for this Customer.")
+
+        updated_fields = _apply_lead_detail_field_updates(
+            lead_detail_name, field_updates, list(field_updates.keys())
+        )
+
+        lead_detail_meta = frappe.get_meta("Lead Detail Form")
+        field_labels = []
+        for f in field_updates.keys():
+            df = lead_detail_meta.get_field(f)
+            label = (df.label if df and df.label else None) or f.replace("_", " ").title()
+            field_labels.append(str(label))
+
+        activity_message = (
+            f"<b>{employee}</b> (top of {department} hierarchy) directly updated: "
+            f"<b>{', '.join(field_labels)}</b>.<br><b>Reason:</b> {reason}"
+        )
+        _add_activity_log("Customer", customer_name, activity_message, user)
+        if service_doctype and service_name:
+            _add_activity_log(service_doctype, service_name, activity_message, user)
+
+        return {
+            "status": "success",
+            "applied_directly": True,
+            "updated_fields": updated_fields,
+        }
+
+    # ── Normal / escalate pending-approval flow ────────────────────────────
     customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
 
     if not customer_owner:
@@ -509,19 +654,15 @@ def request_field_update(
             _("No customer owner found for this Customer:{0}").format(customer_name)
         )
 
-    department = None
-
-    if extra_info:
-        department = get_department_from_service(extra_info)
-
-    elif service_doctype:
-        department = get_department_from_service(service_doctype)
-        
-    if (service_doctype == "Resume" or service_doctype == "Cover Letter"):
+    if is_resume_or_cover_letter:
         manager_employee = customer_owner
+    elif routing["mode"] == "escalate":
+        # Requester already holds the configured role — route to their
+        # direct superior (one level up the department's assign_to chain).
+        manager_employee = routing["manager_employee"]
     else:
         manager_employee = get_approver_by_department(employee, service_doctype, extra_info)
-        
+
     if not manager_employee:
         frappe.throw(
             f"Permission Request Configuration Is Not Set Up Properly For {department} Department. Please Contact Administrator."
@@ -530,12 +671,6 @@ def request_field_update(
     manager_user = get_user(manager_employee)
     if not manager_user:
         frappe.throw("Approver employee has no linked User account.")
-
-    if isinstance(field_updates, str):
-        try:
-            field_updates = json.loads(field_updates)
-        except Exception:
-            frappe.throw("Invalid field data received. Please try again.")
 
     # Build field labels for activity log
     lead_detail_meta = frappe.get_meta("Lead Detail Form")
@@ -599,16 +734,8 @@ def request_field_update(
             "reason": reason,
             "field_labels": ", ".join(field_labels),
         }
-
-        subject = frappe.render_template(
-            template.subject,
-            context,
-        )
-
-        message = frappe.render_template(
-            template.response_html or template.response,
-            context,
-        )
+        subject = frappe.render_template(template.subject, context)
+        message = frappe.render_template(template.response_html or template.response, context)
 
     activity_message = (
         f"<b>Requested field update for:</b> "
@@ -617,20 +744,10 @@ def request_field_update(
         f"Sent to manager <b>{manager_employee}</b> for approval."
     )
 
-    _add_activity_log(
-        "Customer",
-        customer_name,
-        activity_message,
-        user,
-    )
+    _add_activity_log("Customer", customer_name, activity_message, user)
 
     if service_doctype and service_name:
-        _add_activity_log(
-            service_doctype,
-            service_name,
-            activity_message,
-            user,
-        )
+        _add_activity_log(service_doctype, service_name, activity_message, user)
 
     manager_email = frappe.db.get_value("User", manager_user, "email")
     send_notification(

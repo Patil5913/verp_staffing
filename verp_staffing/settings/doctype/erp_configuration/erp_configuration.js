@@ -65,6 +65,12 @@ frappe.ui.form.on("ERP Configuration", {
 });
 
 async function render_headlines(frm) {
+
+	if (frm.__headline_rendered_for === frm.doc.name) return;
+	frm.__headline_rendered_for = frm.doc.name;
+
+	frm.dashboard.clear_headline();
+
 	const r = await frappe.call({
 		method: "verp_staffing.utils.onboarding_setup_helper.get_setup_progress",
 	});

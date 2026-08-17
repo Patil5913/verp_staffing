@@ -1,14 +1,14 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
-import frappe,json
+import frappe, json
 from frappe.utils import now_datetime
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.customer import update_customer_stage
 
+
 class Resume(Document):
-    
     def autoname(self):
         if not self.customer:
             frappe.throw("Customer is required")
@@ -18,46 +18,141 @@ class Resume(Document):
         self.name = generate_name_series("Resume", customer_name)
 
     def validate(self):
-        self._prevent_manual_completion()
+        self.validate_resume_submission()
+        self.handle_resume_status()
 
-    def on_update(self):
-        self._auto_complete_after_save()
-        
+
+
     def after_insert(self):
         update_customer_stage(
             customer=self.customer,
             service="resume",
         )
 
-    def _prevent_manual_completion(self):
-        """
-        Prevent users from manually setting status to Completed
-        without uploading resume.
-        """
+
+    def get_existing_resume_row_names(self):
         if self.is_new():
-            return
+            return set()
 
-        before = self.get_doc_before_save()
-        if not before:
-            return
-
-        if (
-            before.status != "Completed"
-            and self.status == "Completed"
-            and not self.resume
-        ):
-            frappe.throw(
-                "You cannot manually mark Resume as Completed. "
-                "Upload a resume PDF first."
+        return set(
+            frappe.db.get_all(
+                "Document References",
+                filters={
+                    "parent": self.name,
+                    "parenttype": "Resume",
+                    "parentfield": "resume_table",
+                },
+                pluck="name",
             )
+        )
 
-    def _auto_complete_after_save(self):
+    def get_existing_resume_rows(self):
+        if self.is_new():
+            return {}
+
+        rows = frappe.db.get_all(
+            "Document References",
+            filters={
+                "parent": self.name,
+                "parenttype": "Resume",
+                "parentfield": "resume_table",
+            },
+            fields=[
+                "name",
+                "document",
+                "document_title",
+                "description",
+                "date",
+            ],
+        )
+
+        return {
+            row.name: row
+            for row in rows
+        }
+
+    def validate_resume_submission(self):
+        # Completed Resume is locked.
+        if not self.is_new() and self.get_db_value("status") == "Completed":
+            frappe.throw("Completed Resume cannot be modified.")
+
+        new_rows = self.get_new_resume_rows()
+
+        # Only ONE new resume can be added in one update cycle.
+        if len(new_rows) > 1:
+            frappe.throw("Only one new resume can be uploaded at a time.")
+
+        # If a new row is added, attachment is mandatory.
+        if len(new_rows) == 1 and not new_rows[0].document:
+            frappe.throw("Resume attachment is required.")
+
+    def handle_resume_status(self):
+        if self.status not in (
+            "Pending",
+            "Request for Update",
+        ):
+            return
+
+        new_rows = self.get_new_resume_rows()
+
+        if len(new_rows) == 1 and new_rows[0].document:
+            self.status = "Completed"
+
+    def get_new_resume_rows(self):
+        existing_rows = self.get_existing_resume_rows()
+
+        return [
+            row
+            for row in (self.resume_table or [])
+            if row.name not in existing_rows
+        ]
+
+
+
+
+@frappe.whitelist()
+def get_latest_resume_document(customer):
+    if not customer:
+        return None
+
+    # There is only one Resume per customer.
+    resume_name = frappe.db.get_value(
+        "Resume",
+        {"customer": customer},
+        "name",
+    )
+
+    if not resume_name:
+        return None
+
+    # Respect permission on the parent Resume.
+    if not frappe.has_permission(
+        "Resume",
+        doc=resume_name,
+        ptype="read",
+    ):
+        frappe.throw(
+            "Not permitted to access this Resume",
+            frappe.PermissionError,
+        )
+
+    row = frappe.db.sql(
         """
-        After save, if resume exists and status is not completed,
-        silently mark it completed.
-        """  
-        if not self.resume and self.status == "Completed":
-            self.db_set("status", "Pending", update_modified=False)
-            
-        if self.resume and self.status != "Completed":
-            self.db_set("status", "Completed", update_modified=False)
+		SELECT
+			name,
+			document,
+			date
+		FROM `tabDocument References`
+		WHERE
+			parent = %(parent)s
+			AND parenttype = 'Resume'
+			AND parentfield = 'resume_table'
+			AND IFNULL(document, '') != ''
+		ORDER BY date DESC, idx DESC
+		LIMIT 1
+		""",
+        {"parent": resume_name},
+        as_dict=True,
+    )
+
+    return row[0] if row else None

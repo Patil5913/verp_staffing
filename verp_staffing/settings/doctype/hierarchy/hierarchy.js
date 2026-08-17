@@ -8,7 +8,7 @@ frappe.ui.form.on("Hierarchy", {
 		if (!frm.get_field("role_table_html").$wrapper.find("#role-table-wrapper").length) {
 			render_role_table_html(frm);
 		}
-		if(frappe.session.user === "Administrator"){
+		if (frappe.session.user === "Administrator") {
 			await render_headline(frm);
 		}
 		frm.department_roles = await load_department_roles(frm);
@@ -101,6 +101,10 @@ frappe.ui.form.on("Hierarchy", {
 
 async function render_headline(frm) {
 	if (frm.is_new()) return;
+	if (frm.__headline_rendered_for === frm.doc.name) return;
+	frm.__headline_rendered_for = frm.doc.name;
+
+	frm.dashboard.clear_headline();
 
 	frm.dashboard.set_headline_alert(
 		__(
