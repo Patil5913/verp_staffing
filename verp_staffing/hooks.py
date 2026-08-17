@@ -148,7 +148,7 @@ after_install = [
 ]
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
-    # "verp_staffing.install.after_install",
+    "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
