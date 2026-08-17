@@ -1882,13 +1882,24 @@ def setup_navbar_settings():
         if row.item_label == "Session Defaults":
             row.hidden = 1
             updated = True
-
+    has_vrugle_support = False
     for row in navbar.help_dropdown:
         if row.item_label == "Frappe Support":
             row.hidden = 1
             updated = True
+        if row.item_label == "Vrugle Support":
+            has_vrugle_support = True
+    if not has_vrugle_support:
+        navbar.append(
+            "help_dropdown",
+            {
+                "item_label": "Vrugle Support",
+                "item_type": "Route",
+                "route": "mailto:support@vrugle.com",
+            },
+        )
 
-    url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
+    url = "https://drive.usercontent.google.com/uc?id=1QDOhV8V4IeOCHaj22ydoWATFSqJkAgH5&export=download"
 
     existing = frappe.db.get_value(
         "File",
@@ -1938,7 +1949,7 @@ def seed_website_setting():
         updated = True
 
     # App logo (reuse if exists, else download)
-    url = "https://drive.usercontent.google.com/uc?id=1WAOgwqIH21AZJ88HmM-6fCc9nRv3ExYj&export=download"
+    url = "https://drive.usercontent.google.com/uc?id=1QDOhV8V4IeOCHaj22ydoWATFSqJkAgH5&export=download"
     existing = frappe.db.get_value(
         "File",
         {"attached_to_doctype": "Website Settings"},
@@ -1984,7 +1995,7 @@ def seed_website_setting():
     footer_html = """
     <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
         <span>Made with</span>
-        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Blue%20Heart.png"
+        <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Blue%20Heart.png" alt="Love"
              width="18" height="18" />
         <span>by <b>Vrugle</b></span>
     </div>
@@ -2028,7 +2039,13 @@ def seed_sales_stages():
 
 def create_interview_statuses():
     statuses = [
-        "Rejected", "Get The Offer", "Rescheduled", "Cancelled", "Completed", "Today", "Scheduled",
+        "Rejected",
+        "Get The Offer",
+        "Rescheduled",
+        "Cancelled",
+        "Completed",
+        "Today",
+        "Scheduled",
     ]
 
     for name in statuses:
@@ -2652,12 +2669,7 @@ def get_primary_business_role(user_email: str) -> str | None:
 
 
 SERVICE_DEPARTMENT_MAP = {
-    "Technical": [
-        "RUC",
-        "JDC",
-        "Training",
-        "Interview Support"
-    ],
+    "Technical": ["RUC", "JDC", "Training", "Interview Support"],
     "Resume": [
         "Resume",
         "Cover Letter",

@@ -11,25 +11,21 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "verp_staffing",
-# 		"logo": "/assets/verp_staffing/logo.png",
-# 		"title": "Vrugle Staffing ERP",
-# 		"route": "/verp_staffing",
-# 		"has_permission": "verp_staffing.api.permission.has_app_permission"
-# 	}
-# ]
-# scheduler_events = {
-#     "cron": {
-#         "* * * * *": [
-#             "verp_staffing.crm.api.agreement.send_agreement_reminders"
-#         ],
-# "0 8 * * *": [  # This cron expression runs daily at midnight
-#         "verp_staffing.accounts.doctype.sales_invoice.send_dynamic_payment_reminders"
-#     ],
-#     }
-# }
+add_to_apps_screen = [
+	{
+		"name": "verp_staffing",
+		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png",
+		"title": "Vrugle Staffing ERP",
+		"route": "/app",
+		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"
+	}
+]
+
+website_context = {
+	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
+	"splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",
+}
+
 # Includes in <head>
 # ------------------
 
@@ -346,6 +342,10 @@ scheduler_events = {
             "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_dynamic_payment_reminders"
         ],
     },
+}
+
+override_scheduled_jobs = {
+    "frappe.utils.change_log.check_for_update": "verp_staffing.overrides.notification_settings.override_updates_notification"
 }
 
 # Setup
