@@ -4,6 +4,9 @@ let interview_offset = 0;
 const interview_limit = 5;
 
 frappe.ui.form.on("Onboardings", {
+	onload(frm) {
+		load_customer_history_if_needed(frm);
+	},
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -15,18 +18,6 @@ frappe.ui.form.on("Onboardings", {
 		};
 
 		frappe.breadcrumbs.update();
-		frappe.call({
-			method: "verp_staffing.www.customer.get_customer_history",
-			args: {
-				customer: frm.doc.customer,
-				interview_limit: interview_limit,
-				interview_offset: interview_offset,
-			},
-			callback(r) {
-				if (!r.message) return;
-				render_customer_history(frm, r.message);
-			},
-		});
 		showOnboarding_tab(frm);
 		// show_sales_order(frm);
 		window.render_owned_sales_orders(frm, "sales_content", frm.doc.customer);
@@ -99,358 +90,23 @@ frappe.ui.form.on("Onboardings", {
 		}
 	},
 });
+function load_customer_history_if_needed(frm) {
+	if (!frm.doc.customer) return;
+	if (frm.__history_loaded_for === frm.doc.name) return; // already loaded for this doc
 
-function render_customer_history(frm, data, append_interviews = false) {
-	let html = "";
-	// COMMON STYLES
-	const card = `
-		border:1px solid #e5e7eb;
-		border-radius:10px;
-		padding:16px;
-		margin-bottom:18px;
-		background:#fff;
-		box-shadow:0 1px 2px rgba(0,0,0,0.05);
-	`;
+	frm.__history_loaded_for = frm.doc.name;
 
-	const table = `
-		width:100%;
-		border-collapse:collapse;
-		font-size:13px;
-	`;
-
-	const th = `
-		padding:8px;
-		text-align:left;
-		background:#f8fafc;
-		color:#475569;
-		font-weight:500;
-	`;
-
-	const td = `
-		padding:8px;
-		border-top:1px solid #f1f5f9;
-		color:#334155;
-	`;
-	// CUSTOMER CREATION
-	html += `
-	<div style="${card}">
-		<p><b>Customer:</b> ${data.customer.customer_name}</p>
-		<p><b>Owner:</b> ${data.customer.owner}</p>
-	</div>
-	`;
-	// SALES ORDER
-	if (data.departments?.["Sales Order"]) {
-		let records = data.departments["Sales Order"];
-
-		html += `
-		<div style="${card}">
-			<h4 style="margin-bottom:10px;">Sales Order</h4>
-			<table style="${table}">
-				<thead>
-					<tr>
-						<th style="${th}">#</th>
-						<th style="${th}">ID</th>
-						<th style="${th}">Agreement</th>
-					</tr>
-				</thead>
-				<tbody>
-					${records
-						.map(
-							(so, i) => `
-						<tr>
-							<td style="${td}">${i + 1}</td>
-							<td style="${td}">
-								<a
-									href="/app/sales-order/${so.id}"
-									target="_blank"
-									style="color:#260fea;font-weight:500;text-decoration:none;"
-								>
-									${so.id}
-								</a>
-							</td>
-							<td style="${td}">
-								${so.agreement || "-"}
-							</td>
-						</tr>
-					`,
-						)
-						.join("")}
-				</tbody>
-			</table>
-		</div>
-		`;
+	if (frm.fields_dict.customer_details) {
+		frm.fields_dict.customer_details.$wrapper.html(
+			"<p style='color:#888'>Loading history...</p>",
+		);
 	}
-	// OTHER DEPARTMENTS
-	if (data.departments) {
-		Object.keys(data.departments).forEach((dept_name) => {
-			let records = data.departments[dept_name];
 
-			if (dept_name === "Sales Order") return;
-
-			html += `
-			<div style="${card}">
-				<h4 style="margin-bottom:10px;">${dept_name}</h4>
-			`;
-			// INTERVIEW (special case)
-			if (dept_name === "Interview") {
-				html += `
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-
-    <div style="display:flex;gap:8px;align-items:center;">
-
-        <input type="text" id="interview-search"
-            placeholder="Search company / role / status"
-            style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;" />
-
-        From : <input type="date" id="interview-from" style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
-        To : <input type="date" id="interview-to" style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
-
-        <button id="interview-filter-btn"
-    style="padding:6px 12px;background:#260fea;color:#fff;border:none;border-radius:6px;">
-    Apply
-</button>
-
-<button id="interview-clear-btn"
-    style="padding:6px 12px;background:#e5e7eb;color:#334155;border:none;border-radius:6px;">
-    Clear
-</button>
-
-    </div>
-</div>
-
-<!-- SCROLLABLE CONTAINER -->
-<div id="interview-container"
-    style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f8fafc;">
-    
-    <div id="interview-list"></div>
-
-</div>
-
-<!-- LOAD MORE OUTSIDE -->
-<div id="interview-load-more" style="text-align:center;margin-top:15px;"></div>
-`;
-			} else {
-				// NORMAL DEPARTMENTS
-				records.forEach((dept) => {
-					html += `
-					<div style="margin-bottom:12px;">
-
-						<p>
-							<a
-								href="/app/${dept.department.toLowerCase().replace(/\s+/g, "-")}/${dept.id}"
-								target="_blank"
-								style="color:#260fea;font-weight:500;text-decoration:none;"
-							>
-								${dept.id}
-							</a>
-						</p>
-
-						<p style="color:#64748b;">
-							Status: ${dept.status || "-"}
-						</p>
-
-						<p style="color:#64748b;">
-							Assigned: ${dept.assign_to || "-"}
-						</p>
-
-						${
-							dept.resume
-								? `<p><a href="${dept.resume}" target="_blank" style="color:#260fea;">View Resume</a></p>`
-								: ""
-						}
-
-					</div>
-					`;
-					// SESSION TABLE
-					if (dept.session_details?.length) {
-						html += `
-						<table style="${table}">
-							<thead>
-								<tr>
-									<th style="${th}">#</th>
-									<th style="${th}">Duration</th>
-									<th style="${th}">Date</th>
-									<th style="${th}">Projects</th>
-									<th style="${th}">Quality</th>
-								</tr>
-							</thead>
-							<tbody>
-								${dept.session_details
-									.map(
-										(row, i) => `
-									<tr>
-										<td style="${td}">${i + 1}</td>
-										<td style="${td}">${row.session_duration_in_hour || "-"}</td>
-										<td style="${td}">${row.date || "-"}</td>
-										<td style="${td}">${row.projects || "-"}</td>
-										<td style="${td}">${row.quality || "-"}</td>
-									</tr>
-								`,
-									)
-									.join("")}
-							</tbody>
-						</table>
-						`;
-					}
-					// JOB APPLICATION
-					if (dept.job_application_count?.length) {
-						html += `
-						<table style="${table}">
-							<thead>
-								<tr>
-									<th style="${th}">#</th>
-									<th style="${th}">Small</th>
-									<th style="${th}">Large</th>
-									<th style="${th}">Total</th>
-									<th style="${th}">Date</th>
-								</tr>
-							</thead>
-							<tbody>
-								${dept.job_application_count
-									.map(
-										(row, i) => `
-									<tr>
-										<td style="${td}">${i + 1}</td>
-										<td style="${td}">${row.small_application || "-"}</td>
-										<td style="${td}">${row.large_application || "-"}</td>
-										<td style="${td}">${row.total_application || "-"}</td>
-										<td style="${td}">${row.date || "-"}</td>
-									</tr>
-								`,
-									)
-									.join("")}
-							</tbody>
-						</table>
-						`;
-					}
-					// PROOF OF WORK
-					if (dept.proof_of_work?.length) {
-						html += `
-						<table style="${table}">
-							<thead>
-								<tr>
-									<th style="${th}">#</th>
-									<th style="${th}">Date</th>
-									<th style="${th}">Description</th>
-									<th style="${th}">Attachment</th>
-								</tr>
-							</thead>
-							<tbody>
-								${dept.proof_of_work
-									.map(
-										(row, i) => `
-									<tr>
-										<td style="${td}">${i + 1}</td>
-										<td style="${td}">${row.date || "-"}</td>
-										<td style="${td}">${row.description || "-"}</td>
-										<td style="${td}">
-											${
-												row.document
-													? `<a href="${row.document}" target="_blank" style="color:#260fea;">View</a>`
-													: "-"
-											}
-										</td>
-									</tr>
-								`,
-									)
-									.join("")}
-							</tbody>
-						</table>
-						`;
-					}
-				});
-			}
-			html += `</div>`;
-		});
-	}
-	// RENDER
-	frm.fields_dict.customer_details.$wrapper.html(html);
-	render_interviews(data, append_interviews);
-
-	$(document)
-		.off("click", "#load-more-interviews")
-		.on("click", "#load-more-interviews", function () {
-			interview_offset += interview_limit;
-			let from_date = $("#interview-from").val();
-			let to_date = $("#interview-to").val();
-
-			if (from_date && to_date && from_date > to_date) {
-				frappe.msgprint("From Date cannot be greater than To Date");
-				return;
-			}
-			frappe.call({
-				method: "verp_staffing.www.customer.get_customer_history",
-				args: {
-					customer: frm.doc.customer,
-					interview_limit: interview_limit,
-					interview_offset: interview_offset,
-					search: $("#interview-search").val(),
-					from_date: $("#interview-from").val(),
-					to_date: $("#interview-to").val(),
-				},
-				callback: function (r) {
-					render_interviews(r.message, true);
-				},
-			});
-		});
-
-	$(document)
-		.off("click", "#interview-filter-btn")
-		.on("click", "#interview-filter-btn", function () {
-			let search = $("#interview-search").val();
-			let from_date = $("#interview-from").val();
-			let to_date = $("#interview-to").val();
-
-			// DATE VALIDATION
-			if (from_date && to_date && from_date > to_date) {
-				frappe.msgprint("From Date cannot be greater than To Date");
-				return;
-			}
-
-			interview_offset = 0;
-
-			frappe.call({
-				method: "verp_staffing.www.customer.get_customer_history",
-				args: {
-					customer: frm.doc.customer,
-					interview_limit: interview_limit,
-					interview_offset: interview_offset,
-					search: search,
-					from_date: from_date,
-					to_date: to_date,
-				},
-				callback: function (r) {
-					render_interviews(r.message, false);
-				},
-			});
-		});
-	$(document)
-		.off("click", "#interview-clear-btn")
-		.on("click", "#interview-clear-btn", function () {
-			// Reset inputs
-			$("#interview-search").val("");
-			$("#interview-from").val("");
-			$("#interview-to").val("");
-
-			// Reset pagination
-			interview_offset = 0;
-
-			// Reload default data (NO filters)
-			frappe.call({
-				method: "verp_staffing.www.customer.get_customer_history",
-				args: {
-					customer: frm.doc.customer,
-					interview_limit: interview_limit,
-					interview_offset: interview_offset,
-					search: "",
-					from_date: "",
-					to_date: "",
-				},
-				callback: function (r) {
-					render_interviews(r.message, false);
-				},
-			});
-		});
+	window.verp_staffing.render_customer_history_widget(frm, {
+		fieldname: "customer_details",
+		customer: frm.doc.customer,
+		doctype: "Customer",
+	});
 }
 window.viewFullFeedback = function (encodedText) {
 	const fullText = decodeURIComponent(encodedText);
@@ -717,4 +373,3 @@ function showOnboarding_tab(frm) {
 		},
 	});
 }
-

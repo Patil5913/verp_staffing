@@ -68,12 +68,59 @@ class ERPConfiguration(Document):
 
 @frappe.whitelist()
 def get_services():
-	# is_service = 1 means it's a service item
-	return frappe.get_all(
-		"Item",
-		filters={"is_service": 1, "disabled": 0},
-		pluck="name",
-	)
+    # is_service = 1 means it's a service item
+    return frappe.get_all(
+        "Item",
+        filters={"is_service": 1, "disabled": 0},
+        pluck="name",
+    )
+
+
+@frappe.whitelist()
+def get_website_app_settings():
+    """Read app_name/app_logo via Frappe's built-in single-doc cache."""
+    doc = frappe.get_cached_doc("Website Settings")
+    return {"app_name": doc.app_name, "app_logo": doc.app_logo}
+
+
+def _ensure_public_file(file_url: str) -> str:
+    """If file_url points to a private File, make it public and
+    return the (possibly new) file_url."""
+    if not file_url or "/private/" not in file_url:
+        return file_url
+
+    file_doc = frappe.get_doc("File", {"file_url": file_url})
+
+    if file_doc.is_private:
+        file_doc.is_private = 0
+        file_doc.save(ignore_permissions=True)  # moves file on disk, updates file_url
+
+    return file_doc.file_url
+
+
+@frappe.whitelist()
+def update_website_app_settings(app_name=None, app_logo=None):
+    if not frappe.has_permission("Website Settings", "write"):
+        frappe.throw(
+            _("Not permitted to update Website Settings"), frappe.PermissionError
+        )
+
+    if app_logo:
+        app_logo = _ensure_public_file(app_logo)
+
+    doc = frappe.get_doc("Website Settings")
+    changed = False
+    if app_name is not None and doc.app_name != app_name:
+        doc.app_name = app_name
+        changed = True
+    if app_logo is not None and doc.app_logo != app_logo:
+        doc.app_logo = app_logo
+        changed = True
+
+    if changed:
+        doc.save()
+
+    return {"app_name": doc.app_name, "app_logo": doc.app_logo}
 
 
 # ---------------------------------------------------------------------------

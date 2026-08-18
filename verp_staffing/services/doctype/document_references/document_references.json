@@ -36,14 +36,14 @@
    "fieldname": "document",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "Dcoument"
+   "label": "Document"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-13 17:30:39.008906",
+ "modified": "2026-08-18 10:23:11.690231",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Document References",

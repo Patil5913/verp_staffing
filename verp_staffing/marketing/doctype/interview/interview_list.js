@@ -1,8 +1,6 @@
 (function () {
 	"use strict";
 
-	const DEBUG = false;
-	const log = (...args) => DEBUG && console.log("[Interview Kanban]", ...args);
 
 	const ROUND_SUMMARY_METHOD =
 		"verp_staffing.marketing.doctype.interview.interview.get_round_summary_for_kanban";
@@ -431,7 +429,6 @@
 
 		state.pendingTodayUpdate.add(name);
 
-		log("auto-updating to Today", name);
 
 		Promise.resolve(apply_status_change(listview, name, "Today"))
 			.catch((err) => {
@@ -593,7 +590,6 @@
 				return;
 			}
 
-			log("column change detected", name, previous, "->", columnValue);
 
 			state.pendingStatusChange.add(name);
 			state.cardColumnState.delete(name);
@@ -731,7 +727,6 @@
 		if (!namesToFetch.length) return;
 
 		namesToFetch.forEach((n) => state.roundInFlight.add(n));
-		log("fetching rounds for", namesToFetch);
 
 		frappe.call({
 			method: ROUND_SUMMARY_METHOD,

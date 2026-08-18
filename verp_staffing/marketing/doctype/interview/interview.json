@@ -76,7 +76,7 @@
  "index_web_pages_for_search": 1,
  "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2026-08-17 12:31:34.706682",
+ "modified": "2026-08-18 14:59:18.674613",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
@@ -179,5 +179,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "company"
+ "title_field": "company",
+ "track_changes": 1
 }

@@ -8,6 +8,7 @@ frappe.ui.form.on("ERP Configuration", {
 	async refresh(frm) {
 		active_frm = frm;
 		set_department_role_filters(frm);
+		render_website_app_settings(frm);
 		setup_permission_table_filters(frm);
 		add_remove_sample_data_button(frm);
 		await render_headlines(frm);
@@ -69,7 +70,6 @@ frappe.ui.form.on("ERP Configuration", {
 });
 
 async function render_headlines(frm) {
-
 	if (frm.__headline_rendered_for === frm.doc.name) return;
 	frm.__headline_rendered_for = frm.doc.name;
 
@@ -1113,6 +1113,61 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 			}, 1800);
 		});
 	}); // end frappe.model.with_doctype
+}
+
+function render_website_app_settings(frm) {
+	const $wrapper = frm.get_field("website_settings").$wrapper.empty();
+	const $row = $('<div class="row"></div>').appendTo($wrapper);
+	const $col1 = $('<div class="col-sm-6"></div>').appendTo($row);
+	const $col2 = $('<div class="col-sm-6"></div>').appendTo($row);
+
+	// page-session cache so switching tabs / re-render doesn't refetch
+	if (frappe.erp_config_website_cache) {
+		build_controls(frappe.erp_config_website_cache);
+	} else {
+		frappe.call({
+			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_website_app_settings",
+			callback: (r) => {
+				frappe.erp_config_website_cache = r.message;
+				build_controls(r.message);
+			},
+		});
+	}
+
+	function build_controls(data) {
+		$col1.empty();
+		$col2.empty();
+
+		const name_ctrl = frappe.ui.form.make_control({
+			parent: $col1,
+			df: { fieldtype: "Data", fieldname: "app_name", label: "App Name" },
+			render_input: true,
+		});
+		name_ctrl.set_value(data.app_name);
+		name_ctrl.$input.on("blur", () => save_field("app_name", name_ctrl.get_value()));
+
+		const logo_ctrl = frappe.ui.form.make_control({
+			parent: $col2,
+			df: { fieldtype: "Attach Image", fieldname: "app_logo", label: "App Logo" },
+			render_input: true,
+		});
+		logo_ctrl.set_value(data.app_logo);
+		logo_ctrl.df.onchange = () => save_field("app_logo", logo_ctrl.get_value());
+	}
+
+	function save_field(fieldname, value) {
+		if (frappe.erp_config_website_cache?.[fieldname] === value) return; // skip no-op writes
+		frappe.call({
+			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.update_website_app_settings",
+			args: { [fieldname]: value },
+			freeze: true,
+			freeze_message: __("Updating Website Settings..."),
+			callback: (r) => {
+				frappe.erp_config_website_cache = r.message;
+				frappe.show_alert({ message: __("Website Settings updated"), indicator: "green" });
+			},
+		});
+	}
 }
 
 // ---------------------------------------------------------------------------

@@ -39,27 +39,10 @@ class JDC(Document):
         
     def validate(self):
         set_document_reference_titles(self.proof_of_work)
-        self.validate_completed_lock()
         self.stamp_updated_document_rows()
         self.validate_documents()
 
-    def validate_completed_lock(self):
-            """
-            Once a JDC is Completed, the complete
-            document becomes immutable.
-            This includes:
-            - parent fields
-            - proof_of_work child rows
-            - adding rows
-            - deleting rows
-            - modifying existing rows
-            """
-            if self.is_new():
-                return
 
-            previous_status = self.db_get("status")
-            if previous_status == "Completed":
-                frappe.throw("Completed JDC cannot be modified.")
 
     def stamp_updated_document_rows(self):
         """

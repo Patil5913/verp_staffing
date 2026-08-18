@@ -42,7 +42,9 @@
   "department_display_form_fields",
   "department_access_fields_tab",
   "department_access_fields",
-  "department_access_form_fields"
+  "department_access_form_fields",
+  "website_settings_tab",
+  "website_settings"
  ],
  "fields": [
   {
@@ -263,13 +265,22 @@
    "label": "Is Sample Data Removed",
    "read_only": 1,
    "hidden": 1
+  },
+  {
+   "fieldname": "website_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Website Settings"
+  },
+  {
+   "fieldname": "website_settings",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-18 17:07:59.126856",
+ "modified": "2026-08-18 14:11:18.424081",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

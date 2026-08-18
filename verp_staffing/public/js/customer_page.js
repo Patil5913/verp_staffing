@@ -5,15 +5,49 @@ let _events_bound = false;
 let token = null;
 let customerEmail = null;
 
+function escape_html(str) {
+	return String(str == null ? "" : str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+function get_status_badge_style(status) {
+	var s = (status || "").toLowerCase();
+	var rules = [
+		["rescheduled", "background:#ffedd5;color:#9a3412;"], // orange
+		["scheduled", "background:#cffafe;color:#155e75;"], // cyan
+		["today", "background:#fef9c3;color:#854d0e;"], // yellow
+		["completed", "background:#dbeafe;color:#1e40af;"], // blue
+		["cancelled", "background:#e2e8f0;color:#334155;"], // gray
+		["get the offer", "background:#dcfce7;color:#166534;"], // green
+		["accepted", "background:#dcfce7;color:#166534;"], // green (same as get the offer)
+		["rejected", "background:#fee2e2;color:#991b1b;"], // red
+	];
+
+	for (var i = 0; i < rules.length; i++) {
+		if (s.indexOf(rules[i][0]) !== -1) return rules[i][1];
+	}
+	return "background:#f1f5f9;color:#475569;";
+}
+
+function render_status_badge(status) {
+	var style = get_status_badge_style(status);
+	var text = status || "-";
+	return '<span class="status-badge" style="' + style + '">' + escape_html(text) + "</span>";
+}
+
 document.addEventListener("DOMContentLoaded", function () {
 	start_otp_bootstrap();
 });
 
 async function start_otp_bootstrap() {
 	const root = await wait_for_root("#otp-root", 3000);
-	
+
 	if (!root) return;
-	
+
 	token = new URLSearchParams(window.location.search).get("t");
 
 	// ✅ otherwise load OTP UI
@@ -77,10 +111,9 @@ document.addEventListener("click", async function (e) {
 });
 
 async function handle_logout() {
-	const t = new URLSearchParams(window.location.search).get("t")
+	const t = new URLSearchParams(window.location.search).get("t");
 
 	try {
-		
 		await api_call("verp_staffing.utils.customer_page.logout_otp_web", {
 			token: t,
 		});

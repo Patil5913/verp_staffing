@@ -222,7 +222,6 @@ async function apply_employee_read_only_restriction(frm) {
 }
 
 async function render_headline(frm) {
-	console.log("frm.is_new(): ", frm.is_new());
 	if (frm.is_new()) return;
 	if (frm.__headline_rendered_for === frm.doc.name) return;
 	frm.__headline_rendered_for = frm.doc.name;
