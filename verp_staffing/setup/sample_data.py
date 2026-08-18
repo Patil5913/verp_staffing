@@ -166,27 +166,35 @@ def _get_or_create(doctype, filters, values=None, track_as_sample=True):
 	return doc
 
 
-def _safe(step_name, fn, *args, **kwargs):
-	"""Run a seeding step, log and continue on failure (never abort the
-	whole run because one section hit a missing master/config).
-
-	Crucially, roll back on failure: a step that raised partway through
-	may have left uncommitted, half-built state (e.g. a tree doctype's
-	lft/rgt update, or several inserted child rows) sitting in the same
-	transaction the *next* step will run in. Without this, a failure in
-	one section can leave the connection in a state that makes the next
-	section fail too, for a completely unrelated reason - the opposite
-	of what this helper is supposed to guarantee.
+def _rollback_to_new_savepoint(fn, on_error_title, *args, **kwargs):
+	"""Run fn under a fresh SAVEPOINT and, on failure, roll back only to
+	that savepoint - not the whole transaction. Sample data seeding now
+	runs inside the single request-wide transaction the setup wizard
+	uses (see setup_wizard.py - there is no manual commit boundary
+	before this runs anymore). A bare frappe.db.rollback() here would
+	silently wipe the Company and Fiscal Year created earlier in that
+	same request, not just this step's own partial writes - which is
+	exactly the bug a mid-request commit was previously (wrongly)
+	papering over.
 	"""
+	savepoint = f"sd_{frappe.generate_hash(length=10)}"
+	frappe.db.savepoint(savepoint)
 	try:
 		return fn(*args, **kwargs)
 	except Exception:
-		frappe.log_error(
-			title=f"Sample Data: {step_name} failed",
-			message=frappe.get_traceback(),
-		)
-		frappe.db.rollback()
+		frappe.log_error(title=on_error_title, message=frappe.get_traceback())
+		frappe.db.rollback(save_point=savepoint)
 		return None
+
+
+def _safe(step_name, fn, *args, **kwargs):
+	"""Run a seeding step, log and continue on failure (never abort the
+	whole run because one section hit a missing master/config).
+	Rolls back to a savepoint taken just before this step, not the
+	whole transaction - see _rollback_to_new_savepoint above."""
+	return _rollback_to_new_savepoint(
+		fn, f"Sample Data: {step_name} failed", *args, **kwargs
+	)
 
 
 def _default_currency(company):
@@ -677,17 +685,17 @@ def _get_or_create_tax_account(company, label):
 
 def _safe_tax_row(company, label, step_name):
 	"""Tax account creation failing should not take the whole order down
-	with it - return no tax rows instead of aborting."""
-	try:
+	with it - return no tax rows instead of aborting. Savepoint-scoped
+	for the same reason as _safe() above."""
+
+	def _create():
 		account = _get_or_create_tax_account(company, label)
 		return [_sample_tax_row(account)]
-	except Exception:
-		frappe.log_error(
-			title=f"Sample Data: {step_name} tax account skipped",
-			message=frappe.get_traceback(),
-		)
-		frappe.db.rollback()
-		return []
+
+	result = _rollback_to_new_savepoint(
+		_create, f"Sample Data: {step_name} tax account skipped"
+	)
+	return result or []
 
 
 def create_sales_order(company, customer, items):

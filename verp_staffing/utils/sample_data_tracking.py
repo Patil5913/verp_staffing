@@ -3,7 +3,7 @@ import frappe
 SINGLE_DOCTYPE = "ERP Configuration"
 LOG_FIELD = "sample_data_log"
 REMOVED_FLAG_FIELD = "is_sample_data_removed"
-
+DEMO_COMPANY_NAME = "Demo Company"
 
 def _read_log():
 	try:
@@ -77,6 +77,17 @@ def _track_auto_generated_companions(doctype, name):
 			message=f"{doctype} {name}\n\n{frappe.get_traceback()}",
 		)
 
+
+def clear_log_for_doctype(doctype):
+	"""Drop every tracked entry for `doctype` at once. Used when a whole
+	bucket was just force-deleted via a single raw SQL DELETE rather than
+	confirmed one name at a time through remove_from_log() - see
+	remove_sample_data._force_delete_sample_data()."""
+	data = _read_log()
+	if doctype in data:
+		data.pop(doctype, None)
+		_write_log(data)
+  
 
 def remove_from_log(doctype, name):
 	"""Remove a single entry once it's been CONFIRMED deleted - never
