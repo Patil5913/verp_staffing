@@ -72,7 +72,8 @@
    "fieldname": "support",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Support"
+   "label": "Support",
+   "read_only": 1
   },
   {
    "fieldname": "feedback",
@@ -183,7 +184,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-12 14:56:54.511789",
+ "modified": "2026-08-18 11:06:01.402965",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview Round",

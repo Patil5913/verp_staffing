@@ -5,6 +5,9 @@ const interview_limit = 5;
 let CURRENT_EMPLOYEE = null;
 
 frappe.ui.form.on("Customer", {
+	onload(frm) {
+		load_customer_history_if_needed(frm);
+	},
 	async refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -96,21 +99,9 @@ frappe.ui.form.on("Customer", {
 				},
 			});
 		}
-
-		if (frm.fields_dict.customer_details) {
-			frm.fields_dict.customer_details.$wrapper.html(
-				"<p style='color:#888'>Loading history...</p>",
-				"<p style='color:#888'>Loading history...</p>",
-			);
-		}
-
-		if (!frm.doc.name) return;
-		window.verp_staffing.render_customer_history_widget(frm, {
-			fieldname: "customer_details",
-			customer: frm.doc.name,
-			doctype: "Customer",
-		});
-
+		// if (frappe.get_route()[3] === "history_tab") {
+		// 	load_customer_history_if_needed(frm);
+		// }
 		const display_fields = await window.get_display_fields(frm.doctype);
 
 		window.render_customer_related_html({
@@ -192,6 +183,25 @@ frappe.ui.form.on("Customer", {
 		}
 	},
 });
+
+function load_customer_history_if_needed(frm) {
+	if (!frm.doc.name) return;
+	if (frm.__history_loaded_for === frm.doc.name) return; // already loaded for this doc
+
+	frm.__history_loaded_for = frm.doc.name;
+
+	if (frm.fields_dict.customer_details) {
+		frm.fields_dict.customer_details.$wrapper.html(
+			"<p style='color:#888'>Loading history...</p>",
+		);
+	}
+
+	window.verp_staffing.render_customer_history_widget(frm, {
+		fieldname: "customer_details",
+		customer: frm.doc.name,
+		doctype: "Customer",
+	});
+}
 
 function set_customer_owner(frm) {
 	if (frm.doc.customer_owner) return;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026, Vrugle and contributors
+// For license information, please see license.txt
+
 let email_config_rows = [];
 let active_frm = null; // tracks current form so document-level handlers below can reach it
 
@@ -5,7 +8,9 @@ frappe.ui.form.on("ERP Configuration", {
 	async refresh(frm) {
 		active_frm = frm;
 		set_department_role_filters(frm);
+		render_website_app_settings(frm);
 		setup_permission_table_filters(frm);
+		add_remove_sample_data_button(frm);
 		await render_headlines(frm);
 		// Load from doc into memory, then render
 		try {
@@ -65,7 +70,6 @@ frappe.ui.form.on("ERP Configuration", {
 });
 
 async function render_headlines(frm) {
-
 	if (frm.__headline_rendered_for === frm.doc.name) return;
 	frm.__headline_rendered_for = frm.doc.name;
 
@@ -1109,4 +1113,350 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 			}, 1800);
 		});
 	}); // end frappe.model.with_doctype
+}
+
+function render_website_app_settings(frm) {
+	const $wrapper = frm.get_field("website_settings").$wrapper.empty();
+	const $row = $('<div class="row"></div>').appendTo($wrapper);
+	const $col1 = $('<div class="col-sm-6"></div>').appendTo($row);
+	const $col2 = $('<div class="col-sm-6"></div>').appendTo($row);
+
+	// page-session cache so switching tabs / re-render doesn't refetch
+	if (frappe.erp_config_website_cache) {
+		build_controls(frappe.erp_config_website_cache);
+	} else {
+		frappe.call({
+			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_website_app_settings",
+			callback: (r) => {
+				frappe.erp_config_website_cache = r.message;
+				build_controls(r.message);
+			},
+		});
+	}
+
+	function build_controls(data) {
+		$col1.empty();
+		$col2.empty();
+
+		const name_ctrl = frappe.ui.form.make_control({
+			parent: $col1,
+			df: { fieldtype: "Data", fieldname: "app_name", label: "App Name" },
+			render_input: true,
+		});
+		name_ctrl.set_value(data.app_name);
+		name_ctrl.$input.on("blur", () => save_field("app_name", name_ctrl.get_value()));
+
+		const logo_ctrl = frappe.ui.form.make_control({
+			parent: $col2,
+			df: { fieldtype: "Attach Image", fieldname: "app_logo", label: "App Logo" },
+			render_input: true,
+		});
+		logo_ctrl.set_value(data.app_logo);
+		logo_ctrl.df.onchange = () => save_field("app_logo", logo_ctrl.get_value());
+	}
+
+	function save_field(fieldname, value) {
+		if (frappe.erp_config_website_cache?.[fieldname] === value) return; // skip no-op writes
+		frappe.call({
+			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.update_website_app_settings",
+			args: { [fieldname]: value },
+			freeze: true,
+			freeze_message: __("Updating Website Settings..."),
+			callback: (r) => {
+				frappe.erp_config_website_cache = r.message;
+				frappe.show_alert({ message: __("Website Settings updated"), indicator: "green" });
+			},
+		});
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Remove Sample Data
+// ---------------------------------------------------------------------------
+
+function add_remove_sample_data_button(frm) {
+	frm.add_custom_button(
+		__("Remove Sample Data"),
+		() => open_remove_sample_data_dialog(frm),
+		__("Actions"),
+	);
+}
+
+function open_remove_sample_data_dialog(frm) {
+	frappe.call({
+		method:
+			"verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_sample_data_summary",
+		freeze: true,
+		freeze_message: __("Checking sample data…"),
+		callback(r) {
+			const summary = r.message || {};
+			if (!summary.total) {
+				frappe.msgprint(__("No sample data found."));
+				return;
+			}
+			if (summary.unexpected_doctypes && summary.unexpected_doctypes.length) {
+				show_unexpected_doctypes_dialog(summary);
+				return;
+			}
+			if (summary.conflicts && summary.conflicts.length) {
+				show_sample_data_conflict_dialog(frm, summary);
+			} else {
+				confirm_plain_sample_data_removal(frm, summary);
+			}
+		},
+	});
+}
+
+// ── Shared building blocks ──────────────────────────────────────────────────
+
+function sample_data_dialog_styles() {
+	return `
+	<style>
+	.sd-group { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+	.sd-group-head { font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; word-break: break-word; }
+	.sd-badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; background: var(--gray-200); color: var(--text-muted); padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
+	.sd-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 2px; }
+	.sd-chip { font-size: 12px; background: var(--subtle-accent); border-radius: 6px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px; max-width: 100%; word-break: break-word; }
+	.sd-chip-dt { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+	.sd-link { color: var(--text-color); text-decoration: underline; word-break: break-word; }
+	.sd-link:hover { color: var(--blue-500); }
+	.sd-scroll { max-height: 340px; overflow-y: auto; padding-right: 4px; }
+	.sd-details summary { cursor: pointer; font-size: 13px; color: var(--text-muted); margin: 6px 0; }
+	.sd-warning { background: var(--bg-orange); border: 1px solid var(--orange-300, #f0ad4e); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; }
+	</style>`;
+}
+
+function sd_doc_link(doctype, name) {
+	const route = frappe.utils.get_form_link
+		? frappe.utils.get_form_link(doctype, name)
+		: `/app/${frappe.router.slug(doctype)}/${encodeURIComponent(name)}`;
+	return `<a href="${route}" target="_blank" rel="noopener" class="sd-link">${frappe.utils.escape_html(name)}</a>`;
+}
+
+// records: {doctype: [name, ...]} -> grouped, clickable HTML
+function sd_records_html(records) {
+	return Object.entries(records || {})
+		.map(([doctype, names]) => {
+			const chips = names.map((n) => `<span class="sd-chip">${sd_doc_link(doctype, n)}</span>`).join("");
+			return `
+				<div class="sd-group">
+					<div class="sd-group-head">
+						<span class="sd-badge">${frappe.utils.escape_html(doctype)}</span>
+						<span>${names.length}</span>
+					</div>
+					<div class="sd-chips">${chips}</div>
+				</div>`;
+		})
+		.join("");
+}
+
+// conflicts: [{sample_doctype, sample_name, linked_doctype, linked_name}] ->
+// grouped by sample record, clickable HTML
+function sd_conflicts_html(conflicts) {
+	const groups = new Map();
+	conflicts.forEach((c) => {
+		const key = `${c.sample_doctype}::${c.sample_name}`;
+		if (!groups.has(key)) {
+			groups.set(key, { doctype: c.sample_doctype, name: c.sample_name, links: [] });
+		}
+		groups.get(key).links.push({ doctype: c.linked_doctype, name: c.linked_name });
+	});
+
+	return Array.from(groups.values())
+		.map((g) => {
+			const chips = g.links
+				.map(
+					(l) =>
+						`<span class="sd-chip">${sd_doc_link(l.doctype, l.name)}<span class="sd-chip-dt">${frappe.utils.escape_html(l.doctype)}</span></span>`,
+				)
+				.join("");
+			return `
+				<div class="sd-group">
+					<div class="sd-group-head">
+						<span class="sd-badge">${frappe.utils.escape_html(g.doctype)}</span>
+						${sd_doc_link(g.doctype, g.name)}
+					</div>
+					<div class="sd-chips">${chips}</div>
+				</div>`;
+		})
+		.join("");
+}
+
+// ── Dialogs ──────────────────────────────────────────────────────────────────
+
+function show_unexpected_doctypes_dialog(summary) {
+	// Safety net tripped: the log contains a doctype outside the known
+	// sample-data list. Refuse to proceed automatically and show
+	// exactly what was found so it can be reviewed by hand.
+	const html = sd_records_html(summary.unexpected_doctypes.reduce((acc, dt) => {
+		acc[dt] = summary.records[dt];
+		return acc;
+	}, {}));
+
+	frappe.msgprint({
+		title: __("Remove Sample Data - Manual Review Needed"),
+		indicator: "orange",
+		message: `
+			${sample_data_dialog_styles()}
+			<p>${__(
+				"The sample data log contains record types this tool doesn't know how to remove automatically. Nothing has been deleted. Please review these manually:",
+			)}</p>
+			<div class="sd-scroll">${html}</div>
+		`,
+	});
+}
+
+function confirm_plain_sample_data_removal(frm, summary) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Remove Sample Data"),
+		size: "large",
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "preview_html",
+				options: `
+					${sample_data_dialog_styles()}
+					<p>${__("This will permanently delete {0} sample records. This cannot be undone.", [summary.total])}</p>
+					<details class="sd-details">
+						<summary>${__("Show exactly what will be deleted")}</summary>
+						<div class="sd-scroll">${sd_records_html(summary.records)}</div>
+					</details>
+				`,
+			},
+		],
+		primary_action_label: __("Delete Sample Data"),
+		primary_action: () => {
+			dialog.hide();
+			run_sample_data_removal(frm, 0);
+		},
+	});
+
+	dialog.set_secondary_action_label(__("Cancel"));
+	dialog.set_secondary_action(() => dialog.hide());
+	dialog.show();
+}
+
+function show_sample_data_conflict_dialog(frm, summary) {
+	const conflicts = summary.conflicts || summary; // supports being called with just the array too
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Sample Data Has Live Links"),
+		size: "large",
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "conflict_html",
+				options: `
+					${sample_data_dialog_styles()}
+					<p>${__(
+						"These documents were created on top of sample data. Removing the sample data will also delete them:",
+					)}</p>
+					<div class="sd-scroll">${sd_conflicts_html(Array.isArray(conflicts) ? conflicts : [])}</div>
+					${
+						summary.records
+							? `<details class="sd-details">
+								<summary>${__("Show all {0} sample records that will also be deleted", [summary.total || ""])}</summary>
+								<div class="sd-scroll">${sd_records_html(summary.records)}</div>
+							</details>`
+							: ""
+					}
+				`,
+			},
+		],
+		primary_action_label: __("Delete Sample Data and Linked Records"),
+		primary_action: () => {
+			dialog.hide();
+			run_sample_data_removal(frm, 1);
+		},
+	});
+
+	dialog.set_secondary_action_label(__("Cancel"));
+	dialog.set_secondary_action(() => dialog.hide());
+	dialog.show();
+}
+
+function run_sample_data_removal(frm, delete_conflicts) {
+	frappe.call({
+		method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.remove_sample_data",
+		args: { delete_conflicts },
+		freeze: true,
+		freeze_message: __("Removing sample data…"),
+		callback(r) {
+			const res = r.message || {};
+
+			if (res.status === "conflicts") {
+				// conflicts appeared between the check and the delete call
+				show_sample_data_conflict_dialog(frm, { conflicts: res.conflicts });
+				return;
+			}
+
+			const result = res.result || {};
+			const errors = result.errors || [];
+			const skipped = result.skipped_unexpected || {};
+			const remaining = result.remaining || {};
+			const deleted_total = Object.values(result.doctype_counts || {}).reduce((a, b) => a + b, 0);
+
+			if (res.is_sample_data_removed) {
+				frappe.show_alert({ message: __("Sample data removed."), indicator: "green" });
+			} else {
+				// Partial or failed run - say so plainly. The log only ever
+				// drops an entry once that specific delete is confirmed, so
+				// "remaining" here is the ground truth of what's still there,
+				// not a guess.
+				frappe.msgprint({
+					title: __("Sample Data Not Fully Removed"),
+					indicator: "orange",
+					message: `
+						${sample_data_dialog_styles()}
+						<p>${__("{0} record(s) were deleted. {1} record(s) are still present.", [
+							deleted_total,
+							sum_record_counts(remaining),
+						])}</p>
+						${
+							errors.length
+								? `<p><b>${__("Failed - see reason below:")}</b></p>
+									<div class="sd-scroll">${sd_errors_html(errors)}</div>`
+								: ""
+						}
+						${
+							Object.keys(skipped).length
+								? `<p><b>${__("Skipped - not on the known sample-data list:")}</b></p>
+									<div class="sd-scroll">${sd_records_html(skipped)}</div>`
+								: ""
+						}
+					`,
+				});
+			}
+
+			// Patch frappe.boot in place so sample_data_guard.js's validate
+			// check goes back to being a free in-memory read for the rest of
+			// this session, without needing a refresh. (The realtime event
+			// from mark_sample_data_removed() does this for every other open
+			// session too - this just avoids waiting on it for our own tab.)
+			if (res.is_sample_data_removed) {
+				frappe.boot.is_sample_data_removed = 1;
+			}
+
+			frm.reload_doc();
+		},
+	});
+}
+
+function sum_record_counts(records) {
+	return Object.values(records || {}).reduce((total, names) => total + names.length, 0);
+}
+
+function sd_errors_html(errors) {
+	return errors
+		.map(
+			(e) => `
+				<div class="sd-group">
+					<div class="sd-group-head">
+						<span class="sd-badge">${frappe.utils.escape_html(e.doctype)}</span>
+						${sd_doc_link(e.doctype, e.name)}
+					</div>
+					<div style="font-size:12px;color:var(--text-muted);padding-left:2px;">${frappe.utils.escape_html(e.error || "")}</div>
+				</div>`,
+		)
+		.join("");
 }

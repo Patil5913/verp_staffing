@@ -13,15 +13,52 @@ function get_department_status_badge(status) {
 	const raw = (status || "").trim();
 	const key = raw.toLowerCase();
 
+	// Matched case-insensitively; covers both "Request for Update" (what the
+	// backend actually returns) and "Requested for Update" just in case.
 	const STYLE_MAP = {
 		completed: "background:#dcfce7;color:#166534;",
 		pending: "background:#fef3c7;color:#92400e;",
 		"request for update": "background:#dbeafe;color:#1e40af;",
+		"requested for update": "background:#dbeafe;color:#1e40af;",
 	};
 
 	const style = STYLE_MAP[key] || "background:#f1f5f9;color:#475569;";
 
 	return `<span class="status-badge" style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;${style}">${frappe.utils.escape_html(raw || "-")}</span>`;
+}
+
+function format_display_datetime(value) {
+	if (!value) return "-";
+	const d = new Date(String(value).replace(" ", "T"));
+	if (isNaN(d.getTime())) return value;
+	return d.toLocaleString(undefined, {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
+function render_forward_events(events) {
+	if (!events || !events.length) return "";
+
+	const items = events
+		.map(
+			(e, i) => `
+			<li>${i + 1}. Forwarded to <b>${frappe.utils.escape_html(e.department || "-")} Dept.</b> — ${frappe.utils.escape_html(format_display_datetime(e.timestamp))}</li>
+		`,
+		)
+		.join("");
+
+	return `
+		<div style="margin-top:8px;">
+			<span style="color:#64748b;font-size:12px;font-weight:500;">Forward History</span>
+			<ul style="margin:4px 0 0 18px;padding:0;font-size:12px;color:#475569;">
+				${items}
+			</ul>
+		</div>
+	`;
 }
 
 function render_link_or_text(doctype, docname, label, extra_style = "") {
@@ -68,7 +105,36 @@ function render_truncated_text(text, limit = 80) {
 	`;
 }
 
-window.verp_staffing = window.verp_staffing || {};
+// Renders the linked Interview Round context (Interview / Company /
+// Role / Round / Type / dates / status) for JDC and Interview Support
+// records on the desk history widget — mirrors the round-detail box
+// already shown on the public portal page, which previously had no
+// equivalent here.
+function render_interview_round_detail(dept) {
+	if (!dept.interview_round_detail) return "";
+
+	const rd = dept.interview_round_detail;
+	const iv = dept.interview || {};
+	const supportTag = rd.support
+		? ` <span title="Support Taken" style="display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;cursor:default;">S</span>`
+		: "";
+	const timeStr = rd.from_time && rd.to_time ? `${rd.from_time} - ${rd.to_time}` : "-";
+
+	return `
+		<div style="margin-top:8px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+			<p style="margin:0 0 6px 0;font-weight:600;font-size:13px;color:#334155;">Interview Round</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Interview:</b> ${render_link_or_text("Interview", iv.name, iv.name || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Company:</b> ${frappe.utils.escape_html(iv.company || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Role:</b> ${frappe.utils.escape_html(iv.role || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Round:</b> ${frappe.utils.escape_html(rd.round || "-")}${supportTag}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Type:</b> ${frappe.utils.escape_html(rd.type_of_interview || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Added On:</b> ${frappe.utils.escape_html(rd.date_added || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Interview Date:</b> ${frappe.utils.escape_html(rd.date_of_interview || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Time:</b> ${frappe.utils.escape_html(timeStr)}</p>
+			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Status:</b> ${get_interview_status_badge(rd.status)}</p>
+		</div>
+	`;
+}
 
 window.verp_staffing.render_customer_history_widget = function (frm, opts = {}) {
 	const settings = Object.assign(
@@ -113,6 +179,27 @@ window.verp_staffing.render_customer_history_widget = function (frm, opts = {}) 
 		},
 	});
 };
+
+function get_interview_status_badge(status) {
+	const raw = (status || "").trim();
+	const s = raw.toLowerCase();
+
+	const RULES = [
+		["rescheduled", "background:#ffedd5;color:#9a3412;"], // orange
+		["scheduled", "background:#cffafe;color:#155e75;"], // cyan
+		["today", "background:#fef9c3;color:#854d0e;"], // yellow
+		["completed", "background:#dbeafe;color:#1e40af;"], // blue
+		["cancelled", "background:#e2e8f0;color:#334155;"], // gray
+		["get the offer", "background:#dcfce7;color:#166534;"], // green
+		["accepted", "background:#dcfce7;color:#166534;"], // green (same as get the offer)
+		["rejected", "background:#fee2e2;color:#991b1b;"], // red
+	];
+
+	const match = RULES.find(([keyword]) => s.includes(keyword));
+	const style = match ? match[1] : "background:#f1f5f9;color:#475569;";
+
+	return `<span class="status-badge" style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;${style}">${frappe.utils.escape_html(raw || "-")}</span>`;
+}
 
 function render_customer_history(frm, fieldname, data, append_interviews = false) {
 	const state = frm.__customer_history_state[fieldname];
@@ -202,7 +289,6 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 			`;
 	}
 
-	console.log("data; ", data);
 	if (data.departments) {
 		Object.keys(data.departments).forEach((dept_name) => {
 			let records = data.departments[dept_name];
@@ -213,10 +299,6 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 				<div style="${card}">
 					<h4 style="margin-bottom:10px;">${dept_name}</h4>
 				`;
-
-			// ============================
-			// INTERVIEW (special case)
-			// ============================
 
 			if (dept_name === "Interview") {
 				html += `
@@ -255,12 +337,21 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 	`;
 			} else {
 				records.forEach((dept) => {
+					if (idx > 0) {
+						html += `<hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">`;
+					}
 					html += `
 						<div style="margin-bottom:12px;">
 
 							<p>
 								${render_link_or_text(dept.department, dept.id, dept.id, "font-weight:500;")}
 							</p>
+
+							${
+								dept.service_name
+									? `<p style="color:#64748b;">Service: ${render_link_or_text("Item", dept.service, dept.service_name)}</p>`
+									: ""
+							}
 
 							<p style="color:#64748b;">
 								Status: ${get_department_status_badge(dept.status)}
@@ -269,6 +360,8 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 							<p style="color:#64748b;">
 								Assigned: ${dept.assign_to || "-"}
 							</p>
+
+							${render_interview_round_detail(dept)}
 
 							${
 								dept.resume
@@ -342,13 +435,16 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 					}
 
 					if (dept.document_references?.length) {
+						const is_resume = dept.department === "Resume";
+
 						html += `
 							<table style="${table}">
 								<thead>
 									<tr>
 										<th style="${th}">#</th>
+										${is_resume ? "" : `<th style="${th}">Title</th>`}
 										<th style="${th}">Date</th>
-										<th style="${th}">Description</th>
+										${is_resume ? "" : `<th style="${th}">Description</th>`}
 										<th style="${th}">Attachment</th>
 									</tr>
 								</thead>
@@ -358,8 +454,9 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 											(row, i) => `
 										<tr>
 											<td style="${td}">${i + 1}</td>
+											${is_resume ? "" : `<td style="${td}">${row.document_title || "-"}</td>`}
 											<td style="${td}">${row.date || "-"}</td>
-											<td style="${td}">${render_truncated_text(row.description, 80)}</td>
+											${is_resume ? "" : `<td style="${td}">${render_truncated_text(row.description, 80)}</td>`}
 											<td style="${td}">
 												${row.document ? `<a href="${row.document}" target="_blank" style="color:#260fea;">View</a>` : "-"}
 											</td>
@@ -371,6 +468,8 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 							</table>
 							`;
 					}
+
+					html += render_forward_events(dept.forward_events);
 				});
 			}
 			html += `</div>`;
@@ -475,6 +574,8 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 		});
 }
 
+// NOTE: this used to be defined twice, identically. De-duped —
+// behavior is unchanged.
 window.viewFullFeedback = function (encodedText) {
 	const fullText = decodeURIComponent(encodedText);
 
@@ -569,9 +670,7 @@ function render_interviews(data, append = false) {
 					<div style="display:flex;justify-content:space-between;margin-bottom:10px;">
 						${render_link_or_text("Interview", dept.id, dept.id, "font-weight:600;")}
 
-						<span style="background:#e0f2fe;padding:4px 10px;border-radius:20px;font-size:12px;">
-							${dept.status || "-"}
-						</span>
+						${get_interview_status_badge(dept.status)}
 					</div>
 
 					<div style="color:#64748b;margin-bottom:8px;">
@@ -581,11 +680,12 @@ function render_interviews(data, append = false) {
 					<table style="width:100%;border-collapse:collapse;font-size:13px;">
 		<thead>
 			<tr>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">#</th>
 				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Round</th>
 				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Type</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Interview</th>
+				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Added On</th>
+				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Interview Date</th>
 				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Time</th>
+				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Status</th>
 				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Feedback</th>
 			</tr>
 		</thead>
@@ -594,15 +694,23 @@ function render_interviews(data, append = false) {
 				dept.interview_rounds_table?.length
 					? dept.interview_rounds_table
 							.map(
-								(r, i) => `
+								(r) => `
 					<tr style="border-bottom:1px solid #cbd5e1;">
-						<td style="padding:8px;">${i + 1}</td>
-						<td style="padding:8px;">${r.round || "-"}</td>
+						<td style="padding:8px;">
+						${r.round || "-"}
+						${
+							r.support
+								? `<span title="Support Taken" style="display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;cursor:default;">S</span>`
+								: ""
+						}
+						</td>
 						<td style="padding:8px;">${r.type_of_interview || "-"}</td>
+						<td style="padding:8px;">${r.date || "-"}</td>
 						<td style="padding:8px;">${r.date_of_interview || "-"}</td>
 						<td style="padding:8px;">
 						${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${r.edt_est || ""}` : "-"}
 						</td>
+						<td style="padding:8px;">${get_interview_status_badge(r.status)}</td>
 						<td style="padding:8px;">
 											${
 												r.feedback && r.feedback.trim()
@@ -642,9 +750,7 @@ function render_interviews(data, append = false) {
 			</div>
 			`;
 		});
-
 		container.append(html);
-
 		let meta = data.interview_meta;
 
 		if (meta && meta.offset + meta.limit < meta.total) {

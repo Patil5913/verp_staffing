@@ -97,6 +97,68 @@
 		overflow-x: auto;
 	}
 
+	.status-badge {
+		display: inline-block;
+		padding: 3px 10px;
+		border-radius: 20px;
+		font-size: 12px;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.support-tag {
+		display: inline-block;
+		margin-left: 6px;
+		width: 16px;
+		height: 16px;
+		line-height: 16px;
+		text-align: center;
+		border-radius: 50%;
+		background: #e0e7ff;
+		color: #4338ca;
+		font-size: 10px;
+		font-weight: 700;
+		cursor: default;
+	}
+
+	.forward-history {
+		margin-top: 8px;
+	}
+	.forward-history-label {
+		color: #64748b;
+		font-size: 12px;
+		font-weight: 500;
+	}
+	.forward-history ul {
+		margin: 4px 0 0 18px;
+		padding: 0;
+		font-size: 12px;
+		color: #475569;
+	}
+
+	.download-btn {
+		display: inline-block;
+		padding: 6px 12px;
+		background: #260fea;
+		color: #fff !important;
+		border-radius: 6px;
+		font-size: 12px;
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.round-detail-box {
+		margin-top: 10px;
+		padding: 10px 12px;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+	}
+	.round-detail-box p {
+		margin: 4px 0;
+		font-size: 13px;
+	}
+
 	@media (max-width: 768px) {
 		table {
 			min-width: 600px;
@@ -163,10 +225,10 @@
 	>
 		<div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc">
 			<h3 style="margin: 0; font-weight: 600; color: #0f172a; font-size: 18px">
-				Interview Feedback
+				Pending Feedback
 			</h3>
 			<p style="margin-top: 6px; color: #64748b; font-size: 13px">
-				Share your feedback for completed interview rounds
+				Please fill the feedback below to access your data.
 			</p>
 		</div>
 
@@ -187,6 +249,13 @@
 							box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
 						"
 					>
+						<div style="margin-bottom: 12px">
+							<span style="font-size: 12px; color: #64748b">Interview</span><br />
+							<span style="font-size: 15px; font-weight: 600; color: #0f172a"
+								>{{ r.title }}</span
+							>
+						</div>
+
 						<div style="margin-bottom: 12px">
 							<div style="margin-bottom: 6px">
 								<span style="font-size: 12px; color: #64748b">Company</span><br />
@@ -267,12 +336,123 @@
 									this.style.borderColor = '#e2e8f0';
 									this.style.boxShadow = 'none';
 								"
-							>
-							</textarea>
+							></textarea>
 						</div>
 					</div>
 					{% endfor %}
 				</div>
+
+				{% if pending_feedback_items %}
+				<h4
+					style="
+						margin: 18px 0 10px 0;
+						font-weight: 600;
+						color: #0f172a;
+						font-size: 15px;
+					"
+				>
+					Other Pending Feedback
+				</h4>
+				<div id="otherFeedbackContainer">
+					{% for item in pending_feedback_items %}
+					<div
+						class="other-feedback-card"
+						style="
+							border: 1px solid #e2e8f0;
+							border-radius: 12px;
+							padding: 16px;
+							margin-bottom: 14px;
+							background: #ffffff;
+							box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+						"
+					>
+						<div style="margin-bottom: 12px">
+							<span style="font-size: 12px; color: #64748b">{{ item.doctype }}</span
+							><br />
+							<span style="font-size: 15px; font-weight: 600; color: #0f172a"
+								>{{ item.title }}</span
+							>
+						</div>
+
+						<div
+							style="
+								display: grid;
+								grid-template-columns: repeat(2, 1fr);
+								gap: 10px 20px;
+								font-size: 12px;
+								margin-bottom: 12px;
+								padding: 10px;
+								background: #f8fafc;
+								border-radius: 8px;
+							"
+						>
+							{% for label, value in item.context_lines %}
+							<div>
+								<span style="color: #64748b">{{ label }}</span><br />
+								<span style="color: #0f172a; font-weight: 500">{{ value }}</span>
+							</div>
+							{% endfor %}
+						</div>
+
+						<div>
+							<label
+								style="
+									font-size: 12px;
+									color: #64748b;
+									margin-bottom: 4px;
+									display: block;
+								"
+								>Your Feedback</label
+							>
+							<textarea
+								class="other-feedback-textarea"
+								data-doctype="{{ item.doctype }}"
+								data-docname="{{ item.docname }}"
+								data-session-row="{{ item.session_row_name or '' }}"
+								placeholder="Write your feedback..."
+								style="
+									width: 100%;
+									min-height: 70px;
+									resize: vertical;
+									padding: 12px;
+									font-size: 13px;
+									border: 1px solid #e2e8f0;
+									border-radius: 10px;
+									outline: none;
+									transition: all 0.2s;
+									background: #ffffff;
+								"
+								onfocus="
+									this.style.borderColor = '#260fea';
+									this.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.15)';
+								"
+								onblur="
+									this.style.borderColor = '#e2e8f0';
+									this.style.boxShadow = 'none';
+								"
+							></textarea>
+							<button
+								type="button"
+								class="other-feedback-submit"
+								style="
+									margin-top: 8px;
+									padding: 8px 18px;
+									background: #260fea;
+									color: #fff;
+									border: none;
+									border-radius: 8px;
+									font-size: 13px;
+									font-weight: 600;
+									cursor: pointer;
+								"
+							>
+								Submit
+							</button>
+						</div>
+					</div>
+					{% endfor %}
+				</div>
+				{% endif %}
 
 				<div
 					style="
@@ -323,20 +503,39 @@
 		var stageSection = document.getElementById("stage-section");
 		var submitBtn = document.getElementById("submitFeedbackBtn");
 		var inputs = document.querySelectorAll(".feedback-input");
+		var otherCards = document.querySelectorAll(".other-feedback-textarea");
 
-		if (inputs.length > 0 && feedbackDialog && stageSection) {
+		if ((inputs.length > 0 || otherCards.length > 0) && feedbackDialog && stageSection) {
 			feedbackDialog.style.display = "flex";
 			stageSection.style.display = "none";
+		}
+
+		// Only reveal the history once EVERY pending item — interview
+		// round feedback AND the other-doctype items below — has been
+		// submitted. Previously this only tracked round feedback; now
+		// that other doctypes prompt too, closing on round-submit alone
+		// would skip past those.
+		function checkAllDone() {
+			var remaining = document.querySelectorAll(
+				".feedback-input, .other-feedback-textarea",
+			).length;
+			if (remaining === 0 && feedbackDialog && stageSection) {
+				feedbackDialog.style.display = "none";
+				stageSection.style.display = "block";
+			}
 		}
 
 		inputs.forEach(function (input) {
 			input.addEventListener("input", function () {
 				var allFilled = true;
-				inputs.forEach(function (i) {
+				document.querySelectorAll(".feedback-input").forEach(function (i) {
 					if (!i.value.trim()) allFilled = false;
 				});
 				if (submitBtn) {
-					submitBtn.style.display = allFilled ? "inline-block" : "none";
+					var stillHasRoundInputs =
+						document.querySelectorAll(".feedback-input").length > 0;
+					submitBtn.style.display =
+						allFilled && stillHasRoundInputs ? "inline-block" : "none";
 				}
 			});
 		});
@@ -385,8 +584,8 @@
 									text +
 									"</div>";
 							});
-							document.getElementById("feedbackDialog").style.display = "none";
-							document.getElementById("stage-section").style.display = "block";
+							if (submitBtn) submitBtn.style.display = "none";
+							checkAllDone();
 						}
 					})
 					.catch(function (err) {
@@ -395,6 +594,75 @@
 					});
 			};
 		}
+
+		// ---- individual "other pending feedback" items (JDC, Interview
+		// Support, Training, RUC) — each submits on its own via
+		// save_customer_feedback, unlike the bulk interview-round flow
+		// above, since that's the shape of the existing API for those
+		// doctypes.
+		document.addEventListener("click", function (e) {
+			if (!e.target.classList || !e.target.classList.contains("other-feedback-submit")) {
+				return;
+			}
+
+			var btn = e.target;
+			var card = btn.closest(".other-feedback-card");
+			var textarea = card.querySelector(".other-feedback-textarea");
+			var text = textarea.value.trim();
+
+			if (!text) {
+				alert("Please enter feedback before submitting.");
+				return;
+			}
+
+			var doctype = textarea.dataset.doctype;
+			var docname = textarea.dataset.docname;
+			var sessionRow = textarea.dataset.sessionRow;
+			var t = new URLSearchParams(window.location.search).get("t");
+			var csrfToken = document.querySelector('[name="csrf_token"]');
+
+			btn.disabled = true;
+			btn.textContent = "Submitting…";
+
+			var payload = {
+				token: t,
+				doctype: doctype,
+				docname: docname,
+				feedback: text,
+			};
+			if (sessionRow) payload.session_row_name = sessionRow;
+
+			fetch("/api/method/verp_staffing.www.customer.save_customer_feedback", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Frappe-CSRF-Token": csrfToken ? csrfToken.value : "",
+				},
+				body: JSON.stringify(payload),
+			})
+				.then(function (res) {
+					return res.json();
+				})
+				.then(function (r) {
+					if (r.message && r.message.status === "success") {
+						card.innerHTML =
+							'<div style="background:#f8fafc;padding:10px;border-radius:8px;font-size:13px;color:#334155;">' +
+							text +
+							"</div>";
+						checkAllDone();
+					} else {
+						btn.disabled = false;
+						btn.textContent = "Submit";
+						alert("Something went wrong");
+					}
+				})
+				.catch(function (err) {
+					console.error("Error:", err);
+					btn.disabled = false;
+					btn.textContent = "Submit";
+					alert("Something went wrong");
+				});
+		});
 	});
 </script>
 
@@ -474,7 +742,7 @@
 
 				data.forEach(function (rec) {
 					var roundsHtml = (rec.interview_rounds_table || [])
-						.map(function (r, i) {
+						.map(function (r) {
 							var feedbackHtml = "-";
 							if (r.feedback && r.feedback.trim()) {
 								var text = r.feedback.trim();
@@ -496,22 +764,30 @@
 									? r.from_time + " - " + r.to_time + " " + (r.edt_est || "")
 									: "-";
 
+							var supportTag = r.support
+								? ' <span class="support-tag" title="Support Taken">S</span>'
+								: "";
+
 							return (
 								'<tr style="border-bottom:1px solid #cbd5e1;">' +
 								'<td style="padding:8px;">' +
-								(i + 1) +
-								"</td>" +
-								'<td style="padding:8px;">' +
 								(r.round || "-") +
+								supportTag +
 								"</td>" +
 								'<td style="padding:8px;">' +
 								(r.type_of_interview || "-") +
+								"</td>" +
+								'<td style="padding:8px;">' +
+								(r.date || "-") +
 								"</td>" +
 								'<td style="padding:8px;">' +
 								(r.date_of_interview || "-") +
 								"</td>" +
 								'<td style="padding:8px;">' +
 								timeStr +
+								"</td>" +
+								'<td style="padding:8px;">' +
+								render_status_badge(r.status) +
 								"</td>" +
 								'<td style="padding:8px;">' +
 								feedbackHtml +
@@ -530,18 +806,17 @@
 						"</b> &nbsp;&bull;&nbsp; " +
 						(rec.role || "-") +
 						"</div>" +
-						'<span style="background:#e0f2fe;color:#0369a1;padding:4px 10px;border-radius:20px;font-size:12px;">' +
-						(rec.status || "-") +
-						"</span>" +
+						render_status_badge(rec.status) +
 						"</div>" +
 						'<div style="overflow-x:auto;">' +
 						'<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
 						'<thead><tr style="background:#f8fafc;">' +
-						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">#</th>' +
 						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Round</th>' +
 						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Type</th>' +
+						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Added On</th>' +
 						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Interview Date</th>' +
 						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Time</th>' +
+						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Status</th>' +
 						'<th style="padding:8px;border-bottom:2px solid #cbd5e1;">Feedback</th>' +
 						"</tr></thead>" +
 						"<tbody>" +
@@ -688,6 +963,51 @@
 	{% for dept, records in full_history.departments.items() %} {% if dept != "Sales Order" and
 	dept != "Interview" %}
 
+	<!--
+		Technical Other Services / Marketing Other Services / Other Services
+		are NOT grouped under their generic doctype name here — each record
+		is rendered as its own section, titled by its actual service name,
+		alongside JDC / Marketing / etc. Minimum data only: service name +
+		status (+ forward history, since that applies everywhere).
+	-->
+	{% if dept in other_service_doctypes %} {% for rec in records %}
+	<div style="padding: 15px; margin-bottom: 15px">
+		<div
+			style="
+				border: 1px solid #e5e7eb;
+				border-radius: 10px;
+				padding: 14px;
+				background: #f9fafb;
+			"
+		>
+			<h4 style="margin-bottom: 10px; font-weight: 600">{{ rec.service_name or dept }}</h4>
+
+			<p style="margin: 4px 0; font-size: 13px">
+				<b>Status:</b>
+				<span class="status-badge" style="{{ rec.status_badge_style }}"
+					>{{ rec.status or "-" }}</span
+				>
+			</p>
+
+			{% if rec.forward_events_display %}
+			<div class="forward-history">
+				<span class="forward-history-label">Forward History</span>
+				<ul>
+					{% for f in rec.forward_events_display %}
+					<li>
+						{{ loop.index }}. Forwarded to <b>{{ f.department }} Dept.</b> — {{ f.when
+						}}
+					</li>
+					{% endfor %}
+				</ul>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+	{% endfor %} {% else %}
+
+	<!-- Regular departments: JDC, Interview Support, Training, RUC,
+		Marketing, Resume, Cover Letter -->
 	<div style="padding: 15px; margin-bottom: 15px">
 		<h4 style="margin-bottom: 10px; font-weight: 600">{{ dept }}</h4>
 
@@ -701,23 +1021,56 @@
 				background: #f9fafb;
 			"
 		>
+
 			<p style="margin: 4px 0; color: #334155; font-size: 13px">
-				<b>Status:</b> {{ rec.status or "-" }}
+				<b>Status:</b>
+				<span class="status-badge" style="{{ rec.status_badge_style }}"
+					>{{ rec.status or "-" }}</span
+				>
 			</p>
 
 			<p style="margin: 4px 0; color: #334155; font-size: 13px">
 				<b>Assigned To:</b> {{ rec.assign_to or "-" }}
 			</p>
 
-			{% if rec.resume %}
-			<p style="margin: 4px 0; color: #334155; font-size: 13px">
-				<b>Resume:</b>
-				<a
-					href="/api/method/verp_staffing.www.customer.download_resume?resume={{ rec.docname | urlencode }}&token={{ token | urlencode }}"
-					style="color: #260fea; font-weight: 500"
-					>Download</a
-				>
-			</p>
+			<!-- JDC / Interview Support: show the linked interview round,
+				including which Interview it belongs to and the
+				company/role, not just the round itself -->
+			{% if dept in interview_linked_doctypes and rec.interview_round_detail %}
+			<div class="round-detail-box">
+				<p style="font-weight: 600; margin-bottom: 6px">Interview Round</p>
+				{% if rec.interview %}
+				<p><b>Interview:</b> {{ rec.interview.name or "-" }}</p>
+				<p><b>Company:</b> {{ rec.interview.company or "-" }}</p>
+				<p><b>Role:</b> {{ rec.interview.role or "-" }}</p>
+				{% endif %}
+				<p>
+					<b>Round:</b> {{ rec.interview_round_detail.round or "-" }} {% if
+					rec.interview_round_detail.support %}
+					<span class="support-tag" title="Support Taken">S</span>
+					{% endif %}
+				</p>
+				<p><b>Type:</b> {{ rec.interview_round_detail.type_of_interview or "-" }}</p>
+				<p><b>Added On:</b> {{ rec.interview_round_detail.date_added or "-" }}</p>
+				<p>
+					<b>Interview Date:</b>
+					{{ rec.interview_round_detail.date_of_interview or "-" }}
+				</p>
+				<p>
+					<b>Time:</b>
+					{% if rec.interview_round_detail.from_time and
+					rec.interview_round_detail.to_time %} {{ rec.interview_round_detail.from_time
+					}} - {{ rec.interview_round_detail.to_time }} {% else %}-{% endif %}
+				</p>
+				<p>
+					<b>Status:</b>
+					<span
+						class="status-badge"
+						style="{{ rec.interview_round_detail.status_badge_style }}"
+						>{{ rec.interview_round_detail.status or "-" }}</span
+					>
+				</p>
+			</div>
 			{% endif %} {% if rec.session_details %}
 			<div style="margin-top: 10px">
 				<b>Session Details:</b>
@@ -808,62 +1161,52 @@
 					</tbody>
 				</table>
 			</div>
-			{% endif %} {% if rec.proof_of_work %}
+			{% endif %}
+
+			<!-- Resume / Cover Letter: latest document only, download-only
+				(no browsable list, no raw "View" link — everything else on
+				this page is text-only and this is the one deliberate
+				exception) -->
+			{% if dept in download_allowed_doctypes %}
 			<div style="margin-top: 10px">
-				<b>Proof of Work:</b>
-				<table
-					style="
-						width: 100%;
-						border-collapse: collapse;
-						font-size: 13px;
-						margin-top: 8px;
-					"
+				{% if rec.latest_document_reference %}
+				<p style="margin: 4px 0; font-size: 13px">
+					<b>Latest Document:</b>
+					{{ rec.latest_document_reference.document_title or "Document" }} {% if
+					rec.latest_document_reference.date %} ({{ rec.latest_document_reference.date
+					}}) {% endif %}
+				</p>
+				<a
+					class="download-btn"
+					href="/api/method/verp_staffing.www.customer.download_document?doctype={{ dept | urlencode }}&docname={{ rec.docname | urlencode }}&token={{ token | urlencode }}"
+					>Download</a
 				>
-					<thead>
-						<tr style="background: #f1f5f9">
-							<th style="padding: 8px; border-bottom: 2px solid #cbd5e1">No.</th>
-							<th style="padding: 8px; border-bottom: 2px solid #cbd5e1">Date</th>
-							<th style="padding: 8px; border-bottom: 2px solid #cbd5e1">
-								Description
-							</th>
-							<th style="padding: 8px; border-bottom: 2px solid #cbd5e1">
-								Attachments
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						{% for p in rec.proof_of_work %}
-						<tr>
-							<td style="padding: 8px; border-bottom: 1px solid #e5e7eb">
-								{{ loop.index }}
-							</td>
-							<td style="padding: 8px; border-bottom: 1px solid #e5e7eb">
-								{{ p.date or "-" }}
-							</td>
-							<td style="padding: 8px; border-bottom: 1px solid #e5e7eb">
-								{{ p.description or "-" }}
-							</td>
-							<td style="padding: 8px; border-bottom: 1px solid #e5e7eb">
-								{% if p.document %}
-								<a
-									href="{{ p.document }}"
-									target="_blank"
-									style="color: #260fea"
-									>View</a
-								>
-								{% else %}-{% endif %}
-							</td>
-						</tr>
-						{% endfor %}
-					</tbody>
-				</table>
+				{% else %}
+				<p style="margin: 4px 0; font-size: 13px; color: #94a3b8">
+					No document available yet
+				</p>
+				{% endif %}
+			</div>
+			{% endif %}
+
+			<!-- Forward History -->
+			{% if rec.forward_events_display %}
+			<div class="forward-history">
+				<span class="forward-history-label">Forward History</span>
+				<ul>
+					{% for f in rec.forward_events_display %}
+					<li>
+						{{ loop.index }}. Forwarded to <b>{{ f.department }} Dept.</b> — {{ f.when
+						}}
+					</li>
+					{% endfor %}
+				</ul>
 			</div>
 			{% endif %}
 		</div>
 		{% endfor %}
 	</div>
-
-	{% endif %} {% endfor %}
+	{% endif %} {% endif %} {% endfor %}
 
 	<!-- ================= INTERVIEW SECTION (ALWAYS RENDERED) ================= -->
 	<div style="padding: 15px; margin-bottom: 15px">

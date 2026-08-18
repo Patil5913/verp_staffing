@@ -115,6 +115,7 @@
    "fieldname": "customer_feedback",
    "fieldtype": "Table",
    "label": "Customer Feedback",
+   "no_copy": 1,
    "options": "Customer Feedback",
    "read_only": 1
   }
@@ -123,7 +124,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-17 15:12:27.778739",
+ "modified": "2026-08-18 16:24:32.991903",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

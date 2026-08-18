@@ -84,7 +84,9 @@ class InterviewSupport(Document):
         child_doctype = self.meta.get_field("proof_of_work").options
         child_meta = frappe.get_meta(child_doctype)
         tracked_fields = [
-            df.fieldname for df in child_meta.fields if df.fieldname not in IGNORED_ROW_FIELDS
+            df.fieldname
+            for df in child_meta.fields
+            if df.fieldname not in IGNORED_ROW_FIELDS
         ]
 
         date_df = child_meta.get_field("date")
@@ -99,7 +101,10 @@ class InterviewSupport(Document):
             if not old_row:
                 continue  # newly added row, not an update to an existing one
 
-            changed = any(row.get(fieldname) != old_row.get(fieldname) for fieldname in tracked_fields)
+            changed = any(
+                row.get(fieldname) != old_row.get(fieldname)
+                for fieldname in tracked_fields
+            )
             if changed:
                 row.date = stamp_value
 
@@ -113,6 +118,7 @@ class InterviewSupport(Document):
                 frappe.throw(f"Document is required in row {row.idx}.")
 
     def after_insert(self):
+        frappe.set_value("Interview Round", self.interview_round, "support", 1)
         update_customer_stage(
             customer=self.customer,
             service="jdc",

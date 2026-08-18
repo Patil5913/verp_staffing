@@ -11,6 +11,156 @@ def safe_b64decode(data):
     return base64.urlsafe_b64decode(data.encode()).decode()
 
 
+_DEPARTMENT_STATUS_STYLES = {
+    "completed": "background:#dcfce7;color:#166534;",
+    "pending": "background:#fef3c7;color:#92400e;",
+    "request for update": "background:#dbeafe;color:#1e40af;",
+    "requested for update": "background:#dbeafe;color:#1e40af;",
+}
+
+
+def _department_status_badge_style(status):
+    key = (status or "").strip().lower()
+    return _DEPARTMENT_STATUS_STYLES.get(key, "background:#f1f5f9;color:#475569;")
+
+
+_INTERVIEW_STATUS_STYLE_RULES = [
+    ("rescheduled", "background:#ffedd5;color:#9a3412;"),
+    ("scheduled", "background:#cffafe;color:#155e75;"),
+    ("today", "background:#fef9c3;color:#854d0e;"),
+    ("completed", "background:#dbeafe;color:#1e40af;"),
+    ("cancelled", "background:#e2e8f0;color:#334155;"),
+    ("get the offer", "background:#dcfce7;color:#166534;"),
+    ("accepted", "background:#dcfce7;color:#166534;"),
+    ("rejected", "background:#fee2e2;color:#991b1b;"),
+]
+
+
+def _interview_status_badge_style(status):
+    key = (status or "").strip().lower()
+    for keyword, style in _INTERVIEW_STATUS_STYLE_RULES:
+        if keyword in key:
+            return style
+    return "background:#f1f5f9;color:#475569;"
+
+
+def _format_event_datetime(value):
+    if not value:
+        return "-"
+    try:
+        dt = frappe.utils.get_datetime(value)
+        return dt.strftime("%b %d, %Y, %I:%M %p")
+    except Exception:
+        return str(value)
+
+
+def _augment_history_for_display(history):
+    """Mutates and returns `history` with display-only fields added for
+    the portal template: status_badge_style per record, a friendly
+    forward_events_display list, a status_badge_style on
+    interview_round_detail, and latest_document_reference for
+    Resume / Cover Letter (used for the single-item download UI)."""
+    if not history or not history.get("departments"):
+        return history
+
+    for dept, records in history["departments"].items():
+        if dept == "Interview":
+            continue
+
+        for rec in records:
+            rec["status_badge_style"] = _department_status_badge_style(
+                rec.get("status")
+            )
+
+            rec["forward_events_display"] = [
+                {
+                    "department": e.get("department") or "-",
+                    "when": _format_event_datetime(e.get("timestamp")),
+                }
+                for e in (rec.get("forward_events") or [])
+            ]
+
+            round_detail = rec.get("interview_round_detail")
+            if round_detail:
+                round_detail["status_badge_style"] = _interview_status_badge_style(
+                    round_detail.get("status")
+                )
+
+            refs = rec.get("document_references") or []
+            rec["latest_document_reference"] = (
+                max(refs, key=lambda r: r.get("date") or "") if refs else None
+            )
+
+    return history
+
+
+def _build_pending_feedback_items(history):
+    items = []
+    departments = (history or {}).get("departments") or {}
+
+    for dept in ("JDC", "Interview Support", "Training"):
+        for rec in departments.get(dept, []):
+            feedback_status = rec.get("feedback_status") or {}
+            if not feedback_status.get("due"):
+                continue
+
+            if dept in INTERVIEW_LINKED_DOCTYPES:
+                interview = rec.get("interview") or {}
+                round_detail = rec.get("interview_round_detail") or {}
+                title = "%s — %s" % (dept, interview.get("company") or "Interview")
+                # Note: no docname/interview-name shown here on purpose —
+                # the feedback form only needs enough context for the
+                # customer to recognize *what* they're giving feedback
+                # on, not internal record identifiers.
+                context_lines = [
+                    ("Round", round_detail.get("round") or "-"),
+                    ("Company", interview.get("company") or "-"),
+                    ("Role", interview.get("role") or "-"),
+                    ("Interview Type", round_detail.get("type_of_interview") or "-"),
+                    ("Interview Date", round_detail.get("date_of_interview") or "-"),
+                ]
+            else:  # Training
+                title = "Training Session"
+                context_lines = [
+                    ("Assigned To", rec.get("assign_to") or "-"),
+                    ("Status", rec.get("status") or "-"),
+                ]
+
+            items.append(
+                {
+                    "doctype": dept,
+                    "docname": rec.get("docname"),
+                    "session_row_name": None,
+                    "title": title,
+                    "context_lines": context_lines,
+                }
+            )
+
+    for rec in departments.get("RUC", []):
+        for session in rec.get("session_details") or []:
+            if not session.get("feedback_due"):
+                continue
+
+            items.append(
+                {
+                    "doctype": "RUC",
+                    "docname": rec.get("docname"),
+                    "session_row_name": session.get("name"),
+                    "title": "RUC Session",
+                    "context_lines": [
+                        ("Date", session.get("date") or "-"),
+                        (
+                            "Duration (hrs)",
+                            session.get("session_duration_in_hour") or "-",
+                        ),
+                        ("Projects", session.get("projects") or "-"),
+                    ],
+                }
+            )
+
+    return items
+
+
 def verify_token_and_get_email(token):
     import hmac
     import hashlib
@@ -90,9 +240,16 @@ def get_context(context):
         if not customer_name:
             context.full_history = None
             context.feedback_rounds = []
-            return
+            context.pending_feedback_items = []
+            return context
 
-    context.full_history = get_customer_history(token=raw_token)
+    context.full_history = _augment_history_for_display(
+        get_customer_history(token=raw_token)
+    )
+    context.other_service_doctypes = list(OTHER_SERVICE_DOCTYPES)
+    context.interview_linked_doctypes = list(INTERVIEW_LINKED_DOCTYPES)
+    context.download_allowed_doctypes = list(DOWNLOAD_ALLOWED_DOCTYPES)
+    context.pending_feedback_items = _build_pending_feedback_items(context.full_history)
 
     from frappe.utils import get_datetime, now_datetime
     import pytz
@@ -143,6 +300,8 @@ def get_context(context):
                     context.feedback_rounds.append(
                         {
                             "round_name": round.name,
+                            "title": "Interview — %s"
+                            % (interview.company or "Interview"),
                             "company": interview.company,
                             "role": interview.role,
                             "round": round.round,
@@ -240,9 +399,6 @@ def authenticate_customer_request(token, require_verified=True):
     }
 
 
-# ================================================================
-# CUSTOMER HISTORY
-# ===============================================================
 @frappe.whitelist(allow_guest=True)
 def save_interview_feedback(token, feedback_data):
     if not feedback_data:
@@ -328,6 +484,12 @@ DOCUMENT_REFERENCE_DOCTYPES = {
     "Other Services",
 }
 
+OTHER_SERVICE_DOCTYPES = {
+    "Technical Other Services",
+    "Marketing Other Services",
+    "Other Services",
+}
+
 COMPLETED_STATUS = "Completed"
 
 DOC_FIELDS_BY_DOCTYPE = {
@@ -336,9 +498,9 @@ DOC_FIELDS_BY_DOCTYPE = {
     "Training": ["name", "assign_to", "status"],
     "Cover Letter": ["name", "assign_to", "status"],
     "Marketing": ["name", "assign_to", "status"],
-    "Technical Other Services": ["name", "assign_to", "status"],
-    "Marketing Other Services": ["name", "assign_to", "status"],
-    "Other Services": ["name", "assign_to", "status"],
+    "Technical Other Services": ["name", "assign_to", "status", "service"],
+    "Marketing Other Services": ["name", "assign_to", "status", "service"],
+    "Other Services": ["name", "assign_to", "status", "service"],
     "JDC": ["name", "assign_to", "interview_round", "status"],
     "Interview Support": ["name", "assign_to", "interview_round", "status"],
 }
@@ -418,6 +580,28 @@ def _get_pending_feedback_info(doctype, docname, customer):
     return len(events), feedback_count, status
 
 
+_feedback_child_fieldname_cache = {}
+
+
+def _get_feedback_child_fieldname(doctype):
+    """The child table that stores customer feedback isn't necessarily
+    named `customer_feedback` on every doctype — hardcoding that name
+    is what caused the 417 / AttributeError('NoneType' has no
+    attribute 'options') when submitting feedback for Interview
+    Support, since that doctype's table field uses a different
+    fieldname. Resolve it from the doctype's meta instead, by finding
+    whichever table field points at the "Customer Feedback" child
+    doctype."""
+    if doctype not in _feedback_child_fieldname_cache:
+        fieldname = None
+        for df in frappe.get_meta(doctype).get_table_fields():
+            if df.options == "Customer Feedback":
+                fieldname = df.fieldname
+                break
+        _feedback_child_fieldname_cache[doctype] = fieldname
+    return _feedback_child_fieldname_cache[doctype]
+
+
 # ---------------------------------------------------------------------
 # get_customer_history
 # ---------------------------------------------------------------------
@@ -431,14 +615,15 @@ def get_customer_history(
         auth = authenticate_customer_request(token, require_verified=False)
         customer = auth["customer"]
 
-    customer_doc = frappe.get_doc(
+    customer_rows = frappe.get_all(
         "Customer",
-        customer,
+        filters={"name": customer},
         fields=["name", "stage", "owner"],
     )
-    if not customer_doc:
+    if not customer_rows:
         return {"customer": {}, "departments": {}}
 
+    customer_doc = customer_rows[0]
     history = {
         "customer": {
             "owner": customer_doc.owner,
@@ -496,11 +681,14 @@ def _populate_department_history(history, stage_data, customer):
                 ir.name              AS round_name,
                 ir.parent             AS interview_name,
                 ir.round              AS round,
+                ir.date               AS date_added,
                 ir.date_of_interview  AS date_of_interview,
                 ir.from_time          AS from_time,
                 ir.to_time            AS to_time,
                 ir.type_of_interview  AS type_of_interview,
                 ir.feedback           AS feedback,
+                ir.status              AS round_status,
+                ir.support             AS round_support,
                 i.company              AS company,
                 i.role                 AS role,
                 i.status               AS interview_status
@@ -533,7 +721,22 @@ def _populate_department_history(history, stage_data, customer):
 
     all_doctypes = interview_doctypes + simple_doctypes
 
-    # ---- batch-fetch every child table across every doc, once each ------
+    service_codes = {
+        d.service
+        for doctype in all_doctypes
+        if doctype in OTHER_SERVICE_DOCTYPES
+        for d in docs_by_doctype[doctype]
+        if d.service
+    }
+    service_name_map = {}
+    if service_codes:
+        rows = frappe.get_all(
+            "Item",
+            filters={"name": ["in", list(service_codes)]},
+            fields=["name", "item_name"],
+        )
+        service_name_map = {row.name: row.item_name for row in rows}
+
     doc_ref_parents = [
         d.name
         for doctype in all_doctypes
@@ -572,6 +775,7 @@ def _populate_department_history(history, stage_data, customer):
             "Session Details",
             filters={"parent": ["in", ruc_names]},
             fields=[
+                "name",
                 "parent",
                 "session_duration_in_hour",
                 "date",
@@ -613,6 +817,10 @@ def _populate_department_history(history, stage_data, customer):
                 "id": d.name,
             }
 
+            if doctype in OTHER_SERVICE_DOCTYPES:
+                dept_entry["service"] = d.service
+                dept_entry["service_name"] = service_name_map.get(d.service, d.service)
+
             if doctype in DOCUMENT_REFERENCE_DOCTYPES:
                 refs = doc_refs_map.get(d.name, [])
                 if doctype == "Resume":
@@ -634,6 +842,7 @@ def _populate_department_history(history, stage_data, customer):
                 sessions = session_map.get(d.name, [])
                 dept_entry["session_details"] = [
                     {
+                        "name": s["name"],
                         "date": s["date"],
                         "session_duration_in_hour": s["session_duration_in_hour"],
                         "projects": s["projects"],
@@ -691,11 +900,14 @@ def _populate_department_history(history, stage_data, customer):
                     }
                     dept_entry["interview_round_detail"] = {
                         "round": round_info.round,
+                        "date_added": round_info.date_added,
                         "date_of_interview": round_info.date_of_interview,
                         "from_time": round_info.from_time,
                         "to_time": round_info.to_time,
                         "type_of_interview": round_info.type_of_interview,
                         "feedback": round_info.feedback,
+                        "status": round_info.round_status,
+                        "support": round_info.round_support,
                     }
                 else:
                     dept_entry["interview"] = None
@@ -819,6 +1031,8 @@ def _populate_interview_history(history, customer, interview_limit, interview_of
                 "to_time",
                 "edt_est",
                 "feedback",
+                "status",
+                "support",
             ],
             order_by="date_of_interview asc",
         )
@@ -843,6 +1057,8 @@ def _populate_interview_history(history, customer, interview_limit, interview_of
                         "to_time": r["to_time"],
                         "edt_est": r["edt_est"],
                         "feedback": r["feedback"],
+                        "status": r["status"],
+                        "support": r["support"],
                     }
                     for r in rounds_by_interview.get(iv.name, [])
                 ],
@@ -858,31 +1074,33 @@ def _populate_interview_history(history, customer, interview_limit, interview_of
 
 
 FEEDBACK_DOCTYPES = {"Interview Round", "JDC", "Interview Support", "Training", "RUC"}
- 
- 
+
+
 @frappe.whitelist(allow_guest=True)
 def save_customer_feedback(token, doctype, docname, feedback, session_row_name=None):
     auth = authenticate_customer_request(token)
     customer = auth["customer"]
- 
+
     if doctype not in FEEDBACK_DOCTYPES:
         frappe.throw(_("Invalid doctype"))
- 
+
     if not feedback or not str(feedback).strip():
         frappe.throw(_("Feedback cannot be empty"))
- 
+
     if not _verify_doc_belongs_to_customer(doctype, docname, customer):
         frappe.throw(_("Unauthorized"))
- 
+
     if doctype == "Interview Round":
-        frappe.db.set_value("Interview Round", docname, "feedback", feedback, update_modified=False)
+        frappe.db.set_value(
+            "Interview Round", docname, "feedback", feedback, update_modified=False
+        )
         frappe.db.commit()
         return {"status": "success", "message": "Feedback updated successfully"}
- 
+
     if doctype == "RUC":
         if not session_row_name:
             frappe.throw(_("session_row_name is required for RUC feedback"))
- 
+
         session = frappe.db.get_value(
             "Session Details",
             {"name": session_row_name, "parent": docname, "parenttype": "RUC"},
@@ -893,53 +1111,117 @@ def save_customer_feedback(token, doctype, docname, feedback, session_row_name=N
             frappe.throw(_("Session not found"))
         if session.candidate_feedback:
             frappe.throw(_("Feedback already submitted for this session"))
- 
+
         frappe.db.set_value(
-            "Session Details", session_row_name, "candidate_feedback", feedback,
+            "Session Details",
+            session_row_name,
+            "candidate_feedback",
+            feedback,
             update_modified=False,
         )
         frappe.db.commit()
         return {"status": "success", "message": "Feedback submitted successfully"}
- 
+
     # JDC / Interview Support / Training — child table append, count-gated
-    forward_count, feedback_count, status = _get_pending_feedback_info(doctype, docname, customer)
- 
+    forward_count, feedback_count, status = _get_pending_feedback_info(
+        doctype, docname, customer
+    )
+
     if feedback_count >= forward_count:
         frappe.throw(_("No pending feedback for this item"))
     if status != COMPLETED_STATUS:
         frappe.throw(_("Feedback can only be submitted once this is marked Completed"))
- 
+
+    # Resolve the correct child-table fieldname per doctype instead of
+    # assuming "customer_feedback" everywhere — that assumption is what
+    # previously caused a 417 / AttributeError on Interview Support,
+    # whose feedback child table lives under a different fieldname.
+    child_fieldname = _get_feedback_child_fieldname(doctype)
+    if not child_fieldname:
+        frappe.throw(_("Feedback is not configured for this record type"))
+
     doc = frappe.get_doc(doctype, docname)
-    doc.append("customer_feedback", {
-        "feedback": feedback,
-        "date": frappe.utils.now_datetime(),
-    })
+    doc.append(
+        child_fieldname,
+        {
+            "feedback": feedback,
+            "date": frappe.utils.now_datetime(),
+        },
+    )
     doc.save(ignore_permissions=True)
     frappe.db.commit()
- 
+
     return {"status": "success", "message": "Feedback submitted successfully"}
 
 
-# Download Resume
+# ---------------------------------------------------------------------
+# Reusable document download (token-authenticated, guest-facing)
+# ---------------------------------------------------------------------
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 from frappe.utils.file_manager import get_file_path
+import os
+
+# Doctypes allowed to be downloaded from the public/portal page. Add a
+# doctype here to enable downloads for it — as long as it has a
+# `customer` field (for ownership checks) and rows in the shared
+# "Document References" child table (`proof_of_work`), no other backend
+# change is needed.
+DOWNLOAD_ALLOWED_DOCTYPES = {"Resume", "Cover Letter"}
+
+
+def _stream_file(file_url):
+    """Streams a file to the response after resolving it on disk,
+    regardless of whether it's stored under /private/files/ or
+    /files/ (public) — only the basename is used to look it up, and
+    _validate_site_file_path still guards against path traversal."""
+    if not file_url:
+        frappe.throw(_("Missing file"))
+
+    relative = os.path.basename(file_url)
+    file_path = get_file_path(relative)
+    validated_output_path = _validate_site_file_path(file_path)
+
+    with validated_output_path.open("rb") as f:
+        frappe.local.response.filename = relative
+        frappe.local.response.filecontent = f.read()
+        frappe.local.response.type = "download"
+
+
+@frappe.whitelist(allow_guest=True)
+def download_document(doctype, docname, token):
+    """Reusable, token-authenticated download endpoint. Downloads the
+    most recent "Document References" row linked to the given parent
+    doc, after verifying it belongs to the authenticated customer.
+    Restricted to DOWNLOAD_ALLOWED_DOCTYPES — everything else is
+    rejected even if the caller guesses a valid docname."""
+    auth = authenticate_customer_request(token, require_verified=False)
+    customer = auth["customer"]
+
+    if doctype not in DOWNLOAD_ALLOWED_DOCTYPES:
+        frappe.throw(_("Downloads are not available for this record"))
+
+    doc_customer = frappe.db.get_value(doctype, docname, "customer")
+    if not doc_customer or doc_customer != customer:
+        frappe.throw(_("Unauthorized"))
+
+    latest_ref = frappe.get_all(
+        "Document References",
+        filters={"parent": docname, "parenttype": doctype},
+        fields=["document"],
+        order_by="date desc",
+        limit_page_length=1,
+    )
+
+    if not latest_ref or not latest_ref[0].document:
+        frappe.throw(_("No document available to download"))
+
+    _stream_file(latest_ref[0].document)
 
 
 @frappe.whitelist(allow_guest=True)
 def download_resume(resume, token):
-    auth = authenticate_customer_request(token, require_verified=False)
-    res = frappe.get_value("Resume", resume, ["customer", "resume"])
-    if auth["customer"] != res[0]:
-        frappe.throw("Unauthorized customer")
-    file_url = res[1]
-    if not file_url:
-        frappe.throw("Missing file")
-
-    # sanitize
-    file_path = get_file_path(file_url.replace("/private/files/", ""))
-    validated_output_path = _validate_site_file_path(file_path)
-
-    with validated_output_path.open("rb") as f:
-        frappe.local.response.filename = file_url
-        frappe.local.response.filecontent = f.read()
-        frappe.local.response.type = "download"
+    """Kept for backward compatibility with any existing links pointing
+    here directly. Delegates to download_document — see the note above
+    about this now downloading the latest Document References row
+    rather than the Resume.resume attach field."""
+    return download_document("Resume", resume, token)

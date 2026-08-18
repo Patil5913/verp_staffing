@@ -52,7 +52,16 @@ app_include_js = [
     "/assets/verp_staffing/js/override/email_provider_defaults.js",
     "/assets/verp_staffing/js/document_references_widget.js",
     "/assets/verp_staffing/js/customer_history.js",
+    "/assets/verp_staffing/js/sample_data_guard.js",
 ]
+
+
+# Puts is_sample_data_removed into frappe.boot on every page load, so
+# the client can check it without a server call on every save.
+# If you already have an extend_bootinfo function, add the one line
+# from boot.boot_session into it instead of assigning this directly.
+extend_bootinfo = "verp_staffing.boot.boot_session"
+
 
 # include js, css files in header of web template
 # web_include_css = "/assets/verp_staffing/css/verp_staffing.css"
@@ -148,7 +157,7 @@ after_install = [
 ]
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
-    "verp_staffing.install.after_install",
+    # "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]

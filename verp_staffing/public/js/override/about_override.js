@@ -69,7 +69,6 @@ frappe.ui.misc.about = function () {
 	const show_versions = function (versions) {
 		const $wrap = $("#about-app-versions").empty();
 		let app = {};
-		console.log("versions: ", versions);
 		function get_version_text(app) {
 			if (app.branch) {
 				return `v${app.branch_version || app.version} (${app.branch})`;
