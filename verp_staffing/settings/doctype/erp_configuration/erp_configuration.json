@@ -39,7 +39,10 @@
   "department_display_form_fields",
   "department_access_fields_tab",
   "department_access_fields",
-  "department_access_form_fields"
+  "department_access_form_fields",
+  "sample_data_section",
+  "sample_data_log",
+  "is_sample_data_removed"
  ],
  "fields": [
   {
@@ -237,6 +240,28 @@
    "label": "Default Company",
    "options": "Company",
    "reqd": 1
+  },
+  {
+   "fieldname": "sample_data_section",
+   "fieldtype": "Section Break",
+   "label": "Sample Data",
+   "collapsible": 1
+  },
+  {
+   "description": "Internal log of every record inserted by the 'Add sample data' setup-wizard step, keyed by doctype. Used by the 'Remove Sample Data' action - not meant to be edited by hand.",
+   "fieldname": "sample_data_log",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Sample Data Log"
+  },
+  {
+   "default": "0",
+   "description": "Set automatically once 'Remove Sample Data' finishes with no errors. Read-only.",
+   "fieldname": "is_sample_data_removed",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Sample Data Removed",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

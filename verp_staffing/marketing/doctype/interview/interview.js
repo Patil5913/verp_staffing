@@ -1,11 +1,14 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
-const DEFAULT_ROUND_STATUS = "Scheduled";
 const CANCELLED_LIKE_STATUSES = ["Cancelled", "Rescheduled"];
 const FINAL_ROUND_STATUSES = new Set(["Cancelled", "Rescheduled", "Completed"]);
 
 frappe.ui.form.on("Interview", {
+	onload(frm) {
+		get_default_round_status(frm);
+	},
+
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -21,6 +24,8 @@ frappe.ui.form.on("Interview", {
 			frm.tour.init({ tour_name: "Interview" }).then(() => frm.tour.start());
 		});
 
+		get_default_round_status(frm);
+
 		hide_interview_round_no_column(frm);
 		apply_round_delete_restriction(frm); 
 		check_marketing_superiority(frm); 
@@ -30,7 +35,6 @@ frappe.ui.form.on("Interview", {
 			frm.set_df_property("marketing_link", "read_only", 1);
 			frm.set_df_property("role", "read_only", 1);
 			frm.set_df_property("company", "read_only", 1);
-			frm.set_df_property("status", "read_only", 1);
 			fetch_and_render_resume(frm);
 		}
 	},
@@ -67,7 +71,11 @@ frappe.ui.form.on("Interview Round", {
 		}
 
 		if (!row.status) {
-			frappe.model.set_value(cdt, cdn, "status", DEFAULT_ROUND_STATUS);
+			get_default_round_status(frm).then((default_status) => {
+				if (default_status && !row.status) {
+					frappe.model.set_value(cdt, cdn, "status", default_status);
+				}
+			});
 		}
 
 		apply_round_row_lock(frm);
@@ -77,9 +85,6 @@ frappe.ui.form.on("Interview Round", {
 		apply_round_row_lock(frm);
 	},
 
-	// Fires whenever a row's expanded edit dialog opens — the dialog builds
-	// its fields fresh each time, so read-only state must be re-applied here,
-	// not just once on form refresh.
 	form_render(frm, cdt, cdn) {
 		apply_round_row_lock(frm);
 		toggle_cancellation_fields(frm, cdt, cdn);
@@ -89,8 +94,6 @@ frappe.ui.form.on("Interview Round", {
 		const row = locals[cdt][cdn];
 		if (!row || row.__reverting_status) return;
 
-		// Already finalized in a previous save — status can never change again,
-		// no matter what row this is or whether it's still the "last" round.
 		if (is_round_finalized(row)) {
 			row.__reverting_status = true;
 			frappe.msgprint({
@@ -107,8 +110,6 @@ frappe.ui.form.on("Interview Round", {
 			return;
 		}
 
-		// About to set a terminal status for the first time — irreversible
-		// once saved, so confirm before letting it stick.
 		if (FINAL_ROUND_STATUSES.has(row.status)) {
 			frappe.confirm(
 				__(
@@ -120,9 +121,11 @@ frappe.ui.form.on("Interview Round", {
 				},
 				() => {
 					row.__reverting_status = true;
-					const fallback = row.__status_snapshot || DEFAULT_ROUND_STATUS;
-					frappe.model.set_value(cdt, cdn, "status", fallback).then(() => {
-						row.__reverting_status = false;
+					get_default_round_status(frm).then((default_status) => {
+						const fallback = row.__status_snapshot || default_status || "";
+						frappe.model.set_value(cdt, cdn, "status", fallback).then(() => {
+							row.__reverting_status = false;
+						});
 					});
 				},
 			);
@@ -162,9 +165,26 @@ frappe.ui.form.on("Interview Round", {
 	},
 });
 
-// ---------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------
+function get_default_round_status(frm) {
+	if (!frm.__default_round_status_promise) {
+		frm.__default_round_status_promise = frappe.db
+			.get_single_value("ERP Configuration", "default_interview_status")
+			.then((value) => {
+				frm.__default_round_status = value || "";
+				
+				if (!value) {
+					frappe.throw("Default Interview Status is not set in 'ERP Configuration', please contact admin.");
+				}
+				return frm.__default_round_status;
+			})
+			.catch((err) => {
+				console.error("Failed to fetch default interview status", err);
+				frm.__default_round_status = "";
+				return "";
+			});
+	}
+	return frm.__default_round_status_promise;
+}
 
 function hide_interview_round_no_column() {
 	if ($("#interview-round-no-column-style").length) {

@@ -22,12 +22,19 @@ Order of creation follows the dependency chain requested:
 	-> Purchase Invoice (submitted)
 	-> Payment Entry (submitted, referencing Sales Invoice / Purchase Order /
 	   Purchase Invoice)
+
+Every record actually inserted below (as opposed to reused via
+get-or-create) is logged through insert_tracked()/track() from
+verp_staffing.utils.sample_data_tracking, so "Remove Sample Data" on
+ERP Configuration knows exactly what it's safe to delete later without
+having to guess from the record name.
 """
 
 import random
 import frappe
 from frappe import _
 from frappe.utils import add_days, today, random_string
+from verp_staffing.utils.sample_data_tracking import insert_tracked, track
 
 
 DEPARTMENT_MAP = {
@@ -117,7 +124,7 @@ def _get_or_create_service_doc(doctype, customer, employees, dept):
 			"status": "Pending",
 		}
 	)
-	doc.insert(ignore_permissions=True)
+	insert_tracked(doc)
 	return doc.name
 
 
@@ -139,14 +146,23 @@ def create_service_records_for_sales_order(customer, items, employees):
 
 	return created
 
-def _get_or_create(doctype, filters, values=None):
-	"""Return an existing doc matching filters, or insert a new one."""
+def _get_or_create(doctype, filters, values=None, track_as_sample=True):
+	"""Return an existing doc matching filters, or insert a new one.
+
+	track_as_sample=False is for callers that reuse this get-or-create
+	helper for something that ISN'T actually sample data (see
+	create_administrator_employee below) - without it, this helper had
+	no way to opt out and was logging the real Administrator's own
+	Employee record as removable sample data."""
 	name = frappe.db.exists(doctype, filters)
 	if name:
 		return frappe.get_doc(doctype, name if isinstance(name, str) else filters)
 
 	doc = frappe.get_doc({"doctype": doctype, **(values or {}), **filters})
-	doc.insert(ignore_permissions=True)
+	if track_as_sample:
+		insert_tracked(doc)
+	else:
+		doc.insert(ignore_permissions=True)
 	return doc
 
 
@@ -340,7 +356,11 @@ def create_users_and_employees(department_map):
 
 def create_administrator_employee(department_map, employees):
 	"""Administrator becomes an Employee with one assignment row per
-	department, holding every department role."""
+	department, holding every department role.
+
+	Deliberately NOT tracked as sample data: this is the real
+	Administrator's own Employee record, not a demo entity, so
+	"Remove Sample Data" should never touch it."""
 
 	admin_user = "Administrator"
 
@@ -361,6 +381,7 @@ def create_administrator_employee(department_map, employees):
 			"enabled": 1,
 			"employee_assignment_details_table": assignment_rows,
 		},
+		track_as_sample=False,
 	)
 
 	return admin_employee.name
@@ -382,7 +403,7 @@ def create_leads(employees):
 				"lead_owner": lead_owner,
 			}
 		)
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		leads.append(doc.name)
 
 	return leads
@@ -401,7 +422,7 @@ def create_opportunities(employees, leads):
 				"opportunity_owner": sales_owner,
 			}
 		)
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		opportunities.append(doc.name)
 
 	# and a couple converted from existing leads
@@ -414,7 +435,7 @@ def create_opportunities(employees, leads):
 				"opportunity_from_lead": lead_name,
 			}
 		)
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		opportunities.append(doc.name)
 
 	return opportunities
@@ -433,7 +454,7 @@ def create_customers(employees, leads, opportunities):
 				"customer_owner": sales_owner,
 			}
 		)
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		customers.append(doc.name)
 
 	# customer created off the back of a Lead
@@ -447,7 +468,7 @@ def create_customers(employees, leads, opportunities):
 				"customer_owner": sales_owner,
 			}
 		)
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		customers.append(doc.name)
 
 	# customer created off the back of an Opportunity
@@ -461,7 +482,7 @@ def create_customers(employees, leads, opportunities):
 				"customer_owner": sales_owner,
 			}
 		)
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		customers.append(doc.name)
 
 	return customers
@@ -474,6 +495,11 @@ def create_customers(employees, leads, opportunities):
 # further down, silently skipping Sales Order/Invoice/Purchase Order/
 # Purchase Invoice too - they all correctly refuse to run without real
 # Item records).
+#
+# NOTE: Item Category itself is deliberately NOT tracked as sample data
+# (see _get_or_create_leaf_category / _get_or_create_tree_root below) -
+# it's shared structural setup, not a demo entity, and other real Items
+# may depend on it after sample data is removed.
 # ---------------------------------------------------------------------------
 
 def _get_or_create_leaf_category(name="Services"):
@@ -682,7 +708,7 @@ def create_sales_order(company, customer, items):
 			"taxes": taxes,
 		}
 	)
-	so.insert(ignore_permissions=True)
+	insert_tracked(so)
 	return so.name
 
 
@@ -705,7 +731,7 @@ def create_purchase_orders(company, suppliers, items):
 				"taxes": taxes,
 			}
 		)
-		po.insert(ignore_permissions=True)
+		insert_tracked(po)
 		po.submit()
 		orders.append(po.name)
 
@@ -743,7 +769,7 @@ def create_purchase_invoices(company, suppliers, items):
 				"taxes": taxes,
 			}
 		)
-		pi.insert(ignore_permissions=True)
+		insert_tracked(pi)
 		pi.submit()
 		invoices.append(pi.name)
 
@@ -770,7 +796,7 @@ def create_sales_invoices(company, customers, items):
 				"items": _service_items_table(items, company),
 			}
 		)
-		si.insert(ignore_permissions=True)
+		insert_tracked(si)
 		si.submit()
 		invoices.append(si.name)
 
@@ -782,12 +808,14 @@ def create_sales_invoices(company, customers, items):
 # ---------------------------------------------------------------------------
 
 def create_suppliers():
+	supplier_group = _get_or_create_supplier_group()
+
 	suppliers = []
 	for name, supplier_type in SAMPLE_SUPPLIERS:
 		doc = _get_or_create(
 			"Supplier",
 			{"supplier_name": name},
-			{"supplier_type": supplier_type},
+			{"supplier_type": supplier_type, "supplier_group": supplier_group},
 		)
 		suppliers.append(doc.name)
 	return suppliers
@@ -886,7 +914,7 @@ def create_payment_entries(company, sales_invoices, purchase_orders, purchase_in
 				],
 			}
 		)
-		pe.insert(ignore_permissions=True)
+		insert_tracked(pe)
 		pe.submit()
 		entries.append(pe.name)
 
@@ -905,19 +933,6 @@ def _get_or_create_supplier_group(name="Services"):
 	doc.insert(ignore_permissions=True)
 	return doc.name
 
-
-def create_suppliers():
-	supplier_group = _get_or_create_supplier_group()
-
-	suppliers = []
-	for name, supplier_type in SAMPLE_SUPPLIERS:
-		doc = _get_or_create(
-			"Supplier",
-			{"supplier_name": name},
-			{"supplier_type": supplier_type, "supplier_group": supplier_group},
-		)
-		suppliers.append(doc.name)
-	return suppliers
 
 def create_subscription_plan(company, items):
 	if not items:
@@ -941,7 +956,7 @@ def create_subscription_plan(company, items):
 			"billing_interval_count": 1,
 		}
 	)
-	plan.insert(ignore_permissions=True)
+	insert_tracked(plan)
 	plan.submit()
 	return plan.name
 
@@ -965,7 +980,7 @@ def create_subscriptions(company, customers, suppliers, plan):
 				"start_date": today(),
 			}
 		)
-		sub.insert(ignore_permissions=True)
+		insert_tracked(sub)
 		sub.submit()
 		subscriptions.append(sub.name)
 
@@ -982,7 +997,7 @@ def create_subscriptions(company, customers, suppliers, plan):
 				"start_date": today(),
 			}
 		)
-		sub.insert(ignore_permissions=True)
+		insert_tracked(sub)
 		sub.submit()
 		subscriptions.append(sub.name)
 
@@ -1033,7 +1048,7 @@ def create_journal_entries(company, employees):
 			],
 		}
 	)
-	je.insert(ignore_permissions=True)
+	insert_tracked(je)
 	je.submit()
 	return [je.name]
 
@@ -1082,7 +1097,7 @@ def create_interviews_for_marketing(marketing_name):
 				"is mandatory per row, so rounds were left empty for this Interview.",
 			)
 
-		doc.insert(ignore_permissions=True)
+		insert_tracked(doc)
 		interviews.append(doc.name)
 
 	return interviews

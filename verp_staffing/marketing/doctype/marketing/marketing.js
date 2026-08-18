@@ -190,47 +190,167 @@ function create_interview(frm, values) {
 	});
 }
 
+const MKT_INTERVIEW_VISIBLE_COUNT = 5;
+const MKT_INTERVIEW_LIST_MAX_HEIGHT = 230; // px
+ 
 function render_interview_list(frm) {
 	if (!frm.doc.name) return;
-
+ 
 	frappe.call({
 		method: "verp_staffing.marketing.doctype.marketing.marketing.get_interviews_by_marketing",
 		args: {
 			marketing: frm.doc.name,
 		},
 		callback(r) {
-			const data = r.message || [];
+			render_interview_list_html(frm, r.message || []);
+		},
+	});
+}
 
-			if (!data.length) {
-				frm.fields_dict.interview_list.$wrapper.html(
-					"<div class='text-muted'>No interviews linked</div>",
-				);
-				return;
+function mkt_inject_interview_list_styles() {
+	if (document.getElementById("mkt-interview-list-styles")) return;
+	const style = document.createElement("style");
+	style.id = "mkt-interview-list-styles";
+	style.textContent = `
+		.mkt-interview-list-wrap { width: 100%; }
+		.mkt-interview-list {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+		.mkt-interview-list-wrap.mkt-expanded .mkt-interview-list {
+			max-height: ${MKT_INTERVIEW_LIST_MAX_HEIGHT}px;
+			overflow-y: auto;
+			padding-right: 4px;
+		}
+		.mkt-interview-item {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 7px 8px;
+			border-radius: 6px;
+			font-size: 13px;
+			color: #1c1c1c;
+			text-decoration: none;
+			transition: background .12s ease;
+			min-width: 0;
+		}
+		.mkt-interview-item:hover {
+			background: #F1F1F1;
+			text-decoration: none;
+			color: #1c1c1c;
+		}
+		.mkt-interview-item span:last-child {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.mkt-interview-dot {
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: #2490EF;
+			flex: none;
+		}
+		.mkt-interview-toggle-btn {
+			margin-top: 4px;
+			font-size: 12.5px;
+			font-weight: 600;
+			color: #2490EF;
+			background: none;
+			border: none;
+			cursor: pointer;
+			padding: 4px 8px;
+		}
+		.mkt-interview-toggle-btn:hover {
+			text-decoration: underline;
+		}
+		.mkt-interview-empty {
+			color: #8D99A6;
+			font-size: 13px;
+			padding: 6px 2px;
+		}
+	`;
+	document.head.appendChild(style);
+}
+
+
+function render_interview_list_html(frm, data) {
+	mkt_inject_interview_list_styles();
+ 
+	const $wrapper = frm.fields_dict.interview_list.$wrapper;
+ 
+	if (!data.length) {
+		$wrapper.html("<div class='mkt-interview-empty'>No interviews linked</div>");
+		return;
+	}
+ 
+	const has_more = data.length > MKT_INTERVIEW_VISIBLE_COUNT;
+	const esc = frappe.utils.escape_html;
+ 
+	function build_items(list) {
+		return list
+			.map(
+				(d) => `
+					<li>
+						<a href="#" class="mkt-interview-item" data-interview="${esc(d.company || "")}">
+							<span class="mkt-interview-dot"></span>
+							<span>${esc(d.company || "")}</span>
+						</a>
+					</li>
+				`
+			)
+			.join("");
+	}
+ 
+	$wrapper.html(`
+		<div class="mkt-interview-list-wrap">
+			<ul class="mkt-interview-list">
+				${build_items(has_more ? data.slice(0, MKT_INTERVIEW_VISIBLE_COUNT) : data)}
+			</ul>
+			${
+				has_more
+					? `<button type="button" class="mkt-interview-toggle-btn" data-expanded="0">
+							Read more (${data.length - MKT_INTERVIEW_VISIBLE_COUNT} more)
+						</button>`
+					: ""
 			}
-
-			let html = "<ul style='padding-left:15px'>";
-
-			data.forEach((d) => {
-				html += `
-                    <li>
-                        <a href="#" data-interview="${d.company}">
-                            ${d.company}
-                        </a>
-                    </li>
-                `;
-			});
-
-			html += "</ul>";
-
-			frm.fields_dict.interview_list.$wrapper.html(html);
-
-			// Click handler
-			frm.fields_dict.interview_list.$wrapper.find("a").on("click", function (e) {
+		</div>
+	`);
+ 
+	const $wrap = $wrapper.find(".mkt-interview-list-wrap");
+	const $list = $wrapper.find(".mkt-interview-list");
+	const $toggle = $wrapper.find(".mkt-interview-toggle-btn");
+ 
+	function bind_item_clicks() {
+		$wrapper
+			.find(".mkt-interview-item")
+			.off("click")
+			.on("click", function (e) {
 				e.preventDefault();
-
 				frappe.set_route("List", "Interview", "Kanban", { marketing_link: frm.doc.name });
 			});
-		},
+	}
+	bind_item_clicks();
+ 
+	if (!has_more) return;
+ 
+	$toggle.on("click", function () {
+		const expanded = $toggle.attr("data-expanded") === "1";
+ 
+		if (!expanded) {
+			$list.html(build_items(data));
+			$wrap.addClass("mkt-expanded");
+			$toggle.attr("data-expanded", "1").text("Show less");
+		} else {
+			$list.html(build_items(data.slice(0, MKT_INTERVIEW_VISIBLE_COUNT)));
+			$wrap.removeClass("mkt-expanded");
+			$toggle
+				.attr("data-expanded", "0")
+				.text(`Read more (${data.length - MKT_INTERVIEW_VISIBLE_COUNT} more)`);
+		}
+ 
+		bind_item_clicks();
 	});
 }
 
