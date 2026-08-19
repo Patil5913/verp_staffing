@@ -31,6 +31,14 @@ frappe.ui.form.on("Marketing Other Services", {
 			fields: display_fields,
 		});
 
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+				filters: {
+					department: "Marketing",
+				},
+			};
+		});
 		window.setup_service_permission_button(frm);
 	},
 });

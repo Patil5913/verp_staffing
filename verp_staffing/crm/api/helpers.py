@@ -1,5 +1,6 @@
 import frappe
 from frappe.query_builder import DocType
+from verp_staffing.accounts.utils.sales_order_status import _get_department_map
 
 
 # get employee name from user
@@ -62,6 +63,21 @@ def get_all_subordinates(root_employee: str, department: str | None = None) -> s
                 stack.append(child)
 
     return collected
+
+
+@frappe.whitelist()
+def get_assign_to_by_service(doctype, txt, searchfield, start, page_len, filters):
+    """get service key from stag json and get department"""
+    service = filters.get("service")
+    customer = filters.get("customer")
+    stage = frappe.get_value("Customer", customer, "stage")
+    stage = json.loads(stage) if stage else {}
+    service_key = service.strip().lower()
+    department = stage[service_key][0].get("department")
+
+    return get_subordinate_employees(
+        doctype, txt, searchfield, start, page_len, filters={"department": department}
+    )
 
 
 # function to filter out only subordinate employees
@@ -444,8 +460,8 @@ def get_approver_by_department(employee_name, service_doctype=None, extra_info=N
                 return superior.get("employee")
 
         return direct_manager
-    
-    
+
+
 def resolve_field_update_routing(employee_name, department):
     """
     Determines how a field-update request should route for this department,
@@ -976,8 +992,11 @@ def _validate_site_file_path(file_path: str) -> Path:
 
     return path
 
+
 @frappe.whitelist()
-def _is_superior_in_department(assign_to: str, current_user: str, department: str) -> dict:
+def _is_superior_in_department(
+    assign_to: str, current_user: str, department: str
+) -> dict:
     """
     Returns True if current_user is anywhere above assign_to
     in the given department's assignment hierarchy.

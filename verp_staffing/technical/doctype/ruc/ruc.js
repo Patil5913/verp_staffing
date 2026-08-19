@@ -33,8 +33,18 @@ frappe.ui.form.on("RUC", {
 			customer: frm.doc.customer,
 			fields: display_fields,
 		});
-		
+
 		window.setup_service_permission_button(frm);
+		
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_assign_to_by_service",
+				filters: {
+					service: "RUC",
+					customer: frm.doc.customer,
+				},
+			};
+		});
 	},
 
 	customer(frm) {

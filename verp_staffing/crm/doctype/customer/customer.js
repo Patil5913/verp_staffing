@@ -5,9 +5,12 @@ const interview_limit = 5;
 let CURRENT_EMPLOYEE = null;
 
 frappe.ui.form.on("Customer", {
-	onload(frm) {
-		load_customer_history_if_needed(frm);
+	setup(frm) {
+		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
+			render_tab_data(frm);
+		});
 	},
+
 	async refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -48,8 +51,6 @@ frappe.ui.form.on("Customer", {
 		});
 
 		if (!frm.is_new()) {
-			window.render_owned_sales_orders(frm, "sales_content", frm.doc.name);
-
 			frappe.call({
 				method: "frappe.client.get_value",
 				args: {
@@ -99,9 +100,7 @@ frappe.ui.form.on("Customer", {
 				},
 			});
 		}
-		// if (frappe.get_route()[3] === "history_tab") {
-		// 	load_customer_history_if_needed(frm);
-		// }
+		render_tab_data(frm);
 		const display_fields = await window.get_display_fields(frm.doctype);
 
 		window.render_customer_related_html({
@@ -183,6 +182,16 @@ frappe.ui.form.on("Customer", {
 		}
 	},
 });
+
+function render_tab_data(frm) {
+	if (frm.is_new()) return;
+	const active_tab = frm.active_tab_map && frm.active_tab_map[frm.doc.name];
+	if (active_tab.df.fieldname === "history_tab") {
+		load_customer_history_if_needed(frm);
+	} else if (active_tab.df.fieldname === "sales_tab") {
+		window.render_owned_sales_orders(frm, "sales_content", frm.doc.name);
+	}
+}
 
 function load_customer_history_if_needed(frm) {
 	if (!frm.doc.name) return;

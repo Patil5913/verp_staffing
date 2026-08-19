@@ -336,7 +336,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 	<div id="interview-load-more" style="text-align:center;margin-top:15px;"></div>
 	`;
 			} else {
-				records.forEach((dept) => {
+				records.forEach((dept, idx) => {
 					if (idx > 0) {
 						html += `<hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">`;
 					}

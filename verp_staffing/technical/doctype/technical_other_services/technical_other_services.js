@@ -30,6 +30,14 @@ frappe.ui.form.on("Technical Other Services", {
 			customer: frm.doc.customer,
 			fields: display_fields,
 		});
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+				filters: {
+					department: "Technical",
+				},
+			};
+		});
 
 		window.setup_service_permission_button(frm);
 	},

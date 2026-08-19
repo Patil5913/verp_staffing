@@ -4,9 +4,12 @@ let interview_offset = 0;
 const interview_limit = 5;
 
 frappe.ui.form.on("Onboardings", {
-	onload(frm) {
-		load_customer_history_if_needed(frm);
+	setup(frm) {
+		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
+			render_tab_data(frm);
+		});
 	},
+
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
 
@@ -18,15 +21,54 @@ frappe.ui.form.on("Onboardings", {
 		};
 
 		frappe.breadcrumbs.update();
-		showOnboarding_tab(frm);
-		// show_sales_order(frm);
-		window.render_owned_sales_orders(frm, "sales_content", frm.doc.customer);
+		showOnboarding_data(frm);
 
 		if (frm.doc.status === "Completed") {
-			frm.set_df_property("status", "read_only", 1);
+			frm.disable_form();
+			frm.disable_save();
 		}
 		window.add_forward_button(frm);
+		render_tab_data(frm);
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+				filters: {
+					department: "Onboarding",
+				},
+			};
+		});
+	},
+	sales_order: function (frm) {
+		frappe.new_doc("Sales Order", { customer: frm.doc.customer });
+	},
+	status: function (frm) {
+		if (frm.doc.status === "Completed") {
+			frappe.confirm(
+				"Marking this as Completed cannot be undone. Proceed?",
+				() => {
+					// User clicked 'Yes'
+					frm.set_df_property("status", "read_only", 1);
+					frm.save();
+				},
+				() => {
+					// User clicked 'No' - Revert to previous value
+					// frm.doc.__onsave holds values from the last save
+					let previous_status = frm.doc.__onsave ? frm.doc.__onsave.status : "Draft";
+					frm.set_value("status", previous_status);
+				},
+			);
+		}
+	},
+});
 
+function render_tab_data(frm) {
+	if (frm.is_new()) return;
+	const active_tab = frm.active_tab_map && frm.active_tab_map[frm.doc.name];
+	if (active_tab.df.fieldname === "history_tab") {
+		load_customer_history_if_needed(frm);
+	} else if (active_tab.df.fieldname === "sales_order_tab") {
+		window.render_owned_sales_orders(frm, "sales_content", frm.doc.customer);
+	} else if (active_tab.df.fieldname === "customer_information_tab") {
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details_html",
@@ -67,29 +109,9 @@ frappe.ui.form.on("Onboardings", {
 				"old_resume",
 			],
 		});
-	},
-	sales_order: function (frm) {
-		frappe.new_doc("Sales Order", { customer: frm.doc.customer });
-	},
-	status: function (frm) {
-		if (frm.doc.status === "Completed") {
-			frappe.confirm(
-				"Marking this as Completed cannot be undone. Proceed?",
-				() => {
-					// User clicked 'Yes'
-					frm.set_df_property("status", "read_only", 1);
-					frm.save();
-				},
-				() => {
-					// User clicked 'No' - Revert to previous value
-					// frm.doc.__onsave holds values from the last save
-					let previous_status = frm.doc.__onsave ? frm.doc.__onsave.status : "Draft";
-					frm.set_value("status", previous_status);
-				},
-			);
-		}
-	},
-});
+	}
+}
+
 function load_customer_history_if_needed(frm) {
 	if (!frm.doc.customer) return;
 	if (frm.__history_loaded_for === frm.doc.name) return; // already loaded for this doc
@@ -108,197 +130,8 @@ function load_customer_history_if_needed(frm) {
 		doctype: "Customer",
 	});
 }
-window.viewFullFeedback = function (encodedText) {
-	const fullText = decodeURIComponent(encodedText);
 
-	const dialog = document.createElement("div");
-	dialog.style = `
-        position:fixed;
-        top:0;left:0;right:0;bottom:0;
-        background:rgba(0,0,0,0.5);
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        z-index:9999;
-    `;
-
-	dialog.innerHTML = `
-        <div style="
-            background:#fff;
-            padding:24px;
-            border-radius:12px;
-            width:700px;
-            max-width:95%;
-            max-height:80vh;
-            display:flex;
-            flex-direction:column;
-        ">
-            <h3 style="margin-bottom:12px;">Full Feedback</h3>
-
-            <div style="
-                overflow-y:auto;
-                padding-right:6px;
-                margin-bottom:15px;
-            ">
-                <p style="
-                    color:#334155;
-                    font-size:14px;
-                    line-height:1.6;
-                    word-break:break-word;
-                    white-space:pre-wrap;
-                "></p>
-            </div>
-
-            <div style="text-align:right;">
-                <button onclick="this.closest('[data-dialog]').remove()"
-                    style="
-                        padding:6px 14px;
-                        background:#260fea;
-                        color:#fff;
-                        border:none;
-                        border-radius:6px;
-                        cursor:pointer;
-                    ">
-                    Close
-                </button>
-            </div>
-        </div>
-    `;
-
-	dialog.setAttribute("data-dialog", "true");
-	// Close when clicking outside
-	dialog.addEventListener("click", function (e) {
-		if (!e.target.closest("#feedbackBox")) {
-			dialog.remove();
-		}
-	});
-
-	document.body.appendChild(dialog);
-
-	// Safe text injection (no HTML breaking)
-	dialog.querySelector("p").innerText = fullText;
-};
-
-function render_interviews(data, append = false) {
-	let container = $("#interview-list");
-
-	if (!append) {
-		container.html("");
-	}
-
-	let html = "";
-	let records = data.departments?.Interview || [];
-
-	if (!records.length) {
-		html += `
-        <div style="text-align:center;color:#64748b;padding:20px;">
-            No interviews found
-        </div>
-    `;
-	} else {
-		records.forEach((dept) => {
-			html += `
-		<div style="margin-top:10px;">
-			<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f9fafb;">
-
-				<div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-					<a href="/app/interview/${dept.id}" target="_blank"
-						style="font-weight:600;color:#260fea;">
-						${dept.id}
-					</a>
-
-					<span style="background:#e0f2fe;padding:4px 10px;border-radius:20px;font-size:12px;">
-						${dept.status || "-"}
-					</span>
-				</div>
-
-				<div style="color:#64748b;margin-bottom:8px;">
-					Company: ${dept.company || "-"} • Role: ${dept.role || "-"}
-				</div>
-
-				<table style="width:100%;border-collapse:collapse;font-size:13px;">
-    <thead>
-        <tr>
-            <th style="border-bottom:2px solid #cbd5f5;padding:8px;">#</th>
-            <th style="border-bottom:2px solid #cbd5f5;padding:8px;">Round</th>
-            <th style="border-bottom:2px solid #cbd5f5;padding:8px;">Type</th>
-            <th style="border-bottom:2px solid #cbd5f5;padding:8px;">Interview</th>
-            <th style="border-bottom:2px solid #cbd5f5;padding:8px;">Time</th>
-            <th style="border-bottom:2px solid #cbd5f5;padding:8px;">Feedback</th>
-        </tr>
-    </thead>
-    <tbody>
-        ${
-			dept.interview_rounds_table?.length
-				? dept.interview_rounds_table
-						.map(
-							(r, i) => `
-                <tr style="border-bottom:1px solid #cbd5e1;">
-                    <td style="padding:8px;">${i + 1}</td>
-                    <td style="padding:8px;">${r.round || "-"}</td>
-                    <td style="padding:8px;">${r.type_of_interview || "-"}</td>
-                    <td style="padding:8px;">${r.date_of_interview || "-"}</td>
-					<td style="padding:8px;">
-                      ${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${r.edt_est || ""}` : "-"}
-                    </td>
-                    <td style="padding:8px;">
-                                        ${
-											r.feedback && r.feedback.trim()
-												? (() => {
-														const text = r.feedback.trim();
-														const limit = 20; // 👈 number of characters you want
-														const shortText = text.slice(0, limit);
-
-														if (text.length > limit) {
-															return `
-                                                        
-                                                            ${shortText}...
-                                                            <span 
-                                                                style="cursor:pointer;font-weight:500;"
-                                                                onclick='viewFullFeedback("${encodeURIComponent(text)}")'
-                                                            >
-                                                                view
-                                                            </span>
-                                                    `;
-														} else {
-															return text;
-														}
-													})()
-												: "-"
-										}
-                                        </td>
-                </tr>
-            `,
-						)
-						.join("")
-				: `<tr><td colspan="7" style="text-align:center;padding:10px;">No rounds</td></tr>`
-		}
-    </tbody>
-</table>
-
-			</div>
-		</div>
-		`;
-		});
-
-		container.append(html);
-
-		let meta = data.interview_meta;
-
-		if (meta && meta.offset + meta.limit < meta.total) {
-			$("#interview-load-more").html(`
-			<button id="load-more-interviews"
-				style="padding:8px 16px;border:none;background:#260fea;color:white;border-radius:6px;">
-				Load More
-			</button>
-		`);
-		} else {
-			$("#interview-load-more").html("");
-		}
-	}
-}
-
-function showOnboarding_tab(frm) {
+function showOnboarding_data(frm) {
 	if (!frm.doc.customer) return;
 
 	frappe.call({
