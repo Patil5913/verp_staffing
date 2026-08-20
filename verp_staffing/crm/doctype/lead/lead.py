@@ -28,8 +28,7 @@ class Lead(Document):
         self.name = generate_name_series("Lead", name)
 
     def before_insert(self):
-        if frappe.session.user != "Administrator":
-            self.set_lead_owner()
+        self.set_lead_owner()
 
     def after_insert(self):
         self.create_lead_detail()

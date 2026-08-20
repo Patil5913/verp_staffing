@@ -12,6 +12,11 @@ frappe.ui.form.on("Lead", {
 	},
 
 	refresh(frm) {
+		frm.set_query("lead_owner", () => {
+			return {
+				filters: { department: ["in", ["Sales", "Lead"]] },
+			};
+		});
 		frappe.breadcrumbs.clear();
 
 		// Define the breadcrumb structure

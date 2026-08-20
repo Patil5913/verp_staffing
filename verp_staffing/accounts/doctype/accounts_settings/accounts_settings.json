@@ -16,7 +16,7 @@
    "label": "Charts Of Accounts"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "show_balance_in_coa",
    "fieldtype": "Check",
    "label": "Show Balances in Chart Of Accounts"
@@ -28,16 +28,17 @@
    "label": "Auto send Sales Invoice after Submission"
   },
   {
+   "description": "Specify the number of days before the due date when invoice payment reminders should be sent.\nkeep 0 if don't want to send remainder",
    "fieldname": "invoice_reminder_days",
    "fieldtype": "Int",
-   "label": "Invoice Reminder Days"
+   "label": "Invoice Remainder Days"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-14 11:32:03.974011",
+ "modified": "2026-08-19 14:04:33.994866",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Accounts Settings",

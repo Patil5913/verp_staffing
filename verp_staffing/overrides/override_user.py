@@ -1,6 +1,7 @@
 import frappe
-from frappe.core.doctype.user.user import (User)
-from frappe import _,STANDARD_USERS
+from frappe.core.doctype.user.user import User
+from frappe import _, STANDARD_USERS
+
 
 class CustomUser(User):
     @classmethod
@@ -10,10 +11,7 @@ class CustomUser(User):
         """
         fields = super().get_quick_entry_fields()
         # REMOVE role_profile_name from quick entry
-        return [
-            f for f in fields
-            if f.get("fieldname") != "role_profile_name"
-        ]
+        return [f for f in fields if f.get("fieldname") != "role_profile_name"]
 
     def on_update(self):
         super().on_update()
@@ -21,12 +19,15 @@ class CustomUser(User):
             return
         if self.name == "Administrator":
             return
-
+        if frappe.flags.get("in_sample_data_import"):
+            return
         if frappe.db.exists("Employee", {"user": self.name}):
             return
 
         frappe.msgprint(
-            msg=_("This user does not have an Employee record.\nYou should create an Employee for proper system access."),
+            msg=_(
+                "This user does not have an Employee record.\nYou should create an Employee for proper system access."
+            ),
             title=_("Missing Employee Record"),
             primary_action={
                 "label": _("Create Employee"),
@@ -35,9 +36,10 @@ class CustomUser(User):
                 "hide_on_success": True,
             },
         )
+
     def check_roles_added(self):
         "Override this core validation function as it is breaking our flow"
-        return    
+        return
 
     def after_insert(self):
         super().after_insert()
@@ -46,10 +48,7 @@ class CustomUser(User):
         if self.name in ("Administrator", "Guest"):
             return
 
-        if frappe.db.exists(
-            "Has Role",
-            {"parent": self.name, "role": "Inbox User"}
-        ):
+        if frappe.db.exists("Has Role", {"parent": self.name, "role": "Inbox User"}):
             return
 
         self.append("roles", {"role": "Inbox User"})
@@ -57,10 +56,13 @@ class CustomUser(User):
 
 
 def ask_pass_update():
-	# update the sys defaults as to awaiting users
-	from frappe.utils import set_default
+    # update the sys defaults as to awaiting users
+    from frappe.utils import set_default
 
-	password_list = frappe.get_all(
-		"User Email", filters={"awaiting_password": 1, "used_oauth": 0}, pluck="parent", distinct=True
-	)
-	set_default("email_user_password", ",".join(password_list))
+    password_list = frappe.get_all(
+        "User Email",
+        filters={"awaiting_password": 1, "used_oauth": 0},
+        pluck="parent",
+        distinct=True,
+    )
+    set_default("email_user_password", ",".join(password_list))

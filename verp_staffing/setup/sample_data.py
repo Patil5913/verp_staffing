@@ -244,7 +244,7 @@ def _get_company_default_account(company, fieldname, account_type=None):
 
 def create_sample_data(company):
 	"""Seed the whole demo data set for `company` (a Company doc)."""
-
+	frappe.flags.in_sample_data_import = True
 	employees = _safe(
 		"Users & Employees", create_users_and_employees, DEPARTMENT_MAP
 	)
@@ -308,6 +308,7 @@ def create_sample_data(company):
 	frappe.db.commit()
 
 	_safe("Journal Entries", create_journal_entries, company, employees)
+	frappe.flags.in_sample_data_import = False
 	frappe.db.commit()
 
 

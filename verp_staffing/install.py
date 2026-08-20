@@ -1046,7 +1046,7 @@ FORM_TOURS = {
             {
                 "title": "Set Invoice Reminder Days",
                 "fieldname": "invoice_reminder_days",
-                "description": "Specify the number of days before the due date when invoice payment reminders should be sent.",
+                "description": "Specify the number of days before the due date when invoice payment reminders should be sent.keep 0 if don't want to send remainder",
                 "position": "Right Center",
                 "label": "Invoice Reminder Days",
                 "fieldtype": "Int",

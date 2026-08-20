@@ -6,7 +6,6 @@ const interview_limit = 5;
 frappe.ui.form.on("CR", {
 	setup(frm) {
 		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
-			console.log("check called");
 			render_tab_data(frm);
 		});
 	},
