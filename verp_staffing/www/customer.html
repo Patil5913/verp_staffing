@@ -147,6 +147,21 @@
 		text-decoration: none;
 	}
 
+	.lead-document-update-btn {
+		padding: 6px 12px;
+		background: #e2e8f0;
+		color: #334155;
+		border: none;
+		border-radius: 6px;
+		font-size: 12px;
+		font-weight: 500;
+		cursor: pointer;
+	}
+	.lead-document-update-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
 	.round-detail-box {
 		margin-top: 10px;
 		padding: 10px 12px;
@@ -175,7 +190,7 @@
 <!-- ============== VERIFICATION BLOCK ========================= -->
 {% if invalid_link %}
 
-<!-- ❌ INVALID LINK UI -->
+<!-- INVALID LINK UI -->
 <div style="text-align: center; padding: 60px">
 	<h2 style="color: #dc2626">Invalid or Expired Link</h2>
 	<p style="color: #64748b">This link is not valid. Please request a new one.</p>
@@ -183,7 +198,7 @@
 
 {% elif not is_verified %}
 
-<!-- 🔐 OTP UI -->
+<!-- OTP UI -->
 <div id="otp-section-wrapper">
 	<div id="otp-root"></div>
 </div>
@@ -959,18 +974,68 @@
 	</div>
 	{% endif %}
 
+	<!-- ================= DOCUMENTS (EAD Card, Driving Licence, Old Resume, Visa Copy) ================= -->
+	{% if lead_documents %}
+	<div
+		style="
+			border: 1px solid #e5e7eb;
+			border-radius: 10px;
+			padding: 16px;
+			margin-bottom: 18px;
+			background: #fff;
+		"
+	>
+		<h4 style="margin-bottom: 10px">Documents</h4>
+
+		{% for doc in lead_documents %}
+		<div
+			class="lead-document-row"
+			data-field="{{ doc.field }}"
+			style="
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 10px 0;
+				border-bottom: 1px solid #f1f5f9;
+				gap: 12px;
+				flex-wrap: wrap;
+			"
+		>
+			<div>
+				<p style="margin: 0; font-weight: 500; font-size: 13px">{{ doc.label }}</p>
+				<p
+					class="lead-document-filename"
+					style="margin: 2px 0 0 0; font-size: 12px; color: #64748b"
+				>
+					{% if doc.uploaded_file_name %}{{ doc.uploaded_file_name }}{% else %}Not
+					uploaded{% endif %}
+				</p>
+			</div>
+			<div style="display: flex; gap: 8px; align-items: center">
+				{% if doc.file_name %}
+				<a
+					class="download-btn lead-document-download"
+					href="/api/method/verp_staffing.www.customer.download_lead_document?field={{ doc.field }}&token={{ token | urlencode }}"
+					>Download</a
+				>
+				{% endif %}
+				<button type="button" class="lead-document-update-btn">
+					{% if doc.file_name %}Update{% else %}Upload{% endif %}
+				</button>
+				<input type="file" class="lead-document-file-input" style="display: none" />
+			</div>
+		</div>
+		{% endfor %}
+
+		<p style="margin: 10px 0 0 0; font-size: 12px; color: #94a3b8">
+			Max file size: 1 MB per document.
+		</p>
+	</div>
+	{% endif %}
+
 	<!-- ================= OTHER DEPARTMENTS ================= -->
 	{% for dept, records in full_history.departments.items() %} {% if dept != "Sales Order" and
-	dept != "Interview" %}
-
-	<!--
-		Technical Other Services / Marketing Other Services / Other Services
-		are NOT grouped under their generic doctype name here — each record
-		is rendered as its own section, titled by its actual service name,
-		alongside JDC / Marketing / etc. Minimum data only: service name +
-		status (+ forward history, since that applies everywhere).
-	-->
-	{% if dept in other_service_doctypes %} {% for rec in records %}
+	dept != "Interview" %} {% if dept in other_service_doctypes %} {% for rec in records %}
 	<div style="padding: 15px; margin-bottom: 15px">
 		<div
 			style="
@@ -1033,14 +1098,11 @@
 				<b>Assigned To:</b> {{ rec.assign_to or "-" }}
 			</p>
 
-			<!-- JDC / Interview Support: show the linked interview round,
-				including which Interview it belongs to and the
-				company/role, not just the round itself -->
+			<!-- JDC / Interview Support: show the linked interview round -->
 			{% if dept in interview_linked_doctypes and rec.interview_round_detail %}
 			<div class="round-detail-box">
 				<p style="font-weight: 600; margin-bottom: 6px">Interview Round</p>
 				{% if rec.interview %}
-				<p><b>Interview:</b> {{ rec.interview.name or "-" }}</p>
 				<p><b>Company:</b> {{ rec.interview.company or "-" }}</p>
 				<p><b>Role:</b> {{ rec.interview.role or "-" }}</p>
 				{% endif %}

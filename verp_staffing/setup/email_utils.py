@@ -127,7 +127,6 @@ def create_email_account(args, domain):
     ],
 })
     doc.append("imap_folder", {"folder_name": "Inbox"})
-    print(f"__________________doc:{doc.as_dict()}")
     doc.insert(ignore_permissions=True)
 
     return doc.name

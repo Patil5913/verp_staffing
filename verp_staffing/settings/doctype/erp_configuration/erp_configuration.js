@@ -10,7 +10,9 @@ frappe.ui.form.on("ERP Configuration", {
 		set_department_role_filters(frm);
 		render_website_app_settings(frm);
 		setup_permission_table_filters(frm);
-		add_remove_sample_data_button(frm);
+		if (!frm.doc.is_sample_data_removed) {
+			add_remove_sample_data_button(frm);
+		}
 		await render_headlines(frm);
 		// Load from doc into memory, then render
 		try {
@@ -1184,8 +1186,7 @@ function add_remove_sample_data_button(frm) {
 
 function open_remove_sample_data_dialog(frm) {
 	frappe.call({
-		method:
-			"verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_sample_data_summary",
+		method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_sample_data_summary",
 		freeze: true,
 		freeze_message: __("Checking sample data…"),
 		callback(r) {
@@ -1237,7 +1238,9 @@ function sd_doc_link(doctype, name) {
 function sd_records_html(records) {
 	return Object.entries(records || {})
 		.map(([doctype, names]) => {
-			const chips = names.map((n) => `<span class="sd-chip">${sd_doc_link(doctype, n)}</span>`).join("");
+			const chips = names
+				.map((n) => `<span class="sd-chip">${sd_doc_link(doctype, n)}</span>`)
+				.join("");
 			return `
 				<div class="sd-group">
 					<div class="sd-group-head">
@@ -1288,10 +1291,12 @@ function show_unexpected_doctypes_dialog(summary) {
 	// Safety net tripped: the log contains a doctype outside the known
 	// sample-data list. Refuse to proceed automatically and show
 	// exactly what was found so it can be reviewed by hand.
-	const html = sd_records_html(summary.unexpected_doctypes.reduce((acc, dt) => {
-		acc[dt] = summary.records[dt];
-		return acc;
-	}, {}));
+	const html = sd_records_html(
+		summary.unexpected_doctypes.reduce((acc, dt) => {
+			acc[dt] = summary.records[dt];
+			return acc;
+		}, {}),
+	);
 
 	frappe.msgprint({
 		title: __("Remove Sample Data - Manual Review Needed"),
@@ -1394,7 +1399,10 @@ function run_sample_data_removal(frm, delete_conflicts) {
 			const errors = result.errors || [];
 			const skipped = result.skipped_unexpected || {};
 			const remaining = result.remaining || {};
-			const deleted_total = Object.values(result.doctype_counts || {}).reduce((a, b) => a + b, 0);
+			const deleted_total = Object.values(result.doctype_counts || {}).reduce(
+				(a, b) => a + b,
+				0,
+			);
 
 			if (res.is_sample_data_removed) {
 				frappe.show_alert({ message: __("Sample data removed."), indicator: "green" });

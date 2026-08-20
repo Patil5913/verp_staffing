@@ -1,25 +1,14 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
+const DEFAULT_ROUND_STATUS = "Scheduled";
 const CANCELLED_LIKE_STATUSES = ["Cancelled", "Rescheduled"];
 const FINAL_ROUND_STATUSES = new Set(["Cancelled", "Rescheduled", "Completed"]);
 
-// Text-match strip for the row "..." dropdown. Frappe builds this menu fresh
-// each time it's opened rather than once at load, so we hook show.bs.dropdown
-// and remove matching items right before the menu becomes visible.
-// Verify these labels against your Frappe version's actual dropdown (open one
-// in devtools) if reorder items still show up on a locked row after this.
-const REORDER_MENU_TEXT_MATCHES = ["insert above", "insert below", "duplicate", "move"];
-
 frappe.ui.form.on("Interview", {
-	onload(frm) {
-		get_default_round_status(frm);
-	},
-
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
 
-		// Define the breadcrumb structure
 		frappe.breadcrumbs.all[frappe.get_route_str()] = {
 			workspace: "Interviews",
 			doctype: frm.doctype,
@@ -31,15 +20,11 @@ frappe.ui.form.on("Interview", {
 			frm.tour.init({ tour_name: "Interview" }).then(() => frm.tour.start());
 		});
 
-		get_default_round_status(frm);
-
 		hide_interview_round_no_column(frm);
 		apply_round_delete_restriction(frm);
-		check_marketing_superiority(frm); // resolves frm.__is_superior, then re-applies lock + reorder block
+		check_marketing_superiority(frm);
 		capture_status_snapshots(frm);
 
-		// Apply immediately with whatever we know so far (defaults to locked
-		// until check_marketing_superiority's async callback resolves).
 		apply_round_row_lock(frm);
 		block_round_reorder(frm);
 
@@ -47,6 +32,7 @@ frappe.ui.form.on("Interview", {
 			frm.set_df_property("marketing_link", "read_only", 1);
 			frm.set_df_property("role", "read_only", 1);
 			frm.set_df_property("company", "read_only", 1);
+			frm.set_df_property("status", "read_only", 1);
 			fetch_and_render_resume(frm);
 		}
 	},
@@ -83,11 +69,7 @@ frappe.ui.form.on("Interview Round", {
 		}
 
 		if (!row.status) {
-			get_default_round_status(frm).then((default_status) => {
-				if (default_status && !row.status) {
-					frappe.model.set_value(cdt, cdn, "status", default_status);
-				}
-			});
+			frappe.model.set_value(cdt, cdn, "status", DEFAULT_ROUND_STATUS);
 		}
 
 		apply_round_row_lock(frm);
@@ -135,11 +117,9 @@ frappe.ui.form.on("Interview Round", {
 				},
 				() => {
 					row.__reverting_status = true;
-					get_default_round_status(frm).then((default_status) => {
-						const fallback = row.__status_snapshot || default_status || "";
-						frappe.model.set_value(cdt, cdn, "status", fallback).then(() => {
-							row.__reverting_status = false;
-						});
+					const fallback = row.__status_snapshot || DEFAULT_ROUND_STATUS;
+					frappe.model.set_value(cdt, cdn, "status", fallback).then(() => {
+						row.__reverting_status = false;
 					});
 				},
 			);
@@ -179,36 +159,30 @@ frappe.ui.form.on("Interview Round", {
 	},
 });
 
-function get_default_round_status(frm) {
-	if (!frm.__default_round_status_promise) {
-		frm.__default_round_status_promise = frappe.db
-			.get_single_value("ERP Configuration", "default_interview_status")
-			.then((value) => {
-				frm.__default_round_status = value || "";
-				
-				if (!value) {
-					frappe.throw("Default Interview Status is not set in 'ERP Configuration', please contact admin.");
-				}
-				return frm.__default_round_status;
-			})
-			.catch((err) => {
-				console.error("Failed to fetch default interview status", err);
-				frm.__default_round_status = "";
-				return "";
-			});
-	}
-	return frm.__default_round_status_promise;
-}
-
 function hide_interview_round_no_column() {
-	if ($("#interview-round-no-column-style").length) {
-		return;
-	}
+	if ($("#interview-round-no-column-style").length) return;
 
 	$("head").append(`
 		<style id="interview-round-no-column-style">
 			[data-fieldname="interview_rounds_table"] .row-index,
 			[data-fieldname="interview_rounds_table"] .grid-row-index {
+				display: none !important;
+			}
+		</style>
+	`);
+}
+
+function inject_round_lock_style() {
+	if ($("#interview-round-lock-style").length) return;
+
+	// button classes come from grid_row_form.js's set_form_events bindings
+	$("head").append(`
+		<style id="interview-round-lock-style">
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-insert-row,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-insert-row-below,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-duplicate-row,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-move-row,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-append-row {
 				display: none !important;
 			}
 		</style>
@@ -225,15 +199,16 @@ function is_round_finalized(row) {
 	return !!row && FINAL_ROUND_STATUSES.has(row.__status_snapshot);
 }
 
-// Single source of truth for "can this row be edited/reordered right now".
-// Position (idx) is only trustworthy because block_round_reorder prevents
-// non-superior users from ever changing it — the two functions are coupled
-// by design, don't lock one without the other.
 function is_row_locked(frm, row) {
+	if (!frm || !frm.doc) return true;
 	if (frm.__is_superior) return false;
 	const rows = frm.doc.interview_rounds_table || [];
 	const last_idx = rows.length;
 	return row.idx !== last_idx;
+}
+
+function is_drag_locked(frm) {
+	return !frm?.__is_superior;
 }
 
 function check_marketing_superiority(frm) {
@@ -284,21 +259,20 @@ function check_marketing_superiority(frm) {
 }
 
 function apply_round_row_lock(frm) {
+	if (!frm || !frm.doc || !frm.fields_dict?.interview_rounds_table) return;
 	const rows = frm.doc.interview_rounds_table || [];
 	if (!rows.length) return;
 
 	const grid = frm.fields_dict.interview_rounds_table.grid;
+	const drag_locked = is_drag_locked(frm);
 
 	rows.forEach((row) => {
 		const grid_row = grid.grid_rows_by_docname[row.name];
 		if (!grid_row) return;
 
 		const locked = is_row_locked(frm, row);
+		row._sortable = !drag_locked;
 
-		// grid_row.docfields is the SAME array reference as grid.docfields,
-		// shared across every row in the grid. Mutating it in place makes
-		// every row's inline read-only state collapse to whichever row was
-		// processed last. Clone once per row before mutating.
 		if (grid_row.docfields === grid.docfields) {
 			grid_row.docfields = grid.docfields.map((df) => ({ ...df }));
 		}
@@ -308,7 +282,6 @@ function apply_round_row_lock(frm) {
 		});
 		grid_row.refresh();
 
-		// Expanded row-edit dialog, if currently open for this row.
 		if (grid_row.grid_form && grid_row.grid_form.fields_dict) {
 			Object.values(grid_row.grid_form.fields_dict).forEach((field) => {
 				field.df.__base_read_only = field.df.__base_read_only ?? field.df.read_only ?? 0;
@@ -327,39 +300,67 @@ function apply_round_delete_restriction(frm) {
 	frm.fields_dict.interview_rounds_table.grid.refresh();
 }
 
-// Blocks drag-sort, and strips "Insert Above / Insert Below / Duplicate /
-// Move" from a locked row's dropdown. This is UX-layer only — there is
-// deliberately no backend enforcement, per requirement, so an admin/superior
-// user is always exempt and non-privileged users are blocked purely here.
 function block_round_reorder(frm) {
+	if (!frm || !frm.fields_dict?.interview_rounds_table) return;
+
+	inject_round_lock_style();
+
 	const grid = frm.fields_dict.interview_rounds_table.grid;
-	const allow_all = !!frm.__is_superior;
-	// Sortable.js is the drag-drop mechanism in recent Frappe versions.
-	// Property name has moved across versions — guard both.
-	const sortable = grid.sortable_list || grid.sortable;
-	if (sortable && sortable.option) {
-		sortable.option("disabled", !allow_all);
+	const drag_locked = is_drag_locked(frm);
+
+	frm.fields_dict.interview_rounds_table.$wrapper?.toggleClass(
+		"round-reorder-locked",
+		drag_locked,
+	);
+
+	const wrapper_el = grid.wrapper[0];
+	if (wrapper_el) {
+		if (wrapper_el.__round_lock_handle_guard) {
+			wrapper_el.removeEventListener(
+				"mousedown",
+				wrapper_el.__round_lock_handle_guard,
+				true,
+			);
+			wrapper_el.removeEventListener(
+				"touchstart",
+				wrapper_el.__round_lock_handle_guard,
+				true,
+			);
+		}
+		const guard = function (e) {
+			if (is_drag_locked(frm) && e.target.closest(".sortable-handle")) {
+				e.stopPropagation();
+				e.preventDefault();
+			}
+		};
+		wrapper_el.__round_lock_handle_guard = guard;
+		wrapper_el.addEventListener("mousedown", guard, true);
+		wrapper_el.addEventListener("touchstart", guard, true);
 	}
-	grid.wrapper.find(".grid-row").attr("draggable", allow_all ? "true" : "false");
 
-	// Row "..." menu: Frappe rebuilds this dropdown's contents each time it
-	// opens, so hook the Bootstrap show event rather than trying to strip
-	// items once at render time (they won't exist yet then).
-	grid.wrapper
-		.off("show.bs.dropdown.round-lock")
-		.on("show.bs.dropdown.round-lock", ".grid-row", function () {
-			const cdn = $(this).attr("data-name");
-			const row = locals["Interview Round"][cdn];
-			if (!row || !is_row_locked(frm, row)) return;
+	patch_grid_row_actions(frm);
+}
 
-			const $menu = $(this).find(".dropdown-menu");
-			$menu.find(".dropdown-item, a").each(function () {
-				const text = $(this).text().trim().toLowerCase();
-				if (REORDER_MENU_TEXT_MATCHES.some((t) => text.includes(t))) {
-					$(this).remove();
-				}
-			});
-		});
+function patch_grid_row_actions(frm) {
+	const sample_row = frm.fields_dict.interview_rounds_table.grid.grid_rows?.[0];
+	if (!sample_row) return;
+
+	const grid_row_proto = Object.getPrototypeOf(sample_row);
+	if (grid_row_proto.__round_lock_patched) return;
+	grid_row_proto.__round_lock_patched = true;
+
+	const original_insert = grid_row_proto.insert;
+	const original_move = grid_row_proto.move;
+
+	grid_row_proto.insert = function (...args) {
+		if (this.doc.doctype === "Interview Round" && is_drag_locked(this.frm)) return;
+		return original_insert.apply(this, args);
+	};
+
+	grid_row_proto.move = function (...args) {
+		if (this.doc.doctype === "Interview Round" && is_drag_locked(this.frm)) return;
+		return original_move.apply(this, args);
+	};
 }
 
 function toggle_cancellation_fields(frm, cdt, cdn) {
@@ -388,15 +389,10 @@ function toggle_cancellation_fields(frm, cdt, cdn) {
 
 	by_field.refresh();
 	reason_field.refresh();
-
-	// One refresh at the end, not one per field-mutation step, to avoid the
-	// dialog tearing down/rebuilding mid-sequence.
-	grid_row.grid_form.refresh();
 }
 
 function fetch_and_render_resume(frm) {
 	const set_html = (html) => frm.set_df_property("resume", "options", html);
-
 	const clear_resume = () => set_html("");
 
 	frappe.db.get_value("Marketing", frm.doc.marketing_link, "customer").then(({ message }) => {
@@ -407,27 +403,19 @@ function fetch_and_render_resume(frm) {
 		}
 		frappe.call({
 			method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
-			args: {
-				customer: customer,
-			},
+			args: { customer: customer },
 			callback(r) {
 				const resume = r.message;
-
 				if (!resume?.document) {
 					clear_resume();
 					return;
 				}
-
 				set_html(`
 				<div style="padding:8px">
-					<a
+					
 						href="${resume.document}"
 						target="_blank"
-						style="
-							color:#1a73e8;
-							font-weight:600;
-							text-decoration:none;
-						"
+						style="color:#1a73e8;font-weight:600;text-decoration:none;"
 					>
 						📄 View Resume
 					</a>

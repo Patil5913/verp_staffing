@@ -247,6 +247,7 @@
    "collapsible": 1,
    "fieldname": "sample_data_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Sample Data"
   },
   {
@@ -254,8 +255,7 @@
    "fieldname": "sample_data_log",
    "fieldtype": "Long Text",
    "label": "Sample Data Log",
-   "read_only": 1,
-   "hidden": 1
+   "read_only": 1
   },
   {
    "default": "0",
@@ -263,8 +263,7 @@
    "fieldname": "is_sample_data_removed",
    "fieldtype": "Check",
    "label": "Is Sample Data Removed",
-   "read_only": 1,
-   "hidden": 1
+   "read_only": 1
   },
   {
    "fieldname": "website_settings_tab",
@@ -280,7 +279,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-18 14:11:18.424081",
+ "modified": "2026-08-20 15:42:23.743466",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

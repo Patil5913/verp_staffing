@@ -4,8 +4,10 @@ let interview_offset = 0;
 const interview_limit = 5;
 
 frappe.ui.form.on("CR", {
-	onload(frm) {
-		load_customer_history_if_needed(frm);
+	setup(frm) {
+		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
+			render_tab_data(frm);
+		});
 	},
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
@@ -18,29 +20,50 @@ frappe.ui.form.on("CR", {
 		};
 
 		frappe.breadcrumbs.update();
-		frappe.call({
-			method: "verp_staffing.www.customer.get_customer_history",
-			args: {
-				customer: frm.doc.customer,
-				interview_limit: interview_limit,
-				interview_offset: interview_offset,
-			},
-			callback(r) {
-				if (!r.message) return;
-				render_customer_history(frm, r.message);
-			},
-		});
-		show_sales_order(frm);
-		if (frm.doc.status === "Completed") {
-			// Make the entire form read-only
-			frm.disable_form();
+		render_tab_data(frm);
 
-			// Hide Save button
+		if (frm.doc.status === "Completed") {
+			frm.disable_form();
 			frm.disable_save();
-			// frm.set_df_property("status", "read_only", 1);
 		}
 		window.add_forward_button(frm);
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+				filters: {
+					department: "CR",
+				},
+			};
+		});
+	},
+	status: function (frm) {
+		if (frm.doc.status === "Completed") {
+			frappe.confirm(
+				"Marking this as Completed cannot be undone. Proceed?",
+				() => {
+					// User clicked 'Yes'
+					frm.set_df_property("status", "read_only", 1);
+					frm.save();
+				},
+				() => {
+					// User clicked 'No' - Revert to previous value
+					// frm.doc.__onsave holds values from the last save
+					let previous_status = frm.doc.__onsave ? frm.doc.__onsave.status : "Draft";
+					frm.set_value("status", previous_status);
+				},
+			);
+		}
+	},
+});
 
+function render_tab_data(frm) {
+	if (frm.is_new()) return;
+	const active_tab = frm.active_tab_map && frm.active_tab_map[frm.doc.name];
+	if (active_tab.df.fieldname === "history_tab") {
+		load_customer_history_if_needed(frm);
+	} else if (active_tab.df.fieldname === "sales_order_tab") {
+		show_sales_order(frm);
+	} else if (active_tab.df.fieldname === "customer_information_tab") {
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details",
@@ -81,26 +104,8 @@ frappe.ui.form.on("CR", {
 				"old_resume",
 			],
 		});
-	},
-	status: function (frm) {
-		if (frm.doc.status === "Completed") {
-			frappe.confirm(
-				"Marking this as Completed cannot be undone. Proceed?",
-				() => {
-					// User clicked 'Yes'
-					frm.set_df_property("status", "read_only", 1);
-					frm.save();
-				},
-				() => {
-					// User clicked 'No' - Revert to previous value
-					// frm.doc.__onsave holds values from the last save
-					let previous_status = frm.doc.__onsave ? frm.doc.__onsave.status : "Draft";
-					frm.set_value("status", previous_status);
-				},
-			);
-		}
-	},
-});
+	}
+}
 
 function load_customer_history_if_needed(frm) {
 	if (!frm.doc.customer) return;

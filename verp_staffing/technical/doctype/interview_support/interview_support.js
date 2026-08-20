@@ -29,6 +29,15 @@ frappe.ui.form.on("Interview Support", {
 			fields: display_fields,
 		});
 
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_assign_to_by_service",
+				filters: {
+					service: "Interview Support",
+					customer: frm.doc.customer,
+				},
+			};
+		});
 		window.setup_service_permission_button(frm);
 	},
 });

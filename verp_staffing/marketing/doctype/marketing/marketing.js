@@ -44,11 +44,13 @@ frappe.ui.form.on("Marketing", {
 			open_create_interview_dialog(frm);
 		});
 
+		
 		frm.set_query("assign_to", () => {
 			return {
-				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+				query: "verp_staffing.crm.api.helpers.get_assign_to_by_service",
 				filters: {
-					department: "Marketing",
+					service: "Marketing",
+					customer: frm.doc.customer,
 				},
 			};
 		});
