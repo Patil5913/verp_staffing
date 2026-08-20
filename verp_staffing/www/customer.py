@@ -108,11 +108,8 @@ def _build_pending_feedback_items(history):
                 interview = rec.get("interview") or {}
                 round_detail = rec.get("interview_round_detail") or {}
                 title = "%s — %s" % (dept, interview.get("company") or "Interview")
-                # Note: no docname/interview-name shown here on purpose —
-                # the feedback form only needs enough context for the
-                # customer to recognize *what* they're giving feedback
-                # on, not internal record identifiers.
                 context_lines = [
+                    ("Interview", interview.get("name") or "-"),
                     ("Round", round_detail.get("round") or "-"),
                     ("Company", interview.get("company") or "-"),
                     ("Role", interview.get("role") or "-"),
@@ -241,6 +238,7 @@ def get_context(context):
             context.full_history = None
             context.feedback_rounds = []
             context.pending_feedback_items = []
+            context.lead_documents = []
             return context
 
     context.full_history = _augment_history_for_display(
@@ -250,6 +248,7 @@ def get_context(context):
     context.interview_linked_doctypes = list(INTERVIEW_LINKED_DOCTYPES)
     context.download_allowed_doctypes = list(DOWNLOAD_ALLOWED_DOCTYPES)
     context.pending_feedback_items = _build_pending_feedback_items(context.full_history)
+    context.lead_documents = _build_lead_documents(customer_name)
 
     from frappe.utils import get_datetime, now_datetime
     import pytz
@@ -721,6 +720,7 @@ def _populate_department_history(history, stage_data, customer):
 
     all_doctypes = interview_doctypes + simple_doctypes
 
+    # ---- batch-fetch Item display names for "Other Services" docs -------
     service_codes = {
         d.service
         for doctype in all_doctypes
@@ -737,6 +737,7 @@ def _populate_department_history(history, stage_data, customer):
         )
         service_name_map = {row.name: row.item_name for row in rows}
 
+    # ---- batch-fetch every child table across every doc, once each ------
     doc_ref_parents = [
         d.name
         for doctype in all_doctypes
@@ -1132,10 +1133,6 @@ def save_customer_feedback(token, doctype, docname, feedback, session_row_name=N
     if status != COMPLETED_STATUS:
         frappe.throw(_("Feedback can only be submitted once this is marked Completed"))
 
-    # Resolve the correct child-table fieldname per doctype instead of
-    # assuming "customer_feedback" everywhere — that assumption is what
-    # previously caused a 417 / AttributeError on Interview Support,
-    # whose feedback child table lives under a different fieldname.
     child_fieldname = _get_feedback_child_fieldname(doctype)
     if not child_fieldname:
         frappe.throw(_("Feedback is not configured for this record type"))
@@ -1225,3 +1222,154 @@ def download_resume(resume, token):
     about this now downloading the latest Document References row
     rather than the Resume.resume attach field."""
     return download_document("Resume", resume, token)
+
+LEAD_DOCUMENT_FIELDS_META = [
+    ("ead_card", "EAD Card"),
+    ("driving_licence", "Driving Licence"),
+    ("old_resume", "Old Resume"),
+    ("visa_copy", "Visa Copy"),
+]
+LEAD_DOCUMENT_FIELDS = {f for f, _label in LEAD_DOCUMENT_FIELDS_META}
+
+MAX_UPLOAD_SIZE_BYTES = 1 * 1024 * 1024 #5mb
+
+
+def _get_lead_details_name(customer):
+    return frappe.db.get_value("Customer", customer, "lead_details")
+
+
+def _build_lead_documents(customer):
+    """Display data only — never exposes a raw file_url, since these
+    are private documents; the page links to download_lead_document
+    instead, which re-checks ownership on every request."""
+    lead_details_name = _get_lead_details_name(customer)
+    if not lead_details_name:
+        return []
+
+    field_names = [f for f, _label in LEAD_DOCUMENT_FIELDS_META]
+    values = (
+        frappe.db.get_value(
+            "Lead Detail Form", lead_details_name, field_names, as_dict=True
+        )
+        or {}
+    )
+
+    file_names = [v for v in values.values() if v]
+    file_meta_map = {}
+    if file_names:
+        rows = frappe.get_all(
+            "File",
+            filters={"name": ["in", file_names]},
+            fields=["name", "file_name"],
+        )
+        file_meta_map = {row.name: row.file_name for row in rows}
+
+    documents = []
+    for field, label in LEAD_DOCUMENT_FIELDS_META:
+        file_name = values.get(field)
+        documents.append(
+            {
+                "field": field,
+                "label": label,
+                "file_name": file_name,
+                "uploaded_file_name": file_meta_map.get(file_name)
+                if file_name
+                else None,
+            }
+        )
+
+    return documents
+
+
+@frappe.whitelist(allow_guest=True)
+def download_lead_document(token, field):
+    """Token-authenticated download for one of the four Lead Detail
+    Form document fields."""
+    auth = authenticate_customer_request(token, require_verified=False)
+    customer = auth["customer"]
+
+    if field not in LEAD_DOCUMENT_FIELDS:
+        frappe.throw(_("Invalid document field"))
+
+    lead_details_name = _get_lead_details_name(customer)
+    if not lead_details_name:
+        frappe.throw(_("Unauthorized"))
+
+    file_name = frappe.db.get_value("Lead Detail Form", lead_details_name, field)
+    if not file_name:
+        frappe.throw(_("No document available to download"))
+
+    file_url = frappe.db.get_value("File", file_name, "file_url")
+    if not file_url:
+        frappe.throw(_("No document available to download"))
+
+    _stream_file(file_url)
+
+
+@frappe.whitelist(allow_guest=True)
+def upload_lead_document(token, field):
+    """Replaces one of the four Lead Detail Form document fields:
+    deletes the old File (if any), creates a new one attached to the
+    Lead Detail Form record, and repoints the field to it. Expects a
+    multipart/form-data POST with a `file` part (same shape as
+    Frappe's own upload endpoint) plus `token` and `field`.
+
+    5 MB limit enforced here as a backend backstop — the frontend
+    should already be rejecting oversized files before they're sent,
+    but this endpoint doesn't trust that."""
+    auth = authenticate_customer_request(token, require_verified=False)
+    customer = auth["customer"]
+
+    if field not in LEAD_DOCUMENT_FIELDS:
+        frappe.throw(_("Invalid document field"))
+
+    lead_details_name = _get_lead_details_name(customer)
+    if not lead_details_name:
+        frappe.throw(_("No linked lead details found for this customer"))
+
+    uploaded = frappe.request.files.get("file")
+    if not uploaded:
+        frappe.throw(_("No file received"))
+
+    content = uploaded.stream.read()
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        frappe.throw(_("File size must be under 1 MB"))
+
+    old_file_name = frappe.db.get_value("Lead Detail Form", lead_details_name, field)
+
+    from frappe.utils.file_manager import save_file
+
+    frappe.flags.ignore_permissions = True
+    try:
+        new_file = save_file(
+            uploaded.filename,
+            content,
+            "Lead Detail Form",
+            lead_details_name,
+            is_private=1,
+        )
+
+        frappe.db.set_value("Lead Detail Form", lead_details_name, field, new_file.name)
+
+        # Only remove the old File doc once the new one is safely linked
+        # in, so a mid-request failure never leaves the field pointing
+        # at nothing.
+        if old_file_name and old_file_name != new_file.name:
+            try:
+                frappe.delete_doc(
+                    "File", old_file_name, ignore_permissions=True, force=True
+                )
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(), "Failed to remove old lead document"
+                )
+    finally:
+        frappe.flags.ignore_permissions = False
+
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "file_name": new_file.name,
+        "uploaded_file_name": new_file.file_name,
+    }

@@ -39,6 +39,100 @@ function render_status_badge(status) {
 	return '<span class="status-badge" style="' + style + '">' + escape_html(text) + "</span>";
 }
 
+// ============================================================
+// LEAD DOCUMENTS (EAD Card, Driving Licence, Old Resume, Visa Copy)
+// ============================================================
+//
+// 5 MB check here mirrors MAX_UPLOAD_SIZE_BYTES in customer.py —
+// this is just the fast-fail UX path; the backend re-checks and does
+// not trust this.
+var LEAD_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
+
+document.addEventListener("click", function (e) {
+	if (!e.target.classList || !e.target.classList.contains("lead-document-update-btn")) {
+		return;
+	}
+	var row = e.target.closest(".lead-document-row");
+	if (!row) return;
+	var fileInput = row.querySelector(".lead-document-file-input");
+	if (fileInput) fileInput.click();
+});
+
+function extract_frappe_error(data) {
+	if (!data) return null;
+	if (data._server_messages) {
+		try {
+			var msgs = JSON.parse(data._server_messages);
+			var first = JSON.parse(msgs[0]);
+			return first.message;
+		} catch (e) {
+			/* fall through */
+		}
+	}
+	return data.exception || data.message || null;
+}
+
+document.addEventListener("change", function (e) {
+	if (!e.target.classList || !e.target.classList.contains("lead-document-file-input")) {
+		return;
+	}
+
+	var input = e.target;
+	var file = input.files && input.files[0];
+	if (!file) return;
+
+	if (file.size > LEAD_DOCUMENT_MAX_BYTES) {
+		alert("File size must be under 1 MB.");
+		input.value = "";
+		return;
+	}
+
+	var row = input.closest(".lead-document-row");
+	var field = row.dataset.field;
+	var updateBtn = row.querySelector(".lead-document-update-btn");
+	var t = new URLSearchParams(window.location.search).get("t");
+	var csrfToken = document.querySelector('[name="csrf_token"]');
+
+	var formData = new FormData();
+	formData.append("file", file);
+	formData.append("token", t);
+	formData.append("field", field);
+
+	updateBtn.disabled = true;
+	var originalLabel = updateBtn.textContent;
+	updateBtn.textContent = "Uploading…";
+
+	fetch("/api/method/verp_staffing.www.customer.upload_lead_document", {
+		method: "POST",
+		headers: csrfToken ? { "X-Frappe-CSRF-Token": csrfToken.value } : {},
+		body: formData,
+	})
+		.then(function (res) {
+			return res.json().then(function (data) {
+				return { ok: res.ok, data: data };
+			});
+		})
+		.then(function (result) {
+			updateBtn.disabled = false;
+			input.value = "";
+
+			if (result.ok && result.data.message && result.data.message.status === "success") {
+				updateBtn.textContent = "Update";
+			} else {
+				updateBtn.textContent = originalLabel;
+				var errMsg = extract_frappe_error(result.data);
+				alert(errMsg || "Upload failed. Please try again.");
+			}
+		})
+		.catch(function (err) {
+			console.error("Lead document upload error:", err);
+			updateBtn.disabled = false;
+			updateBtn.textContent = originalLabel;
+			input.value = "";
+			alert("Something went wrong");
+		});
+});
+
 document.addEventListener("DOMContentLoaded", function () {
 	start_otp_bootstrap();
 });
