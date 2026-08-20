@@ -247,6 +247,7 @@
    "collapsible": 1,
    "fieldname": "sample_data_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Sample Data"
   },
   {
@@ -278,7 +279,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-19 14:51:29.571294",
+ "modified": "2026-08-20 15:42:23.743466",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

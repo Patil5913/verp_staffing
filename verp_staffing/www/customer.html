@@ -1035,9 +1035,7 @@
 
 	<!-- ================= OTHER DEPARTMENTS ================= -->
 	{% for dept, records in full_history.departments.items() %} {% if dept != "Sales Order" and
-	dept != "Interview" %}
-
-	{% if dept in other_service_doctypes %} {% for rec in records %}
+	dept != "Interview" %} {% if dept in other_service_doctypes %} {% for rec in records %}
 	<div style="padding: 15px; margin-bottom: 15px">
 		<div
 			style="
@@ -1062,7 +1060,8 @@
 				<ul>
 					{% for f in rec.forward_events_display %}
 					<li>
-						{{ loop.index }}. Forwarded to <b>{{ f.department }}</b> — {{ f.when }}
+						{{ loop.index }}. Forwarded to <b>{{ f.department }} Dept.</b> — {{ f.when
+						}}
 					</li>
 					{% endfor %}
 				</ul>
@@ -1087,7 +1086,6 @@
 				background: #f9fafb;
 			"
 		>
-			<p style="margin: 4px 0; color: #334155; font-size: 13px"><b>ID:</b> {{ rec.id }}</p>
 
 			<p style="margin: 4px 0; color: #334155; font-size: 13px">
 				<b>Status:</b>
@@ -1104,6 +1102,10 @@
 			{% if dept in interview_linked_doctypes and rec.interview_round_detail %}
 			<div class="round-detail-box">
 				<p style="font-weight: 600; margin-bottom: 6px">Interview Round</p>
+				{% if rec.interview %}
+				<p><b>Company:</b> {{ rec.interview.company or "-" }}</p>
+				<p><b>Role:</b> {{ rec.interview.role or "-" }}</p>
+				{% endif %}
 				<p>
 					<b>Round:</b> {{ rec.interview_round_detail.round or "-" }} {% if
 					rec.interview_round_detail.support %}
@@ -1256,7 +1258,8 @@
 				<ul>
 					{% for f in rec.forward_events_display %}
 					<li>
-						{{ loop.index }}. Forwarded to <b>{{ f.department }}</b> — {{ f.when }}
+						{{ loop.index }}. Forwarded to <b>{{ f.department }} Dept.</b> — {{ f.when
+						}}
 					</li>
 					{% endfor %}
 				</ul>
