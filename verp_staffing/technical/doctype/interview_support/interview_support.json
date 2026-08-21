@@ -7,21 +7,29 @@
  "field_order": [
   "customer",
   "interview_round",
-  "resume",
+  "interview_details",
   "column_break_vbqj",
   "assign_to",
   "status",
   "random_section",
+  "resume",
   "proof_of_work",
   "proof_of_work_html",
   "candidate_feedback",
   "section_break_yeoz",
-  "lead_details"
+  "lead_details",
+  "notes_tab",
+  "notes_html",
+  "updates_tab",
+  "updates_html",
+  "activities_tab",
+  "open_activities_html"
  ],
  "fields": [
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "hidden": 1,
    "in_global_search": 1,
    "in_list_view": 1,
    "in_preview": 1,
@@ -48,8 +56,11 @@
    "fieldname": "interview_round",
    "fieldtype": "Link",
    "label": "Interview Round",
+   "no_copy": 1,
    "options": "Interview Round",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "random_section",
@@ -90,12 +101,45 @@
    "fieldtype": "Small Text",
    "label": "Candidate Feedback",
    "read_only": 1
+  },
+  {
+   "fieldname": "interview_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "notes_tab",
+   "fieldtype": "Tab Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes_html",
+   "fieldtype": "HTML",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "updates_tab",
+   "fieldtype": "Tab Break",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "updates_html",
+   "fieldtype": "HTML",
+   "label": "Updates"
+  },
+  {
+   "fieldname": "activities_tab",
+   "fieldtype": "Tab Break",
+   "label": "Activities"
+  },
+  {
+   "fieldname": "open_activities_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-17 11:44:06.854907",
+ "modified": "2026-08-21 15:46:35.075509",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Interview Support",

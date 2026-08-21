@@ -2,6 +2,11 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Marketing", {
+	setup(frm) {
+		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
+			render_tab_data(frm);
+		});
+	},
 	async refresh(frm) {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
@@ -10,6 +15,7 @@ frappe.ui.form.on("Marketing", {
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
 		}
+		render_tab_data(frm);
 
 		frappe.call({
 			method: "verp_staffing.crm.api.helpers._is_superior_in_department",
@@ -44,7 +50,6 @@ frappe.ui.form.on("Marketing", {
 			open_create_interview_dialog(frm);
 		});
 
-		
 		frm.set_query("assign_to", () => {
 			return {
 				query: "verp_staffing.crm.api.helpers.get_assign_to_by_service",
@@ -82,6 +87,34 @@ frappe.ui.form.on("Marketing", {
 		frm.trigger("refresh");
 	},
 });
+
+function render_tab_data(frm) {
+	if (frm.is_new()) return;
+	const active_tab = frm.active_tab_map && frm.active_tab_map[frm.doc.name];
+	if (active_tab.df.fieldname === "history_tab") {
+		load_customer_history_if_needed(frm);
+	}
+}
+
+function load_customer_history_if_needed(frm) {
+	if (!frm.doc.name) return;
+	if (frm.__history_loaded_for === frm.doc.name) return; // already loaded for this doc
+
+	frm.__history_loaded_for = frm.doc.name;
+
+	if (frm.fields_dict.customer_details) {
+		frm.fields_dict.customer_details.$wrapper.html(
+			"<p style='color:#888'>Loading history...</p>",
+		);
+	}
+
+	window.verp_staffing.render_customer_history_widget(frm, {
+		fieldname: "customer_details",
+		customer: frm.doc.customer,
+		doctype: "Customer",
+		department: "marketing",
+	});
+}
 
 function handle_assign_to_permission(frm) {
 	if (!frm.doc.assign_to) return;
@@ -194,10 +227,10 @@ function create_interview(frm, values) {
 
 const MKT_INTERVIEW_VISIBLE_COUNT = 5;
 const MKT_INTERVIEW_LIST_MAX_HEIGHT = 230; // px
- 
+
 function render_interview_list(frm) {
 	if (!frm.doc.name) return;
- 
+
 	frappe.call({
 		method: "verp_staffing.marketing.doctype.marketing.marketing.get_interviews_by_marketing",
 		args: {
@@ -276,20 +309,19 @@ function mkt_inject_interview_list_styles() {
 	document.head.appendChild(style);
 }
 
-
 function render_interview_list_html(frm, data) {
 	mkt_inject_interview_list_styles();
- 
+
 	const $wrapper = frm.fields_dict.interview_list.$wrapper;
- 
+
 	if (!data.length) {
 		$wrapper.html("<div class='mkt-interview-empty'>No interviews linked</div>");
 		return;
 	}
- 
+
 	const has_more = data.length > MKT_INTERVIEW_VISIBLE_COUNT;
 	const esc = frappe.utils.escape_html;
- 
+
 	function build_items(list) {
 		return list
 			.map(
@@ -300,11 +332,11 @@ function render_interview_list_html(frm, data) {
 							<span>${esc(d.company || "")}</span>
 						</a>
 					</li>
-				`
+				`,
 			)
 			.join("");
 	}
- 
+
 	$wrapper.html(`
 		<div class="mkt-interview-list-wrap">
 			<ul class="mkt-interview-list">
@@ -319,11 +351,11 @@ function render_interview_list_html(frm, data) {
 			}
 		</div>
 	`);
- 
+
 	const $wrap = $wrapper.find(".mkt-interview-list-wrap");
 	const $list = $wrapper.find(".mkt-interview-list");
 	const $toggle = $wrapper.find(".mkt-interview-toggle-btn");
- 
+
 	function bind_item_clicks() {
 		$wrapper
 			.find(".mkt-interview-item")
@@ -334,12 +366,12 @@ function render_interview_list_html(frm, data) {
 			});
 	}
 	bind_item_clicks();
- 
+
 	if (!has_more) return;
- 
+
 	$toggle.on("click", function () {
 		const expanded = $toggle.attr("data-expanded") === "1";
- 
+
 		if (!expanded) {
 			$list.html(build_items(data));
 			$wrap.addClass("mkt-expanded");
@@ -351,7 +383,7 @@ function render_interview_list_html(frm, data) {
 				.attr("data-expanded", "0")
 				.text(`Read more (${data.length - MKT_INTERVIEW_VISIBLE_COUNT} more)`);
 		}
- 
+
 		bind_item_clicks();
 	});
 }

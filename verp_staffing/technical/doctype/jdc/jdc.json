@@ -5,12 +5,20 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "assign_to",
   "customer",
-  "status",
   "interview_round",
-  "resume",
+  "interview_details",
+  "column_break_tgje",
+  "assign_to",
+  "status",
+  "session_details_section",
+  "scheduled_on",
+  "column_break_kmnb",
+  "from_time",
+  "column_break_zjuc",
+  "to_time",
   "section_break_mtyr",
+  "resume",
   "proof_of_work",
   "proof_of_work_html",
   "customer_feedback",
@@ -27,6 +35,7 @@
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "hidden": 1,
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
@@ -109,7 +118,8 @@
    "fieldtype": "Link",
    "label": "Interview Round",
    "options": "Interview Round",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "customer_feedback",
@@ -118,13 +128,51 @@
    "no_copy": 1,
    "options": "Customer Feedback",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_tgje",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interview_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "session_details_section",
+   "fieldtype": "Section Break",
+   "label": "Session Details"
+  },
+  {
+   "fieldname": "scheduled_on",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Schedule On"
+  },
+  {
+   "fieldname": "column_break_kmnb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "label": "From",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_zjuc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_time",
+   "fieldtype": "Time",
+   "label": "To"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-18 16:24:32.991903",
+ "modified": "2026-08-21 14:46:59.007461",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",

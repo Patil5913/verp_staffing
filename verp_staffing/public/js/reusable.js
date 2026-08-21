@@ -473,7 +473,7 @@ function open_forward_prompt(frm, services) {
 			},
 			{
 				fieldname: "interview_round",
-				fieldtype: "Select",
+				fieldtype: "Autocomplete",
 				label: "Select Interview Round",
 				hidden: 1,
 				options: [],
@@ -649,6 +649,7 @@ function toggle_fields(dialog, frm) {
 			method: "verp_staffing.crm.api.auto_assign.get_customer_interviews",
 			args: {
 				customer: frm.doc.customer || frm.doc.name,
+				service: serviceLower,
 			},
 			callback(r) {
 				const interview_rounds = r.message || [];
@@ -1506,3 +1507,58 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 		},
 	});
 };
+
+window.verp_staffing.render_interview_details = function render_interview_details(frm, html_field, interview_round) {
+	const $wrapper = html_field.$wrapper;
+
+	if (!interview_round) {
+		$wrapper.html("");
+		frm.__interview_details_loaded_for = null;
+		return;
+	}
+
+	if (frm.__interview_details_loaded_for === frm.doc.name) {
+		return;
+	}
+
+	frappe.call({
+		method: "verp_staffing.technical.doctype.interview_support.interview_support.get_interview_details",
+		args: { interview_round: interview_round },
+		callback(r) {
+			frm.__interview_details_loaded_for = frm.doc.name;
+
+			if (!r.message || !Object.keys(r.message).length) {
+				$wrapper.html("");
+				return;
+			}
+
+			$wrapper.html(build_interview_details_html(r.message));
+		},
+	});
+};
+
+function build_interview_details_html(d) {
+	const date_str = d.interview_date ? moment(d.interview_date).format("ddd MMM D") : "";
+
+	const time_str =
+		d.from_time && d.to_time
+			? `${moment(d.from_time, "HH:mm:ss").format("h:mm A")} – ${moment(
+					d.to_time,
+					"HH:mm:ss",
+				).format("h:mm A")}${d.edt_est ? " " + d.edt_est : ""}`
+			: "";
+
+	const row = (label, value) =>
+		value ? `<div><strong>${label}:</strong> ${frappe.utils.escape_html(value)}</div>` : "";
+
+	return `
+		<div class="interview-details-block">
+			${row("Company", d.company)}
+			${row("Role", d.role)}
+			${row("Interview Date", date_str)}
+			${row("Interview Time" + (d.edt_est ? ` (${d.edt_est})` : ""), time_str)}
+			${row("Client Name", d.client_name)}
+			${row("Interview Round", d.interview_round)}
+		</div>
+	`;
+}

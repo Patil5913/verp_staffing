@@ -601,11 +601,6 @@ def _get_feedback_child_fieldname(doctype):
     return _feedback_child_fieldname_cache[doctype]
 
 
-# ---------------------------------------------------------------------
-# get_customer_history
-# ---------------------------------------------------------------------
-
-
 @frappe.whitelist(allow_guest=True)
 def get_customer_history(
     customer=None, token=None, interview_limit=5, interview_offset=0

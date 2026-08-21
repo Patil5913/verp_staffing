@@ -204,7 +204,7 @@ function get_interview_status_badge(status) {
 function render_customer_history(frm, fieldname, data, append_interviews = false) {
 	const state = frm.__customer_history_state[fieldname];
 	let html = "";
-
+	console.log("data: ", data);
 	const card = `
 			border:1px solid #e5e7eb;
 			border-radius:10px;

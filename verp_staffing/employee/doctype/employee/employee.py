@@ -246,7 +246,7 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
             ON e.name = d.parent
         WHERE
             d.department = %s
-            AND d.designation = %s
+            AND d.designation in %s
             AND NOT e.name = %s
     """
 
