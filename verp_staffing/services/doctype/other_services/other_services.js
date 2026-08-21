@@ -15,6 +15,8 @@ frappe.ui.form.on("Other Services", {
 			frm.set_df_property("status", "read_only", 1);
 			frm.set_df_property("assign_to", "read_only", 1);
 		}
+		frm.set_df_property("customer", "hidden", 1);
+
 		window.verp_staffing.render_document_references_table(frm, {
 			fieldname: "proof_of_work",
 			wrapper_field: "proof_of_work_html",

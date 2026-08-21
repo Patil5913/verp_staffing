@@ -13,6 +13,7 @@ frappe.ui.form.on("Technical Other Services", {
 			frm.set_df_property("status", "read_only", 1);
 			frm.set_df_property("assign_to", "read_only", 1);
 		}
+			frm.set_df_property("customer", "hidden", 1);
 
 		const display_fields = await window.get_display_fields(frm.doc.service);
 

@@ -7,8 +7,15 @@ frappe.ui.form.on("Interview Support", {
 		window.add_forward_button(frm);
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
+		window.verp_staffing.render_interview_details(
+			frm,
+			frm.fields_dict.interview_details,
+			frm.doc.interview_round,
+		);
 		const display_fields = await window.get_display_fields(frm.doctype);
-
+		if (frm.doc.interview_round) {
+			frm.set_df_property("interview_round", "hidden", 1);
+		}
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
 			frm.set_df_property("assign_to", "read_only", 1);

@@ -8,6 +8,7 @@ from verp_staffing.crm.api.customer import update_customer_stage
 from verp_staffing.services.doctype.document_references.document_references import (
     set_document_reference_titles,
 )
+from frappe import _
 
 # Child fields we never treat as "content" for the purposes of deciding
 # whether a proof_of_work row was actually edited.
@@ -118,8 +119,47 @@ class InterviewSupport(Document):
                 frappe.throw(f"Document is required in row {row.idx}.")
 
     def after_insert(self):
-        frappe.set_value("Interview Round", self.interview_round, "support", 1)
+        frappe.db.set_value("Interview Round", self.interview_round, "support", 1)
         update_customer_stage(
             customer=self.customer,
             service="jdc",
         )
+
+
+@frappe.whitelist()
+def get_interview_details(interview_round):
+	"""Fetch display data for Interview Support's interview_details HTML field.
+	"""
+	if not interview_round:
+		return {}
+
+	round_data = frappe.db.get_value(
+		"Interview Round",
+		interview_round,
+		["round", "date_of_interview", "from_time", "to_time", "edt_est", "parent"],
+		as_dict=True,
+	)
+
+	if not round_data or not round_data.parent:
+		return {}
+
+	if not frappe.has_permission("Interview", "read", round_data.parent):
+		frappe.throw(_("Not permitted to view this Interview"), frappe.PermissionError)
+
+	interview_data = frappe.get_cached_value(
+		"Interview",
+		round_data.parent,
+		["company", "role"],
+		as_dict=True,
+	)
+
+	return {
+		"company": interview_data.company,
+		"role": interview_data.role,
+		"client_name": interview_data.company,
+		"interview_date": round_data.date_of_interview,
+		"from_time": round_data.from_time,
+		"to_time": round_data.to_time,
+		"edt_est": round_data.edt_est,
+		"interview_round": round_data.round,
+	}

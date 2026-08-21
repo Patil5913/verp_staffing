@@ -33,6 +33,7 @@
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "hidden": 1,
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
@@ -114,7 +115,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-17 12:21:54.857014",
+ "modified": "2026-08-21 14:50:20.360740",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Training",

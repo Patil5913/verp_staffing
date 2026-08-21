@@ -363,28 +363,48 @@ def notify_assignees(doc, service, customer):
 
 
 @frappe.whitelist()
-def get_customer_interviews(customer):
-
+def get_customer_interviews(customer, service=None):
     if not customer:
         return []
 
-    marketing = frappe.get_value("Marketing", {"customer": customer}, "name")
-
+    marketing = frappe.get_cached_value("Marketing", {"customer": customer}, "name")
     if not marketing:
         return []
 
-    interviews = frappe.db.sql(
-        """
-        SELECT
-            ir.name AS value,
-            CONCAT(ir.round,' ','(', i.company, ')') AS label
-        FROM `tabInterview` i
-        INNER JOIN `tabInterview Round` ir ON ir.parent = i.name
-        WHERE i.marketing_link = %s
-        """,
-        (marketing,),
-        as_dict=True,
-    )
+    base_select = """
+		SELECT
+			ir.name AS value,
+			CONCAT(ir.round, ' (', i.company, ')') AS label
+		FROM `tabInterview` i
+		INNER JOIN `tabInterview Round` ir ON ir.parent = i.name
+	"""
+
+    if service == "jdc":
+        query = (
+            base_select
+            + """
+			LEFT JOIN `tabJDC` jdc ON jdc.interview_round = ir.name
+			WHERE i.marketing_link = %(marketing)s
+			AND jdc.name IS NULL
+		"""
+        )
+    elif service == "interview support":
+        query = (
+            base_select
+            + """
+			WHERE i.marketing_link = %(marketing)s
+			AND ir.support = 0
+		"""
+        )
+    else:
+        query = (
+            base_select
+            + """
+			WHERE i.marketing_link = %(marketing)s
+		"""
+        )
+
+    interviews = frappe.db.sql(query, {"marketing": marketing}, as_dict=True)
 
     return interviews
 

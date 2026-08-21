@@ -8,6 +8,14 @@ frappe.ui.form.on("JDC", {
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 		const display_fields = await window.get_display_fields(frm.doctype);
+		window.verp_staffing.render_interview_details(
+			frm,
+			frm.fields_dict.interview_details,
+			frm.doc.interview_round,
+		);
+		if (frm.doc.interview_round) {
+			frm.set_df_property("interview_round", "hidden", 1);
+		}
 
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
