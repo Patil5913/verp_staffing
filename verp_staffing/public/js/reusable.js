@@ -1508,7 +1508,11 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 	});
 };
 
-window.verp_staffing.render_interview_details = function render_interview_details(frm, html_field, interview_round) {
+window.verp_staffing.render_interview_details = function render_interview_details(
+	frm,
+	html_field,
+	interview_round,
+) {
 	const $wrapper = html_field.$wrapper;
 
 	if (!interview_round) {
@@ -1553,12 +1557,11 @@ function build_interview_details_html(d) {
 
 	return `
 		<div class="interview-details-block">
-			${row("Company", d.company)}
+			${row("Interview Round", d.interview_round)}
 			${row("Role", d.role)}
 			${row("Interview Date", date_str)}
 			${row("Interview Time" + (d.edt_est ? ` (${d.edt_est})` : ""), time_str)}
 			${row("Client Name", d.client_name)}
-			${row("Interview Round", d.interview_round)}
 		</div>
 	`;
 }

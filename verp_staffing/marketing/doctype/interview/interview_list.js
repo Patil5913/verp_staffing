@@ -476,7 +476,7 @@
 
 				return `
 			<div class="kanban-round-row">
-				<span class="kanban-round-badge">R${frappe.utils.escape_html(r.round ?? "")}</span>
+				<span class="kanban-round-badge">${frappe.utils.escape_html(r.round ?? "")}</span>
 				<span class="kanban-round-date">${frappe.utils.escape_html(date)}</span>
 				<span class="indicator-pill ${color} kanban-round-status">
 					${frappe.utils.escape_html(r.status || __("Unknown"))}
