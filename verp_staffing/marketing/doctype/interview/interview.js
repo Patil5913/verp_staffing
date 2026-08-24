@@ -412,7 +412,7 @@ function fetch_and_render_resume(frm) {
 				}
 				set_html(`
 				<div style="padding:8px">
-					
+					<a
 						href="${resume.document}"
 						target="_blank"
 						style="color:#1a73e8;font-weight:600;text-decoration:none;"

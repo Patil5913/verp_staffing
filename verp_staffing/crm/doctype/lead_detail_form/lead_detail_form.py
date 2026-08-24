@@ -1108,7 +1108,7 @@ def apply_signature_and_audit_to_pdf(
         otp_logs = [l for l in auth_logs if l.get("event") == "otp_verified"]
 
         if otp_logs:
-            section_title("USER VERIFICATION")
+            section_title("EMAIL OTP VERIFICATION")
 
             for log in otp_logs:
                 ts = fmt_ts(
