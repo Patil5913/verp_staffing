@@ -50,7 +50,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-24 17:03:05.028135",
+ "modified": "2026-08-24 17:55:18.318285",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Pdf Agreement Template",
@@ -98,6 +98,11 @@
   {
    "read": 1,
    "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "CR",
    "select": 1
   }
  ],

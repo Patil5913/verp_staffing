@@ -76,7 +76,7 @@
  "index_web_pages_for_search": 1,
  "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2026-08-18 14:59:18.674613",
+ "modified": "2026-08-24 17:51:54.509128",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
@@ -171,6 +171,22 @@
    "role": "Recruiter",
    "select": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
   }
  ],
  "row_format": "Dynamic",
