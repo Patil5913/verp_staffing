@@ -1,6 +1,54 @@
+// ---------------------------------------------------------------------
+// Shared marketing_link filter persistence — identical block exists in
+// the sibling file (interview_list.js / interview_calendar.js). Guarded
+// so whichever loads first initializes it.
+//
+// WHY: Frappe's List/Kanban/Gantt/Calendar view-switcher changes the URL
+// PATH (.../view/kanban/Interview vs .../view/list/Interview) but does
+// NOT preserve the existing query string. Reading marketing_link purely
+// from window.location.search — which every prior version of this logic
+// did — silently returns null the moment the user switches view type,
+// even though their selected customer never changed. This adds a
+// sessionStorage fallback so the value survives that URL loss, and syncs
+// the URL back from storage whenever possible so deep-linking still works.
+// ---------------------------------------------------------------------
+if (!window.InterviewMarketingFilter) {
+	const STORAGE_KEY = "interview_marketing_link";
+
+	window.InterviewMarketingFilter = {
+		get() {
+			const from_url = new URLSearchParams(window.location.search).get("marketing_link");
+			if (from_url) {
+				try {
+					sessionStorage.setItem(STORAGE_KEY, from_url);
+				} catch (e) {}
+				return from_url;
+			}
+
+			let from_storage = null;
+			try {
+				from_storage = sessionStorage.getItem(STORAGE_KEY);
+			} catch (e) {}
+			if (from_storage) {
+				window.InterviewMarketingFilter.set(from_storage);
+			}
+			return from_storage;
+		},
+
+		set(value) {
+			if (!value) return;
+			try {
+				sessionStorage.setItem(STORAGE_KEY, value);
+			} catch (e) {}
+			const url = new URL(window.location.href);
+			url.searchParams.set("marketing_link", value);
+			window.history.replaceState({}, "", url);
+		},
+	};
+}
+
 (function () {
 	"use strict";
-
 
 	const ROUND_SUMMARY_METHOD =
 		"verp_staffing.marketing.doctype.interview.interview.get_round_summary_for_kanban";
@@ -429,7 +477,6 @@
 
 		state.pendingTodayUpdate.add(name);
 
-
 		Promise.resolve(apply_status_change(listview, name, "Today"))
 			.catch((err) => {
 				console.error("[Interview Kanban] auto Today status update failed", err);
@@ -589,7 +636,6 @@
 				schedule_board_refresh(listview);
 				return;
 			}
-
 
 			state.pendingStatusChange.add(name);
 			state.cardColumnState.delete(name);
@@ -969,20 +1015,27 @@
 	// -----------------------------------------------------------------
 
 	function get_marketing_param() {
-		return new URLSearchParams(window.location.search).get("marketing_link");
+		return window.InterviewMarketingFilter.get();
 	}
 
 	function set_marketing_param(value) {
-		const url = new URL(window.location.href);
-		url.searchParams.set("marketing_link", value);
-		window.history.replaceState({}, "", url);
+		window.InterviewMarketingFilter.set(value);
 	}
 
 	function apply_marketing_auto_filter(listview) {
 		if (state.marketingIsSetting) return;
 		const param = get_marketing_param();
-		if (state.marketingAppliedValue === param && param) return;
-		auto_apply_marketing_filter(listview);
+		if (!param) return; // genuinely never selected a customer this session
+		auto_apply_marketing_filter(listview); // cheap + idempotent, safe to always verify
+	}
+
+	function marketing_filter_already_applied(listview, value) {
+		try {
+			const filters = listview.filter_area?.filter_list?.filters || [];
+			return filters.some((f) => f.fieldname === "marketing_link" && f.value === value);
+		} catch (e) {
+			return false;
+		}
 	}
 
 	function auto_apply_marketing_filter(listview) {
@@ -998,10 +1051,10 @@
 					const body = listview.page?.body;
 					if (body) {
 						body.html(`
-							<div class="text-muted text-center mt-5">
-								You are not assigned to any customer.
-							</div>
-						`);
+						<div class="text-muted text-center mt-5">
+							You are not assigned to any customer.
+						</div>
+					`);
 					}
 					return;
 				}
@@ -1009,8 +1062,12 @@
 				const value = param || options[0].value;
 				if (!param) set_marketing_param(value);
 
-				if (state.marketingAppliedValue === value) {
-					update_customer_label(listview.page, options[0].label);
+				update_customer_label(listview.page, options[0].label);
+
+				// Check THIS listview's actual filter_area, not cached memory
+				// from a previous view instance.
+				if (marketing_filter_already_applied(listview, value)) {
+					state.marketingAppliedValue = value;
 					return;
 				}
 
@@ -1018,7 +1075,6 @@
 				state.marketingAppliedValue = value;
 
 				set_filter_without_loop(listview, value);
-				update_customer_label(listview.page, options[0].label);
 
 				setTimeout(() => {
 					state.marketingIsSetting = false;
@@ -1131,9 +1187,11 @@
 		if (typeof filter_area.clear === "function") {
 			const original_clear = filter_area.clear.bind(filter_area);
 			filter_area.clear = function (...args) {
-				original_clear(...args);
-				if (state.marketingIsSetting) return;
-				reapply_marketing_filter_after_clear(listview);
+				const result = original_clear(...args); // capture it
+				if (!state.marketingIsSetting) {
+					reapply_marketing_filter_after_clear(listview);
+				}
+				return result;
 			};
 		}
 
@@ -1141,9 +1199,11 @@
 		if (filter_list && typeof filter_list.clear_filters === "function") {
 			const original_list_clear = filter_list.clear_filters.bind(filter_list);
 			filter_list.clear_filters = function (...args) {
-				original_list_clear(...args);
-				if (state.marketingIsSetting) return;
-				reapply_marketing_filter_after_clear(listview);
+				const result = original_list_clear(...args); // capture it
+				if (!state.marketingIsSetting) {
+					reapply_marketing_filter_after_clear(listview);
+				}
+				return result; // same requirement as above
 			};
 		}
 	}

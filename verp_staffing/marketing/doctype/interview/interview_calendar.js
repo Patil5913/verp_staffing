@@ -1,3 +1,52 @@
+// ---------------------------------------------------------------------
+// Shared marketing_link filter persistence — identical block exists in
+// the sibling file (interview_list.js / interview_calendar.js). Guarded
+// so whichever loads first initializes it.
+//
+// WHY: Frappe's List/Kanban/Gantt/Calendar view-switcher changes the URL
+// PATH (.../view/kanban/Interview vs .../view/list/Interview) but does
+// NOT preserve the existing query string. Reading marketing_link purely
+// from window.location.search — which every prior version of this logic
+// did — silently returns null the moment the user switches view type,
+// even though their selected customer never changed. This adds a
+// sessionStorage fallback so the value survives that URL loss, and syncs
+// the URL back from storage whenever possible so deep-linking still works.
+// ---------------------------------------------------------------------
+if (!window.InterviewMarketingFilter) {
+	const STORAGE_KEY = "interview_marketing_link";
+
+	window.InterviewMarketingFilter = {
+		get() {
+			const from_url = new URLSearchParams(window.location.search).get("marketing_link");
+			if (from_url) {
+				try {
+					sessionStorage.setItem(STORAGE_KEY, from_url);
+				} catch (e) {}
+				return from_url;
+			}
+
+			let from_storage = null;
+			try {
+				from_storage = sessionStorage.getItem(STORAGE_KEY);
+			} catch (e) {}
+			if (from_storage) {
+				window.InterviewMarketingFilter.set(from_storage);
+			}
+			return from_storage;
+		},
+
+		set(value) {
+			if (!value) return;
+			try {
+				sessionStorage.setItem(STORAGE_KEY, value);
+			} catch (e) {}
+			const url = new URL(window.location.href);
+			url.searchParams.set("marketing_link", value);
+			window.history.replaceState({}, "", url);
+		},
+	};
+}
+
 frappe.views.calendar["Interview"] = {
 	field_map: {
 		start: "start",
@@ -327,6 +376,198 @@ function ivw_on_interview_gantt_route() {
 	window.__interviewGanttTodayObserver = observer;
 })();
 
+(function watch_interview_gantt_empty_state() {
+	if (window.__interviewGanttEmptyObserver) return;
+
+	function customize_empty_state() {
+		if (!ivw_on_interview_gantt_route()) return;
+
+		document.querySelectorAll(".no-result, .msg-box").forEach((box) => {
+			if (box.dataset.ivwEmptyPatched) return;
+			if (!(box.textContent || "").includes("No Interview found")) return;
+
+			box.dataset.ivwEmptyPatched = "1";
+
+			const message_el = box.querySelector("p");
+			if (message_el) {
+				message_el.textContent = __(
+					"No interview rounds found for the selected customer.",
+				);
+			}
+
+			box.querySelectorAll(".btn-new-doc").forEach((btn) => {
+				btn.style.display = "none";
+			});
+		});
+	}
+
+	const observer = new MutationObserver(() => customize_empty_state());
+	observer.observe(document.body, { childList: true, subtree: true });
+	window.__interviewGanttEmptyObserver = observer;
+})();
+
+// ---------------------------------------------------------------------
+// frappe-gantt (vendor library, not our code) throws when given a
+// genuinely empty task list — it tries to compute the timeline's date
+// range from the min/max task dates, gets null, and calls .getFullYear()
+// on it without a guard. This is a real bug in the third-party library,
+// triggered exactly when a filtered Gantt view correctly has zero rows
+// (e.g. a customer with no interview rounds yet).
+//
+// Left unhandled, this uncaught exception aborts whatever
+// frappe.run_serially chain is currently running, which can leave later
+// steps in that same navigation cycle (including other views' init code)
+// in a partially-run state. Wrapping render_gantt in try/catch contains
+// the failure to Gantt's own rendering step and shows our own empty
+// message instead of letting it escape and disrupt anything downstream.
+// ---------------------------------------------------------------------
+(function patch_gantt_empty_state_crash() {
+	function apply_patch() {
+		const proto = frappe.views && frappe.views.GanttView && frappe.views.GanttView.prototype;
+		if (!proto || typeof proto.render_gantt !== "function" || proto.render_gantt.__ivw_patched) {
+			return false;
+		}
+
+		const original_render_gantt = proto.render_gantt;
+		proto.render_gantt = function (...args) {
+			try {
+				return original_render_gantt.apply(this, args);
+			} catch (e) {
+				console.warn(
+					"[Interview Gantt] vendor gantt library failed (likely zero-task edge case) — showing fallback empty state instead of throwing.",
+					e
+				);
+				if (this.$result) {
+					this.$result.html(`
+						<div class="text-muted text-center mt-5">
+							${__("No interview rounds found for the selected customer.")}
+						</div>
+					`);
+				}
+			}
+		};
+		proto.render_gantt.__ivw_patched = true;
+		return true;
+	}
+
+	// GanttView's class may not be loaded/registered yet at the moment
+	// this script evaluates — retry briefly rather than assuming timing.
+	if (!apply_patch()) {
+		const interval = setInterval(() => {
+			if (apply_patch()) clearInterval(interval);
+		}, 300);
+		setTimeout(() => clearInterval(interval), 5000);
+	}
+})();
+
+
+function ivw_on_interview_calendar_route() {
+	const route = frappe.get_route ? frappe.get_route() : [];
+	return route[0] === "List" && route[1] === "Interview" && route[2] === "Calendar";
+}
+
+// ---------------------------------------------------------------------
+// Force a genuine refetch when the Calendar route is active and the
+// selected customer differs from what's currently rendered.
+//
+// WHY A PERSISTENT MutationObserver (not a route-change poll): the
+// customer can also change via the "Select Customer" dialog while
+// already sitting on Calendar — no route change fires in that case, so
+// anything keyed only off frappe.router "change" would miss it. An
+// observer watching the whole document catches every DOM update
+// regardless of what triggered it, same pattern already proven for the
+// Gantt bar renderer and today-marker recolor in this file.
+//
+// WHY TARGET ".fc" SPECIFICALLY: FullCalendar's jQuery plugin attaches
+// its own "fc" class to whichever exact element .fullCalendar() was
+// called on. Calling .fullCalendar(method) on any other element (a
+// wrapper, a parent, a guessed class name) either throws or silently
+// no-ops — it will never find the plugin instance. ".fc" is guaranteed
+// present on that exact element across FullCalendar v3 installs,
+// unlike wrapper class names which can vary by Frappe version.
+// ---------------------------------------------------------------------
+(function force_interview_calendar_refetch_on_route() {
+	if (window.__interviewCalendarRefetchObserver) return;
+
+	let last_fetched_marketing = null;
+
+	function try_refetch() {
+		if (!ivw_on_interview_calendar_route()) return;
+
+		const current = ivw_get_marketing_param();
+		if (current === last_fetched_marketing) return; // nothing actually changed
+
+		const $fc = $(".fc").first();
+		if (!$fc.length) return; // plugin not mounted on this pass yet
+
+		try {
+			$fc.fullCalendar("refetchEvents");
+			last_fetched_marketing = current;
+		} catch (e) {
+			// Plugin present in DOM but not yet initialized — next
+			// mutation will retry.
+		}
+	}
+
+	const observer = new MutationObserver(() => try_refetch());
+	observer.observe(document.body, { childList: true, subtree: true });
+	window.__interviewCalendarRefetchObserver = observer;
+
+	// Also reset the "last known" value the instant we leave the route,
+	// so returning to Calendar later always re-checks rather than
+	// trusting a stale comparison from a previous visit.
+	frappe.router.on("change", () => {
+		if (!ivw_on_interview_calendar_route()) {
+			last_fetched_marketing = null;
+		}
+	});
+})();
+
+function ivw_get_marketing_param() {
+	return window.InterviewMarketingFilter.get();
+}
+
+// Frappe's Calendar `filters` config only knows about fields you declare
+// in frappe.views.calendar[...].filters (company/role/status here) — it
+// has no concept of marketing_link, so it never includes it in the
+// payload sent to get_events_method, regardless of what's in the URL.
+// This merges it in unconditionally, right before the request goes out,
+// so correctness never depends on Frappe's own filter bookkeeping.
+function ivw_merge_marketing_filter(existing_filters) {
+	let filters = existing_filters;
+	try {
+		filters = typeof filters === "string" ? JSON.parse(filters) : filters || [];
+	} catch (e) {
+		filters = [];
+	}
+	if (!Array.isArray(filters)) filters = [];
+
+	const param = ivw_get_marketing_param();
+	if (!param) return filters;
+
+	const already_has = filters.some(
+		(f) => Array.isArray(f) && (f[0] === "marketing_link" || f[1] === "marketing_link"),
+	);
+	return already_has ? filters : filters.concat([["marketing_link", "=", param]]);
+}
+
+function ivw_normalize_call_args(call_args) {
+	// frappe.call supports two invocation styles — object-style and
+	// positional-style. Different Frappe view classes use different
+	// ones internally (this is the exact same ambiguity that broke
+	// get_list_settings earlier). Detecting only one style is why the
+	// Gantt branch worked while the Calendar branch silently never
+	// matched at all.
+	const first = call_args[0];
+	if (first && typeof first === "object" && !Array.isArray(first)) {
+		return { style: "object", opts: first, method: first.method, args: first.args, callback: first.callback };
+	}
+	if (typeof first === "string") {
+		return { style: "positional", opts: null, method: first, args: call_args[1], callback: call_args[2] };
+	}
+	return { style: "unknown", opts: null, method: null, args: null, callback: null };
+}
+
 (function override_interview_gantt_fetch() {
 	if (frappe.__interview_gantt_call_patched) return;
 	frappe.__interview_gantt_call_patched = true;
@@ -334,11 +575,21 @@ function ivw_on_interview_gantt_route() {
 	const original_call = frappe.call;
 
 	frappe.call = function (...call_args) {
-		const opts = call_args[0];
-		const is_object_call = opts && typeof opts === "object" && !Array.isArray(opts);
-		const method = is_object_call ? opts.method : null;
-		const args = is_object_call ? opts.args : null;
+		const { method, args, callback } = ivw_normalize_call_args(call_args);
 
+		// ---- Calendar: get_interview_round_events ----
+		if (method === "verp_staffing.marketing.doctype.interview.interview.get_interview_round_events") {
+			const merged_args = Object.assign({}, args, {
+				filters: JSON.stringify(ivw_merge_marketing_filter(args && args.filters)),
+			});
+			const param = ivw_get_marketing_param();
+			if (param) merged_args.marketing_link = param; // explicit, unambiguous — independent of filters shape
+
+			return original_call.call(frappe, { method, args: merged_args, callback });
+		}
+
+		// ---- Gantt: the doomed reportview.get call (unchanged logic,
+		// now reachable regardless of calling convention) ----
 		const is_doomed_reportview_call =
 			method === "frappe.desk.reportview.get" &&
 			args &&
@@ -347,35 +598,32 @@ function ivw_on_interview_gantt_route() {
 			args.order_by.indexOf("`start`") !== -1;
 
 		if (ivw_on_interview_gantt_route() && is_doomed_reportview_call) {
+			const merged_filters = ivw_merge_marketing_filter(args.filters);
+
 			return original_call
 				.call(frappe, {
 					method: "verp_staffing.marketing.doctype.interview.interview.get_interview_gantt_rows",
-					args: { filters: JSON.stringify(args.filters || []) },
+					args: { filters: JSON.stringify(merged_filters) },
 				})
 				.then((r) => {
 					const rows = r.message || [];
-
 					window.__interviewGanttMap = {};
 					rows.forEach((row) => {
 						window.__interviewGanttMap[row.name] = {
-							interview: row.interview,
-							company: row.company,
-							role: row.role,
-							round: row.round,
-							status: row.status,
+							interview: row.interview, company: row.company, role: row.role,
+							round: row.round, status: row.status,
 							date_of_interview: row.date_of_interview,
-							from_time: row.from_time,
-							to_time: row.to_time,
-							edt_est: row.edt_est,
+							from_time: row.from_time, to_time: row.to_time, edt_est: row.edt_est,
 						};
 					});
-
 					const result = { message: rows };
-					if (opts.callback) opts.callback(result);
+					if (callback) callback(result);
 					return result;
 				});
 		}
 
+		// ---- Pass-through: forward every other call in the app exactly
+		// as originally invoked, untouched. ----
 		return original_call.apply(frappe, call_args);
 	};
 })();
@@ -427,10 +675,14 @@ function render_interview_calendar_card(event, element, view) {
 				<span class="ivwc-dot"></span>
 				<span class="ivwc-status-text">${esc(status)}</span>
 			</div>
-			${when ? `
+			${
+				when
+					? `
 			<div class="ivwc-row ivwc-row-time">
 				<span class="ivwc-time">${esc(when)}</span>
-			</div>` : ""}
+			</div>`
+					: ""
+			}
 		</div>
 	`;
 

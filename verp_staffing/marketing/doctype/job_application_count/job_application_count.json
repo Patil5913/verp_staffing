@@ -34,6 +34,7 @@
    "fieldname": "total_application",
    "fieldtype": "Int",
    "in_list_view": 1,
+   "read_only": 1,
    "label": "Total Application"
   }
  ],

@@ -1,7 +1,5 @@
 import re
 from datetime import datetime
-
-# import frappe
 from frappe.utils import cstr
 from frappe.model.naming import getseries
 
@@ -12,7 +10,8 @@ DOCTYPE_PREFIX_MAP = {
     "Technical Other Services": "TOS",
     "Cover Letter" : "CL",
     "Marketing Other Services" : "MOS",
-    "Lead Detail Form" : "LDF"
+    "Lead Detail Form" : "LDF",
+    "Interview Support" : "IS",
 }
 
 def sanitize(value: str) -> str:
