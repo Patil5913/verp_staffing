@@ -385,20 +385,24 @@ def _build_conditions(filters):
                 fieldname, operator, value = f[0], f[1], f[2]
             else:
                 continue
-            if fieldname in ("company", "role", "status") and operator == "=":
+            if fieldname in ("company", "role", "status", "marketing_link") and operator == "=":
                 conditions += f" AND i.{fieldname} = %({fieldname})s"
                 values[fieldname] = value
     return conditions, values
 
 
 @frappe.whitelist()
-def get_interview_round_events(start, end, filters=None):
-	"""Calendar event source."""
+def get_interview_round_events(start, end, filters=None, marketing_link=None):
+    # Calendar event source.
 	conditions, values = _build_conditions(filters)
+
+	if marketing_link:
+		conditions += " AND i.marketing_link = %(marketing_link)s"
+		values["marketing_link"] = marketing_link
+
 	values.update({"start": start, "end": end})
 
-	rounds = frappe.db.sql(
-		f"""
+	rounds = frappe.db.sql(f"""
 		SELECT ir.name AS round_name, ir.parent AS interview, ir.round,
 			ir.date_of_interview, ir.from_time, ir.to_time, ir.edt_est,
 			ir.status AS round_status, i.company, i.role, i.status AS interview_status
@@ -407,33 +411,26 @@ def get_interview_round_events(start, end, filters=None):
 		WHERE ir.date_of_interview BETWEEN %(start)s AND %(end)s
 		{conditions}
 		ORDER BY ir.date_of_interview, ir.from_time
-	""",
-		values,
-		as_dict=True,
-	)
+	""", values, as_dict=True)
 
 	events = []
 	for r in rounds:
 		has_time = bool(r.from_time and r.to_time)
 		status = r.round_status or r.interview_status or ""
-		events.append(
-			{
-				"name": r.interview,
-				"subject": f"{r.company} — {r.role} (Round {r.round})",
-				"start": f"{r.date_of_interview} {r.from_time or '09:00:00'}",
-				"end": f"{r.date_of_interview} {r.to_time or '10:00:00'}",
-				"allDay": 0 if has_time else 1,
-				"status": status,
-				# NEW — separate fields so the client can build a structured
-				# card instead of parsing pieces back out of `subject`.
-				"company": r.company,
-				"role": r.role,
-				"round": r.round,
-				"from_time": r.from_time,
-				"to_time": r.to_time,
-				"edt_est": r.edt_est,
-			}
-		)
+		events.append({
+			"name": r.interview,
+			"subject": f"{r.company} — {r.role} (Round {r.round})",
+			"start": f"{r.date_of_interview} {r.from_time or '09:00:00'}",
+			"end": f"{r.date_of_interview} {r.to_time or '10:00:00'}",
+			"allDay": 0 if has_time else 1,
+			"status": status,
+			"company": r.company,
+			"role": r.role,
+			"round": r.round,
+			"from_time": r.from_time,
+			"to_time": r.to_time,
+			"edt_est": r.edt_est,
+		})
 	return events
 
 

@@ -35,7 +35,7 @@ class InterviewSupport(Document):
 
         customer_name = frappe.db.get_value("Customer", self.customer, "name1")
 
-        self.name = generate_name_series("I_S", customer_name)
+        self.name = generate_name_series("Interview Support", customer_name)
 
     def validate(self):
         set_document_reference_titles(self.proof_of_work)

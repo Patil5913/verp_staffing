@@ -16,9 +16,10 @@
   "job_application_count",
   "section_break_ivbq",
   "start_date",
-  "target_based_on",
   "column_break_gkfy",
   "target",
+  "column_break_jxks",
+  "target_based_on",
   "section_break_xurw",
   "customer_details_html",
   "history_tab",
@@ -158,6 +159,10 @@
   {
    "fieldname": "customer_details",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "column_break_jxks",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
@@ -165,7 +170,7 @@
  "index_web_pages_for_search": 1,
  "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2026-08-21 15:57:51.034282",
+ "modified": "2026-08-25 10:59:43.694939",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing",
