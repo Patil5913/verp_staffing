@@ -133,39 +133,3 @@ def get_chart(data):
         "type": "bar",
         "colors": ["#8494FF"],
     }
-
-@frappe.whitelist()
-def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
-    """
-    Link field search for lead_owner filter.
-    Non-admin sees only their visible hierarchy (same rule as the report).
-    Admin sees all employees.
-    """
-    user = frappe.session.user
-    values = {
-        "txt": f"%{txt}%",
-        "start": int(start),
-        "page_len": int(page_len),
-    }
-    conditions = [
-        "(name LIKE %(txt)s OR employee_name LIKE %(txt)s)"
-    ]
-
-    if user != "Administrator":
-        allowed = get_visible_employee_names_cached()
-        if not allowed:
-            return []
-        placeholders = _build_in_placeholders("se", allowed, values)
-        conditions.append(f"name IN ({placeholders})")
-
-    query = (
-        "SELECT "
-        "name, employee_name "
-        "FROM `tabEmployee` "
-        "WHERE "
-        + " AND ".join(conditions)
-        + " ORDER BY name "
-        "LIMIT %(start)s, %(page_len)s"
-    )
-
-    return frappe.db.sql(query, values)
