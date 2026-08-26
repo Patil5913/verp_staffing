@@ -264,7 +264,7 @@ window.InterviewMarketingFilter =
 		// in two incompatible formats, is what produced the nested
 		// ["in",[...]] garbage you're seeing in the address bar.
 		const STORAGE_KEY = "interview_marketing_links_v2";
-		const URL_PARAM = "ivw_customers";
+		const URL_PARAM = "marketing_link";
 
 		function encode_list(list) {
 			return list.map(encodeURIComponent).join(",");
