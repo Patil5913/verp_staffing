@@ -940,6 +940,8 @@ def customer_query(user):
 
 
 def interview_query(user):
+    if user == "Administrator":
+            return ""
 
     visible_users = get_visible_user_names_cached()
     if not visible_users:
