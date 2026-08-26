@@ -56,7 +56,7 @@ frappe.ui.form.on("ERP Configuration", {
 		});
 	},
 
-	before_save(frm) {
+	async before_save(frm) {
 		// Capture any manually typed email values
 		let wrapper = frm.get_field("email_configuration").$wrapper;
 		wrapper.find(".email-account").each(function (i) {
@@ -65,9 +65,14 @@ frappe.ui.form.on("ERP Configuration", {
 			}
 		});
 
-		// Write to doc AND mark form dirty so Frappe actually saves it
 		frm.doc.email_configuration_detail = JSON.stringify(email_config_rows);
 		frm.dirty();
+
+		// Flush every staged System Settings edit as one request. Awaited
+		// so the ERP Configuration save doesn't proceed if this fails —
+		// you don't want the doc reporting "saved" while System Settings
+		// silently didn't update.
+		await flush_system_settings_changes();
 	},
 });
 
@@ -1155,6 +1160,8 @@ function render_website_app_settings(frm) {
 		});
 		logo_ctrl.set_value(data.app_logo);
 		logo_ctrl.df.onchange = () => save_field("app_logo", logo_ctrl.get_value());
+
+		render_system_settings_fields(frm);
 	}
 
 	function save_field(fieldname, value) {
@@ -1467,4 +1474,164 @@ function sd_errors_html(errors) {
 				</div>`,
 		)
 		.join("");
+}
+
+const SYSTEM_SETTINGS_EXISTING_SECTION_FIELDS = ["country", "language", "time_zone", "currency"];
+
+const SYSTEM_SETTINGS_FIELD_GROUPS = [
+	{
+		label: "Date and Number Format",
+		fields: ["date_format", "time_format", "number_format"],
+	},
+	{
+		label: "Session, Password & Email Limits",
+		fields: [
+			"session_expiry",
+			"deny_multiple_sessions",
+			"reset_password_link_expiry_duration",
+			"password_reset_limit",
+			"welcome_email_template",
+			"reset_password_template",
+		],
+	},
+	{
+		label: "Files",
+		fields: ["max_file_size", "allowed_file_extensions"],
+	},
+];
+
+const SYSTEM_SETTINGS_READ_ONLY_FIELDS = new Set(["time_zone"]);
+
+let system_settings_pending_changes = {};
+let system_settings_current_values = {}; 
+
+function stage_system_settings_change(frm, fieldname, value) {
+	system_settings_pending_changes[fieldname] = value;
+	system_settings_current_values[fieldname] = value; 
+	frm.dirty(); 
+}
+
+function flush_system_settings_changes() {
+	if (!Object.keys(system_settings_pending_changes).length) {
+		return Promise.resolve();
+	}
+
+	const values_to_save = system_settings_pending_changes;
+	system_settings_pending_changes = {}; // clear now so a fresh edit mid-flush isn't dropped or double-sent
+
+	return new Promise((resolve, reject) => {
+		frappe.call({
+			method:
+				"verp_staffing.settings.doctype.erp_configuration.erp_configuration.update_system_settings_fields",
+			args: { values: values_to_save },
+			freeze: true,
+			freeze_message: __("Updating System Settings..."),
+			callback(r) {
+				const saved = (r.message && r.message.values) || {};
+				Object.assign(system_settings_current_values, saved);
+
+				if ("language" in values_to_save) {
+					frappe.msgprint(__("Refreshing..."));
+					window.location.reload();
+				}
+				resolve();
+			},
+			error() {
+				Object.assign(system_settings_pending_changes, values_to_save);
+				frappe.msgprint({
+					title: __("Error"),
+					indicator: "red",
+					message: __("Failed to update System Settings. Your changes were not saved."),
+				});
+				reject(new Error("system settings save failed"));
+			},
+		});
+	});
+}
+
+function render_system_settings_field_row(
+	frm,
+	$wrapper,
+	current_values,
+	timezones,
+	fieldnames,
+	section_label,
+) {
+	if (section_label) {
+		$wrapper.append(`
+			<div style="font-size:17px;font-weight:600;margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--border-color);">
+				${frappe.utils.escape_html(section_label)}
+			</div>
+		`);
+	}
+
+	const $row = $('<div class="row"></div>').appendTo($wrapper);
+
+	fieldnames.forEach((fieldname) => {
+		const source_df = frappe.meta.get_docfield("System Settings", fieldname);
+		if (!source_df) return; // typo guard — fails loud in console rather than silently
+
+		// Clone so the cached System Settings meta is never mutated.
+		const df = Object.assign({}, source_df);
+		if (fieldname === "time_zone") {
+			df.options = timezones.join("\n");
+		}
+
+		const $col = $('<div class="col-sm-6" style="margin-bottom:10px;"></div>').appendTo($row);
+
+		const control = frappe.ui.form.make_control({
+			parent: $col,
+			df,
+			render_input: true,
+		});
+
+		control.set_value(current_values[fieldname]).then(() => {
+			if (SYSTEM_SETTINGS_READ_ONLY_FIELDS.has(fieldname)) return; // display-only, never wired to save
+
+			control.df.onchange = () => {
+				const value = control.get_value();
+				if (value === current_values[fieldname]) return; // skip no-op writes
+				stage_system_settings_change(frm, fieldname, value);
+			};
+		});
+	});
+}
+
+function render_system_settings_fields(frm) {
+	const $wrapper = frm.get_field("website_settings").$wrapper;
+
+	frappe.model.with_doctype("System Settings", () => {
+		frappe.call({
+			method:
+				"verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_system_settings_fields",
+			callback(r) {
+				const current_values = (r.message && r.message.values) || {};
+				const timezones = (r.message && r.message.timezones) || [];
+
+				// keep a module-level reference so flush_system_settings_changes
+				// can reconcile server-returned values back into it after save
+				system_settings_current_values = current_values;
+
+				render_system_settings_field_row(
+					frm,
+					$wrapper,
+					current_values,
+					timezones,
+					SYSTEM_SETTINGS_EXISTING_SECTION_FIELDS,
+					null, // no heading — joins the existing app_name/app_logo section
+				);
+
+				SYSTEM_SETTINGS_FIELD_GROUPS.forEach((group) => {
+					render_system_settings_field_row(
+						frm,
+						$wrapper,
+						current_values,
+						timezones,
+						group.fields,
+						group.label,
+					);
+				});
+			},
+		});
+	});
 }

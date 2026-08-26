@@ -545,6 +545,32 @@ def get_visible_employee_names_cached(department=None):
     cache.set_value(cache_key, employees, expires_in_sec=600)
     return employees
 
+def get_visible_user_names_cached(department=None):
+    """Same visibility rule as get_visible_employee_names_cached, but
+    resolves to User login ids instead of Employee names — Interview has
+    no assign_to field to compare Employee names against; it only has the
+    framework `owner` field, which stores a User.
+    """
+    cache = frappe.cache()
+    cache_key = f"Visible_User_Names:{frappe.session.user}:{department or 'all'}"
+
+    cached = cache.get_value(cache_key)
+    if cached:
+        return set(cached)
+
+    employee_names = get_visible_employee_names_cached(department=department)
+
+    users = set()
+    for emp in employee_names:
+        user = get_user(emp)
+        if user:
+            users.add(user)
+
+    users.add(frappe.session.user)  # always see your own docs
+
+    cache.set_value(cache_key, list(users), expires_in_sec=600)
+    return users
+
 
 # get allowed leads for sales person
 def get_allowed_leads(user):
@@ -911,6 +937,16 @@ def customer_query(user):
         return "1=0"
 
     return "(" + " OR ".join(conditions) + ")"
+
+
+def interview_query(user):
+
+    visible_users = get_visible_user_names_cached()
+    if not visible_users:
+        return "1=0"
+
+    users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
+    return f"`tabInterview`.owner IN ({users_sql})"
 
 
 def sales_order_query(user):
