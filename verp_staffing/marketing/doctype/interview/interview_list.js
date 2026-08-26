@@ -1,51 +1,4 @@
-// ---------------------------------------------------------------------
-// Shared marketing_link filter persistence — identical block exists in
-// the sibling file (interview_list.js / interview_calendar.js). Guarded
-// so whichever loads first initializes it.
-//
-// WHY: Frappe's List/Kanban/Gantt/Calendar view-switcher changes the URL
-// PATH (.../view/kanban/Interview vs .../view/list/Interview) but does
-// NOT preserve the existing query string. Reading marketing_link purely
-// from window.location.search — which every prior version of this logic
-// did — silently returns null the moment the user switches view type,
-// even though their selected customer never changed. This adds a
-// sessionStorage fallback so the value survives that URL loss, and syncs
-// the URL back from storage whenever possible so deep-linking still works.
-// ---------------------------------------------------------------------
-if (!window.InterviewMarketingFilter) {
-	const STORAGE_KEY = "interview_marketing_link";
-
-	window.InterviewMarketingFilter = {
-		get() {
-			const from_url = new URLSearchParams(window.location.search).get("marketing_link");
-			if (from_url) {
-				try {
-					sessionStorage.setItem(STORAGE_KEY, from_url);
-				} catch (e) {}
-				return from_url;
-			}
-
-			let from_storage = null;
-			try {
-				from_storage = sessionStorage.getItem(STORAGE_KEY);
-			} catch (e) {}
-			if (from_storage) {
-				window.InterviewMarketingFilter.set(from_storage);
-			}
-			return from_storage;
-		},
-
-		set(value) {
-			if (!value) return;
-			try {
-				sessionStorage.setItem(STORAGE_KEY, value);
-			} catch (e) {}
-			const url = new URL(window.location.href);
-			url.searchParams.set("marketing_link", value);
-			window.history.replaceState({}, "", url);
-		},
-	};
-}
+// List + Kanban view customization for Interview. Requires
 
 (function () {
 	"use strict";
@@ -61,18 +14,6 @@ if (!window.InterviewMarketingFilter) {
 
 	const CANCELLED_LIKE_STATUSES = new Set(["Cancelled", "Rescheduled"]);
 	const FINAL_ROUND_STATUSES = new Set(["Cancelled", "Rescheduled", "Completed"]);
-
-	// Maps status -> Frappe's built-in indicator-pill color classes, reusing
-	// the same palette already used for the kanban column headers.
-	const STATUS_INDICATOR_MAP = {
-		Scheduled: "cyan",
-		Today: "yellow",
-		Completed: "blue",
-		Cancelled: "gray",
-		Rescheduled: "orange",
-		"Get The Offer": "green",
-		Rejected: "red",
-	};
 
 	const ROUND_PREVIEW_LIMIT = 5;
 
@@ -98,6 +39,7 @@ if (!window.InterviewMarketingFilter) {
 	};
 
 	frappe.listview_settings["Interview"] = {
+		// Registers the Interview breadcrumb on first load.
 		onload(listview) {
 			frappe.breadcrumbs.all[frappe.get_route_str()] = {
 				workspace: "Interviews",
@@ -107,6 +49,8 @@ if (!window.InterviewMarketingFilter) {
 			frappe.breadcrumbs.update();
 		},
 
+		// Applies marketing-customer scoping, Kanban overrides, and the
+		// filter-UI lock on every list refresh.
 		refresh(listview) {
 			const page = listview.page;
 			if (!page) return;
@@ -134,10 +78,7 @@ if (!window.InterviewMarketingFilter) {
 		},
 	};
 
-	// -----------------------------------------------------------------
-	// Kanban chrome
-	// -----------------------------------------------------------------
-
+	// Hides Kanban's default "add column" and "Select Kanban" controls.
 	function hide_kanban_chrome(page) {
 		requestAnimationFrame(() => {
 			page.wrapper.find(".add-new-column").hide();
@@ -149,12 +90,14 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
+	// Returns true when the current listview is rendering Kanban.
 	function is_kanban_view(listview) {
 		return (
 			listview.view_name === "Kanban" || window.location.pathname.includes("/view/kanban/")
 		);
 	}
 
+	// Injects the Kanban board's card/column layout and round-summary CSS once.
 	function inject_kanban_css() {
 		if (state.kanbanStyleInjected) return;
 		state.kanbanStyleInjected = true;
@@ -163,20 +106,14 @@ if (!window.InterviewMarketingFilter) {
 			.attr("id", "interview-kanban-overrides")
 			.html(
 				`
-				/* =========================================================
-				   BOARD
-				   ========================================================= */
-
+				/* Board */
 				.kanban {
 					overflow-x: auto !important;
 					overflow-y: hidden !important;
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   COLUMNS
-				   ========================================================= */
-
+				/* Columns */
 				.kanban-column {
 					width: 360px !important;
 					min-width: 360px !important;
@@ -185,10 +122,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   CARD CONTAINER
-				   ========================================================= */
-
+				/* Card container */
 				.kanban-cards {
 					width: 100% !important;
 					min-width: 0 !important;
@@ -196,10 +130,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   NORMAL SORTABLE ITEM
-				   ========================================================= */
-
+				/* Normal sortable item */
 				.kanban-card-wrapper {
 					display: block !important;
 
@@ -210,10 +141,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   ACTUAL CARD
-				   ========================================================= */
-
+				/* Actual card */
 				.kanban-card-wrapper > .kanban-card {
 					display: block !important;
 
@@ -238,21 +166,8 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   IMPORTANT:
-				   SORTABLE DRAG ELEMENT
-				   =========================================================
-
-				   The wrapper is the sortable item.
-
-				   When Sortable starts dragging, the wrapper can lose
-				   its normal .kanban-cards parent. Therefore 100% can
-				   become the width of the board/body.
-
-				   Force the dragged wrapper to remain exactly the same
-				   width as a Kanban column.
-				   ========================================================= */
-
+				/* Sortable drag element: lock the dragged wrapper to a
+				   column's width so it doesn't inherit the board's width. */
 				.kanban-card-wrapper.sortable-drag,
 				.kanban-card-wrapper.sortable-fallback {
 					width: 360px !important;
@@ -273,14 +188,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   SORTABLE GHOST
-				   =========================================================
-
-				   The ghost remains inside the target column, so it
-				   should follow the normal column width.
-				   ========================================================= */
-
+				/* Sortable ghost: stays inside the target column's width. */
 				.kanban-card-wrapper.sortable-ghost {
 					width: 100% !important;
 					min-width: 0 !important;
@@ -297,10 +205,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   PREVENT DRAGGED CARD CONTENT FROM EXPANDING IT
-				   ========================================================= */
-
+				/* Prevent dragged card content from expanding it */
 				.sortable-drag .kanban-card-title,
 				.sortable-fallback .kanban-card-title,
 				.sortable-drag .kanban-card-doc,
@@ -317,10 +222,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   HOVER
-				   ========================================================= */
-
+				/* Hover */
 				.kanban-card-wrapper:hover {
 					width: 100% !important;
 					max-width: 100% !important;
@@ -333,10 +235,7 @@ if (!window.InterviewMarketingFilter) {
 					box-sizing: border-box !important;
 				}
 
-				/* =========================================================
-				   DEFAULT FRAPPE CARD UI
-				   ========================================================= */
-
+				/* Default Frappe card UI */
 				.add-card {
 					display: none !important;
 				}
@@ -345,10 +244,7 @@ if (!window.InterviewMarketingFilter) {
 					display: none !important;
 				}
 
-				/* =========================================================
-				   ROUND SUMMARY
-				   ========================================================= */
-
+				/* Round summary */
 				.kanban-rounds-summary {
 					width: 100%;
 					min-width: 0;
@@ -453,25 +349,18 @@ if (!window.InterviewMarketingFilter) {
 			.appendTo("head");
 	}
 
-	// If an interview's LAST round is scheduled for today, and it isn't
-	// already "Today" or in a terminal status, fire a real status update
-	// through the same whitelisted endpoint the drag-and-drop path uses.
-	// This is a genuine write (not a display override) — the server re-derives
-	// Interview.status from the round the same way it does for any other
-	// kanban-driven status change.
+	// Auto-updates an interview's status to "Today" when its last round's
+	// date matches today, via the same whitelisted endpoint drag-and-drop uses.
 	function check_and_update_today_status(listview, name, rounds) {
 		if (!rounds || !rounds.length) return;
 
 		const lastRound = rounds[rounds.length - 1];
 		if (!lastRound) return;
 
-		// Don't touch a round that's already terminal or already "Today".
 		if (FINAL_ROUND_STATUSES.has(lastRound.status)) return;
 		if (lastRound.status === "Today") return;
 		if (!is_today(lastRound.date_of_interview)) return;
 
-		// Don't race with a manual drag-driven update or a prior in-flight
-		// auto-update for the same interview.
 		if (state.pendingStatusChange.has(name)) return;
 		if (state.pendingTodayUpdate.has(name)) return;
 
@@ -486,6 +375,7 @@ if (!window.InterviewMarketingFilter) {
 			});
 	}
 
+	// Renders (or replaces) the round-summary block on each given Kanban card.
 	function apply_round_summaries($wrappers) {
 		$wrappers.each(function () {
 			const $wrapper = $(this);
@@ -506,6 +396,7 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
+	// Builds the round-summary HTML for one interview's cached rounds.
 	function build_round_summary_html(name, rounds) {
 		if (!rounds || !rounds.length) {
 			return `<div class="kanban-rounds-empty">${__("No rounds yet")}</div>`;
@@ -516,7 +407,9 @@ if (!window.InterviewMarketingFilter) {
 
 		const rows = visible
 			.map((r) => {
-				const color = STATUS_INDICATOR_MAP[r.status] || STATUS_INDICATOR_MAP["Cancelled"];
+				const color =
+					window.STATUS_INDICATOR_MAP[r.status] ||
+					window.STATUS_INDICATOR_MAP["Cancelled"];
 				const date = r.date_of_interview
 					? frappe.datetime.str_to_user(r.date_of_interview)
 					: "—";
@@ -543,6 +436,7 @@ if (!window.InterviewMarketingFilter) {
 		return `<div class="kanban-rounds-summary${expanded ? " expanded" : ""}">${rows}${toggle}</div>`;
 	}
 
+	// Binds the "show more / show less" toggle for a card's round list.
 	function bind_round_toggle_handler(listview) {
 		listview.page.wrapper
 			.off("click.kanbanRoundsToggle")
@@ -566,10 +460,8 @@ if (!window.InterviewMarketingFilter) {
 			});
 	}
 
-	// -----------------------------------------------------------------
-	// Round summary rendering
-	// -----------------------------------------------------------------
-
+	// Wires up all Kanban-specific behavior: CSS, round rendering, drag
+	// tracking, and the round-toggle handler.
 	function setup_kanban_overrides(listview) {
 		inject_kanban_css();
 		schedule_render(listview);
@@ -579,19 +471,18 @@ if (!window.InterviewMarketingFilter) {
 		bind_round_toggle_handler(listview);
 	}
 
+	// Detects the end of a card drag and checks for a resulting column/status change.
 	function bind_drag_end_listener(listview) {
 		if (state.dragEndBound) return;
 		state.dragEndBound = true;
 
 		const on_release = () => {
-			if (!state.isDragging) return; // wasn't dragging a card — ignore plain clicks
+			if (!state.isDragging) return;
 			state.isDragging = false;
 
 			const lv = state.currentListview;
 			if (!lv || !is_kanban_view(lv)) return;
 
-			// Small delay lets Sortable.js + Frappe's native update_order call
-			// finish settling the DOM before we read the final column.
 			setTimeout(() => check_for_status_change_after_drop(lv), 150);
 		};
 
@@ -599,8 +490,8 @@ if (!window.InterviewMarketingFilter) {
 		document.addEventListener("touchend", on_release);
 	}
 
-	// Only ever called once, right after a real drop. Compares the live DOM
-	// column against the frozen pre-drag baseline.
+	// Compares each card's post-drop column against its pre-drag baseline
+	// and triggers a status change for any card that actually moved.
 	function check_for_status_change_after_drop(listview) {
 		const $wrappers = listview.page.wrapper.find(".kanban-card-wrapper[data-name]");
 
@@ -620,10 +511,8 @@ if (!window.InterviewMarketingFilter) {
 				state.cardColumnState.set(name, columnValue);
 				return;
 			}
-			if (previous === columnValue) return; // no real change
+			if (previous === columnValue) return;
 
-			// The round is already terminal — reject the move outright, no dialog to
-			// confirm here, since there's nothing to confirm; it simply can't change.
 			if (FINAL_ROUND_STATUSES.has(previous)) {
 				frappe.msgprint({
 					title: __("Status Locked"),
@@ -654,6 +543,8 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
+	// (Re)binds a MutationObserver on the Kanban board to re-render round
+	// summaries whenever the board's DOM changes.
 	function bind_kanban_observer(listview) {
 		const board_el = listview.page.wrapper.find(".kanban")[0];
 		if (!board_el) return;
@@ -684,21 +575,14 @@ if (!window.InterviewMarketingFilter) {
 		state.kanbanObserver.observe(board_el, { childList: true, subtree: true });
 	}
 
+	// Debounces round-summary rendering to one call per animation frame,
+	// skipping entirely while a card is being dragged.
 	function schedule_render(listview) {
 		if (state.renderScheduled) return;
 		state.renderScheduled = true;
 
 		requestAnimationFrame(() => {
 			state.renderScheduled = false;
-
-			// Never touch card DOM while a drag is live. SortableJS is actively
-			// cloning/transforming card nodes during a drag, and replacing our
-			// .kanban-rounds-summary markup mid-drag corrupts its size/position
-			// tracking — this is what caused the badge to render detached and
-			// floating over the wrong column. Once the drag ends (mouseup ->
-			// isDragging = false), the next mutation naturally triggers a
-			// normal render/sync pass, so nothing needs to be force-refreshed
-			// here on drop.
 			if (state.isDragging) return;
 
 			render_round_summary(listview);
@@ -706,9 +590,8 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
-	// Silently records each card's current column as the "known good" state.
-	// Never triggers a status change — that only happens in
-	// check_for_status_change_after_drop, called explicitly on mouseup.
+	// Records each card's current column as the known-good baseline for
+	// drag-change detection.
 	function sync_column_baseline(listview) {
 		listview.page.wrapper.find(".kanban-card-wrapper[data-name]").each(function () {
 			const name = this.dataset.name;
@@ -723,11 +606,7 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
-	// Tracks drag start so sync_column_baseline can pause while a drag is live.
-	// Rebound (via namespaced off/on) on every setup pass, not gated by a
-	// one-time boolean — otherwise a rebuilt .kanban wrapper after a board
-	// refresh would silently stop receiving these events, the same class of
-	// bug that hit the "read more" toggle (see below).
+	// Tracks drag start on Kanban cards so rendering can pause during a drag.
 	function bind_drag_state_tracking(listview) {
 		listview.page.wrapper
 			.off("mousedown.kanbanDrag touchstart.kanbanDrag")
@@ -736,8 +615,7 @@ if (!window.InterviewMarketingFilter) {
 			});
 	}
 
-	// Reads the card's own title/company/role directly from its DOM, so the
-	// confirmation dialog can show context without an extra round trip.
+	// Reads a card's title/company/role directly from its DOM for use in confirmation dialogs.
 	function extract_card_context($wrapper) {
 		const title = $wrapper.find(".kanban-card-title").first().text().trim();
 		const docLines = $wrapper.find(".kanban-card-doc > .text-muted");
@@ -746,15 +624,14 @@ if (!window.InterviewMarketingFilter) {
 		return { title, company, role };
 	}
 
+	// Renders cached round summaries immediately, then fetches summaries
+	// for any cards not yet cached.
 	function render_round_summary(listview) {
 		const $wrappers = listview.page.wrapper.find(".kanban-card-wrapper[data-name]");
 		if (!$wrappers.length) return;
 
 		apply_round_summaries($wrappers);
 
-		// Check already-cached rounds too — not just freshly fetched ones —
-		// so an interview whose last round rolls over to "today" gets picked
-		// up on the next render pass even without a fresh network fetch.
 		$wrappers.each(function () {
 			const name = this.dataset.name;
 			if (!name) return;
@@ -781,7 +658,7 @@ if (!window.InterviewMarketingFilter) {
 				const data = r.message || {};
 				Object.entries(data).forEach(([name, rounds]) => {
 					state.roundCache.set(name, rounds);
-					check_and_update_today_status(listview, name, rounds); // NEW
+					check_and_update_today_status(listview, name, rounds);
 				});
 				namesToFetch.forEach((n) => state.roundInFlight.delete(n));
 				apply_round_summaries(
@@ -795,27 +672,8 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
-	// -----------------------------------------------------------------
-	// Status-change interception (drag-and-drop on the Kanban board)
-	//
-	// Frappe's Kanban board applies a column move via
-	// `frappe.db.set_value(doctype, docname, field, value)`. We intercept
-	// that specific call for Interview/status and route it through our own
-	// whitelisted method instead, so:
-	//   1. Cancelled/Rescheduled always prompts for a reason first.
-	//   2. The write always lands on the last Interview Round row, with
-	//      Interview.status re-derived from it server-side — never a
-	//      direct write to the top-level field.
-	//
-	// If your Frappe version's Kanban board uses a different call for the
-	// drag update, check the Network tab while dragging a card and adjust
-	// the condition inside the patched function below accordingly.
-	// -----------------------------------------------------------------
-
-	// -----------------------------------------------------------------
-	// Status-change interception (drag-and-drop on the Kanban board)
-	// -----------------------------------------------------------------
-
+	// Routes a Kanban column-drop status change through confirmation
+	// dialogs (for Cancelled/Rescheduled/Completed) before applying it.
 	function handle_kanban_status_change(listview, interview_name, new_status, context = {}) {
 		if (CANCELLED_LIKE_STATUSES.has(new_status)) {
 			return prompt_cancellation_details(interview_name, new_status, context).then(
@@ -848,6 +706,7 @@ if (!window.InterviewMarketingFilter) {
 		return Promise.resolve(apply_status_change(listview, interview_name, new_status));
 	}
 
+	// Confirms marking a round Completed (a terminal, unrevertable status).
 	function prompt_terminal_status_confirmation(interview_name, status, context) {
 		return new Promise((resolve) => {
 			let settled = false;
@@ -865,7 +724,7 @@ if (!window.InterviewMarketingFilter) {
 					${context.role ? " · " + frappe.utils.escape_html(context.role) : ""}
 				</div>
 			</div>
-			<div>${__("Mark this interview round as")} <span class="indicator-pill ${STATUS_INDICATOR_MAP[status] || STATUS_INDICATOR_MAP["Cancelled"]}">${frappe.utils.escape_html(status)}</span>?</div>
+			<div>${__("Mark this interview round as")} <span class="indicator-pill ${window.STATUS_INDICATOR_MAP[status] || window.STATUS_INDICATOR_MAP["Cancelled"]}">${frappe.utils.escape_html(status)}</span>?</div>
 			<div style="margin-top: 8px; font-size: 12px; color: var(--text-muted, #5d6472);">
 				${__("This status is final — it cannot be changed once confirmed.")}
 			</div>
@@ -879,6 +738,8 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
+	// Prompts for "Cancelled By" and "Reason of Cancel" before applying a
+	// Cancelled/Rescheduled status.
 	function prompt_cancellation_details(interview_name, status, context) {
 		return new Promise((resolve) => {
 			let settled = false;
@@ -896,7 +757,7 @@ if (!window.InterviewMarketingFilter) {
 					${context.role ? " · " + frappe.utils.escape_html(context.role) : ""}
 				</div>
 				<div style="font-size: 12px; margin-top: 6px;">
-					${__("Mark this interview round as")} <span class="indicator-pill ${STATUS_INDICATOR_MAP[status] || STATUS_INDICATOR_MAP["Cancelled"]}">${frappe.utils.escape_html(status)}</span>
+					${__("Mark this interview round as")} <span class="indicator-pill ${window.STATUS_INDICATOR_MAP[status] || window.STATUS_INDICATOR_MAP["Cancelled"]}">${frappe.utils.escape_html(status)}</span>
 				</div>
 				<div style="margin-top: 8px; font-size: 12px; color: var(--text-muted, #5d6472);">
 				${__("This status is final — it cannot be changed once confirmed.")}
@@ -943,6 +804,8 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
+	// Applies a status change via the whitelisted update endpoint and
+	// refreshes the board (reverting the card visually on failure).
 	function apply_status_change(listview, interview_name, status, extra = {}) {
 		return frappe
 			.call({
@@ -955,20 +818,18 @@ if (!window.InterviewMarketingFilter) {
 				},
 			})
 			.then((r) => {
-				state.roundCache.delete(interview_name); // force a fresh fetch
+				state.roundCache.delete(interview_name);
 				schedule_board_refresh(listview);
 				return r;
 			})
 			.catch((err) => {
-				schedule_board_refresh(listview); // revert the visual column position on failure
+				schedule_board_refresh(listview);
 				throw err;
 			});
 	}
 
-	// Debounces the post-update board refresh so it never fires while
-	// Frappe's own native `update_order` call (fired automatically on every
-	// drag to persist card position) is still in flight — avoids the two
-	// requests racing on the same Kanban Board record and deadlocking.
+	// Debounces the post-update board refresh so it doesn't race Frappe's
+	// own drag-order persistence call.
 	function schedule_board_refresh(listview) {
 		if (state.refreshTimer) clearTimeout(state.refreshTimer);
 		state.refreshTimer = setTimeout(() => {
@@ -977,15 +838,14 @@ if (!window.InterviewMarketingFilter) {
 		}, 500);
 	}
 
+	// Returns true if the given date string is today.
 	function is_today(date_str) {
 		if (!date_str) return false;
 		return date_str === frappe.datetime.get_today();
 	}
 
-	// -----------------------------------------------------------------
-	// Cleanup on route change
-	// -----------------------------------------------------------------
-
+	// Clears all Kanban-specific caches/observers once the user navigates
+	// away from the Kanban view.
 	function ensure_route_cleanup() {
 		if (state.routeCleanupBound) return;
 		state.routeCleanupBound = true;
@@ -1010,25 +870,23 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
-	// -----------------------------------------------------------------
-	// Marketing customer auto-filter (unchanged behaviour)
-	// -----------------------------------------------------------------
-
+	// Reads the currently selected marketing_link.
 	function get_marketing_param() {
 		return window.InterviewMarketingFilter.get();
 	}
 
+	// Persists the given value as the selected marketing_link.
 	function set_marketing_param(value) {
 		window.InterviewMarketingFilter.set(value);
 	}
 
+	// Triggers the marketing-customer auto-filter unless one is already being applied.
 	function apply_marketing_auto_filter(listview) {
 		if (state.marketingIsSetting) return;
-		const param = get_marketing_param();
-		if (!param) return; // genuinely never selected a customer this session
-		auto_apply_marketing_filter(listview); // cheap + idempotent, safe to always verify
+		auto_apply_marketing_filter(listview);
 	}
 
+	// Returns true if the given marketing_link value is already an active filter on this listview.
 	function marketing_filter_already_applied(listview, value) {
 		try {
 			const filters = listview.filter_area?.filter_list?.filters || [];
@@ -1038,51 +896,53 @@ if (!window.InterviewMarketingFilter) {
 		}
 	}
 
+	// Resolves a default marketing_link if none is selected, then applies
+	// it as a filter and updates the toolbar customer label.
 	function auto_apply_marketing_filter(listview) {
 		if (!listview.filter_area) return;
 
-		const param = get_marketing_param();
-		frappe.call({
-			method: MARKETING_OPTIONS_METHOD,
-			args: { param },
-			callback(r) {
-				const options = r.message || [];
-				if (!options.length) {
-					const body = listview.page?.body;
-					if (body) {
-						body.html(`
+		window.ivw_ensure_marketing_param().then((value) => {
+			if (!value) {
+				const body = listview.page?.body;
+				if (body) {
+					body.html(`
 						<div class="text-muted text-center mt-5">
 							You are not assigned to any customer.
 						</div>
 					`);
+				}
+				return;
+			}
+
+			frappe.call({
+				method: MARKETING_OPTIONS_METHOD,
+				args: { param: value },
+				callback(r) {
+					const options = r.message || [];
+					const label = options[0]?.label || value;
+
+					update_customer_label(listview.page, label);
+
+					if (marketing_filter_already_applied(listview, value)) {
+						state.marketingAppliedValue = value;
+						return;
 					}
-					return;
-				}
 
-				const value = param || options[0].value;
-				if (!param) set_marketing_param(value);
-
-				update_customer_label(listview.page, options[0].label);
-
-				// Check THIS listview's actual filter_area, not cached memory
-				// from a previous view instance.
-				if (marketing_filter_already_applied(listview, value)) {
+					state.marketingIsSetting = true;
 					state.marketingAppliedValue = value;
-					return;
-				}
 
-				state.marketingIsSetting = true;
-				state.marketingAppliedValue = value;
+					set_filter_without_loop(listview, value);
 
-				set_filter_without_loop(listview, value);
-
-				setTimeout(() => {
-					state.marketingIsSetting = false;
-				}, 1000);
-			},
+					setTimeout(() => {
+						state.marketingIsSetting = false;
+					}, 1000);
+				},
+			});
 		});
 	}
 
+	// Replaces any existing marketing_link filter with the given value
+	// without triggering the clear-filter guard.
 	function set_filter_without_loop(listview, value) {
 		try {
 			const existing = listview.filter_area.filter_list.filters || [];
@@ -1096,17 +956,7 @@ if (!window.InterviewMarketingFilter) {
 		}
 	}
 
-	// -----------------------------------------------------------------
-	// Lock the marketing_link filter: user can't add it manually via the
-	// field picker, and can't remove it via "Clear Filters" / the "x" on
-	// the Filters pill.
-	// -----------------------------------------------------------------
-
-	// Patches the actual field-source used by the "+ Add a Filter" dropdown
-	// so marketing_link never appears as a selectable field for Interview.
-	// This is the "correct" fix — falls through silently if the class name
-	// ever changes across Frappe versions, and hide_marketing_filter_option_in_dom
-	// below acts as a DOM-level backstop regardless.
+	// Removes marketing_link from the "+ Add a Filter" field picker for Interview.
 	function patch_field_select_to_hide_marketing() {
 		if (state.fieldSelectPatched) return;
 		if (!frappe.ui || typeof frappe.ui.FieldSelect !== "function") return;
@@ -1124,31 +974,17 @@ if (!window.InterviewMarketingFilter) {
 		};
 	}
 
-	// -----------------------------------------------------------------
-	// Two things get scrubbed from the filter popover on every DOM mutation:
-	//  1. "Marketing" as a selectable option in the "+ Add a Filter" awesomplete
-	//     dropdown (prevents adding it manually).
-	//  2. The already-applied marketing_link filter ROW itself — it's still
-	//     functionally active (drives the actual query, survives Clear
-	//     Filters via lock_marketing_filter's reapply), just not rendered,
-	//     so the user has nothing to click or drag in that row at all.
-	// Scoped to Interview only. A MutationObserver is required (not a
-	// one-shot hide on open) because Awesomplete rebuilds its <li> list from
-	// scratch on every keystroke, and Frappe re-renders .filter-box rows
-	// whenever filters are (re)applied.
-	// -----------------------------------------------------------------
-
+	// Hides "Marketing" from the filter-field dropdown and hides the
+	// already-applied marketing_link filter row from the popover.
 	function scrub_marketing_from_filter_popover() {
 		if (state.currentListview?.doctype !== "Interview") return;
 
-		// (1) strip "Marketing" from the field-name awesomplete suggestions
 		document
 			.querySelectorAll(".fieldname-select-area li, .fieldname-select-area [role='option']")
 			.forEach((li) => {
 				if (li.textContent.trim() === "Marketing") li.remove();
 			});
 
-		// (2) hide the entire row for the already-applied marketing_link filter
 		document.querySelectorAll(".filter-edit-area .filter-box").forEach((row) => {
 			const isMarketingRow =
 				row.querySelector("[data-fieldname='marketing_link']") ||
@@ -1161,6 +997,7 @@ if (!window.InterviewMarketingFilter) {
 		});
 	}
 
+	// Observes the filter popover and re-applies the marketing-link scrub on every DOM mutation.
 	function bind_marketing_filter_dom_guard() {
 		if (state.marketingFieldBlockerBound) return;
 		state.marketingFieldBlockerBound = true;
@@ -1173,12 +1010,8 @@ if (!window.InterviewMarketingFilter) {
 		observer.observe(document.body, { childList: true, subtree: true });
 	}
 
-	// Wraps filter_area.clear() (and filter_list.clear_filters(), which some
-	// "Clear Filters" buttons call directly) so any clear NOT triggered by our
-	// own internal filter-setting flows silently reinstates marketing_link.
-	// Guarded by state.marketingIsSetting to avoid recursion/double-adds when
-	// apply_marketing_filter()/auto_apply_marketing_filter() do their own
-	// clear() as part of normal operation.
+	// Wraps filter_area.clear()/filter_list.clear_filters() so any
+	// non-internal clear silently reinstates the marketing_link filter.
 	function lock_marketing_filter(listview) {
 		const filter_area = listview.filter_area;
 		if (!filter_area || filter_area.__marketingLockApplied) return;
@@ -1187,7 +1020,7 @@ if (!window.InterviewMarketingFilter) {
 		if (typeof filter_area.clear === "function") {
 			const original_clear = filter_area.clear.bind(filter_area);
 			filter_area.clear = function (...args) {
-				const result = original_clear(...args); // capture it
+				const result = original_clear(...args);
 				if (!state.marketingIsSetting) {
 					reapply_marketing_filter_after_clear(listview);
 				}
@@ -1199,15 +1032,16 @@ if (!window.InterviewMarketingFilter) {
 		if (filter_list && typeof filter_list.clear_filters === "function") {
 			const original_list_clear = filter_list.clear_filters.bind(filter_list);
 			filter_list.clear_filters = function (...args) {
-				const result = original_list_clear(...args); // capture it
+				const result = original_list_clear(...args);
 				if (!state.marketingIsSetting) {
 					reapply_marketing_filter_after_clear(listview);
 				}
-				return result; // same requirement as above
+				return result;
 			};
 		}
 	}
 
+	// Re-applies the marketing_link filter and refreshes the list after a clear.
 	function reapply_marketing_filter_after_clear(listview) {
 		const value = state.marketingAppliedValue || get_marketing_param();
 		if (!value) return;
@@ -1222,6 +1056,7 @@ if (!window.InterviewMarketingFilter) {
 		}, 50);
 	}
 
+	// Creates (once) the "Customer: —" pill in the list toolbar.
 	function ensure_customer_label(page) {
 		if (page.customer_label) return page.customer_label;
 
@@ -1243,6 +1078,7 @@ if (!window.InterviewMarketingFilter) {
 		return label;
 	}
 
+	// Updates the toolbar customer pill's label text.
 	function update_customer_label(page, label) {
 		const pill = ensure_customer_label(page);
 		const valueEl = pill.find(".marketing-customer-value");
@@ -1257,6 +1093,7 @@ if (!window.InterviewMarketingFilter) {
 		pill.css("opacity", 1);
 	}
 
+	// Opens the "Select Customer" dialog for manually choosing a marketing customer.
 	function open_marketing_customer_dialog(listview) {
 		const current_value = get_marketing_param();
 
@@ -1293,6 +1130,7 @@ if (!window.InterviewMarketingFilter) {
 		dialog.show();
 	}
 
+	// Applies the given marketing_link as the list's active filter.
 	function apply_marketing_filter(listview, value) {
 		if (!value || !listview.filter_area) return;
 

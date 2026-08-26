@@ -1142,6 +1142,7 @@ def after_install():
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     seed_form_tours()
     seed_party_types()
+    set_default_system_settings()
 
 
 def seed_master_sidebar_config():
@@ -1160,65 +1161,6 @@ def seed_master_sidebar_config():
             "roles": ["_show_setup"],
             "route": "/app/setup",
             "link_type": "page",
-        },
-        {
-            "key": "users",
-            "label": "Users",
-            "icon": "icon-setting-gear",
-            "parent_type": "type_2",
-            "shortcut": "",
-            "roles": [],
-            "children": [
-                {
-                    "key": "user",
-                    "name": "User",
-                    "type": "doctype",
-                    "route": "/app/user",
-                    "doctype": "User",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
-                    "roles": [],
-                },
-                {
-                    "key": "employee",
-                    "name": "Employee",
-                    "type": "doctype",
-                    "route": "/app/employee",
-                    "doctype": "Employee",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
-                    "roles": [],
-                },
-                {
-                    "key": "outsource",
-                    "name": "Outsource",
-                    "type": "doctype",
-                    "route": "/app/outsource",
-                    "doctype": "Outsource",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
-                    "roles": [],
-                },
-                {
-                    "key": "role",
-                    "name": "Role",
-                    "type": "doctype",
-                    "route": "/app/role",
-                    "doctype": "Role",
-                    "icon": "icon-setting-gear",
-                    "shortcut": "",
-                    "roles": [],
-                },
-                {
-                    "key": "role-permissions-manager",
-                    "name": "Role Permissions Manager",
-                    "type": "page",
-                    "route": "/app/permission-manager",
-                    "icon": "icon-assign",
-                    "shortcut": "",
-                    "roles": ["System Manager", "_show_role_permission_manager"],
-                },
-            ],
         },
         {
             "key": "staffing-master",
@@ -1287,6 +1229,65 @@ def seed_master_sidebar_config():
                     "icon": "icon-setting-gear",
                     "shortcut": "",
                     "roles": [],
+                },
+            ],
+        },
+        {
+            "key": "users",
+            "label": "Users",
+            "icon": "icon-setting-gear",
+            "parent_type": "type_2",
+            "shortcut": "",
+            "roles": [],
+            "children": [
+                {
+                    "key": "user",
+                    "name": "User",
+                    "type": "doctype",
+                    "route": "/app/user",
+                    "doctype": "User",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "employee",
+                    "name": "Employee",
+                    "type": "doctype",
+                    "route": "/app/employee",
+                    "doctype": "Employee",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "outsource",
+                    "name": "Outsource",
+                    "type": "doctype",
+                    "route": "/app/outsource",
+                    "doctype": "Outsource",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "role",
+                    "name": "Role",
+                    "type": "doctype",
+                    "route": "/app/role",
+                    "doctype": "Role",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": [],
+                },
+                {
+                    "key": "role-permissions-manager",
+                    "name": "Role Permissions Manager",
+                    "type": "page",
+                    "route": "/app/permission-manager",
+                    "icon": "icon-assign",
+                    "shortcut": "",
+                    "roles": ["System Manager", "_show_role_permission_manager"],
                 },
             ],
         },
@@ -2077,7 +2078,13 @@ def seed_party_types():
                 "party_type": "Supplier",
             }
         ).insert()
-
+        
+def set_default_system_settings():
+	doc = frappe.get_single("System Settings")
+	doc.set("welcome_email_template", "Welcome Email Template")
+	doc.set("reset_password_template", "Reset Password Email")
+	doc.set("disable_system_update_notification", 1)
+	doc.save(ignore_permissions=True)
 
 def seed_type_of_interview():
     doctype = "Type Of Interview"
