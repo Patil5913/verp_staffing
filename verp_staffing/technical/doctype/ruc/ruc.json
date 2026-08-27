@@ -108,7 +108,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-21 14:58:38.062818",
+ "modified": "2026-08-27 10:06:49.021940",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "RUC",
@@ -248,5 +248,6 @@
  "sort_order": "DESC",
  "states": [],
  "title_field": "customer",
- "track_changes": 1
+ "track_changes": 1,
+ "translated_doctype": 1
 }

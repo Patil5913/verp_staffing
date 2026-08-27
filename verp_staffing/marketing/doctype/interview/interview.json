@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "marketing_link",
+  "customer",
   "status",
   "column_break_iehb",
   "company",
@@ -19,7 +20,7 @@
   {
    "fieldname": "marketing_link",
    "fieldtype": "Link",
-   "label": "Marketing",
+   "label": "Customer",
    "options": "Marketing",
    "reqd": 1,
    "search_index": 1
@@ -70,13 +71,20 @@
    "fieldtype": "Table",
    "label": "Interview Rounds",
    "options": "Interview Round"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer",
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2026-08-24 17:51:54.509128",
+ "modified": "2026-08-27 10:21:48.250379",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",

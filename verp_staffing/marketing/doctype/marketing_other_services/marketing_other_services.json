@@ -124,7 +124,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-13 17:47:11.578332",
+ "modified": "2026-08-27 10:09:04.870499",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Marketing Other Services",
@@ -225,8 +225,11 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "title_field": "customer",
+ "track_changes": 1,
+ "translated_doctype": 1
 }
