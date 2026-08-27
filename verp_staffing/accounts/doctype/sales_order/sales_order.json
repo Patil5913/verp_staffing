@@ -92,9 +92,9 @@
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Company",
    "options": "Company",
-   "reqd": 1,
    "set_only_once": 1
   },
   {
@@ -112,6 +112,7 @@
    "collapsible": 1,
    "fieldname": "currency_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Currency"
   },
   {
@@ -412,7 +413,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 09:48:55.207614",
+ "modified": "2026-08-27 17:25:14.897874",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
