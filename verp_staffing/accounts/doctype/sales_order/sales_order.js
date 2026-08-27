@@ -624,7 +624,7 @@ function open_mark_as_paid_dialog(frm, term_row, is_rerequest = false) {
 			fieldname: "summary_html",
 			options: `
 				<div class="alert alert-info" style="margin-bottom:12px">
-					<b>Amount:</b> ${format_currency(term_row.received_amount ?? term_row.amount, term_row.currency || so_currency, 2)}<br>
+					<b>Amount:</b> ${format_currency(term_row.received_amount != 0.0 ? term.received_amount : term_row.amount, term_row.currency || so_currency, 2)}<br>
 					${
 						term_row.sales_invoice
 							? `<b>Invoice:</b> ${term_row.sales_invoice} (${term_row.currency || so_currency})`
@@ -1180,6 +1180,12 @@ async function load_invoice_page(frm) {
 	} finally {
 		frm._invoice_loading = false;
 		wrapper.find(".invoices-loading-msg").hide();
+
+		const $scrollWrapper = wrapper.find(".invoices-scroll-wrapper");
+		const el = $scrollWrapper[0];
+		if (frm._invoice_has_more && el && el.scrollHeight <= el.clientHeight) {
+			load_invoice_page(frm);
+		}
 	}
 }
 

@@ -538,7 +538,6 @@ class PaymentEntry(Document):
                 build_gl_entry(
                     account=d.account_head,
                     against=against,
-                    exchange_rate=1,  # taxes are always in company currency
                     **{dr_or_cr: flt(d.tax_amount)},
                     **base,
                 )
@@ -551,7 +550,6 @@ class PaymentEntry(Document):
                     build_gl_entry(
                         account=payment_account,
                         against=against,
-                        exchange_rate=1,  # company currency
                         **{rev_dr_or_cr: flt(d.tax_amount)},
                         **base,
                     )
@@ -939,12 +937,6 @@ def validate_amounts_are_positive(doc):
         ("base_total_allocated_amount", "Base Total Allocated Amount", "non_negative"),
         ("unallocated_amount", "Unallocated Amount", "non_negative"),
         ("base_unallocated_amount", "Base Unallocated Amount", "non_negative"),
-        ("total_taxes_and_charges", "Total Taxes and Charges", "non_negative"),
-        (
-            "base_total_taxes_and_charges",
-            "Base Total Taxes and Charges",
-            "non_negative",
-        ),
     ]
 
     for field, label, rule in fields:

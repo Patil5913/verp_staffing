@@ -303,7 +303,16 @@ frappe.ui.form.on("Payment Entry", {
 		});
 
 		frm.set_query("account_head", "taxes", function () {
-			return { filters: { is_group: 0, company: frm.doc.company } };
+			if (!frm.doc.company) {
+				return { filters: { name: "__invalid__" } };
+			}
+			return {
+				filters: {
+					account_type: ["in", ["Tax", "Chargeable","Indirect Expense","Direct Expense", "Expense Account", "Income Account"]],
+					is_group: 0,
+					company: frm.doc.company,
+				},
+			};
 		});
 	},
 
