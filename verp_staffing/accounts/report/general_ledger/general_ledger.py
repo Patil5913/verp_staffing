@@ -261,8 +261,8 @@ def get_gl_entries(filters, in_acc_currency=False):
     conds = []
     values = {}
 
-    if not filters.get("include_cancelled"):
-        conds.append("gle.is_cancelled = 0")
+    # if not filters.get("include_cancelled"):
+    #     conds.append("gle.is_cancelled = 0")
 
     conds.append("gle.company = %(company)s")
     values["company"] = filters.company

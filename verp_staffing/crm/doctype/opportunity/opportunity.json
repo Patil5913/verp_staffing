@@ -188,7 +188,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 16:40:54.835869",
+ "modified": "2026-08-27 10:02:33.790572",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Opportunity",
@@ -264,9 +264,11 @@
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "name1",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
  "title_field": "name1",
- "track_changes": 1
+ "track_changes": 1,
+ "translated_doctype": 1
 }

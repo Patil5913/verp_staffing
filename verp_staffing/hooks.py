@@ -33,7 +33,6 @@ website_context = {
 app_include_css = ["/assets/verp_staffing/css/global.css"]
 # pdflibjs Imports
 app_include_js = [
-    "/assets/verp_staffing/js/psd.js",
     "/assets/verp_staffing/js/pdf.min.js",
     "/assets/verp_staffing/js/pdf.worker.min.js",
     "/assets/verp_staffing/js/calculation_engine.js",
@@ -42,7 +41,7 @@ app_include_js = [
     "/assets/verp_staffing/js/user_custom.js",
     "/assets/verp_staffing/js/override/about_override.js",
     "/assets/verp_staffing/js/override/interview_common.js",
-    "/assets/verp_staffing/js/protection.js",
+    # "/assets/verp_staffing/js/protection.js",
     "/assets/verp_staffing/js/email_badge.js",
     "/assets/verp_staffing/js/utils.js",
     "/assets/verp_staffing/js/override/global_hide.js",
@@ -195,13 +194,39 @@ after_migrate = [
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+    "Customer": "verp_staffing.crm.api.helpers.customer_query",
+    "Sales Order": "verp_staffing.crm.api.helpers.sales_order_query",
+    "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
+    "Lead": "verp_staffing.crm.api.helpers.lead_query",
+    "Resume": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "RUC": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Marketing": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Interview": "verp_staffing.crm.api.helpers.interview_query",
+    "Training": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "JDC": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "CR": "verp_staffing.crm.api.helpers.generic_assign_query",
+}
+
+has_permission = {
+    "Resume": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "RUC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Marketing": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Training": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "JDC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "CR": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    # Customer, Sales Order, Opportunity, Lead, Interview need their own
+    # has_permission functions mirroring their existing *_query() logic
+    # (customer_owner / opportunity_owner / lead_owner / owner respectively)
+}
 
 # DocType Class
 # ---------------
@@ -382,24 +407,7 @@ override_whitelisted_methods = {
  
     "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
     "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
-}
-# set query permisson for doctype
-permission_query_conditions = {
-    "Customer": "verp_staffing.crm.api.helpers.customer_query",
-    "Sales Order": "verp_staffing.crm.api.helpers.sales_order_query",
-    "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
-    "Lead": "verp_staffing.crm.api.helpers.lead_query",
-    "Resume": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "RUC": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "Marketing": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "Interview": "verp_staffing.crm.api.helpers.interview_query",
-    "Training": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "JDC": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_query",
-    "CR": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "frappe.desk.form.utils.get_next": "verp_staffing.crm.api.helpers.get_next_permitted"
 }
 
 # each overriding function accepts a `data` argument;

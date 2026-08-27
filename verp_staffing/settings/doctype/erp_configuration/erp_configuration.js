@@ -1500,7 +1500,7 @@ const SYSTEM_SETTINGS_FIELD_GROUPS = [
 	},
 ];
 
-const SYSTEM_SETTINGS_READ_ONLY_FIELDS = new Set(["time_zone"]);
+// const SYSTEM_SETTINGS_READ_ONLY_FIELDS = new Set(["time_zone"]);
 
 let system_settings_pending_changes = {};
 let system_settings_current_values = {}; 
@@ -1586,7 +1586,7 @@ function render_system_settings_field_row(
 		});
 
 		control.set_value(current_values[fieldname]).then(() => {
-			if (SYSTEM_SETTINGS_READ_ONLY_FIELDS.has(fieldname)) return; // display-only, never wired to save
+			// if (SYSTEM_SETTINGS_READ_ONLY_FIELDS.has(fieldname)) return; // display-only, never wired to save
 
 			control.df.onchange = () => {
 				const value = control.get_value();

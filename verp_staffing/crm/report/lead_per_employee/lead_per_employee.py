@@ -150,7 +150,7 @@ def get_data(filters):
     visa_map = {}
     for row in breakdown_rows:
         emp = row.employee
-        entry = f"{row.visa_status}: {row.cnt}"
+        entry = f"{row.visa_status if row.visa_status else 'No_Status'}: {row.cnt}"
         if emp not in visa_map:
             visa_map[emp] = []
         visa_map[emp].append(entry)
@@ -186,53 +186,3 @@ def get_chart(data):
         "type": "bar",
         "colors": ["#8494FF"],
     }
-
-@frappe.whitelist()
-def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
-    """
-    Link field search for the employee filter.
-    Restricts to Lead department employees visible to the current user.
-    Non-admin sees only their visible hierarchy.
-    """
-    values = {
-        "txt": f"%{txt}%",
-        "start": int(start),       
-        "page_len": int(page_len),
-        "dept": "Lead",
-    }
-
-    conditions = [
-        "tabEmployee.name LIKE %(txt)s",
-        """
-        EXISTS (
-            SELECT 1
-            FROM `tabEmployee Assignment Detail` d
-            WHERE d.parent = tabEmployee.name
-              AND d.department = %(dept)s
-        )
-        """,
-    ]
-
-    if frappe.session.user != "Administrator":
-        allowed = get_visible_employee_names_cached()
-        if not allowed:
-            return []
-        placeholders = _build_in_placeholders("se", allowed, values)
-        conditions.append(f"tabEmployee.name IN ({placeholders})")
-        
-    query = """
-        SELECT
-            tabEmployee.name,
-            tabEmployee.employee_name
-        FROM `tabEmployee`
-        WHERE
-    """
-
-    query += " AND ".join(conditions)
-
-    query += """
-        ORDER BY tabEmployee.employee_name
-        LIMIT %(start)s, %(page_len)s
-    """
-
-    return frappe.db.sql(query, values)

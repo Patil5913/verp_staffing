@@ -55,11 +55,191 @@ if (!document.getElementById("pdf-builder-style")) {
 	.builder-tool:active{
 		cursor:grabbing;
 	}
+
+	.prop-info{
+		display:inline-flex;
+		align-items:center;
+		justify-content:center;
+		width:15px;
+		height:15px;
+		border-radius:50%;
+		background:#e5e7eb;
+		color:#6b7280;
+		font-size:10px;
+		font-style:normal;
+		font-weight:700;
+		margin-left:6px;
+		cursor:default;
+		position:relative;
+	}
+
+	.prop-info-tooltip{
+		position:fixed;
+		z-index:100000;
+		background:#111827;
+		color:#fff;
+		padding:8px 10px;
+		border-radius:6px;
+		font-size:11.5px;
+		font-weight:400;
+		line-height:1.4;
+		box-shadow:0 8px 24px rgba(0,0,0,.3);
+		pointer-events:none;
+		text-align:left;
+	}
+
+	.prop-warning{
+		display:none;
+		background:#fff7ed;
+		border:1px solid #fdba74;
+		color:#9a3412;
+		font-size:11.5px;
+		line-height:1.4;
+		padding:8px 10px;
+		border-radius:6px;
+		margin:-4px 0 14px;
+	}
+
+	#property-guide{
+		margin-top:10px;
+		padding:12px 14px;
+		background:#f8fafc;
+		border:1px solid #e5e7eb;
+		border-radius:8px;
+		font-size:13px;
+		line-height:1.6;
+		color:#4b5563;
+	}
+
+	#property-guide b{
+		color:#374151;
+	}
+
+	.pdf-tour-overlay{
+		position:fixed;
+		inset:0;
+		z-index:9998;
+		pointer-events:none;
+	}
+
+	.pdf-tour-highlight{
+		position:fixed;
+		z-index:9998;
+		border-radius:8px;
+		box-shadow:0 0 0 9999px rgba(15,23,42,.6);
+		transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease;
+		pointer-events:none;
+	}
+
+	.pdf-tour-tooltip{
+		position:fixed;
+		z-index:9999;
+		background:white;
+		border-radius:10px;
+		padding:16px 18px;
+		width:300px;
+		box-shadow:0 10px 30px rgba(0,0,0,.3);
+		transition:top .25s ease,left .25s ease;
+	}
+
+	.pdf-tour-tooltip h5{
+		margin:0 0 6px;
+		font-size:14px;
+		font-weight:700;
+		color:#111827;
+	}
+
+	.pdf-tour-tooltip p{
+		margin:0 0 14px;
+		font-size:12.5px;
+		color:#4b5563;
+		line-height:1.5;
+	}
+
+	.pdf-tour-footer{
+		display:flex;
+		justify-content:space-between;
+		align-items:center;
+	}
+
+	.pdf-tour-progress{
+		font-size:11px;
+		color:#9ca3af;
+	}
+
+	.pdf-tour-actions button{
+		margin-left:6px;
+	}
+
+	.pdf-tour-skip{
+		position:absolute;
+		top:10px;
+		right:12px;
+		background:none;
+		border:none;
+		color:#9ca3af;
+		font-size:12px;
+		cursor:pointer;
+	}
 	`;
 
 	document.head.appendChild(style);
 }
 let CURRENT_TOOL = null;
+
+// Short, plain-language explanations for each property field, shown via the (i) icon.
+const PROPERTY_INFO = {
+	name: __(
+		"A unique identifier for this field. Give two fields the exact same name to make them show the same value everywhere that name is used.",
+	),
+	placeholder: __(
+		"Sample text shown only inside this builder so you can preview the layout. It is not part of the final document — the real value fills in when the template is used.",
+	),
+	font_size: __(
+		"How large the text will appear in the generated document. Bigger sizes work well for headings or emphasis.",
+	),
+	line_height: __(
+		"The vertical spacing between lines when text wraps. If it's too large for the box height, wrapped text may not fit — a warning appears below if that happens.",
+	),
+};
+
+function info_icon(key) {
+	const text = PROPERTY_INFO[key] || "";
+	return `<span class="prop-info" data-tip="${escape_html(text)}">i</span>`;
+}
+
+// Delegated so it works for icons rendered at any time; appended to <body> and positioned
+// with fixed coordinates so ancestor overflow:auto containers (like #property-content)
+// can never clip it.
+if (!window._prop_info_tooltip_bound) {
+	window._prop_info_tooltip_bound = true;
+
+	$(document).on("mouseenter", ".prop-info", function () {
+		const text = $(this).attr("data-tip");
+		if (!text) return;
+
+		const rect = this.getBoundingClientRect();
+		const tip_width = 220;
+		const $tip = $('<div class="prop-info-tooltip"></div>')
+			.text(text)
+			.css("width", tip_width)
+			.appendTo("body");
+
+		let left = rect.left + rect.width / 2 - tip_width / 2;
+		left = Math.max(8, Math.min(left, window.innerWidth - tip_width - 8));
+
+		let top = rect.top - $tip.outerHeight() - 10;
+		if (top < 8) {
+			top = rect.bottom + 10;
+		}
+
+		$tip.css({ top, left });
+	});
+
+	$(document).on("mouseleave", ".prop-info", function () {
+		$(".prop-info-tooltip").remove();
+	});
+}
 
 frappe.ui.form.on("Pdf Agreement Template", {
 	refresh(frm) {
@@ -83,9 +263,7 @@ frappe.ui.form.on("Pdf Agreement Template", {
 		}
 
 		frm.add_custom_button("Show Form Tour", () => {
-			const tour_name = "PDF Agreement Template";
-
-			frm.tour.init({ tour_name }).then(() => frm.tour.start());
+			start_builder_tour(frm);
 		});
 
 		if (window._pdf_upload_observer) {
@@ -346,6 +524,152 @@ function close_property_sidebar() {
 	$("#property-content").empty();
 
 	$(".pdf-field").removeClass("selected");
+}
+
+// On-demand spotlight walkthrough of the builder. Native Frappe Form Tours don't work
+// well here since the builder is plain HTML/canvas, not standard doctype fields — so this
+// highlights real DOM elements of the builder itself and only runs when the user asks for it.
+function start_builder_tour(frm) {
+	if (!frm.doc.upload_pdf_template) {
+		frappe.msgprint(__("Please upload a PDF template first, then start the tour."));
+		return;
+	}
+	if ($(".pdf-tour-overlay").length) return;
+
+	const sidebar_was_visible = $("#property-sidebar").is(":visible");
+	let sidebar_forced = false;
+	if (!sidebar_was_visible) {
+		$("#property-sidebar").css("display", "flex");
+		$("#property-content").html(
+			`<div style="color:#9ca3af;font-size:13px;padding:30px 0;text-align:center;">${__(
+				"Field properties appear here once you select a field",
+			)}</div>`,
+		);
+		sidebar_forced = true;
+	}
+
+	const steps = [
+		{
+			selector: "#builder-toolbox",
+			title: __("1. Toolbox"),
+			desc: __(
+				"Drag any of these onto the PDF to add a field — Text, Number, Date, Text Editor or Signature.",
+			),
+		},
+		{
+			selector: "#pdf-pages-wrap",
+			title: __("2. PDF Preview"),
+			desc: __(
+				"Your uploaded PDF appears here. Drop a field anywhere on the page, click a field to select it, drag it to reposition, or use its bottom-right handle to resize it.",
+			),
+		},
+		{
+			selector: "#property-sidebar",
+			title: __("3. Properties Panel"),
+			desc: __(
+				"When a field is selected, edit its name, preview text, font size and line height here. Hover the (i) next to any label for a plain-language explanation.",
+			),
+		},
+		{
+			selector: "#save-template",
+			title: __("4. Save Template"),
+			desc: __(
+				"Saves your current field layout so it can be used to auto-fill this PDF later.",
+			),
+		},
+		{
+			selector: "#clear-temp",
+			title: __("5. Clear"),
+			desc: __(
+				"Removes every field from the builder. This only changes the builder view — nothing is deleted until you press Save.",
+			),
+		},
+	];
+
+	let idx = 0;
+	const $highlight = $('<div class="pdf-tour-highlight"></div>').appendTo("body");
+	const $tooltip = $('<div class="pdf-tour-tooltip"></div>').appendTo("body");
+	$('<div class="pdf-tour-overlay"></div>').appendTo("body");
+
+	function cleanup() {
+		$(".pdf-tour-overlay, .pdf-tour-highlight, .pdf-tour-tooltip").remove();
+		$(window).off("resize.pdftour");
+		if (sidebar_forced) {
+			$("#property-sidebar").hide();
+			$("#property-content").empty();
+		}
+	}
+
+	function position_for(step) {
+		const $target = $(step.selector);
+		if (!$target.length) return false;
+
+		const rect = $target[0].getBoundingClientRect();
+		const pad = 6;
+		$highlight.css({
+			top: rect.top - pad,
+			left: rect.left - pad,
+			width: rect.width + pad * 2,
+			height: rect.height + pad * 2,
+		});
+
+		const tooltip_width = 300;
+		let top = rect.bottom + 14;
+		let left = rect.left;
+		if (left + tooltip_width > window.innerWidth - 20) {
+			left = window.innerWidth - tooltip_width - 20;
+		}
+		if (top + 170 > window.innerHeight) {
+			top = Math.max(20, rect.top - 180);
+		}
+		$tooltip.css({ top, left });
+		return true;
+	}
+
+	function render_step() {
+		const step = steps[idx];
+		if (!position_for(step)) {
+			idx++;
+			if (idx >= steps.length) {
+				cleanup();
+				return;
+			}
+			render_step();
+			return;
+		}
+
+		$tooltip.html(`
+			<button class="pdf-tour-skip">${__("Skip")} ✕</button>
+			<h5>${step.title}</h5>
+			<p>${step.desc}</p>
+			<div class="pdf-tour-footer">
+				<span class="pdf-tour-progress">${idx + 1} / ${steps.length}</span>
+				<div class="pdf-tour-actions">
+					${idx > 0 ? `<button class="btn btn-xs btn-default pdf-tour-prev">${__("Back")}</button>` : ""}
+					<button class="btn btn-xs btn-primary pdf-tour-next">${
+						idx === steps.length - 1 ? __("Done") : __("Next")
+					}</button>
+				</div>
+			</div>
+		`);
+
+		$tooltip.find(".pdf-tour-skip").on("click", cleanup);
+		$tooltip.find(".pdf-tour-next").on("click", () => {
+			idx++;
+			if (idx >= steps.length) {
+				cleanup();
+			} else {
+				render_step();
+			}
+		});
+		$tooltip.find(".pdf-tour-prev").on("click", () => {
+			idx = Math.max(0, idx - 1);
+			render_step();
+		});
+	}
+
+	$(window).on("resize.pdftour", () => position_for(steps[idx]));
+	render_step();
 }
 
 const PDFJS_URL = "/assets/verp_staffing/js/pdf.min.js";
@@ -761,26 +1085,26 @@ function open_property_sidebar(frm, field) {
 
 	body.html(`
 
-		<label>Field Name</label>
+		<label>${__("Field Name")}${info_icon("name")}</label>
 
 		<input
 		id="prop-name"
 		value="${escape_html(field.name)}">
 
-		<label>Preview Text</label>
+		<label>${__("Preview Text")}${info_icon("placeholder")}</label>
 
 		<input
 		id="prop-placeholder"
 		value="${escape_html(field.builder_placeholder || "")}">
 
-		<label>Font Size</label>
+		<label>${__("Font Size")}${info_icon("font_size")}</label>
 
 		<input
 		id="prop-font"
 		type="number"
 		value="${field.font_size}">
 
-		<label>Line Height</label>
+		<label>${__("Line Height")}${info_icon("line_height")}</label>
 
 		<input
 		id="prop-line"
@@ -788,19 +1112,18 @@ function open_property_sidebar(frm, field) {
 		step=".1"
 		value="${field.line_height}">
 
-		<label>Width</label>
+		<div id="line-height-warn" class="prop-warning"></div>
 
-		<input
-		value="${Math.round(field.width)}"
-		disabled>
-
-		<label>Height</label>
-
-		<input
-		value="${Math.round(field.height)}"
-		disabled>
+		<div id="property-guide">
+			💡 <b>${__("Quick tips")}</b><br>
+			• ${__("Reuse the same Name on multiple fields to auto-fill the same value in all of them.")}<br>
+			• ${__("Preview Text is only shown here in the builder, not in the final document.")}<br>
+			• ${__("Drag a field's blue corner handle to resize it, or drag its body to move it.")}
+		</div>
 
 	`);
+
+	update_line_height_warning(field);
 
 	$("#prop-name").on("input", function () {
 		field.name = this.value;
@@ -837,6 +1160,8 @@ function open_property_sidebar(frm, field) {
 			.find(".pdf-field-preview")
 			.css("font-size", field.font_size * PREVIEW_FONT_SCALE + "px");
 
+		update_line_height_warning(field);
+
 		frm.dirty();
 	});
 
@@ -851,8 +1176,32 @@ function open_property_sidebar(frm, field) {
 			.find(".pdf-field-preview")
 			.css("line-height", field.line_height);
 
+		update_line_height_warning(field);
+
 		frm.dirty();
 	});
+}
+
+// Warn (non-blocking) when font_size * line_height would overflow the field's box height
+function update_line_height_warning(field) {
+	const $warn = $("#line-height-warn");
+	if (!$warn.length) return;
+
+	const estimated_text_height = Math.round(field.font_size * field.line_height);
+	const box_height = Math.round(field.height);
+
+	if (estimated_text_height > box_height) {
+		$warn
+			.text(
+				__(
+					"⚠ This line height may cause wrapped text to overflow the box (~{0}px needed vs {1}px available). Consider lowering it or resizing the field.",
+					[estimated_text_height, box_height],
+				),
+			)
+			.show();
+	} else {
+		$warn.hide();
+	}
 }
 
 function attach_field_select_handlers($el, frm, field) {
@@ -1045,13 +1394,6 @@ function make_field_resizable($el, frm, field) {
 				width,
 				height,
 			});
-
-			// Update sidebar if selected
-			if ($el.hasClass("selected")) {
-				$("#property-content input").eq(4).val(Math.round(width));
-
-				$("#property-content input").eq(5).val(Math.round(height));
-			}
 		});
 
 	$(document)
@@ -1070,6 +1412,10 @@ function make_field_resizable($el, frm, field) {
 				width: field.width,
 				height: field.height,
 			});
+
+			if ($el.hasClass("selected")) {
+				update_line_height_warning(field);
+			}
 
 			frm.dirty();
 		});

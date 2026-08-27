@@ -72,6 +72,7 @@ frappe.ui.form.on("Sales Order", {
 				}
 			});
 		}, 0);
+		sync_payment_term_so_currency(frm);
 		(frm.doc.taxes || []).forEach((row) =>
 			verp_staffing.purchase.tax.toggle_rate_amount_fields(frm, row.doctype, row.name),
 		);
@@ -79,13 +80,7 @@ frappe.ui.form.on("Sales Order", {
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
 		await render_invoices_tab(frm);
 		if (!frm.is_new() && frm.doc.docstatus === 1) {
-			frappe.call({
-				method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_sales_invoice_for_order",
-				args: { sales_order: frm.doc.name },
-				callback: async (r) => {
-					await render_payment_term_actions(frm, r.message);
-				},
-			});
+			await render_payment_term_actions(frm);
 			toggle_payment_terms_add_button(frm);
 		}
 	},
@@ -167,6 +162,7 @@ frappe.ui.form.on("Sales Order", {
 		handle_currency(frm);
 		verp_staffing.calculation_engine.calculate_invoice(frm);
 		verp_staffing.calculation_engine.handle_rounded_total(frm);
+		sync_payment_term_so_currency(frm);
 	},
 	conversion_rate: function (frm) {
 		verp_staffing.purchase.exchange.update_description(frm);
@@ -333,6 +329,7 @@ frappe.ui.form.on("Customer Payment Terms", {
 		const remaining = Math.max(0, so_total - used);
 
 		frappe.model.set_value(cdt, cdn, "amount", remaining);
+		frappe.model.set_value(cdt, cdn, "so_currency", frm.doc.currency);
 	},
 	payment_terms_remove(frm) {
 		const so_total = frm.doc.disable_rounded_total
@@ -419,6 +416,16 @@ async function get_document_link(doctype_route, name) {
 	`;
 }
 
+// ── Keep so_currency in sync on every existing row (covers rows that
+// existed before this field, and any change to the SO's own currency) ────
+function sync_payment_term_so_currency(frm) {
+	(frm.doc.payment_terms || []).forEach((row) => {
+		if (row.so_currency !== frm.doc.currency) {
+			frappe.model.set_value(row.doctype, row.name, "so_currency", frm.doc.currency);
+		}
+	});
+}
+
 // ── Compute due_date = start_date + counter days ───────────────────────
 function compute_due_date(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
@@ -457,23 +464,28 @@ async function fetch_and_set_interview_count(frm, cdt, cdn) {
 	update_payment_term_description(frm, cdt, cdn);
 }
 
-// ── Auto-generate human-readable description ───────────────────────────
+// ── Auto-generate human-readable description (shows both currencies) ───
 function update_payment_term_description(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	if (!row.payment_condition) return;
 
-	const amount = row.amount ? format_currency(row.amount, frm.doc.currency, 4) : "—";
+	const amount = row.amount ? format_currency(row.amount, frm.doc.currency, 2) : "—";
+	const converted =
+		row.currency && row.currency !== frm.doc.currency && row.received_amount
+			? ` (${format_currency(row.received_amount, row.currency, 2)})`
+			: "";
+	const amount_display = `${amount}${converted}`;
 
 	let desc = "";
 
 	if (row.payment_condition === "Not Applied") {
-		desc = `Pay ${amount} — No condition applied (immediate or pre-paid)`;
+		desc = `Pay ${amount_display} — No condition applied (immediate or pre-paid)`;
 	} else if (row.payment_condition === "Number of Days") {
 		const days = row.counter || "?";
 		const start = row.start_date ? frappe.datetime.str_to_user(row.start_date) : "?";
 		const due = row.due_date ? frappe.datetime.str_to_user(row.due_date) : "not computed";
 
-		desc = `Pay ${amount} after ${days} day(s) from ${start} — Due: ${due}`;
+		desc = `Pay ${amount_display} after ${days} day(s) from ${start} — Due: ${due}`;
 	} else {
 		const required = row.counter || "?";
 		const current = row.current_interview_count != null ? row.current_interview_count : "…";
@@ -482,13 +494,14 @@ function update_payment_term_description(frm, cdt, cdn) {
 				? Math.max(0, row.counter - row.current_interview_count)
 				: "?";
 
-		desc = `Pay ${amount} after ${required} interview(s) — Current: ${current}, Remaining: ${remaining}`;
+		desc = `Pay ${amount_display} after ${required} interview(s) — Current: ${current}, Remaining: ${remaining}`;
 	}
 
 	frappe.model.set_value(cdt, cdn, "description", desc);
 }
 
-async function render_payment_term_actions(frm, si_name) {
+// ── Render per-row action button + invoice/company info ────────────────
+async function render_payment_term_actions(frm) {
 	const grid = frm.fields_dict["payment_terms"].grid;
 
 	grid.wrapper.off("click.fix_modal", ".grid-row-open .btn-open-row, .grid-row .btn-open-row");
@@ -503,20 +516,32 @@ async function render_payment_term_actions(frm, si_name) {
 			}
 		}, 100);
 	});
-	
-	grid.grid_rows.forEach(async(grid_row) => {
+
+	grid.grid_rows.forEach(async (grid_row) => {
 		const row = grid_row.doc;
 
-		const paymentEntryLink = row.payment_entry
-			? `— ${await get_document_link("payment-entry", row.payment_entry)}`
-			: "";
-
 		// Clean up previously added elements
-		grid_row.wrapper.find(".btn-payment-action, .payment-lock-msg").remove();
+		grid_row.wrapper
+			.find(".btn-payment-action, .payment-lock-msg, .payment-invoice-info")
+			.remove();
+
+		// Always show "PaymentEntryId - Company" once a PE exists on this row
+		if (row.payment_entry) {
+			const $peInfo = $(`
+				<div class="text-muted small payment-invoice-info" style="padding: 2px 8px;">
+					${row.payment_entry} - ${row.company || "—"}
+				</div>
+			`);
+			grid_row.wrapper.find(".data-row").append($peInfo);
+		}
 
 		if (row.payment_status === "Verified") return;
 
 		if (row.payment_status === "Pending Verification") {
+			const paymentEntryLink = row.payment_entry
+				? `— ${await get_document_link("payment-entry", row.payment_entry)}`
+				: "";
+
 			const $info = $(`
                 <span class="text-muted small payment-lock-msg" 
                       style="padding: 4px 8px; display: inline-block;">
@@ -530,23 +555,8 @@ async function render_payment_term_actions(frm, si_name) {
 			return;
 		}
 
-		if (!si_name) {
-			const $btn = $(`
-		<button class="btn btn-xs btn-primary btn-payment-action"
-				style="margin: 2px 8px;">
-			Mark as paid
-		</button>
-	`);
-
-			$btn.on("click", (e) => {
-				e.stopPropagation();
-				open_create_invoice_dialog(frm, row);
-			});
-
-			grid_row.wrapper.find(".data-row").append($btn);
-			return;
-		}
-
+		// One unified action for every row — invoice/company/currency are
+		// resolved automatically on the backend the first time, reused after
 		const is_rerequest = row.payment_status === "Rejected";
 		const btn_label = is_rerequest ? "Re-request" : "Mark as Paid";
 		const btn_class = is_rerequest ? "btn-warning" : "btn-primary";
@@ -560,126 +570,151 @@ async function render_payment_term_actions(frm, si_name) {
 
 		$btn.on("click", (e) => {
 			e.stopPropagation();
-			open_mark_as_paid_dialog(frm, row, si_name, is_rerequest);
+			open_mark_as_paid_dialog(frm, row, is_rerequest);
 		});
 
 		grid_row.wrapper.find(".data-row").append($btn);
 	});
 }
 
-function open_create_invoice_dialog(frm, term_row) {
-	const dialog = new frappe.ui.Dialog({
-		title: __("Create Invoice"),
+function open_mark_as_paid_dialog(frm, term_row, is_rerequest = false) {
+	const needs_company = !term_row.sales_invoice;
+	const so_currency = frm.doc.currency;
 
-		fields: [
-			{
-				fieldtype: "Data",
-				fieldname: "reference_no",
-				label: __("Reference / Cheque No"),
-				reqd: 1,
-			},
-			{
-				fieldtype: "Data",
-				fieldname: "remarks",
-				label: __("Add Remarks (Amount paid in which account)"),
-				reqd: 1,
-			},
-			{
-				fieldtype: "Date",
-				fieldname: "reference_date",
-				label: __("Reference Date"),
-				default: frappe.datetime.get_today(),
-				reqd: 1,
-			},
-		],
+	let dialog;
 
-		primary_action_label: __("Create Invoice"),
+	// Fetch the selected company's currency, toggle the exchange-rate field,
+	// and refresh the received-amount preview accordingly.
+	const refresh_preview = async () => {
+		if (!needs_company) return;
 
-		primary_action: async (values) => {
-			dialog.disable_primary_action();
+		const company = dialog.get_value("company");
+		const $preview = dialog.fields_dict.received_preview.$wrapper;
 
-			try {
-				const r = await frappe.call({
-					method: "verp_staffing.accounts.doctype.sales_order.sales_order.create_sales_invoice_from_sales_order",
+		if (!company) {
+			dialog.set_df_property("conversion_rate", "hidden", 1);
+			$preview.html("");
+			return;
+		}
 
-					args: {
-						sales_order: frm.doc.name,
-						payment_term_row: term_row.name,
-						reference_no: values.reference_no,
-						reference_date: values.reference_date,
-						remarks: values.remarks,
-					},
-				});
+		const r = await frappe.db.get_value("Company", company, "default_currency");
+		const target_currency = (r.message && r.message.default_currency) || so_currency;
+		const same_currency = target_currency === so_currency;
 
-				if (r.message) {
-					dialog.hide();
+		dialog.set_df_property("conversion_rate", "hidden", same_currency ? 1 : 0);
+		dialog.set_df_property("conversion_rate", "reqd", same_currency ? 0 : 1);
 
-					frappe.msgprint({
-						title: __("Invoice Created"),
-						message: `
-							Sales Invoice <b>${r.message.invoice}</b> created.<br>
-							Payment Entry <b>${r.message.payment_entry}</b> created.
-						`,
-						indicator: "green",
-					});
+		if (same_currency) {
+			dialog.set_value("conversion_rate", 1);
+		}
 
-					await frm.reload_doc();
-				}
-			} catch (e) {
-				dialog.enable_primary_action();
-			}
+		const rate = flt(dialog.get_value("conversion_rate")) || 0;
+		const received = same_currency ? flt(term_row.amount) : flt(term_row.amount) * rate;
+
+		$preview.html(`
+			<div class="text-muted small" style="padding: 4px 0 8px;">
+				Received Amount: <b>${format_currency(received, target_currency, 2)}</b>
+			</div>
+		`);
+	};
+
+	const dialog_fields = [
+		{
+			fieldtype: "HTML",
+			fieldname: "summary_html",
+			options: `
+				<div class="alert alert-info" style="margin-bottom:12px">
+					<b>Amount:</b> ${format_currency(term_row.received_amount != 0.0 ? term.received_amount : term_row.amount, term_row.currency || so_currency, 2)}<br>
+					${
+						term_row.sales_invoice
+							? `<b>Invoice:</b> ${term_row.sales_invoice} (${term_row.currency || so_currency})`
+							: `<b>Invoice:</b> will be created for the company selected below`
+					}
+					${
+						is_rerequest && term_row.payment_entry
+							? `<br><b>Payment Entry:</b> 
+							   <a href="/app/payment-entry/${term_row.payment_entry}" target="_blank">
+							       ${term_row.payment_entry}
+							   </a>`
+							: ""
+					}
+				</div>
+			`,
 		},
-	});
+	];
 
-	dialog.show();
-}
-
-function open_mark_as_paid_dialog(frm, term_row, si_name, is_rerequest = false) {
-	const amount = format_currency(term_row.amount, frm.doc.currency, 2);
-
-	const dialog = new frappe.ui.Dialog({
-		title: is_rerequest ? __("Re-request Verification") : __("Mark as Paid"),
-		fields: [
+	if (needs_company) {
+		dialog_fields.push(
+			{
+				fieldtype: "Link",
+				options: "Company",
+				fieldname: "company",
+				label: __("Company"),
+				default: frm.doc.company,
+				reqd: 1,
+				onchange: () => refresh_preview(),
+			},
+			{
+				fieldtype: "Float",
+				fieldname: "conversion_rate",
+				label: __("Exchange Rate") + ` (1 ${so_currency} = ?)`,
+				hidden: 1,
+				onchange: () => refresh_preview(),
+			},
 			{
 				fieldtype: "HTML",
-				options: `
-                    <div class="alert alert-info" style="margin-bottom:12px">
-                        <b>Amount:</b> ${amount}<br>
-                        <b>Invoice:</b> ${si_name}<br>
-                        <b>Condition:</b> ${term_row.description || term_row.payment_condition}
-                        ${
-							is_rerequest && term_row.payment_entry
-								? `<br><b>Payment Entry:</b> 
-                               <a href="/app/payment-entry/${term_row.payment_entry}" target="_blank">
-                                   ${term_row.payment_entry}
-                               </a>`
-								: ""
-						}
-                    </div>
-                `,
+				fieldname: "received_preview",
+				options: "",
 			},
-			{
-				fieldtype: "Data",
-				fieldname: "reference_no",
-				label: __("Reference / Cheque No"),
-				reqd: 1,
-			},
-			{
-				fieldtype: "Data",
-				fieldname: "remarks",
-				label: __("Add Remarks (Amount paid in which account"),
-				reqd: 1,
-			},
-			{
-				fieldtype: "Date",
-				fieldname: "reference_date",
-				label: __("Reference Date"),
-				default: frappe.datetime.get_today(),
-				reqd: 1,
-			},
-		],
+		);
+	}
+
+	dialog_fields.push(
+		{
+			fieldtype: "Data",
+			fieldname: "payer_account_name",
+			label: __("Payer's Account Name"),
+			reqd: 1,
+		},
+		{
+			fieldtype: "Data",
+			fieldname: "reference_no",
+			label: __("Reference Id/ Transaction No/ Cheque No"),
+			reqd: 1,
+		},
+		{
+			fieldtype: "Data",
+			fieldname: "remarks",
+			label: __("Add Remarks (Amount paid in which account)"),
+			reqd: 1,
+		},
+		{
+			fieldtype: "Date",
+			fieldname: "reference_date",
+			label: __("Reference Date"),
+			default: frappe.datetime.get_today(),
+			reqd: 1,
+		},
+	);
+
+	dialog = new frappe.ui.Dialog({
+		title: is_rerequest ? __("Re-request Verification") : __("Mark as Paid"),
+		fields: dialog_fields,
 		primary_action_label: is_rerequest ? __("Re-request") : __("Submit for Verification"),
 		primary_action: async (values) => {
+			if (needs_company) {
+				const company = dialog.get_value("company");
+				const conversion_rate = dialog.get_value("conversion_rate");
+				if (!company) {
+					frappe.msgprint(__("Company is required."));
+					return;
+				}
+				if (!dialog.get_field("conversion_rate").df.hidden && flt(conversion_rate) <= 0) {
+					frappe.msgprint(__("Enter a valid exchange rate."));
+					return;
+				}
+			}
+
 			dialog.disable_primary_action();
 			try {
 				const r = await frappe.call({
@@ -690,15 +725,47 @@ function open_mark_as_paid_dialog(frm, term_row, si_name, is_rerequest = false) 
 						reference_no: values.reference_no,
 						reference_date: values.reference_date,
 						remarks: values.remarks,
+						payer_account_name: values.payer_account_name,
+						company: values.company || undefined,
+						conversion_rate: values.conversion_rate || undefined,
 					},
 				});
 				if (r.message) {
 					dialog.hide();
+
+					if (needs_company) {
+						frappe.model.set_value(
+							term_row.doctype,
+							term_row.name,
+							"company",
+							r.message.company,
+						);
+						frappe.model.set_value(
+							term_row.doctype,
+							term_row.name,
+							"currency",
+							r.message.currency,
+						);
+						frappe.model.set_value(
+							term_row.doctype,
+							term_row.name,
+							"conversion_rate",
+							r.message.conversion_rate,
+						);
+						frappe.model.set_value(
+							term_row.doctype,
+							term_row.name,
+							"received_amount",
+							r.message.received_amount,
+						);
+					}
+
 					frappe.msgprint({
 						title: is_rerequest ? __("Re-requested") : __("Submitted"),
-						message: `Payment Entry <b>${r.message}</b> 
-                                    ${is_rerequest ? "re-submitted" : "submitted"} for verification.<br><br>
-                                    <a href="/app/payment-entry/${r.message}" target="_blank">
+						message: `Payment Entry <b>${r.message.payment_entry}</b> 
+                                    ${is_rerequest ? "re-submitted" : "submitted"} for verification.<br>
+                                    Invoice: <b>${r.message.invoice}</b><br><br>
+                                    <a href="/app/payment-entry/${r.message.payment_entry}" target="_blank">
                                         Open Payment Entry →
                                     </a>`,
 						indicator: "blue",
@@ -710,6 +777,11 @@ function open_mark_as_paid_dialog(frm, term_row, si_name, is_rerequest = false) 
 			}
 		},
 	});
+
+	if (needs_company) {
+		dialog.set_value("company", frm.doc.company);
+		refresh_preview();
+	}
 
 	dialog.show();
 }
@@ -995,9 +1067,12 @@ function get_invoice_indicator(inv) {
 	return { label: "Unpaid", color: "orange" };
 }
 
+// ── Invoices tab — multiple invoices per SO, infinite scroll (5 per page) ──
 async function render_invoices_tab(frm) {
+	const wrapper = frm.get_field("invoices_html").$wrapper;
+
 	if (frm.is_new()) {
-		frm.get_field("invoices_html").$wrapper.html(
+		wrapper.html(
 			`<p class="text-muted" style="padding:10px">
                 Save the Sales Order first to see linked invoices.
             </p>`,
@@ -1005,54 +1080,113 @@ async function render_invoices_tab(frm) {
 		return;
 	}
 
-	const r = await frappe.call({
-		method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_linked_invoice",
-		args: { sales_order: frm.doc.name },
-	});
-
-	const invoice = r.message;
-	const wrapper = frm.get_field("invoices_html").$wrapper;
-	if (!invoice) {
-		wrapper.html(
-			`<p class="text-muted" style="padding:10px">
-                No invoice created yet. Create a paycheck first, submit sales order to create invoice
-            </p>`,
-		);
-		return;
-	}
-
-	const { label, color } = get_invoice_indicator(invoice);
-
-	const invoiceNameHtml = await get_document_link("sales-invoice", invoice.name);
+	frm._invoice_offset = 0;
+	frm._invoice_has_more = true;
+	frm._invoice_loading = false;
 
 	wrapper.html(`
-	<div style="padding: 10px">
-		<table class="table table-bordered table-hover">
-			<thead>
+		<div class="invoices-scroll-wrapper" style="max-height: 320px; overflow-y: auto; padding: 10px;">
+			<table class="table table-bordered table-hover" style="margin-bottom: 0;">
+				<thead>
+					<tr>
+						<th>Invoice</th>
+						<th>Company</th>
+						<th>Date</th>
+						<th>Created By</th>
+						<th>Grand Total</th>
+						<th>Outstanding</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody class="invoices-tbody"></tbody>
+			</table>
+			<p class="text-muted small invoices-empty-msg" style="padding: 10px; display:none;">
+				No invoices created yet.
+			</p>
+			<p class="text-muted small text-center invoices-loading-msg" style="padding: 6px; display:none;">
+				Loading...
+			</p>
+		</div>
+	`);
+
+	const $scrollWrapper = wrapper.find(".invoices-scroll-wrapper");
+	$scrollWrapper.off("scroll.invoice_paging").on("scroll.invoice_paging", () => {
+		const el = $scrollWrapper[0];
+		if (
+			frm._invoice_has_more &&
+			!frm._invoice_loading &&
+			el.scrollTop + el.clientHeight >= el.scrollHeight - 40
+		) {
+			load_invoice_page(frm);
+		}
+	});
+
+	await load_invoice_page(frm);
+}
+
+async function load_invoice_page(frm) {
+	if (frm._invoice_loading || !frm._invoice_has_more) return;
+	frm._invoice_loading = true;
+
+	const wrapper = frm.get_field("invoices_html").$wrapper;
+	wrapper.find(".invoices-loading-msg").show();
+	const is_first_page = frm._invoice_offset === 0;
+
+	try {
+		const r = await frappe.call({
+			method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_linked_invoices",
+			args: {
+				sales_order: frm.doc.name,
+				limit_start: frm._invoice_offset,
+				limit_page_length: 5,
+			},
+		});
+
+		const { invoices = [], has_more = false } = r.message || {};
+		frm._invoice_has_more = has_more;
+		frm._invoice_offset += invoices.length;
+
+		if (is_first_page && invoices.length === 0) {
+			wrapper.find(".invoices-empty-msg").show();
+			return;
+		}
+
+		const $tbody = wrapper.find(".invoices-tbody");
+
+		for (const inv of invoices) {
+			const invoiceLink = await get_document_link("sales-invoice", inv.name);
+			const draftBadge =
+				inv.docstatus === 0
+					? `<span class="indicator-pill orange" style="margin-left:6px;">Draft</span>`
+					: inv.docstatus === 2
+						? `<span class="indicator-pill orange" style="margin-left:6px;">Cancelled</span>`
+						: "";
+			const { label, color } = get_invoice_indicator(inv);
+
+			$tbody.append(`
 				<tr>
-					<th>Invoice</th>
-					<th>Date</th>
-					<th>Grand Total</th>
-					<th>Outstanding</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr>
-					<td>${invoiceNameHtml}</td>
-					<td>${frappe.datetime.str_to_user(invoice.posting_date)}</td>
-					<td>${format_currency(invoice.grand_total, invoice.currency)}</td>
-					<td>${format_currency(invoice.outstanding_amount, invoice.currency)}</td>
+					<td>${invoiceLink}${draftBadge}</td>
+					<td>${frappe.utils.escape_html(inv.company || "")}</td>
+					<td>${frappe.datetime.str_to_user(inv.posting_date)}</td>
+					<td>${frappe.utils.escape_html(inv.owner_fullname || "")}</td>
+					<td>${format_currency(inv.grand_total, inv.currency)}</td>
+					<td>${format_currency(inv.outstanding_amount, inv.currency)}</td>
 					<td>
-						<span class="indicator-pill ${color}">
-							${__(label)}
-						</span>
+						<span class="indicator-pill ${color}">${__(label)}</span>
 					</td>
 				</tr>
-			</tbody>
-		</table>
-	</div>
-`);
+			`);
+		}
+	} finally {
+		frm._invoice_loading = false;
+		wrapper.find(".invoices-loading-msg").hide();
+
+		const $scrollWrapper = wrapper.find(".invoices-scroll-wrapper");
+		const el = $scrollWrapper[0];
+		if (frm._invoice_has_more && el && el.scrollHeight <= el.clientHeight) {
+			load_invoice_page(frm);
+		}
+	}
 }
 
 // ── Validates total payment terms don't exceed SO grand total ──────────
@@ -1120,17 +1254,30 @@ function toggle_payment_term_fields(frm, cdt, cdn) {
 	const condition = row.payment_condition;
 
 	const read_only_map = {
-		"Not Applied": { counter: 1, start_date: 1, due_date: 1, current_interview_count: 1 },
-		"Number of Days": { counter: 0, start_date: 0, due_date: 1, current_interview_count: 1 },
+		"Not Applied": {
+			counter: 1,
+			start_date: 1,
+			due_date: 1,
+			current_interview_count: 1,
+			received_amount: 1,
+		},
+		"Number of Days": {
+			counter: 0,
+			start_date: 0,
+			due_date: 1,
+			current_interview_count: 1,
+			received_amount: 1,
+		},
 		"Number of Interviews": {
 			counter: 0,
 			start_date: 1,
 			due_date: 1,
 			current_interview_count: 1,
+			received_amount: 1,
 		},
 	};
-
 	const config = read_only_map[condition] || read_only_map["Not Applied"];
+	console.log("config: ", config);
 	const grid = frm.fields_dict["payment_terms"].grid;
 	const grid_row = grid.grid_rows.find((r) => r.doc.name === cdn);
 	if (!grid_row) return;

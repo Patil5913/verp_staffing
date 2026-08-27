@@ -146,9 +146,16 @@ def get_services_for_customer(customer):
         pluck=True,
     )
 
+IGNORE_SERVICE_COMPLETION_STATUS = [
+    "Interview Support",
+    "Training",
+    "JDC"
+]
 
 def is_all_services_completed(customer, services):
     for service in services:
+        if service in IGNORE_SERVICE_COMPLETION_STATUS:
+            continue
         if not is_service_completed(service, customer):
             return False
 

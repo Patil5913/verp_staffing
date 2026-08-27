@@ -155,7 +155,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-18 17:43:39.815047",
+ "modified": "2026-08-27 10:01:51.411973",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",
@@ -295,10 +295,12 @@
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "name1",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
  "title_field": "name1",
  "track_changes": 1,
- "track_views": 1
+ "track_views": 1,
+ "translated_doctype": 1
 }

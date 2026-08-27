@@ -158,12 +158,12 @@ frappe.query_reports["General Ledger"] = {
 			fieldtype: "Select",
 			options: "\nYes\nNo",
 		},
-		{
-			fieldname: "include_cancelled",
-			label: __("Include Cancelled Entries"),
-			fieldtype: "Check",
-			default: 1,
-		},
+		// {
+		// 	fieldname: "include_cancelled",
+		// 	label: __("Include Cancelled Entries"),
+		// 	fieldtype: "Check",
+		// 	default: 1,
+		// },
 		{
 			fieldname: "show_in_account_currency",
 			label: __("Show in Account Currency"),

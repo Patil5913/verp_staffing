@@ -237,6 +237,14 @@ frappe.query_reports["Profit and Loss Statement"] = {
 			on_change: function () {
 				let me = frappe.query_reports["Profit and Loss Statement"];
 				let rate = frappe.query_report.get_filter_value("presentation_exchange_rate") || 1;
+				if (rate < 0) {
+					frappe.msgprint({
+						title: __("Invalid Exchange Rate"),
+						message: __("Exchange rate must be positive."),
+						indicator: "red",
+					});
+					frappe.query_report.set_filter_value("presentation_exchange_rate", 1);
+				}
 				let from = frappe.query_report.get_filter_value("currency");
 				let company = frappe.query_report.get_filter_value("company");
 

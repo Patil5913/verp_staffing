@@ -825,6 +825,53 @@ def generic_assign_query(user):
     return f"`tab{doctype}`.assign_to IN ({team_sql})"
 
 
+def generic_assign_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    return doc.assign_to in team
+
+
+from frappe.utils import cint
+
+@frappe.whitelist()
+def get_next_permitted(doctype, value, prev, filters=None, sort_order="desc", sort_field="creation"):
+    prev = cint(prev)
+    if not filters:
+        filters = []
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    current_sort_value = frappe.db.get_value(doctype, value, sort_field)
+    is_ascending = sort_order.lower() == "asc"
+
+    if prev == is_ascending:
+        operator, order_by = "<", f"{sort_field} desc, name desc"
+    else:
+        operator, order_by = ">", f"{sort_field} asc, name asc"
+
+    query_filters = list(filters) + [[doctype, sort_field, operator, current_sort_value]]
+
+    result = frappe.get_list(
+        doctype,
+        filters=query_filters,   # permission_query_conditions is applied here automatically
+        fields=["name"],
+        order_by=order_by,
+        limit_page_length=1,
+    )
+
+    if result:
+        return result[0]["name"]
+
+    frappe.msgprint(frappe._("No further accessible records"))
+    return None
+
+
 from verp_staffing.employee.doctype.employee.employee import get_user_departments
 
 

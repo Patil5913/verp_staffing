@@ -15,7 +15,7 @@ frappe.ui.form.on("Payment Entry", {
 			frm.page.set_indicator(__(status), color);
 		}
 
-				frm.add_custom_button("Show Form Tour", () => {
+		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Payment Entry";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
@@ -284,7 +284,7 @@ frappe.ui.form.on("Payment Entry", {
 
 		frm.set_query("reference_name", "references", function (doc, cdt, cdn) {
 			const row = locals[cdt][cdn];
-			const filters = { docstatus: 1 };
+			const filters = { docstatus: 1, payment_term_row: ["is", "not set"] };
 			if (frm.doc.company) filters["company"] = frm.doc.company;
 			const party_type_doctypes = [
 				"Sales Invoice",
@@ -303,7 +303,16 @@ frappe.ui.form.on("Payment Entry", {
 		});
 
 		frm.set_query("account_head", "taxes", function () {
-			return { filters: { is_group: 0, company: frm.doc.company } };
+			if (!frm.doc.company) {
+				return { filters: { name: "__invalid__" } };
+			}
+			return {
+				filters: {
+					account_type: ["in", ["Tax", "Chargeable","Indirect Expense","Direct Expense", "Expense Account", "Income Account"]],
+					is_group: 0,
+					company: frm.doc.company,
+				},
+			};
 		});
 	},
 

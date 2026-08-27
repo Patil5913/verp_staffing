@@ -78,7 +78,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-06-26 19:06:22.770069",
+ "modified": "2026-08-27 10:13:36.475893",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Item Category",
@@ -127,7 +127,7 @@
    "role": "Sales Team Lead",
    "select": 1
   },
-    {
+  {
    "read": 1,
    "role": "Marketing Team Lead",
    "select": 1
@@ -202,8 +202,10 @@
  "rows_threshold_for_grid_search": 20,
  "search_fields": "parent_item_category",
  "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "item_category_name",
  "translated_doctype": 1
 }

@@ -128,7 +128,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-13 17:46:18.595876",
+ "modified": "2026-08-27 10:08:28.021656",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",
@@ -268,5 +268,6 @@
  "sort_order": "DESC",
  "states": [],
  "title_field": "customer",
- "track_changes": 1
+ "track_changes": 1,
+ "translated_doctype": 1
 }

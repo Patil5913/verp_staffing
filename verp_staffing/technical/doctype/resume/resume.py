@@ -121,14 +121,13 @@ def get_latest_resume_document(customer):
         {"customer": customer},
         "name",
     )
-
+        
     if not resume_name:
         return None
 
     # Respect permission on the parent Resume.
     if not frappe.has_permission(
         "Resume",
-        doc=resume_name,
         ptype="read",
     ):
         frappe.throw(

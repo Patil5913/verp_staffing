@@ -18,8 +18,6 @@ class UOMMustBeIntegerError(frappe.ValidationError):
 
 
 class SalesInvoice(Document):
-    pass
-
     def set_indicator(self):
         """Set indicator for portal"""
         if self.outstanding_amount < 0:
@@ -71,6 +69,83 @@ class SalesInvoice(Document):
         self.set_indicator()
         self.set_in_words()
         self.set_status()
+
+    def on_trash(self):
+        if not self.payment_term_row:
+            return
+
+        term_invoice, verification_log = frappe.db.get_value(
+            "Customer Payment Terms",
+            self.payment_term_row,
+            ["sales_invoice", "verification_log"],
+        )
+
+        if term_invoice != self.name:
+            # This term has already moved on to a different invoice (e.g. this
+            # SI was cancelled earlier and a fresh one created) — don't stomp
+            # on the currently active payment cycle.
+            return
+
+        now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+        new_log = (
+            f"{verification_log or ''}\n[{now_str}] Sales Invoice {self.name} deleted by {frappe.session.user}"
+        ).strip()
+
+        frappe.db.set_value(
+            "Customer Payment Terms",
+            self.payment_term_row,
+            {
+                "payment_status": "Unpaid",
+                "sales_invoice": "",
+                "payment_entry": "",
+                "verification_log": new_log,
+            },
+        )
+
+    def on_cancel(self):
+        if not self.payment_term_row:
+            return
+
+        term_invoice, verification_log = frappe.db.get_value(
+            "Customer Payment Terms",
+            self.payment_term_row,
+            ["sales_invoice", "verification_log"],
+        )
+
+        if term_invoice != self.name:
+            return
+
+        draft_pe_names = frappe.db.sql(
+            """
+            SELECT per.parent
+            FROM `tabPayment Entry Reference` per
+            INNER JOIN `tabPayment Entry` pe ON pe.name = per.parent
+            WHERE per.reference_name = %s
+            AND pe.docstatus = 0
+            AND pe.verification_status = 'Pending Verification'
+            """,
+            (self.name,),
+        )
+
+        if draft_pe_names:
+            frappe.db.delete("Payment Entry Reference", {"parent": ["in", draft_pe_names]})
+            frappe.db.delete("Payment Entry", {"name": ["in", draft_pe_names]})
+
+        now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+        new_log = (
+            f"{verification_log or ''}\n[{now_str}] Sales Invoice {self.name} cancelled by {frappe.session.user}"
+        ).strip()
+
+        frappe.db.set_value(
+            "Customer Payment Terms",
+            self.payment_term_row,
+            {
+                "payment_status": "Unpaid",
+                "sales_invoice": "",
+                "payment_entry": "",
+                "verification_log": new_log,
+            },
+        )
 
     def validate_mandatory_fields(self):
         if not self.customer:
@@ -364,7 +439,6 @@ class SalesInvoice(Document):
         taxes = self.get("taxes") or []
 
         for tax in taxes:
-
             idx = tax.idx
 
             charge_type = tax.charge_type
@@ -378,23 +452,15 @@ class SalesInvoice(Document):
             # ==========================================
 
             if not charge_type and (
-                getattr(tax, "row_id", None)
-                or tax.rate
-                or tax.tax_amount
+                getattr(tax, "row_id", None) or tax.rate or tax.tax_amount
             ):
-                frappe.throw(
-                    _("Row {0}: Please select Charge Type first").format(idx)
-                )
+                frappe.throw(_("Row {0}: Please select Charge Type first").format(idx))
 
             # ==========================================
             # Direct Charge Types
             # ==========================================
 
-            if (
-                charge_type in direct_charge_types
-                and getattr(tax, "row_id", None)
-            ):
-
+            if charge_type in direct_charge_types and getattr(tax, "row_id", None):
                 frappe.throw(
                     _(
                         "Row {0}: Row ID is allowed only for "
@@ -408,7 +474,6 @@ class SalesInvoice(Document):
             # ==========================================
 
             if charge_type in previous_row_types:
-
                 if idx == 1:
                     frappe.throw(
                         _(
@@ -432,8 +497,7 @@ class SalesInvoice(Document):
                 if row_id >= idx:
                     frappe.throw(
                         _(
-                            "Row {0}: Row ID ({1}) must reference "
-                            "an earlier tax row"
+                            "Row {0}: Row ID ({1}) must reference an earlier tax row"
                         ).format(idx, row_id)
                     )
 
@@ -442,13 +506,11 @@ class SalesInvoice(Document):
             # ==========================================
 
             if charge_type == "Actual":
-
                 if tax.tax_amount is None:
                     frappe.throw(
-                        _(
-                            "Row {0}: Tax Amount cannot be empty "
-                            "for Actual type"
-                        ).format(idx)
+                        _("Row {0}: Tax Amount cannot be empty for Actual type").format(
+                            idx
+                        )
                     )
 
                 if tax_amount < 0:
@@ -463,28 +525,19 @@ class SalesInvoice(Document):
             # ==========================================
 
             if tax.rate is None:
-                frappe.throw(
-                    _("Row {0}: Tax Rate cannot be empty").format(idx)
-                )
+                frappe.throw(_("Row {0}: Tax Rate cannot be empty").format(idx))
 
             if rate < 0:
-                frappe.throw(
-                    _("Row {0}: Tax Rate cannot be negative").format(idx)
-                )
+                frappe.throw(_("Row {0}: Tax Rate cannot be negative").format(idx))
 
             if rate == 0:
-                frappe.throw(
-                    _("Row {0}: Tax Rate cannot be zero").format(idx)
-                )
+                frappe.throw(_("Row {0}: Tax Rate cannot be zero").format(idx))
 
             if rate > 100:
                 frappe.throw(
-                    _(
-                        "Row {0}: Tax Rate ({1}%) "
-                        "cannot exceed 100%"
-                    ).format(idx, rate)
+                    _("Row {0}: Tax Rate ({1}%) cannot exceed 100%").format(idx, rate)
                 )
-                
+
     def validate_grand_total(self):
         """Block submission of zero/negative grand total on invoices."""
         if flt(self.grand_total) <= 0:
@@ -909,7 +962,7 @@ def send_dynamic_payment_reminders():
             "party_field": "supplier",
         },
     )
-    
+
     common_fields = [
         "name",
         "due_date",
@@ -918,7 +971,6 @@ def send_dynamic_payment_reminders():
     ]
 
     for config in invoice_configs:
-
         doctype = config["doctype"]
         party_field = config["party_field"]
 
@@ -961,7 +1013,6 @@ def send_reminder_email(doc, invoice_type="Sales Invoice"):
         "Email Template",
         template_name,
     ):
-
         frappe.log_error(
             title="Missing Email Template",
             message=(
@@ -995,10 +1046,7 @@ def send_reminder_email(doc, invoice_type="Sales Invoice"):
         recipient = get_notification_email()
 
     if not recipient:
-        frappe.log_error(
-            f"No email for invoice {doc.get('name')}",
-            "Payment Reminder"
-        )
+        frappe.log_error(f"No email for invoice {doc.get('name')}", "Payment Reminder")
         return
 
     frappe.enqueue(
@@ -1008,6 +1056,7 @@ def send_reminder_email(doc, invoice_type="Sales Invoice"):
         message=message,
         now=False,
     )
+
 
 def get_notification_email():
     # Get JSON from your custom field

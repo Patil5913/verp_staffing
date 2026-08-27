@@ -1142,7 +1142,7 @@ def after_install():
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     seed_form_tours()
     seed_party_types()
-    # set_default_system_settings()
+    set_default_system_settings()
 
 
 def seed_master_sidebar_config():
@@ -2081,8 +2081,8 @@ def seed_party_types():
         
 def set_default_system_settings():
 	doc = frappe.get_single("System Settings")
-	doc.set("welcome_email_template", "Welcome Email Template")
-	doc.set("reset_password_template", "Reset Password Email")
+	# doc.set("welcome_email_template", "Welcome Email Template")
+	# doc.set("reset_password_template", "Reset Password Email")
 	doc.set("disable_system_update_notification", 1)
 	doc.save(ignore_permissions=True)
 

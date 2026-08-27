@@ -28,9 +28,7 @@ frappe.ui.form.on("Interview", {
 			frm.tour.init({ tour_name: "Interview" }).then(() => frm.tour.start());
 		});
 
-		// For new Interview, make sure default status is applied.
 		initialize_default_interview_status(frm);
-
 		hide_interview_round_no_column(frm);
 		apply_round_delete_restriction(frm);
 		check_marketing_superiority(frm);
@@ -40,12 +38,16 @@ frappe.ui.form.on("Interview", {
 		block_round_tab_new_row(frm);
 
 		if (!frm.is_new()) {
-			frm.set_df_property("marketing_link", "read_only", 1);
+			frm.set_df_property("marketing_link", "hidden", 1);
+			frm.set_df_property("customer", "hidden", 0);
+			frm.set_df_property("customer", "read_only", 1);
 			frm.set_df_property("role", "read_only", 1);
 			frm.set_df_property("company", "read_only", 1);
 			frm.set_df_property("status", "read_only", 1);
 
 			fetch_and_render_resume(frm);
+		} else {
+			frm.set_df_property("customer", "hidden", 1);
 		}
 	},
 
@@ -517,22 +519,21 @@ function fetch_and_render_resume(frm) {
 	const set_html = (html) => frm.set_df_property("resume", "options", html);
 	const clear_resume = () => set_html("");
 
-	frappe.db.get_value("Marketing", frm.doc.marketing_link, "customer").then(({ message }) => {
-		const customer = message?.customer;
-		if (!customer) {
-			clear_resume();
-			return;
-		}
-		frappe.call({
-			method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
-			args: { customer: customer },
-			callback(r) {
-				const resume = r.message;
-				if (!resume?.document) {
-					clear_resume();
-					return;
-				}
-				set_html(`
+	const customer = frm.doc.customer;
+	if (!customer) {
+		clear_resume();
+		return;
+	}
+	frappe.call({
+		method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
+		args: { customer: customer },
+		callback(r) {
+			const resume = r.message;
+			if (!resume?.document) {
+				clear_resume();
+				return;
+			}
+			set_html(`
 				<div style="padding:8px">
 					
 						href="${resume.document}"
@@ -543,10 +544,9 @@ function fetch_and_render_resume(frm) {
 					</a>
 				</div>
 			`);
-			},
-			error() {
-				clear_resume();
-			},
-		});
+		},
+		error() {
+			clear_resume();
+		},
 	});
 }

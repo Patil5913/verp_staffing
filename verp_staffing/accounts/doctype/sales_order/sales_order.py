@@ -60,13 +60,13 @@ class SalesOrder(Document):
     def before_update_after_submit(self):
         # Same validations must run post-submit too
         self.validate_payment_terms_deletion()
-        self.validate_payment_terms_total()
+        # self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
 
     def validate(self):
         self.validate_payment_terms_deletion()
-        self.validate_payment_terms_total()
+        # self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
         self.validate_mandatory()
@@ -577,106 +577,6 @@ def send_details_form_notification(recipient, sales_order, customer):
 
 
 @frappe.whitelist()
-def create_sales_invoice_from_sales_order(
-    sales_order,
-    payment_term_row,
-    reference_no,
-    reference_date,
-    remarks,
-):
-    """Create sales invoice directly from sales order
-    User can create multiple sales invoice and select
-    items from sales order to be included in invoice
-    """
-    so = frappe.get_doc("Sales Order", sales_order)
-
-    # Block if SI already exists for this SO
-    if existing := frappe.db.exists("Sales Invoice", {"sales_order": sales_order}):
-        frappe.throw(
-            f"A Sales Invoice already exists for this Sales Order: "
-            f"<a href='/app/sales-invoice/{existing}'>{existing}</a>",
-            title="Invoice Already Exists",
-        )
-
-    si = frappe.new_doc("Sales Invoice")
-    si.customer = so.customer
-    si.company = so.company
-    si.company_currency = so.company_currency
-    si.currency = so.currency
-    si.conversion_rate = so.conversion_rate
-    si.sales_order = so.name
-    si.disable_rounded_total = so.disable_rounded_total
-    si.additional_discount_percentage = so.additional_discount_percentage
-    si.discount_amount = so.discount_amount
-    si.additional_discount_account = so.additional_discount_account
-
-    for row in so.items:
-        si.append(
-            "items",
-            {
-                "item": row.item,
-                "qty": row.qty,
-                "rate": row.rate,
-                "uom": row.uom,
-                "income_account": row.income_account,
-                "type": row.type,
-            },
-        )
-
-    for tax in so.taxes or []:
-        si.append(
-            "taxes",
-            {
-                "charge_type": tax.charge_type,
-                "account_head": tax.account_head,
-                "rate": tax.rate,
-                "tax_amount": tax.tax_amount,
-            },
-        )
-
-    si.insert(ignore_permissions=True)
-    si.submit()
-    pe_name = create_payment_entry_from_term(
-        sales_order=sales_order,
-        payment_term_row=payment_term_row,
-        reference_no=reference_no,
-        reference_date=reference_date,
-        remarks=remarks,
-    )
-
-    return {
-        "invoice": si.name,
-        "payment_entry": pe_name,
-    }
-
-
-@frappe.whitelist()
-def get_linked_invoice(sales_order):
-    """Get invoice lined with sales order"""
-    invoice = frappe.db.get_value(
-        "Sales Invoice",
-        {"sales_order": sales_order},
-        [
-            "name",
-            "posting_date",
-            "due_date",
-            "grand_total",
-            "outstanding_amount",
-            "currency",
-        ],
-        as_dict=True,
-    )
-
-    return invoice
-
-
-@frappe.whitelist()
-def get_sales_invoice_for_order(sales_order):
-    """Returns linked SI name if exists, else None."""
-    return frappe.db.get_value("Sales Invoice", {"sales_order": sales_order}, "name")
-
-
-@frappe.whitelist()
 def get_interview_count_for_customer(customer):
     """
     Traverse: Customer → Marketing (unique) → get_interviews_by_marketing
@@ -704,7 +604,29 @@ def create_payment_entry_from_term(
     reference_no,
     reference_date,
     remarks=None,
+    payer_account_name=None,
+    company=None,
+    conversion_rate=None,
 ):
+    """Mark a payment term as paid, handling cross-currency payments.
+
+    First time (term has no sales_invoice yet):
+        - `company` (chosen in the dialog) is required.
+        - currency = that company's default_currency.
+        - If currency differs from the SO's own currency, `conversion_rate`
+          (entered by the user) converts term.amount (SO currency) into
+          term.received_amount (company currency). If currencies match,
+          conversion_rate is forced to 1 and received_amount == amount,
+          regardless of what's passed in — never trust the client for this.
+        - A Sales Invoice is created in the company's currency for exactly
+          received_amount; a Payment Entry follows in the same currency.
+        - company / currency / conversion_rate / received_amount /
+          sales_invoice are all written on the term in a single save().
+
+    Re-request (sales_invoice already exists):
+        - company/currency/conversion_rate/received_amount are already fixed
+          from the first run and are not re-derived.
+    """
     so = frappe.get_doc("Sales Order", sales_order)
 
     term = next((r for r in so.payment_terms if r.name == payment_term_row), None)
@@ -714,85 +636,100 @@ def create_payment_entry_from_term(
     if term.payment_status not in ("Unpaid", "Rejected"):
         frappe.throw(f"This payment term is already in status: {term.payment_status}")
 
-    si_name = frappe.db.get_value("Sales Invoice", {"sales_order": sales_order}, "name")
-    if not si_name:
-        frappe.throw(
-            "Please create a Sales Invoice before requesting payment verification."
+    # Single doc load for the term. Every write below happens on this object
+    # and is flushed in ONE save() per branch (one UPDATE covering every
+    # changed field, instead of several separate calls).
+    payment_term = frappe.get_doc("Customer Payment Terms", payment_term_row)
+
+    if not payment_term.sales_invoice:
+        if not company:
+            frappe.throw(
+                "Company is required to create the invoice for this payment term."
+            )
+
+        currency = frappe.get_cached_value("Company", company, "default_currency")
+        same_currency = currency == so.currency
+
+        rate = 1.0 if same_currency else flt(conversion_rate)
+        if not same_currency and rate <= 0:
+            frappe.throw(
+                "A valid exchange rate is required for a different-currency payment."
+            )
+
+        received_amount = (
+            flt(term.amount) if same_currency else flt(flt(term.amount) * rate)
         )
 
-    # Fetch SI totals for reference row
+        payment_term.company = company
+        payment_term.currency = currency
+        payment_term.conversion_rate = rate
+        payment_term.received_amount = received_amount
+        payment_term.sales_invoice = _create_invoice_for_term(
+            so, payment_term, payment_term_row
+        )
+
     si = frappe.db.get_value(
         "Sales Invoice",
-        si_name,
+        payment_term.sales_invoice,
         ["grand_total", "outstanding_amount", "currency"],
         as_dict=True,
     )
 
-    if term.payment_entry:
-        # Re-request on existing PE — just update status back to Pending
-        pe = frappe.get_doc("Payment Entry", term.payment_entry)
+    now_str = frappe.utils.format_datetime(frappe.utils.now_datetime())
+
+    if payment_term.payment_entry:
+        # Re-request on existing PE — just flip status back to Pending
+        pe = frappe.get_doc("Payment Entry", payment_term.payment_entry)
         if pe.verification_status not in ("Pending Verification", "Rejected"):
             frappe.throw("Cannot re-request verification for this payment entry.")
 
         pe.verification_status = "Pending Verification"
         pe.reference_no = reference_no
         pe.reference_date = reference_date
+        pe.payer_account_name = payer_account_name
         pe.save(ignore_permissions=True)
-        now = frappe.utils.now_datetime()
-        now_str = frappe.utils.format_datetime(now)
-        payment_term = frappe.get_doc(
-            "Customer Payment Terms",
-            payment_term_row,
-        )
+
         payment_term.payment_status = "Pending Verification"
         _append_verification_log(
-            payment_term,
-            f"Re-requested verification by {frappe.session.user}",
-            now_str,
+            payment_term, f"Re-requested verification by {frappe.session.user}", now_str
         )
         payment_term.save(ignore_permissions=True)
-        return pe.name
+
+        return _term_response(payment_term, pe.name)
 
     # Fresh PE creation
     pe = frappe.new_doc("Payment Entry")
     pe.payment_type = "Receive"
     pe.posting_date = frappe.utils.today()
-    pe.company = so.company
+    pe.company = payment_term.company
     pe.party_type = "Customer"
     pe.party = so.customer
-    pe.paid_amount = term.amount
-    pe.received_amount = term.amount
+    pe.paid_amount = payment_term.received_amount
     pe.reference_no = reference_no
     pe.reference_date = reference_date
-    pe.currency = so.currency
-    pe.conversion_rate = so.conversion_rate
+    pe.currency = payment_term.currency
+    pe.conversion_rate = 1
     pe.payment_term_row = payment_term_row
+    pe.payer_account_name = payer_account_name
     pe.verification_status = "Pending Verification"
+    pe.remarks = remarks
 
-    # Reference the Sales Invoice in references child table
     pe.append(
         "references",
         {
             "reference_doctype": "Sales Invoice",
-            "reference_name": si_name,
+            "reference_name": payment_term.sales_invoice,
             "total_amount": si.grand_total,
             "outstanding_amount": si.outstanding_amount,
-            "allocated_amount": term.amount,
+            "allocated_amount": payment_term.received_amount,
             "invoice_currency": si.currency,
         },
     )
-    pe.remarks = remarks
 
     pe.insert(ignore_permissions=True)
-    payment_term = frappe.get_doc(
-        "Customer Payment Terms",
-        payment_term_row,
-    )
+
     payment_term.payment_entry = pe.name
     payment_term.payment_status = "Pending Verification"
-
-    now = frappe.utils.now_datetime()
-    now_str = frappe.utils.format_datetime(now)
     _append_verification_log(
         payment_term,
         f"Payment entry {pe.name} created by {frappe.session.user}",
@@ -800,7 +737,173 @@ def create_payment_entry_from_term(
     )
     payment_term.save(ignore_permissions=True)
 
-    return pe.name
+    return _term_response(payment_term, pe.name)
+
+
+def _term_response(payment_term, pe_name):
+    return {
+        "payment_entry": pe_name,
+        "invoice": payment_term.sales_invoice,
+        "company": payment_term.company,
+        "currency": payment_term.currency,
+        "conversion_rate": payment_term.conversion_rate,
+        "received_amount": payment_term.received_amount,
+    }
+
+
+def _create_invoice_for_term(so, payment_term, payment_term_row):
+    """Create and submit a Sales Invoice for exactly payment_term.received_amount,
+    in payment_term.currency, against payment_term.company. Not whitelisted —
+    internal only, called from create_payment_entry_from_term.
+    """
+    si = frappe.new_doc("Sales Invoice")
+    si.customer = so.customer
+    si.company = payment_term.company
+    si.company_currency = payment_term.currency
+    si.currency = payment_term.currency
+    si.conversion_rate = 1
+    si.sales_order = so.name
+    si.payment_term_row = payment_term_row
+    si.disable_rounded_total = so.disable_rounded_total
+
+    _append_prorated_items(si, so, payment_term)
+
+    # Only percentage-driven taxes are copied — they recompute automatically
+    # against the new (smaller, differently-currencied) net total. "Actual"
+    # charge types are skipped since a fixed amount can't be safely prorated
+    # or currency-converted here. Flagged to Ramesh previously.
+    for tax in so.taxes or []:
+        if tax.charge_type == "Actual":
+            continue
+        si.append(
+            "taxes",
+            {
+                "charge_type": tax.charge_type,
+                "account_head": tax.account_head,
+                "rate": tax.rate,
+            },
+        )
+
+    si.insert(ignore_permissions=True)
+    si.submit()
+    return si.name
+
+
+def _append_prorated_items(si, so, payment_term):
+    """Copy SO items onto the invoice so the total equals
+    payment_term.received_amount exactly, in the invoice's own currency.
+    Quantity fixed at 1 per line; each item's rate is its proportional share
+    of received_amount (weights taken from the SO items' original amounts,
+    which are currency-agnostic ratios), rounded to a whole number, with the
+    last item absorbing the rounding remainder so the sum is exact.
+    """
+    items = so.items or []
+    if not items:
+        frappe.throw("Sales Order has no items to invoice.")
+
+    total_items_amount = flt(sum(flt(d.amount) for d in items))
+    target = flt(payment_term.received_amount)
+
+    from verp_staffing.accounts.api.get_defaults import get_default_company_account
+
+    income_account = get_default_company_account(
+        company=payment_term.company, fieldname="default_income_account"
+    )
+
+    if len(items) == 1 or total_items_amount <= 0:
+        si.append(
+            "items",
+            {
+                "item": items[0].item,
+                "qty": 1,
+                "rate": target,
+                "uom": items[0].uom,
+                "income_account": income_account,
+                "type": items[0].type,
+            },
+        )
+        return
+
+    allocated = 0
+    for row in items[:-1]:
+        share = int(round(target * flt(row.amount) / total_items_amount))
+        allocated += share
+        si.append(
+            "items",
+            {
+                "item": row.item,
+                "qty": 1,
+                "rate": share,
+                "uom": row.uom,
+                "income_account": income_account,
+                "type": row.type,
+            },
+        )
+
+    last = items[-1]
+    si.append(
+        "items",
+        {
+            "item": last.item,
+            "qty": 1,
+            "rate": target - allocated,  # absorbs the rounding remainder
+            "uom": last.uom,
+            "income_account": income_account,
+            "type": last.type,
+        },
+    )
+
+
+@frappe.whitelist()
+def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
+    """Paginated list of Sales Invoices linked to this Sales Order, newest
+    first. One invoice now exists per payment term, so a Sales Order can have
+    several — the client calls this repeatedly with increasing limit_start
+    for infinite scroll.
+    """
+    limit_start = cint(limit_start)
+    limit_page_length = cint(limit_page_length) or 5
+
+    invoices = frappe.get_all(
+        "Sales Invoice",
+        filters={"sales_order": sales_order},
+        fields=[
+            "name",
+            "company",
+            "posting_date",
+            "grand_total",
+            "outstanding_amount",
+            "currency",
+            "docstatus",
+            "owner",
+            "creation",
+        ],
+        order_by="creation desc",
+        limit_start=limit_start,
+        limit_page_length=limit_page_length,
+    )
+
+    owners = list({d.owner for d in invoices})
+    fullnames = (
+        {
+            u.name: u.full_name
+            for u in frappe.get_all(
+                "User", filters={"name": ["in", owners]}, fields=["name", "full_name"]
+            )
+        }
+        if owners
+        else {}
+    )
+
+    for d in invoices:
+        d["owner_fullname"] = fullnames.get(d.owner, d.owner)
+
+    total_count = frappe.db.count("Sales Invoice", {"sales_order": sales_order})
+
+    return {
+        "invoices": invoices,
+        "has_more": (limit_start + len(invoices)) < total_count,
+    }
 
 
 @frappe.whitelist()
@@ -886,6 +989,7 @@ def _append_verification_log(doc, message, now_str):
 
     new_line = f"[{now_str}] {message}"
     doc.verification_log = f"{existing}\n{new_line}".strip()
+    doc.save()
 
 
 def handle_background_failure(title, sales_order, error, message):
@@ -1094,15 +1198,10 @@ def send_payment_term_reminders():
 
             message = f"""
                 Payment reminder triggered for Sales Order <b>{so.name}</b>.
-
                 <br><br>
-
                 Customer: {so.customer_name or so.customer}
-
                 <br>
-
                 Condition: {row.payment_condition}
-
                 <br>
 
                 Amount: {row.amount}
@@ -1144,7 +1243,6 @@ def get_owned_sales_orders(customer):
     if not customer:
         return []
 
-    
     visible_employee_names = get_visible_employee_names_cached()
 
     if not visible_employee_names:
@@ -1159,10 +1257,8 @@ def get_owned_sales_orders(customer):
         pluck="user",
     )
 
-
     if not visible_users:
         return []
-
 
     rows = frappe.db.sql(
         """
@@ -1210,7 +1306,6 @@ def get_owned_sales_orders(customer):
         },
         as_dict=True,
     )
-
 
     sales_orders = {}
 

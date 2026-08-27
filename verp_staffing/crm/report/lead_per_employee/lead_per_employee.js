@@ -44,7 +44,7 @@ frappe.query_reports["Lead Per Employee"] = {
 			options: "Employee",
 			get_query: function () {
 				return {
-					query: "verp_staffing.crm.report.lead_per_employee.lead_per_employee.get_lead_hierarchy_employees",
+					query: "verp_staffing.crm.api.report_helper.get_lead_hierarchy_employees",
 				};
 			},
 		},
