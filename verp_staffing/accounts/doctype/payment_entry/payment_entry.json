@@ -69,6 +69,7 @@
   "column_break_23",
   "reference_date",
   "clearance_date",
+  "payer_account_name",
   "section_break_12",
   "status",
   "custom_remarks",
@@ -632,11 +633,16 @@
    "label": "Payment Term Row",
    "print_hide": 1,
    "report_hide": 1
+  },
+  {
+   "fieldname": "payer_account_name",
+   "fieldtype": "Data",
+   "label": "Payer's Account Name"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-02 16:39:57.916350",
+ "modified": "2026-08-26 17:20:24.368000",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Payment Entry",

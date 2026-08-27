@@ -43,6 +43,7 @@ class ERPConfiguration(Document):
 	def clear_cache(self):
 		cache = frappe.cache()
 		cache.delete_key("dept_role_map")
+		frappe.clear_document_cache("ERP Configuration", self.name)
 
 	def on_update(self):
 		self.clear_cache()

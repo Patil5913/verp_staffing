@@ -80,7 +80,8 @@
    "fieldname": "base_total",
    "fieldtype": "Currency",
    "label": "Total (Company Currency)",
-   "options": "Company:company:default_currency"
+   "options": "Company:company:default_currency",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_wdvt",
@@ -91,7 +92,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-01 10:29:37.325180",
+ "modified": "2026-08-26 16:25:15.767042",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Taxes and Charges",

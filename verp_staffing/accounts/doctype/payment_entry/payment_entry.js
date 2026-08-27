@@ -15,7 +15,7 @@ frappe.ui.form.on("Payment Entry", {
 			frm.page.set_indicator(__(status), color);
 		}
 
-				frm.add_custom_button("Show Form Tour", () => {
+		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "Payment Entry";
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
@@ -284,7 +284,7 @@ frappe.ui.form.on("Payment Entry", {
 
 		frm.set_query("reference_name", "references", function (doc, cdt, cdn) {
 			const row = locals[cdt][cdn];
-			const filters = { docstatus: 1 };
+			const filters = { docstatus: 1, payment_term_row: ["is", "not set"] };
 			if (frm.doc.company) filters["company"] = frm.doc.company;
 			const party_type_doctypes = [
 				"Sales Invoice",

@@ -232,6 +232,7 @@ frappe.query_reports["Balance Sheet"] = {
 			label: __("Exchange Rate"),
 			fieldtype: "Float",
 			default: 1,
+			precision: 6,
 			// Shown only when a different presentation currency is selected.
 			// All amounts in the report will be multiplied by this rate.
 			// Example: if company currency is INR and you select USD,
@@ -245,10 +246,10 @@ frappe.query_reports["Balance Sheet"] = {
 			hidden: 1, // starts hidden; _toggle_exchange_rate() controls visibility
 			on_change: function () {
 				let rate = frappe.query_report.get_filter_value("exchange_rate");
-				if (rate < 1) {
+				if (rate < 0) {
 					frappe.msgprint({
 						title: __("Invalid Exchange Rate"),
-						message: __("Exchange rate must be greater than 1."),
+						message: __("Exchange rate must be positive."),
 						indicator: "red",
 					});
 					frappe.query_report.set_filter_value("exchange_rate", 1);

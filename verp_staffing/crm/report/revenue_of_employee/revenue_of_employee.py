@@ -6,12 +6,14 @@ from dateutil.relativedelta import relativedelta
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
+
 def execute(filters=None):
     filters = filters or {}
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
+
 
 def get_columns():
     return [
@@ -32,12 +34,14 @@ def get_columns():
             "label": "Total Revenue",
             "fieldname": "total_revenue",
             "fieldtype": "Currency",
+            "options": "currency",
             "width": 150,
         },
         {
             "label": "Target",
             "fieldname": "target",
             "fieldtype": "Currency",
+            "options": "currency",
             "width": 130,
         },
         {
@@ -52,8 +56,16 @@ def get_columns():
             "fieldtype": "Date",
             "width": 130,
         },
+        {
+            "label": "Currency",
+            "fieldname": "currency",
+            "fieldtype": "Data",
+            "width": 130,
+            "hidden":1
+        },
     ]
-    
+
+
 def _get_sales_employees(employee_names):
     """
     Given a list of employee names (or None for "all"), return a list of dicts:
@@ -98,6 +110,7 @@ def _get_sales_employees(employee_names):
     requested = set(employee_names)
     return [e for e in cached if e["name"] in requested]
 
+
 def _resolve_dates(filters):
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
@@ -106,10 +119,10 @@ def _resolve_dates(filters):
     if timeline and not start_date:
         today = frappe.utils.getdate()
         delta_map = {
-            "Monthly":  dict(months=1),
+            "Monthly": dict(months=1),
             "3 Months": dict(months=3),
             "6 Months": dict(months=6),
-            "Yearly":   dict(years=1),
+            "Yearly": dict(years=1),
         }
         if timeline in delta_map:
             start_date = today - relativedelta(**delta_map[timeline])
@@ -117,9 +130,10 @@ def _resolve_dates(filters):
 
     return start_date, end_date
 
+
 def get_data(filters):
     user = frappe.session.user
-    # company = filters.get("company") or frappe.defaults.get_user_default("company")
+    company = filters.get("company")
     employee_filter = filters.get("employee")
 
     # -- Resolve which employees are in scope --------------------------------
@@ -148,6 +162,10 @@ def get_data(filters):
     # -- Build WHERE ---------------------------------------------------------
     conditions = ["so.owner IS NOT NULL", "so.docstatus = 1"]
     values = {}
+
+    if company:
+        conditions.append("cpt.company = %(company)s")
+        values["company"] = company
 
     start_date, end_date = _resolve_dates(filters)
 
@@ -200,16 +218,20 @@ def get_data(filters):
         if not emp:
             # so.owner has no matching Sales employee — skip.
             continue
-        result.append({
-            "employee":        emp["name"],
-            "employee_name":   emp["employee_name"],
-            "total_revenue":   row["total_revenue"] or 0.0,
-            "target":          emp.get("target") or 0.0,
-            "target_based_on": emp.get("target_based_on") or "",
-            "start_date":      emp.get("start_date") or "",
-        })
+        result.append(
+            {
+                "employee": emp["name"],
+                "employee_name": emp["employee_name"],
+                "total_revenue": row["total_revenue"] or 0.0,
+                "target": emp.get("target") or 0.0,
+                "target_based_on": emp.get("target_based_on") or "",
+                "start_date": emp.get("start_date") or "",
+                "currency": "USD"
+            }
+        )
 
     return result
+
 
 def get_chart(data):
     if not data:
@@ -229,6 +251,7 @@ def get_chart(data):
         "colors": ["#28a745"],
     }
 
+
 @frappe.whitelist()
 def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
     """
@@ -238,7 +261,7 @@ def get_sales_hierarchy_employees(doctype, txt, searchfield, start, page_len, fi
     """
     values = {
         "txt": f"%{txt}%",
-        "start":    int(start),     # always cast — HTTP delivers strings
+        "start": int(start),  # always cast — HTTP delivers strings
         "page_len": int(page_len),
         "dept": "Sales",
     }

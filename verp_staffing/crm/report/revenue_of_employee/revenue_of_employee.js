@@ -2,6 +2,15 @@ let bar_observer = null;
 let bar_interval = null;
 
 frappe.query_reports["Revenue Of Employee"] = {
+	onload: function (report) {
+		frappe.db.get_single_value("ERP Configuration", "default_company").then((company) => {
+			const current_company = report.get_filter_value("company");
+			console.log("current_company: ", current_company);
+			if (!current_company && company) {
+				report.set_filter_value("company", company);
+			}
+		});
+	},
 	filters: [
 		{
 			fieldname: "employee",
@@ -13,6 +22,13 @@ frappe.query_reports["Revenue Of Employee"] = {
 					query: "verp_staffing.crm.report.revenue_of_employee.revenue_of_employee.get_sales_hierarchy_employees",
 				};
 			},
+		},
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			reqd: 1,
 		},
 		{
 			fieldname: "start_date",

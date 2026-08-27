@@ -14,13 +14,22 @@
   "last_reminder_date",
   "section_break_amount",
   "amount",
+  "received_amount",
   "column_break_2",
   "payment_status",
   "section_break_info",
   "current_interview_count",
-  "payment_entry",
   "description",
-  "verification_log"
+  "verification_log",
+  "section_break_tugs",
+  "payment_entry",
+  "so_currency",
+  "column_break_sgjb",
+  "sales_invoice",
+  "conversion_rate",
+  "column_break_fuhi",
+  "company",
+  "currency"
  ],
  "fields": [
   {
@@ -61,8 +70,9 @@
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
+   "label": "Decided Amount",
    "non_negative": 1,
+   "options": "so_currency",
    "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
    "reqd": 1
   },
@@ -118,6 +128,7 @@
   },
   {
    "allow_on_submit": 1,
+   "columns": 1,
    "fieldname": "start_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -125,6 +136,7 @@
   },
   {
    "allow_on_submit": 1,
+   "columns": 1,
    "fieldname": "due_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -140,13 +152,73 @@
    "print_hide": 1,
    "read_only": 1,
    "report_hide": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sales_invoice",
+   "fieldtype": "Data",
+   "label": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_tugs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_sgjb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_fuhi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "company",
+   "fieldtype": "Data",
+   "label": "Company",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "currency",
+   "fieldtype": "Data",
+   "label": "Invoice Currency",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "conversion_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "fieldname": "received_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Received Amount",
+   "non_negative": 1,
+   "options": "currency",
+   "read_only": 1,
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)"
+  },
+  {
+   "fieldname": "so_currency",
+   "fieldtype": "Data",
+   "label": "So Currency",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-25 18:51:04.402879",
+ "modified": "2026-08-27 10:54:20.498770",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

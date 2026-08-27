@@ -77,7 +77,7 @@
    "allow_on_submit": 1,
    "fieldname": "payment_terms",
    "fieldtype": "Table",
-   "label": "Add Payment Terms",
+   "label": "Payment Terms",
    "options": "Customer Payment Terms"
   },
   {
@@ -115,6 +115,8 @@
    "label": "Currency"
   },
   {
+   "fetch_from": "company.default_currency",
+   "fetch_if_empty": 1,
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
@@ -410,7 +412,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-26 17:43:06.940934",
+ "modified": "2026-08-27 09:48:55.207614",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Sales Order",
