@@ -84,7 +84,7 @@ MANAGED_SYSTEM_SETTINGS_FIELDS = [
 	"allowed_file_extensions",
 ]
 
-SYSTEM_SETTINGS_READ_ONLY_FIELDS = {"time_zone"}
+# SYSTEM_SETTINGS_READ_ONLY_FIELDS = {"time_zone"}
 
 @frappe.whitelist()
 def get_system_settings_fields():
@@ -122,8 +122,8 @@ def update_system_settings_fields(values):
 	for fieldname in values:
 		if fieldname not in MANAGED_SYSTEM_SETTINGS_FIELDS:
 			frappe.throw(_("Field '{0}' is not managed here.").format(fieldname))
-		if fieldname in SYSTEM_SETTINGS_READ_ONLY_FIELDS:
-			frappe.throw(_("'{0}' cannot be edited directly.").format(fieldname))
+		# if fieldname in SYSTEM_SETTINGS_READ_ONLY_FIELDS:
+		# 	frappe.throw(_("'{0}' cannot be edited directly.").format(fieldname))
 
 	doc = frappe.get_single("System Settings")
 	for fieldname, value in values.items():

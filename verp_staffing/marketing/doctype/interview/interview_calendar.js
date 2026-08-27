@@ -170,6 +170,73 @@ function ivw_on_any_interview_route() {
 	document.head.appendChild(style);
 })();
 
+const IVW_MONTH_NAMES = [
+	"January", "February", "March", "April", "May", "June",
+	"July", "August", "September", "October", "November", "December",
+];
+ 
+// Finds the x-coordinate of a given calendar day's upper-text label
+// (e.g. "27 August") in the Gantt chart's own SVG. Matches both
+// zero-padded ("07 August") and unpadded ("7 August") forms since
+// different frappe-gantt builds format the day number differently.
+function ivw_find_day_center_x(svg, day_date) {
+	const day = day_date.getDate();
+	const month = IVW_MONTH_NAMES[day_date.getMonth()];
+	const padded = `${String(day).padStart(2, "0")} ${month}`;
+	const unpadded = `${day} ${month}`;
+ 
+	const upper_texts = Array.from(svg.querySelectorAll("text.upper-text"));
+	const match = upper_texts.find((t) => {
+		const txt = t.textContent.trim();
+		return txt === padded || txt === unpadded;
+	});
+ 
+	return match ? parseFloat(match.getAttribute("x")) : null;
+}
+ 
+// Computes the CORRECT x pixel for a given date + "HH:MM:SS" time,
+// entirely independent of frappe-gantt's own (buggy) internal parsing —
+// derived purely from real tick-label positions already in the DOM.
+// Returns null if the relevant day label isn't currently rendered (e.g.
+// zoomed out to Month view, where sub-day precision isn't meaningful
+// anyway) — callers should fall back to the native rect x in that case.
+function ivw_compute_correct_x(svg, date_of_interview, time_str) {
+	if (!date_of_interview) return null;
+ 
+	const [y, m, d] = date_of_interview.split("-").map(Number);
+	if (!y || !m || !d) return null;
+ 
+	const day_date = new Date(y, m - 1, d);
+	const today_center = ivw_find_day_center_x(svg, day_date);
+	if (today_center === null) return null;
+ 
+	// Day width = spacing between two consecutive day-center labels.
+	// This is measured directly from the DOM, so it's automatically
+	// correct for whatever the current zoom level actually is (Quarter
+	// Day, Half Day, Day, Week...) without us having to assume how many
+	// sub-ticks exist per day.
+	const next_center = ivw_find_day_center_x(svg, new Date(y, m - 1, d + 1));
+	const prev_center = ivw_find_day_center_x(svg, new Date(y, m - 1, d - 1));
+ 
+	let day_width;
+	if (next_center !== null) {
+		day_width = next_center - today_center;
+	} else if (prev_center !== null) {
+		day_width = today_center - prev_center;
+	} else {
+		return null; // can't determine scale — let caller fall back
+	}
+ 
+	const day_start_x = today_center - day_width / 2;
+	const px_per_hour = day_width / 24;
+ 
+	const [hh, mm, ss] = (time_str || "00:00:00").split(":").map(Number);
+	const hours_into_day = (hh || 0) + (mm || 0) / 60 + (ss || 0) / 3600;
+ 
+	return day_start_x + hours_into_day * px_per_hour;
+}
+
+
 // Watches the DOM for newly-rendered Gantt bars and, for each one, builds
 // and injects a rich foreignObject card (customer/company/role/round/status/
 // time) sized and positioned over the underlying bar/grid-row geometry.
@@ -191,20 +258,36 @@ function ivw_on_any_interview_route() {
 		const rect = bar.querySelector(".bar");
 		if (!rect) return;
 
-		const rect_x = parseFloat(rect.getAttribute("x")) || 0;
+		// const rect_x = parseFloat(rect.getAttribute("x")) || 0;
 		const rect_y = parseFloat(rect.getAttribute("y")) || 0;
 		const rect_w = parseFloat(rect.getAttribute("width")) || 0;
 		const rect_h = parseFloat(rect.getAttribute("height")) || 0;
 
+		// row_pitch measurement (unchanged) ...
 		const svg = bar.closest("svg");
 		const grid_row = svg ? svg.querySelector(".grid-row") : null;
 		const row_pitch = grid_row ? parseFloat(grid_row.getAttribute("height")) : 0;
 		const ROW_INSET = 4;
 
-		const width = Math.max(rect_w, MIN_CARD_WIDTH);
+		// --- corrected positioning (this is the actual fix) ---
+		const computed_start_x = svg
+			? ivw_compute_correct_x(svg, info.date_of_interview, info.from_time)
+			: null;
+		const computed_end_x = svg
+			? ivw_compute_correct_x(svg, info.date_of_interview, info.to_time)
+			: null;
+
+		const rect_x = parseFloat(rect.getAttribute("x")) || 0; // fallback only
+
+		const x = computed_start_x !== null ? computed_start_x : rect_x;
+		const computed_width =
+			computed_start_x !== null && computed_end_x !== null
+				? computed_end_x - computed_start_x
+				: rect_w;
+
+		const width = Math.max(computed_width, MIN_CARD_WIDTH);
 		const height =
 			row_pitch > 0 ? row_pitch - ROW_INSET : Math.max(rect_h, MIN_CARD_HEIGHT_FALLBACK);
-		const x = rect_x;
 		const y = rect_y - (height - rect_h) / 2;
 
 		const status = info.status || "Scheduled";
