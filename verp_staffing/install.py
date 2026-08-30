@@ -1142,7 +1142,7 @@ def after_install():
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     seed_form_tours()
     seed_party_types()
-    set_default_system_settings()
+    # set_default_system_settings()
 
 
 def seed_master_sidebar_config():
