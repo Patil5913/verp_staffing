@@ -1500,15 +1500,13 @@ const SYSTEM_SETTINGS_FIELD_GROUPS = [
 	},
 ];
 
-// const SYSTEM_SETTINGS_READ_ONLY_FIELDS = new Set(["time_zone"]);
-
 let system_settings_pending_changes = {};
-let system_settings_current_values = {}; 
+let system_settings_current_values = {};
 
 function stage_system_settings_change(frm, fieldname, value) {
 	system_settings_pending_changes[fieldname] = value;
-	system_settings_current_values[fieldname] = value; 
-	frm.dirty(); 
+	system_settings_current_values[fieldname] = value;
+	frm.dirty();
 }
 
 function flush_system_settings_changes() {
@@ -1521,8 +1519,7 @@ function flush_system_settings_changes() {
 
 	return new Promise((resolve, reject) => {
 		frappe.call({
-			method:
-				"verp_staffing.settings.doctype.erp_configuration.erp_configuration.update_system_settings_fields",
+			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.update_system_settings_fields",
 			args: { values: values_to_save },
 			freeze: true,
 			freeze_message: __("Updating System Settings..."),
@@ -1571,8 +1568,12 @@ function render_system_settings_field_row(
 		const source_df = frappe.meta.get_docfield("System Settings", fieldname);
 		if (!source_df) return; // typo guard — fails loud in console rather than silently
 
-		// Clone so the cached System Settings meta is never mutated.
-		const df = Object.assign({}, source_df);
+		const df = Object.assign({}, source_df, {
+			read_only: 0,
+			read_only_depends_on: null,
+			set_only_once: 0,
+		});
+
 		if (fieldname === "time_zone") {
 			df.options = timezones.join("\n");
 		}
@@ -1586,8 +1587,6 @@ function render_system_settings_field_row(
 		});
 
 		control.set_value(current_values[fieldname]).then(() => {
-			// if (SYSTEM_SETTINGS_READ_ONLY_FIELDS.has(fieldname)) return; // display-only, never wired to save
-
 			control.df.onchange = () => {
 				const value = control.get_value();
 				if (value === current_values[fieldname]) return; // skip no-op writes
@@ -1602,8 +1601,7 @@ function render_system_settings_fields(frm) {
 
 	frappe.model.with_doctype("System Settings", () => {
 		frappe.call({
-			method:
-				"verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_system_settings_fields",
+			method: "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_system_settings_fields",
 			callback(r) {
 				const current_values = (r.message && r.message.values) || {};
 				const timezones = (r.message && r.message.timezones) || [];

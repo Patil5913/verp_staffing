@@ -531,7 +531,7 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
 
     events = []
     for r in rounds:
-        has_time = bool(r.from_time and r.to_time)
+        has_time = bool(r.from_time is not None and r.to_time is not None)
         status = r.round_status or r.interview_status or ""
         events.append({
             "name": r.interview,

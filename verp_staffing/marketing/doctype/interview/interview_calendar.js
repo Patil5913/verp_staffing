@@ -22,19 +22,118 @@ frappe.views.calendar["Interview"] = {
 	],
 	get_events_method:
 		"verp_staffing.marketing.doctype.interview.interview.get_interview_round_events",
+
 	options: {
-		// Renders each calendar event as a custom status-colored card instead
-		// of FullCalendar's default event element.
-		eventRender: function (event, element, view) {
-			render_interview_calendar_card(event, element, view);
-		},
-		// Adjusts an event card's density classes (narrow/short/tall) once
-		// FullCalendar has laid out and sized its element.
-		eventAfterRender: function (event, element, view) {
-			adjust_interview_calendar_card_density(element);
-		},
+	eventRender: function (event, element, view) {
+		render_interview_calendar_card(event, element, view);
 	},
+	// Position must be corrected BEFORE density classes are computed —
+	// otherwise adjust_interview_calendar_card_density reads FullCalendar's
+	// native (too-short) height and wrongly marks short interviews as
+	// "ivwc-short", hiding the time row that we're about to make room for.
+	eventAfterRender: function (event, element, view) {
+		correct_interview_calendar_time_position(event, element, view);
+		adjust_interview_calendar_card_density(element);
+	},
+},
 };
+
+// Reads a .fc-slats <tr>'s data-time attribute ("HH:MM:SS") as seconds.
+function ivwc_slot_seconds(tr) {
+	const t = tr.getAttribute("data-time");
+	if (!t) return null;
+	const [hh, mm, ss] = t.split(":").map(Number);
+	return (hh || 0) * 3600 + (mm || 0) * 60 + (ss || 0);
+}
+
+// Measures real px-per-second scale of the current time-grid from its own
+// slot rows, entirely independent of whatever (possibly TZ-shifted) dates
+// FullCalendar itself parsed for event.start/end.
+function ivwc_measure_time_grid_scale(time_grid) {
+	const rows = Array.from(time_grid.querySelectorAll(".fc-slats tr[data-time]"));
+	if (rows.length < 2) return null;
+
+	const first = rows[0];
+	const last = rows[rows.length - 1];
+	const t0 = ivwc_slot_seconds(first);
+	const t1 = ivwc_slot_seconds(last);
+	if (t0 === null || t1 === null || t1 === t0) return null;
+
+	const y0 = first.getBoundingClientRect().top;
+	const y1 = last.getBoundingClientRect().top;
+
+	return { t0, y0, px_per_sec: (y1 - y0) / (t1 - t0) };
+}
+
+function ivwc_time_str_to_seconds(time_str) {
+	if (!time_str) return null;
+	const [hh, mm, ss] = String(time_str).split(":").map(Number);
+	return (hh || 0) * 3600 + (mm || 0) * 60 + (ss || 0);
+}
+
+// Overrides the event element's top/height using the RAW (un-converted)
+// from_time/to_time, so the box lands on the correct hour row regardless
+// of any timezone conversion FullCalendar/Frappe applied to event.start/end.
+function correct_interview_calendar_time_position(event, element, view) {
+	const view_name = (view && view.name) || "";
+	const is_time_grid = view_name === "agendaWeek" || view_name === "agendaDay";
+	if (!is_time_grid) return; // month view is date-only, no hour row to fix
+
+	const el = element && element.jquery ? element[0] : element;
+	if (!el) return;
+
+	const props = event.extendedProps || event;
+	const from_sec = ivwc_time_str_to_seconds(props.from_time);
+	if (from_sec === null) return; // nothing to correct for all-day events
+
+	const to_sec = ivwc_time_str_to_seconds(props.to_time);
+
+	const time_grid = el.closest(".fc-time-grid");
+	if (!time_grid) return;
+
+	function apply() {
+		const scale = ivwc_measure_time_grid_scale(time_grid);
+		if (!scale) return false;
+
+		const parent = el.offsetParent || time_grid;
+		const parent_top = parent.getBoundingClientRect().top;
+
+		const start_y = scale.y0 + (from_sec - scale.t0) * scale.px_per_sec;
+		const end_y =
+			to_sec !== null
+				? scale.y0 + (to_sec - scale.t0) * scale.px_per_sec
+				: start_y + 30 * 60 * scale.px_per_sec; // default 30 min if no to_time
+
+		const duration_height = end_y - start_y;
+
+		const prev_height = el.style.height;
+		el.style.height = "auto";
+		const content_height = el.scrollHeight;
+		el.style.height = prev_height;
+
+		const height = Math.max(duration_height, content_height, 18);
+
+		try {
+			el.style.top = start_y - parent_top + "px";
+			el.style.height = height + "px";
+		} catch (e) {
+			return false;
+		}
+		return true;
+	}
+
+	if (apply()) return;
+
+	let tries = 0;
+	const MAX_TRIES = 6;
+	const RETRY_DELAY_MS = 50;
+	const retry = () => {
+		tries += 1;
+		if (apply() || tries >= MAX_TRIES) return;
+		setTimeout(retry, RETRY_DELAY_MS);
+	};
+	setTimeout(retry, RETRY_DELAY_MS);
+}
 
 frappe.views.calendar["Interview"] = Object.assign({}, frappe.views.calendar["Interview"], {
 	gantt: {
@@ -171,10 +270,20 @@ function ivw_on_any_interview_route() {
 })();
 
 const IVW_MONTH_NAMES = [
-	"January", "February", "March", "April", "May", "June",
-	"July", "August", "September", "October", "November", "December",
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
 ];
- 
+
 // Finds the x-coordinate of a given calendar day's upper-text label
 // (e.g. "27 August") in the Gantt chart's own SVG. Matches both
 // zero-padded ("07 August") and unpadded ("7 August") forms since
@@ -184,16 +293,16 @@ function ivw_find_day_center_x(svg, day_date) {
 	const month = IVW_MONTH_NAMES[day_date.getMonth()];
 	const padded = `${String(day).padStart(2, "0")} ${month}`;
 	const unpadded = `${day} ${month}`;
- 
+
 	const upper_texts = Array.from(svg.querySelectorAll("text.upper-text"));
 	const match = upper_texts.find((t) => {
 		const txt = t.textContent.trim();
 		return txt === padded || txt === unpadded;
 	});
- 
+
 	return match ? parseFloat(match.getAttribute("x")) : null;
 }
- 
+
 // Computes the CORRECT x pixel for a given date + "HH:MM:SS" time,
 // entirely independent of frappe-gantt's own (buggy) internal parsing —
 // derived purely from real tick-label positions already in the DOM.
@@ -202,14 +311,14 @@ function ivw_find_day_center_x(svg, day_date) {
 // anyway) — callers should fall back to the native rect x in that case.
 function ivw_compute_correct_x(svg, date_of_interview, time_str) {
 	if (!date_of_interview) return null;
- 
+
 	const [y, m, d] = date_of_interview.split("-").map(Number);
 	if (!y || !m || !d) return null;
- 
+
 	const day_date = new Date(y, m - 1, d);
 	const today_center = ivw_find_day_center_x(svg, day_date);
 	if (today_center === null) return null;
- 
+
 	// Day width = spacing between two consecutive day-center labels.
 	// This is measured directly from the DOM, so it's automatically
 	// correct for whatever the current zoom level actually is (Quarter
@@ -217,7 +326,7 @@ function ivw_compute_correct_x(svg, date_of_interview, time_str) {
 	// sub-ticks exist per day.
 	const next_center = ivw_find_day_center_x(svg, new Date(y, m - 1, d + 1));
 	const prev_center = ivw_find_day_center_x(svg, new Date(y, m - 1, d - 1));
- 
+
 	let day_width;
 	if (next_center !== null) {
 		day_width = next_center - today_center;
@@ -226,16 +335,15 @@ function ivw_compute_correct_x(svg, date_of_interview, time_str) {
 	} else {
 		return null; // can't determine scale — let caller fall back
 	}
- 
+
 	const day_start_x = today_center - day_width / 2;
 	const px_per_hour = day_width / 24;
- 
+
 	const [hh, mm, ss] = (time_str || "00:00:00").split(":").map(Number);
 	const hours_into_day = (hh || 0) + (mm || 0) / 60 + (ss || 0) / 3600;
- 
+
 	return day_start_x + hours_into_day * px_per_hour;
 }
-
 
 // Watches the DOM for newly-rendered Gantt bars and, for each one, builds
 // and injects a rich foreignObject card (customer/company/role/round/status/

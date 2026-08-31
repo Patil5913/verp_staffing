@@ -18,9 +18,8 @@ def get_user(employee_name):
 
     try:
         user = frappe.db.get_value("Employee", employee_name, "user")
-        if user:
-            if frappe.db.exists("User", user):
-                return user
+        if user and frappe.db.exists("User", user):
+            return user
     except Exception:
         return None
 
@@ -545,6 +544,7 @@ def get_visible_employee_names_cached(department=None):
     cache.set_value(cache_key, employees, expires_in_sec=600)
     return employees
 
+
 def get_visible_user_names_cached(department=None):
     """Same visibility rule as get_visible_employee_names_cached, but
     resolves to User login ids instead of Employee names — Interview has
@@ -837,10 +837,124 @@ def generic_assign_has_permission(doc, ptype="read", user=None):
     return doc.assign_to in team
 
 
+def customer_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    return doc.customer_owner in team
+
+
+def opportunity_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if doc.opportunity_owner in team:
+        return True
+
+    departments = get_user_departments(user)
+
+    return bool(
+        "Sales" in departments
+        and frappe.db.exists(
+            "Customer",
+            {"party_name": doc.name, "customer_owner": ["in", team]},
+        )
+    )
+
+
+def lead_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if doc.lead_owner in team:
+        return True
+
+    departments = get_user_departments(user)
+
+    return bool(
+        "Sales" in departments
+        and frappe.db.exists(
+            "Opportunity",
+            {"opportunity_from_lead": doc.name, "opportunity_owner": ["in", team]},
+        )
+    )
+
+
+def sales_order_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    departments = get_user_departments(user)
+
+    # Accounting sees everything
+    if "Accounting" in departments:
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if "Sales" in departments:
+        customer_owner = frappe.db.get_value("Customer", doc.customer, "customer_owner")
+        if customer_owner in team:
+            return True
+
+    if "CR" in departments:
+        return frappe.db.exists(
+            "CR",
+            {
+                "customer": doc.customer,
+                "assign_to": ["in", team],
+            },
+        )
+
+    if "Onboarding" in departments:
+        return frappe.db.exists(
+            "Onboardings",
+            {
+                "customer": doc.customer,
+                "assign_to": ["in", team],
+            },
+        )
+
+    return False
+
+
+def interview_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    visible_users = get_visible_user_names_cached()
+    if not visible_users:
+        return False
+
+    return doc.owner in visible_users
+
+
 from frappe.utils import cint
 
+
 @frappe.whitelist()
-def get_next_permitted(doctype, value, prev, filters=None, sort_order="desc", sort_field="creation"):
+def get_next_permitted(
+    doctype, value, prev, filters=None, sort_order="desc", sort_field="creation"
+):
     prev = cint(prev)
     if not filters:
         filters = []
@@ -855,11 +969,13 @@ def get_next_permitted(doctype, value, prev, filters=None, sort_order="desc", so
     else:
         operator, order_by = ">", f"{sort_field} asc, name asc"
 
-    query_filters = list(filters) + [[doctype, sort_field, operator, current_sort_value]]
+    query_filters = list(filters) + [
+        [doctype, sort_field, operator, current_sort_value]
+    ]
 
     result = frappe.get_list(
         doctype,
-        filters=query_filters,   # permission_query_conditions is applied here automatically
+        filters=query_filters,  # permission_query_conditions is applied here automatically
         fields=["name"],
         order_by=order_by,
         limit_page_length=1,
@@ -988,7 +1104,7 @@ def customer_query(user):
 
 def interview_query(user):
     if user == "Administrator":
-            return ""
+        return ""
 
     visible_users = get_visible_user_names_cached()
     if not visible_users:

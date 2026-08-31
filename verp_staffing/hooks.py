@@ -223,9 +223,11 @@ has_permission = {
     "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "CR": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
-    # Customer, Sales Order, Opportunity, Lead, Interview need their own
-    # has_permission functions mirroring their existing *_query() logic
-    # (customer_owner / opportunity_owner / lead_owner / owner respectively)
+    "Customer": "verp_staffing.crm.api.helpers.customer_has_permission",
+    "Sales Order": "verp_staffing.crm.api.helpers.sales_order_has_permission",
+    "Opportunity": "verp_staffing.crm.api.helpers.opportunity_has_permission",
+    "Lead": "verp_staffing.crm.api.helpers.lead_has_permission",
+    "Interview": "verp_staffing.crm.api.helpers.interview_has_permission",
 }
 
 # DocType Class
