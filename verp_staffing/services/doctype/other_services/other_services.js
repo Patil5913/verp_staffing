@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Other Services", {
 	async refresh(frm) {
-		window.add_forward_button(frm);
+		window.add_forward_button(frm,service_name=frm.doc.service);
 		window.render_notes(frm);
 		window.fetch_and_render_resume(frm);
 		window.render_activity_section(frm);

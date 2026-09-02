@@ -4,7 +4,7 @@
 frappe.ui.form.on("Cover Letter", {
 	async refresh(frm) {
 		window.render_notes(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm,service_name="Cover Letter");
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 		const display_fields = await window.get_display_fields(frm.doctype);

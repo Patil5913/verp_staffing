@@ -4,7 +4,7 @@
 frappe.ui.form.on("Interview Support", {
 	async refresh(frm) {
 		window.render_notes(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, service_name="Interview Support");
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 		window.verp_staffing.render_interview_details(

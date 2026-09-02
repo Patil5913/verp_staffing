@@ -90,7 +90,7 @@ def get_forwardable_departments(customer):
 
     active_in = []
 
-    if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
+    if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
         active_in.append("CR")
 
     if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
@@ -254,9 +254,9 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
-    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"})
     onboarding_active = frappe.db.exists(
-        "Onboardings", {"customer": customer, "status": "Active"}
+        "Onboardings", {"customer": customer, "status": ["in", ["Active","Completed"]]}
     )
     if doctype not in ["CR", "Onboardings"]:
         if cr_active or onboarding_active:
@@ -291,6 +291,14 @@ def get_forwardable_departments_from_service(doctype, docname):
         options.append("Onboarding")
     return {"blocked": False, "options": options}
 
+@frappe.whitelist()
+def get_onboarding_credentials(customer):
+    if not frappe.db.exists("Onboardings", {"customer": customer}):
+        return {"email": None, "password": None}
+
+    credentials = frappe.db.get_value("Onboardings", {"customer": customer}, ["candidate_marketing_email", "password"], as_dict=True)
+
+    return credentials if credentials else {"email": None, "password": None}
 
 @frappe.whitelist()
 def update_company_percentage(lead_name, company_percentage):

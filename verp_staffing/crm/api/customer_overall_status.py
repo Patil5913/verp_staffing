@@ -36,10 +36,13 @@ def compute_customer_status(customer):
 
     # Hard overrides checked before anything else, so we skip fetching
     # stage entirely when they apply.
-    if frappe.db.exists("CR", {"customer": customer}):
+    if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
         return "Moved To CR"
-    if frappe.db.exists("Onboardings", {"customer": customer}):
+    if frappe.db.exists("Onboardings", {"customer": customer,"status": "Active"}):
         return "Moved To Onboarding"
+
+    if frappe.db.exists("Onboardings", {"customer": customer,"status": "Completed"}):
+            return "Customer Placed"
 
     stage_json = frappe.db.get_value("Customer", customer, "stage")
     try:

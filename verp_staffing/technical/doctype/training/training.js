@@ -5,7 +5,7 @@ frappe.ui.form.on("Training", {
 	async refresh(frm) {
 		window.render_notes(frm);
 		window.fetch_and_render_resume(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, service_name="Training");
 		window.render_activity_section(frm);
 
 		const display_fields = await window.get_display_fields(frm.doctype);

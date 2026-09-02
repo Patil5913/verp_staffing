@@ -122,7 +122,7 @@ frappe.ui.form.on("Customer", {
 				apply_tab_visibility(frm, dept);
 			},
 		});
-		window.add_forward_button(frm);
+		window.add_forward_button(frm,service_name="Sales");
 
 		frm.add_custom_button("Send Portal Link", function () {
 			frappe.call({

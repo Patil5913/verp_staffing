@@ -5,7 +5,7 @@ frappe.ui.form.on("Technical Other Services", {
 	async refresh(frm) {
 		window.render_notes(frm);
 		window.fetch_and_render_resume(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, service_name=frm.doc.service);
 		window.render_activity_section(frm);
 		window.setup_service_permission_button(frm);
 

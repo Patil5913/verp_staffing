@@ -13,7 +13,7 @@ frappe.ui.form.on("Resume", {
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
 			frm.set_df_property("assign_to", "read_only", 1);
-			window.add_forward_button(frm);
+			window.add_forward_button(frm, (service_name = "Resume"));
 		}
 
 		const display_fields = await window.get_display_fields(frm.doctype);
@@ -45,7 +45,7 @@ frappe.ui.form.on("Resume", {
 
 	status(frm) {
 		if (frm.doc.status == "Completed") {
-			window.add_forward_button(frm);
+			window.add_forward_button(frm, (service_name = "Resume"));
 		}
 	},
 

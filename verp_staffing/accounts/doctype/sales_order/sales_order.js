@@ -1277,7 +1277,6 @@ function toggle_payment_term_fields(frm, cdt, cdn) {
 		},
 	};
 	const config = read_only_map[condition] || read_only_map["Not Applied"];
-	console.log("config: ", config);
 	const grid = frm.fields_dict["payment_terms"].grid;
 	const grid_row = grid.grid_rows.find((r) => r.doc.name === cdn);
 	if (!grid_row) return;

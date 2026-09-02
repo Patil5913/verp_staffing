@@ -12,12 +12,7 @@ frappe.ui.form.on("RUC", {
 			frm.set_df_property("assign_to", "read_only", 1);
 		}
 
-		frappe.call({
-			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-			callback: (r) => {
-				window.add_forward_button(frm);
-			},
-		});
+		window.add_forward_button(frm, service_name="RUC");
 
 		frm.add_custom_button("Show Form Tour", () => {
 			const tour_name = "RUC";
@@ -51,11 +46,6 @@ frappe.ui.form.on("RUC", {
 		window.fetch_and_render_resume(frm);
 	},
 	status(frm) {
-		frappe.call({
-			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-			callback: (r) => {
-				window.add_forward_button(frm);
-			},
-		});
+		window.add_forward_button(frm, service_name="RUC");
 	},
 });

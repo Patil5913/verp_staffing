@@ -60,7 +60,7 @@ frappe.ui.form.on("Marketing", {
 			};
 		});
 
-		window.add_forward_button(frm);
+		window.add_forward_button(frm,service_name="Marketing");
 		// to display the lead details
 
 		if (!frm.is_new()) {
