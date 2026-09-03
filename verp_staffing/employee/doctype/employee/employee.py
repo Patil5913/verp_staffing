@@ -16,7 +16,7 @@ class Employee(Document):
             frappe.throw(_("Employee Name is required"))
 
         self.name = generate_name_series("Employee", name)
-        
+
     def clear_employee_cache(self):
         cache = frappe.cache()
         cache.delete_key(f"lead_user::{self.user}")
@@ -25,25 +25,10 @@ class Employee(Document):
         cache.delete_key(f"user_departments::{self.name}")
         cache.delete_key(f"roles:{self.name}")
 
-        departments = {
-            row.department
-            for row in self.employee_assignment_details_table
-            if row.department
-        }
-
-        for department in departments:
-            cache.delete_key(f"superiors:{self.name}:{department}")
-            cache.delete_key(f"emp_tree:{self.name}:{department}")
-            cache.delete_key(f"Visible_Employee_Names:{self.user}:{department}")
-            cache.delete_key(f"Visible_User_Names:{self.user}:{department}")
-
-        # Cache without department filter
-        cache.delete_key(f"superiors:{self.name}:None")
-        cache.delete_key(f"emp_tree:{self.name}:all")
-        cache.delete_key(f"Visible_Employee_Names:{self.user}:all")
-        cache.delete_key(f"Visible_User_Names:{self.user}:all")
-        cache.delete_key(f"Visible_User_Names:{self.user}:None")
-
+        cache.delete_keys("superiors:*")
+        cache.delete_keys("emp_tree:*")
+        cache.delete_keys("Visible_Employee_Names:*")
+        cache.delete_keys("Visible_User_Names:*")
 
     def on_update(self):
         # self.validate_employee_edit_permission()
@@ -68,11 +53,7 @@ class Employee(Document):
         seen_departments = set()
 
         # Collect unique departments used in rows
-        departments = {
-            row.department
-            for row in rows
-            if row.department
-        }
+        departments = {row.department for row in rows if row.department}
 
         # Build department -> child_roles map once
         department_child_roles = {}
@@ -89,14 +70,10 @@ class Employee(Document):
 
                 if hierarchy_row.role_hierarchy_json:
                     try:
-                        hierarchy = frappe.parse_json(
-                            hierarchy_row.role_hierarchy_json
-                        )
+                        hierarchy = frappe.parse_json(hierarchy_row.role_hierarchy_json)
 
                         for entry in hierarchy:
-                            child_roles.update(
-                                entry.get("child_roles") or []
-                            )
+                            child_roles.update(entry.get("child_roles") or [])
 
                     except Exception:
                         frappe.log_error(
@@ -128,9 +105,7 @@ class Employee(Document):
             if department:
                 if department in seen_departments:
                     frappe.throw(
-                        _(
-                            "Row {0}: Department <b>{1}</b> is already selected."
-                        ).format(
+                        _("Row {0}: Department <b>{1}</b> is already selected.").format(
                             row.idx,
                             department,
                         ),
@@ -163,6 +138,7 @@ class Employee(Document):
                 ),
                 title=_("Assigned To Required"),
             )
+
 
 @frappe.whitelist()
 def get_users_not_linked_to_employee(
@@ -200,7 +176,7 @@ def get_users_not_linked_to_employee(
                 like_txt,
             ]
         )
-        
+
     query = """
         SELECT
             u.name
@@ -223,6 +199,7 @@ def get_users_not_linked_to_employee(
     )
 
     return list(frappe.db.sql(query, values))
+
 
 @frappe.whitelist()
 def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filters):
@@ -285,6 +262,7 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
 
     return frappe.db.sql(query, values)
 
+
 @frappe.whitelist()
 def user_belongs_to_department(user, department):
     if not (user and department):
@@ -308,6 +286,7 @@ def user_belongs_to_department(user, department):
             ),
         )
     )
+
 
 @frappe.whitelist()
 def get_employee_from_user(user):
@@ -580,7 +559,7 @@ def validate_employee_assignment_hierarchy(doc):
                     current_role,
                     ", ".join(sorted(allowed_parent_roles)),
                 )
-        )
+            )
 
         assigned_roles = employee_role_map.get(
             assigned_to,
