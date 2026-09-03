@@ -6,11 +6,7 @@ frappe.ui.form.on("Marketing", {
 		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
 			render_tab_data(frm);
 		});
-		console.log("fields_dict at setup:", frm.fields_dict);
-		console.log(
-			"job_application_count grid at setup:",
-			frm.fields_dict["job_application_count"],
-		);
+
 	},
 	async refresh(frm) {
 		window.render_notes(frm);
