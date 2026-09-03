@@ -35,11 +35,15 @@ class Employee(Document):
             cache.delete_key(f"superiors:{self.name}:{department}")
             cache.delete_key(f"emp_tree:{self.name}:{department}")
             cache.delete_key(f"Visible_Employee_Names:{self.user}:{department}")
+            cache.delete_key(f"Visible_User_Names:{self.user}:{department}")
 
         # Cache without department filter
         cache.delete_key(f"superiors:{self.name}:None")
         cache.delete_key(f"emp_tree:{self.name}:all")
         cache.delete_key(f"Visible_Employee_Names:{self.user}:all")
+        cache.delete_key(f"Visible_User_Names:{self.user}:all")
+        cache.delete_key(f"Visible_User_Names:{self.user}:None")
+
 
     def on_update(self):
         # self.validate_employee_edit_permission()

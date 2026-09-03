@@ -6,16 +6,24 @@ frappe.ui.form.on("Marketing", {
 		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
 			render_tab_data(frm);
 		});
+		console.log("fields_dict at setup:", frm.fields_dict);
+		console.log(
+			"job_application_count grid at setup:",
+			frm.fields_dict["job_application_count"],
+		);
 	},
 	async refresh(frm) {
 		window.render_notes(frm);
 		window.render_activity_section(frm);
+		add_owner_grid_column(frm, "job_application_count");
 		window.fetch_and_render_resume(frm);
 
 		if (frm.doc.status === "Completed") {
 			frm.set_df_property("status", "read_only", 1);
 		}
 		render_tab_data(frm);
+
+		ensure_job_application_lock_patch(frm);
 
 		frappe.call({
 			method: "verp_staffing.crm.api.helpers._is_superior_in_department",
@@ -27,12 +35,18 @@ frappe.ui.form.on("Marketing", {
 			callback(r) {
 				if (!r.message) return;
 				const is_superior = r.message.is_superior;
+
 				frm.set_df_property("target", "read_only", !is_superior);
 				if (frm.doc.start_date) {
 					frm.set_df_property("start_date", "read_only", !is_superior);
 				}
+
 				const jobGrid = frm.fields_dict["job_application_count"].grid;
-				jobGrid.update_docfield_property("date", "read_only", !is_superior);
+				jobGrid.update_docfield_property("date", "read_only", !is_superior); // unchanged — whole-column lock is intentional here
+
+				frm.__mkt_job_app_is_superior = is_superior;
+				apply_job_application_row_locks(frm, is_superior);
+
 				frm.refresh_field("target");
 			},
 			error(err) {
@@ -60,7 +74,7 @@ frappe.ui.form.on("Marketing", {
 			};
 		});
 
-		window.add_forward_button(frm,service_name="Marketing");
+		window.add_forward_button(frm, (service_name = "Marketing"));
 		// to display the lead details
 
 		if (!frm.is_new()) {
@@ -87,6 +101,81 @@ frappe.ui.form.on("Marketing", {
 		frm.trigger("refresh");
 	},
 });
+
+function apply_job_application_row_locks(frm, is_superior) {
+	const grid = frm.fields_dict["job_application_count"].grid;
+	const today = frappe.datetime.get_today();
+
+	(grid.grid_rows || []).forEach((grid_row) => {
+		if (!grid_row.doc) return; // skip filter/search row
+
+		const is_own_row = grid_row.doc.owner === frappe.session.user;
+		const is_today = grid_row.doc.date === today;
+		const locked = !is_superior && (!is_today || !is_own_row);
+
+		["large_application", "small_application"].forEach((fieldname) => {
+			set_row_field_readonly(grid_row, fieldname, locked);
+		});
+	});
+}
+
+function set_row_field_readonly(grid_row, fieldname, locked) {
+	const grid = grid_row.grid;
+
+	// clone docfields for this row only, same pattern as CR History locking —
+	// avoids mutating the shared array used by every row
+	if (grid_row.docfields === grid.docfields) {
+		grid_row.docfields = grid.docfields.map((df) => ({ ...df }));
+	}
+	const df = grid_row.docfields.find((d) => d.fieldname === fieldname);
+	if (df) {
+		df.__base_read_only = df.__base_read_only ?? df.read_only ?? 0;
+		df.read_only = locked ? 1 : df.__base_read_only;
+	}
+
+	// if the row is currently editable inline, refresh the live control too
+	const field = grid_row.on_grid_fields_dict && grid_row.on_grid_fields_dict[fieldname];
+	if (field) {
+		field.df.__base_read_only = field.df.__base_read_only ?? field.df.read_only ?? 0;
+		field.df.read_only = locked ? 1 : field.df.__base_read_only;
+		field.refresh();
+	}
+
+	// if the row's expanded form dialog is open, refresh that field too
+	const form_field = grid_row.grid_form?.fields_dict?.[fieldname];
+	if (form_field) {
+		form_field.df.__base_read_only =
+			form_field.df.__base_read_only ?? form_field.df.read_only ?? 0;
+		form_field.df.read_only = locked ? 1 : form_field.df.__base_read_only;
+		form_field.refresh();
+	}
+}
+
+function ensure_job_application_lock_patch(frm) {
+	const grid = frm.fields_dict["job_application_count"].grid;
+	if (grid.__row_lock_patched) return;
+	grid.__row_lock_patched = true;
+
+	const reapply = () => {
+		if (frm.__mkt_job_app_is_superior !== undefined) {
+			apply_job_application_row_locks(frm, frm.__mkt_job_app_is_superior);
+		}
+	};
+
+	const original_refresh = grid.refresh.bind(grid);
+	grid.refresh = function (...args) {
+		original_refresh(...args);
+		reapply();
+	};
+
+	if (typeof grid.make_head === "function") {
+		const original_make_head = grid.make_head.bind(grid);
+		grid.make_head = function (...args) {
+			original_make_head(...args);
+			reapply();
+		};
+	}
+}
 
 function render_tab_data(frm) {
 	if (frm.is_new()) return;
@@ -418,4 +507,82 @@ function update_job_application_totals(frm, cdt, cdn) {
 		row.total_application = small + large;
 		frm.refresh_field("job_application_count");
 	}
+}
+
+function add_owner_grid_column(frm, fieldname, options = {}) {
+	const { label = __("Created By") } = options;
+	const grid = frm.fields_dict[fieldname].grid;
+
+	if (!grid.__owner_column_patched) {
+		grid.__owner_column_patched = true;
+
+		const original_refresh = grid.refresh.bind(grid);
+		grid.refresh = function (...args) {
+			original_refresh(...args);
+			inject_owner_column(grid, label);
+		};
+
+		if (typeof grid.make_head === "function") {
+			const original_make_head = grid.make_head.bind(grid);
+			grid.make_head = function (...args) {
+				original_make_head(...args);
+				inject_owner_column(grid, label);
+			};
+		}
+	}
+	grid.refresh();
+}
+
+function inject_owner_column(grid, label) {
+	if (grid.header_row) {
+		inject_owner_cell(grid.header_row, label, true);
+	}
+	(grid.grid_rows || []).forEach((grid_row) => inject_owner_cell(grid_row, label, false));
+}
+
+function inject_owner_cell(grid_row, label, is_header) {
+	if (!grid_row.row) return;
+	if (!is_header && !grid_row.doc) return; // skip search/filter row
+	const $row = grid_row.row;
+
+	const display = is_header ? label : resolve_owner_display(grid_row);
+	let $col = $row.children(".owner-col");
+
+	if ($col.length) {
+		$col.find(".static-area").text(display);
+		$col.attr("title", is_header ? display : grid_row.doc?.owner || "");
+		return;
+	}
+
+	// find the anchor BEFORE creating the new column, and exclude .owner-col
+	// so it can never match itself on a stale/duplicate pass
+	const $last_data_col = $row.children("[data-fieldname]").not(".owner-col").last();
+
+	$col = make_owner_col(display, is_header);
+	if (!is_header) $col.attr("title", grid_row.doc?.owner || "");
+
+	if ($last_data_col.length) {
+		$col.insertAfter($last_data_col);
+	} else {
+		$row.append($col); // fallback: no real data columns found
+	}
+}
+
+function make_owner_col(display, is_header) {
+	// detached — NOT appended here, caller controls placement
+	const $col = $(`
+		<div class="col grid-static-col owner-col" data-fieldname="owner" data-fieldtype="Data">
+			<div class="field-area" style="display:none;"></div>
+			<div class="static-area ellipsis"></div>
+		</div>
+	`);
+	$col.find(".static-area").text(display);
+	if (is_header) $col.attr("title", display);
+	return $col;
+}
+
+function resolve_owner_display(grid_row) {
+	const owner = grid_row.doc.owner;
+	const info = owner ? frappe.user_info(owner) : null;
+	return info ? info.fullname : owner || "";
 }

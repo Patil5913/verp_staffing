@@ -13,36 +13,40 @@
  ],
  "fields": [
   {
+   "columns": 1,
    "fieldname": "small_application",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Small Application"
   },
   {
+   "columns": 1,
    "fieldname": "large_application",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Large Application"
   },
   {
+   "columns": 2,
    "fieldname": "date",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Date"
   },
   {
+   "columns": 1,
    "fieldname": "total_application",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "read_only": 1,
-   "label": "Total Application"
+   "label": "Total Application",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-31 10:36:44.718520",
+ "modified": "2026-09-02 16:16:21.105767",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Job Application Count",

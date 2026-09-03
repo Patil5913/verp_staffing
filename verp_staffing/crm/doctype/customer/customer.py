@@ -67,19 +67,6 @@ class Customer(Document):
                 frappe.throw("Stage field contains invalid JSON")
 
 
-@frappe.whitelist()
-def get_employee_department():
-    employee_name = frappe.db.get_value(
-        "Employee", {"user": frappe.session.user}, "name"
-    )
-
-    if not employee_name:
-        return None
-
-    emp = frappe.get_doc("Employee", employee_name)
-    return emp.employee_assignment_details_table
-
-
 from verp_staffing.install import SERVICE_DOCTYPE_MAP
 from verp_staffing.employee.doctype.employee.employee import user_belongs_to_department
 

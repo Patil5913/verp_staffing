@@ -115,13 +115,6 @@ frappe.ui.form.on("Customer", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
-		frappe.call({
-			method: "verp_staffing.crm.doctype.customer.customer.get_employee_department",
-			callback: (r) => {
-				let dept = r.message;
-				apply_tab_visibility(frm, dept);
-			},
-		});
 		window.add_forward_button(frm,service_name="Sales");
 
 		frm.add_custom_button("Send Portal Link", function () {
@@ -275,28 +268,6 @@ function toggle_tab_view(frm) {
 				frm.toggle_display("after_placement_details", true);
 			}
 		},
-	});
-}
-
-const DEPARTMENT_VISIBILITY = {
-	sales: ["lead_details_html", "sales_tab", "resume_tab", "technical_tab", "marketing_tab"],
-	resume: ["lead_details_html", "resume_tab"],
-	technical: ["lead_details_html", "resume_tab", "technical_tab"],
-	marketing: ["lead_details_html", "resume_tab", "technical_tab", "marketing_tab"],
-};
-
-function apply_tab_visibility(frm, department) {
-	const allowed = DEPARTMENT_VISIBILITY[department] || [];
-	const all_tabs = [
-		"sales_tab",
-		"resume_tab",
-		"technical_tab",
-		"marketing_tab",
-		"note_tab",
-		"activities_tab",
-	];
-	all_tabs.forEach((tab) => {
-		frm.set_df_property(tab, "hidden", !allowed.includes(tab));
 	});
 }
 

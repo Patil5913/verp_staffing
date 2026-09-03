@@ -6,7 +6,7 @@ frappe.ui.form.on("Resume", {
 		render_resume_document_table(frm, {
 			fieldname: "resume_table",
 			wrapper_field: "resume_html",
-			show_fields: ["document", "date"],
+			show_fields: ["document", "date", "owner"],
 			status_field: "status",
 		});
 
@@ -86,6 +86,13 @@ function validate_resume_submission(frm) {
 	}
 }
 
+const RESUME_OWNER_PSEUDO_DF = {
+	fieldname: "owner",
+	fieldtype: "Data",
+	label: "Uploaded By",
+	read_only: 1,
+};
+
 function render_resume_document_table(frm, opts) {
 	const { fieldname, wrapper_field, show_fields, status_field = "status" } = opts;
 
@@ -110,7 +117,11 @@ function render_resume_document_table(frm, opts) {
 	frappe.model.with_doctype(child_doctype, () => {
 		const meta = frappe.get_meta(child_doctype);
 		const columns = show_fields
-			.map((fn) => meta.fields.find((f) => f.fieldname === fn))
+			.map((fn) =>
+				fn === "owner"
+					? RESUME_OWNER_PSEUDO_DF
+					: meta.fields.find((f) => f.fieldname === fn),
+			)
 			.filter((df) => df && !df.hidden);
 
 		let active_controls = [];
@@ -252,6 +263,11 @@ function render_resume_document_table(frm, opts) {
 		function format_static(df, row) {
 			const value = row[df.fieldname];
 			if (!value) return `<span class="text-muted">&mdash;</span>`;
+			if (df.fieldname === "owner") {
+				const info = frappe.user_info(value);
+				const full_name = info ? info.fullname : value;
+				return `<span title="${frappe.utils.escape_html(value)}">${frappe.utils.escape_html(full_name)}</span>`;
+			}
 			if (df.fieldtype === "Attach" || df.fieldtype === "Attach Image") {
 				const file_name = decodeURIComponent(String(value).split("/").pop());
 				return `<a href="${value}" target="_blank" rel="noopener"><i class="fa fa-link" style="margin-right:4px;"></i>${frappe.utils.escape_html(file_name)}</a>`;
