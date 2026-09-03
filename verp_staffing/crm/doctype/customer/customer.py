@@ -80,7 +80,7 @@ def get_forwardable_departments(customer):
     if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
         active_in.append("CR")
 
-    if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
+    if frappe.db.exists("Onboardings", {"customer": customer,  "status": ["in", ["Active","Completed"]]}):
         active_in.append("Onboarding")
 
     if active_in:
