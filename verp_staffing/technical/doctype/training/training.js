@@ -5,7 +5,7 @@ frappe.ui.form.on("Training", {
 	async refresh(frm) {
 		window.render_notes(frm);
 		window.fetch_and_render_resume(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, (service_name = "Training"));
 		window.render_activity_section(frm);
 
 		const display_fields = await window.get_display_fields(frm.doctype);
@@ -18,7 +18,7 @@ frappe.ui.form.on("Training", {
 		window.verp_staffing.render_document_references_table(frm, {
 			fieldname: "proof_of_work",
 			wrapper_field: "proof_of_work_html",
-			show_fields: ["document", "document_title", "description", "date"],
+			show_fields: ["document", "document_title", "description", "date", "owner"],
 			locked_statuses: ["Completed"],
 			status_field: "status",
 		});
@@ -29,7 +29,7 @@ frappe.ui.form.on("Training", {
 			customer: frm.doc.customer,
 			fields: display_fields,
 		});
-		
+
 		frm.set_query("assign_to", () => {
 			return {
 				query: "verp_staffing.crm.api.helpers.get_assign_to_by_service",

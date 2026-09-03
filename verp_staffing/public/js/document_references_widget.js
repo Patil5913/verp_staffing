@@ -12,6 +12,13 @@ const GRID_COLLAPSE_TO_DATA = [
 	"HTML Editor",
 ];
 
+const OWNER_PSEUDO_DF = {
+	fieldname: "owner",
+	fieldtype: "Data",
+	label: "Created By",
+	read_only: 1,
+};
+
 window.verp_staffing = window.verp_staffing || {};
 
 function ensure_drdocref_styles() {
@@ -57,7 +64,9 @@ window.verp_staffing.render_document_references_table = function (frm, opts) {
 		const meta = frappe.get_meta(child_doctype);
 		const editable_grid = !!meta.editable_grid;
 		const columns = show_fields
-			.map((fn) => meta.fields.find((f) => f.fieldname === fn))
+			.map((fn) =>
+				fn === "owner" ? OWNER_PSEUDO_DF : meta.fields.find((f) => f.fieldname === fn),
+			)
 			.filter((df) => df && !df.hidden);
 
 		const selected = new Set();
@@ -65,7 +74,6 @@ window.verp_staffing.render_document_references_table = function (frm, opts) {
 		let $wrap; // set on every render(); read by render_row()'s checkbox handler
 
 		render();
-
 
 		function refresh_bulk_actions() {
 			const count = selected.size;
@@ -84,7 +92,6 @@ window.verp_staffing.render_document_references_table = function (frm, opts) {
 		}
 
 		function render() {
-
 			active_controls.forEach((c) => c.$wrapper && c.$wrapper.remove());
 			active_controls = [];
 			selected.clear();
@@ -272,6 +279,11 @@ window.verp_staffing.render_document_references_table = function (frm, opts) {
 		function format_static(df, row) {
 			const value = row[df.fieldname];
 			if (!value) return `<span class="text-muted">&mdash;</span>`;
+			if (df.fieldname === "owner") {
+				const info = frappe.user_info(value);
+				const full_name = info ? info.fullname : value;
+				return `<span title="${frappe.utils.escape_html(value)}">${frappe.utils.escape_html(full_name)}</span>`;
+			}
 			if (df.fieldtype === "Attach" || df.fieldtype === "Attach Image") {
 				const file_name = decodeURIComponent(String(value).split("/").pop());
 				return `<a href="${value}" target="_blank" rel="noopener"><i class="fa fa-link" style="margin-right:4px;"></i>${frappe.utils.escape_html(file_name)}</a>`;
@@ -292,9 +304,12 @@ window.verp_staffing.render_document_references_table = function (frm, opts) {
 		// not just the visible columns — matching native grid's row-expand.
 		function open_row_dialog(row, locked) {
 			const all_fields = meta.fields.filter((f) => !f.hidden);
+			const dialog_fields = columns.some((c) => c.fieldname === "owner")
+				? [...all_fields, OWNER_PSEUDO_DF]
+				: all_fields;
 			const dialog = new frappe.ui.Dialog({
 				title: __("Document"),
-				fields: all_fields.map((df) => ({
+				fields: dialog_fields.map((df) => ({
 					...df,
 					read_only: locked ? 1 : df.read_only,
 					default: row[df.fieldname],

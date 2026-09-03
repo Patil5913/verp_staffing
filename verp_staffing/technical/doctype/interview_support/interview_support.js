@@ -4,7 +4,7 @@
 frappe.ui.form.on("Interview Support", {
 	async refresh(frm) {
 		window.render_notes(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, service_name="Interview Support");
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 		window.verp_staffing.render_interview_details(
@@ -24,7 +24,7 @@ frappe.ui.form.on("Interview Support", {
 		window.verp_staffing.render_document_references_table(frm, {
 			fieldname: "proof_of_work",
 			wrapper_field: "proof_of_work_html",
-			show_fields: ["document", "document_title", "description", "date"],
+			show_fields: ["document", "document_title", "description", "date","owner"],
 			locked_statuses: ["Completed"],
 			status_field: "status",
 		});

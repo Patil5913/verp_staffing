@@ -4,7 +4,7 @@
 frappe.ui.form.on("JDC", {
 	async refresh(frm) {
 		window.render_notes(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, (service_name = "JDC"));
 		window.render_activity_section(frm);
 		window.fetch_and_render_resume(frm);
 		const display_fields = await window.get_display_fields(frm.doctype);
@@ -25,7 +25,7 @@ frappe.ui.form.on("JDC", {
 		window.verp_staffing.render_document_references_table(frm, {
 			fieldname: "proof_of_work",
 			wrapper_field: "proof_of_work_html",
-			show_fields: ["document", "document_title", "description", "date"],
+			show_fields: ["document", "document_title", "description", "date", "owner"],
 			locked_statuses: ["Completed"],
 			status_field: "status",
 		});

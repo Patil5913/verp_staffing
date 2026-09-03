@@ -1,7 +1,5 @@
 // Copyright (c) 2026, Vrugle and contributors
 // For license information, please see license.txt
-let interview_offset = 0;
-const interview_limit = 5;
 
 frappe.ui.form.on("Onboardings", {
 	setup(frm) {
@@ -9,11 +7,8 @@ frappe.ui.form.on("Onboardings", {
 			render_tab_data(frm);
 		});
 	},
-
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
-
-		// Define the breadcrumb structure
 		frappe.breadcrumbs.all[frappe.get_route_str()] = {
 			workspace: "Onboarding",
 			doctype: frm.doctype,
@@ -21,45 +16,85 @@ frappe.ui.form.on("Onboardings", {
 		};
 
 		frappe.breadcrumbs.update();
-		showOnboarding_data(frm);
-
-		if (frm.doc.status === "Completed") {
-			frm.disable_form();
-			frm.disable_save();
-		}
-		window.add_forward_button(frm);
 		render_tab_data(frm);
-		frm.set_query("assign_to", () => {
-			return {
-				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
-				filters: {
-					department: "Onboarding",
-				},
-			};
+
+		if (frm.doc.status !== "Active") {
+			frm.disable_form();
+		} else if (frm.doc.status === "Returned") {
+			window.add_forward_button(frm, (service_name = "Onboarding"));
+		}
+
+		const assign_to_query = () => ({
+			query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+			filters: { department: "Onboarding" },
 		});
+		frm.set_query("assign_to", assign_to_query);
+		frm.set_query("assign_to", "onboarding_history", assign_to_query);
+
+		lock_history_grid(frm);
+		add_resolution_buttons(frm);
 	},
 	sales_order: function (frm) {
 		frappe.new_doc("Sales Order", { customer: frm.doc.customer });
 	},
-	status: function (frm) {
-		if (frm.doc.status === "Completed") {
-			frappe.confirm(
-				"Marking this as Completed cannot be undone. Proceed?",
-				() => {
-					// User clicked 'Yes'
-					frm.set_df_property("status", "read_only", 1);
-					frm.save();
-				},
-				() => {
-					// User clicked 'No' - Revert to previous value
-					// frm.doc.__onsave holds values from the last save
-					let previous_status = frm.doc.__onsave ? frm.doc.__onsave.status : "Draft";
-					frm.set_value("status", previous_status);
-				},
-			);
-		}
-	},
 });
+
+function get_latest_onboarding_history_row(rows) {
+	if (!rows || !rows.length) return null;
+	return rows.reduce((latest, row) => {
+		if (!latest) return row;
+		const a = row.forwarded_on ? new Date(row.forwarded_on) : new Date(0);
+		const b = latest.forwarded_on ? new Date(latest.forwarded_on) : new Date(0);
+		if (a > b) return row;
+		if (a.getTime() === b.getTime() && row.idx > latest.idx) return row;
+		return latest;
+	}, null);
+}
+
+function lock_history_grid(frm) {
+	const grid = frm.fields_dict.onboarding_history.grid;
+
+	grid.cannot_add_rows = true;
+	grid.df.cannot_delete_rows = true;
+	grid.refresh();
+}
+
+function patch_onboarding_history_row_actions(grid) {
+	if (grid.__onboarding_history_drag_patched) return;
+	grid.__onboarding_history_drag_patched = true;
+
+	["mousedown", "touchstart"].forEach((evt) => {
+		grid.wrapper.on(evt, ".sortable-handle, .row-index", function (e) {
+			if (grid.wrapper.hasClass("onboarding-history-reorder-locked")) {
+				e.stopImmediatePropagation();
+				e.preventDefault();
+				return false;
+			}
+		});
+	});
+}
+
+function add_resolution_buttons(frm) {
+	if (frm.is_new() || !frm.doc.onboarding_history || !frm.doc.onboarding_history.length) return;
+
+	const latest = get_latest_onboarding_history_row(frm.doc.onboarding_history);
+	if (!latest || latest.status !== "Active") return;
+
+	frm.add_custom_button("Mark Completed", () => confirm_resolution(frm, "Completed"), "Actions");
+	frm.add_custom_button("Mark Returned", () => confirm_resolution(frm, "Returned"), "Actions");
+}
+
+function confirm_resolution(frm, action) {
+	frappe.confirm(`Mark this Onboarding as ${action}? This cannot be undone.`, () => {
+		frappe.call({
+			method: "verp_staffing.onboarding.doctype.onboardings.onboardings.resolve_onboarding",
+			args: { onboarding_name: frm.doc.name, action: action },
+			callback() {
+				frm.reload_doc();
+			},
+		});
+	});
+}
 
 function render_tab_data(frm) {
 	if (frm.is_new()) return;
@@ -114,95 +149,16 @@ function render_tab_data(frm) {
 
 function load_customer_history_if_needed(frm) {
 	if (!frm.doc.customer) return;
-	if (frm.__history_loaded_for === frm.doc.name) return; // already loaded for this doc
-
+	if (frm.__history_loaded_for === frm.doc.name) return;
 	frm.__history_loaded_for = frm.doc.name;
-
 	if (frm.fields_dict.customer_details) {
 		frm.fields_dict.customer_details.$wrapper.html(
 			"<p style='color:#888'>Loading history...</p>",
 		);
 	}
-
 	window.verp_staffing.render_customer_history_widget(frm, {
 		fieldname: "customer_details",
 		customer: frm.doc.customer,
 		doctype: "Customer",
-	});
-}
-
-function showOnboarding_data(frm) {
-	if (!frm.doc.customer) return;
-
-	frappe.call({
-		method: "verp_staffing.onboarding.doctype.onboardings.onboardings.get_after_placement_details",
-		args: {
-			customer: frm.doc.customer,
-		},
-		callback(r) {
-			const data = r.message;
-
-			if (!data || !data.position) {
-				frm.fields_dict.after_placement_details.$wrapper.html(
-					"<div style='color:#888'>No placement details available</div>",
-				);
-				return;
-			}
-
-			const html = `
-				<div style="padding:10px">
-					<p><b>Position:</b> ${data.position}</p>
-					<p><b>Placement Company:</b> ${data.placement_company}</p>
-					<p><b>Job Duration:</b> ${data.job_duration}</p>
-					<p><b>Salary:</b> ${data.salary}</p>
-
-					<div style="margin-top:10px">
-						<label><b>Company Percentage</b></label>
-						<input 
-							type="number" 
-							id="company_percentage_input"
-							value="${data.company_percentage || 0}"
-							style="width:100%; padding:6px; margin-top:4px"
-						/>
-					</div>
-
-					<button 
-						class="btn btn-primary"
-						style="margin-top:10px"
-						id="save_company_percentage"
-					>
-						Save
-					</button>
-				</div>
-			`;
-
-			const wrapper = frm.fields_dict.after_placement_details.$wrapper;
-
-			wrapper.html(html);
-
-			// bind click
-			wrapper.off("click", "#save_company_percentage");
-
-			wrapper.on("click", "#save_company_percentage", function () {
-				const value = wrapper.find("#company_percentage_input").val();
-
-				if (!value) {
-					frappe.msgprint("Company Percentage is required");
-					return;
-				}
-
-				frappe.call({
-					method: "verp_staffing.crm.doctype.customer.customer.update_company_percentage",
-					args: {
-						lead_name: data.lead_name,
-						company_percentage: value,
-					},
-					callback() {
-						frappe.msgprint("Updated successfully");
-						frm.refresh();
-					},
-				});
-			});
-		},
 	});
 }

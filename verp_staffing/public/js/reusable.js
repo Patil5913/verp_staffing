@@ -389,22 +389,17 @@ window.get_display_fields = async function (doctype) {
 
 // --------------------- forward - button --------------------------
 
-window.add_forward_button = async function add_forward_button(frm) {
+window.add_forward_button = async function add_forward_button(frm, service_name) {
 	frm.add_custom_button("Forward Candidate", async () => {
 		let method = "";
 		let args = {};
 		if (frm.doctype === "Customer") {
 			method = "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments";
-			args = {
-				customer: frm.doc.name,
-			};
+			args = { customer: frm.doc.name };
 		} else {
 			method =
 				"verp_staffing.crm.doctype.customer.customer.get_forwardable_departments_from_service";
-			args = {
-				doctype: frm.doctype,
-				docname: frm.doc.name,
-			};
+			args = { doctype: frm.doctype, docname: frm.doc.name };
 		}
 
 		frappe.call({
@@ -412,22 +407,20 @@ window.add_forward_button = async function add_forward_button(frm) {
 			args: args,
 			callback(r) {
 				const response = r.message;
-
-				// Handle new shaped response {blocked, options} and legacy plain array
 				const isNewShape =
 					response && typeof response === "object" && !Array.isArray(response);
-				// --- Blocked: customer already active in CR or Onboarding ---
+
 				if (isNewShape && response.blocked) {
 					const depts = response.active_in.join(" and ");
 					frappe.msgprint({
 						title: "Forwarding Not Allowed",
 						indicator: "red",
-						message: `This customer is currently active in <b>${depts}</b>. 
+						message: `This customer is currently forwarded to <b>${depts}</b>. 
                                   No further forwarding is allowed.`,
 					});
 					return;
 				}
-				// Normalize services list from either shape
+
 				let services = isNewShape ? response.options || [] : response || [];
 				if (!services.length) {
 					frappe.msgprint("No services available for forwarding.");
@@ -441,7 +434,7 @@ window.add_forward_button = async function add_forward_button(frm) {
 					return;
 				}
 
-				open_forward_prompt(frm, services);
+				open_forward_prompt(frm, services, service_name);
 			},
 		});
 	});
@@ -449,14 +442,12 @@ window.add_forward_button = async function add_forward_button(frm) {
 
 function toggle_manual_assign(dialog) {
 	const manual = dialog.get_value("manual_assign");
-
 	dialog.set_df_property("assign_employee", "hidden", !manual);
 	dialog.set_df_property("assign_employee", "reqd", manual);
-
 	dialog.refresh();
 }
 
-function open_forward_prompt(frm, services) {
+function open_forward_prompt(frm, services, service_name) {
 	const d = new frappe.ui.Dialog({
 		title: "Forward Candidate",
 		fields: [
@@ -479,9 +470,35 @@ function open_forward_prompt(frm, services) {
 				options: [],
 			},
 			{
+				fieldname: "interview",
+				fieldtype: "Autocomplete",
+				label: "Select Interview",
+				hidden: 1,
+				options: [],
+			},
+			{
+				fieldname: "email",
+				options: "Email",
+				fieldtype: "Data",
+				label: "Candidate Email (Used For Marketing)",
+				hidden: 1,
+			},
+			{
+				fieldname: "password",
+				fieldtype: "Data",
+				label: "Email Password",
+				hidden: 1,
+			},
+			{
 				fieldname: "note",
 				fieldtype: "Text Editor",
 				label: "Note (Optional)",
+				hidden: 1,
+			},
+			{
+				fieldname: "reason_for_forwarding",
+				fieldtype: "Small Text",
+				label: "Reason For Forwarding",
 				hidden: 1,
 			},
 			{
@@ -495,39 +512,6 @@ function open_forward_prompt(frm, services) {
 				},
 			},
 			{
-				fieldname: "position",
-				label: "Position",
-				fieldtype: "Data",
-				hidden: 1,
-			},
-
-			{
-				fieldname: "placement_company",
-				label: "Placement Company",
-				fieldtype: "Data",
-				hidden: 1,
-			},
-
-			{
-				fieldname: "job_duration",
-				label: "Job Type/Duration",
-				fieldtype: "Data",
-				hidden: 1,
-			},
-			{
-				fieldname: "salary",
-				label: "Salary",
-				fieldtype: "Currency",
-				hidden: 1,
-			},
-
-			{
-				fieldname: "company_percentage",
-				label: "Company Percentage",
-				fieldtype: "Float",
-				hidden: 1,
-			},
-			{
 				fieldname: "assign_employee",
 				label: "Assign To",
 				fieldtype: "Link",
@@ -535,7 +519,6 @@ function open_forward_prompt(frm, services) {
 				hidden: 1,
 				get_query: function () {
 					const selected_service = d.get_value("service");
-
 					return {
 						filters: [
 							["Employee Assignment Detail", "department", "=", selected_service],
@@ -550,7 +533,6 @@ function open_forward_prompt(frm, services) {
 				frappe.msgprint("Note is required for RUC.");
 				return;
 			}
-
 			if (
 				(values.service === "JDC" || values.service === "Interview Support") &&
 				!values.interview_round
@@ -558,48 +540,45 @@ function open_forward_prompt(frm, services) {
 				frappe.msgprint(`Please select Interview Round for ${values.service}`);
 				return;
 			}
+			if (values.service?.toLowerCase() === "cr" && !values.reason_for_forwarding) {
+				frappe.msgprint("Reason for forwarding is required for CR.");
+				return;
+			}
 			if (values.service?.toLowerCase() === "onboarding") {
-				const required_fields = [
-					"position",
-					"placement_company",
-					"job_duration",
-					"salary",
-					"company_percentage",
-				];
-
-				for (let field of required_fields) {
-					if (!values[field]) {
-						frappe.msgprint(`${field.replace("_", " ")} is required`);
-						return;
-					}
+				if (!values.interview) {
+					frappe.msgprint("Please select an Interview for Onboarding.");
+					return;
+				}
+				if (!values.email || !values.password) {
+					frappe.msgprint("Candidate Email and Password are required.");
+					return;
+				}
+				if (!frappe.utils.validate_type(values.email, "email")) {
+					frappe.msgprint("Please enter a valid Candidate Email.");
+					return;
 				}
 			}
 			d.disable_primary_action();
-			forward_candidate(frm, values);
+			forward_candidate(frm, values, service_name);
 			d.hide();
 		},
 	});
-
 	d.show();
 }
 
 function toggle_fields(dialog, frm) {
 	const service = dialog.get_value("service");
 	const serviceLower = service?.toLowerCase();
-
-	// reset everything first
 	const fields_to_hide = [
 		"note",
+		"reason_for_forwarding",
 		"interview_round",
+		"interview",
+		"email",
+		"password",
 		"manual_assign",
 		"assign_employee",
-		"position",
-		"placement_company",
-		"job_duration",
-		"salary",
-		"company_percentage",
 	];
-
 	fields_to_hide.forEach((f) => {
 		dialog.set_df_property(f, "hidden", 1);
 		dialog.set_df_property(f, "reqd", 0);
@@ -610,65 +589,86 @@ function toggle_fields(dialog, frm) {
 		return;
 	}
 
-	// Onboarding logic
-	if (serviceLower === "onboarding") {
-		dialog.set_df_property("manual_assign", "hidden", 0);
-
-		const onboarding_fields = [
-			"position",
-			"placement_company",
-			"job_duration",
-			"salary",
-			"company_percentage",
-		];
-
-		onboarding_fields.forEach((f) => {
-			dialog.set_df_property(f, "hidden", 0);
-			dialog.set_df_property(f, "reqd", 1);
-		});
-
-		dialog.refresh();
-		return;
-	}
-	//  CR
 	if (serviceLower === "cr") {
 		dialog.set_df_property("manual_assign", "hidden", 0);
-
+		dialog.set_df_property("reason_for_forwarding", "hidden", 0);
+		dialog.set_df_property("reason_for_forwarding", "reqd", 1);
+		dialog.set_df_property("note", "hidden", 1);
 		dialog.refresh();
 		return;
 	}
-
-	// ------------------------------
-	// Default services logic
-	// ------------------------------
 
 	dialog.set_df_property("note", "hidden", 0);
 
-	if (serviceLower === "jdc" || serviceLower === "interview support") {
+	if (
+		serviceLower === "jdc" ||
+		serviceLower === "interview support" ||
+		serviceLower === "onboarding"
+	) {
 		frappe.call({
 			method: "verp_staffing.crm.api.auto_assign.get_customer_interviews",
-			args: {
-				customer: frm.doc.customer || frm.doc.name,
-				service: serviceLower,
-			},
+			args: { customer: frm.doc.customer || frm.doc.name, service: serviceLower },
 			callback(r) {
-				const interview_rounds = r.message || [];
-				if (!interview_rounds.length) {
+				const data = r.message || [];
+
+				if (serviceLower === "onboarding") {
+					dialog.set_df_property("manual_assign", "hidden", 0);
+
+					if (!data.length) {
+						frappe.msgprint({
+							title: __("No Interview Found"),
+							message: __(
+								"This customer does not have any interview with status 'Get The Offer'.",
+							),
+							indicator: "orange",
+						});
+						dialog.refresh();
+						return;
+					}
+
+					dialog.set_df_property("note", "hidden", 1);
+					dialog.set_df_property("interview", "options", data);
+					dialog.set_df_property("interview", "hidden", 0);
+					dialog.set_df_property("interview", "reqd", 1);
+
+					dialog.set_df_property("email", "hidden", 0);
+					dialog.set_df_property("email", "reqd", 1);
+					dialog.set_df_property("password", "hidden", 0);
+					dialog.set_df_property("password", "reqd", 1);
+
+					// preset from any existing Onboardings record so the marketing
+					// person can verify/edit rather than retype from scratch
+					frappe.call({
+						method: "verp_staffing.crm.doctype.customer.customer.get_onboarding_credentials",
+						args: { customer: frm.doc.customer || frm.doc.name },
+						callback(cr) {
+							if (cr.message?.candidate_marketing_email) {
+								dialog.set_value("email", cr.message.candidate_marketing_email);
+							}
+							if (cr.message?.password) {
+								dialog.set_value("password", cr.message.password);
+							}
+							dialog.refresh();
+						},
+					});
+					return;
+				}
+
+				// jdc / interview support (unchanged)
+				if (!data.length) {
 					frappe.msgprint({
-						title: __("No Interview Round"),
+						title: __("No Interview Round Found"),
 						message: __(
 							"This customer does not have any interview round scheduled yet.",
 						),
 						indicator: "orange",
 					});
-
 					dialog.set_df_property("interview_round", "hidden", 1);
 					dialog.set_df_property("interview_round", "reqd", 0);
 					dialog.refresh();
 					return;
 				}
-
-				dialog.set_df_property("interview_round", "options", interview_rounds);
+				dialog.set_df_property("interview_round", "options", data);
 				dialog.set_df_property("interview_round", "hidden", 0);
 				dialog.set_df_property("interview_round", "reqd", 1);
 				dialog.refresh();
@@ -679,55 +679,23 @@ function toggle_fields(dialog, frm) {
 	dialog.refresh();
 }
 
-function get_stage_json(frm) {
-	return new Promise((resolve) => {
-		frappe.call({
-			method: "frappe.client.get",
-			args: {
-				doctype: "Customer",
-				name: frm.doc.name,
-			},
-			callback: function (r) {
-				if (!r.message || !r.message.stage) {
-					resolve([]);
-					return;
-				}
-
-				try {
-					const parsedStage = JSON.parse(r.message.stage);
-					// parsedStage.count = 0
-					resolve(Object.keys(parsedStage), parsedStage);
-					// resolve(parsedStage);
-				} catch (e) {
-					console.warn("Invalid stage JSON");
-					resolve([]);
-				}
-			},
-			error: function () {
-				resolve([]);
-			},
-		});
-	});
-}
-
-function forward_candidate(frm, values) {
+function forward_candidate(frm, values, service_name) {
 	frappe.call({
 		method: "verp_staffing.crm.api.auto_assign.forward_candidate",
 		args: {
 			customer: frm.doc.customer || frm.doc.name,
 			service: values.service,
 			interview_round: values.interview_round || null,
+			interview: values.interview || null,
+			email: values.email || null,
+			password: values.password || null,
 			assign_employee: values.assign_employee || null,
-			// Onboarding Fields
-			position: values.position || null,
-			placement_company: values.placement_company || null,
-			job_duration: values.job_duration || null,
-			salary: values.salary || null,
-			company_percentage: values.company_percentage || null,
+			reason_for_forwarding: values.reason_for_forwarding || null,
+			from_service_name: service_name || null,
 		},
 		callback(r) {
 			const noteDoctype = r.message.doctype;
-			if (values.note.trim()) {
+			if (values.note && values.note.trim()) {
 				frappe.call({
 					method: "verp_staffing.crm.api.notes.add_note",
 					args: {
@@ -741,7 +709,6 @@ function forward_candidate(frm, values) {
 			frappe.msgprint(
 				`Candidate forwarded for ${values.service} and assigned automatically.`,
 			);
-
 			frm.reload_doc();
 		},
 	});

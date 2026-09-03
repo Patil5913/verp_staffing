@@ -136,7 +136,6 @@ frappe.ui.form.on("Employee", {
 				if (!parent_roles.length) {
 					return { filters: { name: ["=", ""] } };
 				}
-				console.log("parent_roles: ", parent_roles);
 				return {
 					query: "verp_staffing.employee.doctype.employee.employee.get_employees_by_assignment",
 					filters: {

@@ -5,7 +5,6 @@ frappe.query_reports["Revenue Of Employee"] = {
 	onload: function (report) {
 		frappe.db.get_single_value("ERP Configuration", "default_company").then((company) => {
 			const current_company = report.get_filter_value("company");
-			console.log("current_company: ", current_company);
 			if (!current_company && company) {
 				report.set_filter_value("company", company);
 			}

@@ -2,6 +2,8 @@ import json
 import frappe
 from frappe.utils import now_datetime
 from verp_staffing.crm.api.helpers import send_notification
+from verp_staffing.accounts.utils.sales_order_status import _get_department_map
+from frappe import _
 
 
 @frappe.whitelist()
@@ -132,19 +134,24 @@ def forward_candidate(customer, service, interview_round=None):
     except Exception:
         stage = {}
 
-    if service_key in ["cr", "onboarding"]:
-        department = "CR" if service_key == "cr" else "Onboarding"
-
-        return handle_CR_Onboarding_forward(
+    if service_key == "cr":
+        return handle_cr_forward(
             customer=customer,
-            department=department,
+            from_service_name=frappe.form_dict.get("from_service_name"),
+            reason_for_forwarding=frappe.form_dict.get("reason_for_forwarding"),
             assign_employee=frappe.form_dict.get("assign_employee"),
-            position=frappe.form_dict.get("position"),
-            placement_company=frappe.form_dict.get("placement_company"),
-            job_duration=frappe.form_dict.get("job_duration"),
-            salary=frappe.form_dict.get("salary"),
-            company_percentage=frappe.form_dict.get("company_percentage"),
         )
+
+    if service_key == "onboarding":
+        return handle_onboarding_forward(
+            customer=customer,
+            from_service_name=frappe.form_dict.get("from_service_name"),
+            interview=frappe.form_dict.get("interview"),
+            email=frappe.form_dict.get("email"),
+            password=frappe.form_dict.get("password"),
+            assign_employee=frappe.form_dict.get("assign_employee"),
+        )
+
     if service_key in stage:
         doctype = SERVICE_DOCTYPE_MAP.get(service_key, "Other Services")
         department = stage[service_key][0].get("department")
@@ -396,6 +403,15 @@ def get_customer_interviews(customer, service=None):
 			AND ir.support = 0
 		"""
         )
+    elif service == "onboarding":
+        query = """
+            SELECT  
+                CONCAT(i.company, ' (', i.role, ')') AS label,
+                i.name AS value
+            FROM `tabInterview` i
+                WHERE i.marketing_link = %(marketing)s
+            """
+
     else:
         query = (
             base_select
@@ -457,104 +473,170 @@ DEPARTMENT_DOCTYPE = {
     "CR": "CR",
     "Onboarding": "Onboardings",
 }
+CR_BLOCKING_STATUS = "Dispute Pending"
 
 
-def handle_CR_Onboarding_forward(
-    customer,
-    department,
-    assign_employee=None,
-    position=None,
-    placement_company=None,
-    job_duration=None,
-    salary=None,
-    company_percentage=None,
+def _resolve_forwarded_from_department(from_service_name):
+    if not from_service_name:
+        frappe.throw("Source service is required to forward to CR")
+
+    if from_service_name.strip().lower() == "sales":
+        return "Sales"
+
+    department = _get_department_map().get(from_service_name)
+    if not department:
+        frappe.throw(_(f"No department found for service {from_service_name}"))
+
+    return department
+
+
+def handle_cr_forward(
+    customer, from_service_name, reason_for_forwarding, assign_employee=None
 ):
+    if not reason_for_forwarding:
+        frappe.throw(_("Reason for forwarding is required for CR"))
 
-    target_doctype = DEPARTMENT_DOCTYPE.get(department)
-    if not target_doctype:
-        frappe.throw(f"Invalid department: {department}")
+    forwarded_from_department = _resolve_forwarded_from_department(from_service_name)
 
-    # Duplicate Validation — only block if an ACTIVE record exists
-    existing_active = frappe.db.exists(
-        target_doctype,
-        {
-            "customer": customer,
-            "status": "Active",
-        },
-    )
+    existing_cr_name = frappe.db.get_value("CR", {"customer": customer}, "name")
 
-    if existing_active:
-        frappe.throw(f"Customer already forwarded to {department}")
-    # Fields Validation (only required for Onboarding)
-    if department == "Onboarding":
-        required_fields = {
-            "Position": position,
-            "Placement Company": placement_company,
-            "Job Duration": job_duration,
-            "Salary": salary,
-            "Company Percentage": company_percentage,
-        }
-        for label, value in required_fields.items():
-            if not value:
-                frappe.throw(f"{label} is required for onboarding")
+    if existing_cr_name:
+        current_status = frappe.db.get_value("CR", existing_cr_name, "status")
+        if current_status == CR_BLOCKING_STATUS:
+            frappe.throw(
+                f"Customer already has an active CR case in '{CR_BLOCKING_STATUS}' status. "
+                f"It must be resolved or refunded before forwarding again."
+            )
 
-    # Determine assignee
-    assignee = assign_employee or get_department_load_employee(
-        department, target_doctype
-    )
+    assignee = assign_employee or get_department_load_employee("CR", "CR")
 
-    # Get Customer + Lead Detail
-    customer_doc = frappe.get_doc("Customer", customer)
-    if not customer_doc.lead_details:
-        frappe.throw("Lead Detail Form not linked to customer")
+    history_row = {
+        "reason_for_forwarding": reason_for_forwarding,
+        "forwarded_by": frappe.session.user,
+        "forwarded_from_department": forwarded_from_department,
+        "status": CR_BLOCKING_STATUS,
+        "forwarded_on": now_datetime(),
+        "assign_to": assignee,
+    }
 
-    lead_doc = frappe.get_doc("Lead Detail Form", customer_doc.lead_details)
+    if existing_cr_name:
+        cr_doc = frappe.get_doc("CR", existing_cr_name)
+        cr_doc.append("cr_history", history_row)
+        cr_doc.save(ignore_permissions=True)
+    else:
+        cr_doc = frappe.get_doc(
+            {
+                "doctype": "CR",
+                "customer": customer,
+                "cr_history": [history_row],
+            }
+        )
+        cr_doc.insert(ignore_permissions=True)
 
-    # Update Lead Detail Form (only relevant fields for Onboarding)
-    if department == "Onboarding":
-        lead_doc.position = position
-        lead_doc.placement_company = placement_company
-        lead_doc.job_duration = job_duration
-        lead_doc.salary = salary
-        lead_doc.company_percentage = company_percentage
-        lead_doc.save(ignore_permissions=True)
-
-    # Get current employee
-    employee = frappe.get_all(
-        "Employee",
-        filters={"user": ["=", frappe.session.user]},
-        pluck="name",
-        distinct=True,
-    )
-    if not employee:
-        frappe.throw("No Employee record found for the current user")
-
-    # Create new department record
-    route = frappe.get_doc(
-        {
-            "doctype": target_doctype,
-            "customer": customer,
-            "status": "Active",
-            "assign_to": assignee,
-            "forwarded_by": employee[0],
-            "forwarded_on": now_datetime(),
-        }
-    )
-    route.insert(ignore_permissions=True)
-
-    # Notify assignee
-    emp_user = frappe.db.get_value("Employee", assignee, "user")
+    emp_user = frappe.db.get_value("Employee", assignee, "user") if assignee else None
     if emp_user:
         send_notification(
             recipients=[emp_user],
-            subject=f"New Candidate Assigned",
+            subject="New Candidate Assigned",
             message=(
-                f"You have been assigned a new candidate.\n\n"
+                f"You have been assigned a new CR case.\n\n"
                 f"Customer: {customer}\n"
-                f"Department: {department}"
+                f"Forwarded from: {forwarded_from_department}"
             ),
             send_email=0,
             send_system=1,
         )
 
-    return {"reforward": False, "doctype": "Customer", "name": customer}
+    return {"reforward": bool(existing_cr_name), "doctype": "CR", "name": cr_doc.name}
+
+
+def handle_onboarding_forward(
+    customer,
+    from_service_name,
+    interview,
+    email=None,
+    password=None,
+    assign_employee=None,
+):
+    if not interview:
+        frappe.throw(_("Interview is required for Onboarding"))
+    if not email or not password:
+        frappe.throw(_("Candidate Email and Password are required"))
+
+    forwarded_from_department = _resolve_forwarded_from_department(from_service_name)
+
+    interview_doc = frappe.db.get_value(
+        "Interview", interview, ["company", "role"], as_dict=True
+    )
+    if not interview_doc:
+        frappe.throw(f"Interview {interview} not found")
+
+    existing_name = frappe.db.get_value("Onboardings", {"customer": customer}, "name")
+
+    if existing_name:
+        current_status = frappe.db.get_value("Onboardings", existing_name, "status")
+        if current_status in ["Active", "Completed"]:
+            frappe.throw(
+                f"Customer is forwarded for onboarding."
+                f"status: {current_status}. so cannot forward further untill it is returned."
+            )
+
+    assignee = assign_employee or get_department_load_employee(
+        "Onboarding", "Onboardings"
+    )
+
+    history_row = {
+        "company": interview_doc.company,
+        "role": interview_doc.role,
+        "assign_to": assignee,
+        "forwarded_by": frappe.session.user,
+        "forwarded_from": forwarded_from_department,
+        "forwarded_on": now_datetime(),
+        "status": "Active",
+    }
+
+    frappe.flags.cr_system_action = True
+    try:
+        if existing_name:
+            onboarding_doc = frappe.get_doc("Onboardings", existing_name)
+            onboarding_doc.append("onboarding_history", history_row)
+            onboarding_doc.candidate_marketing_email = email
+            onboarding_doc.password = password
+            onboarding_doc.status = "Active"
+            onboarding_doc.assign_to = assignee
+            onboarding_doc.save(ignore_permissions=True)
+        else:
+            onboarding_doc = frappe.get_doc(
+                {
+                    "doctype": "Onboardings",
+                    "customer": customer,
+                    "status": "Active",
+                    "assign_to": assignee,
+                    "candidate_marketing_email": email,
+                    "password": password,
+                    "onboarding_history": [history_row],
+                }
+            )
+            onboarding_doc.insert(ignore_permissions=True)
+    finally:
+        frappe.flags.cr_system_action = False
+
+    emp_user = frappe.db.get_value("Employee", assignee, "user") if assignee else None
+    if emp_user:
+        send_notification(
+            recipients=[emp_user],
+            subject="New Candidate Assigned",
+            message=(
+                f"You have been assigned a new Onboarding case.\n\n"
+                f"Customer: {customer}\n"
+                f"Forwarded from: {forwarded_from_department}"
+            ),
+            send_email=0,
+            send_system=1,
+        )
+
+    return {
+        "reforward": bool(existing_name),
+        "doctype": "Onboardings",
+        "name": onboarding_doc.name,
+    }

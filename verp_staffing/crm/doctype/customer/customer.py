@@ -67,19 +67,6 @@ class Customer(Document):
                 frappe.throw("Stage field contains invalid JSON")
 
 
-@frappe.whitelist()
-def get_employee_department():
-    employee_name = frappe.db.get_value(
-        "Employee", {"user": frappe.session.user}, "name"
-    )
-
-    if not employee_name:
-        return None
-
-    emp = frappe.get_doc("Employee", employee_name)
-    return emp.employee_assignment_details_table
-
-
 from verp_staffing.install import SERVICE_DOCTYPE_MAP
 from verp_staffing.employee.doctype.employee.employee import user_belongs_to_department
 
@@ -90,10 +77,10 @@ def get_forwardable_departments(customer):
 
     active_in = []
 
-    if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
+    if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
         active_in.append("CR")
 
-    if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
+    if frappe.db.exists("Onboardings", {"customer": customer,  "status": ["in", ["Active","Completed"]]}):
         active_in.append("Onboarding")
 
     if active_in:
@@ -254,9 +241,9 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
-    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Active"})
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"})
     onboarding_active = frappe.db.exists(
-        "Onboardings", {"customer": customer, "status": "Active"}
+        "Onboardings", {"customer": customer, "status": ["in", ["Active","Completed"]]}
     )
     if doctype not in ["CR", "Onboardings"]:
         if cr_active or onboarding_active:
@@ -291,6 +278,14 @@ def get_forwardable_departments_from_service(doctype, docname):
         options.append("Onboarding")
     return {"blocked": False, "options": options}
 
+@frappe.whitelist()
+def get_onboarding_credentials(customer):
+    if not frappe.db.exists("Onboardings", {"customer": customer}):
+        return {"email": None, "password": None}
+
+    credentials = frappe.db.get_value("Onboardings", {"customer": customer}, ["candidate_marketing_email", "password"], as_dict=True)
+
+    return credentials if credentials else {"email": None, "password": None}
 
 @frappe.whitelist()
 def update_company_percentage(lead_name, company_percentage):

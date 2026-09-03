@@ -21,6 +21,14 @@ body.verp-blur .layout-main-section {
 	filter: blur(10px);
 	pointer-events: none;
 }
+/* Add owner column in child table grid */
+.owner-col {
+	min-width: 120px;
+}
+.owner-col .static-area {
+	color: var(--text-muted);
+	font-size: 12px;
+}
 
 body.verp-protected::after {
 	content: "CONFIDENTIAL – VERP STAFFING";

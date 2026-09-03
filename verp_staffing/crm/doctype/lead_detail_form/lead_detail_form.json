@@ -64,13 +64,6 @@
   "ead_card",
   "driving_licence",
   "old_resume",
-  "after_placement_data_section",
-  "position",
-  "placement_company",
-  "job_duration",
-  "column_break_deos",
-  "salary",
-  "company_percentage",
   "section_break_odpr",
   "reference_table"
  ],
@@ -395,46 +388,12 @@
   {
    "fieldname": "files_upload_section",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "after_placement_data_section",
-   "fieldtype": "Section Break",
-   "label": "After Placement Data"
-  },
-  {
-   "fieldname": "position",
-   "fieldtype": "Data",
-   "label": "Position"
-  },
-  {
-   "fieldname": "placement_company",
-   "fieldtype": "Data",
-   "label": "Placement Company"
-  },
-  {
-   "fieldname": "job_duration",
-   "fieldtype": "Data",
-   "label": "Job Duration"
-  },
-  {
-   "fieldname": "column_break_deos",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "salary",
-   "fieldtype": "Data",
-   "label": "Salary"
-  },
-  {
-   "fieldname": "company_percentage",
-   "fieldtype": "Data",
-   "label": "Company Percentage"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-06 15:43:47.310251",
+ "modified": "2026-09-03 17:59:40.312114",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

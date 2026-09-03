@@ -22,19 +22,20 @@ frappe.ui.form.on("CR", {
 		frappe.breadcrumbs.update();
 		render_tab_data(frm);
 
-		if (frm.doc.status === "Completed") {
+		if (frm.doc.status != "Dispute Pending") {
 			frm.disable_form();
 			frm.disable_save();
+			window.add_forward_button(frm);
 		}
-		window.add_forward_button(frm);
-		frm.set_query("assign_to", () => {
-			return {
-				query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
-				filters: {
-					department: "CR",
-				},
-			};
+		const assign_to_query = () => ({
+			query: "verp_staffing.crm.api.helpers.get_subordinate_employees",
+			filters: { department: "CR" },
 		});
+
+		frm.set_query("assign_to", assign_to_query);
+		frm.set_query("assign_to", "cr_history", assign_to_query);
+		lock_history_grid(frm);
+		add_resolution_buttons(frm);
 	},
 	status: function (frm) {
 		if (frm.doc.status === "Completed") {
@@ -55,6 +56,14 @@ frappe.ui.form.on("CR", {
 		}
 	},
 });
+
+function lock_history_grid(frm) {
+	const grid = frm.fields_dict.cr_history.grid;
+
+	grid.cannot_add_rows = true;
+	grid.df.cannot_delete_rows = true;
+	grid.refresh();
+}
 
 function render_tab_data(frm) {
 	if (frm.is_new()) return;
@@ -400,4 +409,52 @@ function load_payment_terms(so_name, frm) {
 
 function make_safe_id(name) {
 	return name.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function add_resolution_buttons(frm) {
+	if (frm.is_new() || !frm.doc.cr_history || !frm.doc.cr_history.length) return;
+
+	const latest = frm.doc.cr_history[frm.doc.cr_history.length - 1];
+	if (latest.status !== "Dispute Pending") return;
+
+	frm.add_custom_button(
+		"Resolve",
+		() => open_resolution_dialog(frm, "Dispute Resolved"),
+		"Actions",
+	);
+	frm.add_custom_button("Refund", () => open_resolution_dialog(frm, "Refund"), "Actions");
+}
+
+function open_resolution_dialog(frm, action) {
+	const d = new frappe.ui.Dialog({
+		title: action,
+		fields: [
+			{
+				fieldname: "remarks",
+				fieldtype: "Small Text",
+				label: action === "Refund" ? "Reason for Refund" : "Resolution Remarks",
+				reqd: 1,
+			},
+		],
+		primary_action_label: action,
+		primary_action(values) {
+			d.disable_primary_action();
+			frappe.call({
+				method: "verp_staffing.cr.doctype.cr.cr.resolve_or_refund_cr",
+				args: {
+					cr_name: frm.doc.name,
+					action: action,
+					remarks: values.remarks,
+				},
+				callback() {
+					d.hide();
+					frm.reload_doc();
+				},
+				error() {
+					d.enable_primary_action();
+				},
+			});
+		},
+	});
+	d.show();
 }

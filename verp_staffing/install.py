@@ -2080,11 +2080,7 @@ def seed_party_types():
         ).insert()
         
 def set_default_system_settings():
-	doc = frappe.get_single("System Settings")
-	# doc.set("welcome_email_template", "Welcome Email Template")
-	# doc.set("reset_password_template", "Reset Password Email")
-	doc.set("disable_system_update_notification", 1)
-	doc.save(ignore_permissions=True)
+    frappe.db.set_single_value("System Settings", "disable_system_update_notification", 1)
 
 def seed_type_of_interview():
     doctype = "Type Of Interview"

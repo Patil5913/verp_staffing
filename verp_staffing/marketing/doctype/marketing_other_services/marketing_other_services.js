@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Marketing Other Services", {
 	async refresh(frm) {
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, (service_name = frm.doc.service));
 		window.fetch_and_render_resume(frm);
 		window.render_notes(frm);
 		window.render_activity_section(frm);
@@ -15,12 +15,12 @@ frappe.ui.form.on("Marketing Other Services", {
 			frm.set_df_property("status", "read_only", 1);
 			frm.set_df_property("assign_to", "read_only", 1);
 		}
-			frm.set_df_property("customer", "hidden", 1);
+		frm.set_df_property("customer", "hidden", 1);
 
 		window.verp_staffing.render_document_references_table(frm, {
 			fieldname: "proof_of_work",
 			wrapper_field: "proof_of_work_html",
-			show_fields: ["document", "document_title", "description", "date"],
+			show_fields: ["document", "document_title", "description", "date", "owner"],
 			locked_statuses: ["Completed"],
 			status_field: "status",
 		});

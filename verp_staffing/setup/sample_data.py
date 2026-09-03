@@ -792,6 +792,8 @@ def create_sales_invoices(company, customers, items):
 	currency = _default_currency(company)
 	debit_to = _get_company_default_account(company, "default_receivable_account", "Receivable")
 
+	taxes = _safe_tax_row(company, "Input GST", "Purchase Invoice")
+
 	invoices = []
 	for customer in customers[:2]:
 		si = frappe.get_doc(
@@ -802,6 +804,7 @@ def create_sales_invoices(company, customers, items):
 				"currency": currency,
 				"debit_to": debit_to,
 				"posting_date": today(),
+				"taxes": taxes,
 				"items": _service_items_table(items, company),
 			}
 		)
@@ -864,7 +867,7 @@ def create_payment_entries(company, sales_invoices, purchase_orders, purchase_in
 
 	references = []
 	references += [("Sales Invoice", n, "Receive") for n in sales_invoices]
-	references += [("Purchase Order", n, "Pay") for n in purchase_orders]
+	# references += [("Purchase Order", n, "Pay") for n in purchase_orders]
 	references += [("Purchase Invoice", n, "Pay") for n in purchase_invoices]
 
 	receivable = _get_company_default_account(company, "default_receivable_account", "Receivable")
@@ -1027,7 +1030,7 @@ def create_journal_entries(company, employees):
 		)
 		return []
 
-	amount = 5000
+	amount = 50000
 
 	je = frappe.get_doc(
 		{

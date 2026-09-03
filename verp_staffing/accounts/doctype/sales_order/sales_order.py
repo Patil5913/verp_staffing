@@ -1238,80 +1238,121 @@ def send_payment_term_reminders():
             )
 
 
+def _should_bypass_owner_filter():
+    if frappe.session.user == "Administrator":
+        return True
+    from verp_staffing.employee.doctype.employee.employee import get_user_departments
+
+    departments = get_user_departments()
+    return "Onboarding" in departments
+
+
 @frappe.whitelist()
 def get_owned_sales_orders(customer):
     if not customer:
         return []
 
-    visible_employee_names = get_visible_employee_names_cached()
+    bypass_owner_filter = _should_bypass_owner_filter()
 
-    if not visible_employee_names:
-        return []
+    if bypass_owner_filter:
+        rows = frappe.db.sql(
+            """
+            SELECT
+                so.name,
+                so.owner,
+                so.creation,
+                so.posting_date,
+                so.docstatus,
+                so.status,
+                so.grand_total,
+                so.currency,
+                cpt.name AS payment_term_name,
+                cpt.payment_condition,
+                cpt.counter,
+                cpt.start_date,
+                cpt.due_date,
+                cpt.last_reminder_date,
+                cpt.amount,
+                cpt.payment_status,
+                cpt.current_interview_count,
+                cpt.payment_entry,
+                cpt.description,
+                cpt.verification_log,
+                cpt.idx AS payment_term_idx
+            FROM `tabSales Order` AS so
+            LEFT JOIN `tabCustomer Payment Terms` AS cpt
+                ON cpt.parent = so.name
+                AND cpt.parenttype = 'Sales Order'
+            WHERE
+                so.customer = %(customer)s
+            ORDER BY
+                so.creation DESC,
+                cpt.idx ASC
+            """,
+            {"customer": customer},
+            as_dict=True,
+        )
+    else:
+        visible_employee_names = get_visible_employee_names_cached()
+        if not visible_employee_names:
+            return []
 
-    visible_users = frappe.db.get_all(
-        "Employee",
-        filters={
-            "name": ["in", list(visible_employee_names)],
-            "user": ["is", "set"],
-        },
-        pluck="user",
-    )
+        visible_users = frappe.db.get_all(
+            "Employee",
+            filters={
+                "name": ["in", list(visible_employee_names)],
+                "user": ["is", "set"],
+            },
+            pluck="user",
+        )
+        if not visible_users:
+            return []
 
-    if not visible_users:
-        return []
-
-    rows = frappe.db.sql(
-        """
-        SELECT
-            so.name,
-            so.owner,
-            so.creation,
-            so.posting_date,
-            so.docstatus,
-            so.status,
-            so.grand_total,
-            so.currency,
-
-            cpt.name AS payment_term_name,
-            cpt.payment_condition,
-            cpt.counter,
-            cpt.start_date,
-            cpt.due_date,
-            cpt.last_reminder_date,
-            cpt.amount,
-            cpt.payment_status,
-            cpt.current_interview_count,
-            cpt.payment_entry,
-            cpt.description,
-            cpt.verification_log,
-            cpt.idx AS payment_term_idx
-
-        FROM `tabSales Order` AS so
-
-        LEFT JOIN `tabCustomer Payment Terms` AS cpt
-            ON cpt.parent = so.name
-            AND cpt.parenttype = 'Sales Order'
-
-        WHERE
-            so.customer = %(customer)s
-            AND so.owner IN %(owners)s
-
-        ORDER BY
-            so.creation DESC,
-            cpt.idx ASC
-        """,
-        {
-            "customer": customer,
-            "owners": tuple(visible_users),
-        },
-        as_dict=True,
-    )
+        rows = frappe.db.sql(
+            """
+            SELECT
+                so.name,
+                so.owner,
+                so.creation,
+                so.posting_date,
+                so.docstatus,
+                so.status,
+                so.grand_total,
+                so.currency,
+                cpt.name AS payment_term_name,
+                cpt.payment_condition,
+                cpt.counter,
+                cpt.start_date,
+                cpt.due_date,
+                cpt.last_reminder_date,
+                cpt.amount,
+                cpt.payment_status,
+                cpt.current_interview_count,
+                cpt.payment_entry,
+                cpt.description,
+                cpt.verification_log,
+                cpt.idx AS payment_term_idx
+            FROM `tabSales Order` AS so
+            LEFT JOIN `tabCustomer Payment Terms` AS cpt
+                ON cpt.parent = so.name
+                AND cpt.parenttype = 'Sales Order'
+            WHERE
+                so.customer = %(customer)s
+                AND so.owner IN %(owners)s
+            ORDER BY
+                so.creation DESC,
+                cpt.idx ASC
+            """,
+            {
+                "customer": customer,
+                "owners": tuple(visible_users),
+            },
+            as_dict=True,
+        )
 
     sales_orders = {}
-
     for row in rows:
         sales_order_name = row.name
-
         if sales_order_name not in sales_orders:
             sales_orders[sales_order_name] = {
                 "name": row.name,
@@ -1324,7 +1365,6 @@ def get_owned_sales_orders(customer):
                 "currency": row.currency,
                 "payment_terms": [],
             }
-
         if row.payment_term_name:
             sales_orders[sales_order_name]["payment_terms"].append(
                 {
@@ -1343,5 +1383,4 @@ def get_owned_sales_orders(customer):
                     "idx": row.payment_term_idx,
                 }
             )
-
     return list(sales_orders.values())

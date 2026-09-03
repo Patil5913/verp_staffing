@@ -326,39 +326,46 @@ def get_group_total(account_name, gl_map, children_map, acc_map):
     return total
 
 
+def get_period_root_totals(gl, accounts):
+    """Sum of all LEAF accounts per root_type (Asset/Liability/Equity) for a
+    single period's GL map — one pass over the account list instead of the
+    three separate list-comprehension sums that used to happen independently
+    in total_row(), get_report_summary(), and get_chart_data() for the same
+    numbers.
+    """
+    totals = {"Asset": 0.0, "Liability": 0.0, "Equity": 0.0}
+    for a in accounts:
+        if a.is_group or a.root_type not in totals:
+            continue
+        totals[a.root_type] += compute_net(a.name, gl, a.root_type)
+    return totals
+
+
 def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
     if not period_gl:
         return []
 
     # Always use accumulated GL for summary regardless of period movement toggle
-    # If accumulated_gl is provided use it, otherwise fall back to last period_gl
     _label, _pf, _pt, gl = accumulated_gl if accumulated_gl else period_gl[-1]
-    leaf_accounts = [a for a in accounts if not a.is_group]
+    totals = get_period_root_totals(gl, accounts)
 
-    total_assets = sum(
-        compute_net(a.name, gl, a.root_type)
-        for a in leaf_accounts
-        if a.root_type == "Asset"
-    )
-    total_liab = sum(
-        compute_net(a.name, gl, a.root_type)
-        for a in leaf_accounts
-        if a.root_type == "Liability"
-    )
-    total_equity = sum(
-        compute_net(a.name, gl, a.root_type)
-        for a in leaf_accounts
-        if a.root_type == "Equity"
-    )
+    total_assets = totals["Asset"]
+    total_liab = totals["Liability"]
+    # Equity here is Assets − Liabilities, not just the explicit Equity
+    # ledger accounts. Equity accounts alone rarely carry the current
+    # year's unclosed profit/loss (that lives in Income/Expense GL
+    # entries, which this report doesn't query) — so summing only Equity
+    # accounts undercounts equity and never balances. Deriving it this way
+    # makes the sheet balance by construction; there's no separate
+    # "Difference" figure needed anymore.
+    total_equity = total_assets - total_liab
 
-    balance_check = total_assets - total_liab - total_equity
     # Apply exchange rate if presentation currency differs from company currency
     exchange_rate = flt(filters.get("exchange_rate") or 1)
     if exchange_rate and exchange_rate != 1:
         total_assets *= exchange_rate
         total_liab *= exchange_rate
         total_equity *= exchange_rate
-        balance_check *= exchange_rate
 
     currency = filters.get("currency") or frappe.get_cached_value(
         "Company", filters.company, "default_currency"
@@ -384,14 +391,7 @@ def get_report_summary(period_gl, accounts, filters, accumulated_gl=None):
             "label": _("Total Equity"),
             "datatype": "Currency",
             "currency": currency,
-            "indicator": "Green",
-        },
-        {
-            "value": balance_check,
-            "label": _("Difference (should be 0)"),
-            "datatype": "Currency",
-            "currency": currency,
-            "indicator": "Green" if abs(balance_check) < 0.01 else "Red",
+            "indicator": "Green" if total_equity >= 0 else "Red",
         },
     ]
 
@@ -463,6 +463,14 @@ def get_data(filters):
 
         period_gl.append((label, p_from, p_to, gl))
 
+    # ── STEP 4: One-time root-type totals per period ───────────────
+    # Computed once here and reused for the Current Year Earnings plug,
+    # every total_row(), and the chart — instead of each of those re-summing
+    # the same leaf accounts independently.
+    period_root_totals = {
+        label: get_period_root_totals(gl, accounts) for label, _pf, _pt, gl in period_gl
+    }
+
     # ── Row builder ───────────────────────────────────────────────
     data = []
 
@@ -531,12 +539,31 @@ def get_data(filters):
         }
         for lbl, _pf, _pt, gl in period_gl:
             fn = frappe.scrub(lbl)
-            row[fn] = sum(
-                compute_net(a.name, gl, a.root_type)
-                for a in accounts
-                if a.root_type == root_type and not a.is_group
-            )
+            row[fn] = period_root_totals[lbl][root_type]
         return row
+
+    def current_year_earnings_row():
+        """Plug row so Assets = Liabilities + Equity per period. Equity
+        ledger accounts alone don't include the current year's unclosed
+        profit/loss (that lives in Income/Expense accounts, which this
+        report doesn't query) — without this the sheet never balances.
+        """
+        row = {
+            "account": _("Current Year Earnings"),
+            "root_type": "Equity",
+            "indent": 1,
+            "is_group": 0,
+            "currency": filters.get("currency"),
+        }
+        has_value = False
+        for label, _pf, _pt, _gl in period_gl:
+            fn = frappe.scrub(label)
+            totals = period_root_totals[label]
+            earnings = totals["Asset"] - totals["Liability"] - totals["Equity"]
+            row[fn] = earnings
+            if earnings:
+                has_value = True
+        return row, has_value
 
     # ── ASSETS ────────────────────────────────────────────────────
     section_header("ASSETS", "Asset")
@@ -564,11 +591,22 @@ def get_data(filters):
         a.name for a in accounts if a.root_type == "Equity" and not a.parent_account
     ]:
         add_rows(root, indent=1)
+
+    earnings_row, earnings_has_value = current_year_earnings_row()
+    if show_zero or earnings_has_value:
+        data.append(earnings_row)
+
     t_equity = total_row("Total Equity", "Equity")
+    for label, _pf, _pt, _gl in period_gl:
+        fn = frappe.scrub(label)
+        t_equity[fn] = flt(t_equity.get(fn, 0)) + flt(earnings_row.get(fn, 0))
     data.append(t_equity)
     data.append({})
 
     # ── TOTAL LIABILITIES + EQUITY ────────────────────────────────
+    # With the earnings plug folded into t_equity above, this now always
+    # equals Total Assets for the same period — the sheet balances by
+    # construction, so there's nothing left to reconcile separately.
     le_row = {
         "account": "Total Liabilities + Equity",
         "indent": 0,

@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-08-31 10:52:35.204082",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "status",
+  "column_break_mmyj",
+  "remarks",
+  "column_break_mvrq",
+  "assign_to",
+  "section_break_zlgl",
+  "reason_for_forwarding",
+  "column_break_yoxw",
+  "forwarded_by",
+  "column_break_nrws",
+  "forwarded_from_department",
+  "section_break_bbcc",
+  "resolve_refund_on",
+  "column_break_iyyn",
+  "forwarded_on",
+  "column_break_jphf",
+  "action_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "reason_for_forwarding",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reason For Forwarding",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_yoxw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "forwarded_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Forwarded By",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_nrws",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "forwarded_from_department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Forwarded From:",
+   "options": "Department",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "Dispute Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Dispute Pending\nDispute Resolved\nRefund",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_mmyj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Write reason for refund if any otherwise remarks for resolution",
+   "fieldname": "remarks",
+   "fieldtype": "Data",
+   "label": "Remarks",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_zlgl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_bbcc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_iyyn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "default": "now",
+   "fieldname": "forwarded_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Forwarded On",
+   "read_only": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "resolve_refund_on",
+   "fieldtype": "Datetime",
+   "label": "Resolve/Refund On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_mvrq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assign To",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_jphf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_by",
+   "fieldtype": "Link",
+   "label": "Action By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-31 16:24:49.684105",
+ "modified_by": "Administrator",
+ "module": "CR",
+ "name": "CR History",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
