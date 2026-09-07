@@ -13,6 +13,7 @@ let isAgreement = null;
 let pdfValue = null;
 let token = null;
 let candidateFields = [];
+let Agreement_signed = false;
 const DOC_FIELDS = new Set(["visa_copy", "ead_card", "driving_licence", "old_resume"]);
 
 const CONCERN_FIELDS = [
@@ -329,19 +330,25 @@ frappe.ready(async function () {
 		});
 	}
 
-	if (pdfValue) {
+	if ((pdfValue, agreementValue)) {
 		// fetch Agreement by Sales Order
+		console.error("pdfValue, agreementValue: ", pdfValue, agreementValue);
 		frappe.call({
 			method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
 			args: {
 				path: pdfValue,
+				agreement: agreementValue,
 			},
 			callback: function (res) {
-				if (!res.message || !res.message.length) {
+				if (!res.message) {
 					console.error("PDF to image conversion failed");
 					return;
 				}
-
+				if (res.message.status === "Agreement_signed") {
+					Agreement_signed = true;
+					disable_next_button();
+					return;
+				}
 				let html = "";
 
 				res.message.forEach((img) => {
@@ -1230,7 +1237,6 @@ function apply_state(state, opts) {
 	const otpSec = document.getElementById("otp-section");
 	const subtext = document.getElementById("otp-subtext");
 	const otpInput = document.getElementById("otp-input");
-
 	// If the DOM isn't ready yet (edge case during restore), bail
 	if (!sendBtn || !otpSec) {
 		console.warn("[OTP] apply_state called before DOM ready, state:", state);
@@ -1243,6 +1249,13 @@ function apply_state(state, opts) {
 	sendBtn.disabled = false;
 	sendBtn.style.background = "#007bff";
 	sendBtn.style.color = "#fff";
+	if (Agreement_signed) {
+		otpSec.style.display = "none";
+		sendBtn.style.display = "none";
+		if (subtext) subtext.textContent = "Your agreement has been signed.";
+		set_status("✅ Agreement signed successfully!", "green");
+		return;
+	}
 	if (verifyBtn) verifyBtn.disabled = false;
 
 	// ── Per-state logic ────────────────────────────────────────────────────────
@@ -1338,7 +1351,7 @@ function build_otp_html() {
 	const email = typeof customerEmail !== "undefined" && customerEmail ? customerEmail : "";
 	const emailLine = email
 		? '<p style="margin:0 0 16px 0;font-size:13px;color:#333;line-height:1.5;">' +
-			'Sending code to: <strong style="color:#1a1a2e;">' +
+			'Email: <strong style="color:#1a1a2e;">' +
 			email +
 			"</strong></p>"
 		: "";

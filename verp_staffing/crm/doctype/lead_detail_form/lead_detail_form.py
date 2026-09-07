@@ -290,6 +290,29 @@ def apply_signature_and_audit_to_pdf(
         except Exception:
             audit_trail_text = {}
 
+    if not audit_trail_text:
+        # 1. Fall back to whatever audit_trail is already on the in-memory agreement doc
+        if agreement and getattr(agreement, "audit_trail", None):
+            try:
+                audit_trail_text = json.loads(agreement.audit_trail)
+            except Exception:
+                audit_trail_text = {}
+
+        # 2. Still nothing — re-fetch fresh from the DB once (covers stale in-memory doc)
+        if not audit_trail_text and agreement:
+            fetched_audit_trail = frappe.db.get_value(
+                "Agreement", agreement.name, "audit_trail"
+            )
+            if fetched_audit_trail:
+                try:
+                    audit_trail_text = json.loads(fetched_audit_trail)
+                except Exception:
+                    audit_trail_text = {}
+
+        # 3. Truly unrecoverable — fail loudly instead of silently skipping the certificate
+        if not audit_trail_text:
+            frappe.throw("Internal Server Error while Generating Certificate Please try again")
+
     # ---------------------------------------------------------
     # STEP 1: APPLY SIGNATURES
     # ---------------------------------------------------------
