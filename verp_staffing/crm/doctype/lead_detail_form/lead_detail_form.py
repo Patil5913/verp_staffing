@@ -112,7 +112,7 @@ def process_drawn_signature_and_apply(doc, token):
         frappe.throw("Failed to process drawn signature")
 
 
-def apply_pdf_signature(doc, signature_image_file):
+def apply_pdf_signature(doc, signature_image_file, agr):
     if not signature_image_file:
         frappe.throw("Signature file missing")
 
@@ -124,11 +124,11 @@ def apply_pdf_signature(doc, signature_image_file):
     else:
         signature_image_path = signature_image_file
 
-    data = verify_token(doc.form_token)
-    if not data:
-        frappe.throw("Invalid or tampered token")
+    # data = verify_token(doc.form_token)
+    # if not data:
+    #     frappe.throw("Invalid or tampered token")
 
-    agr = data.get("agr")
+    # agr = data.get("agr")
     if not agr:
         frappe.throw("Agreement link missing")
 
@@ -293,10 +293,14 @@ def apply_signature_and_audit_to_pdf(
     if not audit_trail_text:
         # 1. Fall back to whatever audit_trail is already on the in-memory agreement doc
         if agreement and getattr(agreement, "audit_trail", None):
-            try:
-                audit_trail_text = json.loads(agreement.audit_trail)
-            except Exception:
-                audit_trail_text = {}
+            raw = agreement.audit_trail
+            if isinstance(raw, str):
+                try:
+                    audit_trail_text = json.loads(raw)
+                except Exception:
+                    audit_trail_text = {}
+            elif isinstance(raw, (dict, list)):
+                audit_trail_text = raw
 
         # 2. Still nothing — re-fetch fresh from the DB once (covers stale in-memory doc)
         if not audit_trail_text and agreement:
@@ -304,15 +308,19 @@ def apply_signature_and_audit_to_pdf(
                 "Agreement", agreement.name, "audit_trail"
             )
             if fetched_audit_trail:
-                try:
-                    audit_trail_text = json.loads(fetched_audit_trail)
-                except Exception:
-                    audit_trail_text = {}
+                if isinstance(fetched_audit_trail, str):
+                    try:
+                        audit_trail_text = json.loads(fetched_audit_trail)
+                    except Exception:
+                        audit_trail_text = {}
+                elif isinstance(fetched_audit_trail, (dict, list)):
+                    audit_trail_text = fetched_audit_trail
 
         # 3. Truly unrecoverable — fail loudly instead of silently skipping the certificate
         if not audit_trail_text:
-            frappe.throw("Internal Server Error while Generating Certificate Please try again")
-
+            frappe.throw(
+                "Internal Server Error while Generating Certificate Please try again"
+            )
     # ---------------------------------------------------------
     # STEP 1: APPLY SIGNATURES
     # ---------------------------------------------------------
@@ -1561,7 +1569,6 @@ def apply_signature_and_audit_to_pdf(
         )
 
         y -= 14
-
 
         c.restoreState()
 
