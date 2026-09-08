@@ -112,7 +112,7 @@ def process_drawn_signature_and_apply(doc, token):
         frappe.throw("Failed to process drawn signature")
 
 
-def apply_pdf_signature(doc, signature_image_file, agr):
+def apply_pdf_signature(doc, signature_image_file):
     if not signature_image_file:
         frappe.throw("Signature file missing")
 
@@ -124,11 +124,11 @@ def apply_pdf_signature(doc, signature_image_file, agr):
     else:
         signature_image_path = signature_image_file
 
-    # data = verify_token(doc.form_token)
-    # if not data:
-    #     frappe.throw("Invalid or tampered token")
+    data = verify_token(doc.form_token)
+    if not data:
+        frappe.throw("Invalid or tampered token")
 
-    # agr = data.get("agr")
+    agr = data.get("agr")
     if not agr:
         frappe.throw("Agreement link missing")
 

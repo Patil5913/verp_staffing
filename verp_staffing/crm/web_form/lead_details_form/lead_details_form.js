@@ -332,7 +332,6 @@ frappe.ready(async function () {
 
 	if ((pdfValue, agreementValue)) {
 		// fetch Agreement by Sales Order
-		console.error("pdfValue, agreementValue: ", pdfValue, agreementValue);
 		frappe.call({
 			method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
 			args: {
