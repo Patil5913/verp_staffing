@@ -50,6 +50,9 @@ document.addEventListener(
 
 frappe.ready(async function () {
 	$(".navbar").hide();
+	disable_next_button()
+		document.querySelector(".discard-btn")?.remove();
+
 	function decodeToken(token) {
 		try {
 			const decoded = atob(token);
@@ -168,8 +171,6 @@ frappe.ready(async function () {
 			frappe.web_form.set_value("signature_method", "Draw");
 		}
 
-		// remove discard button
-		document.querySelector(".discard-btn")?.remove();
 
 		if (_otp_state !== "verified") {
 			if (typeof disable_next_button === "function") disable_next_button();
@@ -1241,7 +1242,6 @@ function apply_state(state, opts) {
 		console.warn("[OTP] apply_state called before DOM ready, state:", state);
 		return;
 	}
-
 	// ── Hard reset baseline ────────────────────────────────────────────────────
 	stop_timer();
 	otpSec.style.display = "none";
@@ -1263,11 +1263,13 @@ function apply_state(state, opts) {
 		if (subtext)
 			subtext.textContent = "We'll send a 6-digit code to your registered email address.";
 		set_status("", "");
+		disable_next_button();
 	} else if (state === "sending") {
 		sendBtn.textContent = "Sending…";
 		sendBtn.disabled = true;
 		sendBtn.style.background = "#6c757d";
 		set_status("", "");
+		disable_next_button();
 	} else if (state === "otp_sent") {
 		otpSec.style.display = "block";
 		sendBtn.textContent = "OTP Sent";
@@ -1286,6 +1288,7 @@ function apply_state(state, opts) {
 		if (opts.seconds && opts.seconds > 0) {
 			start_timer(opts.seconds);
 		}
+		disable_next_button();
 	} else if (state === "verified") {
 		otpSec.style.display = "none";
 		sendBtn.style.display = "none";
@@ -2402,7 +2405,7 @@ function disable_next_button() {
 
 		nextBtn.disabled = true;
 		nextBtn.classList.add("btn-disabled");
-	}, 200);
+	}, 100);
 }
 
 // enable next button
