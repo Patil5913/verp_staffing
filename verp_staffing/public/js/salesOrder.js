@@ -119,11 +119,11 @@ window.render_agreement_module = function ({
 
           <!-- Action Buttons -->
           <div class="mt-4 d-flex gap-2 flex-wrap" style="gap: 8px;">
-           <button id="ag_preview" class="btn btn-default btn-sm" style="text-center>
+           <button id="ag_preview" class="btn btn-default btn-sm" style="text-align: center;>
               <svg class="icon icon-xs mr-1"><use href="#icon-eye"/></svg>
               Preview
             </button>
-            <button id="ag_save" class="btn btn-primary btn-sm" style="text-center>
+            <button id="ag_save" class="btn btn-primary btn-sm" style="text-align: center;>
               <svg class="icon icon-xs mr-1"><use href="#icon-save"/></svg>
               Save${auto_mode ? " As Draft" : ""}
             </button>
@@ -132,7 +132,8 @@ window.render_agreement_module = function ({
               background: var(--gray-900);
               color: white;
               border: none;
-			  text-center
+			  text-align: center;
+			  
             >
               <svg class="icon icon-xs mr-1"><use href="#icon-send"/></svg>
               Save &amp; Send
@@ -493,7 +494,6 @@ function collect_agreement_data() {
 function load_form_fields(wrapper) {
 	const template = wrapper.find("#ag_template").val();
 	const form_div = wrapper.find("#ag_dynamic_form");
-
 	if (!template) {
 		form_div.empty();
 		return;
@@ -507,7 +507,7 @@ function load_form_fields(wrapper) {
 			const blocks = JSON.parse(tpl.fields_json || "[]");
 			agreementFieldManager.clear();
 			form_div.empty();
-
+			form_div.show();
 			if (!blocks.length) return;
 
 			form_div.append(`

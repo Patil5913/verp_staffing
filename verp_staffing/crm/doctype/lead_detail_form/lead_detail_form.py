@@ -1015,22 +1015,6 @@ def apply_signature_and_audit_to_pdf(
 
         y = start_certificate_page(page_num)
 
-        # -----------------------------------------------------
-        # EXISTING AGREEMENT CERTIFICATE CONTENT
-        # -----------------------------------------------------
-        #
-        # The old Agreement-specific large header:
-        #
-        # SIGNATURE CERTIFICATE
-        # Electronic Signature Verification Record
-        #
-        # has intentionally been removed.
-        #
-        # The E-Sign header above now replaces it.
-        #
-        # Certificate ID remains part of the Agreement content.
-        # -----------------------------------------------------
-
         y -= 20
 
         # =====================================================
@@ -1717,23 +1701,6 @@ def apply_signature_and_audit_to_pdf(
     if not sales_order.customer:
         return output_path
 
-    customer = frappe.get_doc(
-        "Customer",
-        sales_order.customer,
-    )
-
-    if not customer.customer_owner:
-        return output_path
-
-    opp_owner_user = frappe.db.get_value(
-        "Employee",
-        customer.customer_owner,
-        "user",
-    )
-
-    if not opp_owner_user:
-        return output_path
-
     validated_output_path = _validate_site_file_path(output_path)
 
     with validated_output_path.open("rb") as f:
@@ -1764,6 +1731,10 @@ def apply_signature_and_audit_to_pdf(
             "response",
         ],
         as_dict=True,
+    )
+    customer = frappe.get_doc(
+        "Customer",
+        sales_order.customer,
     )
 
     if template:
@@ -1801,7 +1772,16 @@ def apply_signature_and_audit_to_pdf(
     # =====================================================
     # INTERNAL NOTIFICATION
     # =====================================================
+    if not customer.customer_owner:
+        return output_path
+    opp_owner_user = frappe.db.get_value(
+        "Employee",
+        customer.customer_owner,
+        "user",
+    )
 
+    if not opp_owner_user:
+        return output_path
     subject = "Agreement Signed by Customer"
 
     message = (
@@ -2090,7 +2070,7 @@ def get_otp_status(token):
         return {"state": "idle"}
 
     # Sanitise token — alphanumeric + _ only
-    token = str(token)[:128]
+    token = str(token)
 
     verified_key = f"otp_verified:{token}"
     cache_key = f"otp:{token}"
@@ -2132,7 +2112,7 @@ def send_otp(token, email):
     if "@" not in str(email):
         frappe.throw("Invalid email address")
 
-    token = str(token)[:128]
+    token = str(token)
     cache_key = f"otp:{token}"
 
     # Check if an OTP already exists and is still valid
@@ -2218,7 +2198,7 @@ def verify_otp(token, otp):
     if not otp:
         frappe.throw("Missing OTP")
 
-    token = str(token)[:128]
+    token = str(token)
     otp = str(otp).strip()
     cache_key = f"otp:{token}"
     verified_key = f"otp_verified:{token}"
