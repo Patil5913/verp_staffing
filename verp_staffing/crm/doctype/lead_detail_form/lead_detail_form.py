@@ -42,6 +42,30 @@ class LeadDetailForm(Document):
             if not pattern.match(self.personal_linkedin):
                 frappe.throw(_("Please enter a valid LinkedIn profile URL."))
 
+        # Validate per-service required candidate fields if form_token is provided
+        if self.form_token:
+            token_data = verify_token(self.form_token)
+            if token_data and token_data.get("so"):
+                so_name = token_data.get("so")
+                res = get_candidate_fields_from_sales_order(so_name)
+                req_fields = res.get("required_fields", [])
+                missing = []
+                for fname in req_fields:
+                    val = self.get(fname)
+                    if (
+                        val is None
+                        or val == ""
+                        or (isinstance(val, list) and len(val) == 0)
+                    ):
+                        lbl = self.meta.get_label(fname) or fname
+                        missing.append(lbl)
+                if missing:
+                    frappe.throw(
+                        _("The following required fields are missing: {0}").format(
+                            ", ".join(missing)
+                        )
+                    )
+
 
 def process_drawn_signature_and_apply(doc, token):
     import time
@@ -2251,7 +2275,7 @@ def verify_otp(token, otp):
 @frappe.whitelist(allow_guest=True)
 def get_candidate_fields_from_sales_order(name, customer=None):
     if not name:
-        return {"fields": [], "values": {}, "table_columns": {}}
+        return {"fields": [], "required_fields": [], "values": {}, "table_columns": {}}
 
     services = frappe.db.get_all(
         "Items Table",
@@ -2268,22 +2292,38 @@ def get_candidate_fields_from_sales_order(name, customer=None):
         config = {}
 
     fields = []
+    required_fields = set()
     table_columns = {}  # fieldname -> [allowed child columns]
 
     for service in services:
         cfg = config.get(service)
         if not cfg:
             continue
-        for field_entry in cfg.get("fields", []):
-            # Support both plain string and dict {"field": "x", "columns": [...]}
+        field_entries = (
+            cfg.get("fields", [])
+            if isinstance(cfg, dict)
+            else (cfg if isinstance(cfg, list) else [])
+        )
+        for field_entry in field_entries:
+            # Support plain string, dict with field_name/field, and columns
             if isinstance(field_entry, dict):
-                fname = field_entry.get("field")
+                fname = (
+                    field_entry.get("field_name")
+                    or field_entry.get("field")
+                    or field_entry.get("fieldname")
+                )
                 cols = field_entry.get("columns", [])
-                fields.append(fname)
-                if cols:
-                    table_columns[fname] = cols
-            else:
-                fields.append(field_entry)
+                is_req = bool(field_entry.get("is_required"))
+                if fname:
+                    if fname not in fields:
+                        fields.append(fname)
+                    if is_req:
+                        required_fields.add(fname)
+                    if cols:
+                        table_columns[fname] = cols
+            elif isinstance(field_entry, str):
+                if field_entry not in fields:
+                    fields.append(field_entry)
 
     values = {}
     if customer:
@@ -2319,6 +2359,7 @@ def get_candidate_fields_from_sales_order(name, customer=None):
 
     return {
         "fields": fields,
+        "required_fields": list(required_fields),
         "values": values,
         "table_columns": table_columns,  # Pass to frontend
     }

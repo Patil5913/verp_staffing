@@ -19,7 +19,6 @@ frappe.ui.form.on("Account", {
 	refresh(frm) {
 		frappe.breadcrumbs.clear();
 
-		// Define the breadcrumb structure
 		frappe.breadcrumbs.all[frappe.get_route_str()] = {
 			workspace: "Accounting",
 			doctype: frm.doctype,
@@ -29,46 +28,24 @@ frappe.ui.form.on("Account", {
 		frappe.breadcrumbs.update();
 		frm.toggle_display("account_name", frm.is_new());
 
-		// hide fields if group
-		frm.toggle_display(["tax_rate"], cint(frm.doc.is_group) == 0);
+		frm.toggle_enable(["is_group", "company"], frm.is_new());
+		frm.toggle_enable("account_number", frm.is_new() && frm.doc.account_type === "Bank");
 
-		frm.toggle_enable(["is_group", "company", "account_number"], frm.is_new());
-
-		if (cint(frm.doc.is_group) == 0) {
-			frm.toggle_display(
-				"freeze_account",
-				frm.doc.__onload && frm.doc.__onload.can_freeze_account,
-			);
-		}
-
-		// read-only for root accounts
 		if (!frm.is_new()) {
 			if (!frm.doc.parent_account) {
 				frm.set_read_only();
 				frm.set_intro(__("This is a root account and cannot be edited."));
 			} else {
-				// credit days and type if customer or supplier
 				frm.set_intro(null);
 				frm.trigger("account_type");
-				// show / hide convert buttons
 				frm.trigger("add_toolbar_buttons");
 			}
-			if (frm.has_perm("write")) {
-				frm.add_custom_button(
-					__("Update Account Name / Number"),
-					function () {
-						frm.trigger("update_account_number");
-					},
-					__("Actions"),
-				);
-			}
+			
 		}
 	},
+
 	account_type: function (frm) {
-		if (frm.doc.is_group == 0) {
-			frm.toggle_display(["tax_rate"], frm.doc.account_type == "Tax");
-			frm.toggle_display("warehouse", frm.doc.account_type == "Stock");
-		}
+		frm.toggle_enable("account_number", frm.is_new() && frm.doc.account_type === "Bank");
 	},
 	add_toolbar_buttons: function (frm) {
 		frm.add_custom_button(
@@ -108,61 +85,6 @@ frappe.ui.form.on("Account", {
 				},
 				__("View"),
 			);
-
-	
 		}
-	},
-
-	update_account_number: function (frm) {
-		var d = new frappe.ui.Dialog({
-			title: __("Update Account Number / Name"),
-			fields: [
-				{
-					label: "Account Name",
-					fieldname: "account_name",
-					fieldtype: "Data",
-					reqd: 1,
-					default: frm.doc.account_name,
-				},
-				{
-					label: "Account Number",
-					fieldname: "account_number",
-					fieldtype: "Data",
-					default: frm.doc.account_number,
-				},
-			],
-			primary_action: function () {
-				var data = d.get_values();
-				if (
-					data.account_number === frm.doc.account_number &&
-					data.account_name === frm.doc.account_name
-				) {
-					d.hide();
-					return;
-				}
-
-				frappe.call({
-					method: "verp_staffing.accounts.doctype.account.account.update_account_number",
-					args: {
-						account_number: data.account_number,
-						account_name: data.account_name,
-						name: frm.doc.name,
-					},
-					callback: function (r) {
-						if (!r.exc) {
-							if (r.message) {
-								frappe.set_route("Form", "Account", r.message);
-							} else {
-								frm.set_value("account_number", data.account_number);
-								frm.set_value("account_name", data.account_name);
-							}
-							d.hide();
-						}
-					},
-				});
-			},
-			primary_action_label: __("Update"),
-		});
-		d.show();
 	},
 });

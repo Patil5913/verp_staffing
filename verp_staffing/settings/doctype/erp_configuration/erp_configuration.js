@@ -136,6 +136,7 @@ const TYPE_OPTIONS = [
 	"HR",
 	"Contact",
 	"Notification",
+	"Agreement",
 	"Support",
 	"Sales",
 	"Finance",
@@ -709,10 +710,6 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 		"i_confirm_my_identity_and_signing_this_document_intentionally",
 	];
 
-	// ── CONFIG shape differs for candidate_form ───────────────────────────
-	// candidate_form: { "Resume": { fields: [...], is_agreement_required: bool, is_candidate_form_required: bool } }
-	// others:         { "Resume": ["field1", "field2", ...] }
-
 	let CONFIG = {};
 	try {
 		CONFIG = frm.doc[storageField] ? JSON.parse(frm.doc[storageField]) : {};
@@ -720,36 +717,99 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 		CONFIG = {};
 	}
 
-	// Migrate legacy flat-array format for candidate_form (if any old data exists)
-	if (isCandidateForm) {
-		Object.keys(CONFIG).forEach((key) => {
-			if (Array.isArray(CONFIG[key])) {
-				CONFIG[key] = {
-					fields: CONFIG[key],
-					is_agreement_required: false,
-					is_candidate_form_required: false,
-				};
-			}
-		});
+	// Helper to normalize fields for candidate_form
+	function normalizeFields(name) {
+		if (!isCandidateForm) return;
+		if (!CONFIG[name]) return;
+		if (Array.isArray(CONFIG[name])) {
+			CONFIG[name] = {
+				fields: CONFIG[name],
+				is_agreement_required: false,
+				is_candidate_form_required: false,
+			};
+		}
+		if (!Array.isArray(CONFIG[name].fields)) CONFIG[name].fields = [];
+
+		CONFIG[name].fields = CONFIG[name].fields
+			.map((f) => {
+				if (typeof f === "string") {
+					return { field_name: f, is_required: false };
+				}
+				if (f && typeof f === "object") {
+					const fn = f.field_name || f.field || f.fieldname;
+					if (fn) {
+						return { field_name: fn, is_required: !!f.is_required };
+					}
+				}
+				return null;
+			})
+			.filter(Boolean);
 	}
 
-	// Helpers to read/write from CONFIG safely across both shapes
+	// Normalize all keys initially if candidate_form
+	if (isCandidateForm) {
+		Object.keys(CONFIG).forEach((key) => normalizeFields(key));
+	}
+
+	function getFieldObjects(name) {
+		if (!isCandidateForm) return [];
+		normalizeFields(name);
+		return (CONFIG[name] && CONFIG[name].fields) || [];
+	}
+
 	function getFields(name) {
-		if (isCandidateForm) return (CONFIG[name] && CONFIG[name].fields) || [];
+		if (isCandidateForm) {
+			return getFieldObjects(name).map((f) => f.field_name);
+		}
 		return CONFIG[name] || [];
 	}
 
-	function setFields(name, fields) {
+	function isFieldSelected(name, fieldname) {
+		return getFields(name).includes(fieldname);
+	}
+
+	function isFieldRequired(name, fieldname) {
+		if (!isCandidateForm) return false;
+		const obj = getFieldObjects(name).find((f) => f.field_name === fieldname);
+		return obj ? !!obj.is_required : false;
+	}
+
+	function toggleFieldSelected(name, fieldname, isSelected) {
 		if (isCandidateForm) {
-			if (!CONFIG[name])
+			if (!CONFIG[name]) {
 				CONFIG[name] = {
 					fields: [],
 					is_agreement_required: false,
 					is_candidate_form_required: false,
 				};
-			CONFIG[name].fields = fields;
+			}
+			normalizeFields(name);
+			let current = CONFIG[name].fields;
+			if (isSelected) {
+				if (!current.some((f) => f.field_name === fieldname)) {
+					current.push({ field_name: fieldname, is_required: false });
+				}
+			} else {
+				CONFIG[name].fields = current.filter((f) => f.field_name !== fieldname);
+			}
 		} else {
-			CONFIG[name] = fields;
+			let current = CONFIG[name] || [];
+			if (isSelected) {
+				if (!current.includes(fieldname)) current.push(fieldname);
+			} else {
+				current = current.filter((x) => x !== fieldname);
+			}
+			CONFIG[name] = current;
+		}
+	}
+
+	function setFieldRequired(name, fieldname, isRequired) {
+		if (!isCandidateForm) return;
+		normalizeFields(name);
+		if (!CONFIG[name]) return;
+		const obj = (CONFIG[name].fields || []).find((f) => f.field_name === fieldname);
+		if (obj) {
+			obj.is_required = !!isRequired;
 		}
 	}
 
@@ -812,9 +872,9 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 		const stepsHtml = intent.steps
 			.map(
 				(s, i) => `
-            <div style="display:flex;align-items:center;gap:5px;background:#fff;border:0.5px solid ${intent.accentBorder};padding:3px 9px;border-radius:20px;">
+            <div style="display:flex;align-items:center;gap:5px;background:var(--card-bg, #fff);border:0.5px solid var(--border-color);padding:3px 9px;border-radius:20px;">
                 <div style="width:14px;height:14px;border-radius:50%;background:${intent.accentColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;flex-shrink:0;">${i + 1}</div>
-                <span style="font-size:11px;color:${intent.accentDark};">${s}</span>
+                <span style="font-size:11px;color:var(--text-color);">${s}</span>
             </div>
         `,
 			)
@@ -822,15 +882,15 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 
 		// ── Outer shell ───────────────────────────────────────────────────
 		wrapper.html(`
-            <div style="font-size:13px;color:inherit;">
+            <div style="font-size:13px;color:var(--text-color);">
 
-                <div style="background:${intent.accentBg};border:0.5px solid ${intent.accentBorder};border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
+                <div style="background:var(--subtle-accent, ${intent.accentBg});border:0.5px solid var(--border-color, ${intent.accentBorder});border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
                     <div style="width:36px;height:36px;border-radius:8px;background:${intent.accentColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
                         ${intent.icon}
                     </div>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:13px;font-weight:500;color:${intent.accentDark};margin:0 0 4px;">${intent.title}</div>
-                        <div style="font-size:12px;line-height:1.55;color:${intent.accentColor};margin:0 0 10px;">${intent.description}</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-color);margin:0 0 4px;">${intent.title}</div>
+                        <div style="font-size:12px;line-height:1.55;color:var(--text-muted);margin:0 0 10px;">${intent.description}</div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                             ${stepsHtml}
                             <span style="font-size:10px;padding:2px 8px;border-radius:3px;font-weight:500;background:${intent.accentColor};color:#fff;">
@@ -842,22 +902,22 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
                     <div style="width:22px;height:22px;border-radius:50%;background:${intent.accentColor};border:1px solid ${intent.accentColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff;flex-shrink:0;">1</div>
-                    <span style="font-size:12px;font-weight:500;">Choose a ${intent.selectorLabel}</span>
-                    <div style="flex:1;height:1px;background:#e8e8e8;"></div>
-                    <div id="${uid}-sn2" style="width:22px;height:22px;border-radius:50%;background:#f5f5f5;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:11px;color:#bbb;flex-shrink:0;">2</div>
-                    <span id="${uid}-sl2" style="font-size:12px;color:#bbb;">Select fields</span>
+                    <span style="font-size:12px;font-weight:500;color:var(--text-color);">Choose a ${intent.selectorLabel}</span>
+                    <div style="flex:1;height:1px;background:var(--border-color, #e8e8e8);"></div>
+                    <div id="${uid}-sn2" style="width:22px;height:22px;border-radius:50%;background:var(--subtle-fg, #f5f5f5);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);flex-shrink:0;">2</div>
+                    <span id="${uid}-sl2" style="font-size:12px;color:var(--text-muted);">Select fields</span>
                 </div>
 
                 <div id="${uid}-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;margin-bottom:20px;"></div>
 
                 <div id="${uid}-panel">
-                    <div style="text-align:center;padding:30px 20px;border:0.5px dashed #ddd;border-radius:10px;color:#454545;font-size:12px;">
+                    <div style="text-align:center;padding:30px 20px;border:0.5px dashed var(--border-color);border-radius:10px;color:var(--text-muted);font-size:12px;background:var(--card-bg, var(--fg-color));">
                         ☝️ Select a ${intent.selectorLabel} above to configure its fields
                     </div>
                 </div>
 
-                <div id="${uid}-footer" style="display:none;margin-top:13px;padding:10px 14px;background:#f8f9fa;border:1px solid #eee;border-radius:8px;align-items:center;justify-content:space-between;gap:10px;">
-                    <div id="${uid}-fm" style="font-size:12px;color:#666;"></div>
+                <div id="${uid}-footer" style="display:none;margin-top:13px;padding:10px 14px;background:var(--subtle-accent, var(--subtle-fg));border:1px solid var(--border-color);border-radius:8px;align-items:center;justify-content:space-between;gap:10px;">
+                    <div id="${uid}-fm" style="font-size:12px;color:var(--text-muted);"></div>
                     <button id="${uid}-save" style="background:${intent.accentColor};color:#fff;border:none;padding:7px 15px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0;">
                         Save configuration
                     </button>
@@ -875,14 +935,14 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 
 			grid.append(`
                 <div class="cfs-item-${uid}" data-name="${escapeQ(name)}"
-                    style="border:0.5px solid #e8e8e8;border-radius:9px;padding:10px 11px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:all 0.13s;">
+                    style="border:0.5px solid var(--border-color);border-radius:9px;padding:10px 11px;cursor:pointer;display:flex;align-items:center;gap:9px;background:var(--card-bg, var(--fg-color));transition:all 0.13s;">
                     <div class="cfs-item-ic-${uid}"
-                        style="width:28px;height:28px;border-radius:6px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background 0.13s;">
+                        style="width:28px;height:28px;border-radius:6px;background:var(--subtle-fg, #f5f5f5);color:var(--text-color);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background 0.13s;">
                         ${icon}
                     </div>
                     <div style="min-width:0;">
-                        <div style="font-size:12px;font-weight:500;color:#454545;">${name}</div>
-                        <div class="cfs-item-ct-${uid}" style="font-size:10px;color:#888;">${cnt} field${cnt !== 1 ? "s" : ""}</div>
+                        <div style="font-size:12px;font-weight:500;color:var(--text-color);">${name}</div>
+                        <div class="cfs-item-ct-${uid}" style="font-size:10px;color:var(--text-muted);">${cnt} field${cnt !== 1 ? "s" : ""}</div>
                     </div>
                 </div>
             `);
@@ -890,11 +950,17 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 
 		// Selector card click
 		grid.on("click", `.cfs-item-${uid}`, function () {
-			grid.find(`.cfs-item-${uid}`).css({ border: "0.5px solid #e8e8e8", background: "" });
-			grid.find(`.cfs-item-ic-${uid}`).css({ background: "#f5f5f5", color: "inherit" });
+			grid.find(`.cfs-item-${uid}`).css({
+				border: "0.5px solid var(--border-color)",
+				background: "var(--card-bg, var(--fg-color))",
+			});
+			grid.find(`.cfs-item-ic-${uid}`).css({
+				background: "var(--subtle-fg, #f5f5f5)",
+				color: "var(--text-color)",
+			});
 			$(this).css({
 				border: `1.5px solid ${intent.accentColor}`,
-				background: intent.accentBg,
+				background: `var(--subtle-accent, ${intent.accentBg})`,
 			});
 			$(this)
 				.find(`.cfs-item-ic-${uid}`)
@@ -905,7 +971,7 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 				color: "#fff",
 				border: `1px solid ${intent.accentColor}`,
 			});
-			wrapper.find(`#${uid}-sl2`).css({ color: "inherit", fontWeight: "500" });
+			wrapper.find(`#${uid}-sl2`).css({ color: "var(--text-color)", fontWeight: "500" });
 			wrapper.find(`#${uid}-footer`).css("display", "flex");
 			renderPanel("");
 			updateFooter();
@@ -919,35 +985,35 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 			// ── Service options block (candidate_form only) ───────────────
 			const serviceOptionsHtml = isCandidateForm
 				? `
-                <div style="padding:12px 14px;border-bottom:0.5px solid ${intent.accentBorder};">
-                    <div style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:${intent.accentDark};margin-bottom:10px;">
+                <div style="padding:12px 14px;border-bottom:0.5px solid var(--border-color);">
+                    <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">
                         Service Options
                     </div>
                     <div style="display:flex;flex-direction:column;gap:8px;">
 
-                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:9px 11px;border-radius:7px;border:0.5px solid ${getFlag(currentItem, "is_agreement_required") ? intent.accentColor : intent.accentBorder};background:${getFlag(currentItem, "is_agreement_required") ? "#fff" : "transparent"};transition:all 0.13s;"
+                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:9px 11px;border-radius:7px;border:0.5px solid ${getFlag(currentItem, "is_agreement_required") ? intent.accentColor : "var(--border-color)"};background:${getFlag(currentItem, "is_agreement_required") ? "var(--card-bg, var(--fg-color))" : "transparent"};transition:all 0.13s;"
                             id="${uid}-agr-label">
                             <input type="checkbox"
                                 id="${uid}-is_agreement_required"
                                 ${getFlag(currentItem, "is_agreement_required") ? "checked" : ""}
                                 style="width:14px;height:14px;accent-color:${intent.accentColor};cursor:pointer;margin:2px 0 0;flex-shrink:0;" />
                             <div>
-                                <div style="font-size:12px;font-weight:500;color:${intent.accentDark};">Is Agreement Required</div>
-                                <div style="font-size:11px;color:${intent.accentColor};margin-top:2px;line-height:1.4;">
-                                    When checked, an agreement document is become mandatory for candidates applying under this service.
+                                <div style="font-size:12px;font-weight:500;color:var(--text-color);">Is Agreement Required</div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;">
+                                    When checked, an agreement document is mandatory for candidates applying under this service.
                                 </div>
                             </div>
                         </label>
 
-                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:9px 11px;border-radius:7px;border:0.5px solid ${getFlag(currentItem, "is_candidate_form_required") ? intent.accentColor : intent.accentBorder};background:${getFlag(currentItem, "is_candidate_form_required") ? "#fff" : "transparent"};transition:all 0.13s;"
+                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:9px 11px;border-radius:7px;border:0.5px solid ${getFlag(currentItem, "is_candidate_form_required") ? intent.accentColor : "var(--border-color)"};background:${getFlag(currentItem, "is_candidate_form_required") ? "var(--card-bg, var(--fg-color))" : "transparent"};transition:all 0.13s;"
                             id="${uid}-cfr-label">
                             <input type="checkbox"
                                 id="${uid}-is_candidate_form_required"
                                 ${getFlag(currentItem, "is_candidate_form_required") ? "checked" : ""}
                                 style="width:14px;height:14px;accent-color:${intent.accentColor};cursor:pointer;margin:2px 0 0;flex-shrink:0;" />
                             <div>
-                                <div style="font-size:12px;font-weight:500;color:${intent.accentDark};">Is Candidate Form Required</div>
-                                <div style="font-size:11px;color:${intent.accentColor};margin-top:2px;line-height:1.4;">
+                                <div style="font-size:12px;font-weight:500;color:var(--text-color);">Is Candidate Form Required</div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;">
                                     When checked, the candidate details form is sent to the candidate for this service. Fields selected below will appear on that form.
                                 </div>
                             </div>
@@ -959,18 +1025,22 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 				: "";
 
 			let html = `
-                <div style="border:0.5px solid #e8e8e8;border-radius:9px;overflow:hidden;">
+                <div style="border:0.5px solid var(--border-color);border-radius:9px;overflow:hidden;background:var(--card-bg, var(--fg-color));">
                     ${serviceOptionsHtml}
-                    <div style="padding:10px 12px;border-bottom:1px solid #eee;background:#fafafa;display:flex;gap:9px;align-items:center;">
+                    <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);background:var(--subtle-accent, var(--subtle-fg));display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
                         <input id="${uid}-srch" type="text" placeholder="Search fields…" value="${escapeQ(q)}"
-                            style="flex:1;border:0.5px solid #ddd;border-radius:6px;padding:5px 10px;font-size:12px;outline:none;"
+                            style="flex:1;min-width:140px;border:0.5px solid var(--border-color);background:var(--control-bg, var(--card-bg));color:var(--text-color);border-radius:6px;padding:5px 10px;font-size:12px;outline:none;"
                             oninput="__cfsRefilter_${uid}(this.value)" />
                         <span id="${uid}-selall"
-                            style="font-size:11px;color:${intent.accentColor};cursor:pointer;border:0.5px solid ${intent.accentBorder};border-radius:4px;padding:3px 7px;background:${intent.accentBg};white-space:nowrap;">
+                            style="font-size:11px;color:var(--text-color);cursor:pointer;border:0.5px solid var(--border-color);border-radius:4px;padding:3px 8px;background:var(--subtle-fg);white-space:nowrap;user-select:none;">
                             Select all
                         </span>
-                        <div style="font-size:11px;color:#888;white-space:nowrap;">
-                            <strong id="${uid}-cnt" style="color:${intent.accentColor};">${sel.length}</strong> selected
+                        <button id="${uid}-copy-btn" class="btn btn-xs btn-default"
+                            style="font-size:11px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-color:var(--border-color);color:var(--text-color);background:var(--card-bg);padding:3px 8px;border-radius:4px;cursor:pointer;">
+                            <span style="font-size:12px;">📋</span> Copy Fields From
+                        </button>
+                        <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">
+                            <strong id="${uid}-cnt" style="color:var(--text-color);">${sel.length}</strong> selected
                         </div>
                     </div>
             `;
@@ -987,32 +1057,51 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 				anyVisible = true;
 
 				html += `
-                    <div style="padding:8px 13px 2px;font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:${intent.accentDark};display:flex;align-items:center;gap:6px;">
+                    <div style="padding:8px 13px 2px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
                         <span>${sec.label}</span>
-                        <span style="flex:1;border-top:0.5px solid ${intent.accentBorder};display:block;"></span>
+                        <span style="flex:1;border-top:0.5px solid var(--border-color);display:block;"></span>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:0 9px 9px;">
                 `;
 				vis.forEach((f) => {
-					const on = sel.includes(f.fieldname);
+					const on = isFieldSelected(currentItem, f.fieldname);
+					const req = isFieldRequired(currentItem, f.fieldname);
+
 					html += `
-                        <label data-fn="${f.fieldname}"
-                            style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;background:${on ? intent.accentBg : "transparent"};">
-                            <input type="checkbox" class="${uid}-cb" data-fieldname="${f.fieldname}"
-                                ${on ? "checked" : ""}
-                                style="width:13px;height:13px;accent-color:${intent.accentColor};cursor:pointer;margin:0;flex-shrink:0;" />
-                            <span style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#454545;white-space:nowrap;" title="${f.label}">
-                                ${f.label}
-                            </span>
+                        <div data-fn="${f.fieldname}" class="cfs-field-row"
+                            style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid ${on ? "var(--border-color)" : "transparent"};background:${on ? "var(--subtle-accent, var(--subtle-fg))" : "transparent"};transition:all 0.13s;">
+                            
+                            <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;flex:1;min-width:0;">
+                                <input type="checkbox" class="${uid}-cb" data-fieldname="${f.fieldname}"
+                                    ${on ? "checked" : ""}
+                                    style="width:13px;height:13px;accent-color:${intent.accentColor};cursor:pointer;margin:0;flex-shrink:0;" />
+                                <span style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--text-color);white-space:nowrap;" title="${f.label}">
+                                    ${f.label}
+                                </span>
+                            </label>
+                            
                             ${getFieldTypeBadge(f.fieldtype)}
-                        </label>
+
+                            ${
+								isCandidateForm
+									? `
+                                <label class="${uid}-req-wrap" style="display:${on ? "inline-flex" : "none"};align-items:center;gap:3px;margin:0 0 0 4px;padding:1px 5px;border-radius:4px;background:var(--card-bg, var(--fg-color));border:1px solid var(--border-color);font-size:10px;color:var(--text-muted);cursor:pointer;user-select:none;" title="Mark field as mandatory on candidate form">
+                                    <input type="checkbox" class="${uid}-req-cb" data-fieldname="${f.fieldname}"
+                                        ${req ? "checked" : ""}
+                                        style="width:11px;height:11px;accent-color:#e24c4c;cursor:pointer;margin:0;" />
+                                    <span style="font-weight:${req ? "600" : "400"};color:${req ? "#e24c4c" : "var(--text-muted)"};">Is Required</span>
+                                </label>
+                            `
+									: ""
+							}
+                        </div>
                     `;
 				});
 				html += `</div>`;
 			});
 
 			if (!anyVisible) {
-				html += `<div style="padding:28px;text-align:center;color:#aaa;font-size:12px;">No fields match "${escapeQ(q)}"</div>`;
+				html += `<div style="padding:28px;text-align:center;color:var(--text-muted);font-size:12px;">No fields match "${escapeQ(q)}"</div>`;
 			}
 			html += `</div>`;
 
@@ -1025,10 +1114,11 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 					setFlag(currentItem, "is_agreement_required", val);
 					const lbl = wrapper.find(`#${uid}-agr-label`);
 					lbl.css({
-						border: `0.5px solid ${val ? intent.accentColor : intent.accentBorder}`,
-						background: val ? "#fff" : "transparent",
+						border: `0.5px solid ${val ? intent.accentColor : "var(--border-color)"}`,
+						background: val ? "var(--card-bg, var(--fg-color))" : "transparent",
 					});
 					frm.set_value(storageField, JSON.stringify(CONFIG));
+					frm.dirty();
 				});
 
 				wrapper.find(`#${uid}-is_candidate_form_required`).on("change", function () {
@@ -1036,14 +1126,15 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 					setFlag(currentItem, "is_candidate_form_required", val);
 					const lbl = wrapper.find(`#${uid}-cfr-label`);
 					lbl.css({
-						border: `0.5px solid ${val ? intent.accentColor : intent.accentBorder}`,
-						background: val ? "#fff" : "transparent",
+						border: `0.5px solid ${val ? intent.accentColor : "var(--border-color)"}`,
+						background: val ? "var(--card-bg, var(--fg-color))" : "transparent",
 					});
 					frm.set_value(storageField, JSON.stringify(CONFIG));
+					frm.dirty();
 				});
 			}
 
-			// Search
+			// Search input
 			wrapper.find(`#${uid}-srch`).on("input", function () {
 				const v = $(this).val();
 				renderPanel(v);
@@ -1058,32 +1149,130 @@ function render_field_selector_widget(frm, htmlFieldname, storageField, intentKe
 			wrapper.find(`#${uid}-selall`).on("click", function () {
 				const currentFields = getFields(currentItem);
 				const allOn = allFieldNames.every((fn) => currentFields.includes(fn));
-				setFields(currentItem, allOn ? [] : [...allFieldNames]);
+
+				allFieldNames.forEach((fn) => {
+					toggleFieldSelected(currentItem, fn, !allOn);
+				});
+
 				renderPanel(wrapper.find(`#${uid}-srch`).val() || "");
 				syncCardCount();
 				updateFooter();
 				frm.set_value(storageField, JSON.stringify(CONFIG));
+				frm.dirty();
+			});
+
+			// Copy Fields From button handler
+			wrapper.find(`#${uid}-copy-btn`).on("click", function () {
+				if (!currentItem) return;
+
+				const availableItems = itemsList.filter((name) => {
+					if (name === currentItem) return false;
+					const f = getFields(name);
+					const agr = getFlag(name, "is_agreement_required");
+					const cfr = getFlag(name, "is_candidate_form_required");
+					return f.length > 0 || agr || cfr;
+				});
+
+				if (!availableItems.length) {
+					frappe.msgprint(__("No other service has configured fields to copy from."));
+					return;
+				}
+
+				const dialog = new frappe.ui.Dialog({
+					title: __("Copy Fields to {0}", [currentItem]),
+					fields: [
+						{
+							fieldtype: "HTML",
+							fieldname: "warning_html",
+							options: `
+                                <div style="background:var(--subtle-accent, #fff8e6);border:1px solid var(--border-color, #ffe58f);padding:12px 14px;border-radius:8px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;">
+                                    <div style="font-size:16px;line-height:1;">⚠️</div>
+                                    <div style="font-size:12px;color:var(--text-color);line-height:1.45;">
+                                        <strong>Notice:</strong> Copying will replace all fields and settings configured for current service (<strong>${frappe.utils.escape_html(currentItem)}</strong>) with the fields from the selected service.
+                                    </div>
+                                </div>
+                            `,
+						},
+						{
+							label: __("Copy Fields From Service"),
+							fieldname: "source_service",
+							fieldtype: "Select",
+							options: availableItems.join("\n"),
+							reqd: 1,
+						},
+					],
+					primary_action_label: __("Copy & Replace"),
+					primary_action(values) {
+						const src = values.source_service;
+						if (!src || !CONFIG[src]) return;
+
+						CONFIG[currentItem] = JSON.parse(JSON.stringify(CONFIG[src]));
+						frm.set_value(storageField, JSON.stringify(CONFIG));
+						frm.dirty();
+
+						dialog.hide();
+						renderPanel(wrapper.find(`#${uid}-srch`).val() || "");
+						syncCardCount();
+						updateFooter();
+
+						frappe.show_alert({
+							message: __("Fields copied successfully from {0} to {1}", [
+								src,
+								currentItem,
+							]),
+							indicator: "green",
+						});
+					},
+				});
+
+				dialog.show();
 			});
 
 			// Field checkbox toggle
 			wrapper.find(`.${uid}-cb`).on("change", function () {
 				const fn = $(this).data("fieldname");
 				const on = $(this).prop("checked");
-				let fields = getFields(currentItem);
+
+				toggleFieldSelected(currentItem, fn, on);
+
+				const row = $(this).closest(".cfs-field-row");
+				row.css({
+					background: on ? "var(--subtle-accent, var(--subtle-fg))" : "transparent",
+					border: `1px solid ${on ? "var(--border-color)" : "transparent"}`,
+				});
+
+				const reqWrap = row.find(`.${uid}-req-wrap`);
 				if (on) {
-					if (!fields.includes(fn)) fields.push(fn);
+					reqWrap.css("display", "inline-flex");
 				} else {
-					fields = fields.filter((x) => x !== fn);
+					reqWrap.css("display", "none");
 				}
-				setFields(currentItem, fields);
-				$(this)
-					.closest("label")
-					.css("background", on ? intent.accentBg : "transparent");
+
 				wrapper.find(`#${uid}-cnt`).text(getFields(currentItem).length);
 				syncCardCount();
 				updateFooter();
 				frm.set_value(storageField, JSON.stringify(CONFIG));
+				frm.dirty();
 			});
+
+			// Required checkbox toggle (candidate_form only)
+			if (isCandidateForm) {
+				wrapper.find(`.${uid}-req-cb`).on("change", function () {
+					const fn = $(this).data("fieldname");
+					const req = $(this).prop("checked");
+
+					setFieldRequired(currentItem, fn, req);
+
+					const lblText = $(this).next("span");
+					lblText.css({
+						fontWeight: req ? "600" : "400",
+						color: req ? "#e24c4c" : "var(--text-muted)",
+					});
+
+					frm.set_value(storageField, JSON.stringify(CONFIG));
+					frm.dirty();
+				});
+			}
 		}
 
 		window[`__cfsRefilter_${uid}`] = function (v) {

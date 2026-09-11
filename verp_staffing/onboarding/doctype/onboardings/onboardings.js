@@ -132,6 +132,8 @@ function render_tab_data(frm) {
 				"current_visa_status",
 				"experience",
 				"number_for_marketing",
+				"marketing_email_id",
+				"marketing_email_password",
 				"google_voice_number",
 				"marketing_linkedin",
 				"passport_number",

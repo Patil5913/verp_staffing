@@ -825,10 +825,27 @@ async function load_erp_config(frm) {
 	const serviceConfig = {};
 
 	Object.keys(rawConfig).forEach((service) => {
-		const cfg = rawConfig[service] || {};
+		let cfg = rawConfig[service];
+		if (Array.isArray(cfg)) {
+			cfg = { fields: cfg };
+		} else if (!cfg || typeof cfg !== "object") {
+			cfg = {};
+		}
+
+		const rawFields = Array.isArray(cfg.fields) ? cfg.fields : [];
+		const normFields = rawFields
+			.map((f) => {
+				if (typeof f === "string") return { field_name: f, is_required: false };
+				if (f && typeof f === "object") {
+					const fn = f.field_name || f.field || f.fieldname;
+					if (fn) return { field_name: fn, is_required: !!f.is_required };
+				}
+				return null;
+			})
+			.filter(Boolean);
 
 		serviceConfig[service] = {
-			fields: Array.isArray(cfg.fields) ? cfg.fields : [],
+			fields: normFields,
 			isAgreementRequired: !!cfg.is_agreement_required,
 			isCandidateFormRequired: !!cfg.is_candidate_form_required,
 		};

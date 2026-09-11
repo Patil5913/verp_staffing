@@ -600,8 +600,6 @@ def handle_onboarding_forward(
         if existing_name:
             onboarding_doc = frappe.get_doc("Onboardings", existing_name)
             onboarding_doc.append("onboarding_history", history_row)
-            onboarding_doc.candidate_marketing_email = email
-            onboarding_doc.password = password
             onboarding_doc.status = "Active"
             onboarding_doc.assign_to = assignee
             onboarding_doc.save(ignore_permissions=True)
@@ -612,8 +610,6 @@ def handle_onboarding_forward(
                     "customer": customer,
                     "status": "Active",
                     "assign_to": assignee,
-                    "candidate_marketing_email": email,
-                    "password": password,
                     "onboarding_history": [history_row],
                 }
             )

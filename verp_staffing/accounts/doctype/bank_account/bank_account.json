@@ -9,10 +9,8 @@
   "account",
   "bank",
   "account_type",
-  "account_subtype",
   "column_break_lhqw",
   "disabled",
-  "is_default",
   "is_company_account",
   "company",
   "section_break_11",
@@ -22,7 +20,7 @@
   "account_details_section",
   "iban",
   "column_break_pfiw",
-  "branch_code",
+  "ifsc_code",
   "bank_account_no",
   "address_and_contact",
   "address_html",
@@ -31,6 +29,8 @@
  ],
  "fields": [
   {
+   "fetch_from": "account.account_name",
+   "fetch_if_empty": 1,
    "fieldname": "account_name",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -65,19 +65,16 @@
   },
   {
    "default": "0",
-   "fieldname": "is_default",
-   "fieldtype": "Check",
-   "label": "Is Default Account"
-  },
-  {
-   "default": "0",
    "description": "Setting the account as a Company Account is necessary for Bank Reconciliation",
    "fieldname": "is_company_account",
    "fieldtype": "Check",
-   "label": "Is Company Account"
+   "label": "Is Company Account",
+   "set_only_once": 1
   },
   {
    "depends_on": "is_company_account",
+   "fetch_from": "account.company",
+   "fetch_if_empty": 1,
    "fieldname": "company",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -91,12 +88,6 @@
    "fieldtype": "Link",
    "label": "Account type",
    "options": "Bank Account Type"
-  },
-  {
-   "fieldname": "account_subtype",
-   "fieldtype": "Link",
-   "label": "Account subtype",
-   "options": "Bank Account Subtype"
   },
   {
    "fieldname": "section_break_11",
@@ -136,12 +127,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "branch_code",
-   "fieldtype": "Data",
-   "in_global_search": 1,
-   "label": "Branch Code"
-  },
-  {
    "fieldname": "bank_account_no",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -167,12 +152,18 @@
    "fieldname": "contact_html",
    "fieldtype": "HTML",
    "label": "Contact"
+  },
+  {
+   "fieldname": "ifsc_code",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "IFSC Code"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-26 17:39:59.157683",
+ "modified": "2026-09-11 10:42:46.901617",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Account",

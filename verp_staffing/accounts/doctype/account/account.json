@@ -10,7 +10,6 @@
  "field_order": [
   "disabled",
   "account_name",
-  "account_number",
   "is_group",
   "company",
   "account_currency",
@@ -19,8 +18,13 @@
   "column_break_miet",
   "parent_account",
   "account_type",
-  "tax_rate",
-  "freeze_account",
+  "bank_section",
+  "account_number",
+  "bank",
+  "column_break_bank1",
+  "ifsc_code",
+  "column_break_bank2",
+  "bank_account_type",
   "section_break_y1gg",
   "lft",
   "rgt",
@@ -87,6 +91,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Account Number",
+   "read_only_depends_on": "account_type != \"Bank\"",
    "search_index": 1
   },
   {
@@ -113,20 +118,6 @@
    "search_index": 1
   },
   {
-   "description": "Rate at which this tax is applied",
-   "fieldname": "tax_rate",
-   "fieldtype": "Float",
-   "label": "Tax Rate"
-  },
-  {
-   "default": "No",
-   "description": "If the account is frozen, entries are allowed to restricted users.",
-   "fieldname": "freeze_account",
-   "fieldtype": "Select",
-   "label": "Freeze Account",
-   "options": "No\nYes"
-  },
-  {
    "depends_on": "eval:doc.is_group==0",
    "fieldname": "account_currency",
    "fieldtype": "Link",
@@ -148,6 +139,40 @@
    "label": "Report Type",
    "options": "\nBalance Sheet\nProfit and Loss",
    "set_only_once": 1
+  },
+  {
+   "depends_on": "eval:doc.account_type==\"Bank\"",
+   "fieldname": "bank_section",
+   "fieldtype": "Section Break",
+   "label": "Bank Details"
+  },
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "label": "Bank",
+   "mandatory_depends_on": "eval:doc.account_type==\"Bank\"",
+   "options": "Bank"
+  },
+  {
+   "fieldname": "column_break_bank1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.account_type==\"Bank\"",
+   "fieldname": "ifsc_code",
+   "fieldtype": "Data",
+   "label": "IFSC Code"
+  },
+  {
+   "fieldname": "column_break_bank2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.account_type==\"Bank\"",
+   "fieldname": "bank_account_type",
+   "fieldtype": "Link",
+   "label": "Bank Account Type",
+   "options": "Bank Account Type"
   }
  ],
  "grid_page_length": 50,
@@ -155,7 +180,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-06-26 17:42:13.359839",
+ "modified": "2026-09-11 15:15:14.125759",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Account",

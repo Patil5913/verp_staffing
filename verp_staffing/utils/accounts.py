@@ -89,11 +89,6 @@ def format_ces_api(data, param):
 		to_currency=param.get("to_currency"),
 		from_currency=param.get("from_currency"),
 	)
- 
-
-@frappe.whitelist()
-def get_tax_rate(account_head):
-	return frappe.get_cached_value("Account", account_head, ["tax_rate", "account_name"], as_dict=True)
 
 
 @frappe.whitelist()

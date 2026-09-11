@@ -6,7 +6,6 @@ frappe.ui.form.on("Marketing", {
 		$(frm.wrapper).on("shown.bs.tab", ".nav-link", () => {
 			render_tab_data(frm);
 		});
-
 	},
 	async refresh(frm) {
 		window.render_notes(frm);
@@ -350,15 +349,15 @@ function mkt_inject_interview_list_styles() {
 			padding: 7px 8px;
 			border-radius: 6px;
 			font-size: 13px;
-			color: #1c1c1c;
+			color: var(--text-color, #1c1c1c);
 			text-decoration: none;
 			transition: background .12s ease;
 			min-width: 0;
 		}
 		.mkt-interview-item:hover {
-			background: #F1F1F1;
+			background: var(--hover-notification-bg, var(--subtle-fg, rgba(0,0,0,0.05)));
 			text-decoration: none;
-			color: #1c1c1c;
+			color: var(--text-color, #1c1c1c);
 		}
 		.mkt-interview-item span:last-child {
 			white-space: nowrap;
@@ -366,17 +365,18 @@ function mkt_inject_interview_list_styles() {
 			text-overflow: ellipsis;
 		}
 		.mkt-interview-dot {
-			width: 6px;
-			height: 6px;
+			width: 8px;
+			height: 8px;
 			border-radius: 50%;
-			background: #2490EF;
-			flex: none;
+			background: #38bdf8;
+			flex-shrink: 0;
+			display: inline-block;
 		}
 		.mkt-interview-toggle-btn {
 			margin-top: 4px;
 			font-size: 12.5px;
 			font-weight: 600;
-			color: #2490EF;
+			color: #38bdf8;
 			background: none;
 			border: none;
 			cursor: pointer;
@@ -386,7 +386,7 @@ function mkt_inject_interview_list_styles() {
 			text-decoration: underline;
 		}
 		.mkt-interview-empty {
-			color: #8D99A6;
+			color: var(--text-muted, #8D99A6);
 			font-size: 13px;
 			padding: 6px 2px;
 		}
