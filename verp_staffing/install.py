@@ -1141,7 +1141,7 @@ def after_install():
     # seed_bulk_users_with_password()
     # seed_employees_with_hierarchy(HIERARCHY_DATA)
     seed_form_tours()
-    seed_party_types()
+    seed_party_types_and_bank_account_types()
     # set_default_system_settings()
 
 
@@ -2061,7 +2061,7 @@ def create_interview_statuses():
             doc.insert(ignore_permissions=True)
 
 
-def seed_party_types():
+def seed_party_types_and_bank_account_types():
     if not frappe.db.exists("Party Type", "Customer"):
         frappe.get_doc(
             {
@@ -2078,9 +2078,29 @@ def seed_party_types():
                 "party_type": "Supplier",
             }
         ).insert()
-        
+
+    if not frappe.db.exists("Bank Account Type", "Current"):
+        frappe.get_doc(
+            {
+                "doctype": "Bank Account Type",
+                "account_type": "Current",
+            }
+        ).insert()
+
+    if not frappe.db.exists("Bank Account Type", "Current"):
+        frappe.get_doc(
+            {
+                "doctype": "Bank Account Type",
+                "account_type": "Savings",
+            }
+        ).insert()
+
+
 def set_default_system_settings():
-    frappe.db.set_single_value("System Settings", "disable_system_update_notification", 1)
+    frappe.db.set_single_value(
+        "System Settings", "disable_system_update_notification", 1
+    )
+
 
 def seed_type_of_interview():
     doctype = "Type Of Interview"
