@@ -262,7 +262,6 @@ window.setup_service_permission_button = function (frm) {
 // 	});
 // };
 
-
 window._service_open_update_detail_dialog = function (frm) {
 	if (!frm.doc.customer) {
 		frappe.msgprint("Customer not linked.");
@@ -299,8 +298,12 @@ window._service_open_update_detail_dialog = function (frm) {
 						},
 						error: function () {
 							_open_update_detail_dialog(
-								frm, current_values, dept.simple_fields || {},
-								dept.table_fields || {}, "service", false,
+								frm,
+								current_values,
+								dept.simple_fields || {},
+								dept.table_fields || {},
+								"service",
+								false,
 							);
 						},
 					});
@@ -323,7 +326,6 @@ window._service_open_update_detail_dialog = function (frm) {
 		},
 	});
 };
-
 
 window._service_show_accept_updates = function (frm) {
 	frappe.call({
@@ -368,7 +370,14 @@ window._service_show_accept_updates = function (frm) {
 };
 
 // ─── _open_update_detail_dialog ───────────────────────────────────────────────
-function _open_update_detail_dialog(frm, current_values, fields, table_fields, mode, is_higher_authority = false) {
+function _open_update_detail_dialog(
+	frm,
+	current_values,
+	fields,
+	table_fields,
+	mode,
+	is_higher_authority = false,
+) {
 	const customer_name = mode === "service" ? frm.doc.customer : frm.doc.name;
 	const api_method =
 		mode === "service"
@@ -390,7 +399,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		"mobile",
 		"mobile_no",
 		"personal_phone_number",
-		"number_for_marketing"
+		"number_for_marketing",
 	]);
 	const isPhoneField = (f) => PHONE_FIELDS.has(f.toLowerCase());
 	const isEmailField = (f) => EMAIL_FIELDS.has(f.toLowerCase());
@@ -597,7 +606,7 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 			.join("");
 
 		// ── button style matching lead.js exactly ─────────────────────────────
-		const btnStyle = `height:30px;padding:0 10px;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#344054;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s;font-family:inherit;white-space:nowrap;`;
+		const btnStyle = `height:30px;padding:0 10px;border:1px solid var(--color-border-secondary, rgba(0,0,0,0.15));background:var(--card-bg, #fff);color:var(--text-color, #344054);border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s;font-family:inherit;white-space:nowrap;`;
 
 		const bodyHtml = `
 <div>
@@ -611,14 +620,14 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 				onmouseenter="this.style.background=&#39;#d92d20&#39;" onmouseleave="this.style.background=&#39;#f04438&#39;">🗑</button>
 			<div style="width:1px;height:18px;background:rgba(0,0,0,0.12);margin:0 2px;flex-shrink:0;"></div>
 			<button onclick="window.__perm_dlg_insert_(&#39;${tableId}&#39;,${rowIdx},&#39;above&#39;)" style="${btnStyle}"
-				onmouseenter="this.style.background=&#39;#f9fafb&#39;" onmouseleave="this.style.background=&#39;#fff&#39;">↑ Above</button>
+				onmouseenter="this.style.background=&#39;var(--hover-notification-bg, #f9fafb)&#39;" onmouseleave="this.style.background=&#39;var(--card-bg, #fff)&#39;">↑ Above</button>
 			<button onclick="window.__perm_dlg_insert_(&#39;${tableId}&#39;,${rowIdx},&#39;below&#39;)" style="${btnStyle}"
-				onmouseenter="this.style.background=&#39;#f9fafb&#39;" onmouseleave="this.style.background=&#39;#fff&#39;">↓ Below</button>
+				onmouseenter="this.style.background=&#39;var(--hover-notification-bg, #f9fafb)&#39;" onmouseleave="this.style.background=&#39;var(--card-bg, #fff)&#39;">↓ Below</button>
 			<button onclick="window.__perm_dlg_duplicate_(&#39;${tableId}&#39;,${rowIdx})" style="${btnStyle}"
-				onmouseenter="this.style.background=&#39;#f9fafb&#39;" onmouseleave="this.style.background=&#39;#fff&#39;">⧉ Duplicate</button>
+				onmouseenter="this.style.background=&#39;var(--hover-notification-bg, #f9fafb)&#39;" onmouseleave="this.style.background=&#39;var(--card-bg, #fff)&#39;">⧉ Duplicate</button>
 			<button onclick="window.__perm_close_dialog_()"
-				style="width:30px;height:30px;border:none;background:transparent;color:#667085;border-radius:6px;cursor:pointer;font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"
-				onmouseenter="this.style.background='#f2f4f7'" onmouseleave="this.style.background='transparent'">x</button>
+				style="width:30px;height:30px;border:none;background:transparent;color:var(--text-muted, #667085);border-radius:6px;cursor:pointer;font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"
+				onmouseenter="this.style.background='var(--hover-notification-bg, #f2f4f7)'" onmouseleave="this.style.background='transparent'">x</button>
 		</div>
 	</div>
 
@@ -797,11 +806,11 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 			return `
 <div style="margin-top:12px;">
 	<div class="fg-row fg-table-toggle" data-fieldname="${fieldname}" data-tableid="${tableId}"
-		style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;transition:all 0.2s ease;"
-		onmouseenter="this.style.borderColor=&#39;black&#39;" onmouseleave="if(!this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;#00000020&#39;"
+		style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid var(--border-color, #00000020);border-radius:10px;cursor:pointer;background:var(--card-bg, white);transition:all 0.2s ease;"
+		onmouseenter="this.style.borderColor=&#39;var(--text-color, black)&#39;" onmouseleave="if(!this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;var(--border-color, #00000020)&#39;"
 		onclick="window._perm_toggleTableField(this,&#39;${tableId}&#39;)">
-		<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;">
-			<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
+		<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid var(--text-color, black);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--card-bg, white);">
+			<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid var(--card-bg, white);border-bottom:2px solid var(--card-bg, white);transform:rotate(-45deg) translate(1px,-1px);"></div>
 		</div>
 		<span class="fg-label" style="font-size:13px;font-weight:500;color:var(--color-text-primary);">${frappe.utils.escape_html(config.label)}</span>
 	</div>
@@ -810,8 +819,8 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 		})
 		.join("");
 
-		const higherAuthorityBannerHtml = is_higher_authority
-		? `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;margin-bottom:14px;border:1px solid #f0b429;background:#fff8e6;border-radius:8px;font-size:12.5px;color:#7a5b00;line-height:1.5;">
+	const higherAuthorityBannerHtml = is_higher_authority
+		? `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;margin-bottom:14px;border:1px solid var(--border-warning, #f0b429);background:var(--bg-warning-subtle, #fff8e6);border-radius:8px;font-size:12.5px;color:var(--text-warning, #7a5b00);line-height:1.5;">
 			<span style="font-size:15px;line-height:1;">⚠</span>
 			<span>${__("You are the top of your department's hierarchy, so on save the data will be directly updated — Please be sure before confirming.")}</span>
 		</div>`
@@ -820,17 +829,17 @@ function _open_update_detail_dialog(frm, current_values, fields, table_fields, m
 	// ── simple fields grid ────────────────────────────────────────────────────
 	const simpleHtml = `
 	${higherAuthorityBannerHtml}
-<p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;">${__("Select fields to update")}</p>
+<p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;color:var(--text-muted, inherit);">${__("Select fields to update")}</p>
 <div id="fg-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
 	${Object.entries(fields)
 		.map(([fn, fm]) => {
 			const lbl = typeof fm === "string" ? fm : fm?.label || fn.replace(/_/g, " ");
 			const old = current_values[fn] || "";
 			return `<div class="fg-row" data-fieldname="${fn}" data-label="${frappe.utils.escape_html(lbl)}" data-current="${frappe.utils.escape_html(old)}"
-	style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;transition:all 0.2s ease;min-width:0;"
-	onmouseenter="this.style.borderColor=&#39;black&#39;" onmouseleave="if(!this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;#00000020&#39;">
-	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;">
-		<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
+	style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid var(--border-color, #00000020);border-radius:10px;cursor:pointer;background:var(--card-bg, white);transition:all 0.2s ease;min-width:0;"
+	onmouseenter="this.style.borderColor=&#39;var(--text-color, black)&#39;" onmouseleave="if(!this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;var(--border-color, #00000020)&#39;">
+	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid var(--text-color, black);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--card-bg, white);">
+		<div class="fg-tick" style="display:none;width:8px;height:5px;border-left:2px solid var(--card-bg, white);border-bottom:2px solid var(--card-bg, white);transform:rotate(-45deg) translate(1px,-1px);"></div>
 	</div>
 	<span class="fg-label" style="font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${frappe.utils.escape_html(lbl)}</span>
 </div>`;
@@ -985,7 +994,7 @@ ${tableWidgetHtml}
 		$(this).find(".fg-tick").toggle(selected);
 		$(this)
 			.find(".fg-cb")
-			.css("background", selected ? "black" : "white");
+			.css("background", selected ? "var(--text-color, black)" : "var(--card-bg, white)");
 		_fg_rebuild(dialog, fields, current_values, _saved);
 		toggleReasonField(dialog);
 		if (selected)
@@ -1013,10 +1022,19 @@ window._perm_toggleTableField = function (el, tableId) {
 	const $el = $(el);
 	const selected = $el.toggleClass("selected").hasClass("selected");
 
-	$el.css("border-color", selected ? "black" : "#00000020");
-	$el.css("background", selected ? "#eeeeee" : "white");
+	$el.css(
+		"border-color",
+		selected ? "var(--text-color, black)" : "var(--border-color, #00000020)",
+	);
+	$el.css(
+		"background",
+		selected ? "var(--hover-notification-bg, #eeeeee)" : "var(--card-bg, white)",
+	);
 	$el.find(".fg-tick").toggle(selected);
-	$el.find(".fg-cb").css("background", selected ? "black" : "white");
+	$el.find(".fg-cb").css(
+		"background",
+		selected ? "var(--text-color, black)" : "var(--card-bg, white)",
+	);
 
 	$(`#ftbl-section-${tableId}`).toggle(selected);
 
@@ -1044,7 +1062,7 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 		val = String(val).trim();
 		const meta = field_meta[fn] || {};
 		if (meta.fieldtype === "Link")
-			return `<a href="/app/file/${encodeURIComponent(val)}" target="_blank" style="color:#260fea;font-weight:500;">📎 ${frappe.utils.escape_html(val)}</a>`;
+			return `<a href="/app/file/${encodeURIComponent(val)}" target="_blank" style="color:var(--primary, var(--text-color));font-weight:500;">📎 ${frappe.utils.escape_html(val)}</a>`;
 		return frappe.utils.escape_html(val);
 	}
 
@@ -1080,7 +1098,7 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 	let all_html = "";
 	pending_requests.forEach((req, idx) => {
 		all_html += `<div style="margin-bottom:20px;">
-			<div style="font-size:13px;font-weight:500;">Request ${idx + 1} — <b>${req.requested_by}</b></div>
+			<div style="font-size:13px;font-weight:500;color:var(--text-color);">Request ${idx + 1} — <b>${req.requested_by}</b></div>
 			<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px;">Reason: ${req.reason}</div>`;
 
 		Object.entries(req.field_updates).forEach(([fn, vals]) => {
@@ -1090,36 +1108,36 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 			const inner = is_table
 				? `
 <div style="margin-top:8px;">
-	<div style="font-size:11px;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">Current</div>
+	<div style="font-size:11px;color:var(--text-muted, #666);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">Current</div>
 	${render_table_readonly(vals.old, "var(--color-text-secondary)")}
 </div>
 <div style="margin-top:10px;">
-	<div style="font-size:11px;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">New</div>
-	${render_table_readonly(vals.new, "#3C3489")}
+	<div style="font-size:11px;color:var(--text-muted, #666);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">New</div>
+	${render_table_readonly(vals.new, "var(--primary, var(--text-color))")}
 </div>`
 				: `
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;">
 	<div>
-		<div style="font-size:11px;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">Current</div>
-		<div style="padding:8px 10px;background:#f8f9fa;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:36px;">${render_value(vals.old, fn)}</div>
+		<div style="font-size:11px;color:var(--text-muted, #666);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">Current</div>
+		<div style="padding:8px 10px;background:var(--subtle-fg, #f8f9fa);border:1px solid var(--border-color, #ddd);border-radius:8px;font-size:13px;min-height:36px;color:var(--text-color);">${render_value(vals.old, fn)}</div>
 	</div>
 	<div>
-		<div style="font-size:11px;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">New</div>
-		<div style="padding:8px 10px;background:white;border:1px solid #ccc;border-radius:8px;font-size:13px;min-height:36px;font-weight:500;">${render_value(vals.new, fn)}</div>
+		<div style="font-size:11px;color:var(--text-muted, #666);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:500;">New</div>
+		<div style="padding:8px 10px;background:var(--card-bg, white);border:1px solid var(--border-color, #ccc);border-radius:8px;font-size:13px;min-height:36px;font-weight:500;color:var(--text-color);">${render_value(vals.new, fn)}</div>
 	</div>
 </div>`;
 
 			all_html += `
 <div class="fg-row au-field-row" data-fieldname="${fn}" data-comment="${req.comment_name}"
-	style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid #00000020;border-radius:10px;cursor:pointer;background:white;margin-bottom:10px;transition:all 0.2s ease;"
-	onmouseenter="this.style.borderColor=&#39;black&#39;"
-	onmouseleave="if(this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;black&#39;;else this.style.borderColor=&#39;#00000020&#39;">
-	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid black;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:black;margin-top:3px;">
-		<div class="fg-tick" style="width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);"></div>
+	style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid var(--border-color, #00000020);border-radius:10px;cursor:pointer;background:var(--card-bg, white);color:var(--text-color);margin-bottom:10px;transition:all 0.2s ease;"
+	onmouseenter="this.style.borderColor=&#39;var(--text-color, black)&#39;"
+	onmouseleave="if(this.classList.contains(&#39;selected&#39;))this.style.borderColor=&#39;var(--text-color, black)&#39;;else this.style.borderColor=&#39;var(--border-color, #00000020)&#39;">
+	<div class="fg-cb" style="width:16px;height:16px;border-radius:4px;border:2px solid var(--text-color, black);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--text-color, black);margin-top:3px;">
+		<div class="fg-tick" style="width:8px;height:5px;border-left:2px solid var(--card-bg, white);border-bottom:2px solid var(--card-bg, white);transform:rotate(-45deg) translate(1px,-1px);"></div>
 	</div>
 	<input type="checkbox" class="approve-field-checkbox" data-fieldname="${fn}" data-comment="${req.comment_name}" checked style="display:none;" />
 	<div style="flex:1;">
-		<span style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">${frappe.utils.escape_html(lbl)}</span>
+		<span style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:var(--text-color);">${frappe.utils.escape_html(lbl)}</span>
 		${inner}
 	</div>
 </div>`;
@@ -1133,7 +1151,7 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 			{
 				fieldname: "html",
 				fieldtype: "HTML",
-				options: `<p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;">${__("Select fields to accept")}</p>${all_html}`,
+				options: `<p style="font-size:11px;font-weight:500;text-transform:uppercase;margin-bottom:12px;color:var(--text-muted);">${__("Select fields to accept")}</p>${all_html}`,
 			},
 		],
 		primary_action_label: __("Accept Selected"),
@@ -1215,10 +1233,13 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 
 	d.$wrapper.on("click", ".fg-row.au-field-row", function () {
 		const selected = $(this).toggleClass("selected").hasClass("selected");
-		$(this).css("border-color", selected ? "black" : "#00000020");
+		$(this).css(
+			"border-color",
+			selected ? "var(--text-color, black)" : "var(--border-color, #00000020)",
+		);
 		$(this)
 			.find(".fg-cb")
-			.css("background", selected ? "black" : "white");
+			.css("background", selected ? "var(--text-color, black)" : "var(--card-bg, white)");
 		$(this)
 			.find(".fg-tick")
 			.css("display", selected ? "block" : "none");
@@ -1259,38 +1280,38 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 		let inp_html = "";
 		if (fieldtype === "Select") {
 			const opts = options.split("\n").filter((o) => o);
-			inp_html = `<select class="fg-new-input" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;"><option value="">Select ${label}</option>${opts.map((o) => `<option value="${frappe.utils.escape_html(o)}"${saved_val === o ? " selected" : ""}>${frappe.utils.escape_html(o)}</option>`).join("")}</select>`;
+			inp_html = `<select class="fg-new-input" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-color, #ccc);border-radius:8px;font-size:13px;background:var(--control-bg, var(--card-bg, white));color:var(--text-color);"><option value="">Select ${label}</option>${opts.map((o) => `<option value="${frappe.utils.escape_html(o)}"${saved_val === o ? " selected" : ""}>${frappe.utils.escape_html(o)}</option>`).join("")}</select>`;
 		} else if (fieldtype === "Check") {
 			inp_html = `<input type="checkbox" class="fg-new-input" data-fieldname="${fn}" data-old="${old_val}" ${saved_val == "1" ? "checked" : ""} />`;
 		} else if (fieldtype === "Link") {
 			const cur_html = old_val
-				? `<a href="/app/file/${encodeURIComponent(old_val)}" target="_blank" style="color:#260fea;font-weight:500;">📎 View Current File</a>`
+				? `<a href="/app/file/${encodeURIComponent(old_val)}" target="_blank" style="color:var(--primary, var(--text-color));font-weight:500;">📎 View Current File</a>`
 				: `<span style="color:var(--color-text-tertiary);font-style:italic;">empty</span>`;
-			container.append(`<div class="fg-input-block" style="margin-bottom:18px;padding:12px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary);">
+			container.append(`<div class="fg-input-block" style="margin-bottom:18px;padding:12px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary);color:var(--text-color);">
 				<div style="font-size:12px;font-weight:600;margin-bottom:10px;">${frappe.utils.escape_html(label)}</div>
 				<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-					<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">${__("Current")}</div><div style="padding:8px 10px;background:#f8f9fa;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:36px;">${cur_html}</div></div>
-					<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">${__("New")}</div>
+					<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);">${__("Current")}</div><div style="padding:8px 10px;background:var(--subtle-fg, #f8f9fa);border:1px solid var(--border-color, #ddd);border-radius:8px;font-size:13px;min-height:36px;color:var(--text-color);">${cur_html}</div></div>
+					<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);">${__("New")}</div>
 						<input type="file" class="fg-file-input" data-fieldname="${fn}" style="font-size:12px;" />
-						<div class="fg-file-name" data-fieldname="${fn}" style="font-size:11px;color:var(--color-text-secondary);">${saved_val ? `<span style="color:#260fea;">${frappe.utils.escape_html(saved_val)}</span>` : ""}</div>
+						<div class="fg-file-name" data-fieldname="${fn}" style="font-size:11px;color:var(--color-text-secondary);">${saved_val ? `<span style="color:var(--primary, var(--text-color));">${frappe.utils.escape_html(saved_val)}</span>` : ""}</div>
 						<input type="hidden" class="fg-new-input fg-file-url" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" />
 					</div>
 				</div>
 			</div>`);
 			return;
 		} else if (fieldtype === "Date") {
-			inp_html = `<input class="fg-new-input" type="date" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
+			inp_html = `<input class="fg-new-input" type="date" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-color, #ccc);border-radius:8px;font-size:13px;background:var(--control-bg, var(--card-bg, white));color:var(--text-color);" />`;
 		} else {
-			inp_html = `<input class="fg-new-input" type="text" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" placeholder="${__("Enter new value for")} ${frappe.utils.escape_html(label)}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:white;" />`;
+			inp_html = `<input class="fg-new-input" type="text" data-fieldname="${fn}" data-old="${frappe.utils.escape_html(old_val)}" value="${frappe.utils.escape_html(saved_val)}" placeholder="${__("Enter new value for")} ${frappe.utils.escape_html(label)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-color, #ccc);border-radius:8px;font-size:13px;background:var(--control-bg, var(--card-bg, white));color:var(--text-color);" />`;
 		}
 
-		container.append(`<div class="fg-input-block" style="margin-bottom:18px;padding:12px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary);">
+		container.append(`<div class="fg-input-block" style="margin-bottom:18px;padding:12px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary);color:var(--text-color);">
 			<div style="font-size:12px;font-weight:600;margin-bottom:10px;">${frappe.utils.escape_html(label)}</div>
 			<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-				<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">${__("Current")}</div>
-					<div style="padding:8px 10px;background:#f8f9fa;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:36px;">${old_val ? frappe.utils.escape_html(old_val) : `<span style="color:var(--color-text-tertiary);font-style:italic;">empty</span>`}</div>
+				<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);">${__("Current")}</div>
+					<div style="padding:8px 10px;background:var(--subtle-fg, #f8f9fa);border:1px solid var(--border-color, #ddd);border-radius:8px;font-size:13px;min-height:36px;color:var(--text-color);">${old_val ? frappe.utils.escape_html(old_val) : `<span style="color:var(--color-text-tertiary);font-style:italic;">empty</span>`}</div>
 				</div>
-				<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;">${__("New")}</div>${inp_html}</div>
+				<div><div style="font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);">${__("New")}</div>${inp_html}</div>
 			</div>
 		</div>`);
 	});

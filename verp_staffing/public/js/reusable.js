@@ -43,7 +43,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 		frm.set_df_property(
 			html_field,
 			"options",
-			"<p style='text-align: center; color: #6b7280; padding: 20px;'>No customer selected</p>",
+			"<p style='text-align: center; color: var(--text-muted, #6b7280); padding: 20px;'>No customer selected</p>",
 		);
 		return;
 	}
@@ -57,7 +57,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 				frm.set_df_property(
 					html_field,
 					"options",
-					"<p style='text-align:center;color:#6b7280;padding:20px;'>No records found</p>",
+					"<p style='text-align:center;color:var(--text-muted, #6b7280);padding:20px;'>No records found</p>",
 				);
 				return;
 			}
@@ -96,9 +96,10 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
             .record-section {
                 margin-bottom: 30px;
-                border: 1px solid #e5e7eb;
+                border: 1px solid var(--border-color, #e5e7eb);
                 border-radius: 8px;
-                background: #ffffff;
+                background: var(--card-bg, #ffffff);
+                color: var(--text-color, #212529);
                 overflow: hidden;
             }
 
@@ -111,7 +112,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                 grid-template-columns: 200px 1fr;
                 gap: 16px;
                 padding: 10px 0;
-                border-bottom: 1px solid #f1f3f5;
+                border-bottom: 1px solid var(--border-color, #f1f3f5);
             }
 
             .field-row:last-child {
@@ -121,33 +122,33 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
             .field-label {
                 font-size: 13px;
                 font-weight: 600;
-                color: #495057;
+                color: var(--text-muted, #495057);
             }
 
             .field-value {
                 font-size: 13px;
-                color: #212529;
+                color: var(--text-color, #212529);
                 word-break: break-word;
             }
 
             .table-section {
                 margin-top: 20px;
                 padding: 16px;
-                background: #f8f9fa;
-                border-top: 2px solid #dee2e6;
+                background: var(--bg-color, var(--subtle-fg, #f8f9fa));
+                border-top: 2px solid var(--border-color, #dee2e6);
             }
 
             .table-title {
                 font-size: 14px;
                 font-weight: 600;
                 margin-bottom: 12px;
-                color: #374151;
+                color: var(--text-color, #374151);
             }
 
             .table-wrapper {
                 overflow-x: auto;
-                background: #ffffff;
-                border: 1px solid #dee2e6;
+                background: var(--card-bg, #ffffff);
+                border: 1px solid var(--border-color, #dee2e6);
                 border-radius: 4px;
             }
 
@@ -162,18 +163,20 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
             table.data-table th,
             table.data-table td {
                 padding: 10px 12px;
-                border-bottom: 1px solid #f1f3f5;
+                border-bottom: 1px solid var(--border-color, #f1f3f5);
+                color: var(--text-color, #212529);
                 word-break: break-word;
                 overflow-wrap: break-word;
                 white-space: normal;
             }
 
             table.data-table thead {
-                background: #e9ecef;
+                background: var(--subtle-fg, var(--bg-color, #e9ecef));
+                color: var(--text-color, #212529);
             }
 
             table.data-table tbody tr:hover {
-                background-color: #f8f9fa;
+                background-color: var(--hover-notification-bg, var(--subtle-fg, rgba(0,0,0,0.03)));
             }
 
             .full-preview-overlay {
@@ -187,7 +190,8 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
             }
 
             .full-preview-box {
-                background: #ffffff;
+                background: var(--card-bg, #ffffff);
+                color: var(--text-color, #212529);
                 width: 90%;
                 max-width: 800px;
                 max-height: 80vh;
@@ -195,6 +199,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                 padding: 20px;
                 overflow-y: auto;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+                border: 1px solid var(--border-color, transparent);
             }
 
             .preview-header {
@@ -241,8 +246,8 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 						const value = frappe.utils.escape_html(String(f.value));
 						let current_display_html = value
 							? `<a href="${f.fieldtype == "Link" ? `/app/file/${value}` : value.startsWith("http") ? value : `https://${value}`}" target="_blank"
-        style="color:#260fea;font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin" ? value : "📎 View Current File"}</a>`
-							: `<span style="color:var(--color-text-tertiary);font-style:italic;">No file</span>`;
+        style="color:var(--primary, var(--text-color));font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin" ? value : "📎 View Current File"}</a>`
+							: `<span style="color:var(--text-muted);font-style:italic;">No file</span>`;
 
 						let display_value = value;
 
@@ -251,7 +256,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                 <a href="#"
                   class="open-email-composer"
                   data-email="${frappe.utils.escape_html(value)}"
-                  style="color:#2563eb;font-weight:500;text-decoration:none;">
+                  style="color:var(--primary, var(--text-color));font-weight:500;text-decoration:none;">
                   ${frappe.utils.escape_html(value)}
                 </a>
               `;
@@ -319,7 +324,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
 									html += `
                                     <td style="width:500px; max-width:500px;">
-                                        <span style="cursor:pointer; color:#2563eb; font-weight:500;"
+                                        <span style="cursor:pointer; color:var(--primary, var(--text-color)); font-weight:500;"
                                               onclick="showFullPreview(\`${escapedText.replace(/`/g, "\\`")}\`)">
                                             ${shortText}
                                         </span>
@@ -330,7 +335,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 								}
 							});
 
-							html += `</tr>`;
+							html += `<tr>`;
 						});
 
 						html += `
@@ -632,9 +637,9 @@ function toggle_fields(dialog, frm) {
 					dialog.set_df_property("interview", "reqd", 1);
 
 					dialog.set_df_property("email", "hidden", 0);
-					dialog.set_df_property("email", "reqd", 1);
+					dialog.set_df_property("email", "read_only", 1);
 					dialog.set_df_property("password", "hidden", 0);
-					dialog.set_df_property("password", "reqd", 1);
+					dialog.set_df_property("password", "read_only", 1);
 
 					// preset from any existing Onboardings record so the marketing
 					// person can verify/edit rather than retype from scratch
@@ -642,11 +647,11 @@ function toggle_fields(dialog, frm) {
 						method: "verp_staffing.crm.doctype.customer.customer.get_onboarding_credentials",
 						args: { customer: frm.doc.customer || frm.doc.name },
 						callback(cr) {
-							if (cr.message?.candidate_marketing_email) {
-								dialog.set_value("email", cr.message.candidate_marketing_email);
+							if (cr.message?.marketing_email_id) {
+								dialog.set_value("email", cr.message.marketing_email_id);
 							}
-							if (cr.message?.password) {
-								dialog.set_value("password", cr.message.password);
+							if (cr.message?.marketing_email_password) {
+								dialog.set_value("password", cr.message.marketing_email_password);
 							}
 							dialog.refresh();
 						},
@@ -1111,7 +1116,7 @@ function open_new_task_dialog(frm) {
 
 function render_task_card(t, frm) {
 	return `
-    <div class="task-card list-group-item" data-id="${t.name}" style="padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:10px; ${
+    <div class="task-card list-group-item" data-id="${t.name}" style="padding:10px; border:1px solid var(--border-color, #ccc); border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:10px; background:var(--card-bg, inherit); color:var(--text-color, inherit); ${
 		t.is_completed ? "opacity:0.5; filter: grayscale(0.3);" : ""
 	}">
         <input type="checkbox" ${t.is_completed ? "checked" : ""} class="task-complete" data-id="${t.name}" />
@@ -1135,7 +1140,7 @@ function render_task_card(t, frm) {
 
 function render_event_card(e, frm) {
 	return `
-    <div class="event-card list-group-item" data-id="${e.name}" style="padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:8px;">
+    <div class="event-card list-group-item" data-id="${e.name}" style="padding:10px; border:1px solid var(--border-color, #ccc); border-radius:6px; margin-bottom:8px; background:var(--card-bg, inherit); color:var(--text-color, inherit);">
         <b>${e.category}</b> <br>
         <small>Date: ${e.date || "No date"} | Assigned: ${e.assigned_to || "N/A"}</small>
         <button class="btn btn-xs btn-secondary edit-event-btn" style="margin-left:10px">Edit</button>
@@ -1433,7 +1438,7 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 		frm.set_df_property(
 			"resume",
 			"options",
-			'<div style="color:#888">No customer selected</div>',
+			'<div style="color:var(--text-muted, #888)">No customer selected</div>',
 		);
 		return;
 	}
@@ -1459,7 +1464,7 @@ window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
 						href="${resume.document}"
 						target="_blank"
 						style="
-							color:#1a73e8;
+							color:var(--primary, var(--text-color));
 							font-weight:600;
 							text-decoration:none;
 						"

@@ -49,6 +49,8 @@
   "details_for_marketing_purpose_section",
   "number_for_marketing",
   "google_voice_number",
+  "marketing_email_id",
+  "marketing_email_password",
   "column_break_uksq",
   "marketing_linkedin",
   "linkedin_password",
@@ -392,12 +394,23 @@
   {
    "fieldname": "files_upload_section",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "marketing_email_id",
+   "fieldtype": "Data",
+   "label": "Marketing Email Id",
+   "options": "Email"
+  },
+  {
+   "fieldname": "marketing_email_password",
+   "fieldtype": "Data",
+   "label": "Marketing Email Password"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-11 15:42:54.068069",
+ "modified": "2026-09-11 16:10:21.100748",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",

@@ -280,10 +280,8 @@ def get_forwardable_departments_from_service(doctype, docname):
 
 @frappe.whitelist()
 def get_onboarding_credentials(customer):
-    if not frappe.db.exists("Onboardings", {"customer": customer}):
-        return {"email": None, "password": None}
-
-    credentials = frappe.db.get_value("Onboardings", {"customer": customer}, ["candidate_marketing_email", "password"], as_dict=True)
+    ldf = frappe.db.get_value("Customer", customer, "lead_details")
+    credentials = frappe.db.get_value("Lead Detail Form", ldf, ["marketing_email_id", "marketing_email_password"], as_dict=True)
 
     return credentials if credentials else {"email": None, "password": None}
 

@@ -16,13 +16,19 @@ function get_department_status_badge(status) {
 	// Matched case-insensitively; covers both "Request for Update" (what the
 	// backend actually returns) and "Requested for Update" just in case.
 	const STYLE_MAP = {
-		completed: "background:#dcfce7;color:#166534;",
-		pending: "background:#fef3c7;color:#92400e;",
-		"request for update": "background:#dbeafe;color:#1e40af;",
-		"requested for update": "background:#dbeafe;color:#1e40af;",
+		completed:
+			"background:var(--bg-green-subtle, #dcfce7);color:var(--text-green-subtle, #166534);",
+		pending:
+			"background:var(--bg-amber-subtle, var(--bg-orange-subtle, #fef3c7));color:var(--text-amber-subtle, var(--text-orange-subtle, #92400e));",
+		"request for update":
+			"background:var(--bg-blue-subtle, #dbeafe);color:var(--text-blue-subtle, #1e40af);",
+		"requested for update":
+			"background:var(--bg-blue-subtle, #dbeafe);color:var(--text-blue-subtle, #1e40af);",
 	};
 
-	const style = STYLE_MAP[key] || "background:#f1f5f9;color:#475569;";
+	const style =
+		STYLE_MAP[key] ||
+		"background:var(--bg-gray-subtle, #f1f5f9);color:var(--text-gray-subtle, #475569);";
 
 	return `<span class="status-badge" style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;${style}">${frappe.utils.escape_html(raw || "-")}</span>`;
 }
@@ -53,8 +59,8 @@ function render_forward_events(events) {
 
 	return `
 		<div style="margin-top:8px;">
-			<span style="color:#64748b;font-size:12px;font-weight:500;">Forward History</span>
-			<ul style="margin:4px 0 0 18px;padding:0;font-size:12px;color:#475569;">
+			<span style="color:var(--text-muted, #64748b);font-size:12px;font-weight:500;">Forward History</span>
+			<ul style="margin:4px 0 0 18px;padding:0;font-size:12px;color:var(--text-color, #475569);">
 				${items}
 			</ul>
 		</div>
@@ -77,11 +83,11 @@ function render_link_or_text(doctype, docname, label, extra_style = "") {
 		return `<a
 				href="/app/${route}/${encodeURIComponent(docname)}"
 				target="_blank"
-				style="color:#260fea;text-decoration:none;${extra_style}"
+				style="color:var(--text-color);text-decoration:underline;${extra_style}"
 			>${frappe.utils.escape_html(label)}</a>`;
 	}
 
-	return `<span style="color:#334155;${extra_style}">${frappe.utils.escape_html(label)}</span>`;
+	return `<span style="color:var(--text-color);${extra_style}">${frappe.utils.escape_html(label)}</span>`;
 }
 
 function render_truncated_text(text, limit = 80) {
@@ -96,10 +102,10 @@ function render_truncated_text(text, limit = 80) {
 	return `
 		<span class="truncate-wrap">
 			<span class="truncate-short">${short}&hellip;
-				<a href="javascript:void(0)" class="truncate-toggle" style="color:#260fea;font-weight:500;text-decoration:none;">View more</a>
+				<a href="javascript:void(0)" class="truncate-toggle" style="color:var(--text-color);font-weight:500;text-decoration:underline;">View more</a>
 			</span>
 			<span class="truncate-full" style="display:none;">${full}
-				<a href="javascript:void(0)" class="truncate-toggle" style="color:#260fea;font-weight:500;text-decoration:none;">View less</a>
+				<a href="javascript:void(0)" class="truncate-toggle" style="color:var(--text-color);font-weight:500;text-decoration:underline;">View less</a>
 			</span>
 		</span>
 	`;
@@ -116,22 +122,22 @@ function render_interview_round_detail(dept) {
 	const rd = dept.interview_round_detail;
 	const iv = dept.interview || {};
 	const supportTag = rd.support
-		? ` <span title="Support Taken" style="display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;cursor:default;">S</span>`
+		? ` <span title="Support Taken" style="display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:var(--bg-blue-subtle, #e0e7ff);color:var(--text-blue-subtle, #4338ca);font-size:10px;font-weight:700;cursor:default;">S</span>`
 		: "";
 	const timeStr = rd.from_time && rd.to_time ? `${rd.from_time} - ${rd.to_time}` : "-";
 
 	return `
-		<div style="margin-top:8px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
-			<p style="margin:0 0 6px 0;font-weight:600;font-size:13px;color:#334155;">Interview Round</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Interview:</b> ${render_link_or_text("Interview", iv.name, iv.name || "-")}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Company:</b> ${frappe.utils.escape_html(iv.company || "-")}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Role:</b> ${frappe.utils.escape_html(iv.role || "-")}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Round:</b> ${frappe.utils.escape_html(rd.round || "-")}${supportTag}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Type:</b> ${frappe.utils.escape_html(rd.type_of_interview || "-")}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Added On:</b> ${frappe.utils.escape_html(rd.date_added || "-")}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Interview Date:</b> ${frappe.utils.escape_html(rd.date_of_interview || "-")}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Time:</b> ${frappe.utils.escape_html(timeStr)}</p>
-			<p style="margin:4px 0;font-size:13px;color:#475569;"><b>Status:</b> ${get_interview_status_badge(rd.status)}</p>
+		<div style="margin-top:8px;padding:10px 12px;background:var(--subtle-fg, var(--bg-color, #f8fafc));border:1px solid var(--border-color, #e2e8f0);border-radius:8px;color:var(--text-color);">
+			<p style="margin:0 0 6px 0;font-weight:600;font-size:13px;color:var(--text-color);">Interview Round</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Interview:</b> ${render_link_or_text("Interview", iv.name, iv.name || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Company:</b> ${frappe.utils.escape_html(iv.company || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Role:</b> ${frappe.utils.escape_html(iv.role || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Round:</b> ${frappe.utils.escape_html(rd.round || "-")}${supportTag}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Type:</b> ${frappe.utils.escape_html(rd.type_of_interview || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Added On:</b> ${frappe.utils.escape_html(rd.date_added || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Interview Date:</b> ${frappe.utils.escape_html(rd.date_of_interview || "-")}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Time:</b> ${frappe.utils.escape_html(timeStr)}</p>
+			<p style="margin:4px 0;font-size:13px;color:var(--text-color);"><b>Status:</b> ${get_interview_status_badge(rd.status)}</p>
 		</div>
 	`;
 }
@@ -185,18 +191,44 @@ function get_interview_status_badge(status) {
 	const s = raw.toLowerCase();
 
 	const RULES = [
-		["rescheduled", "background:#ffedd5;color:#9a3412;"], // orange
-		["scheduled", "background:#cffafe;color:#155e75;"], // cyan
-		["today", "background:#fef9c3;color:#854d0e;"], // yellow
-		["completed", "background:#dbeafe;color:#1e40af;"], // blue
-		["cancelled", "background:#e2e8f0;color:#334155;"], // gray
-		["get the offer", "background:#dcfce7;color:#166534;"], // green
-		["accepted", "background:#dcfce7;color:#166534;"], // green (same as get the offer)
-		["rejected", "background:#fee2e2;color:#991b1b;"], // red
+		[
+			"rescheduled",
+			"background:var(--bg-orange-subtle, #ffedd5);color:var(--text-orange-subtle, #9a3412);",
+		], // orange
+		[
+			"scheduled",
+			"background:var(--bg-cyan-subtle, #cffafe);color:var(--text-cyan-subtle, #155e75);",
+		], // cyan
+		[
+			"today",
+			"background:var(--bg-yellow-subtle, #fef9c3);color:var(--text-yellow-subtle, #854d0e);",
+		], // yellow
+		[
+			"completed",
+			"background:var(--bg-blue-subtle, #dbeafe);color:var(--text-blue-subtle, #1e40af);",
+		], // blue
+		[
+			"cancelled",
+			"background:var(--bg-gray-subtle, #e2e8f0);color:var(--text-gray-subtle, #334155);",
+		], // gray
+		[
+			"get the offer",
+			"background:var(--bg-green-subtle, #dcfce7);color:var(--text-green-subtle, #166534);",
+		], // green
+		[
+			"accepted",
+			"background:var(--bg-green-subtle, #dcfce7);color:var(--text-green-subtle, #166534);",
+		], // green (same as get the offer)
+		[
+			"rejected",
+			"background:var(--bg-red-subtle, #fee2e2);color:var(--text-red-subtle, #991b1b);",
+		], // red
 	];
 
 	const match = RULES.find(([keyword]) => s.includes(keyword));
-	const style = match ? match[1] : "background:#f1f5f9;color:#475569;";
+	const style = match
+		? match[1]
+		: "background:var(--bg-gray-subtle, #f1f5f9);color:var(--text-gray-subtle, #475569);";
 
 	return `<span class="status-badge" style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;${style}">${frappe.utils.escape_html(raw || "-")}</span>`;
 }
@@ -205,11 +237,12 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 	const state = frm.__customer_history_state[fieldname];
 	let html = "";
 	const card = `
-			border:1px solid #e5e7eb;
+			border:1px solid var(--border-color, #e5e7eb);
 			border-radius:10px;
 			padding:16px;
 			margin-bottom:18px;
-			background:#fff;
+			background:var(--card-bg, #fff);
+			color:var(--text-color, #212529);
 			box-shadow:0 1px 2px rgba(0,0,0,0.05);
 		`;
 
@@ -222,21 +255,21 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 	const th = `
 			padding:8px;
 			text-align:left;
-			background:#f8fafc;
-			color:#475569;
+			background:var(--subtle-fg, var(--bg-color, #f8fafc));
+			color:var(--text-muted, #475569);
 			font-weight:500;
 		`;
 
 	const td = `
 			padding:8px;
-			border-top:1px solid #f1f5f9;
-			color:#334155;
+			border-top:1px solid var(--border-color, #f1f5f9);
+			color:var(--text-color, #334155);
 		`;
 
 	html += `
 		<div style="${card}">
-			<p><b>${state.doctype}:</b> ${data.customer.customer_name}</p>
-			<p><b>Owner:</b> ${data.customer.owner}</p>
+			<p style="margin:0 0 4px 0;color:var(--text-color);"><b>${state.doctype}:</b> ${frappe.utils.escape_html(data.customer.customer_name || "-")}</p>
+			<p style="margin:0;color:var(--text-color);"><b>Owner:</b> ${frappe.utils.escape_html(data.customer.owner || "-")}</p>
 		</div>
 		`;
 
@@ -245,7 +278,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 
 		html += `
 			<div style="${card}">
-				<h4 style="margin-bottom:10px;">Sales Order</h4>
+				<h4 style="margin-bottom:10px;color:var(--text-color, inherit);">Sales Order</h4>
 				<table style="${table}">
 					<thead>
 						<tr>
@@ -296,29 +329,29 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 
 			html += `
 				<div style="${card}">
-					<h4 style="margin-bottom:10px;">${dept_name}</h4>
+					<h4 style="margin-bottom:10px;color:var(--text-color, inherit);">${dept_name}</h4>
 				`;
 
 			if (dept_name === "Interview") {
 				html += `
 	<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
 
-		<div style="display:flex;gap:8px;align-items:center;">
+		<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 
 			<input type="text" id="interview-search"
 				placeholder="Search company / role / status"
-				style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;" />
+				style="padding:6px 10px;border:1px solid var(--border-color, #e5e7eb);border-radius:6px;font-size:12px;background:var(--control-bg, #ffffff);color:var(--text-color);" />
 
-			From : <input type="date" id="interview-from" style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
-			To : <input type="date" id="interview-to" style="padding:6px;border:1px solid #e5e7eb;border-radius:6px;" />
+			From : <input type="date" id="interview-from" style="padding:6px;border:1px solid var(--border-color, #e5e7eb);border-radius:6px;background:var(--control-bg, #ffffff);color:var(--text-color);" />
+			To : <input type="date" id="interview-to" style="padding:6px;border:1px solid var(--border-color, #e5e7eb);border-radius:6px;background:var(--control-bg, #ffffff);color:var(--text-color);" />
 
 			<button id="interview-filter-btn"
-		style="padding:6px 12px;background:#260fea;color:#fff;border:none;border-radius:6px;">
+		style="padding:6px 12px;background:var(--primary, var(--text-color));color:#fff;border:none;border-radius:6px;cursor:pointer;">
 		Apply
 	</button>
 
 	<button id="interview-clear-btn"
-		style="padding:6px 12px;background:#e5e7eb;color:#334155;border:none;border-radius:6px;">
+		style="padding:6px 12px;background:var(--control-bg, #e5e7eb);color:var(--text-color, #334155);border:1px solid var(--border-color, transparent);border-radius:6px;cursor:pointer;">
 		Clear
 	</button>
 
@@ -326,7 +359,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 	</div>
 
 	<div id="interview-container"
-		style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f8fafc;">
+		style="max-height:400px;overflow-y:auto;border:1px solid var(--border-color, #e5e7eb);border-radius:8px;padding:10px;background:var(--subtle-fg, var(--bg-color, #f8fafc));">
 		
 		<div id="interview-list"></div>
 
@@ -337,7 +370,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 			} else {
 				records.forEach((dept, idx) => {
 					if (idx > 0) {
-						html += `<hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">`;
+						html += `<hr style="border:none;border-top:1px solid var(--border-color, #e2e8f0);margin:14px 0;">`;
 					}
 					html += `
 						<div style="margin-bottom:12px;">
@@ -348,15 +381,15 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 
 							${
 								dept.service_name
-									? `<p style="color:#64748b;">Service: ${render_link_or_text("Item", dept.service, dept.service_name)}</p>`
+									? `<p style="color:var(--text-muted, #64748b);">Service: ${render_link_or_text("Item", dept.service, dept.service_name)}</p>`
 									: ""
 							}
 
-							<p style="color:#64748b;">
+							<p style="color:var(--text-muted, #64748b);">
 								Status: ${get_department_status_badge(dept.status)}
 							</p>
 
-							<p style="color:#64748b;">
+							<p style="color:var(--text-muted, #64748b);">
 								Assigned: ${dept.assign_to || "-"}
 							</p>
 
@@ -364,7 +397,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 
 							${
 								dept.resume
-									? `<p><a href="${dept.resume}" target="_blank" style="color:#260fea;">View Resume</a></p>`
+									? `<p><a href="${dept.resume}" target="_blank" style="color:var(--primary, var(--text-color));">View Resume</a></p>`
 									: ""
 							}
 
@@ -457,7 +490,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 											<td style="${td}">${row.date || "-"}</td>
 											${is_resume ? "" : `<td style="${td}">${render_truncated_text(row.description, 80)}</td>`}
 											<td style="${td}">
-												${row.document ? `<a href="${row.document}" target="_blank" style="color:#260fea;">View</a>` : "-"}
+												${row.document ? `<a href="${row.document}" target="_blank" style="color:var(--primary, var(--text-color));">View</a>` : "-"}
 											</td>
 										</tr>
 									`,
@@ -591,7 +624,9 @@ window.viewFullFeedback = function (encodedText) {
 
 	dialog.innerHTML = `
 			<div style="
-				background:#fff;
+				background:var(--card-bg, #fff);
+				color:var(--text-color, #212529);
+				border:1px solid var(--border-color, transparent);
 				padding:24px;
 				border-radius:12px;
 				width:700px;
@@ -600,7 +635,7 @@ window.viewFullFeedback = function (encodedText) {
 				display:flex;
 				flex-direction:column;
 			">
-				<h3 style="margin-bottom:12px;">Full Feedback</h3>
+				<h3 style="margin-bottom:12px;color:var(--text-color, inherit);">Full Feedback</h3>
 
 				<div style="
 					overflow-y:auto;
@@ -608,7 +643,7 @@ window.viewFullFeedback = function (encodedText) {
 					margin-bottom:15px;
 				">
 					<p style="
-						color:#334155;
+						color:var(--text-color, #334155);
 						font-size:14px;
 						line-height:1.6;
 						word-break:break-word;
@@ -620,7 +655,7 @@ window.viewFullFeedback = function (encodedText) {
 					<button onclick="this.closest('[data-dialog]').remove()"
 						style="
 							padding:6px 14px;
-							background:#260fea;
+							background:var(--primary, var(--text-color));
 							color:#fff;
 							border:none;
 							border-radius:6px;
@@ -656,7 +691,7 @@ function render_interviews(data, append = false) {
 
 	if (!records.length) {
 		html += `
-			<div style="text-align:center;color:#64748b;padding:20px;">
+			<div style="text-align:center;color:var(--text-muted, #64748b);padding:20px;">
 				No interviews found
 			</div>
 		`;
@@ -664,7 +699,7 @@ function render_interviews(data, append = false) {
 		records.forEach((dept) => {
 			html += `
 			<div style="margin-top:10px;">
-				<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f9fafb;">
+				<div style="border:1px solid var(--border-color, #e5e7eb);border-radius:10px;padding:14px;background:var(--card-bg, var(--subtle-fg, #f9fafb));color:var(--text-color);">
 
 					<div style="display:flex;justify-content:space-between;margin-bottom:10px;">
 						${render_link_or_text("Interview", dept.id, dept.id, "font-weight:600;")}
@@ -672,20 +707,20 @@ function render_interviews(data, append = false) {
 						${get_interview_status_badge(dept.status)}
 					</div>
 
-					<div style="color:#64748b;margin-bottom:8px;">
+					<div style="color:var(--text-muted, #64748b);margin-bottom:8px;">
 						Company: ${dept.company || "-"} • Role: ${dept.role || "-"}
 					</div>
 
 					<table style="width:100%;border-collapse:collapse;font-size:13px;">
 		<thead>
 			<tr>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Round</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Type</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Added On</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Interview Date</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Time</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Status</th>
-				<th style="border-bottom:2px solid #cbd5f5;padding:8px;">Feedback</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Round</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Type</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Added On</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Interview Date</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Time</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Status</th>
+				<th style="border-bottom:2px solid var(--border-color, #cbd5f5);padding:8px;color:var(--text-muted, #475569);">Feedback</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -694,12 +729,12 @@ function render_interviews(data, append = false) {
 					? dept.interview_rounds_table
 							.map(
 								(r) => `
-					<tr style="border-bottom:1px solid #cbd5e1;">
+					<tr style="border-bottom:1px solid var(--border-color, #cbd5e1);color:var(--text-color);">
 						<td style="padding:8px;">
 						${r.round || "-"}
 						${
 							r.support
-								? `<span title="Support Taken" style="display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;cursor:default;">S</span>`
+								? `<span title="Support Taken" style="display:inline-block;margin-left:6px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:var(--bg-blue-subtle, #e0e7ff);color:var(--text-blue-subtle, #4338ca);font-size:10px;font-weight:700;cursor:default;">S</span>`
 								: ""
 						}
 						</td>
@@ -723,7 +758,7 @@ function render_interviews(data, append = false) {
 															
 																${shortText}...
 																<span 
-																	style="cursor:pointer;font-weight:500;"
+																	style="cursor:pointer;font-weight:500;color:var(--primary, var(--text-color));"
 																	onclick='viewFullFeedback("${encodeURIComponent(text)}")'
 																>
 																	view
@@ -740,7 +775,7 @@ function render_interviews(data, append = false) {
 				`,
 							)
 							.join("")
-					: `<tr><td colspan="7" style="text-align:center;padding:10px;">No rounds</td></tr>`
+					: `<tr><td colspan="7" style="text-align:center;padding:10px;color:var(--text-muted);">No rounds</td></tr>`
 			}
 		</tbody>
 	</table>
@@ -755,7 +790,7 @@ function render_interviews(data, append = false) {
 		if (meta && meta.offset + meta.limit < meta.total) {
 			$("#interview-load-more").html(`
 				<button id="load-more-interviews"
-					style="padding:8px 16px;border:none;background:#260fea;color:white;border-radius:6px;">
+					style="padding:8px 16px;border:none;background:var(--primary, var(--text-color));color:white;border-radius:6px;cursor:pointer;">
 					Load More
 				</button>
 			`);

@@ -10,8 +10,6 @@
   "assign_to",
   "column_break_ltxt",
   "status",
-  "candidate_marketing_email",
-  "password",
   "section_break_uvqv",
   "contact_references",
   "column_break_pqwh",
@@ -131,18 +129,6 @@
    "options": "Onboarding History"
   },
   {
-   "fieldname": "candidate_marketing_email",
-   "fieldtype": "Data",
-   "label": "Candidate Marketing Email",
-   "read_only": 1
-  },
-  {
-   "fieldname": "password",
-   "fieldtype": "Data",
-   "label": "Password",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_adia",
    "fieldtype": "Column Break",
    "read_only": 1
@@ -151,7 +137,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-02 09:34:58.601187",
+ "modified": "2026-09-11 17:17:30.105943",
  "modified_by": "Administrator",
  "module": "Onboarding",
  "name": "Onboardings",
