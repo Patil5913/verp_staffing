@@ -10,12 +10,6 @@
   "expiry_hours_of_agreement",
   "column_break_zgmd",
   "send_candidate_form_immediatly_after_sales_order_creation",
-  "cadidate_form_configuration_section",
-  "driving_licence",
-  "ead_card",
-  "column_break_aivw",
-  "old_resume",
-  "visa_copy",
   "interview_configuration_section",
   "default_interview_status",
   "section_break_oaag",
@@ -48,15 +42,6 @@
  ],
  "fields": [
   {
-   "fieldname": "cadidate_form_configuration_section",
-   "fieldtype": "Section Break",
-   "label": "Cadidate Form Configuration"
-  },
-  {
-   "fieldname": "column_break_aivw",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "0",
    "fieldname": "send_agreement_immediatly_after_sales_order_creation",
    "fieldtype": "Check",
@@ -78,30 +63,6 @@
    "label": "Immediate Triggerer Configuration"
   },
   {
-   "default": "0",
-   "fieldname": "driving_licence",
-   "fieldtype": "Check",
-   "label": "Is Driving Licence Mandatory"
-  },
-  {
-   "default": "0",
-   "fieldname": "ead_card",
-   "fieldtype": "Check",
-   "label": "Is EAD Card Mandatory"
-  },
-  {
-   "default": "0",
-   "fieldname": "old_resume",
-   "fieldtype": "Check",
-   "label": "Is Old Resume Mandatory"
-  },
-  {
-   "default": "0",
-   "fieldname": "visa_copy",
-   "fieldtype": "Check",
-   "label": "Is Visa Copy Mandatory"
-  },
-  {
    "fieldname": "candidate_form_fields_tab",
    "fieldtype": "Tab Break",
    "label": "Candidate Form Fields"
@@ -114,7 +75,6 @@
   {
    "fieldname": "candidate_details_form_fields",
    "fieldtype": "Long Text",
-   "hidden": 1,
    "label": "Candidate Details Form Fields"
   },
   {
@@ -195,7 +155,6 @@
   {
    "fieldname": "email_configuration_detail",
    "fieldtype": "JSON",
-   "hidden": 1,
    "label": "Email Configuration detail"
   },
   {
@@ -279,7 +238,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-24 17:13:02.525734",
+ "modified": "2026-09-11 15:00:09.499832",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "ERP Configuration",

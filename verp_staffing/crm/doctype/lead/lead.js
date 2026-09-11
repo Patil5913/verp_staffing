@@ -950,8 +950,8 @@ function setupLeadDetailForm(frm) {
 		if (override === "phone" && value) {
 			// Sanitize: Replace ( ) - and spaces with an empty string
 			const sanitized_phone = value.replace(/[()-\s]/g, "");
-			// Your original strict regex (+countrycode followed by 9 to 14 digits)
-			const phone_regex = /^\+[1-9]\d{9,14}$/;
+			// Your original strict regex (+countrycode followed by 10 digits)
+			const phone_regex = /^\+[1-9]\d{10}$/;
 
 			// Validate against the sanitized version
 			if (!phone_regex.test(sanitized_phone)) {
@@ -998,8 +998,8 @@ function setupLeadDetailForm(frm) {
 				// Sanitize: Replace ( ) - and spaces with an empty string
 				const sanitized_phone = value.replace(/[()-\s]/g, "");
 
-				// Your original strict regex (+countrycode followed by 9 to 14 digits)
-				const phone_regex = /^\+[1-9]\d{9,14}$/;
+				// Your original strict regex (+countrycode followed by 10 digits)
+				const phone_regex = /^\+[1-9]\d{10}$/;
 
 				// Validate against the sanitized version
 				if (!phone_regex.test(sanitized_phone)) {

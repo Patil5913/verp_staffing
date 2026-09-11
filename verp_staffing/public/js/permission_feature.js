@@ -887,7 +887,7 @@ ${tableWidgetHtml}
 				if (isPhoneField(fn)) {
 					// Sanitize: Replace ( ) - and spaces with an empty string
 					nv = nv.replace(/[()-\s]/g, "");
-					const phone_regex = /^\+[1-9]\d{9,14}$/;
+					const phone_regex = /^\+[1-9]\d{10}$/;
 					if (!phone_regex.test(nv.trim())) {
 						frappe.msgprint(
 							__(
@@ -1301,7 +1301,7 @@ function validate_phone(phone, label) {
 	if (!phone) {
 		frappe.throw(`${label} is required`);
 	}
-	const phone_regex = /^\+[1-9]\d{9,14}$/;
+	const phone_regex = /^\+[1-9]\d{10}$/;
 	if (!phone_regex.test(phone)) {
 		frappe.throw(`${label} must be in format +countrycode followed by numbers`);
 	}

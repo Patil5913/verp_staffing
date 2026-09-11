@@ -50,8 +50,8 @@ document.addEventListener(
 
 frappe.ready(async function () {
 	$(".navbar").hide();
-	disable_next_button()
-		document.querySelector(".discard-btn")?.remove();
+	disable_next_button();
+	document.querySelector(".discard-btn")?.remove();
 
 	function decodeToken(token) {
 		try {
@@ -171,7 +171,6 @@ frappe.ready(async function () {
 			frappe.web_form.set_value("signature_method", "Draw");
 		}
 
-
 		if (_otp_state !== "verified") {
 			if (typeof disable_next_button === "function") disable_next_button();
 		}
@@ -190,16 +189,21 @@ frappe.ready(async function () {
 			"i_confirm_my_identity_and_signing_this_document_intentionally",
 		];
 		const LDF_FIELDS = ["files_custom_html"];
+		let requiredFields = [];
 		if (!isAgreement) {
 			const res = await getCandidateFieldsFromSalesOrder(salesOrder);
 			candidateFields = res.fields || [];
+			requiredFields = res.required_fields || [];
 			const values = res.values || {};
 			const tableColumns = res.table_columns || {}; // 🔥
 
-			const needsDocConfig = candidateFields.some((f) => DOC_FIELDS.has(f));
-			if (needsDocConfig) {
-				await initRequiredLeadDocsConfig();
-			}
+			REQUIRED_LEAD_DOCS_CONFIG = {};
+			DOC_FIELDS.forEach((doc_fn) => {
+				if (candidateFields.includes(doc_fn)) {
+					REQUIRED_LEAD_DOCS_CONFIG[doc_fn] = requiredFields.includes(doc_fn) ? 1 : 0;
+				}
+			});
+
 			render_file_upload_buttons();
 
 			apply_prefill(values, tableColumns); // 🔥 pass tableColumns
@@ -253,6 +257,11 @@ frappe.ready(async function () {
 			allowed.forEach((fieldname) => {
 				if (frappe.web_form.fields_dict[fieldname]) {
 					frappe.web_form.set_df_property(fieldname, "hidden", 0);
+					if (requiredFields.includes(fieldname)) {
+						frappe.web_form.set_df_property(fieldname, "reqd", 1);
+					} else {
+						frappe.web_form.set_df_property(fieldname, "reqd", 0);
+					}
 					visibleFields.add(fieldname);
 				}
 			});
@@ -772,42 +781,52 @@ async function custom_submit_handler() {
 
 		if (shouldValidate("email", candidateFields)) {
 			let email = frappe.web_form.get_value("email");
-			if (!validate_email(email, "Email")) return false;
+			if (email && email.trim() && !validate_email(email.trim(), "Email")) return false;
 		}
 		if (shouldValidate("personal_linkedin", candidateFields)) {
 			let personal_linkedin = frappe.web_form.get_value("personal_linkedin");
-			const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
+			if (personal_linkedin && personal_linkedin.trim()) {
+				const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
 
-			if (!pattern.test(personal_linkedin)) {
-				frappe.msgprint(__("Please enter a valid LinkedIn profile URL."));
-				return false;
+				if (!pattern.test(personal_linkedin.trim())) {
+					frappe.msgprint(__("Please enter a valid LinkedIn profile URL."));
+					return false;
+				}
 			}
 		}
 		if (shouldValidate("marketing_linkedin", candidateFields)) {
 			let marketing_linkedin = frappe.web_form.get_value("marketing_linkedin");
-			const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
+			if (marketing_linkedin && marketing_linkedin.trim()) {
+				const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
 
-			if (!pattern.test(marketing_linkedin)) {
-				frappe.msgprint(__("Please enter a valid LinkedIn profile URL for marketing."));
-				return false;
+				if (!pattern.test(marketing_linkedin.trim())) {
+					frappe.msgprint(
+						__("Please enter a valid LinkedIn profile URL for marketing."),
+					);
+					return false;
+				}
 			}
 		}
 
 		if (shouldValidate("personal_phone_number", candidateFields)) {
 			let personal_phone = frappe.web_form.get_value("personal_phone_number");
-			personal_phone = personal_phone.replace(/[()-\s]/g, "");
-			if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
-			frappe.web_form.set_value("personal_phone_number", personal_phone);
+			if (personal_phone && personal_phone.trim()) {
+				personal_phone = personal_phone.replace(/[()-\s]/g, "");
+				if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
+				frappe.web_form.set_value("personal_phone_number", personal_phone);
+			}
 		}
 
 		if (shouldValidate("entry_date", candidateFields)) {
 			let entry_date = frappe.web_form.get_value("entry_date");
-			if (!validate_entry_date(entry_date)) return false;
+			if (entry_date && entry_date.trim() && !validate_entry_date(entry_date.trim()))
+				return false;
 		}
 
 		if (shouldValidate("ssn_digit", candidateFields)) {
 			let ssn_digit = frappe.web_form.get_value("ssn_digit");
-			if (!validate_ssn_digit(ssn_digit)) return false;
+			if (ssn_digit && ssn_digit.trim() && !validate_ssn_digit(ssn_digit.trim()))
+				return false;
 		}
 
 		if (shouldValidate("educational_details", candidateFields)) {
@@ -827,9 +846,11 @@ async function custom_submit_handler() {
 
 		if (shouldValidate("number_for_marketing", candidateFields)) {
 			let marketing_phone = frappe.web_form.get_value("number_for_marketing");
-			marketing_phone = marketing_phone.replace(/[()-\s]/g, "");
-			frappe.web_form.set_value("number_for_marketing", marketing_phone);
-			if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
+			if (marketing_phone && marketing_phone.trim()) {
+				marketing_phone = marketing_phone.replace(/[()-\s]/g, "");
+				frappe.web_form.set_value("number_for_marketing", marketing_phone);
+				if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
+			}
 		}
 	}
 
@@ -1417,8 +1438,11 @@ window.addEventListener("beforeunload", () => {
 });
 
 function validate_email(email, label) {
+	if (!email || !email.trim()) {
+		return true;
+	}
 	const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	if (!email_regex.test(email)) {
+	if (!email_regex.test(email.trim())) {
 		frappe.msgprint(`${label} is not a valid email address`);
 		return false;
 	}
@@ -1426,13 +1450,12 @@ function validate_email(email, label) {
 }
 
 function validate_phone(phone, label) {
-	if (!phone) {
-		frappe.msgprint(`${label} is required`);
-		return false;
+	if (!phone || !phone.trim()) {
+		return true;
 	}
 
 	phone = phone.trim();
-	const phone_regex = /^\+[1-9]\d{9,14}$/;
+	const phone_regex = /^\+[1-9]\d{10}$/;
 	if (!phone_regex.test(phone)) {
 		frappe.msgprint(`${label} must be in format +countrycode followed by numbers`);
 		return false;
@@ -1535,12 +1558,11 @@ function validate_address_history(table) {
 }
 
 function validate_entry_date(value) {
-	if (!value) {
-		frappe.msgprint("Entry Date Into USA/Canada is must required.");
-		return false;
+	if (!value || !value.trim()) {
+		return true;
 	}
 
-	if (value && !is_valid_mm_yyyy(value)) {
+	if (!is_valid_mm_yyyy(value.trim())) {
 		frappe.msgprint("Entry Date Into USA/Canada must be in MM-YYYY format.");
 		return false;
 	}
@@ -1548,12 +1570,11 @@ function validate_entry_date(value) {
 }
 
 function validate_ssn_digit(value) {
-	if (!value) {
-		frappe.msgprint("SSN (last 4 digits) is required.");
-		return false;
+	if (!value || !value.trim()) {
+		return true;
 	}
 
-	if (!/^\d{4}$/.test(value)) {
+	if (!/^\d{4}$/.test(value.trim())) {
 		frappe.msgprint("SSN must be exactly 4 digits.");
 		return false;
 	}
@@ -2119,25 +2140,6 @@ let label_map = {
 	driving_licence: "Driving Licence",
 	old_resume: "Old Resume",
 };
-
-async function initRequiredLeadDocsConfig() {
-	console.trace();
-	const r = await frappe.call({
-		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_erp_config_safe",
-	});
-
-	const doc = r.message || {};
-	REQUIRED_LEAD_DOCS_CONFIG["driving_licence"] = doc.driving_licence ?? 0;
-	REQUIRED_LEAD_DOCS_CONFIG["ead_card"] = doc.ead_card ?? 0;
-	REQUIRED_LEAD_DOCS_CONFIG["old_resume"] = doc.old_resume ?? 0;
-	REQUIRED_LEAD_DOCS_CONFIG["visa_copy"] = doc.visa_copy ?? 0;
-	// REQUIRED_LEAD_DOCS_CONFIG = {
-	// 	driving_licence: doc.driving_licence ?? 0,
-	// 	ead_card: doc.ead_card ?? 0,
-	// 	old_resume: doc.old_resume ?? 0,
-	// 	visa_copy: doc.visa_copy ?? 0,
-	// };
-}
 
 function validate_concerns() {
 	for (let concern of CONCERN_FIELDS) {

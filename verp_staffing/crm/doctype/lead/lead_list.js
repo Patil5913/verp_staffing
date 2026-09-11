@@ -114,8 +114,8 @@ function validate_phone(phone, label) {
 		frappe.throw(`${label} is required`);
 	}
 
-	// Your original strict regex (+countrycode followed by 9 to 14 digits)
-	const phone_regex = /^\+[1-9]\d{9,14}$/;
+	// Your original strict regex (+countrycode followed by 10 digits)
+	const phone_regex = /^\+[1-9]\d{10}$/;
 
 	// Validate against the sanitized version
 	if (!phone_regex.test(phone)) {

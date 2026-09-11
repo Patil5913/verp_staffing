@@ -459,10 +459,25 @@ def get_erp_config():
     service_config = {}
 
     for service, cfg in raw_service_config.items():
-        cfg = cfg or {}
+        if isinstance(cfg, list):
+            cfg = {"fields": cfg}
+        elif not isinstance(cfg, dict):
+            cfg = {}
+
+        raw_fields = cfg.get("fields", []) or []
+        norm_fields = []
+        for f in raw_fields:
+            if isinstance(f, str):
+                norm_fields.append({"field_name": f, "is_required": False})
+            elif isinstance(f, dict):
+                fname = f.get("field_name") or f.get("field") or f.get("fieldname")
+                if fname:
+                    norm_fields.append(
+                        {"field_name": fname, "is_required": bool(f.get("is_required"))}
+                    )
 
         service_config[service] = {
-            "fields": cfg.get("fields", []),
+            "fields": norm_fields,
             "is_agreement_required": bool(cfg.get("is_agreement_required")),
             "is_candidate_form_required": bool(cfg.get("is_candidate_form_required")),
         }

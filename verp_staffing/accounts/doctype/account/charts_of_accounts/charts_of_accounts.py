@@ -14,7 +14,6 @@ ACCOUNT_FIELDS = {
     "account_type",
     "root_type",
     "is_group",
-    "tax_rate",
     "account_currency",
 }
 
@@ -82,7 +81,6 @@ def create_charts(
             # local bindings (avoid repeated dict lookups)
             account_type = child.get("account_type")
             account_currency = child.get("account_currency") or default_currency
-            tax_rate = child.get("tax_rate")
 
             account_data = {
                 "doctype": "Account",
@@ -99,7 +97,6 @@ def create_charts(
                 "account_number": account_number,
                 "account_type": account_type,
                 "account_currency": account_currency,
-                "tax_rate": tax_rate,
             }
 
             account = frappe.get_doc(account_data)
@@ -167,7 +164,6 @@ def identify_is_group(child):
                 "account_type",
                 "root_type",
                 "is_group",
-                "tax_rate",
                 "account_number",
                 "account_currency",
             ]
@@ -286,7 +282,6 @@ def get_account_tree_from_existing_company(existing_company):
             "account_type",
             "is_group",
             "root_type",
-            "tax_rate",
             "account_number",
             "account_currency",
         ],
@@ -333,8 +328,6 @@ def build_account_tree(tree, parent, children_map):
             subtree["account_number"] = child.account_number
         if child.account_type:
             subtree["account_type"] = child.account_type
-        if child.tax_rate:
-            subtree["tax_rate"] = child.tax_rate
         if not parent:
             subtree["root_type"] = child.root_type
 

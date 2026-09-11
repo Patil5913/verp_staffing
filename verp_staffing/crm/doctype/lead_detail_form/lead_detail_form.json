@@ -115,7 +115,7 @@
    "description": "\n",
    "fieldname": "experience",
    "fieldtype": "Check",
-   "label": "Experience (Only if worked genuinely and related field and want to keep exp as it is.)"
+   "label": "Experience (Only if worked genuinely)"
   },
   {
    "fieldname": "number_for_marketing",
@@ -224,19 +224,22 @@
    "fieldname": "ead_card",
    "fieldtype": "Link",
    "label": "EAD Card",
-   "options": "File"
+   "options": "File",
+   "read_only": 1
   },
   {
    "fieldname": "driving_licence",
    "fieldtype": "Link",
    "label": "Driving Licence",
-   "options": "File"
+   "options": "File",
+   "read_only": 1
   },
   {
    "fieldname": "visa_copy",
    "fieldtype": "Link",
    "label": "Visa Copy",
-   "options": "File"
+   "options": "File",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_lgnl",
@@ -342,7 +345,8 @@
    "fieldname": "old_resume",
    "fieldtype": "Link",
    "label": "Old Resume",
-   "options": "File"
+   "options": "File",
+   "read_only": 1
   },
   {
    "fieldname": "agreement_html",
@@ -393,7 +397,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-03 17:59:40.312114",
+ "modified": "2026-09-11 15:42:54.068069",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
