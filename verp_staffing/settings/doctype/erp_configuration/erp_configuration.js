@@ -159,7 +159,7 @@ function render_email_configurator(frm) {
 	.custom-grid {
 		border: 1px solid var(--border-color);
 		border-radius: 6px;
-		background: var(--fg-color);
+		background: var(--card-bg, var(--fg-color));
 		margin-bottom: 0;
 		overflow: hidden;
 	}
@@ -168,7 +168,7 @@ function render_email_configurator(frm) {
 		border-collapse: collapse;
 	}
 	.custom-grid thead {
-		background: var(--subtle-accent);
+		background: var(--subtle-accent, var(--control-bg));
 		font-size: 12px;
 		color: var(--text-muted);
 	}
@@ -177,17 +177,19 @@ function render_email_configurator(frm) {
 		font-weight: 600;
 		border-bottom: 1px solid var(--border-color);
 		text-align: left;
+		color: var(--text-muted);
 	}
 	.custom-grid td {
 		padding: 6px 10px;
-		border-bottom: 1px solid var(--border-color-light);
+		border-bottom: 1px solid var(--border-color);
 		vertical-align: middle;
+		color: var(--text-color);
 	}
 	.custom-grid tbody tr:last-child td {
 		border-bottom: none;
 	}
 	.custom-grid tr:hover td {
-		background: var(--highlight-color);
+		background: var(--subtle-accent, var(--highlight-color));
 	}
 	.custom-grid .form-control {
 		border: none;
@@ -199,7 +201,7 @@ function render_email_configurator(frm) {
 		outline: none;
 	}
 	.custom-grid .form-control:focus {
-		background: var(--fg-color);
+		background: var(--card-bg, var(--fg-color));
 		border: 1px solid var(--border-color);
 		border-radius: 4px;
 	}
@@ -211,9 +213,9 @@ function render_email_configurator(frm) {
 		margin-top: 2px;
 	}
 	.grid-footer .btn-delete {
-		background: #e24c4c;
+		background: var(--red-500, #e24c4c);
 		color: #fff;
-		border: 1px solid #e24c4c;
+		border: 1px solid var(--red-500, #e24c4c);
 		padding: 3px 10px;
 		font-size: 12px;
 		border-radius: 5px;
@@ -221,11 +223,11 @@ function render_email_configurator(frm) {
 		cursor: pointer;
 	}
 	.grid-footer .btn-delete:hover {
-		background: #c0392b;
-		border-color: #c0392b;
+		background: var(--red-600, #c0392b);
+		border-color: var(--red-600, #c0392b);
 	}
 	.grid-footer .btn-add-row {
-		background: var(--fg-color);
+		background: var(--card-bg, var(--fg-color));
 		color: var(--text-color);
 		border: 1px solid var(--border-color);
 		padding: 3px 10px;
@@ -235,13 +237,14 @@ function render_email_configurator(frm) {
 		cursor: pointer;
 	}
 	.grid-footer .btn-add-row:hover {
-		background: var(--subtle-accent);
+		background: var(--subtle-accent, var(--control-bg));
 	}
 	.chip {
 		display: inline-flex;
 		align-items: center;
-		background: var(--gray-200);
+		background: var(--control-bg, var(--gray-200));
 		color: var(--text-color);
+		border: 1px solid var(--border-color);
 		padding: 2px 8px;
 		margin: 2px 2px 2px 0;
 		border-radius: 999px;
@@ -272,6 +275,21 @@ function render_email_configurator(frm) {
 		padding: 2px 4px;
 		outline: none;
 		max-width: 130px;
+	}
+	.type-select option {
+		background: var(--card-bg, var(--fg-color, #ffffff));
+		color: var(--text-color, #1e293b);
+	}
+	[data-theme="dark"] .type-select option,
+	.frappe-dark .type-select option {
+		background: var(--card-bg, #1c2128);
+		color: var(--text-color, #e2e8f0);
+	}
+	[data-theme="dark"] .chip,
+	.frappe-dark .chip {
+		background: var(--subtle-accent, var(--border-color, #2d3748));
+		color: var(--text-color, #e2e8f0);
+		border-color: var(--border-color, #4a5568);
 	}
 	.custom-grid input[type="checkbox"] {
 		transform: scale(0.9);
