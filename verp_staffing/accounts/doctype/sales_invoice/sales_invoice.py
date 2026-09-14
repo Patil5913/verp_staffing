@@ -783,20 +783,21 @@ def get_sales_invoice_gl_map(doc):
 
     # 2. Income (CR)
     for item in doc.items:
-        gl_map.append(
-            build_gl_entry(
-                account=item.income_account,
-                credit=item.amount,
-                company=doc.company,
-                transaction_currency=doc.currency,
-                exchange_rate=doc.conversion_rate,
-                posting_date=doc.posting_date,
-                voucher_type=doc.doctype,
-                voucher_no=doc.name,
-                against=doc.customer,
-                remarks="Income",
+        if item.amount > 0:
+            gl_map.append(
+                build_gl_entry(
+                    account=item.income_account,
+                    credit=item.amount,
+                    company=doc.company,
+                    transaction_currency=doc.currency,
+                    exchange_rate=doc.conversion_rate,
+                    posting_date=doc.posting_date,
+                    voucher_type=doc.doctype,
+                    voucher_no=doc.name,
+                    against=doc.customer,
+                    remarks="Income",
+                )
             )
-        )
 
     # 3. Taxes (CR)
     for tax in doc.taxes:

@@ -233,18 +233,19 @@ def get_purchase_invoice_gl_map(doc):
 
     # 2. Expense (DR)
     for item in doc.items:
-        gl_map.append(
-            build_gl_entry(
-                account=item.expense_account,
-                debit=item.amount,
-                company=doc.company,
-                posting_date=doc.posting_date,
-                voucher_type=doc.doctype,
-                voucher_no=doc.name,
-                against=doc.supplier,
-                remarks="Expense",
+        if item.amount > 0:
+            gl_map.append(
+                build_gl_entry(
+                    account=item.expense_account,
+                    debit=item.amount,
+                    company=doc.company,
+                    posting_date=doc.posting_date,
+                    voucher_type=doc.doctype,
+                    voucher_no=doc.name,
+                    against=doc.supplier,
+                    remarks="Expense",
+                )
             )
-        )
 
     # 3. Taxes (DR)
     for tax in doc.taxes:
