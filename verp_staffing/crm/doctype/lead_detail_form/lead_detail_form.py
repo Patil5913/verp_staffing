@@ -2057,10 +2057,14 @@ def request_new_agreement_link(sales_order, signer_email, agreementValue):
     return {"status": "ok"}
 
 
+import hashlib
 import random
+import secrets
 
 OTP_TTL = 300  # seconds — OTP validity window (5 minutes)
 VERIFIED_TTL = 86400  # seconds — how long "verified" state persists (1 day)
+VERIFICATION_KEY_TTL = 1800  # seconds — temporary verification session key (30 minutes)
+MAX_FAILED_OTP_ATTEMPTS = 5
 
 
 def _get_ttl(cache_key):
@@ -2079,11 +2083,54 @@ def _get_ttl(cache_key):
     return max(remaining, 0)
 
 
+def _get_cookie_name(token):
+    return "vk_" + hashlib.md5(str(token).encode("utf-8")).hexdigest()[:16]
+
+
+def validate_verification_key(token, verification_key=None):
+    """
+    Validates if a given verification_key is valid and unexpired for the session token.
+    Checks parameter, X-Verification-Key header, and HTTP Cookie.
+    """
+    if not token:
+        return False
+    token = str(token)
+    if (
+        not verification_key
+        and hasattr(frappe.local, "request")
+        and frappe.local.request
+    ):
+        verification_key = frappe.get_request_header("X-Verification-Key")
+        if not verification_key:
+            cookie_name = _get_cookie_name(token)
+            verification_key = frappe.request.cookies.get(cookie_name)
+    if not verification_key:
+        return False
+
+    v_cache_key = f"verification_key:{token}:{str(verification_key).strip()}"
+    data = frappe.cache().get_value(v_cache_key)
+    if not data or not isinstance(data, dict):
+        return False
+
+    if _get_ttl(v_cache_key) <= 0:
+        frappe.cache().delete_value(v_cache_key)
+        return False
+
+    # Check User-Agent fingerprint
+    ua = frappe.get_request_header("User-Agent") or "unknown"
+    ua_hash = hashlib.sha256(ua.encode("utf-8")).hexdigest()
+    if data.get("ua") and data.get("ua") != ua_hash:
+        return False
+
+    return True
+
+
 @frappe.whitelist(allow_guest=True)
-def get_otp_status(token):
+def get_otp_status(token, verification_key=None):
     """
     Returns the current authentication state for a session token.
-    Called on every page load to restore UI state without re-sending OTP.
+    Strictly requires client to provide a valid verification_key to be considered verified.
+    Does NOT return or issue verification keys.
 
     Returns:
         { state: "verified" }
@@ -2093,24 +2140,28 @@ def get_otp_status(token):
     if not token:
         return {"state": "idle"}
 
-    # Sanitise token — alphanumeric + _ only
     token = str(token)
 
-    verified_key = f"otp_verified:{token}"
-    cache_key = f"otp:{token}"
+    if (
+        not verification_key
+        and hasattr(frappe.local, "request")
+        and frappe.local.request
+    ):
+        cookie_name = _get_cookie_name(token)
+        verification_key = frappe.request.cookies.get(cookie_name)
 
-    # 1. Verified state has highest priority
-    if frappe.cache().get_value(verified_key):
+    # 1. Strictly check if client supplied a valid verification key
+    if verification_key and validate_verification_key(token, verification_key):
         return {"state": "verified"}
 
-    # 2. OTP exists — compute remaining TTL from our stored timestamp
+    # 2. Check if an OTP is currently pending
+    cache_key = f"otp:{token}"
     data = frappe.cache().get_value(cache_key)
     if data and isinstance(data, dict):
         ttl = _get_ttl(cache_key)
         if ttl > 0:
             return {"state": "otp_sent", "expires_in": ttl}
         else:
-            # OTP key exists but has expired — clean it up
             frappe.cache().delete_value(cache_key)
 
     return {"state": "idle"}
@@ -2120,36 +2171,32 @@ def get_otp_status(token):
 def send_otp(token, email):
     """
     Sends an OTP to the given email and stores it in cache keyed by token.
-    If an OTP already exists for this token, returns the remaining TTL instead
-    of sending a new one (prevents OTP spam).
-
-    Returns:
-        { status: "sent",         expires_in: 300 }
-        { status: "already_sent", expires_in: <remaining> }
+    If an OTP already exists for this token, returns the remaining TTL instead.
+    Resets failed attempts counter for a fresh OTP request.
     """
     if not token:
         frappe.throw("Missing token")
     if not email:
         frappe.throw("Missing email")
 
-    # Basic email format check
     if "@" not in str(email):
         frappe.throw("Invalid email address")
 
     token = str(token)
     cache_key = f"otp:{token}"
+    attempts_key = f"otp_attempts:{token}"
 
-    # Check if an OTP already exists and is still valid
     existing = frappe.cache().get_value(cache_key)
     if existing and isinstance(existing, dict):
         ttl = _get_ttl(cache_key)
         if ttl > 0:
             return {"status": "already_sent", "expires_in": ttl}
         else:
-            # Stale entry — remove it and send fresh
             frappe.cache().delete_value(cache_key)
 
-    # Generate a new 6-digit OTP
+    # Clear old failed attempt counter on fresh send
+    frappe.cache().delete_value(attempts_key)
+
     otp = random.randint(100000, 999999)
     expires_at = frappe.utils.now_datetime().timestamp() + OTP_TTL
 
@@ -2159,7 +2206,6 @@ def send_otp(token, email):
         expires_in_sec=OTP_TTL,
     )
 
-    # ─── Send the email ──────────────────────────────────────────────────────────
     try:
         subject = "Your Verification Code"
         message = (
@@ -2177,27 +2223,17 @@ def send_otp(token, email):
 
         if template:
             context = {"otp": otp}
-
-            subject = frappe.render_template(
-                template.subject,
-                context,
-            )
-
+            subject = frappe.render_template(template.subject, context)
             message = frappe.render_template(
-                template.response_html or template.response,
-                context,
+                template.response_html or template.response, context
             )
 
         frappe.sendmail(recipients=[email], subject=subject, message=message, now=True)
     except frappe.OutgoingEmailError as e:
-        # SMTP connection failed — email was never sent. Clean up and report.
         frappe.cache().delete_value(cache_key)
         frappe.log_error(title="OTP OutgoingEmailError", message=str(e))
         frappe.throw("Failed to send OTP email. Please check your email settings.")
     except Exception as e:
-        # Post-send or internal Frappe exception — email very likely already sent.
-        # Log for visibility but DO NOT delete cache or throw.
-        # Returning success here is intentional and correct.
         frappe.log_error(title="OTP sendmail non-fatal exception", message=str(e))
 
     return {"status": "sent", "expires_in": OTP_TTL}
@@ -2208,14 +2244,9 @@ def send_otp(token, email):
 def verify_otp(token, otp):
     """
     Verifies the submitted OTP against the cached value.
-    On success: deletes the OTP, stores a verified flag, returns details.
-    On failure: raises with a user-facing message (caught by safe_frappe_call).
-
-    Returns:
-        { status: "verified", verified_at: "...", ip: "...", user_agent: "..." }
-    Throws:
-        "OTP expired."   — if cache entry is missing or TTL elapsed
-        "Invalid OTP"    — if the code doesn't match
+    Enforces a maximum of 5 failed attempts before invalidating the OTP.
+    On success: generates a 30-minute verification_key saved in cache under
+    `verification_key:{token}:{key}`, returns key to client.
     """
     if not token:
         frappe.throw("Missing token")
@@ -2225,50 +2256,80 @@ def verify_otp(token, otp):
     token = str(token)
     otp = str(otp).strip()
     cache_key = f"otp:{token}"
-    verified_key = f"otp_verified:{token}"
+    attempts_key = f"otp_attempts:{token}"
 
-    # Already verified? Accept immediately (idempotent)
-    if frappe.cache().get_value(verified_key):
-        return {
-            "status": "verified",
-            "verified_at": frappe.utils.now(),
-        }
+    # Check failed attempts
+    attempts = frappe.cache().get_value(attempts_key) or 0
+    if attempts >= MAX_FAILED_OTP_ATTEMPTS:
+        frappe.cache().delete_value(cache_key)
+        frappe.cache().delete_value(attempts_key)
+        frappe.throw(
+            "Too many failed attempts.Please try refreshing page and request a new verification code."
+        )
 
     data = frappe.cache().get_value(cache_key)
-
     if not data or not isinstance(data, dict):
         frappe.throw("OTP expired.")
 
-    # Check TTL ourselves (belt-and-suspenders alongside Redis TTL)
     if _get_ttl(cache_key) <= 0:
         frappe.cache().delete_value(cache_key)
         frappe.throw("OTP expired.")
 
     if data.get("otp") != otp:
-        frappe.throw("Invalid OTP")
+        attempts += 1
+        frappe.cache().set_value(attempts_key, attempts, expires_in_sec=OTP_TTL)
+        if attempts >= MAX_FAILED_OTP_ATTEMPTS:
+            frappe.cache().delete_value(cache_key)
+            frappe.cache().delete_value(attempts_key)
+            frappe.throw(
+                "Too many failed attempts.Please try refreshing page and request a new verification code."
+            )
+        frappe.throw(
+            f"Invalid OTP. ({MAX_FAILED_OTP_ATTEMPTS - attempts} attempts remaining)"
+        )
 
-    # OTP is correct — single-use: delete immediately
+    # Success: clear single-use OTP & attempt counter
     frappe.cache().delete_value(cache_key)
+    frappe.cache().delete_value(attempts_key)
 
-    # Store verified flag for VERIFIED_TTL seconds (1 day by default)
+    # Generate 32-char verification key valid for 30 minutes
+    verification_key = secrets.token_urlsafe(32)
+    expires_at = frappe.utils.now_datetime().timestamp() + VERIFICATION_KEY_TTL
+
+    ua = frappe.get_request_header("User-Agent") or "unknown"
+    ua_hash = hashlib.sha256(ua.encode("utf-8")).hexdigest()
+
+    v_cache_key = f"verification_key:{token}:{verification_key}"
     frappe.cache().set_value(
-        verified_key,
-        True,
-        expires_in_sec=VERIFIED_TTL,
+        v_cache_key,
+        {
+            "key": verification_key,
+            "ua": ua_hash,
+            "_expires_at": expires_at,
+        },
+        expires_in_sec=VERIFICATION_KEY_TTL,
     )
+
+    # Set HTTP Cookie for server-side page renders
+    cookie_name = _get_cookie_name(token)
+    if hasattr(frappe.local, "cookie_manager") and frappe.local.cookie_manager:
+        frappe.local.cookie_manager.set_cookie(
+            cookie_name, verification_key, max_age=VERIFICATION_KEY_TTL
+        )
 
     ip = (
         frappe.get_request_header("X-Forwarded-For")
         or frappe.local.request.remote_addr
         or "unknown"
     )
-    user_agent = frappe.get_request_header("User-Agent") or "unknown"
 
     return {
         "status": "verified",
+        "verification_key": verification_key,
+        "expires_in": VERIFICATION_KEY_TTL,
         "verified_at": frappe.utils.now(),
         "ip": ip,
-        "user_agent": user_agent,
+        "user_agent": ua,
     }
 
 
@@ -2362,18 +2423,6 @@ def get_candidate_fields_from_sales_order(name, customer=None):
         "required_fields": list(required_fields),
         "values": values,
         "table_columns": table_columns,  # Pass to frontend
-    }
-
-
-@frappe.whitelist(allow_guest=True)
-def get_erp_config_safe():
-    return {
-        "driving_licence": frappe.db.get_single_value(
-            "ERP Configuration", "driving_licence"
-        ),
-        "ead_card": frappe.db.get_single_value("ERP Configuration", "ead_card"),
-        "old_resume": frappe.db.get_single_value("ERP Configuration", "old_resume"),
-        "visa_copy": frappe.db.get_single_value("ERP Configuration", "visa_copy"),
     }
 
 
