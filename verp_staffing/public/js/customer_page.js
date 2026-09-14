@@ -206,6 +206,9 @@ document.addEventListener("click", async function (e) {
 
 async function handle_logout() {
 	const t = new URLSearchParams(window.location.search).get("t");
+	if (t) {
+		sessionStorage.removeItem("customer_verification_key_" + t);
+	}
 
 	try {
 		await api_call("verp_staffing.utils.customer_page.logout_otp_web", {
@@ -311,16 +314,25 @@ async function api_call(method, args = {}) {
 
 	if (!res.ok || json.exc) {
 		console.error("[API ERROR]", method, json?.exc || res.statusText);
-		return null;
+		return {
+			_error: true,
+			message: json?._server_messages
+				? JSON.parse(json._server_messages)[0]
+				: json?.exc || res.statusText,
+		};
 	}
 
 	return json.message;
 }
 
 async function restore_otp_state() {
+	const currentToken = token || new URLSearchParams(window.location.search).get("t") || "";
+	const storedKey = sessionStorage.getItem("customer_verification_key_" + currentToken) || "";
 	const res = await fetch(
 		"/api/method/verp_staffing.utils.customer_page.get_otp_status_web?token=" +
-			encodeURIComponent(token),
+			encodeURIComponent(currentToken) +
+			"&verification_key=" +
+			encodeURIComponent(storedKey),
 		{
 			method: "GET",
 			credentials: "include",
@@ -341,29 +353,35 @@ async function restore_otp_state() {
 
 	if (state === "verified") {
 		apply_state("verified");
-	} else if (state === "otp_sent") {
-		if (expiresIn > 5) {
-			apply_state("otp_sent", {
-				seconds: expiresIn,
-				message: "📬 OTP already sent. Check your inbox.",
-				msgColor: "#007bff",
-			});
-		} else if (expiresIn === 0) {
-			apply_state("otp_sent", {
-				seconds: null, // null = skip timer entirely
-				message: "📬 OTP already sent. Enter the code below.",
-				msgColor: "#007bff",
-			});
-		} else {
-			// expiresIn is 1–5 s: about to expire; show expired immediately
-			apply_state("expired");
-		}
 	} else {
-		apply_state("idle");
+		if (storedKey) {
+			sessionStorage.removeItem("customer_verification_key_" + currentToken);
+		}
+		if (state === "otp_sent") {
+			if (expiresIn > 5) {
+				apply_state("otp_sent", {
+					seconds: expiresIn,
+					message: "📬 OTP already sent. Check your inbox.",
+					msgColor: "#007bff",
+				});
+			} else if (expiresIn === 0) {
+				apply_state("otp_sent", {
+					seconds: null, // null = skip timer entirely
+					message: "📬 OTP already sent. Enter the code below.",
+					msgColor: "#007bff",
+				});
+			} else {
+				// expiresIn is 1–5 s: about to expire; show expired immediately
+				apply_state("expired");
+			}
+		} else {
+			apply_state("idle");
+		}
 	}
 }
 
 async function handle_send_otp() {
+	const currentToken = token || new URLSearchParams(window.location.search).get("t") || "";
 	// Block re-entry
 	if (_otp_state === "otp_sent" || _otp_state === "sending" || _otp_state === "verified") return;
 
@@ -375,13 +393,13 @@ async function handle_send_otp() {
 	apply_state("sending");
 
 	const data = await api_call("verp_staffing.utils.customer_page.send_otp_web", {
-		token: token,
+		token: currentToken,
 		email: customerEmail,
 	});
 
-	if (!data) {
+	if (!data || data._error) {
 		apply_state("idle");
-		set_status("❌ Failed to send OTP. Please try again.", "red");
+		set_status("Failed to send OTP. Please try again.", "red");
 		return;
 	}
 
@@ -400,6 +418,7 @@ async function handle_send_otp() {
 }
 
 async function handle_verify_otp() {
+	const currentToken = token || new URLSearchParams(window.location.search).get("t") || "";
 	if (_otp_state !== "otp_sent") return;
 
 	const otpInput = document.getElementById("otp-input");
@@ -422,32 +441,49 @@ async function handle_verify_otp() {
 
 	try {
 		data = await api_call("verp_staffing.utils.customer_page.verify_otp_web", {
-			token: token,
+			token: currentToken,
 			otp: otp,
 		});
 	} catch (e) {
 		console.error("verify error", e);
 	}
 
-	if (!data) {
+	if (!data || data._error) {
 		if (verifyBtn) {
 			verifyBtn.disabled = false;
 			verifyBtn.textContent = "Verify OTP";
 		}
-		set_status("❌ Verification failed. Please try again.", "red");
+		const errMsg = typeof data?.message === "string" ? data.message : "";
+		if (errMsg.toLowerCase().includes("too many failed attempts")) {
+			apply_state("expired");
+			if (otpInput) otpInput.value = "";
+			set_status(
+				"Too many failed attempts. Please try refreshing page and request a new verification code.",
+				"red",
+			);
+		} else {
+			set_status(`Verification failed. Please try again.`, "red");
+		}
 		return;
 	}
 
 	if (data.status === "verified") {
+		if (data.verification_key && currentToken) {
+			sessionStorage.setItem(
+				"customer_verification_key_" + currentToken,
+				data.verification_key,
+			);
+		}
 		apply_state("verified");
-		document.getElementById("otp-box").style.display = "none";
+		const otpBox = document.getElementById("otp-box");
+		if (otpBox) otpBox.style.display = "none";
 		location.reload();
 	} else {
 		if (verifyBtn) {
 			verifyBtn.disabled = false;
 			verifyBtn.textContent = "Verify OTP";
 		}
-		set_status("❌ Invalid or expired OTP.", "red");
+		set_status("Invalid or expired OTP.", "red");
 	}
 }
 

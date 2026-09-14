@@ -1028,9 +1028,10 @@ function bind_otp_events() {
 }
 
 async function restore_otp_state() {
+	const storedKey = sessionStorage.getItem("lead_verification_key_" + token);
 	const data = await safe_frappe_call({
-		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_otp_status", // 🔧 update path
-		args: { token: token },
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_otp_status",
+		args: { token: token, verification_key: storedKey },
 	});
 
 	if (!data) {
@@ -1043,25 +1044,30 @@ async function restore_otp_state() {
 
 	if (state === "verified") {
 		apply_state("verified");
-	} else if (state === "otp_sent") {
-		if (expiresIn > 5) {
-			apply_state("otp_sent", {
-				seconds: expiresIn,
-				message: "📬 OTP already sent. Check your inbox.",
-				msgColor: "#007bff",
-			});
-		} else if (expiresIn === 0) {
-			apply_state("otp_sent", {
-				seconds: null, // null = skip timer entirely
-				message: "📬 OTP already sent. Enter the code below.",
-				msgColor: "#007bff",
-			});
-		} else {
-			// expiresIn is 1–5 s: about to expire; show expired immediately
-			apply_state("expired");
-		}
 	} else {
-		apply_state("idle");
+		if (storedKey) {
+			sessionStorage.removeItem("lead_verification_key_" + token);
+		}
+		if (state === "otp_sent") {
+			if (expiresIn > 5) {
+				apply_state("otp_sent", {
+					seconds: expiresIn,
+					message: "📬 OTP already sent. Check your inbox.",
+					msgColor: "#007bff",
+				});
+			} else if (expiresIn === 0) {
+				apply_state("otp_sent", {
+					seconds: null, // null = skip timer entirely
+					message: "📬 OTP already sent. Enter the code below.",
+					msgColor: "#007bff",
+				});
+			} else {
+				// expiresIn is 1–5 s: about to expire; show expired immediately
+				apply_state("expired");
+			}
+		} else {
+			apply_state("idle");
+		}
 	}
 }
 
@@ -1077,13 +1083,13 @@ async function handle_send_otp() {
 	apply_state("sending");
 
 	const data = await safe_frappe_call({
-		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.send_otp", // 🔧 update path
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.send_otp",
 		args: { token: token, email: customerEmail },
 	});
 
 	if (!data) {
 		apply_state("idle");
-		set_status("❌ Failed to send OTP. Please try again.", "red");
+		set_status("Failed to send OTP. Please try again.", "red");
 		return;
 	}
 
@@ -1121,7 +1127,7 @@ async function handle_verify_otp() {
 	set_status("", "");
 
 	const data = await safe_frappe_call({
-		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.verify_otp", // 🔧 update path
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.verify_otp",
 		args: { token: token, otp: otp },
 		return_error: true,
 	});
@@ -1133,10 +1139,17 @@ async function handle_verify_otp() {
 		}
 
 		const msg = (data.message || "").toLowerCase();
-		if (msg.includes("expired")) {
+		if (msg.includes("too many failed attempts")) {
+			apply_state("expired");
+			if (otpInput) otpInput.value = "";
+			set_status(
+				"Too many failed attempts.Please try refreshing page and request a new verification code.",
+				"red",
+			);
+		} else if (msg.includes("expired")) {
 			apply_state("expired");
 		} else if (msg.includes("invalid")) {
-			set_status("❌ Wrong OTP. Please try again.", "red");
+			set_status(`Wrong OTP. Please try again.`, "red");
 			if (otpInput) {
 				otpInput.style.borderColor = "#dc3545";
 				setTimeout(function () {
@@ -1144,12 +1157,15 @@ async function handle_verify_otp() {
 				}, 1500);
 			}
 		} else {
-			set_status("❌ Verification failed. Please try again.", "red");
+			set_status("Verification failed. Please try again.", "red");
 		}
 		return;
 	}
 
 	if (data && data.status === "verified") {
+		if (data.verification_key) {
+			sessionStorage.setItem("lead_verification_key_" + token, data.verification_key);
+		}
 		apply_state("verified");
 
 		if (isAgreement) {
@@ -1164,7 +1180,7 @@ async function handle_verify_otp() {
 			verifyBtn.disabled = false;
 			verifyBtn.textContent = "Verify OTP";
 		}
-		set_status("❌ Unexpected response. Please try again.", "red");
+		set_status("Unexpected response. Please try again.", "red");
 	}
 }
 
