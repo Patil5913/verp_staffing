@@ -841,7 +841,7 @@ def _append_prorated_items(si, so, payment_term):
 
     allocated = 0
     for row in items[:-1]:
-        share = int(round(target * flt(row.amount) / total_items_amount))
+        share = int(round((target * flt(row.amount) / total_items_amount) - 0.5))
         allocated += share
         si.append(
             "items",

@@ -118,7 +118,6 @@ def generate_form_url(
         currentDate = frappe.utils.format_datetime(
             datetime_string=now_datetime(), format_string="YYYYMMDDHHmmss"
         )
-        frappe.errprint(f"current Date: {currentDate}")
         expiry = get_expiry_timestamp() if ia else None
         data = {
             "so": sales_order,
