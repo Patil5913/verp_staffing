@@ -30,6 +30,11 @@ frappe.setup.utils.bind_email_events = function (slide) {
 };
 
 frappe.setup.on("before_load", function () {
+	// Core only skips the built-in "Create User" slide 
+	frappe.setup.slides = (frappe.setup.slides || []).filter(
+		(s) => s.name !== "user"
+	);
+
 	frappe.setup.add_slide({
 		name: "organization_setup",
 		title: __("Organization Setup"),
