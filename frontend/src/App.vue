@@ -1,10 +1,23 @@
 <template>
   <FrappeUIProvider>
-    <AppShell />
+    <component :is="layout">
+      <router-view />
+    </component>
   </FrappeUIProvider>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { FrappeUIProvider } from 'frappe-ui'
 import AppShell from './layouts/AppShell.vue'
+import BlankLayout from './layouts/BlankLayout.vue'
+
+const route = useRoute()
+
+// Public routes (currently just Login) get no navbar/sidebar chrome, and
+// crucially never mount AppShell — which is what was firing the
+// permission-filtered sidebar fetch (and its "failed to load" toast) for a
+// Guest on the login page.
+const layout = computed(() => (route.meta.public ? BlankLayout : AppShell))
 </script>

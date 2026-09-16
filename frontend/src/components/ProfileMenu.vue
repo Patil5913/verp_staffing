@@ -61,7 +61,7 @@ async function logout() {
   try {
     await call('logout')
   } finally {
-    window.location.href = '/login'
+    window.location.href = '/verp/login'
   }
 }
 

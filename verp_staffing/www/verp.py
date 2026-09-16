@@ -1,12 +1,43 @@
+from urllib.parse import quote
+
 import frappe
+from frappe.www.login import sanitize_redirect
 
 no_cache = 1
+
+LOGIN_PATH = "/verp/login"
 
 
 def get_context(context):
 	frappe.db.commit()  # nosemgrep
+
+	# Auth is entirely Frappe's: frappe.session.user reflects the real
+	# session cookie on every request (this page is no_cache=1, so it's
+	# never served stale), and Frappe's own `login` endpoint is what issues
+	# that session. We only branch on it here — nothing here validates
+	# credentials or manages sessions itself.
+	if frappe.session.user == "Guest":
+		if not _is_login_path():
+			frappe.local.flags.redirect_location = _login_url_with_redirect()
+			raise frappe.Redirect
+	elif _is_login_path():
+		redirect_to = sanitize_redirect(frappe.local.request.args.get("redirect-to")) or "/verp"
+		frappe.local.flags.redirect_location = redirect_to
+		raise frappe.Redirect
+
 	context.boot = get_boot()
 	return context
+
+
+def _is_login_path() -> bool:
+	return frappe.local.request.path.rstrip("/") == LOGIN_PATH
+
+
+def _login_url_with_redirect() -> str:
+	path = frappe.local.request.path
+	query = frappe.local.request.query_string.decode()
+	current = f"{path}?{query}" if query else path
+	return f"{LOGIN_PATH}?redirect-to={quote(current)}"
 
 
 def get_boot():
@@ -26,5 +57,9 @@ def get_boot():
 			"user": user,
 			"full_name": full_name or user,
 			"user_image": user_image,
+			# UX-only: lets the frontend show/hide things per role. Actual
+			# enforcement is Frappe's DocPerm/has_permission on every API
+			# call, not this list.
+			"roles": frappe.get_roles(user) if user and user != "Guest" else [],
 		}
 	)
