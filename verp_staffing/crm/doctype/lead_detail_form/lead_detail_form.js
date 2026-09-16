@@ -1,4 +1,10 @@
 frappe.ui.form.on("Lead Detail Form", {
+	onload(frm){
+		frm.set_df_property("visa_copy", "read_only", 1);
+		frm.set_df_property("ead_card", "read_only", 1);
+		frm.set_df_property("driving_licence", "read_only", 1);
+		frm.set_df_property("old_resume", "read_only", 1);
+	},
 	refresh(frm) {
 		update_parent_skills(frm);
 		frm.toggle_enable("reference_table", false);

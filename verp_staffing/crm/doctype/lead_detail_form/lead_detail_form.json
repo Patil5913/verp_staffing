@@ -226,22 +226,19 @@
    "fieldname": "ead_card",
    "fieldtype": "Link",
    "label": "EAD Card",
-   "options": "File",
-   "read_only": 1
+   "options": "File"
   },
   {
    "fieldname": "driving_licence",
    "fieldtype": "Link",
    "label": "Driving Licence",
-   "options": "File",
-   "read_only": 1
+   "options": "File"
   },
   {
    "fieldname": "visa_copy",
    "fieldtype": "Link",
    "label": "Visa Copy",
-   "options": "File",
-   "read_only": 1
+   "options": "File"
   },
   {
    "fieldname": "column_break_lgnl",
@@ -347,8 +344,7 @@
    "fieldname": "old_resume",
    "fieldtype": "Link",
    "label": "Old Resume",
-   "options": "File",
-   "read_only": 1
+   "options": "File"
   },
   {
    "fieldname": "agreement_html",
@@ -410,7 +406,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-11 16:10:21.100748",
+ "modified": "2026-09-15 21:19:47.578110",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
