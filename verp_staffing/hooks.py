@@ -21,6 +21,13 @@ add_to_apps_screen = [
 	}
 ]
 
+# frappe-ui frontend (Vue3 + Tailwind), served at /verp.
+# Client-side (vue-router) routes under /verp/* need to resolve to the same
+# SPA shell so deep links and page refreshes don't 404.
+website_route_rules = [
+	{"from_route": "/verp/<path:app_path>", "to_route": "verp"},
+]
+
 website_context = {
 	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
 	"splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",

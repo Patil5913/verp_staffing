@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/assets/verp_staffing/images/vrugle-icon_logo.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vrugle Staffing</title>
+    <script>
+      // Set data-theme before first paint so there's no flash of the wrong
+      // theme. Kept in sync at runtime by src/composables/useTheme.js.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('verp-theme')
+          var pref = ['system', 'light', 'dark'].indexOf(stored) > -1 ? stored : 'system'
+          var resolved =
+            pref === 'system'
+              ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+              : pref
+          document.documentElement.setAttribute('data-theme', resolved)
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

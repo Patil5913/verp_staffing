@@ -1145,22 +1145,22 @@ def after_install():
     # set_default_system_settings()
 
 
-def seed_master_sidebar_config():
+def get_default_sidebar_config():
     """
-    Create default sidebar configuration for Master user
-    if it doesn't already exist.
+    Canonical default sidebar tree: seeded onto the "Master" Sidebar
+    Master record, and used as the template new per-user sidebars are
+    customized from (see verp_staffing.utils.sidebar).
     """
-
-    SIDEBAR_CONFIG = [
+    return [
         {
-            "key": "setup",
-            "label": "Setup Guide",
-            "icon": "icon-getting-started",
+            "key": "dashboard",
+            "label": "Dashboard",
+            "icon": "icon-dashboard",
             "parent_type": "type_3",
             "shortcut": "",
-            "roles": ["_show_setup"],
-            "route": "/app/setup",
-            "link_type": "page",
+            "roles": [],
+            "route": "/verp",
+            "link_type": "page"
         },
         {
             "key": "staffing-master",
@@ -1178,7 +1178,7 @@ def seed_master_sidebar_config():
                     "doctype": "Email Domain",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "email-account",
@@ -1188,7 +1188,7 @@ def seed_master_sidebar_config():
                     "doctype": "Email Account",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "department",
@@ -1198,7 +1198,7 @@ def seed_master_sidebar_config():
                     "doctype": "Department",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "hierarchy",
@@ -1208,7 +1208,7 @@ def seed_master_sidebar_config():
                     "doctype": "Hierarchy",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "erp-configuration",
@@ -1218,7 +1218,7 @@ def seed_master_sidebar_config():
                     "doctype": "ERP Configuration",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "pdf-agreement-template",
@@ -1228,9 +1228,9 @@ def seed_master_sidebar_config():
                     "doctype": "Pdf Agreement Template",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "users",
@@ -1248,7 +1248,7 @@ def seed_master_sidebar_config():
                     "doctype": "User",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "employee",
@@ -1258,7 +1258,7 @@ def seed_master_sidebar_config():
                     "doctype": "Employee",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "outsource",
@@ -1268,7 +1268,7 @@ def seed_master_sidebar_config():
                     "doctype": "Outsource",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "role",
@@ -1278,7 +1278,7 @@ def seed_master_sidebar_config():
                     "doctype": "Role",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "role-permissions-manager",
@@ -1287,9 +1287,12 @@ def seed_master_sidebar_config():
                     "route": "/app/permission-manager",
                     "icon": "icon-assign",
                     "shortcut": "",
-                    "roles": ["System Manager", "_show_role_permission_manager"],
-                },
-            ],
+                    "roles": [
+                        "System Manager",
+                        "_show_role_permission_manager"
+                    ]
+                }
+            ]
         },
         {
             "key": "email-inbox",
@@ -1299,7 +1302,7 @@ def seed_master_sidebar_config():
             "shortcut": "",
             "roles": [],
             "route": "/app/email-inbox",
-            "link_type": "page",
+            "link_type": "page"
         },
         {
             "key": "lead",
@@ -1310,7 +1313,7 @@ def seed_master_sidebar_config():
             "roles": [],
             "route": "/app/lead",
             "link_type": "doctype",
-            "doctype": "Lead",
+            "doctype": "Lead"
         },
         {
             "key": "sales",
@@ -1328,7 +1331,7 @@ def seed_master_sidebar_config():
                     "doctype": "Opportunity",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "customer",
@@ -1338,9 +1341,9 @@ def seed_master_sidebar_config():
                     "doctype": "Customer",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "technical",
@@ -1358,7 +1361,7 @@ def seed_master_sidebar_config():
                     "doctype": "Resume",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "ruc",
@@ -1368,7 +1371,7 @@ def seed_master_sidebar_config():
                     "doctype": "RUC",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "jdc",
@@ -1378,7 +1381,7 @@ def seed_master_sidebar_config():
                     "doctype": "JDC",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "cover-letter",
@@ -1388,7 +1391,7 @@ def seed_master_sidebar_config():
                     "doctype": "Cover Letter",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "training",
@@ -1398,7 +1401,7 @@ def seed_master_sidebar_config():
                     "doctype": "Training",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "interview_support",
@@ -1408,7 +1411,7 @@ def seed_master_sidebar_config():
                     "doctype": "Interview Support",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "technical-other-services",
@@ -1418,9 +1421,9 @@ def seed_master_sidebar_config():
                     "doctype": "Technical Other Services",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "marketings",
@@ -1438,7 +1441,7 @@ def seed_master_sidebar_config():
                     "doctype": "Marketing",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "interview",
@@ -1448,7 +1451,7 @@ def seed_master_sidebar_config():
                     "doctype": "Interview",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "marketing-other-services",
@@ -1458,9 +1461,9 @@ def seed_master_sidebar_config():
                     "doctype": "Marketing Other Services",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "cr",
@@ -1471,7 +1474,7 @@ def seed_master_sidebar_config():
             "roles": [],
             "route": "/app/cr",
             "link_type": "doctype",
-            "doctype": "CR",
+            "doctype": "CR"
         },
         {
             "key": "onboardings",
@@ -1482,7 +1485,7 @@ def seed_master_sidebar_config():
             "roles": [],
             "route": "/app/onboardings",
             "link_type": "doctype",
-            "doctype": "Onboardings",
+            "doctype": "Onboardings"
         },
         {
             "key": "accounts-master",
@@ -1500,7 +1503,7 @@ def seed_master_sidebar_config():
                     "doctype": "Company",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "fiscal-year",
@@ -1510,7 +1513,7 @@ def seed_master_sidebar_config():
                     "doctype": "Fiscal Year",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "accounts-settings",
@@ -1520,9 +1523,9 @@ def seed_master_sidebar_config():
                     "doctype": "Accounts Settings",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "pending-pe-requests",
@@ -1530,9 +1533,12 @@ def seed_master_sidebar_config():
             "icon": "icon-accounting",
             "parent_type": "type_3",
             "shortcut": "",
-            "roles": ["System Manager", "_show_accounting"],
+            "roles": [
+                "System Manager",
+                "_show_accounting"
+            ],
             "route": "/app/pending-pe-requests",
-            "link_type": "page",
+            "link_type": "page"
         },
         {
             "key": "coa",
@@ -1540,9 +1546,12 @@ def seed_master_sidebar_config():
             "icon": "icon-accounting",
             "parent_type": "type_3",
             "shortcut": "",
-            "roles": ["System Manager", "_show_accounting"],
+            "roles": [
+                "System Manager",
+                "_show_accounting"
+            ],
             "route": "/app/account/view/tree",
-            "link_type": "page",
+            "link_type": "page"
         },
         {
             "key": "accounting",
@@ -1560,7 +1569,7 @@ def seed_master_sidebar_config():
                     "doctype": "Account",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "bank",
@@ -1570,7 +1579,7 @@ def seed_master_sidebar_config():
                     "doctype": "Bank",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "bank-account",
@@ -1580,7 +1589,7 @@ def seed_master_sidebar_config():
                     "doctype": "Bank Account",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "journal-entry",
@@ -1590,7 +1599,7 @@ def seed_master_sidebar_config():
                     "doctype": "Journal Entry",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "payment-entry",
@@ -1600,7 +1609,7 @@ def seed_master_sidebar_config():
                     "doctype": "Payment Entry",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "purchase-invoice",
@@ -1610,7 +1619,7 @@ def seed_master_sidebar_config():
                     "doctype": "Purchase Invoice",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "sales-invoice",
@@ -1620,7 +1629,7 @@ def seed_master_sidebar_config():
                     "doctype": "Sales Invoice",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "sales-order",
@@ -1630,7 +1639,7 @@ def seed_master_sidebar_config():
                     "doctype": "Sales Order",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "subscription",
@@ -1640,7 +1649,7 @@ def seed_master_sidebar_config():
                     "doctype": "Subscription",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "subscription-plan",
@@ -1650,7 +1659,7 @@ def seed_master_sidebar_config():
                     "doctype": "Subscription Plan",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "purchase-order",
@@ -1660,7 +1669,7 @@ def seed_master_sidebar_config():
                     "doctype": "Purchase Order",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "supplier",
@@ -1670,9 +1679,9 @@ def seed_master_sidebar_config():
                     "doctype": "Supplier",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "other-services",
@@ -1683,7 +1692,7 @@ def seed_master_sidebar_config():
             "roles": [],
             "route": "/app/other-services",
             "link_type": "doctype",
-            "doctype": "Other Services",
+            "doctype": "Other Services"
         },
         {
             "key": "e-sign",
@@ -1694,7 +1703,7 @@ def seed_master_sidebar_config():
             "roles": [],
             "route": "/app/e-sign",
             "link_type": "doctype",
-            "doctype": "E Sign",
+            "doctype": "E Sign"
         },
         {
             "key": "items",
@@ -1712,7 +1721,7 @@ def seed_master_sidebar_config():
                     "doctype": "Item",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "item-category",
@@ -1722,7 +1731,7 @@ def seed_master_sidebar_config():
                     "doctype": "Item Category",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "uom",
@@ -1732,9 +1741,9 @@ def seed_master_sidebar_config():
                     "doctype": "UOM",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
         {
             "key": "reports",
@@ -1751,7 +1760,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Call%20Details",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "future-interviews-per-customer",
@@ -1760,7 +1769,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Future%20Interviews%20Per%20Customer",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "general-ledger",
@@ -1769,7 +1778,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/General%20Ledger",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "interview-target-report",
@@ -1778,7 +1787,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Interview%20Target%20Report",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "interviews-per-customer",
@@ -1787,7 +1796,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Interviews%20Per%20Customer",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "lead-conversion-funnel",
@@ -1796,7 +1805,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Lead%20Conversion%20Funnel",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "lead-details",
@@ -1805,7 +1814,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Lead%20Details",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "lead-per-employee",
@@ -1814,7 +1823,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Lead%20Per%20Employee",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "profiles-per-recruiter",
@@ -1823,7 +1832,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Profiles%20Per%20Recruiter",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "profit-and-loss-statement",
@@ -1832,7 +1841,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Profit%20and%20Loss%20Statement",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "revenue-of-employee",
@@ -1841,7 +1850,7 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Revenue%20Of%20Employee",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
+                    "roles": []
                 },
                 {
                     "key": "balance-sheet",
@@ -1850,11 +1859,30 @@ def seed_master_sidebar_config():
                     "route": "/app/query-report/Balance%20Sheet",
                     "icon": "icon-report",
                     "shortcut": "",
-                    "roles": [],
-                },
-            ],
+                    "roles": []
+                }
+            ]
         },
+        {
+            "key": "setup",
+            "label": "Setup Guide",
+            "icon": "icon-getting-started",
+            "parent_type": "type_3",
+            "shortcut": "",
+            "roles": [
+                "_show_setup"
+            ],
+            "route": "/app/setup",
+            "link_type": "page"
+        }
     ]
+
+
+def seed_master_sidebar_config():
+    """
+    Create default sidebar configuration for Master user
+    if it doesn't already exist.
+    """
 
     if frappe.db.exists("Sidebar Master", {"sidebar_owner": "Master"}):
         return
@@ -1863,7 +1891,7 @@ def seed_master_sidebar_config():
         {
             "doctype": "Sidebar Master",
             "sidebar_owner": "Master",
-            "config_json": json.dumps(SIDEBAR_CONFIG),
+            "config_json": json.dumps(get_default_sidebar_config()),
         }
     )
 

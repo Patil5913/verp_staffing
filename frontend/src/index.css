@@ -1,0 +1,39 @@
+@import 'frappe-ui/style.css';
+
+:root {
+  --app-bg: #f6f8fb;
+  --app-panel: #ffffff;
+  --app-panel-2: #f0f3f8;
+  --app-border: #dee4ed;
+  --app-text: #0b1220;
+  --app-text-muted: #5b6474;
+  --app-primary: #0057e5;
+  --app-primary-hover: #0051d6;
+  --app-primary-tint: rgba(0, 87, 229, 0.08);
+}
+
+[data-theme='dark'] {
+  --app-bg: #0b1019;
+  --app-panel: #111722;
+  --app-panel-2: #171f2b;
+  --app-border: #253041;
+  --app-text: #eaf0fb;
+  --app-text-muted: #93a2bd;
+  --app-primary: #3381ff;
+  --app-primary-hover: #7aadff;
+  --app-primary-tint: rgba(51, 129, 255, 0.16);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
