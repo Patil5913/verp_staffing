@@ -12,6 +12,50 @@ const routes = [
     name: 'Home',
     component: () => import('@/pages/Home.vue'),
   },
+  {
+    // Matches the routes verp_staffing.utils.sidebar._frontend_route
+    // generates for "doctype"-kind sidebar items (the vast majority).
+    path: '/list/:doctype',
+    name: 'DocList',
+    component: () => import('@/pages/DocListPage.vue'),
+  },
+  {
+    // Single doctypes (ERP Configuration, Accounts Settings) — old desk UI
+    // jumps straight to the one record's edit form, never a list.
+    path: '/settings/:doctype',
+    name: 'SettingsForm',
+    component: () => import('@/pages/SettingsFormPage.vue'),
+  },
+  {
+    path: '/report/:reportName',
+    name: 'Report',
+    component: () => import('@/pages/ReportPage.vue'),
+  },
+  {
+    path: '/tree/:doctype',
+    name: 'Tree',
+    component: () => import('@/pages/TreePage.vue'),
+  },
+  {
+    path: '/permission-manager',
+    name: 'PermissionManager',
+    component: () => import('@/pages/PermissionManager.vue'),
+  },
+  {
+    path: '/pending-pe-requests',
+    name: 'PendingPERequests',
+    component: () => import('@/pages/PendingPERequests.vue'),
+  },
+  {
+    path: '/setup',
+    name: 'SetupGuide',
+    component: () => import('@/pages/SetupGuide.vue'),
+  },
+  {
+    path: '/email-inbox',
+    name: 'EmailInbox',
+    component: () => import('@/pages/EmailInbox.vue'),
+  },
 ]
 
 const router = createRouter({

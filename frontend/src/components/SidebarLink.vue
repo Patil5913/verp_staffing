@@ -1,7 +1,7 @@
 <template>
   <component
     :is="isInternal ? 'router-link' : 'a'"
-    v-bind="isInternal ? { to: route } : { href: route }"
+    v-bind="isInternal ? { to: internalTo } : { href: route }"
     class="relative flex h-[34px] items-center gap-2.5 rounded-md px-2.5 text-p-sm transition-colors"
     :class="[
       nested ? 'ml-[19px]' : '',
@@ -45,4 +45,11 @@ const props = defineProps({
 // everything else still points at the classic desk (/app/...) and needs a
 // full browser navigation.
 const isInternal = computed(() => props.route?.startsWith('/verp'))
+
+// vue-router's `to` is resolved against the router's own path space, which
+// already excludes the `history` base ('/verp' — see router.js); router-link
+// re-adds it when building the actual href. Passing the full `/verp/...`
+// route straight through would resolve to no route at all and link to a
+// doubled "/verp/verp/..." href.
+const internalTo = computed(() => props.route.replace(/^\/verp/, '') || '/')
 </script>

@@ -58,7 +58,9 @@ function onLogoClick(e) {
   if (!target) return
   e.preventDefault()
   if (target.startsWith('/verp')) {
-    router.push(target)
+    // router's path space excludes the '/verp' history base (see
+    // SidebarLink.vue) — pushing the full route would double it up.
+    router.push(target.replace(/^\/verp/, '') || '/')
   } else {
     window.location.href = target
   }

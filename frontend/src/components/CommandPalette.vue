@@ -116,7 +116,9 @@ function select(index) {
   if (!item?.route) return
   open.value = false
   if (item.route.startsWith('/verp')) {
-    router.push(item.route)
+    // router's path space excludes the '/verp' history base (see
+    // SidebarLink.vue) — pushing the full route would double it up.
+    router.push(item.route.replace(/^\/verp/, '') || '/')
   } else {
     window.location.href = item.route
   }
