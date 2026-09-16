@@ -15,6 +15,14 @@ body.verp-protected code {
 	user-select: text;
 }
 
+.col.layout-main-section-wrapper {
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+	height: calc(100vh - var(--page-head-height, 60px) - 60px) !important;
+	max-height: calc(100vh - var(--page-head-height, 60px) - 60px) !important;
+	overflow-y: scroll !important;
+}
+
 /* Blur when window loses focus */
 body.verp-blur .main-section,
 body.verp-blur .layout-main-section {
@@ -394,11 +402,15 @@ body.verp-protected::after {
 /* ─────────────────────────────────────────────
    3. SIDEBAR COLUMN — sticky, independent scroll
    ───────────────────────────────────────────── */
+.layout-side-section::-webkit-scrollbar {
+	display: none;
+}
 .layout-side-section {
 	position: sticky !important;
 	top: 0 !important;
-	height: 100vh !important;
-	max-height: 100vh !important;
+	height: calc(100vh - var(--page-head-height, 60px) - 60px) !important;
+	max-height: calc(100vh - var(--page-head-height, 60px) - 60px) !important;
+	overflow-y: scroll !important;
 	overflow: hidden !important;
 	align-self: flex-start !important;
 	z-index: 10;
