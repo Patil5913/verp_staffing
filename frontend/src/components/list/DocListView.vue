@@ -68,6 +68,15 @@
 
       <div class="flex items-center justify-end gap-1">
         <Button
+          v-if="canDelete && selected.size"
+          variant="outline"
+          theme="red"
+          icon-left="trash-2"
+          @click="confirmBulkDelete"
+        >
+          Delete ({{ selected.size }})
+        </Button>
+        <Button
           v-if="isAdmin"
           variant="ghost"
           icon="settings"
@@ -117,6 +126,9 @@
           <table v-if="rows.length" class="doc-table w-full table-fixed border-collapse">
             <thead>
               <tr>
+                <th v-if="canDelete" class="sticky top-0 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
+                  <Checkbox :model-value="allSelected" @click.stop @update:model-value="toggleSelectAll" />
+                </th>
                 <th
                   v-for="column in columns"
                   :key="column.key"
@@ -132,10 +144,23 @@
                     />
                   </span>
                 </th>
+                <th v-if="canDelete" class="sticky top-0 h-11 w-12 border-b border-app-border bg-app-panel-2 px-2" />
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in rows" :key="row.name" class="hover:bg-app-panel-2">
+              <tr
+                v-for="row in rows"
+                :key="row.name"
+                class="cursor-pointer hover:bg-app-panel-2"
+                @click="openRow(row)"
+              >
+                <td v-if="canDelete" class="h-11 w-10 border-b border-app-border px-3" @click.stop>
+                  <Checkbox
+                    :model-value="selected.has(row.name)"
+                    @click.stop
+                    @update:model-value="toggleSelectRow(row.name)"
+                  />
+                </td>
                 <td
                   v-for="column in columns"
                   :key="column.key"
@@ -148,6 +173,13 @@
                     size="md"
                   />
                   <span v-else class="truncate">{{ row[column.key] }}</span>
+                </td>
+                <td v-if="canDelete" class="h-11 w-12 border-b border-app-border px-2 text-center" @click.stop>
+                  <Dropdown :options="rowActions(row)" placement="left">
+                    <template #default="{ open }">
+                      <Button variant="ghost" icon="more-horizontal" :class="open ? 'bg-app-panel-2' : ''" />
+                    </template>
+                  </Dropdown>
                 </td>
               </tr>
             </tbody>
@@ -173,6 +205,9 @@
         @update:model-value="setPageLength(Number($event))"
         class="!w-20"
       />
+      <span class="text-p-sm text-app-text-muted">
+        {{ totalCount }} record{{ totalCount === 1 ? '' : 's' }}
+      </span>
       <Pagination :page="page" :page-count="pageCount" @update:page="setPage" />
     </div>
 
@@ -185,15 +220,33 @@
       :columns-customized="columnsCustomized"
       @saved="onColumnsSaved"
     />
+
+    <Dialog
+      v-model="showDeleteDialog"
+      :options="{
+        title: pendingDelete.length > 1 ? `Delete ${pendingDelete.length} records?` : 'Delete this record?',
+        message: `This permanently deletes ${pendingDelete.length > 1 ? 'these records' : 'this record'}. This can't be undone.`,
+        icon: { name: 'trash-2', appearance: 'danger' },
+      }"
+    >
+      <template #actions>
+        <Button variant="solid" theme="red" icon-left="trash-2" :loading="deleting" @click="onConfirmDelete">
+          Delete
+        </Button>
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { Badge, Button, FeatherIcon, FormControl, LoadingIndicator, Popover, TextInput } from 'frappe-ui'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { Badge, Button, Checkbox, Dialog, Dropdown, FeatherIcon, FormControl, LoadingIndicator, Popover, TextInput } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
+import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
+import { notify } from '@/utils/common/notify'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
 import Pagination from './Pagination.vue'
 import StateBanner from '../common/StateBanner.vue'
@@ -202,11 +255,18 @@ const props = defineProps({
   doctype: { type: String, required: true },
 })
 
+const router = useRouter()
+
+function openRow(row) {
+  router.push({ name: 'DocDetail', params: { doctype: props.doctype, name: row.name } })
+}
+
 const {
   meta,
   docs,
   page,
   pageCount,
+  totalCount,
   pageLength,
   searchText,
   sortField,
@@ -303,6 +363,76 @@ const rows = computed(() =>
     return displayRow
   }),
 )
+
+// Row selection + delete (single-row via the action menu, or bulk via the
+// header checkbox) — both funnel through the same confirm dialog and the
+// same delete_docs call, list_view.py returns per-name success/failure so a
+// permission-restricted row in a bulk selection doesn't silently vanish.
+const canDelete = computed(() => Boolean(meta.resource.data?.perms?.delete))
+
+const selected = ref(new Set())
+
+// Selection is scoped to the current page's rows — reset whenever the
+// visible page changes so stale names from a previous page can't linger.
+watch(rows, () => (selected.value = new Set()))
+
+const allSelected = computed(() => rows.value.length > 0 && rows.value.every((row) => selected.value.has(row.name)))
+
+function toggleSelectAll() {
+  selected.value = allSelected.value ? new Set() : new Set(rows.value.map((row) => row.name))
+}
+
+function toggleSelectRow(name) {
+  const next = new Set(selected.value)
+  if (next.has(name)) next.delete(name)
+  else next.add(name)
+  selected.value = next
+}
+
+function rowActions(row) {
+  return [
+    {
+      label: 'Delete',
+      icon: 'trash-2',
+      theme: 'red',
+      onClick: () => confirmDelete([row.name]),
+    },
+  ]
+}
+
+const showDeleteDialog = ref(false)
+const pendingDelete = ref([])
+
+function confirmDelete(names) {
+  pendingDelete.value = names
+  showDeleteDialog.value = true
+}
+
+function confirmBulkDelete() {
+  confirmDelete([...selected.value])
+}
+
+const deleteResource = useResource({
+  url: 'verp_staffing.utils.list_view.delete_docs',
+})
+const deleting = computed(() => deleteResource.isLoading)
+
+async function onConfirmDelete() {
+  const names = pendingDelete.value
+  const result = await deleteResource.resource.submit({ doctype: props.doctype, names })
+  if (!result) return // request itself failed; useResource already toasted it
+
+  showDeleteDialog.value = false
+  selected.value = new Set()
+
+  if (result.deleted.length) {
+    notify.success(`Deleted ${result.deleted.length} record${result.deleted.length > 1 ? 's' : ''}.`)
+  }
+  if (result.failed.length) {
+    notify.error(result.failed.map((f) => f.error).join('\n'))
+  }
+  refresh()
+}
 </script>
 
 <style scoped>

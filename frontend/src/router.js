@@ -63,6 +63,14 @@ const routes = [
     component: () => import('@/pages/TreePage.vue'),
   },
   {
+    // A record's detail/form view, e.g. /verp/Lead/CRM-LEAD-00001. Ranks
+    // below /:doctype/view/tree since vue-router 4 always prefers a
+    // matching static segment ("view") over this route's dynamic :name.
+    path: '/:doctype/:name',
+    name: 'DocDetail',
+    component: () => import('@/pages/DocDetailPage.vue'),
+  },
+  {
     // Catches anything left unmatched, e.g. /:doctype/view/<unbuilt-view>
     // or a stale/mistyped multi-segment path. Must stay last: vue-router 4
     // ranks a param-with-regex path (this one) below every other pattern.

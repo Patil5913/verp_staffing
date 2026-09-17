@@ -66,6 +66,7 @@
         <Button
           variant="outline"
           theme="red"
+          icon-left="rotate-ccw"
           :disabled="!columnsCustomized"
           :loading="saving.loading && isResetting"
           @click="onReset"
@@ -73,10 +74,11 @@
           Reset to default
         </Button>
         <div class="flex gap-2">
-          <Button variant="outline" @click="isOpen = false">Cancel</Button>
+          <Button variant="outline" icon-left="x" @click="isOpen = false">Cancel</Button>
           <Button
             variant="solid"
-            :disabled="!selected.length"
+            icon-left="save"
+            :disabled="!selected.length || !isDirty"
             :loading="saving.loading && !isResetting"
             @click="onSave"
           >
@@ -114,6 +116,7 @@ const isOpen = computed({
 const selected = ref([])
 const available = ref([])
 const isResetting = ref(false)
+const initialOrder = ref([])
 
 // Re-hydrated from the current meta every time the dialog opens, so it
 // always starts from what's actually on screen rather than stale state
@@ -127,8 +130,17 @@ watch(
     available.value = props.fields
       .filter((f) => !selectedNames.has(f.fieldname))
       .map((f) => ({ ...f }))
+    initialOrder.value = selected.value.map((f) => f.fieldname)
   },
 )
+
+// Dims Save until the column set/order actually differs from what's saved
+// — dragging columns around back to their original order shouldn't leave
+// Save looking actionable.
+const isDirty = computed(() => {
+  const current = selected.value.map((f) => f.fieldname)
+  return current.length !== initialOrder.value.length || current.some((f, i) => f !== initialOrder.value[i])
+})
 
 function removeColumn(element) {
   selected.value = selected.value.filter((f) => f.fieldname !== element.fieldname)

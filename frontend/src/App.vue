@@ -3,6 +3,7 @@
     <component :is="layout">
       <router-view />
     </component>
+    <UnsavedChangesDialog />
   </FrappeUIProvider>
 </template>
 
@@ -12,6 +13,7 @@ import { useRoute } from 'vue-router'
 import { FrappeUIProvider } from 'frappe-ui'
 import AppShell from './layouts/AppShell.vue'
 import BlankLayout from './layouts/BlankLayout.vue'
+import UnsavedChangesDialog from './components/common/UnsavedChangesDialog.vue'
 
 const route = useRoute()
 

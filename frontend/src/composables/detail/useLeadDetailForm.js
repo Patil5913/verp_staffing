@@ -1,0 +1,58 @@
+import { computed, reactive, ref, watch } from 'vue'
+import { useResource } from '@/composables/list/useResource'
+import { notify } from '@/utils/common/notify'
+
+// The Lead's linked "Lead Detail Form" record (candidate-facing fields:
+// education, experience, visa status, etc.), scoped to whatever fields the
+// Administrator has exposed for Lead — see verp_staffing.utils.detail_view.
+// Mirrors useDocDetail's shape so LeadExtras.vue can reuse
+// FieldControl/ChildTableField the same way DocDetailView.vue does.
+export function useLeadDetailForm(leadName) {
+  const detail = useResource({
+    url: 'verp_staffing.utils.detail_view.get_lead_detail_view',
+    makeParams: () => ({ lead_name: leadName.value }),
+    auto: true,
+  })
+
+  const exists = computed(() => !!detail.resource.data?.exists)
+  const fields = computed(() => detail.resource.data?.fields || [])
+  const tables = computed(() => detail.resource.data?.tables || [])
+  const canWrite = computed(() => !!detail.resource.data?.perms?.write)
+
+  const values = reactive({})
+  const snapshot = ref('')
+
+  // Shared by the initial load and by a successful save — save_lead_detail_view
+  // returns the same {values, tables, ...} shape get_lead_detail_view does,
+  // so re-snapshotting off of either keeps isDirty accurate without a
+  // separate reload() round-trip after every save.
+  function applyData(data) {
+    if (!data?.exists) return
+    Object.keys(values).forEach((k) => delete values[k])
+    Object.assign(values, data.values)
+    for (const table of data.tables || []) {
+      values[table.fieldname] = table.rows || []
+    }
+    snapshot.value = JSON.stringify(values)
+  }
+
+  watch(() => detail.resource.data, applyData, { immediate: true })
+
+  const isDirty = computed(() => JSON.stringify(values) !== snapshot.value)
+
+  const save = useResource({
+    url: 'verp_staffing.utils.detail_view.save_lead_detail_view',
+    onSuccess(data) {
+      detail.resource.setData(data)
+      applyData(data)
+      notify.success('Lead details saved.')
+    },
+  })
+
+  async function submit() {
+    const result = await save.resource.submit({ lead_name: leadName.value, values: { ...values } })
+    return !!result
+  }
+
+  return { detail, exists, fields, tables, values, canWrite, isDirty, save, submit }
+}

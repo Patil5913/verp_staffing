@@ -13,15 +13,15 @@
 }
 
 [data-theme='dark'] {
-  --app-bg: #0b1019;
-  --app-panel: #111722;
-  --app-panel-2: #171f2b;
-  --app-border: #253041;
+  --app-bg: #0a0e16;
+  --app-panel: #131a26;
+  --app-panel-2: #1a2230;
+  --app-border: #2b3648;
   --app-text: #eaf0fb;
-  --app-text-muted: #93a2bd;
-  --app-primary: #3381ff;
+  --app-text-muted: #96a5c0;
+  --app-primary: #4c8fff;
   --app-primary-hover: #7aadff;
-  --app-primary-tint: rgba(51, 129, 255, 0.16);
+  --app-primary-tint: rgba(76, 143, 255, 0.16);
 }
 
 html,
@@ -36,4 +36,20 @@ body {
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
+}
+
+/* Tailwind's default shadow-* utilities use a black-based rgba shadow —
+   nearly invisible against a dark panel on a dark background. Give panels
+   a touch of contrast (a top highlight + a slightly stronger drop shadow)
+   in dark mode so cards still read as elevated. */
+[data-theme='dark'] .shadow-sm {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 1px 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .shadow-xl {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+    0 12px 24px -8px rgba(0, 0, 0, 0.6);
 }

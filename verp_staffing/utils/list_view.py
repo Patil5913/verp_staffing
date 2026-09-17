@@ -239,6 +239,28 @@ def set_list_view_columns(doctype, fields):
 
 
 @frappe.whitelist()
+def delete_docs(doctype, names):
+    """Deletes one or more records — backs both the list view's per-row
+    action menu and its checkbox-driven bulk delete. `frappe.delete_doc`
+    already enforces delete permission per document, so a row a user can't
+    delete (e.g. permission-restricted by a User Permission) fails on its
+    own instead of blocking the rest of the batch.
+    """
+    names = frappe.parse_json(names) if isinstance(names, str) else (names or [])
+
+    deleted = []
+    failed = []
+    for name in names:
+        try:
+            frappe.delete_doc(doctype, name)
+            deleted.append(name)
+        except Exception as e:
+            failed.append({"name": name, "error": str(e)})
+
+    return {"deleted": deleted, "failed": failed}
+
+
+@frappe.whitelist()
 def get_settings_meta(doctype):
     """Field metadata + current values for a Single doctype's settings form.
 
