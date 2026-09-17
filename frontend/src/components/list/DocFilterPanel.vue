@@ -1,61 +1,33 @@
 <template>
-  <NestedPopover>
-    <template #target>
-      <Button>
-        <template #prefix><FeatherIcon name="filter" class="h-4 w-4" /></template>
-        Filter
-        <template v-if="rows.length" #suffix>
-          <div
-            class="flex h-5 w-5 items-center justify-center rounded bg-surface-gray-7 text-2xs font-medium text-ink-white"
-          >
-            {{ rows.length }}
-          </div>
-        </template>
-      </Button>
-    </template>
-    <template #body>
-      <div class="my-2 rounded-lg border border-app-border bg-app-panel shadow-xl">
-        <div class="flex min-w-[480px] flex-col gap-3 p-3">
-          <div v-if="!rows.length" class="px-1 py-2 text-p-base text-app-text-muted">
-            No filters yet — add one below.
-          </div>
-          <DocFilterRow
-            v-for="(row, i) in rows"
-            :key="row.key"
-            :filter="row"
-            :docfields="docfields"
-            :first="i === 0"
-            @remove="removeRow(i)"
-          />
+  <div class="flex min-w-0 shrink-0 items-center gap-2 overflow-x-auto">
+    <FilterChip
+      v-for="(row, i) in rows"
+      :key="row.key"
+      :filter="row"
+      :docfields="docfields"
+      @remove="removeRow(i)"
+    />
 
-          <div class="flex items-center justify-between gap-2 border-t border-app-border pt-2">
-            <Autocomplete
-              value=""
-              :options="addableFieldOptions"
-              placeholder="Filter by..."
-              @change="(option) => addRow(option.value)"
-            >
-              <template #target="{ togglePopover }">
-                <Button variant="ghost" @click="togglePopover">
-                  <template #prefix><FeatherIcon name="plus" class="h-4 w-4" /></template>
-                  Add filter
-                </Button>
-              </template>
-            </Autocomplete>
-            <Button v-if="rows.length" variant="ghost" @click="rows = []">
-              Clear all
-            </Button>
-          </div>
-        </div>
-      </div>
-    </template>
-  </NestedPopover>
+    <Autocomplete
+      value=""
+      :options="addableFieldOptions"
+      placeholder="Filter by..."
+      @change="(option) => addRow(option.value)"
+    >
+      <template #target="{ togglePopover }">
+        <Button variant="outline" @click="togglePopover">
+          <template #prefix><FeatherIcon name="filter" class="h-4 w-4" /></template>
+          Filter
+        </Button>
+      </template>
+    </Autocomplete>
+  </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Autocomplete, Button, FeatherIcon, NestedPopover } from 'frappe-ui'
-import DocFilterRow from './DocFilterRow.vue'
+import { Autocomplete, Button, FeatherIcon } from 'frappe-ui'
+import FilterChip from './FilterChip.vue'
 import { applyOperatorChange, getDefaultOperator, isFilterableField } from '@/utils/list/filterOperators'
 
 const props = defineProps({

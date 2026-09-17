@@ -1,8 +1,5 @@
 <template>
-  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8">
-    <h1 class="text-2xl font-semibold text-app-text">{{ doctype }}</h1>
-    <DocListView :key="doctype" :doctype="doctype" />
-  </div>
+  <DocListView :key="doctype" :doctype="doctype" class="h-full" />
 </template>
 
 <script setup>

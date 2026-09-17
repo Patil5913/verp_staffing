@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { debounce } from 'frappe-ui'
 import { useResource } from './useResource'
 
-const PAGE_LENGTH = 10
+const DEFAULT_PAGE_LENGTH = 15
 
 // Orchestrates a generic doctype list view on top of useResource: field/
 // filter metadata (backed by verp_staffing.utils.list_view), the filter
@@ -27,6 +27,7 @@ export function useDocList(doctype) {
   })
 
   const page = ref(1)
+  const pageLength = ref(DEFAULT_PAGE_LENGTH)
   const filters = ref({}) // filter panel's own shape: { fieldname: [operator, value] }
   const searchText = ref('')
   const sortField = ref('modified')
@@ -67,8 +68,8 @@ export function useDocList(doctype) {
       fields: fieldsToFetch.value,
       filters: combinedFilters.value,
       order_by: orderBy.value,
-      limit_start: (page.value - 1) * PAGE_LENGTH,
-      limit_page_length: PAGE_LENGTH,
+      limit_start: (page.value - 1) * pageLength.value,
+      limit_page_length: pageLength.value,
     }),
   })
 
@@ -79,7 +80,7 @@ export function useDocList(doctype) {
   })
 
   const totalCount = computed(() => count.resource.data || 0)
-  const pageCount = computed(() => Math.max(1, Math.ceil(totalCount.value / PAGE_LENGTH)))
+  const pageCount = computed(() => Math.max(1, Math.ceil(totalCount.value / pageLength.value)))
 
   // Guards against the setup-time watchers below firing before the
   // doctype's meta (and therefore fieldsToFetch) has loaded once.
@@ -116,6 +117,10 @@ export function useDocList(doctype) {
     if (ready) docs.resource.submit()
   })
 
+  watch(pageLength, () => {
+    if (ready) refetchAll()
+  })
+
   const debouncedSearch = debounce(() => {
     if (searchText.value.trim()) {
       search.resource.submit()
@@ -128,6 +133,11 @@ export function useDocList(doctype) {
 
   function setPage(value) {
     page.value = value
+  }
+
+  function setPageLength(value) {
+    pageLength.value = value
+    page.value = 1
   }
 
   function toggleSortOrder() {
@@ -150,7 +160,7 @@ export function useDocList(doctype) {
     page,
     pageCount,
     totalCount,
-    pageLength: PAGE_LENGTH,
+    pageLength,
     filters,
     searchText,
     // `search` is a reactive() object (see useResource.js), so `search.isLoading`
@@ -161,6 +171,7 @@ export function useDocList(doctype) {
     sortField,
     sortOrder,
     setPage,
+    setPageLength,
     toggleSortOrder,
     clearFilters,
     refresh,

@@ -138,3 +138,43 @@ export function toUiOperator(operator, value) {
   if (operator === 'is') return `is:${value}`
   return operator
 }
+
+const OPERATOR_PHRASES = {
+  '=': 'is',
+  '!=': 'is not',
+  like: 'contains',
+  'not like': "doesn't contain",
+  in: 'is any of',
+  'not in': 'is none of',
+  '>': '>',
+  '<': '<',
+  '>=': '≥',
+  '<=': '≤',
+  between: 'between',
+}
+
+function describeFilterValue(field, operator, value) {
+  if (operator === 'is') return value === 'set' ? 'is set' : 'is not set'
+  if (operator === 'between') {
+    const [a, b] = value || []
+    return `${a || '?'} – ${b || '?'}`
+  }
+  if (field.fieldtype === 'Check') return value == '1' ? 'Yes' : 'No'
+  if (operator === 'in' || operator === 'not in') {
+    const list = Array.isArray(value)
+      ? value
+      : String(value || '').split(',').map((v) => v.trim()).filter(Boolean)
+    return list.join(', ')
+  }
+  return value === '' || value == null ? '...' : String(value)
+}
+
+// One-line human summary of a filter row, e.g. "Status is Open" or
+// "Modified between 2024-01-01 – 2024-02-01" — used by the filter chip bar
+// so each active filter is readable without opening its editor.
+export function describeFilter(filter) {
+  const { field, operator } = filter
+  if (operator === 'is') return `${field.label} ${describeFilterValue(field, operator, filter.value)}`
+  const phrase = OPERATOR_PHRASES[operator] || operator
+  return `${field.label} ${phrase} ${describeFilterValue(field, operator, filter.value)}`
+}

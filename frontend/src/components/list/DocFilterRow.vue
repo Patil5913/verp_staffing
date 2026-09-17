@@ -1,102 +1,74 @@
 <template>
-  <div class="flex items-start justify-between gap-2">
-    <div class="flex flex-1 flex-wrap items-center gap-2">
-      <div class="w-10 shrink-0 pt-1.5 text-end text-p-base text-app-text-muted">
-        {{ first ? 'Where' : 'And' }}
-      </div>
+  <div class="flex flex-col gap-2">
+    <Autocomplete
+      :value="filter.fieldname"
+      :options="fieldOptions"
+      placeholder="Filter by..."
+      @change="onFieldChange"
+    />
 
-      <div class="min-w-[140px] flex-1">
-        <Autocomplete
-          :value="filter.fieldname"
-          :options="fieldOptions"
-          placeholder="Filter by..."
-          @change="onFieldChange"
-        />
-      </div>
+    <FormControl
+      type="select"
+      :model-value="uiOperator"
+      :options="operatorOptions"
+      @update:model-value="onOperatorChange"
+    />
 
-      <div class="w-36 shrink-0">
-        <FormControl
-          type="select"
-          :model-value="uiOperator"
-          :options="operatorOptions"
-          @update:model-value="onOperatorChange"
-        />
-      </div>
+    <template v-if="valueKind === 'none'" />
 
-      <div class="min-w-[160px] flex-1">
-        <template v-if="valueKind === 'none'" />
+    <FormControl
+      v-else-if="valueKind === 'check'"
+      type="select"
+      :model-value="filter.value"
+      :options="[{ label: 'Yes', value: '1' }, { label: 'No', value: '0' }]"
+      @update:model-value="filter.value = $event"
+    />
 
-        <FormControl
-          v-else-if="valueKind === 'check'"
-          type="select"
-          :model-value="filter.value"
-          :options="[{ label: 'Yes', value: '1' }, { label: 'No', value: '0' }]"
-          @update:model-value="filter.value = $event"
-        />
+    <FormControl
+      v-else-if="valueKind === 'select'"
+      type="select"
+      :model-value="filter.value"
+      :options="selectOptions"
+      @update:model-value="filter.value = $event"
+    />
 
-        <FormControl
-          v-else-if="valueKind === 'select'"
-          type="select"
-          :model-value="filter.value"
-          :options="selectOptions"
-          @update:model-value="filter.value = $event"
-        />
+    <Autocomplete
+      v-else-if="valueKind === 'link'"
+      :value="filter.value"
+      :options="linkSearch.options.value"
+      placeholder="Search..."
+      @update:query="linkSearch.search"
+      @change="(option) => (filter.value = option.value)"
+    />
 
-        <Autocomplete
-          v-else-if="valueKind === 'link'"
-          :value="filter.value"
-          :options="linkSearch.options.value"
-          placeholder="Search..."
-          @update:query="linkSearch.search"
-          @change="(option) => (filter.value = option.value)"
-        />
-
-        <div v-else-if="valueKind === 'date-range'" class="flex items-center gap-1">
-          <FormControl type="date" v-model="filter.value[0]" />
-          <span class="text-app-text-muted">to</span>
-          <FormControl type="date" v-model="filter.value[1]" />
-        </div>
-
-        <div v-else-if="valueKind === 'number-range'" class="flex items-center gap-1">
-          <FormControl type="number" v-model="filter.value[0]" />
-          <span class="text-app-text-muted">to</span>
-          <FormControl type="number" v-model="filter.value[1]" />
-        </div>
-
-        <FormControl
-          v-else-if="valueKind === 'date'"
-          type="date"
-          v-model="filter.value"
-        />
-        <FormControl
-          v-else-if="valueKind === 'datetime'"
-          type="datetime-local"
-          v-model="filter.value"
-        />
-        <FormControl
-          v-else-if="valueKind === 'number'"
-          type="number"
-          v-model="filter.value"
-        />
-        <FormControl
-          v-else-if="valueKind === 'text-list'"
-          type="text"
-          placeholder="comma, separated, values"
-          v-model="filter.value"
-        />
-        <FormControl v-else type="text" v-model="filter.value" />
-      </div>
+    <div v-else-if="valueKind === 'date-range'" class="flex items-center gap-1">
+      <FormControl type="date" v-model="filter.value[0]" />
+      <span class="text-app-text-muted">to</span>
+      <FormControl type="date" v-model="filter.value[1]" />
     </div>
 
-    <Button variant="ghost" @click="$emit('remove')">
-      <template #icon><FeatherIcon name="x" class="h-4 w-4" /></template>
-    </Button>
+    <div v-else-if="valueKind === 'number-range'" class="flex items-center gap-1">
+      <FormControl type="number" v-model="filter.value[0]" />
+      <span class="text-app-text-muted">to</span>
+      <FormControl type="number" v-model="filter.value[1]" />
+    </div>
+
+    <FormControl v-else-if="valueKind === 'date'" type="date" v-model="filter.value" />
+    <FormControl v-else-if="valueKind === 'datetime'" type="datetime-local" v-model="filter.value" />
+    <FormControl v-else-if="valueKind === 'number'" type="number" v-model="filter.value" />
+    <FormControl
+      v-else-if="valueKind === 'text-list'"
+      type="text"
+      placeholder="comma, separated, values"
+      v-model="filter.value"
+    />
+    <FormControl v-else type="text" v-model="filter.value" />
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { Autocomplete, Button, FeatherIcon, FormControl } from 'frappe-ui'
+import { Autocomplete, FormControl } from 'frappe-ui'
 import { useLinkSearch } from '@/composables/list/useLinkSearch'
 import {
   applyOperatorChange,
@@ -110,9 +82,7 @@ import {
 const props = defineProps({
   filter: { type: Object, required: true }, // { fieldname, operator, value, field }
   docfields: { type: Array, required: true },
-  first: { type: Boolean, default: false },
 })
-defineEmits(['remove'])
 
 const fieldOptions = computed(() =>
   props.docfields

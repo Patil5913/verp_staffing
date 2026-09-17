@@ -35,6 +35,20 @@ DISPLAYABLE_FIELDTYPES = {
 }
 SEARCHABLE_FIELDTYPES = {"Data", "Text", "Small Text", "Long Text", "Select", "Link", "Read Only"}
 
+# "modified" is a standard Frappe field (every doctype has it), not one of
+# meta.fields' own custom docfields, so it never shows up when walking
+# meta.fields below. Synthesized so every list view gets a "Last Updated"
+# column without doctypes having to flag it in_list_view themselves.
+LAST_UPDATED_FIELD = {
+    "fieldname": "modified",
+    "label": "Last Updated",
+    "fieldtype": "Datetime",
+    "options": None,
+    "in_list_view": True,
+    "in_standard_filter": False,
+    "reqd": False,
+}
+
 # Bounds how many rows a single free-text search term is allowed to match
 # before being narrowed down further. Keeps resolve_search_filter's
 # permission-safe get_list lookups cheap on large tables; internal
@@ -90,6 +104,9 @@ def get_list_view_meta(doctype):
         # rely on the title field) — fall back to the first few visible
         # fields so the table is never empty.
         list_fields = fields[:4]
+    list_fields = list_fields + [LAST_UPDATED_FIELD]
+
+    fields = fields + [LAST_UPDATED_FIELD]
 
     searchable_fields = [
         f["fieldname"] for f in fields if f["fieldtype"] in SEARCHABLE_FIELDTYPES
