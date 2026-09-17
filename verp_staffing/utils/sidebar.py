@@ -21,7 +21,7 @@ PAGE_ROUTE_OVERRIDES = {
     "/app/email-inbox": "/verp/email-inbox",
     "/app/permission-manager": "/verp/permission-manager",
     "/app/pending-pe-requests": "/verp/pending-pe-requests",
-    "/app/account/view/tree": "/verp/tree/Account",
+    "/app/account/view/tree": "/verp/Account/view/tree",
     "/app/setup": "/verp/setup",
 }
 
@@ -36,8 +36,10 @@ def _frontend_route(item: dict, item_kind: str) -> str:
 
     if item_kind == "doctype" and item.get("doctype"):
         doctype = item["doctype"]
-        kind = "settings" if doctype in SINGLE_DOCTYPES else "list"
-        return f"/verp/{kind}/{quote(doctype)}"
+        if doctype in SINGLE_DOCTYPES:
+            return f"/verp/settings/{quote(doctype)}"
+        # List is the default view for a doctype, so it gets the bare route.
+        return f"/verp/{quote(doctype)}"
 
     if item_kind == "report":
         report_name = item.get("name") or item.get("report_name")

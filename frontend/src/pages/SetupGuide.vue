@@ -123,9 +123,9 @@ const STEPS = [
 // generic create form, so "Continue Setup" lands on the corresponding list
 // instead of a blank new-record form.
 const NEXT_ACTION_LIST_ROUTE = {
-  employee: '/list/Employee',
+  employee: '/Employee',
   erp_configuration: '/settings/ERP%20Configuration',
-  pdf_agreement_template: '/list/Pdf%20Agreement%20Template',
+  pdf_agreement_template: '/Pdf%20Agreement%20Template',
 }
 
 const progress = useResource({

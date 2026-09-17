@@ -13,13 +13,6 @@ const routes = [
     component: () => import('@/pages/Home.vue'),
   },
   {
-    // Matches the routes verp_staffing.utils.sidebar._frontend_route
-    // generates for "doctype"-kind sidebar items (the vast majority).
-    path: '/list/:doctype',
-    name: 'DocList',
-    component: () => import('@/pages/DocListPage.vue'),
-  },
-  {
     // Single doctypes (ERP Configuration, Accounts Settings) — old desk UI
     // jumps straight to the one record's edit form, never a list.
     path: '/settings/:doctype',
@@ -30,11 +23,6 @@ const routes = [
     path: '/report/:reportName',
     name: 'Report',
     component: () => import('@/pages/ReportPage.vue'),
-  },
-  {
-    path: '/tree/:doctype',
-    name: 'Tree',
-    component: () => import('@/pages/TreePage.vue'),
   },
   {
     path: '/permission-manager',
@@ -55,6 +43,32 @@ const routes = [
     path: '/email-inbox',
     name: 'EmailInbox',
     component: () => import('@/pages/EmailInbox.vue'),
+  },
+  {
+    // A bare doctype route is the list view — its default view. Kept last
+    // among top-level paths: vue-router 4 always ranks a static segment
+    // (e.g. "/setup") above a dynamic one, so order here doesn't actually
+    // affect matching, but this keeps the catch-all-shaped route visually
+    // last for readers.
+    path: '/:doctype',
+    name: 'DocList',
+    component: () => import('@/pages/DocListPage.vue'),
+  },
+  {
+    // Non-default views for a doctype live under /:doctype/view/<viewName>,
+    // e.g. /verp/Account/view/tree. Tree is the only one built so far;
+    // kanban/calendar/gantt get their own entry here once they exist.
+    path: '/:doctype/view/tree',
+    name: 'Tree',
+    component: () => import('@/pages/TreePage.vue'),
+  },
+  {
+    // Catches anything left unmatched, e.g. /:doctype/view/<unbuilt-view>
+    // or a stale/mistyped multi-segment path. Must stay last: vue-router 4
+    // ranks a param-with-regex path (this one) below every other pattern.
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/pages/NotFound.vue'),
   },
 ]
 
