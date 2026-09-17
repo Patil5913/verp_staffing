@@ -407,12 +407,13 @@ function render_interview_list_html(frm, data) {
 	const has_more = data.length > MKT_INTERVIEW_VISIBLE_COUNT;
 	const esc = frappe.utils.escape_html;
 
+	console.log(data)
 	function build_items(list) {
 		return list
 			.map(
 				(d) => `
 					<li>
-						<a href="#" class="mkt-interview-item" data-interview="${esc(d.company || "")}">
+						<a href="/app/interview/${d.name}" class="mkt-interview-item"}">
 							<span class="mkt-interview-dot"></span>
 							<span>${esc(d.company || "")}</span>
 						</a>
@@ -441,16 +442,6 @@ function render_interview_list_html(frm, data) {
 	const $list = $wrapper.find(".mkt-interview-list");
 	const $toggle = $wrapper.find(".mkt-interview-toggle-btn");
 
-	function bind_item_clicks() {
-		$wrapper
-			.find(".mkt-interview-item")
-			.off("click")
-			.on("click", function (e) {
-				e.preventDefault();
-				frappe.set_route("List", "Interview", "Kanban", { marketing_link: frm.doc.name });
-			});
-	}
-	bind_item_clicks();
 
 	if (!has_more) return;
 

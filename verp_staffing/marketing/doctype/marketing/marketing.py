@@ -36,5 +36,5 @@ def get_interviews_by_marketing(marketing):
         return []
 
     return frappe.get_all(
-        "Interview", filters={"marketing_link": marketing}, fields=["company"]
+        "Interview", filters={"marketing_link": marketing}, fields=["company", "name"]
     )

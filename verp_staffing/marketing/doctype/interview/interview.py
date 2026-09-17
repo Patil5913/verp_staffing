@@ -12,9 +12,30 @@ from verp_staffing.crm.api.helpers import (
 )
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 
+LOCKED_STATUS_KEYWORDS = (
+    "cancelled",
+    "canceled",
+    "completed",
+    "rescheduled",
+    "rejected",
+)
+CANCELLED_LIKE_KEYWORDS = ("cancelled", "canceled", "rescheduled")
+DEFAULT_ROUND_STATUS = "Scheduled"
 CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
-DEFAULT_ROUND_STATUS = "Scheduled"
+
+def is_status_locked(status):
+    if not status or not isinstance(status, str):
+        return False
+    lower = status.lower()
+    return any(keyword in lower for keyword in LOCKED_STATUS_KEYWORDS)
+
+
+def is_cancelled_like_status(status):
+    if not status or not isinstance(status, str):
+        return False
+    lower = status.lower()
+    return any(keyword in lower for keyword in CANCELLED_LIKE_KEYWORDS)
 
 
 class Interview(Document):
@@ -58,7 +79,9 @@ class Interview(Document):
             self.customer = None
             return
 
-        customer_name = frappe.db.get_value("Marketing", self.marketing_link, "customer")
+        customer_name = frappe.db.get_value(
+            "Marketing", self.marketing_link, "customer"
+        )
         if not customer_name:
             self.customer = None
             return
@@ -105,7 +128,7 @@ class Interview(Document):
 
             self._validate_round_status_not_locked(row, i)
 
-            if row.status in CANCELLED_LIKE_STATUSES and (
+            if is_cancelled_like_status(row.status) and (
                 not row.cancelled_by or not row.reason_of_cancel
             ):
                 frappe.throw(
@@ -167,10 +190,7 @@ class Interview(Document):
         if not previous_row:
             return
 
-        if (
-            previous_row.status in FINAL_ROUND_STATUSES
-            and row.status != previous_row.status
-        ):
+        if is_status_locked(previous_row.status) and row.status != previous_row.status:
             frappe.throw(
                 _(
                     "Row #{0}: This interview round is already '{1}' and its "
@@ -503,8 +523,13 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
         try:
             links = (
                 json.loads(marketing_link)
-                if isinstance(marketing_link, str) and marketing_link.strip().startswith("[")
-                else (marketing_link if isinstance(marketing_link, list) else [marketing_link])
+                if isinstance(marketing_link, str)
+                and marketing_link.strip().startswith("[")
+                else (
+                    marketing_link
+                    if isinstance(marketing_link, list)
+                    else [marketing_link]
+                )
             )
         except (ValueError, TypeError):
             links = [marketing_link]
@@ -517,7 +542,8 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
 
     values.update({"start": start, "end": end})
 
-    rounds = frappe.db.sql(f"""
+    rounds = frappe.db.sql(
+        f"""
         SELECT ir.name AS round_name, ir.parent AS interview, ir.round,
             ir.date_of_interview, ir.from_time, ir.to_time, ir.edt_est,
             ir.status AS round_status, i.company, i.role, i.status AS interview_status,
@@ -527,27 +553,32 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
         WHERE ir.date_of_interview BETWEEN %(start)s AND %(end)s
         {conditions}
         ORDER BY ir.date_of_interview, ir.from_time
-    """, values, as_dict=True)
+    """,
+        values,
+        as_dict=True,
+    )
 
     events = []
     for r in rounds:
         has_time = bool(r.from_time is not None and r.to_time is not None)
         status = r.round_status or r.interview_status or ""
-        events.append({
-            "name": r.interview,
-            "subject": f"{r.company} — {r.role} (Round {r.round})",
-            "start": f"{r.date_of_interview} {r.from_time or '09:00:00'}",
-            "end": f"{r.date_of_interview} {r.to_time or '10:00:00'}",
-            "allDay": 0 if has_time else 1,
-            "status": status,
-            "company": r.company,
-            "role": r.role,
-            "round": r.round,
-            "from_time": r.from_time,
-            "to_time": r.to_time,
-            "edt_est": r.edt_est,
-            "customer": r.customer_name or r.marketing_link,
-        })
+        events.append(
+            {
+                "name": r.interview,
+                "subject": f"{r.company} — {r.role} (Round {r.round})",
+                "start": f"{r.date_of_interview} {r.from_time or '09:00:00'}",
+                "end": f"{r.date_of_interview} {r.to_time or '10:00:00'}",
+                "allDay": 0 if has_time else 1,
+                "status": status,
+                "company": r.company,
+                "role": r.role,
+                "round": r.round,
+                "from_time": r.from_time,
+                "to_time": r.to_time,
+                "edt_est": r.edt_est,
+                "customer": r.customer_name or r.marketing_link,
+            }
+        )
     return events
 
 
@@ -583,26 +614,28 @@ def get_interview_gantt_rows(filters=None):
         if end_dt <= start_dt:
             end_dt = f"{r.date_of_interview} 23:59:00"
 
-        out.append({
-            "name": r.round_id,
-            "interview": r.interview,
-            "owner": r.owner,
-            "docstatus": r.docstatus or 0,
-            "status": status,
-            "company": r.company,
-            "role": r.role,
-            "round": r.round,
-            "date_of_interview": str(r.date_of_interview),
-            "subject": f"{r.company} — {r.role} · Round {r.round} · {status}",
-            "from_time": r.from_time,
-            "to_time": r.to_time,
-            "edt_est": r.edt_est,
-            "start": start_dt,
-            "end": end_dt,
-            "customer": r.customer_name or r.marketing_link,
-            "_assign": "[]",
-            "_liked_by": "[]",
-            "_comments": "[]",
-            "_user_tags": "",
-        })
+        out.append(
+            {
+                "name": r.round_id,
+                "interview": r.interview,
+                "owner": r.owner,
+                "docstatus": r.docstatus or 0,
+                "status": status,
+                "company": r.company,
+                "role": r.role,
+                "round": r.round,
+                "date_of_interview": str(r.date_of_interview),
+                "subject": f"{r.company} — {r.role} · Round {r.round} · {status}",
+                "from_time": r.from_time,
+                "to_time": r.to_time,
+                "edt_est": r.edt_est,
+                "start": start_dt,
+                "end": end_dt,
+                "customer": r.customer_name or r.marketing_link,
+                "_assign": "[]",
+                "_liked_by": "[]",
+                "_comments": "[]",
+                "_user_tags": "",
+            }
+        )
     return out

@@ -1,8 +1,20 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
-const CANCELLED_LIKE_STATUSES = ["Cancelled", "Rescheduled"];
-const FINAL_ROUND_STATUSES = new Set(["Cancelled", "Rescheduled", "Completed"]);
+const LOCKED_STATUS_KEYWORDS = ["cancelled", "canceled", "completed", "rescheduled", "rejected"];
+const CANCELLED_LIKE_KEYWORDS = ["cancelled", "canceled", "rescheduled"];
+
+function is_status_locked(status) {
+	if (!status || typeof status !== "string") return false;
+	const lower = status.toLowerCase();
+	return LOCKED_STATUS_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
+
+function is_cancelled_like_status(status) {
+	if (!status || typeof status !== "string") return false;
+	const lower = status.toLowerCase();
+	return CANCELLED_LIKE_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
 
 frappe.ui.form.on("Interview", {
 	onload(frm) {
@@ -54,7 +66,7 @@ frappe.ui.form.on("Interview", {
 	validate(frm) {
 		const invalid_row = (frm.doc.interview_rounds_table || []).find(
 			(row) =>
-				CANCELLED_LIKE_STATUSES.includes(row.status) &&
+				is_cancelled_like_status(row.status) &&
 				(!row.cancelled_by || !row.reason_of_cancel),
 		);
 
@@ -129,7 +141,7 @@ frappe.ui.form.on("Interview Round", {
 			return;
 		}
 
-		if (FINAL_ROUND_STATUSES.has(row.status)) {
+		if (is_status_locked(row.status)) {
 			frappe.confirm(
 				__(
 					"Once this round's status is set to '{0}', it cannot be changed again. Continue?",
@@ -276,15 +288,13 @@ function capture_status_snapshots(frm) {
 }
 
 function is_round_finalized(row) {
-	return !!row && FINAL_ROUND_STATUSES.has(row.__status_snapshot);
+	return !!row && is_status_locked(row.__status_snapshot);
 }
 
 function is_row_locked(frm, row) {
-	if (!frm || !frm.doc) return true;
-	if (frm.__is_superior) return false;
-	const rows = frm.doc.interview_rounds_table || [];
-	const last_idx = rows.length;
-	return row.idx !== last_idx;
+	if (!frm || !row) return false;
+	const snapshot = row.__status_snapshot ?? row.status;
+	return is_status_locked(snapshot);
 }
 
 function is_drag_locked(frm) {
@@ -494,15 +504,20 @@ function toggle_cancellation_fields(frm, cdt, cdn) {
 	const grid_row = frm.fields_dict.interview_rounds_table.grid.grid_rows_by_docname[cdn];
 	if (!grid_row || !grid_row.grid_form || !grid_row.grid_form.fields_dict) return;
 
-	const is_cancel_like = CANCELLED_LIKE_STATUSES.includes(row.status);
+	const is_cancel_like = is_cancelled_like_status(row.status);
 	const by_field = grid_row.grid_form.fields_dict.cancelled_by;
 	const reason_field = grid_row.grid_form.fields_dict.reason_of_cancel;
 	if (!by_field || !reason_field) return;
 
-	const labels = {
-		Cancelled: ["Cancelled By", "Reason For Cancellation"],
-		Rescheduled: ["Rescheduled By", "Reason For Reschedule"],
-	}[row.status] || ["Cancelled By", "Reason of cancel"];
+	let labels = ["Cancelled By", "Reason of cancel"];
+	if (row.status) {
+		const lower = row.status.toLowerCase();
+		if (lower.includes("rescheduled")) {
+			labels = ["Rescheduled By", "Reason For Reschedule"];
+		} else if (lower.includes("cancel")) {
+			labels = ["Cancelled By", "Reason For Cancellation"];
+		}
+	}
 
 	[by_field, reason_field].forEach((field) => {
 		field.df.hidden = is_cancel_like ? 0 : 1;
@@ -535,7 +550,7 @@ function fetch_and_render_resume(frm) {
 			}
 			set_html(`
 				<div style="padding:8px">
-					
+					<a
 						href="${resume.document}"
 						target="_blank"
 						style="color:#1a73e8;font-weight:600;text-decoration:none;"
