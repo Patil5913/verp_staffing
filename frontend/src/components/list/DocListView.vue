@@ -1,35 +1,72 @@
 <template>
   <div class="flex h-full flex-col">
-    <!-- Sub navbar: doc name, search, filters, refresh -->
+    <!-- Sub navbar: doc name, search, refresh -->
     <div
       class="grid h-11 shrink-0 grid-cols-3 items-center border-b border-app-border bg-app-panel px-6"
     >
       <h1 class="min-w-0 shrink-0 truncate text-p-lg font-medium text-app-text">{{ doctype }}</h1>
 
-      <div class="flex min-w-0 items-center justify-center gap-2">
+      <div class="flex min-w-0 flex-1 items-center gap-2">
         <TextInput
           v-model="searchText"
-          class="w-56 shrink-0"
-          placeholder='Search... try "parth OR engineer"'
+          class="w-full"
+          placeholder='Try: "status=open", "modified between 17 sept to 25 sept"'
         >
           <template #prefix>
             <FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" />
           </template>
-        </TextInput>
+          <template #suffix>
+            <Popover trigger="hover" :hover-delay="0.15" :leave-delay="0.15" placement="bottom-end">
+              <template #target>
+                <FeatherIcon
+                  name="info"
+                  class="h-4 w-4 cursor-help text-app-text-muted hover:text-app-primary"
+                />
+              </template>
+              <template #body>
+                <div
+                  class="my-2 w-[26rem] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
+                >
+                  <div class="flex items-center gap-2 border-b border-app-border bg-app-panel-2 px-4 py-3">
+                    <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
+                    <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
+                  </div>
 
-        <DocFilterPanel v-model="filters" :docfields="docfields" />
+                  <div class="flex flex-col divide-y divide-app-border">
+                    <div
+                      v-for="group in searchSyntaxHelp"
+                      :key="group.title"
+                      class="flex flex-col gap-2.5 px-4 py-3"
+                    >
+                      <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">
+                        {{ group.title }}
+                      </p>
+                      <div v-for="row in group.rows" :key="row.example" class="flex flex-col gap-1">
+                        <code
+                          class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 font-mono text-p-xs text-app-primary"
+                          >{{ row.example }}</code
+                        >
+                        <span class="text-p-sm leading-snug text-app-text-muted">{{ row.description }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </Popover>
+          </template>
+        </TextInput>
 
         <Button
           variant="outline"
           theme="red"
           icon="x"
-          tooltip="Clear filters"
+          tooltip="Clear search"
           :disabled="!hasFilters"
           @click="clearFilters"
         />
       </div>
 
-      <div class="flex justify-end gap-1">
+      <div class="flex items-center justify-end gap-1">
         <Button
           v-if="isAdmin"
           variant="ghost"
@@ -83,7 +120,7 @@
                 <th
                   v-for="column in columns"
                   :key="column.key"
-                  class="sticky top-0 z-10 h-11 cursor-pointer select-none truncate border-b border-app-border bg-app-panel-2 px-3 text-left text-p-base font-semibold text-app-text-muted hover:text-app-text"
+                  class="sticky top-0 h-11 cursor-pointer select-none truncate border-b border-app-border bg-app-panel-2 px-3 text-left text-p-base font-semibold text-app-text-muted hover:text-app-text"
                   @click="onSort(column.key)"
                 >
                   <span class="inline-flex items-center gap-1">
@@ -153,12 +190,11 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { Badge, Button, FeatherIcon, FormControl, LoadingIndicator, TextInput } from 'frappe-ui'
+import { Badge, Button, FeatherIcon, FormControl, LoadingIndicator, Popover, TextInput } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
-import DocFilterPanel from './DocFilterPanel.vue'
 import Pagination from './Pagination.vue'
 import StateBanner from '../common/StateBanner.vue'
 
@@ -172,7 +208,6 @@ const {
   page,
   pageCount,
   pageLength,
-  filters,
   searchText,
   sortField,
   sortOrder,
@@ -185,13 +220,47 @@ const {
 
 const pageLengthOptions = [15, 30, 50, 100].map((n) => ({ label: String(n), value: String(n) }))
 
+const searchSyntaxHelp = [
+  {
+    title: 'Match a field',
+    rows: [
+      { example: 'status=open', description: 'Scope the match to one field, by its name or column label.' },
+      { example: 'status="in progress"', description: 'Quote a value that has spaces.' },
+      { example: 'parth', description: 'A plain word matches any searchable field instead.' },
+    ],
+  },
+  {
+    title: 'Combine conditions',
+    rows: [
+      { example: 'status=open name=parth', description: 'Multiple fields — all must match (AND).' },
+      { example: 'status=open or name=parth', description: 'Either one can match (OR) instead.' },
+    ],
+  },
+  {
+    title: 'Compare numbers & dates',
+    rows: [
+      { example: 'status!=open', description: 'Not equal.' },
+      { example: 'modified>=2026-09-17', description: 'Also works with >, <, <=.' },
+    ],
+  },
+  {
+    title: 'Date & number ranges',
+    rows: [
+      {
+        example: 'modified between 17 sept to 25 sept',
+        description: 'A range on one field — values here don’t need quotes.',
+      },
+    ],
+  },
+]
+
 const showFooter = computed(() => {
   if (meta.isPermissionError || meta.hasError) return false
   if (meta.isLoading && !meta.resource.data) return false
   return !docs.isPermissionError && !docs.hasError
 })
 
-const hasFilters = computed(() => Object.keys(filters.value).length > 0)
+const hasFilters = computed(() => searchText.value.trim().length > 0)
 
 const docfields = computed(() => meta.resource.data?.fields || [])
 const listFields = computed(() => meta.resource.data?.list_fields || [])

@@ -1,8 +1,11 @@
 import json
 import re
 
+from dateutil import parser as dateutil_parser
+
 import frappe
 from frappe import _
+from frappe.utils import now_datetime
 
 # Fieldtypes a generic list view can render as a plain column and/or match
 # against for free-text search. Deliberately excludes Password (sensitive),
@@ -279,30 +282,241 @@ def get_settings_meta(doctype):
     }
 
 
-def _split_terms(txt, pattern):
-    return [part.strip() for part in re.split(pattern, txt, flags=re.IGNORECASE) if part.strip()]
-
-
-def _parse_query(txt):
-    """Splits a free-text query into (terms, mode).
-
-    No boolean keyword -> mode "and", terms split on whitespace (every term
-    must be found, each in any searchable field). A literal, whole-word "or"
-    anywhere -> mode "or" for the whole query, terms split on "or" (any term
-    matching any field is enough). A literal "and" with no "or" present is
-    equivalent to the default and just makes the AND explicit.
+def _field_key_index(meta):
+    """normalized key -> lightweight {fieldname, fieldtype, options} dict,
+    for every alias a search token's key is allowed to use: a field's
+    fieldname *and* its label (users type what the column header shows,
+    e.g. "Lead Owner", not necessarily the internal "lead_owner"), plus
+    "name"/"modified" and modified's own "Last Updated" label — none of
+    which show up in meta.fields directly. Keys are normalized (lowercased,
+    internal whitespace/underscores collapsed to a single space) so
+    "lead_owner", "lead owner" and "Lead Owner" all resolve the same way.
+    Mirrors get_list_view_meta's own visibility rules (displayable, not
+    hidden).
     """
-    txt = (txt or "").strip()
-    if not txt:
-        return [], "and"
+    index = {}
+    for df in meta.fields:
+        if df.fieldtype not in DISPLAYABLE_FIELDTYPES or df.hidden:
+            continue
+        field_def = {"fieldname": df.fieldname, "fieldtype": df.fieldtype, "options": df.options}
+        index[_normalize_key(df.fieldname)] = field_def
+        if df.label:
+            index[_normalize_key(df.label)] = field_def
 
-    if re.search(r"\bor\b", txt, re.IGNORECASE):
-        return _split_terms(txt, r"\bor\b"), "or"
+    name_def = {"fieldname": "name", "fieldtype": "Data", "options": None}
+    index.setdefault(_normalize_key("name"), name_def)
 
-    if re.search(r"\band\b", txt, re.IGNORECASE):
-        return _split_terms(txt, r"\band\b"), "and"
+    modified_def = {"fieldname": "modified", "fieldtype": LAST_UPDATED_FIELD["fieldtype"], "options": None}
+    index[_normalize_key(LAST_UPDATED_FIELD["fieldname"])] = modified_def
+    index[_normalize_key(LAST_UPDATED_FIELD["label"])] = modified_def
+    return index
 
-    return txt.split(), "and"
+
+def _normalize_key(text):
+    return re.sub(r"[\s_]+", " ", text.strip().lower())
+
+
+def _key_alternation(key_index):
+    """A regex alternation matching any key in key_index, tolerating a
+    space *or* underscore between words (so "lead owner" and "lead_owner"
+    both match) — longest key first, so a multi-word key wins over a
+    shorter one that's merely a prefix of it (e.g. prefer "last updated"
+    over a hypothetical standalone "last").
+    """
+    patterns = [r"[\s_]+".join(re.escape(p) for p in key.split(" ")) for key in key_index]
+    patterns.sort(key=len, reverse=True)
+    return "|".join(patterns)
+
+
+# Longer operators must be tried before their prefixes (">=" before ">").
+_OPERATOR_ALT = r">=|<=|!=|=|>|<"
+
+
+def _next_clause_lookahead(key_alt):
+    """Non-consuming boundary marking where a value span (between-clause or,
+    in principle, any other free-running capture) must stop: right before
+    the next recognized `key <op>`/`key between` clause, or the end of the
+    string. Keeps a range's textual value from swallowing an unrelated
+    clause that happens to follow it in the same query.
+    """
+    return rf"(?=\s+(?:{key_alt})\s*(?:{_OPERATOR_ALT}|\bbetween\b)|\Z)"
+
+
+def _coerce_value(field_def, value, end_of_day=False):
+    """Best-effort typed coercion of a search value for a comparison
+    against field_def: the matching Select option (case-insensitive), 1/0
+    for Check, a number for numeric fields, a canonical date/datetime
+    string for Date/Datetime fields (parsed leniently — "17 Sept 2026,
+    15:45" or a bare "25 September" both work, defaulting to midnight
+    today for anything left unspecified), else the value unchanged.
+    Returns None when the fieldtype requires a type the value plainly
+    isn't (e.g. "abc" for a numeric/date field, "maybe" for a Check field)
+    — the caller treats that as "this token doesn't apply here."
+
+    `end_of_day`: for a Datetime upper bound (a between-clause's second
+    value) parsed from a date with no explicit time, rounds up to 23:59:59
+    instead of midnight, so "between 17 sept to 25 sept" includes all of
+    the 25th rather than stopping at its first instant.
+    """
+    fieldtype = field_def["fieldtype"]
+
+    if fieldtype == "Check":
+        lowered = value.lower()
+        if lowered in ("1", "yes", "true", "y"):
+            return 1
+        if lowered in ("0", "no", "false", "n"):
+            return 0
+        return None
+
+    if fieldtype == "Select":
+        options = [o for o in (field_def["options"] or "").split("\n") if o.strip()]
+        return next((o for o in options if o.lower() == value.lower()), None)
+
+    if fieldtype in ("Int", "Float", "Currency", "Percent", "Duration", "Rating"):
+        try:
+            number = float(value)
+        except ValueError:
+            return None
+        return int(number) if fieldtype in ("Int", "Duration") else number
+
+    if fieldtype in ("Date", "Datetime"):
+        base = now_datetime().replace(hour=0, minute=0, second=0, microsecond=0)
+        try:
+            parsed = dateutil_parser.parse(value, fuzzy=True, default=base)
+        except (ValueError, OverflowError, TypeError):
+            return None
+        if fieldtype == "Date":
+            return parsed.strftime("%Y-%m-%d")
+        if end_of_day and ":" not in value:
+            parsed = parsed.replace(hour=23, minute=59, second=59)
+        return parsed.strftime("%Y-%m-%d %H:%M:%S")
+
+    return value
+
+
+def _field_condition(field_def, operator, value):
+    """(operator, value) for a search token targeting field_def, or None
+    when this token can't produce a usable condition here (the caller
+    falls back to treating the whole token as literal free text).
+
+    Operator "=" is the forgiving default: exact match for Check/Select/
+    numeric/Date fields (a Select value that isn't one of its real options
+    falls back to a partial match — typos/partial labels shouldn't just
+    silently match nothing); for Datetime, a whole-day match when the typed
+    value has no time component (e.g. "16-09-2026" matches all of that
+    day, not just its first minute) or a to-the-minute match when it does
+    (e.g. "16 Sept 2026, 15:45"); a case-insensitive partial match for
+    everything else. Any other operator (!=, >, >=, <, <=) always resolves
+    to an exact, typed value — "greater than" only means something once
+    the value is actually a number or date, not a partial string.
+    """
+    value = value.strip()
+    if not value:
+        return None
+
+    fieldtype = field_def["fieldtype"]
+
+    if operator != "=":
+        coerced = _coerce_value(field_def, value)
+        return (operator, coerced) if coerced is not None else None
+
+    if fieldtype == "Check":
+        coerced = _coerce_value(field_def, value)
+        return ("=", coerced) if coerced is not None else None
+
+    if fieldtype == "Select":
+        coerced = _coerce_value(field_def, value)
+        return ("=", coerced) if coerced is not None else ("like", f"%{value}%")
+
+    if fieldtype in ("Int", "Float", "Currency", "Percent", "Duration", "Rating"):
+        coerced = _coerce_value(field_def, value)
+        return ("=", coerced) if coerced is not None else ("like", f"%{value}%")
+
+    if fieldtype in ("Date", "Datetime"):
+        coerced = _coerce_value(field_def, value)
+        if coerced is None:
+            return "like", f"%{value}%"
+        if fieldtype == "Date":
+            return "=", coerced
+        if ":" in value:
+            return "like", f"{coerced[:16]}%"  # explicit time given — match to the minute
+        return "like", f"{coerced[:10]}%"  # date only — match the whole day
+
+    return "like", f"%{value}%"
+
+
+def _unquote(value):
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
+    return value
+
+
+_FREE_TOKEN_RE = re.compile(r'"[^"]*"|\'[^\']*\'|\S+')
+
+
+def _free_text_tokens(txt):
+    return [_unquote(m.group(0)) for m in _FREE_TOKEN_RE.finditer(txt) if _unquote(m.group(0))]
+
+
+def _extract_between_clauses(txt, key_index, key_alt):
+    """Pulls `key between value1 and/to value2` clauses out of txt (e.g.
+    "modified between 17 sept to 25 sept"), resolving each to a
+    (fieldname, coerced_v1, coerced_v2) range condition and erasing the
+    matched text so it isn't reprocessed as free text/other clauses.
+    value1/value2 may be unquoted and contain spaces/commas (dates need
+    this) — capture is bounded by the "and"/"to" separator and by the next
+    recognized clause (see _next_clause_lookahead), not by whitespace.
+    Returns (conditions, remaining_text).
+    """
+    conditions = []
+    pattern = re.compile(
+        rf"(?P<key>{key_alt})\s+between\s+(?P<span>.+?){_next_clause_lookahead(key_alt)}",
+        re.IGNORECASE,
+    )
+
+    def handle(m):
+        field_def = key_index[_normalize_key(m.group("key"))]
+        span = m.group("span").strip()
+        sep = re.search(r"\band\b|\bto\b", span, re.IGNORECASE)
+        if not sep:
+            return m.group(0)
+        v1 = _coerce_value(field_def, _unquote(span[: sep.start()].strip()))
+        v2 = _coerce_value(field_def, _unquote(span[sep.end() :].strip()), end_of_day=True)
+        if v1 is None or v2 is None:
+            return m.group(0)
+        conditions.append((field_def["fieldname"], v1, v2))
+        return " "
+
+    remaining = pattern.sub(handle, txt)
+    return conditions, remaining
+
+
+def _extract_comparison_clauses(txt, key_index, key_alt):
+    """Pulls `key<op>value` clauses (=, !=, >, >=, <, <=) out of txt,
+    resolving each to a (fieldname, operator, value) condition and erasing
+    the matched text. Unlike between-clause values, these stay a single
+    word or a "quoted phrase" — bounding them by the next clause instead
+    would risk swallowing an unrelated free-text term that happens to
+    follow (e.g. "status=open widget" should stay two separate conditions,
+    not one value "open widget"). Returns (conditions, remaining_text).
+    """
+    conditions = []
+    pattern = re.compile(
+        rf'(?P<key>{key_alt})\s*(?P<op>{_OPERATOR_ALT})\s*(?P<value>"[^"]*"|\'[^\']*\'|\S+)',
+        re.IGNORECASE,
+    )
+
+    def handle(m):
+        field_def = key_index[_normalize_key(m.group("key"))]
+        condition = _field_condition(field_def, m.group("op"), _unquote(m.group("value")))
+        if condition is None:
+            return m.group(0)
+        operator, value = condition
+        conditions.append((field_def["fieldname"], operator, value))
+        return " "
+
+    remaining = pattern.sub(handle, txt)
+    return conditions, remaining
 
 
 def _matching_names(doctype, fields, term):
@@ -319,36 +533,113 @@ def _matching_names(doctype, fields, term):
 
 @frappe.whitelist()
 def resolve_search_filter(doctype, txt=None):
-    """Turns the search box's free text into a ["name", "in", [...]] filter
-    the frontend ANDs together with its other list filters, so all actual
-    listing (pagination, sort, permissions) still goes through the standard
-    frappe.client.get_list / get_count path.
+    """Turns the search box's text into a list of get_list-ready filters,
+    which the frontend ANDs together with its other list filters (sort,
+    pagination, permissions all still go through the normal
+    frappe.client.get_list / get_count path).
 
-    Returns {"filter": null} when there's no search text (no constraint), or
-    {"filter": ["name", "in", [...]]} otherwise — an empty list here
-    correctly yields zero rows rather than accidentally matching everything.
+    Three kinds of clause, freely mixed:
+      - `key<op>value` where key is a field's fieldname *or* its column
+        label (spaces/underscores/case all interchangeable — "status",
+        "lead owner" and "Lead Owner" all work) and <op> is one of
+        =, !=, >, >=, <, <=. Bare "=" is forgiving (exact match for
+        Select/Check/numeric/date fields, partial match otherwise);
+        every other operator always does an exact, typed comparison, so
+        it only makes sense once the value actually parses as a number or
+        date for that field. A multi-word value needs quotes, e.g.
+        `status="in progress"`.
+      - `key between value1 and value2` (or "... to ...") — a range on one
+        field, e.g. "last updated between 17 sept to 25 sept". Unlike a
+        single `key<op>value`, value1/value2 don't need quotes even with
+        spaces/commas — natural dates like "17 Sept 2026, 15:45" work
+        as-is — since the range is bounded by "and"/"to" instead.
+      - plain words, matched against every searchable field, same as a
+        `key<op>value` with an unrecognized key (e.g. "foo=bar" where
+        "foo" isn't a real field is searched for literally).
+
+    By default every clause must match — AND. A literal, whole-word "or"
+    anywhere in the query switches the *entire* query to OR instead, e.g.
+    "status=open or name=parth" matches either on its own.
+
+    Returns {"filters": []} when there's nothing to filter on.
     """
     _check_read(doctype)
 
-    terms, mode = _parse_query(txt)
-    if not terms:
-        return {"filter": None}
+    txt = (txt or "").strip()
+    if not txt:
+        return {"filters": []}
 
     meta = frappe.get_meta(doctype)
-    search_fields = [
-        df.fieldname for df in meta.fields if df.fieldtype in SEARCHABLE_FIELDTYPES
-    ]
+    key_index = _field_key_index(meta)
+    key_alt = _key_alternation(key_index)
+
+    search_fields = [df.fieldname for df in meta.fields if df.fieldtype in SEARCHABLE_FIELDTYPES]
     if meta.title_field and meta.title_field not in search_fields:
         search_fields.append(meta.title_field)
     if "name" not in search_fields:
         search_fields.append("name")
 
-    if mode == "or":
-        names = set()
-        for term in terms:
-            names |= _matching_names(doctype, search_fields, term)
-    else:
-        name_sets = [_matching_names(doctype, search_fields, term) for term in terms]
-        names = set.intersection(*name_sets) if name_sets else set()
+    range_conditions, remaining = _extract_between_clauses(txt, key_index, key_alt)
+    field_conditions, remaining = _extract_comparison_clauses(remaining, key_index, key_alt)
 
-    return {"filter": ["name", "in", sorted(names)]}
+    # Whatever's left is plain free text — same AND/OR-keyword handling as
+    # before, now scoped to just the words no clause above claimed.
+    mode = "and"
+    text_terms = []
+    for term in _free_text_tokens(remaining):
+        lowered = term.lower()
+        if lowered == "or":
+            mode = "or"
+        elif lowered != "and":
+            text_terms.append(term)
+
+    if not range_conditions and not field_conditions and not text_terms:
+        return {"filters": []}
+
+    def _names_for_field(fieldname, operator, value):
+        return set(
+            frappe.get_list(
+                doctype,
+                filters=[[fieldname, operator, value]],
+                pluck="name",
+                limit_page_length=MAX_SEARCH_MATCHES,
+            )
+        )
+
+    def _names_for_range(fieldname, v1, v2):
+        return set(
+            frappe.get_list(
+                doctype,
+                filters=[[fieldname, ">=", v1], [fieldname, "<=", v2]],
+                pluck="name",
+                limit_page_length=MAX_SEARCH_MATCHES,
+            )
+        )
+
+    if mode == "or":
+        # OR across field/range/free-text clauses alike can't be expressed
+        # as a flat AND'd filter list, so every clause is resolved to a
+        # name-set first and unioned.
+        names = set()
+        for fieldname, operator, value in field_conditions:
+            names |= _names_for_field(fieldname, operator, value)
+        for fieldname, v1, v2 in range_conditions:
+            names |= _names_for_range(fieldname, v1, v2)
+        for term in text_terms:
+            names |= _matching_names(doctype, search_fields, term)
+        return {"filters": [["name", "in", sorted(names)]]}
+
+    # AND (default): field/range clauses become real filter tuples — no
+    # name-listing needed, so no MAX_SEARCH_MATCHES cap either — and
+    # free-text terms AND together via a single name-set intersection.
+    filters = [[fieldname, operator, value] for fieldname, operator, value in field_conditions]
+    for fieldname, v1, v2 in range_conditions:
+        filters.append([fieldname, ">=", v1])
+        filters.append([fieldname, "<=", v2])
+
+    if text_terms:
+        name_sets = [_matching_names(doctype, search_fields, term) for term in text_terms]
+        names = set.intersection(*name_sets) if name_sets else set()
+        filters.append(["name", "in", sorted(names)])
+
+    return {"filters": filters}

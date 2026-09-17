@@ -4,11 +4,11 @@ import { useResource } from './useResource'
 
 const DEFAULT_PAGE_LENGTH = 15
 
-// Orchestrates a generic doctype list view on top of useResource: field/
-// filter metadata (backed by verp_staffing.utils.list_view), the filter
-// panel's standard filters, a free-text search box resolved to a
-// ["name", "in", [...]] filter server-side (see resolve_search_filter for
-// the AND/OR semantics), sorting, and fixed-page-size (10) pagination.
+// Orchestrates a generic doctype list view on top of useResource: field
+// metadata (backed by verp_staffing.utils.list_view), a search box resolved
+// server-side into a list of get_list filters — field-scoped ("status=open")
+// and/or free-text terms, AND'd or OR'd together (see resolve_search_filter
+// for the full syntax) — sorting, and fixed-page-size (10) pagination.
 //
 // Deliberately built on useResource (frappe.client.get_list) rather than
 // useList (createListResource) — createListResource's reload()/next()
@@ -28,7 +28,6 @@ export function useDocList(doctype) {
 
   const page = ref(1)
   const pageLength = ref(DEFAULT_PAGE_LENGTH)
-  const filters = ref({}) // filter panel's own shape: { fieldname: [operator, value] }
   const searchText = ref('')
   const sortField = ref('modified')
   const sortOrder = ref('desc') // 'asc' | 'desc'
@@ -39,20 +38,7 @@ export function useDocList(doctype) {
     notifyOnError: false,
   })
 
-  const standardFilters = computed(() =>
-    Object.entries(filters.value).map(([fieldname, [operator, value]]) => [
-      fieldname,
-      operator,
-      value,
-    ]),
-  )
-
-  const combinedFilters = computed(() => {
-    const list = [...standardFilters.value]
-    const searchFilter = search.resource.data?.filter
-    if (searchFilter) list.push(searchFilter)
-    return list
-  })
+  const combinedFilters = computed(() => search.resource.data?.filters || [])
 
   const orderBy = computed(() => `${sortField.value} ${sortOrder.value}`)
 
@@ -103,8 +89,6 @@ export function useDocList(doctype) {
     },
   )
 
-  // combinedFilters already reacts to both the standard filter panel and
-  // the resolved search filter, so this one watcher covers both.
   watch(combinedFilters, () => {
     if (ready) refetchAll()
   })
@@ -145,7 +129,8 @@ export function useDocList(doctype) {
   }
 
   function clearFilters() {
-    filters.value = {}
+    searchText.value = ''
+    search.resource.reset()
   }
 
   function refresh() {
@@ -161,7 +146,6 @@ export function useDocList(doctype) {
     pageCount,
     totalCount,
     pageLength,
-    filters,
     searchText,
     // `search` is a reactive() object (see useResource.js), so `search.isLoading`
     // unwraps to a plain boolean *at this access* — re-wrapping in computed()
