@@ -29,7 +29,14 @@
         />
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-1">
+        <Button
+          v-if="isAdmin"
+          variant="ghost"
+          icon="settings"
+          tooltip="Customize columns"
+          @click="showCustomizeColumns = true"
+        />
         <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="refresh" />
       </div>
     </div>
@@ -131,15 +138,26 @@
       />
       <Pagination :page="page" :page-count="pageCount" @update:page="setPage" />
     </div>
+
+    <CustomizeColumnsDialog
+      v-if="isAdmin"
+      v-model="showCustomizeColumns"
+      :doctype="doctype"
+      :fields="docfields"
+      :list-fields="listFields"
+      :columns-customized="columnsCustomized"
+      @saved="onColumnsSaved"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Badge, Button, FeatherIcon, FormControl, LoadingIndicator, TextInput } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
+import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
 import DocFilterPanel from './DocFilterPanel.vue'
 import Pagination from './Pagination.vue'
 import StateBanner from '../common/StateBanner.vue'
@@ -178,6 +196,19 @@ const hasFilters = computed(() => Object.keys(filters.value).length > 0)
 const docfields = computed(() => meta.resource.data?.fields || [])
 const listFields = computed(() => meta.resource.data?.list_fields || [])
 const fieldMap = computed(() => Object.fromEntries(docfields.value.map((f) => [f.fieldname, f])))
+
+const isAdmin = computed(() => Boolean(meta.resource.data?.is_admin))
+const columnsCustomized = computed(() => Boolean(meta.resource.data?.columns_customized))
+const showCustomizeColumns = ref(false)
+
+// set_list_view_columns already returns a fresh get_list_view_meta payload,
+// so apply it directly instead of round-tripping another meta fetch —
+// avoids a race where docs.resource.reload() below would otherwise read
+// list_fields before an async meta reload had resolved.
+function onColumnsSaved(data) {
+  meta.resource.setData(data)
+  docs.resource.reload()
+}
 
 const columns = computed(() => listFields.value.map((f) => ({ key: f.fieldname, label: f.label })))
 

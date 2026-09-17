@@ -1,3 +1,4 @@
+import json
 import re
 
 import frappe
@@ -55,6 +56,11 @@ LAST_UPDATED_FIELD = {
 # staffing-app tables aren't expected to exceed this.
 MAX_SEARCH_MATCHES = 5000
 
+# Stores the Administrator's chosen list-view column set (fieldnames, in
+# order) per doctype — a single shared setting, not per-user, so every role
+# sees the same columns. See set_list_view_columns.
+LIST_VIEW_COLUMN_SETTING_DOCTYPE = "List View Column Setting"
+
 
 def _check_read(doctype):
     if not frappe.has_permission(doctype, "read"):
@@ -62,6 +68,35 @@ def _check_read(doctype):
             _("You do not have permission to view {0}").format(doctype),
             frappe.PermissionError,
         )
+
+
+def _get_custom_column_order(doctype):
+    """The Administrator-configured column order for doctype's list view, or
+    None if it's never been customized (or the stored value is unusable).
+
+    Read via frappe.db.get_value (bypasses the permission framework, same as
+    every other raw DB read in this module) since this is view metadata, not
+    the doctype's own data — it must be visible to every role once set,
+    that's the point of the feature.
+    """
+    raw = frappe.db.get_value(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype, "columns_json")
+    if not raw:
+        return None
+    try:
+        order = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(order, list):
+        return None
+    return [f for f in order if isinstance(f, str)] or None
+
+
+def _displayable_fieldnames(meta):
+    return {
+        df.fieldname
+        for df in meta.fields
+        if df.fieldtype in DISPLAYABLE_FIELDTYPES and not df.hidden
+    } | {LAST_UPDATED_FIELD["fieldname"]}
 
 
 @frappe.whitelist()
@@ -95,18 +130,35 @@ def get_list_view_meta(doctype):
 
     title_field = meta.title_field or "name"
 
-    list_fields = [f for f in fields if f["in_list_view"]]
-    if not any(f["fieldname"] in ("name", title_field) for f in list_fields):
+    default_list_fields = [f for f in fields if f["in_list_view"]]
+    if not any(f["fieldname"] in ("name", title_field) for f in default_list_fields):
         id_field = next((f for f in fields if f["fieldname"] == title_field), None)
-        list_fields = ([id_field] if id_field else []) + list_fields
-    if not list_fields:
+        default_list_fields = ([id_field] if id_field else []) + default_list_fields
+    if not default_list_fields:
         # Nothing declared in_list_view (uncommon, but some doctypes only
         # rely on the title field) — fall back to the first few visible
         # fields so the table is never empty.
-        list_fields = fields[:4]
-    list_fields = list_fields + [LAST_UPDATED_FIELD]
+        default_list_fields = fields[:4]
+    default_list_fields = default_list_fields + [LAST_UPDATED_FIELD]
 
     fields = fields + [LAST_UPDATED_FIELD]
+    field_map = {f["fieldname"]: f for f in fields}
+
+    # The Administrator can override which columns show and in what order
+    # (see set_list_view_columns) — a single setting shared by every role.
+    # Stale/renamed fieldnames from a since-changed doctype are silently
+    # dropped rather than erroring the whole list view.
+    custom_order = _get_custom_column_order(doctype)
+    custom_list_fields = None
+    if custom_order:
+        seen = set()
+        custom_list_fields = [
+            field_map[f]
+            for f in custom_order
+            if f in field_map and not (f in seen or seen.add(f))
+        ]
+
+    list_fields = custom_list_fields or default_list_fields
 
     searchable_fields = [
         f["fieldname"] for f in fields if f["fieldtype"] in SEARCHABLE_FIELDTYPES
@@ -124,6 +176,11 @@ def get_list_view_meta(doctype):
         "fields": fields,
         "list_fields": list_fields,
         "searchable_fields": searchable_fields,
+        # Whether list_fields above is the Administrator's custom column
+        # set (vs. the doctype's own in_list_view default) — drives the
+        # "Reset to default" affordance in the Customize Columns dialog.
+        "columns_customized": bool(custom_list_fields),
+        "is_admin": frappe.session.user == "Administrator",
         "perms": {
             "read": True,
             "write": bool(frappe.has_permission(doctype, "write")),
@@ -131,6 +188,51 @@ def get_list_view_meta(doctype):
             "delete": bool(frappe.has_permission(doctype, "delete")),
         },
     }
+
+
+@frappe.whitelist()
+def set_list_view_columns(doctype, fields):
+    """Administrator-only: sets (or clears) doctype's list-view column order.
+
+    This is a single setting shared by every role — the whole point is that
+    the Administrator picks the columns once and everyone sees the same
+    ones, in the same order. Pass an empty `fields` list to reset the
+    doctype back to its own in_list_view defaults.
+    """
+    _check_read(doctype)
+    if frappe.session.user != "Administrator":
+        frappe.throw(
+            _("Only the Administrator can customize list view columns."),
+            frappe.PermissionError,
+        )
+
+    fields = frappe.parse_json(fields) if isinstance(fields, str) else (fields or [])
+
+    meta = frappe.get_meta(doctype)
+    valid_fieldnames = _displayable_fieldnames(meta)
+
+    seen = set()
+    fields = [
+        f for f in fields if f in valid_fieldnames and not (f in seen or seen.add(f))
+    ]
+
+    exists = frappe.db.exists(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype)
+
+    if not fields:
+        if exists:
+            frappe.delete_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype)
+        return get_list_view_meta(doctype)
+
+    if exists:
+        setting = frappe.get_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype)
+    else:
+        setting = frappe.new_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE)
+        setting.document_type = doctype
+
+    setting.columns_json = json.dumps(fields)
+    setting.save()
+
+    return get_list_view_meta(doctype)
 
 
 @frappe.whitelist()
