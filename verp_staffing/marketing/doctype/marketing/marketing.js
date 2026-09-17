@@ -407,13 +407,16 @@ function render_interview_list_html(frm, data) {
 	const has_more = data.length > MKT_INTERVIEW_VISIBLE_COUNT;
 	const esc = frappe.utils.escape_html;
 
-	console.log(data)
 	function build_items(list) {
 		return list
 			.map(
 				(d) => `
 					<li>
-						<a href="/app/interview/${d.name}" class="mkt-interview-item"}">
+						<a href="${d.owner ? `/app/interview/${d.name}` : "javascript:void(0)"}" class="mkt-interview-item"${
+							!d.owner
+								? ' title="You are not permitted to view other recrutiers interview" style="cursor: not-allowed;"'
+								: ""
+						}>
 							<span class="mkt-interview-dot"></span>
 							<span>${esc(d.company || "")}</span>
 						</a>
@@ -441,7 +444,6 @@ function render_interview_list_html(frm, data) {
 	const $wrap = $wrapper.find(".mkt-interview-list-wrap");
 	const $list = $wrapper.find(".mkt-interview-list");
 	const $toggle = $wrapper.find(".mkt-interview-toggle-btn");
-
 
 	if (!has_more) return;
 
