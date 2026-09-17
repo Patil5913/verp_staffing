@@ -74,9 +74,9 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { Dialog } from 'frappe-ui'
 import router from '@/router'
-import { useSidebar } from '@/composables/useSidebar'
-import { resolveIconName } from '@/utils/sidebarIcons'
-import ScrollArea from './ScrollArea.vue'
+import { useSidebar } from '@/composables/layout/useSidebar'
+import { resolveIconName } from '@/utils/layout/sidebarIcons'
+import ScrollArea from '../common/ScrollArea.vue'
 
 const open = defineModel({ default: false })
 

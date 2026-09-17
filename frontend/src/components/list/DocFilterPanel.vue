@@ -56,7 +56,7 @@
 import { computed, ref, watch } from 'vue'
 import { Autocomplete, Button, FeatherIcon, NestedPopover } from 'frappe-ui'
 import DocFilterRow from './DocFilterRow.vue'
-import { applyOperatorChange, getDefaultOperator, isFilterableField } from '@/utils/filterOperators'
+import { applyOperatorChange, getDefaultOperator, isFilterableField } from '@/utils/list/filterOperators'
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) }, // { fieldname: [operator, value] }

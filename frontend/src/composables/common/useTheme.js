@@ -1,5 +1,5 @@
 import { computed, ref, watchEffect } from 'vue'
-import { notify } from '@/utils/notify'
+import { notify } from '@/utils/common/notify'
 
 const STORAGE_KEY = 'verp-theme'
 const VALID_PREFERENCES = ['system', 'light', 'dark']

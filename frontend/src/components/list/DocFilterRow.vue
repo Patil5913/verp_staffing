@@ -97,7 +97,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Autocomplete, Button, FeatherIcon, FormControl } from 'frappe-ui'
-import { useLinkSearch } from '@/composables/useLinkSearch'
+import { useLinkSearch } from '@/composables/list/useLinkSearch'
 import {
   applyOperatorChange,
   getDefaultOperator,
@@ -105,7 +105,7 @@ import {
   getValueKind,
   isFilterableField,
   toUiOperator,
-} from '@/utils/filterOperators'
+} from '@/utils/list/filterOperators'
 
 const props = defineProps({
   filter: { type: Object, required: true }, // { fieldname, operator, value, field }

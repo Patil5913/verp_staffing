@@ -92,8 +92,8 @@
 <script setup>
 import DOMPurify from 'dompurify'
 import { dayjs, Popover } from 'frappe-ui'
-import { useNotifications } from '@/composables/useNotifications'
-import ScrollArea from './ScrollArea.vue'
+import { useNotifications } from '@/composables/layout/useNotifications'
+import ScrollArea from '../common/ScrollArea.vue'
 
 const { notifications, loading, unreadCount, load, markAllAsRead, markAsRead, resolveRoute } =
   useNotifications()

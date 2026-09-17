@@ -42,8 +42,8 @@
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { call, FeatherIcon, LoadingIndicator, Tree } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 const route = useRoute()
 const doctype = computed(() => route.params.doctype)

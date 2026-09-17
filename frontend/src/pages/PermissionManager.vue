@@ -72,9 +72,9 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { Autocomplete, Button, LoadingIndicator } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import { notify } from '@/utils/notify'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import { notify } from '@/utils/common/notify'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 const PTYPES = [
   'read', 'write', 'create', 'delete', 'submit', 'cancel', 'amend',

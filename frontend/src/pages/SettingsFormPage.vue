@@ -41,9 +41,9 @@
 import { computed, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Button, FormControl, LoadingIndicator } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import { notify } from '@/utils/notify'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import { notify } from '@/utils/common/notify'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 const route = useRoute()
 const doctype = computed(() => route.params.doctype)

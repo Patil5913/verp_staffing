@@ -35,7 +35,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Dialog } from 'frappe-ui'
-import { useSidebar } from '@/composables/useSidebar'
+import { useSidebar } from '@/composables/layout/useSidebar'
 
 const open = defineModel({ default: false })
 

@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { call, initSocket } from 'frappe-ui'
-import { notify } from '@/utils/notify'
+import { notify } from '@/utils/common/notify'
 
 // Mirrors Frappe desk's own notification bell exactly on the backend side:
 // same "Notification Log" whitelisted methods, same realtime channel — see

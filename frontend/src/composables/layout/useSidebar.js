@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { call } from 'frappe-ui'
 import router from '@/router'
-import { notify } from '@/utils/notify'
+import { notify } from '@/utils/common/notify'
 
 // Same server contract the desk-side custom sidebar (public/js/override/
 // desk_override.js) already uses: a single whitelisted call returns a tree
@@ -15,6 +15,7 @@ const SIDEBAR_METHOD = 'verp_staffing.utils.sidebar.get_sidebar_permissions'
 // round trip, never a permission change.
 const CACHE_TTL_MS = 60 * 60 * 1000
 const EXPANDED_STORAGE_KEY = 'verp-sidebar-expanded'
+const OPEN_STORAGE_KEY = 'verp-sidebar-open'
 
 function cacheKeys(user) {
   const suffix = user || 'guest'
@@ -70,10 +71,25 @@ function stripTrailingSlash(path) {
   return (path || '').replace(/\/+$/, '')
 }
 
+const ROUTER_BASE = stripTrailingSlash(router.options.history.base)
+
+// Routes come in as full paths including the router's history base (e.g.
+// "/verp"), same as window.location.pathname — strip that base off both
+// sides so "/verp" (the dashboard, i.e. router path "/") isn't treated as a
+// prefix of every other route under "/verp/...".
+function stripBase(path) {
+  const normalized = stripTrailingSlash(path)
+  if (ROUTER_BASE && normalized.startsWith(ROUTER_BASE)) {
+    return normalized.slice(ROUTER_BASE.length)
+  }
+  return normalized
+}
+
 function isRouteActive(route) {
   if (!route) return false
-  const normalizedRoute = stripTrailingSlash(route)
-  const path = stripTrailingSlash(currentPath.value)
+  const normalizedRoute = stripBase(route)
+  const path = stripBase(currentPath.value)
+  if (!normalizedRoute) return path === ''
   return path === normalizedRoute || path.startsWith(normalizedRoute + '/')
 }
 
@@ -139,6 +155,28 @@ function setExpandedKey(key) {
   }
 }
 
+// whole-sidebar open/closed toggle (separate from the type_2 accordion above)
+function readSidebarOpen() {
+  try {
+    const saved = localStorage.getItem(OPEN_STORAGE_KEY)
+    return saved === null ? true : saved === '1'
+  } catch {
+    return true
+  }
+}
+const sidebarOpen = ref(readSidebarOpen())
+function setSidebarOpen(open) {
+  sidebarOpen.value = open
+  try {
+    localStorage.setItem(OPEN_STORAGE_KEY, open ? '1' : '0')
+  } catch {
+    // ignore
+  }
+}
+function toggleSidebar() {
+  setSidebarOpen(!sidebarOpen.value)
+}
+
 async function load(user, { force = false } = {}) {
   if (!force) {
     const cached = readCache(user)
@@ -175,6 +213,9 @@ export function useSidebar() {
     flatList,
     expandedKey,
     setExpandedKey,
+    sidebarOpen,
+    setSidebarOpen,
+    toggleSidebar,
     isRouteActive,
     firstAccessibleRoute,
     load,

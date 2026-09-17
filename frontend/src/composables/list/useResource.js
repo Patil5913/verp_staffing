@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { createResource } from 'frappe-ui'
-import { notify } from '@/utils/notify'
-import { normalizeError } from '@/utils/errors'
+import { notify } from '@/utils/common/notify'
+import { normalizeError } from '@/utils/common/errors'
 import { useApiState } from './useApiState'
 
 // Thin wrapper around frappe-ui's createResource: every resource in the app

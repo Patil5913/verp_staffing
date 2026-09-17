@@ -80,11 +80,11 @@
 <script setup>
 import { computed } from 'vue'
 import { Badge, Button, FeatherIcon, FormControl, ListView, LoadingIndicator, TextInput } from 'frappe-ui'
-import { useDocList } from '@/composables/useDocList'
-import { formatFieldValue, formatRelativeTime } from '@/utils/formatValue'
+import { useDocList } from '@/composables/list/useDocList'
+import { formatFieldValue, formatRelativeTime } from '@/utils/list/formatValue'
 import DocFilterPanel from './DocFilterPanel.vue'
 import Pagination from './Pagination.vue'
-import StateBanner from './StateBanner.vue'
+import StateBanner from '../common/StateBanner.vue'
 
 const props = defineProps({
   doctype: { type: String, required: true },

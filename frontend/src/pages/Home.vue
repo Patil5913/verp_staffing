@@ -26,7 +26,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Button, call } from 'frappe-ui'
-import { notify } from '@/utils/notify'
+import { notify } from '@/utils/common/notify'
 
 const pong = ref('')
 

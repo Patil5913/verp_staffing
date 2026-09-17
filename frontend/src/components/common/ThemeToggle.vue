@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { useTheme } from '@/composables/useTheme'
+import { useTheme } from '@/composables/common/useTheme'
 import LucideMonitor from '~icons/lucide/monitor'
 import LucideSun from '~icons/lucide/sun'
 import LucideMoon from '~icons/lucide/moon'

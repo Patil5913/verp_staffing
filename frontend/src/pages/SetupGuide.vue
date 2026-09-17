@@ -104,9 +104,9 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Badge, Button, LoadingIndicator } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import { notify } from '@/utils/notify'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import { notify } from '@/utils/common/notify'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 const router = useRouter()
 

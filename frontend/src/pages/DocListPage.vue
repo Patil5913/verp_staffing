@@ -8,7 +8,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import DocListView from '@/components/DocListView.vue'
+import DocListView from '@/components/list/DocListView.vue'
 
 const route = useRoute()
 // vue-router decodes path params, so this is the exact Frappe doctype name

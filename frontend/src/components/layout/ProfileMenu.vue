@@ -5,25 +5,31 @@
         <button
           type="button"
           class="flex w-full items-center gap-2.5 rounded-md p-2 text-left transition-colors"
-          :class="open ? 'bg-app-panel-2' : 'hover:bg-app-panel-2'"
+          :class="[
+            collapsed ? 'justify-center' : '',
+            open ? 'bg-app-panel-2' : 'hover:bg-app-panel-2',
+          ]"
+          :title="collapsed ? fullName : undefined"
         >
           <Avatar :image="userImage" :label="fullName" size="md" />
-          <span class="min-w-0 flex-1">
-            <span
-              class="block truncate text-p-sm font-medium text-app-text"
-            >
-              {{ fullName }}
+          <template v-if="!collapsed">
+            <span class="min-w-0 flex-1">
+              <span
+                class="block truncate text-p-sm font-medium text-app-text"
+              >
+                {{ fullName }}
+              </span>
+              <span
+                v-if="userEmail"
+                class="block truncate text-2xs text-app-text-muted"
+              >
+                {{ userEmail }}
+              </span>
             </span>
             <span
-              v-if="userEmail"
-              class="block truncate text-2xs text-app-text-muted"
-            >
-              {{ userEmail }}
-            </span>
-          </span>
-          <span
-            class="lucide-chevron-up size-3.5 shrink-0 text-app-text-muted"
-          />
+              class="lucide-chevron-up size-3.5 shrink-0 text-app-text-muted"
+            />
+          </template>
         </button>
       </template>
     </Dropdown>
@@ -35,9 +41,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Avatar, Dropdown, call } from 'frappe-ui'
-import { useTheme } from '@/composables/useTheme'
-import { notify } from '@/utils/notify'
-import KeyboardShortcutsDialog from './KeyboardShortcutsDialog.vue'
+import { useTheme } from '@/composables/common/useTheme'
+import { notify } from '@/utils/common/notify'
+import KeyboardShortcutsDialog from '../overlays/KeyboardShortcutsDialog.vue'
+
+defineProps({
+  collapsed: { type: Boolean, default: false },
+})
 
 const fullName = window.full_name || window.user || 'User'
 const userEmail = window.user && window.user !== fullName ? window.user : ''

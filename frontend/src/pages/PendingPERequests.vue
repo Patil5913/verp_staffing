@@ -103,10 +103,10 @@
 <script setup>
 import { ref } from 'vue'
 import { Button, Dialog, FormControl, LoadingIndicator } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import { formatDate } from '@/utils/formatValue'
-import { notify } from '@/utils/notify'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import { formatDate } from '@/utils/list/formatValue'
+import { notify } from '@/utils/common/notify'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 // Mirrors the filters the existing "Pending PE Requests" Custom HTML Block
 // uses (see verp_staffing/fixtures/custom_html_block.json) so this page

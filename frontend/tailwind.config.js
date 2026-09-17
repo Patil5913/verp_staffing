@@ -1,5 +1,5 @@
 import frappeUIPreset from 'frappe-ui/tailwind'
-import { ALL_ICON_NAMES } from './src/utils/sidebarIcons.js'
+import { ALL_ICON_NAMES } from './src/utils/layout/sidebarIcons.js'
 
 export default {
   presets: [frappeUIPreset],

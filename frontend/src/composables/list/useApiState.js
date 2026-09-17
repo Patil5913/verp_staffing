@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { normalizeError } from '@/utils/errors'
+import { normalizeError } from '@/utils/common/errors'
 
 function isEmptyValue(value) {
   if (value == null) return true

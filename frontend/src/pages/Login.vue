@@ -104,7 +104,7 @@ import {
   Password,
   createResource,
 } from 'frappe-ui'
-import { notify } from '@/utils/notify'
+import { notify } from '@/utils/common/notify'
 
 // dynamic binding so Vite's template compiler doesn't try to resolve this
 // as a local build asset — it's served at runtime by the Frappe backend

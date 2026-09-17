@@ -79,10 +79,10 @@
 <script setup>
 import { ref } from 'vue'
 import { Button, LoadingIndicator, TextEditor } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import { formatRelativeTime } from '@/utils/formatValue'
-import { notify } from '@/utils/notify'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import { formatRelativeTime } from '@/utils/list/formatValue'
+import { notify } from '@/utils/common/notify'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 // Scoped to a unified inbox (list/read/reply/flag/trash/spam) — per-account
 // folder switching isn't wired up because frappe.email.inbox.get_email_accounts

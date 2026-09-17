@@ -77,8 +77,8 @@
 import { computed, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { AxisChart, Button, FormControl, LoadingIndicator } from 'frappe-ui'
-import { useResource } from '@/composables/useResource'
-import StateBanner from '@/components/StateBanner.vue'
+import { useResource } from '@/composables/list/useResource'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 const route = useRoute()
 const reportName = computed(() => route.params.reportName)
