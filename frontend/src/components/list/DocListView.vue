@@ -66,16 +66,13 @@
         />
       </div>
 
-      <div class="flex items-center justify-end gap-1">
-        <Button
-          v-if="canDelete && selected.size"
-          variant="outline"
-          theme="red"
-          icon-left="trash-2"
-          @click="confirmBulkDelete"
-        >
+      <div class="flex items-center justify-end gap-2">
+        <AppButton v-if="canCreate" variant="primary" icon="plus" @click="showQuickCreate = true">
+          Add New
+        </AppButton>
+        <AppButton v-if="canDelete && selected.size" variant="danger" icon="trash-2" @click="confirmBulkDelete">
           Delete ({{ selected.size }})
-        </Button>
+        </AppButton>
         <Button
           v-if="isAdmin"
           variant="ghost"
@@ -221,6 +218,8 @@
       @saved="onColumnsSaved"
     />
 
+    <QuickCreateDialog v-if="showQuickCreate" v-model="showQuickCreate" :doctype="doctype" @created="refresh" />
+
     <Dialog
       v-model="showDeleteDialog"
       :options="{
@@ -230,9 +229,7 @@
       }"
     >
       <template #actions>
-        <Button variant="solid" theme="red" icon-left="trash-2" :loading="deleting" @click="onConfirmDelete">
-          Delete
-        </Button>
+        <AppButton variant="danger" icon="trash-2" :loading="deleting" @click="onConfirmDelete">Delete</AppButton>
       </template>
     </Dialog>
   </div>
@@ -247,7 +244,9 @@ import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
 import { notify } from '@/utils/common/notify'
+import AppButton from '@/components/common/AppButton.vue'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
+import QuickCreateDialog from './QuickCreateDialog.vue'
 import Pagination from './Pagination.vue'
 import StateBanner from '../common/StateBanner.vue'
 
@@ -260,6 +259,8 @@ const router = useRouter()
 function openRow(row) {
   router.push({ name: 'DocDetail', params: { doctype: props.doctype, name: row.name } })
 }
+
+const showQuickCreate = ref(false)
 
 const {
   meta,
@@ -369,6 +370,7 @@ const rows = computed(() =>
 // same delete_docs call, list_view.py returns per-name success/failure so a
 // permission-restricted row in a bulk selection doesn't silently vanish.
 const canDelete = computed(() => Boolean(meta.resource.data?.perms?.delete))
+const canCreate = computed(() => Boolean(meta.resource.data?.perms?.create))
 
 const selected = ref(new Set())
 

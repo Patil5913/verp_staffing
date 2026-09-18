@@ -8,9 +8,13 @@ import { validateFieldValue } from '@/utils/detail/fieldFormats'
 // values, and a save() that round-trips through the same endpoint so the
 // form always re-renders from the server's post-save state.
 export function useDocDetail(doctype, name) {
+  // The list view's "New" button routes here with name: 'new' (no real
+  // docname yet) — treated the same as no name at all.
+  const isNew = computed(() => !name.value || name.value === 'new')
+
   const meta = useResource({
     url: 'verp_staffing.utils.detail_view.get_doc_meta',
-    makeParams: () => ({ doctype: doctype.value, name: name.value }),
+    makeParams: () => ({ doctype: doctype.value, name: isNew.value ? undefined : name.value }),
     auto: true,
   })
 
@@ -80,7 +84,7 @@ export function useDocDetail(doctype, name) {
 
     const result = await save.resource.submit({
       doctype: doctype.value,
-      name: name.value,
+      name: isNew.value ? undefined : name.value,
       values: changedValues ?? { ...values },
     })
     return !!result
@@ -94,6 +98,7 @@ export function useDocDetail(doctype, name) {
     canWrite,
     canDelete,
     isDirty,
+    isNew,
     titleField,
     save,
     submit,

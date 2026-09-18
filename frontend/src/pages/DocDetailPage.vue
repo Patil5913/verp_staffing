@@ -10,7 +10,7 @@
         :show-save="!isLead || !leadLocked"
         :save-dirty="isDirty"
         :save-loading="detail.save.isLoading"
-        :show-delete="detail.canDelete.value"
+        :show-delete="!detail.isNew.value && detail.canDelete.value"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
@@ -177,7 +177,12 @@ const DEFAULT_TABS = [
   { key: 'notes', label: 'Notes' },
   { key: 'activity', label: 'Activity' },
 ]
-const tabs = computed(() => (isUser.value ? USER_TABS : DEFAULT_TABS))
+// Notes/Activity are keyed off a real docname (comments, versions, linked
+// tasks/events) — nothing to show for a record that hasn't been saved yet.
+const tabs = computed(() => {
+  if (isUser.value) return USER_TABS
+  return detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS
+})
 const activeTab = ref('details')
 watch(isUser, (value) => (activeTab.value = value ? 'profile' : 'details'), { immediate: true })
 
@@ -192,6 +197,7 @@ const USER_SECURITY_FIELDS = ['simultaneous_sessions', 'restrict_ip', 'login_aft
 const userEmailsTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'user_emails'))
 
 const recordTitle = computed(() => {
+  if (detail.isNew.value) return `New ${doctype.value}`
   const titleField = detail.titleField.value
   return (titleField !== 'name' && detail.values[titleField]) || name.value
 })
@@ -237,7 +243,17 @@ async function onSave() {
   // isDirty clears synchronously — no separate detail.refresh() round-trip
   // needed (that gap was letting a just-saved page still look "dirty" for
   // a moment, triggering the leave-guard even right after a save).
-  await detail.submit()
+  const wasNew = detail.isNew.value
+  const ok = await detail.submit()
+  if (ok && wasNew) {
+    // The doc now has a real name (save's onSuccess already re-snapshotted
+    // detail.meta off the insert response) — swap the URL in place so a
+    // refresh, or the delete/back flow, lands on its real docname instead
+    // of re-triggering another insert.
+    const newName = detail.meta.resource.data?.name
+    bypassNext()
+    router.replace({ name: 'DocDetail', params: { doctype: doctype.value, name: newName } })
+  }
 }
 
 function goBack() {

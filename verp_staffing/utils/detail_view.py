@@ -72,57 +72,80 @@ def _doc_fields_and_tables(meta, doc):
 
 
 @frappe.whitelist()
-def get_doc_meta(doctype, name):
+def get_doc_meta(doctype, name=None):
     """Field/child-table/value/permission metadata for a generic doctype
     detail/form view — the record-level analog of list_view.get_list_view_meta
     (list) and get_settings_meta (single doctype).
+
+    A falsy `name` (the list view's "New" button navigates here with no
+    docname) returns an in-memory frappe.new_doc() instead of an existing
+    record, gated on create permission rather than read/write/delete.
     """
     meta = frappe.get_meta(doctype)
     if meta.issingle:
         frappe.throw(_("{0} is a single doctype; use get_settings_meta").format(doctype))
 
-    _check_read(doctype, name)
-    doc = frappe.get_doc(doctype, name)
+    is_new = not name
+    if is_new:
+        if not frappe.has_permission(doctype, "create"):
+            frappe.throw(
+                _("You do not have permission to create {0}").format(doctype),
+                frappe.PermissionError,
+            )
+        doc = frappe.new_doc(doctype)
+    else:
+        _check_read(doctype, name)
+        doc = frappe.get_doc(doctype, name)
 
     fields, tables = _doc_fields_and_tables(meta, doc)
     values = {f["fieldname"]: doc.get(f["fieldname"]) for f in fields}
 
     return {
         "doctype": doctype,
-        "name": name,
+        "name": None if is_new else name,
         "title_field": meta.title_field or "name",
         "fields": fields,
         "tables": tables,
         "values": values,
         "perms": {
             "read": True,
-            "write": bool(frappe.has_permission(doctype, "write", doc=doc)),
-            "delete": bool(frappe.has_permission(doctype, "delete", doc=doc)),
+            "write": True if is_new else bool(frappe.has_permission(doctype, "write", doc=doc)),
+            "delete": False if is_new else bool(frappe.has_permission(doctype, "delete", doc=doc)),
         },
     }
 
 
 @frappe.whitelist()
-def save_doc_fields(doctype, name, values):
+def save_doc_fields(doctype, name=None, values=None):
     """Applies `values` (a fieldname -> scalar, or fieldname -> list-of-rows
-    for a child table) onto an existing doc and saves it. One call handles
-    both scalar and child-table edits, since Document.set already accepts
-    either shape.
+    for a child table) onto a doc and saves it. One call handles both scalar
+    and child-table edits, since Document.set already accepts either shape.
+
+    A falsy `name` inserts a new doc from `values` instead of updating an
+    existing one, gated on create permission.
     """
     values = frappe.parse_json(values) if isinstance(values, str) else (values or {})
 
-    doc = frappe.get_doc(doctype, name)
-    if not doc.has_permission("write"):
-        frappe.throw(
-            _("You do not have permission to edit {0} {1}").format(doctype, name),
-            frappe.PermissionError,
-        )
+    if name:
+        doc = frappe.get_doc(doctype, name)
+        if not doc.has_permission("write"):
+            frappe.throw(
+                _("You do not have permission to edit {0} {1}").format(doctype, name),
+                frappe.PermissionError,
+            )
+        for fieldname, value in values.items():
+            doc.set(fieldname, value)
+        doc.save()
+    else:
+        if not frappe.has_permission(doctype, "create"):
+            frappe.throw(
+                _("You do not have permission to create {0}").format(doctype),
+                frappe.PermissionError,
+            )
+        doc = frappe.get_doc({"doctype": doctype, **values})
+        doc.insert()
 
-    for fieldname, value in values.items():
-        doc.set(fieldname, value)
-    doc.save()
-
-    return get_doc_meta(doctype, name)
+    return get_doc_meta(doctype, doc.name)
 
 
 def _department_access_fields(doctype_name):
