@@ -212,6 +212,9 @@ def get_data(filters):
         return []
 
     # -- Enrich with employee metadata (no extra DB call) --------------------
+    # Amounts are in the company's currency (this used to be hardcoded "USD",
+    # which mislabelled every non-USD company's revenue).
+    currency = (frappe.get_cached_value("Company", company, "default_currency") if company else None) or "USD"
     result = []
     for row in revenue_rows:
         emp = emp_by_user.get(row["user"])
@@ -226,7 +229,7 @@ def get_data(filters):
                 "target": emp.get("target") or 0.0,
                 "target_based_on": emp.get("target_based_on") or "",
                 "start_date": emp.get("start_date") or "",
-                "currency": "USD"
+                "currency": currency,
             }
         )
 

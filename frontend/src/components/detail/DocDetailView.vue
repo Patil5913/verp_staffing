@@ -18,8 +18,10 @@
 
     <div v-else class="flex flex-col gap-6">
       <div
+        v-if="fields.length"
         class="grid grid-cols-1 items-start gap-x-6 gap-y-5 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm sm:grid-cols-2"
       >
+        <h3 v-if="title" class="col-span-full -mb-1 text-p-base font-medium text-app-text">{{ title }}</h3>
         <div
           v-for="field in fields"
           :key="field.fieldname"
@@ -65,12 +67,36 @@ const props = defineProps({
   // Profile/Email/Security tabs) reuse this same field grid + FieldControl
   // for a curated subset instead of every field on the doctype.
   fieldnames: { type: Array, default: null },
+  // Heading shown at the top of the field card — detail configs use it to
+  // split a long doctype (Payment Entry, invoices) into named groups.
+  title: { type: String, default: '' },
 })
 
+// Frappe's `depends_on`: an "eval:<js expression>" over `doc`, or a bare
+// fieldname meaning "that field has a value". The expressions come from the
+// doctype JSON in this app's own repo (not user input). One that can't be
+// evaluated shows its field — hiding a field on a parse error would be worse.
+function dependsOnPasses(field) {
+  const expr = field.depends_on
+  if (!expr) return true
+  const doc = { ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }
+  try {
+    if (expr.startsWith('eval:')) {
+      const inList = (list, value) => Array.isArray(list) && list.includes(value)
+      // eslint-disable-next-line no-new-func
+      return Boolean(new Function('doc', 'in_list', `return (${expr.slice(5)})`)(doc, inList))
+    }
+    return Boolean(doc[expr])
+  } catch {
+    return true
+  }
+}
+
 const fields = computed(() => {
-  if (!props.fieldnames) return props.detail.fields.value
+  const all = props.detail.fields.value.filter(dependsOnPasses)
+  if (!props.fieldnames) return all
   const order = props.fieldnames
-  return props.detail.fields.value
+  return all
     .filter((f) => order.includes(f.fieldname))
     .sort((a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname))
 })

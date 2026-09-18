@@ -12,7 +12,7 @@ import { notify } from '@/utils/common/notify'
 // tabs/fields on top of this.
 //
 // `extraIsDirty`/`extraSave` let a page fold a second, separately-saved form
-// (e.g. Lead's LeadExtras "Lead Detail Form") into the same Save button and
+// (e.g. Lead's "Lead Detail Form" profile) into the same Save button and
 // the same unsaved-changes guard, without this composable knowing anything
 // about that doctype.
 export function useDetailPageController(doctype, name, options = {}) {
@@ -61,6 +61,21 @@ export function useDetailPageController(doctype, name, options = {}) {
       bypassNext()
       router.replace(`/${encodeURIComponent(doctype.value)}/${encodeURIComponent(newName)}`)
     }
+    return ok
+  }
+
+  // Submit/Cancel (submittable doctypes only): submit first saves any
+  // pending edits, since Frappe submits what's on the server, not what's in
+  // the form. Cancel asks first — it's the one irreversible transition.
+  const showCancelDialog = ref(false)
+
+  async function onSubmit() {
+    if (detail.isDirty.value && !(await detail.submit())) return
+    await detail.submitDoc()
+  }
+
+  async function onCancelDoc() {
+    if (await detail.cancelDoc()) showCancelDialog.value = false
   }
 
   function goBack() {
@@ -100,6 +115,9 @@ export function useDetailPageController(doctype, name, options = {}) {
     showDeleteDialog,
     deleting,
     onDelete,
+    onSubmit,
+    onCancelDoc,
+    showCancelDialog,
     bypassNext,
   }
 }

@@ -1,4 +1,5 @@
 import { computed, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 import { validateFieldValue } from '@/utils/detail/fieldFormats'
@@ -8,6 +9,7 @@ import { validateFieldValue } from '@/utils/detail/fieldFormats'
 // values, and a save() that round-trips through the same endpoint so the
 // form always re-renders from the server's post-save state.
 export function useDocDetail(doctype, name) {
+  const route = useRoute()
   // The list view's "New" button routes here with name: 'new' (no real
   // docname yet) — treated the same as no name at all.
   const isNew = computed(() => !name.value || name.value === 'new')
@@ -26,11 +28,25 @@ export function useDocDetail(doctype, name) {
 
   const fields = computed(() => meta.resource.data?.fields || [])
   const tables = computed(() => meta.resource.data?.tables || [])
-  const canWrite = computed(() => !!meta.resource.data?.perms?.write)
+  // Submittable doctypes (Journal Entry, Payment Entry, invoices, ...):
+  // docstatus 0 draft / 1 submitted / 2 cancelled. A doctype that isn't
+  // submittable always reports 0, so nothing below needs a special case.
+  const isSubmittable = computed(() => !!meta.resource.data?.is_submittable)
+  const docstatus = computed(() => meta.resource.data?.docstatus ?? 0)
+  // A submitted/cancelled doc is frozen, whatever the user's write perm is.
+  const canWrite = computed(() => !!meta.resource.data?.perms?.write && docstatus.value === 0)
+  const canSubmit = computed(() => isSubmittable.value && docstatus.value === 0 && !!meta.resource.data?.perms?.submit)
+  const canCancel = computed(() => isSubmittable.value && docstatus.value === 1 && !!meta.resource.data?.perms?.cancel)
   const canDelete = computed(() => !!meta.resource.data?.perms?.delete)
   const titleField = computed(() => meta.resource.data?.title_field || 'name')
 
   const values = reactive({})
+  // Read-only mirror of the doctype's hidden fields (see get_doc_meta) — for
+  // page logic only, never rendered or saved.
+  const hidden = reactive({})
+  // Rows of hidden child tables (see get_doc_meta) — read by custom panels,
+  // which write edits into `values[<table>]` to have them saved.
+  const hiddenTables = reactive({})
   // JSON snapshot of `values` right after a load/save — isDirty just diffs
   // against it, so it's the single source of truth both ChildTableField
   // (via values[fieldname]) and FieldControl write into.
@@ -46,6 +62,10 @@ export function useDocDetail(doctype, name) {
     if (!data) return
     Object.keys(values).forEach((k) => delete values[k])
     Object.assign(values, data.values)
+    Object.keys(hidden).forEach((k) => delete hidden[k])
+    Object.assign(hidden, data.hidden_values || {})
+    Object.keys(hiddenTables).forEach((k) => delete hiddenTables[k])
+    Object.assign(hiddenTables, data.hidden_tables || {})
     // Table rows aren't part of `values` from the server (get_doc_meta's
     // `values` is scalar-fields-only) — seed them here too, since
     // ChildTableField reads/writes `values[table.fieldname]` the same
@@ -58,6 +78,23 @@ export function useDocDetail(doctype, name) {
 
   watch(() => meta.resource.data, applyData, { immediate: true })
 
+  // "Create X for this customer" style links carry defaults in the query
+  // string (/Sales Order/new?customer=CUST-1) — the desk's frappe.new_doc(
+  // doctype, { customer }). Only a new doc takes them, only for fields this
+  // doctype actually has, and they land after the snapshot so the form
+  // starts dirty (there is something to save).
+  watch(
+    () => meta.resource.data,
+    (data) => {
+      if (!data || data.name) return
+      const known = new Set((data.fields || []).map((f) => f.fieldname))
+      for (const [key, value] of Object.entries(route.query)) {
+        if (known.has(key)) values[key] = value
+      }
+    },
+    { immediate: true },
+  )
+
   const isDirty = computed(() => JSON.stringify(values) !== snapshot.value)
 
   const save = useResource({
@@ -68,6 +105,27 @@ export function useDocDetail(doctype, name) {
       notify.success('Saved.')
     },
   })
+
+  // submit/cancel both answer with the same refreshed meta payload a save
+  // does, so they re-snapshot through the same applyData.
+  function transitionResource(url) {
+    return useResource({
+      url,
+      onSuccess(data) {
+        meta.resource.setData(data)
+        applyData(data)
+      },
+    })
+  }
+  const submitResource = transitionResource('verp_staffing.utils.detail_view.submit_doc')
+  const cancelResource = transitionResource('verp_staffing.utils.detail_view.cancel_doc')
+  async function runTransition(resource, message) {
+    const result = await resource.resource.submit({ doctype: doctype.value, name: name.value })
+    if (result) notify.success(message)
+    return !!result
+  }
+  const submitDoc = () => runTransition(submitResource, 'Submitted.')
+  const cancelDoc = () => runTransition(cancelResource, 'Cancelled.')
 
   const triedSave = ref(false)
 
@@ -95,8 +153,17 @@ export function useDocDetail(doctype, name) {
     fields,
     tables,
     values,
+    hidden,
+    hiddenTables,
     canWrite,
     canDelete,
+    isSubmittable,
+    docstatus,
+    canSubmit,
+    canCancel,
+    submitDoc,
+    cancelDoc,
+    transitioning: computed(() => submitResource.isLoading || cancelResource.isLoading),
     isDirty,
     isNew,
     titleField,

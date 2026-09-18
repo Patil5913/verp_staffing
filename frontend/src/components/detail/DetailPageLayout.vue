@@ -7,6 +7,7 @@
       <div class="flex min-w-0 shrink-0 items-center gap-3">
         <AppButton variant="ghost" size="icon" icon="arrow-left" @click="emit('back')" />
         <h1 class="min-w-0 max-w-xs truncate text-p-lg font-medium text-app-text">{{ title }}</h1>
+        <slot name="title-extra" />
       </div>
 
       <div class="h-6 w-px shrink-0 bg-app-border" />

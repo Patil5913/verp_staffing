@@ -1,16 +1,20 @@
 <template>
   <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+    <template #title-extra>
+      <DocStatusBadge v-if="!detail.isNew.value" :status="detail.values.status" />
+    </template>
+
     <template #actions>
       <RecordActionBar
         :show-save="!leadLocked"
         :save-dirty="isDirty"
-        :save-loading="detail.save.isLoading"
+        :save-loading="detail.save.isLoading || profile.save.isLoading"
         :show-delete="!detail.isNew.value && detail.canDelete.value"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
-        <AppButton v-if="!leadLocked" variant="outline" icon="target" @click="leadExtrasRef?.showCreateOpportunity()">
+        <AppButton v-if="!detail.isNew.value && !leadLocked" variant="outline" icon="target" @click="showOpportunityDialog = true">
           Create Opportunity
         </AppButton>
       </RecordActionBar>
@@ -19,9 +23,36 @@
     <template #tab-details>
       <div class="h-full overflow-y-auto px-6 py-4">
         <div class="flex flex-col gap-6">
-          <DocDetailView :doctype="doctype" :detail="detail" :force-disabled="leadLocked" :read-only-fields="readOnlyFields" />
-          <LeadExtras ref="leadExtrasRef" :lead-name="name" @locked-change="(v) => (leadLocked = v)" />
+          <NoticeBanner
+            v-if="leadLocked"
+            tone="info"
+            message="This Lead is locked — an Opportunity already exists for it, so it can no longer be edited."
+          />
+
+          <!-- What the profile still needs, one click from the Details tab -->
+          <button
+            v-if="profile.exists.value"
+            type="button"
+            class="flex items-center gap-4 rounded-xl border border-app-border bg-app-panel px-5 py-4 text-left shadow-sm transition-colors hover:border-app-primary/40"
+            @click="activeTab = 'profile'"
+          >
+            <span class="lucide-user-round-pen size-5 shrink-0 text-app-primary" />
+            <span class="min-w-0 flex-1">
+              <span class="block text-p-base font-medium text-app-text">Candidate profile</span>
+              <span class="block text-p-sm text-app-text-muted">Education, experience, visa status, documents and consent.</span>
+            </span>
+            <span class="text-p-sm font-medium text-app-text">{{ completeness }}% complete</span>
+            <span class="lucide-chevron-right size-4 text-app-text-muted" />
+          </button>
+
+          <DocDetailView :doctype="doctype" :detail="detail" :force-disabled="leadLocked" :read-only-fields="readOnlyFields" title="Lead" />
         </div>
+      </div>
+    </template>
+
+    <template #tab-profile>
+      <div class="h-full overflow-y-auto px-6 py-4">
+        <LeadProfilePanel :form="profile" :locked="leadLocked" :tried-save="triedSaveProfile" />
       </div>
     </template>
 
@@ -46,6 +77,8 @@
     </template>
   </DetailPageLayout>
 
+  <LeadOpportunityDialog v-model="showOpportunityDialog" :lead-name="name" @created="opportunity.resource.reload()" />
+
   <Dialog
     v-model="showDeleteDialog"
     :options="{
@@ -61,55 +94,78 @@
 </template>
 
 <script setup>
-// Lead's detail page: the generic Details/Notes/Activity tabs, plus the
-// Lead-specific "Lead Detail Form" (candidate-facing fields) and the
-// Create Opportunity flow — both live in LeadExtras.vue below the main
-// field grid, per the Lead doctype's own layout, not in the generic
-// DocDetailPage. See router.js for how /Lead/:name is routed here ahead of
-// the generic /:doctype/:name.
+// Lead's detail page. Details holds the Lead itself; the candidate's
+// "Lead Detail Form" (education, experience, visa, documents, consent) gets
+// its own Candidate Profile tab, grouped into the doctype's sections, and
+// both save from the one navbar Save. Once an Opportunity exists for the
+// Lead it's locked (lead.js). See router.js for how /Lead/:name is routed
+// here ahead of the generic /:doctype/:name.
+//
+// The profile form's state lives here, not in a tab component: tabs unmount
+// when you leave them, and an unsaved profile edit must survive that.
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
+import NoticeBanner from '@/components/common/NoticeBanner.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
-import LeadExtras from '@/components/detail/LeadExtras.vue'
+import LeadOpportunityDialog from '@/components/detail/LeadOpportunityDialog.vue'
+import LeadProfilePanel from '@/components/detail/LeadProfilePanel.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
+import { useLeadDetailForm } from '@/composables/detail/useLeadDetailForm'
+import { useResource } from '@/composables/list/useResource'
+import { validateFieldValue } from '@/utils/detail/fieldFormats'
 
 const route = useRoute()
 
 const doctype = computed(() => 'Lead')
 const name = computed(() => route.params.name)
 
-const leadLocked = ref(false)
-const leadExtrasRef = ref(null)
+const profile = useLeadDetailForm(name)
+const triedSaveProfile = ref(false)
+
+const opportunity = useResource({
+  url: 'verp_staffing.crm.doctype.lead.lead.lead_has_opportunity',
+  makeParams: () => ({ lead_name: name.value }),
+  notifyOnError: false,
+  auto: true,
+})
+const leadLocked = computed(() => !!opportunity.resource.data)
+const showOpportunityDialog = ref(false)
+
+async function saveProfile() {
+  triedSaveProfile.value = true
+  const invalid = profile.fields.value.find((f) => !f.read_only && validateFieldValue(f, profile.values[f.fieldname]))
+  if (invalid) return false
+  return profile.submit()
+}
 
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } = useDetailPageController(
   doctype,
   name,
-  {
-    extraIsDirty: computed(() => leadExtrasRef.value?.isDirty?.value ?? false),
-    extraSave: () => leadExtrasRef.value?.save(),
-  },
+  { extraIsDirty: computed(() => profile.isDirty.value), extraSave: saveProfile },
 )
 
 // Matches the old desk Lead form's onload(): status is always read-only,
-// lead_owner only for non-Administrators — enforced here since these are
-// Lead-specific UI rules, not something detail_view.py's generic
-// get_doc_meta should know about.
+// lead_owner only for non-Administrators.
 const readOnlyFields = computed(() => {
   const fields = ['status']
   if (window.user !== 'Administrator') fields.push('lead_owner')
   return fields
 })
 
-const DEFAULT_TABS = [
+const completeness = computed(() => profile.completeness.value)
+
+const allTabs = computed(() => [
   { key: 'details', label: 'Details' },
+  ...(profile.exists.value ? [{ key: 'profile', label: 'Candidate Profile' }] : []),
   { key: 'notes', label: 'Notes' },
   { key: 'activity', label: 'Activity' },
-]
-const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
+])
+const tabs = computed(() => (detail.isNew.value ? allTabs.value.slice(0, 1) : allTabs.value))
 const activeTab = ref('details')
 </script>

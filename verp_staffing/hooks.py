@@ -167,6 +167,8 @@ after_migrate = [
     # "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
+    # Demo data for a production site, once — guarded; see the file's docstring.
+    "verp_staffing.utils.seed_production.after_migrate",
 ]
 
 # Uninstallation

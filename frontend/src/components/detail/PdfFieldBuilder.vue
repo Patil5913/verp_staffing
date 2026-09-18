@@ -153,6 +153,7 @@ import { Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
+import { usePdfPages } from '@/composables/detail/usePdfPages'
 import { notify } from '@/utils/common/notify'
 
 const props = defineProps({
@@ -341,64 +342,8 @@ function onResizeMouseUp() {
   emitUpdate()
 }
 
-// ── pdf.js: render each page to an image once, so fields overlay a plain
-// <img> instead of needing a live canvas per page ─────────────────────────
-const PDFJS_URL = '/assets/verp_staffing/js/pdf.min.js'
-const PDFJS_WORKER = '/assets/verp_staffing/js/pdf.worker.min.js'
-let pdfjsPromise = null
-function loadPdfjs() {
-  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib)
-  if (pdfjsPromise) return pdfjsPromise
-  pdfjsPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = PDFJS_URL
-    script.onload = () => {
-      if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER
-        resolve(window.pdfjsLib)
-      } else {
-        reject(new Error('pdf.js failed to initialise.'))
-      }
-    }
-    script.onerror = () => reject(new Error('Could not load the PDF viewer (pdf.js).'))
-    document.head.appendChild(script)
-  })
-  return pdfjsPromise
-}
-
-const pages = ref([])
-const loadingPdf = ref(false)
-const pdfError = ref('')
-
-async function loadPdf() {
-  if (!props.pdfUrl) {
-    pages.value = []
-    return
-  }
-  loadingPdf.value = true
-  pdfError.value = ''
-  try {
-    const pdfjsLib = await loadPdfjs()
-    const pdf = await pdfjsLib.getDocument(props.pdfUrl).promise
-    const rendered = []
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i)
-      const viewport = page.getViewport({ scale: 1.5 })
-      const canvas = document.createElement('canvas')
-      canvas.width = viewport.width
-      canvas.height = viewport.height
-      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
-      rendered.push({ number: i, dataUrl: canvas.toDataURL(), width: viewport.width, height: viewport.height })
-    }
-    pages.value = rendered
-  } catch (err) {
-    pdfError.value = err?.message || 'Error loading PDF template.'
-  } finally {
-    loadingPdf.value = false
-  }
-}
-
-watch(() => props.pdfUrl, loadPdf, { immediate: true })
+// pdf.js page rendering lives in usePdfPages, shared with the E Sign builder.
+const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() => props.pdfUrl))
 </script>
 
 <style scoped>

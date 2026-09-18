@@ -8,6 +8,10 @@
     always immediately beside Delete, in this order, regardless of what
     else this page adds — a future action added via the slot above can
     never land between them. -->
+    <AppButton v-if="showSubmit" variant="primary" icon="check-circle" :loading="submitLoading" @click="$emit('submit')">
+      Submit
+    </AppButton>
+    <AppButton v-if="showCancel" variant="outline" icon="x-circle" @click="$emit('cancel')">Cancel</AppButton>
     <AppButton
       v-if="showSave"
       variant="primary"
@@ -35,6 +39,11 @@ defineProps({
   saveLoading: { type: Boolean, default: false },
   showDelete: { type: Boolean, default: false },
   deleteLoading: { type: Boolean, default: false },
+  // Submittable doctypes only — see useDetailPageController's onSubmit /
+  // onCancelDoc. Submit sits before Save/Delete like any other page action.
+  showSubmit: { type: Boolean, default: false },
+  submitLoading: { type: Boolean, default: false },
+  showCancel: { type: Boolean, default: false },
 })
-defineEmits(['save', 'delete'])
+defineEmits(['save', 'delete', 'submit', 'cancel'])
 </script>

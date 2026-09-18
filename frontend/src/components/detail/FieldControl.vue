@@ -3,6 +3,8 @@
     <AppLinkField
       :label="field.label"
       :doctype="field.options"
+      :query="linkQuery?.query"
+      :filters="linkQuery?.filters"
       :model-value="modelValue || ''"
       :disabled="disabled"
       @update:model-value="(v) => emit('update:modelValue', v)"
@@ -110,6 +112,9 @@ const props = defineProps({
   modelValue: { default: null },
   disabled: { type: Boolean, default: false },
   showErrors: { type: Boolean, default: false },
+  // { query?, filters? } for a Link field — a whitelisted standard query and/or
+  // filters, like the desk's frm.set_query(fieldname, ...).
+  linkQuery: { type: Object, default: null },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -164,7 +169,11 @@ const attachFileName = computed(() => (props.modelValue || '').split('/').pop())
 
 const selectOptions = computed(() => {
   if (props.field.fieldtype !== 'Select') return []
-  return (props.field.options || '').split('\n').filter(Boolean).map((v) => ({ label: v, value: v }))
+  const raw = (props.field.options || '').split('\n')
+  const options = raw.filter(Boolean).map((v) => ({ label: v, value: v }))
+  // A leading blank line is Frappe's "may be left empty" — offer that choice,
+  // so a filter or optional Select can be cleared again once picked.
+  return raw[0] === '' && raw.length > 1 ? [{ label: '—', value: '' }, ...options] : options
 })
 
 const error = computed(() => {

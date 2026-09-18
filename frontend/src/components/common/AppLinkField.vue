@@ -14,7 +14,7 @@
       @input="handleInput"
       @focus="loadOptions('')"
     >
-      <template #footer>
+      <template v-if="!hideAddNew" #footer>
         <button type="button" class="app-link-add-new" @click="openQuickCreate">
           <FeatherIcon name="plus" class="h-3.5 w-3.5 shrink-0" />
           <span class="truncate">Add New {{ doctype }}</span>
@@ -23,7 +23,7 @@
     </Combobox>
 
     <QuickCreateDialog
-      v-if="showQuickCreate"
+      v-if="!hideAddNew && showQuickCreate"
       v-model="showQuickCreate"
       :doctype="doctype"
       :initial-value="query"
@@ -46,6 +46,20 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   filters: { type: Object, default: () => ({}) },
+  // How many matches search_link returns — its own default is 10, too few
+  // once a doctype has more matches than fit on one screen (e.g. picking a
+  // DocType out of the few hundred this app defines).
+  pageLength: { type: Number, default: 20 },
+  // Hides the "Add New <doctype>" footer/quick-create flow — for fields
+  // that link to something this page has no business creating on the fly
+  // (e.g. picking an existing DocType in the Permission Manager).
+  hideAddNew: { type: Boolean, default: false },
+  // A whitelisted "standard query" method (e.g.
+  // verp_staffing.crm.api.helpers.get_assign_to_by_service) that filters/
+  // sorts results server-side beyond a plain `filters` dict — same `query`
+  // param the classic desk Link field's set_query() passes through to
+  // search_link.
+  query: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -61,7 +75,13 @@ const showQuickCreate = ref(false)
 const search = useResource({
   url: 'frappe.desk.search.search_link',
   method: 'POST',
-  makeParams: (txt) => ({ doctype: props.doctype, txt: txt || '', filters: props.filters }),
+  makeParams: (txt) => ({
+    doctype: props.doctype,
+    txt: txt || '',
+    filters: props.filters,
+    page_length: props.pageLength,
+    query: props.query || undefined,
+  }),
   notifyOnError: false,
   transform: (data) => (data || []).map((doc) => ({ label: doc.label || doc.value, value: doc.value })),
 })
@@ -78,7 +98,7 @@ function handleInput(txt) {
 }
 
 watch(
-  () => [props.doctype, props.filters],
+  () => [props.doctype, props.filters, props.query],
   () => loadOptions(''),
   { immediate: true, deep: true },
 )

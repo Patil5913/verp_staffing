@@ -3,7 +3,7 @@
 
 import frappe, json
 from frappe.model.document import Document
-from verp_staffing.crm.api.lead_details import create_lead_details
+from verp_staffing.crm.api.lead_details import create_lead_details, get_or_create_lead_detail
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 
@@ -25,14 +25,7 @@ class Customer(Document):
 
         # CASE 1: Party selected → attach to existing Lead Details
         if self.party_name and self.customer_from:
-            lead_detail_name = frappe.db.get_value(
-                "Doctype Reference",
-                {
-                    "reference_doctype": self.customer_from,
-                    "reference_person": self.party_name,
-                },
-                "parent",
-            )
+            lead_detail_name = get_or_create_lead_detail(self.customer_from, self.party_name)
 
             if not lead_detail_name:
                 frappe.throw("Lead Details not found for selected party.")

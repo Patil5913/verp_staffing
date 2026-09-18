@@ -4,7 +4,10 @@
     <div
       class="grid h-11 shrink-0 grid-cols-3 items-center border-b border-app-border bg-app-panel px-6"
     >
-      <h1 class="min-w-0 shrink-0 truncate text-p-lg font-medium text-app-text">{{ doctype }}</h1>
+      <div class="flex min-w-0 items-center gap-3">
+        <h1 class="min-w-0 shrink-0 truncate text-p-lg font-medium text-app-text">{{ doctype }}</h1>
+        <ViewSwitcher :doctype="doctype" current="list" />
+      </div>
 
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <TextInput
@@ -243,6 +246,8 @@ import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
+import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
+import { NO_MANUAL_CREATE } from '@/detailConfigs/listOptions'
 import { notify } from '@/utils/common/notify'
 import AppButton from '@/components/common/AppButton.vue'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
@@ -374,7 +379,9 @@ const rows = computed(() =>
 // same delete_docs call, list_view.py returns per-name success/failure so a
 // permission-restricted row in a bulk selection doesn't silently vanish.
 const canDelete = computed(() => Boolean(meta.resource.data?.perms?.delete))
-const canCreate = computed(() => Boolean(meta.resource.data?.perms?.create))
+// CR / Onboardings are only ever created by forwarding a candidate (their desk
+// list views hide the New button too) — see listOptions.js.
+const canCreate = computed(() => Boolean(meta.resource.data?.perms?.create) && !NO_MANUAL_CREATE.has(props.doctype))
 
 const selected = ref(new Set())
 

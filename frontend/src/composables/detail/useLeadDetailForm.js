@@ -5,7 +5,7 @@ import { notify } from '@/utils/common/notify'
 // The Lead's linked "Lead Detail Form" record (candidate-facing fields:
 // education, experience, visa status, etc.), scoped to whatever fields the
 // Administrator has exposed for Lead — see verp_staffing.utils.detail_view.
-// Mirrors useDocDetail's shape so LeadExtras.vue can reuse
+// Mirrors useDocDetail's shape so LeadProfilePanel.vue can reuse
 // FieldControl/ChildTableField the same way DocDetailView.vue does.
 export function useLeadDetailForm(leadName) {
   const detail = useResource({
@@ -54,5 +54,18 @@ export function useLeadDetailForm(leadName) {
     return !!result
   }
 
-  return { detail, exists, fields, tables, values, canWrite, isDirty, save, submit }
+  // Share of the fields this user can fill that already have a value (a
+  // table counts once it has a row) — a nudge for the profile, not a
+  // validation.
+  const completeness = computed(() => {
+    const inputs = fields.value.filter((f) => !f.read_only && f.fieldtype !== 'Check')
+    const total = inputs.length + tables.value.length
+    if (!total) return 100
+    const filled =
+      inputs.filter((f) => String(values[f.fieldname] ?? '').trim()).length +
+      tables.value.filter((t) => (values[t.fieldname] || []).length).length
+    return Math.round((filled / total) * 100)
+  })
+
+  return { detail, exists, fields, tables, values, canWrite, isDirty, completeness, save, submit }
 }

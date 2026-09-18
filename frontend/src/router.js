@@ -1,4 +1,45 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { marketingConfig, interviewConfig, marketingOtherServicesConfig, otherServicesConfig } from '@/detailConfigs/marketing'
+import { crConfig, onboardingsConfig } from '@/detailConfigs/customerCare'
+import * as accounts from '@/detailConfigs/accounts'
+import { itemConfig, itemCategoryConfig, uomConfig } from '@/detailConfigs/items'
+import { eSignConfig } from '@/detailConfigs/esign'
+
+// Doctypes whose detail page is just config on top of ConfigDetailPage (see
+// that file's header) — one route each, generated so adding a doctype is a
+// config file plus one line here.
+const configPage = (path, name, config) => ({
+  path,
+  name,
+  component: () => import('@/pages/ConfigDetailPage.vue'),
+  props: { config },
+})
+const CONFIG_ROUTES = [
+  configPage('/Marketing/:name', 'MarketingDetail', marketingConfig),
+  configPage('/Interview/:name', 'InterviewDetail', interviewConfig),
+  configPage('/Marketing%20Other%20Services/:name', 'MarketingOtherServicesDetail', marketingOtherServicesConfig),
+  configPage('/Other%20Services/:name', 'OtherServicesDetail', otherServicesConfig({ doctype: 'Other Services' })),
+  configPage('/CR/:name', 'CRDetail', crConfig),
+  configPage('/Onboardings/:name', 'OnboardingsDetail', onboardingsConfig),
+  configPage('/Company/:name', 'CompanyDetail', accounts.companyConfig),
+  configPage('/Fiscal%20Year/:name', 'FiscalYearDetail', accounts.fiscalYearConfig),
+  configPage('/Account/:name', 'AccountDetail', accounts.accountConfig),
+  configPage('/Bank/:name', 'BankDetail', accounts.bankConfig),
+  configPage('/Bank%20Account/:name', 'BankAccountDetail', accounts.bankAccountConfig),
+  configPage('/Journal%20Entry/:name', 'JournalEntryDetail', accounts.journalEntryConfig),
+  configPage('/Payment%20Entry/:name', 'PaymentEntryDetail', accounts.paymentEntryConfig),
+  configPage('/Sales%20Invoice/:name', 'SalesInvoiceDetail', accounts.salesInvoiceConfig),
+  configPage('/Purchase%20Invoice/:name', 'PurchaseInvoiceDetail', accounts.purchaseInvoiceConfig),
+  configPage('/Sales%20Order/:name', 'SalesOrderDetail', accounts.salesOrderConfig),
+  configPage('/Purchase%20Order/:name', 'PurchaseOrderDetail', accounts.purchaseOrderConfig),
+  configPage('/Supplier/:name', 'SupplierDetail', accounts.supplierConfig),
+  configPage('/Subscription/:name', 'SubscriptionDetail', accounts.subscriptionConfig),
+  configPage('/Subscription%20Plan/:name', 'SubscriptionPlanDetail', accounts.subscriptionPlanConfig),
+  configPage('/Item/:name', 'ItemDetail', itemConfig),
+  configPage('/Item%20Category/:name', 'ItemCategoryDetail', itemCategoryConfig),
+  configPage('/UOM/:name', 'UomDetail', uomConfig),
+  configPage('/E%20Sign/:name', 'ESignDetail', eSignConfig),
+]
 
 const routes = [
   {
@@ -8,9 +49,16 @@ const routes = [
     meta: { public: true },
   },
   {
+    // The home page is the dashboard's Overview; the other tabs live under
+    // /dashboard/:section (accounts, crm, marketing, operations).
     path: '/',
     name: 'Home',
-    component: () => import('@/pages/Home.vue'),
+    component: () => import('@/pages/DashboardPage.vue'),
+  },
+  {
+    path: '/dashboard/:section?',
+    name: 'Dashboard',
+    component: () => import('@/pages/DashboardPage.vue'),
   },
   {
     // ERP Configuration is the one Single doctype with real customization
@@ -28,6 +76,11 @@ const routes = [
     path: '/settings/:doctype',
     name: 'SettingsForm',
     component: () => import('@/pages/SettingsFormPage.vue'),
+  },
+  {
+    path: '/reports',
+    name: 'Reports',
+    component: () => import('@/pages/ReportsHub.vue'),
   },
   {
     path: '/report/:reportName',
@@ -65,6 +118,18 @@ const routes = [
     component: () => import('@/pages/DocListPage.vue'),
   },
   {
+    // The Chart of Accounts is the Account tree, company-scoped with
+    // balances — a literal path ranks above the generic /:doctype/view/tree.
+    path: '/Account/view/tree',
+    name: 'AccountTree',
+    component: () => import('@/pages/AccountTreePage.vue'),
+  },
+  {
+    path: '/:doctype/view/kanban',
+    name: 'Kanban',
+    component: () => import('@/pages/KanbanPage.vue'),
+  },
+  {
     // Non-default views for a doctype live under /:doctype/view/<viewName>,
     // e.g. /verp/Account/view/tree. Tree is the only one built so far;
     // kanban/calendar/gantt get their own entry here once they exist.
@@ -87,6 +152,66 @@ const routes = [
     path: '/User/:name',
     name: 'UserDetail',
     component: () => import('@/pages/UserDetailPage.vue'),
+  },
+  {
+    path: '/Employee/:name',
+    name: 'EmployeeDetail',
+    component: () => import('@/pages/EmployeeDetailPage.vue'),
+  },
+  {
+    path: '/Outsource/:name',
+    name: 'OutsourceDetail',
+    component: () => import('@/pages/OutsourceDetailPage.vue'),
+  },
+  {
+    path: '/Role/:name',
+    name: 'RoleDetail',
+    component: () => import('@/pages/RoleDetailPage.vue'),
+  },
+  {
+    path: '/Opportunity/:name',
+    name: 'OpportunityDetail',
+    component: () => import('@/pages/OpportunityDetailPage.vue'),
+  },
+  {
+    path: '/Customer/:name',
+    name: 'CustomerDetail',
+    component: () => import('@/pages/CustomerDetailPage.vue'),
+  },
+  {
+    path: '/Resume/:name',
+    name: 'ResumeDetail',
+    component: () => import('@/pages/ResumeDetailPage.vue'),
+  },
+  {
+    path: '/RUC/:name',
+    name: 'RucDetail',
+    component: () => import('@/pages/RucDetailPage.vue'),
+  },
+  {
+    path: '/JDC/:name',
+    name: 'JdcDetail',
+    component: () => import('@/pages/JdcDetailPage.vue'),
+  },
+  {
+    path: '/Cover%20Letter/:name',
+    name: 'CoverLetterDetail',
+    component: () => import('@/pages/CoverLetterDetailPage.vue'),
+  },
+  {
+    path: '/Training/:name',
+    name: 'TrainingDetail',
+    component: () => import('@/pages/TrainingDetailPage.vue'),
+  },
+  {
+    path: '/Interview%20Support/:name',
+    name: 'InterviewSupportDetail',
+    component: () => import('@/pages/InterviewSupportDetailPage.vue'),
+  },
+  {
+    path: '/Technical%20Other%20Services/:name',
+    name: 'TechnicalOtherServicesDetail',
+    component: () => import('@/pages/TechnicalOtherServicesDetailPage.vue'),
   },
   {
     // %20 rather than a literal space: this string is matched against the
@@ -119,6 +244,7 @@ const routes = [
     name: 'PdfAgreementTemplateDetail',
     component: () => import('@/pages/PdfAgreementTemplateDetailPage.vue'),
   },
+  ...CONFIG_ROUTES,
   {
     // A record's detail/form view, e.g. /verp/Lead/CRM-LEAD-00001. Ranks
     // below /:doctype/view/tree since vue-router 4 always prefers a

@@ -51,7 +51,14 @@ def _doc_fields_and_tables(meta, doc):
     """
     fields = []
     tables = []
+    # Each field/table remembers the Section/Tab Break heading it sits under,
+    # so a custom page can group a long form (Lead Detail Form) the way the
+    # doctype's own layout does.
+    section = ""
     for df in meta.fields:
+        if df.fieldtype in ("Section Break", "Tab Break"):
+            section = df.label or ""
+            continue
         if df.hidden or df.fieldtype in LAYOUT_FIELDTYPES:
             continue
         if df.fieldtype in TABLE_FIELDTYPES:
@@ -69,11 +76,14 @@ def _doc_fields_and_tables(meta, doc):
                     "child_doctype": df.options,
                     "columns": columns,
                     "reqd": bool(df.reqd),
+                    "section": section,
                     "rows": [row.as_dict() for row in (doc.get(df.fieldname) or [])] if doc else [],
                 }
             )
             continue
-        fields.append(_serialize_field(df))
+        serialized = _serialize_field(df)
+        serialized["section"] = section
+        fields.append(serialized)
     return fields, tables
 
 
@@ -105,20 +115,125 @@ def get_doc_meta(doctype, name=None):
 
     fields, tables = _doc_fields_and_tables(meta, doc)
     values = {f["fieldname"]: doc.get(f["fieldname"]) for f in fields}
+    # Hidden fields never render, but a page's own logic often keys off them
+    # (a Subscription's status, a CR's derived state) — exposed read-only.
+    hidden_values = {
+        df.fieldname: doc.get(df.fieldname)
+        for df in meta.fields
+        if df.hidden and df.fieldtype not in LAYOUT_FIELDTYPES | TABLE_FIELDTYPES | {"Password"}
+    }
+
+    # Hidden child tables (E Sign's signature fields / audit log) also never
+    # render generically; a custom panel can read them here, and write edits
+    # back through `values` on save like any other table.
+    hidden_tables = {
+        df.fieldname: [row.as_dict() for row in (doc.get(df.fieldname) or [])]
+        for df in meta.fields
+        if df.hidden and df.fieldtype in TABLE_FIELDTYPES
+    }
 
     return {
         "doctype": doctype,
         "name": None if is_new else name,
         "title_field": meta.title_field or "name",
+        "is_submittable": bool(meta.is_submittable),
+        # 0 draft / 1 submitted / 2 cancelled — always 0 for a doctype that
+        # isn't submittable, so the frontend never has to special-case it.
+        "docstatus": 0 if is_new else int(doc.docstatus or 0),
         "fields": fields,
         "tables": tables,
         "values": values,
+        "hidden_values": hidden_values,
+        "hidden_tables": hidden_tables,
         "perms": {
             "read": True,
             "write": True if is_new else bool(frappe.has_permission(doctype, "write", doc=doc)),
             "delete": False if is_new else bool(frappe.has_permission(doctype, "delete", doc=doc)),
+            "submit": False if is_new else bool(meta.is_submittable and frappe.has_permission(doctype, "submit", doc=doc)),
+            "cancel": False if is_new else bool(meta.is_submittable and frappe.has_permission(doctype, "cancel", doc=doc)),
         },
     }
+
+
+@frappe.whitelist()
+def submit_doc(doctype, name):
+    """Submits a draft of a submittable doctype (docstatus 0 -> 1), gated on
+    the doctype's own submit permission — the detail page's Submit button.
+    Returns the refreshed get_doc_meta payload, same as save_doc_fields."""
+    doc = frappe.get_doc(doctype, name)
+    if not doc.meta.is_submittable:
+        frappe.throw(_("{0} is not submittable").format(doctype))
+    doc.check_permission("submit")
+    doc.submit()
+    return get_doc_meta(doctype, name)
+
+
+@frappe.whitelist()
+def cancel_doc(doctype, name):
+    """Cancels a submitted doc (docstatus 1 -> 2), gated on cancel
+    permission."""
+    doc = frappe.get_doc(doctype, name)
+    if not doc.meta.is_submittable:
+        frappe.throw(_("{0} is not submittable").format(doctype))
+    doc.check_permission("cancel")
+    doc.cancel()
+    return get_doc_meta(doctype, name)
+
+
+def _fill_transaction_defaults(doc):
+    """Fills what the desk form's client scripts (fetch_default_company, the
+    item/account onchange handlers) used to set as you typed, for fields the
+    web form doesn't expose or can't derive on its own — only ever where
+    the value is still empty, never overwriting what the user entered:
+
+    * `company` (hidden on Sales Order etc.): ERP Configuration's default;
+    * sales/purchase item rows: their `type`, and the company's default
+      income / expense account;
+    * invoices' party account (`debit_to` / `credit_to`);
+    * Journal Entry rows: the account's currency, exchange rate and the
+      company-currency debit/credit.
+    """
+    meta = doc.meta
+
+    if meta.has_field("company") and not doc.get("company"):
+        default_company = frappe.db.get_single_value("ERP Configuration", "default_company")
+        if default_company:
+            doc.company = default_company
+
+    company = doc.get("company")
+    company_doc = frappe.get_cached_doc("Company", company) if company and frappe.db.exists("Company", company) else None
+
+    items_field = meta.get_field("items")
+    if items_field and items_field.options == "Items Table":
+        is_sales = doc.doctype in ("Sales Order", "Sales Invoice")
+        for row in doc.get("items") or []:
+            row.type = row.type or ("Sales" if is_sales else "Purchase")
+            if company_doc:
+                if row.type == "Sales" and not row.get("income_account"):
+                    row.income_account = company_doc.default_income_account
+                elif row.type == "Purchase" and not row.get("expense_account"):
+                    row.expense_account = company_doc.default_expense_account
+
+    if company_doc:
+        if meta.has_field("debit_to") and not doc.get("debit_to"):
+            doc.debit_to = company_doc.default_receivable_account
+        if meta.has_field("credit_to") and not doc.get("credit_to"):
+            doc.credit_to = company_doc.default_payable_account
+
+    if doc.doctype == "Journal Entry":
+        company_currency = company_doc.default_currency if company_doc else None
+        for row in doc.get("accounts") or []:
+            if not row.get("account"):
+                continue
+            if not row.get("account_currency"):
+                row.account_currency = frappe.db.get_value("Account", row.account, "account_currency") or company_currency
+            if not row.get("exchange_rate") and row.account_currency == company_currency:
+                row.exchange_rate = 1
+            rate = row.get("exchange_rate") or 1
+            if not row.get("debit"):
+                row.debit = (row.get("debit_in_account_currency") or 0) * rate
+            if not row.get("credit"):
+                row.credit = (row.get("credit_in_account_currency") or 0) * rate
 
 
 @frappe.whitelist()
@@ -141,6 +256,7 @@ def save_doc_fields(doctype, name=None, values=None):
             )
         for fieldname, value in values.items():
             doc.set(fieldname, value)
+        _fill_transaction_defaults(doc)
         doc.save()
     else:
         if not frappe.has_permission(doctype, "create"):
@@ -149,6 +265,7 @@ def save_doc_fields(doctype, name=None, values=None):
                 frappe.PermissionError,
             )
         doc = frappe.get_doc({"doctype": doctype, **values})
+        _fill_transaction_defaults(doc)
         doc.insert()
 
     return get_doc_meta(doctype, doc.name)
