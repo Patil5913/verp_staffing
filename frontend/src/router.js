@@ -13,8 +13,18 @@ const routes = [
     component: () => import('@/pages/Home.vue'),
   },
   {
+    // ERP Configuration is the one Single doctype with real customization
+    // (see ERPConfigurationDetailPage.vue) — a literal path ranks above
+    // /settings/:doctype's dynamic one, same trick as /Lead/:name above
+    // the generic /:doctype/:name.
+    path: '/settings/ERP%20Configuration',
+    name: 'ERPConfigurationDetail',
+    component: () => import('@/pages/ERPConfigurationDetailPage.vue'),
+  },
+  {
     // Single doctypes (ERP Configuration, Accounts Settings) — old desk UI
-    // jumps straight to the one record's edit form, never a list.
+    // jumps straight to the one record's edit form, never a list. This is
+    // the fallback for every single doctype without its own page above.
     path: '/settings/:doctype',
     name: 'SettingsForm',
     component: () => import('@/pages/SettingsFormPage.vue'),
@@ -63,9 +73,57 @@ const routes = [
     component: () => import('@/pages/TreePage.vue'),
   },
   {
+    // Doctypes whose detail page needs customization (extra tabs, extra
+    // input while creating, connections to other doctypes, ...) get their
+    // own page here instead of teaching the generic DocDetailPage about
+    // them — see DocDetailPage.vue's header comment. A literal first
+    // segment ("Lead") ranks above /:doctype/:name's dynamic one, the same
+    // way /:doctype/view/tree ranks above it below.
+    path: '/Lead/:name',
+    name: 'LeadDetail',
+    component: () => import('@/pages/LeadDetailPage.vue'),
+  },
+  {
+    path: '/User/:name',
+    name: 'UserDetail',
+    component: () => import('@/pages/UserDetailPage.vue'),
+  },
+  {
+    // %20 rather than a literal space: this string is matched against the
+    // URL's raw (still percent-encoded) path, same as the actual link this
+    // needs to match — router.push(`/${encodeURIComponent(doctype)}/...`)
+    // (DocListView.vue, QuickCreateDialog.vue) and the sidebar's own
+    // urllib.parse.quote(doctype) both produce "Email%20Domain" here, never
+    // a literal space.
+    path: '/Email%20Domain/:name',
+    name: 'EmailDomainDetail',
+    component: () => import('@/pages/EmailDomainDetailPage.vue'),
+  },
+  {
+    path: '/Email%20Account/:name',
+    name: 'EmailAccountDetail',
+    component: () => import('@/pages/EmailAccountDetailPage.vue'),
+  },
+  {
+    path: '/Department/:name',
+    name: 'DepartmentDetail',
+    component: () => import('@/pages/DepartmentDetailPage.vue'),
+  },
+  {
+    path: '/Hierarchy/:name',
+    name: 'HierarchyDetail',
+    component: () => import('@/pages/HierarchyDetailPage.vue'),
+  },
+  {
+    path: '/Pdf%20Agreement%20Template/:name',
+    name: 'PdfAgreementTemplateDetail',
+    component: () => import('@/pages/PdfAgreementTemplateDetailPage.vue'),
+  },
+  {
     // A record's detail/form view, e.g. /verp/Lead/CRM-LEAD-00001. Ranks
     // below /:doctype/view/tree since vue-router 4 always prefers a
     // matching static segment ("view") over this route's dynamic :name.
+    // This is the fallback for every doctype without its own page above.
     path: '/:doctype/:name',
     name: 'DocDetail',
     component: () => import('@/pages/DocDetailPage.vue'),

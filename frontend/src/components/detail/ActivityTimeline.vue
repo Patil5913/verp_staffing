@@ -155,7 +155,7 @@
         <div class="flex flex-col gap-4">
           <FormControl type="textarea" label="Description" v-model="taskForm.description" />
           <FormControl type="datetime-local" label="Date & Time" v-model="taskForm.date" />
-          <Link label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="taskForm.assignedTo" />
+          <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="taskForm.assignedTo" />
         </div>
       </template>
       <template #actions>
@@ -179,7 +179,7 @@
           <FormControl type="datetime-local" label="Date & Time" required v-model="eventForm.date" />
           <FormControl type="text" label="Summary" required v-model="eventForm.summary" />
           <FormControl type="textarea" label="Description" v-model="eventForm.description" />
-          <Link label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="eventForm.assignedTo" />
+          <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="eventForm.assignedTo" />
         </div>
       </template>
       <template #actions>
@@ -199,8 +199,8 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue'
 import { Avatar, Badge, Dialog, FeatherIcon, FormControl, LoadingIndicator } from 'frappe-ui'
-import { Link } from 'frappe-ui/frappe'
 import AppButton from '@/components/common/AppButton.vue'
+import AppLinkField from '@/components/common/AppLinkField.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useTimeline } from '@/composables/detail/useTimeline'
 

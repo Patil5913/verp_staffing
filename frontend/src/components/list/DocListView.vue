@@ -257,7 +257,11 @@ const props = defineProps({
 const router = useRouter()
 
 function openRow(row) {
-  router.push({ name: 'DocDetail', params: { doctype: props.doctype, name: row.name } })
+  // A plain path, not a named route: some doctypes (Lead, User) have their
+  // own detail page routed ahead of the generic DocDetail one — see
+  // router.js — and this lets vue-router pick whichever one matches instead
+  // of this list view having to know which doctypes are customized.
+  router.push(`/${encodeURIComponent(props.doctype)}/${encodeURIComponent(row.name)}`)
 }
 
 const showQuickCreate = ref(false)

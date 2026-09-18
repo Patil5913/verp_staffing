@@ -39,14 +39,20 @@ def _serialize_field(df):
 
 def _doc_fields_and_tables(meta, doc):
     """Splits meta.fields into (scalar fields, child-table descriptors),
-    dropping hidden/layout/Password fields. Shared by get_doc_meta and
-    get_lead_detail_view so both a plain doctype and the Lead Detail Form
-    render/save the same way.
+    dropping hidden/layout fields (and Password columns inside a child
+    table, which aren't supported there). A top-level Password field is
+    kept: doc.get() for one only ever returns the dummy "****" masked
+    value Frappe persists after a save (see BaseDocument._save_passwords /
+    is_dummy_password) or the real value newly typed this session — never
+    a previously-saved plaintext password — so it's safe to round-trip
+    through get_doc_meta/save_doc_fields the same as any other field.
+    Shared by get_doc_meta and get_lead_detail_view so both a plain doctype
+    and the Lead Detail Form render/save the same way.
     """
     fields = []
     tables = []
     for df in meta.fields:
-        if df.hidden or df.fieldtype in LAYOUT_FIELDTYPES or df.fieldtype == "Password":
+        if df.hidden or df.fieldtype in LAYOUT_FIELDTYPES:
             continue
         if df.fieldtype in TABLE_FIELDTYPES:
             child_meta = frappe.get_meta(df.options) if df.options else None
@@ -440,3 +446,46 @@ def create_event(doctype, name, category, summary, date=None, assigned_to=None, 
     event.insert()
 
     return get_timeline(doctype, name)
+
+
+@frappe.whitelist()
+def get_doctype_field_sections(doctype, exclude_fieldnames=None):
+    """A doctype's displayable fields, grouped by Section Break — for a
+    field-picker UI that lets the Administrator choose which fields of
+    `doctype` to expose elsewhere (see ERP Configuration's Candidate Form
+    Fields / Department Display Fields / Department Access Fields tabs,
+    which pick from Lead Detail Form's fields this way). No specific
+    record is involved, so this doesn't go through get_doc_meta (which
+    requires read/create permission on an actual doc) — read access to
+    `doctype`'s DocType record is enough to see its field list.
+    """
+    if not frappe.has_permission("DocType", "read", doc=doctype):
+        frappe.throw(
+            _("You do not have permission to view {0}'s fields").format(doctype),
+            frappe.PermissionError,
+        )
+
+    exclude = set(frappe.parse_json(exclude_fieldnames) or [])
+    meta = frappe.get_meta(doctype)
+
+    sections = []
+    current = {"label": "General", "fields": []}
+
+    for df in sorted(meta.fields, key=lambda d: d.idx):
+        if df.fieldtype == "Section Break":
+            if current["fields"]:
+                sections.append(current)
+            current = {"label": df.label or (df.fieldname or "").replace("_", " ").title(), "fields": []}
+            continue
+        if df.fieldtype in LAYOUT_FIELDTYPES:
+            continue
+        if not df.fieldname or df.fieldname in exclude or df.hidden or df.read_only:
+            continue
+        current["fields"].append(
+            {"fieldname": df.fieldname, "label": df.label or df.fieldname, "fieldtype": df.fieldtype}
+        )
+
+    if current["fields"]:
+        sections.append(current)
+
+    return sections

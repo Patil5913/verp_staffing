@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
@@ -55,6 +55,12 @@ import { notify } from '@/utils/common/notify'
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   doctype: { type: String, required: true },
+  // Prefills the doctype's title field (e.g. from a Link field's search
+  // text) so "Create New" from a combobox doesn't require retyping.
+  initialValue: { type: String, default: '' },
+  // Link fields want the new doc's name handed back so they can select it
+  // inline, not a navigation away from the record they're editing.
+  navigateOnCreate: { type: Boolean, default: true },
 })
 const emit = defineEmits(['update:modelValue', 'created'])
 
@@ -71,9 +77,23 @@ const detail = useDocDetail(doctypeRef, nameRef)
 
 const requiredFieldnames = computed(() => detail.fields.value.filter((f) => f.reqd).map((f) => f.fieldname))
 
+watch(
+  () => detail.meta.resource.data,
+  (data) => {
+    if (!data || !props.initialValue) return
+    const titleField = data.title_field || 'name'
+    if (!detail.values[titleField]) detail.values[titleField] = props.initialValue
+  },
+  { immediate: true },
+)
+
 function openFullForm() {
   isOpen.value = false
-  router.push({ name: 'DocDetail', params: { doctype: props.doctype, name: 'new' } })
+  // A plain path, not a named route: some doctypes (Lead, User) have their
+  // own detail page routed ahead of the generic DocDetail one — see
+  // router.js — and this lets vue-router pick whichever one matches instead
+  // of this dialog having to know which doctypes are customized.
+  router.push(`/${encodeURIComponent(props.doctype)}/new`)
 }
 
 async function onSave() {
@@ -83,9 +103,9 @@ async function onSave() {
   const newName = detail.meta.resource.data?.name
   notify.success(`${props.doctype} created.`)
   isOpen.value = false
-  emit('created')
-  if (newName) {
-    router.push({ name: 'DocDetail', params: { doctype: props.doctype, name: newName } })
+  emit('created', newName)
+  if (newName && props.navigateOnCreate) {
+    router.push(`/${encodeURIComponent(props.doctype)}/${encodeURIComponent(newName)}`)
   }
 }
 </script>

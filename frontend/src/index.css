@@ -53,3 +53,29 @@ body {
     0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
     0 12px 24px -8px rgba(0, 0, 0, 0.6);
 }
+
+/* App-wide Combobox/Link popover theming.
+   frappe-ui's Combobox portals its dropdown to <body> (ComboboxPortal),
+   so a component's own `<style scoped> :deep(...)` rules never match it —
+   the portalled content isn't a DOM descendant of the component that
+   rendered it, even though it looks nested in the template. These rules
+   are intentionally global so every combobox popover in the app (detail
+   page fields, dialogs, list filters) gets one consistent look instead of
+   each usage silently falling back to the library's default styling. */
+[data-slot='content-body'] {
+  background-color: var(--app-panel);
+  border: 1px solid var(--app-border);
+}
+
+[data-slot='item'] {
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+[data-slot='item'][data-highlighted] {
+  background-color: var(--app-panel-2) !important;
+}
+
+[data-slot='item'][data-state='checked'] {
+  background-color: var(--app-primary-tint) !important;
+}

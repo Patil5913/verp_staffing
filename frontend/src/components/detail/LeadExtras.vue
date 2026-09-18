@@ -54,12 +54,8 @@
     >
       <template #body-content>
         <div class="flex flex-col gap-4">
-          <FormControl
-            type="checkbox"
-            label="Want to assign Opportunity Owner Manually?"
-            v-model="manualAssign"
-          />
-          <Link
+          <Checkbox label="Want to assign Opportunity Owner Manually?" v-model="manualAssign" />
+          <AppLinkField
             v-if="manualAssign"
             label="Opportunity Owner"
             doctype="Employee"
@@ -77,9 +73,9 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Dialog, FormControl } from 'frappe-ui'
-import { Link } from 'frappe-ui/frappe'
+import { Checkbox, Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import AppLinkField from '@/components/common/AppLinkField.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import FieldControl from './FieldControl.vue'
 import ChildTableField from './ChildTableField.vue'

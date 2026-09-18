@@ -54,10 +54,10 @@
           <tr v-for="row in perms.resource.data" :key="row.permlevel" class="border-b border-app-border last:border-0">
             <td class="px-3 py-2 font-medium text-app-text">{{ row.permlevel }}</td>
             <td class="px-3 py-2">
-              <input type="checkbox" :checked="!!row.if_owner" @change="onToggle(row, 'if_owner', $event.target.checked)" />
+              <Checkbox :model-value="!!row.if_owner" @update:model-value="(v) => onToggle(row, 'if_owner', v)" />
             </td>
             <td v-for="pt in PTYPES" :key="pt" class="px-3 py-2">
-              <input type="checkbox" :checked="!!row[pt]" @change="onToggle(row, pt, $event.target.checked)" />
+              <Checkbox :model-value="!!row[pt]" @update:model-value="(v) => onToggle(row, pt, v)" />
             </td>
             <td class="px-3 py-2">
               <Button variant="ghost" icon="x" @click="onRemove(row)" />
@@ -71,7 +71,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Autocomplete, Button, LoadingIndicator } from 'frappe-ui'
+import { Autocomplete, Button, Checkbox, LoadingIndicator } from 'frappe-ui'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 import StateBanner from '@/components/common/StateBanner.vue'
