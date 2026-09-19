@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "skills": {
+    "api-development": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "api-development/SKILL.md",
+      "computedHash": "f9c86c33ba42407adb0318c48efc55e85300fa79fbe57d2502a91dc5843663c6"
+    },
+    "app-development": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "app-development/SKILL.md",
+      "computedHash": "e705898263fb39493667cfc13bdd8e6ccab93b0baa0c8093260da135adf10829"
+    },
+    "desk-customization": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "desk-customization/SKILL.md",
+      "computedHash": "ba525d19115eea11b6f80eedf8679076e18cd41696e9fbc0a1cff8b516557e85"
+    },
+    "doctype-development": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "doctype-development/SKILL.md",
+      "computedHash": "6d91061013d4d6aef7f3c017955887caed06b03ac67cd25e2909d032c4ef4347"
+    },
+    "enterprise-patterns": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "enterprise-patterns/SKILL.md",
+      "computedHash": "f3aa16d9f83d8e8ec3b7d8ca7a7350923bfab470b286674f2990b2a3fcd830e5"
+    },
+    "frappe-manager": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "frappe-manager/SKILL.md",
+      "computedHash": "0fe99d0cf8b2b4529925ae542a7f41077747cb576cddbead1c2ac2036c73d543"
+    },
+    "frontend-development": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "frontend-development/SKILL.md",
+      "computedHash": "34caac5fe50cfc6939ecebc7986d16f79ee9f8feb55e9f51607b78206ca7471b"
+    },
+    "printing-templates": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "printing-templates/SKILL.md",
+      "computedHash": "fe8cf9afe8faf5be393565bf549914cf99acdcfbf4383ba009632550e5e49784"
+    },
+    "project-triage": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "project-triage/SKILL.md",
+      "computedHash": "bbedbc8b1399a67f238bd519471b0da77430f6a287b50fbab8c5dfe2480f2376"
+    },
+    "reports": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "reports/SKILL.md",
+      "computedHash": "87dcd2a4b8b05ed428a1edc35d7f6ce08126a177dcf5ebeaa3b1ceeaa7419a81"
+    },
+    "router": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "router/SKILL.md",
+      "computedHash": "aa230acdc4f3b5fac9434b2ac983f5b42701566ecc2148de84b0f5447aa2f8f6"
+    },
+    "testing": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "testing/SKILL.md",
+      "computedHash": "6dcbb46f0b882886956ab5284a0441b09f5c27d4691e15382249a7764f4e19cd"
+    },
+    "ui-patterns": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "ui-patterns/SKILL.md",
+      "computedHash": "c3baab31cb8b986adf545d5f77a0e7b0ece97c3297b10c7a0adc95eb58d755fd"
+    },
+    "web-forms": {
+      "source": "lubusIN/frappe-skills",
+      "sourceType": "github",
+      "skillPath": "web-forms/SKILL.md",
+      "computedHash": "1449baa95e2a6e000752e2992bff7819e982a5be6d64b890862a3b1c8dbc553e"
+    }
+  }
+}
