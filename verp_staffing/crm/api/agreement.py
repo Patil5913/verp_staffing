@@ -36,6 +36,7 @@ from copy import deepcopy
 @frappe.whitelist()
 def download_agreement(agreement):
     doc = frappe.get_doc("Agreement", agreement)
+    doc.check_permission("read")
 
     # If already generated, return saved file
     if doc.pdf:

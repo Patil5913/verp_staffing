@@ -1,7 +1,7 @@
 <template>
   <section class="flex min-w-0 flex-col rounded-xl border border-app-border bg-app-panel p-4 shadow-sm" :class="chart.span === 2 ? 'lg:col-span-2' : ''">
     <header class="mb-2">
-      <h3 class="text-p-base font-medium text-app-text">{{ chart.title }}</h3>
+      <h3 class="flex items-center gap-2 text-p-base font-medium text-app-text"><span :class="`lucide-${chartIcon(chart)} size-4 shrink-0 text-app-primary`" />{{ chart.title }}</h3>
       <p v-if="chart.subtitle" class="text-p-xs text-app-text-muted">{{ chart.subtitle }}</p>
     </header>
 
@@ -33,6 +33,7 @@
 import { computed } from 'vue'
 import { AxisChart, DonutChart, FunnelChart } from 'frappe-ui'
 import { PALETTE, formatMetric } from '@/utils/dashboard/format'
+import { chartIcon } from '@/utils/dashboard/icons'
 
 const props = defineProps({
   chart: { type: Object, required: true },

@@ -6,6 +6,7 @@
       v-model="model"
       v-model:open="isOpen"
       class="app-link-combobox"
+      :class="{ 'app-link-combobox--compact': compact }"
       :options="comboOptions"
       :placeholder="placeholder || `Select ${doctype}`"
       :disabled="disabled"
@@ -45,6 +46,8 @@ const props = defineProps({
   label: { type: String, default: '' },
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
+  // The 28px toolbar-height control instead of the 36px form field.
+  compact: { type: Boolean, default: false },
   filters: { type: Object, default: () => ({}) },
   // How many matches search_link returns — its own default is 10, too few
   // once a doctype has more matches than fit on one screen (e.g. picking a
@@ -158,5 +161,35 @@ function onCreated(newName) {
 
 .app-link-add-new:hover {
   background-color: var(--app-panel-2);
+}
+</style>
+
+<style>
+/* Not scoped: the trigger is the Combobox's own (renderless) root, which never
+   gets this component's scope attribute, and a scoped :deep() only reaches
+   descendants. Without an explicit width it grows to its text and spills over
+   whatever sits beside it. */
+.app-link-combobox--compact {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 1.75rem;
+  min-height: 0;
+  padding: 0 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background-color: var(--app-panel);
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.app-link-combobox--compact input {
+  font-size: 13px;
+}
+
+.app-link-combobox--compact:focus-within {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 2px var(--app-primary-tint);
 }
 </style>

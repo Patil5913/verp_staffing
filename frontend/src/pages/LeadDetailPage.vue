@@ -52,7 +52,14 @@
 
     <template #tab-profile>
       <div class="h-full overflow-y-auto px-6 py-4">
-        <LeadProfilePanel :form="profile" :locked="leadLocked" :tried-save="triedSaveProfile" />
+        <div class="flex flex-col gap-6">
+          <NoticeBanner
+            v-if="profileLockedByApproval"
+            tone="info"
+            message="This form is locked. Go to the Customer form and click 'Update Detail' to request changes."
+          />
+          <LeadProfilePanel :form="profile" :locked="profileLocked" :tried-save="triedSaveProfile" />
+        </div>
       </div>
     </template>
 
@@ -103,7 +110,7 @@
 //
 // The profile form's state lives here, not in a tab component: tabs unmount
 // when you leave them, and an unsaved profile edit must survive that.
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
@@ -136,6 +143,20 @@ const opportunity = useResource({
 })
 const leadLocked = computed(() => !!opportunity.resource.data)
 const showOpportunityDialog = ref(false)
+
+// lead_detail_form.js: once a Sales Order needs the candidate form, its owner
+// can't edit the profile directly — they ask via Update Detail on the Customer.
+const formLock = useResource({
+  url: 'verp_staffing.crm.api.permission_request.get_lead_detail_form_lock_status',
+  notifyOnError: false,
+})
+watch(
+  () => profile.docname.value,
+  (docname) => docname && formLock.resource.submit({ lead_detail_doc: docname }),
+  { immediate: true },
+)
+const profileLockedByApproval = computed(() => !!formLock.resource.data?.candidate_form_required && !!formLock.resource.data?.is_owner)
+const profileLocked = computed(() => leadLocked.value || profileLockedByApproval.value)
 
 async function saveProfile() {
   triedSaveProfile.value = true

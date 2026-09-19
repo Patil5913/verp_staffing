@@ -20,7 +20,7 @@
             <span v-if="row.support" class="rounded-full bg-indigo-100 px-2 py-0.5 text-p-xs font-semibold text-indigo-700" title="Support taken">Support</span>
           </div>
           <AppButton
-            v-if="editable && isSuperior && !row.name"
+            v-if="editable && (isAdministrator() || (isSuperior && !row.name))"
             variant="ghost"
             size="icon"
             icon="trash-2"
@@ -54,7 +54,9 @@
 <script setup>
 // The Interview's rounds table, with the desk form's rules from
 // interview.js kept intact:
-//  * rounds are append-only, numbered by position;
+//  * rounds are append-only, numbered by position — a superior can take back a
+//    round they just added, and only Administrator can remove a saved one
+//    (interview.js's cannot_delete_rows);
 //  * unless you're a superior of the Marketing assignee, only the latest
 //    round is editable;
 //  * a round whose *saved* status is Cancelled / Rescheduled / Completed can
@@ -70,6 +72,7 @@ import { useResource } from '@/composables/list/useResource'
 import { useIsSuperior } from '@/composables/detail/useIsSuperior'
 import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
+import { isAdministrator } from '@/utils/common/roles'
 
 const CANCELLED_LIKE = ['Cancelled', 'Rescheduled']
 const FINAL = ['Cancelled', 'Rescheduled', 'Completed']

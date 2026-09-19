@@ -1,3 +1,5 @@
 verp_staffing.patches.fix_agreement_pdf_file_hashes
 verp_staffing.patches.migrate_candidate_details_form_fields
 verp_staffing.patches.sync_sidebar_master_config
+verp_staffing.patches.add_email_queue_to_staffing_master
+verp_staffing.patches.show_email_queue_status

@@ -36,6 +36,7 @@
             v-model="form.values[field.fieldname]"
             :disabled="locked || !form.canWrite.value || field.read_only"
             :show-errors="triedSave"
+            :remove-file="removeFile"
           />
         </div>
       </div>
@@ -59,7 +60,11 @@
 // State lives in the page's useLeadDetailForm (passed in as `form`), so an
 // unsaved edit survives switching tabs; this component only renders it.
 import { computed } from 'vue'
+import { call } from 'frappe-ui'
 import FieldControl from './FieldControl.vue'
+import { confirmLeave } from '@/utils/common/confirmDialog'
+import { notify } from '@/utils/common/notify'
+import { normalizeError } from '@/utils/common/errors'
 import ChildTableField from './ChildTableField.vue'
 
 const props = defineProps({
@@ -91,5 +96,18 @@ const completeness = computed(() => props.form.completeness.value)
 
 function jump(key) {
   document.getElementById(`lead-section-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+// lead.js's .fg-remove-file: removing an uploaded file deletes it right away.
+async function removeFile(fieldname) {
+  const ok = await confirmLeave({ title: 'Remove this file?', message: 'The file is deleted from the candidate profile.', leaveLabel: 'Remove', cancelLabel: 'Keep' })
+  if (!ok) return false
+  try {
+    const res = await call('verp_staffing.crm.doctype.lead.lead.remove_attachment', { docname: props.form.docname.value, fieldname })
+    return res?.status === 'success'
+  } catch (e) {
+    notify.error(normalizeError(e).message)
+    return false
+  }
 }
 </script>

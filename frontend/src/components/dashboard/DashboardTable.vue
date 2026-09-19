@@ -1,7 +1,7 @@
 <template>
   <section class="flex min-w-0 flex-col rounded-xl border border-app-border bg-app-panel shadow-sm">
     <header class="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
-      <h3 class="text-p-base font-medium text-app-text">{{ table.title }}</h3>
+      <h3 class="flex items-center gap-2 text-p-base font-medium text-app-text"><span :class="`lucide-${tableIcon(table)} size-4 shrink-0 text-app-primary`" />{{ table.title }}</h3>
       <router-link v-if="table.href" :to="table.href" class="text-p-xs font-medium text-app-primary hover:underline">View all</router-link>
     </header>
 
@@ -30,6 +30,7 @@
 <script setup>
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import { formatMetric } from '@/utils/dashboard/format'
+import { tableIcon } from '@/utils/dashboard/icons'
 
 const props = defineProps({
   table: { type: Object, required: true },

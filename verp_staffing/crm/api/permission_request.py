@@ -998,6 +998,21 @@ def get_owner_pending_field_update_request(customer_name):
     return {"has_pending": False}
 
 
+def _assert_can_review(comment_doc, data, customer_name, reviewer_employee):
+    """Only the approver a field-update request was routed to (or Administrator)
+    may accept or reject it, and only against the customer it was raised for —
+    the caller supplies both the customer and the comment name, so neither can
+    be taken on trust."""
+    if (
+        data.get("type") != "field_update_request"
+        or comment_doc.reference_doctype != "Customer"
+        or comment_doc.reference_name != customer_name
+    ):
+        frappe.throw(_("This update request does not belong to this customer."), frappe.PermissionError)
+    if frappe.session.user != "Administrator" and data.get("approver_employee") != reviewer_employee:
+        frappe.throw(_("Only the approver of this request can review it."), frappe.PermissionError)
+
+
 @frappe.whitelist()
 def apply_field_updates(customer_name, comment_name, approved_fields):
     user = frappe.session.user
@@ -1016,6 +1031,8 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
     except Exception as e:
         frappe.log_error(str(e), "Apply Field Updates Error")
         frappe.throw("Failed to load the update request. Please try again.")
+
+    _assert_can_review(comment_doc, data, customer_name, manager_employee)
 
     if frappe.session.user != "Administrator" and data.get("status") != "Pending":
         frappe.throw("This request has already been processed.")
@@ -1216,6 +1233,8 @@ def reject_field_update_request(customer_name, comment_name):
     except Exception as e:
         frappe.log_error(str(e), "Apply Field Updates Error")
         frappe.throw("Failed to load the update request. Please try again.")
+
+    _assert_can_review(comment_doc, data, customer_name, manager_employee)
 
     if data.get("status") != "Pending":
         frappe.throw("This request has already been processed.")

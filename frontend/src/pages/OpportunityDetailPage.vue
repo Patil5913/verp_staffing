@@ -97,6 +97,7 @@ import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
+import { isAdministrator } from '@/utils/common/roles'
 
 const route = useRoute()
 const router = useRouter()
@@ -131,7 +132,11 @@ const DETAIL_FIELDS = [
 
 // Converted is a one-way transition on the desk form (opportunity.js sets
 // status read-only once Converted) — mirrored here the same way.
-const readOnlyFields = computed(() => (detail.values.status === 'Converted' ? ['status'] : []))
+// opportunity_owner is read-only for everyone but Administrator (opportunity.js onload).
+const readOnlyFields = computed(() => [
+  ...(detail.values.status === 'Converted' ? ['status'] : []),
+  ...(isAdministrator() ? [] : ['opportunity_owner']),
+])
 
 const callDetailsTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'call_details'))
 

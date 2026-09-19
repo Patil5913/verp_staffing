@@ -114,9 +114,7 @@
       </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-p-sm font-medium text-app-text-muted">Recipient</label>
-        <select :value="selected.signer_email" :disabled="disabled" class="h-9 rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text" @change="(e) => patch(selected, { signer_email: e.target.value })">
-          <option v-for="email in recipients" :key="email" :value="email">{{ email }}</option>
-        </select>
+        <AppCombobox :model-value="selected.signer_email" :options="recipients" :disabled="disabled" placeholder="Select a recipient" @update:model-value="(v) => patch(selected, { signer_email: v })" />
       </div>
       <template v-if="selected.field_type !== 'checkbox'">
         <FormControl label="Field label" :model-value="selected.field_label" :disabled="disabled" required @update:model-value="(v) => patch(selected, { field_label: v })" />
@@ -145,6 +143,7 @@
 import { computed, ref } from 'vue'
 import { LoadingIndicator, FormControl } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { usePdfPages } from '@/composables/detail/usePdfPages'
 

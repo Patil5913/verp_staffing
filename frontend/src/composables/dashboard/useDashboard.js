@@ -1,5 +1,5 @@
 import { computed, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useResource } from '@/composables/list/useResource'
 import { presetRange } from '@/utils/dashboard/format'
 
@@ -18,12 +18,19 @@ const readPreset = () => {
 // tab is linkable; range and company are remembered per browser.
 export function useDashboard() {
   const route = useRoute()
+  const router = useRouter()
 
   const meta = useResource({ url: 'verp_staffing.utils.dashboard.get_dashboard_meta', auto: true })
   const sections = computed(() => meta.resource.data?.sections || [])
   const companies = computed(() => meta.resource.data?.companies || [])
 
   const section = computed(() => route.params.section || 'overview')
+
+  // A tab the server didn't list for this user (no permission on any of its
+  // doctypes) isn't reachable by typing /dashboard/<tab> either.
+  watch([sections, section], ([list, key]) => {
+    if (list.length && key !== 'overview' && !list.some((s) => s.key === key)) router.replace('/dashboard')
+  })
   const preset = ref(readPreset())
   const custom = reactive({ from: '', to: '' })
   const company = ref('')

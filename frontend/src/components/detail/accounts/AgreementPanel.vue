@@ -47,10 +47,7 @@
     <SectionCard v-if="!detail.isNew.value && !locked" title="Create Agreement" subtitle="Fill a template with this order's details.">
       <div class="flex max-w-md flex-col gap-1.5">
         <label class="text-p-sm font-medium text-app-text-muted">Template</label>
-        <select v-model="template" class="h-9 rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text focus:border-app-primary focus:outline-none">
-          <option value="">Select template…</option>
-          <option v-for="t in templates.resource.data || []" :key="t.name" :value="t.name">{{ t.title }}</option>
-        </select>
+        <AppCombobox v-model="template" :options="templateOptions" placeholder="Select template…" />
       </div>
 
       <div v-if="loadingTemplate" class="flex justify-center py-6"><LoadingIndicator class="h-5 w-5 text-app-text-muted" /></div>
@@ -99,6 +96,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { call, LoadingIndicator, TextEditor } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { useResource } from '@/composables/list/useResource'
@@ -156,6 +154,7 @@ const templates = useResource({
 })
 
 const template = ref('')
+const templateOptions = computed(() => (templates.resource.data || []).map((t) => ({ label: t.title || t.name, value: t.name })))
 const blocks = ref([])
 const values = reactive({})
 const loadingTemplate = ref(false)

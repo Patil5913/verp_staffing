@@ -85,11 +85,16 @@ function stripBase(path) {
   return normalized
 }
 
+// The dashboard is one page with tabs: "/" is its Overview and the other tabs
+// live under /dashboard/:section — so its sidebar item (route "/verp", or
+// "/verp/dashboard" on a customized sidebar) stays highlighted on all of them.
+const isDashboardPath = (path) => path === '' || path === '/dashboard' || path.startsWith('/dashboard/')
+
 function isRouteActive(route) {
   if (!route) return false
   const normalizedRoute = stripBase(route)
   const path = stripBase(currentPath.value)
-  if (!normalizedRoute) return path === ''
+  if (!normalizedRoute || normalizedRoute === '/dashboard') return isDashboardPath(path)
   return path === normalizedRoute || path.startsWith(normalizedRoute + '/')
 }
 
@@ -177,12 +182,31 @@ function toggleSidebar() {
   setSidebarOpen(!sidebarOpen.value)
 }
 
+// Stale-while-revalidate: a saved copy paints the sidebar at once, then the
+// server's answer (itself cached server-side) replaces it. Without the second
+// step a change — a new Staffing Master item, a changed role — stayed
+// invisible for up to an hour.
+let revalidated = false
+async function revalidate(user) {
+  try {
+    const payload = await call(SIDEBAR_METHOD)
+    config.value = (payload && payload.config) || []
+    writeCache(user, payload)
+  } catch {
+    // keep what's showing; the next load tries again
+  }
+}
+
 async function load(user, { force = false } = {}) {
   if (!force) {
     const cached = readCache(user)
     if (cached) {
       config.value = cached.config || []
       loaded.value = true
+      if (!revalidated) {
+        revalidated = true
+        revalidate(user)
+      }
       return
     }
   }

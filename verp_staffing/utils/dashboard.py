@@ -45,13 +45,14 @@ OPEN_OPPORTUNITY = ("Open", "Quotation", "Replied")
 # ── entry points ──────────────────────────────────────────────────────────
 
 
+def _section_allowed(section):
+    return not section["doctypes"] or any(frappe.has_permission(dt, "read") for dt in section["doctypes"])
+
+
 @frappe.whitelist()
 def get_dashboard_meta():
     """The tabs this user may open, plus the company the money tabs default to."""
-    sections = []
-    for s in SECTIONS:
-        if not s["doctypes"] or any(frappe.has_permission(dt, "read") for dt in s["doctypes"]):
-            sections.append({k: s[k] for k in ("key", "label", "icon")})
+    sections = [{k: s[k] for k in ("key", "label", "icon")} for s in SECTIONS if _section_allowed(s)]
 
     company = _default_company()
     return {
@@ -64,8 +65,11 @@ def get_dashboard_meta():
 
 @frappe.whitelist()
 def get_dashboard(section="overview", from_date=None, to_date=None, company=None, refresh=0):
-    if section not in {s["key"] for s in SECTIONS}:
+    chosen = next((s for s in SECTIONS if s["key"] == section), None)
+    if not chosen:
         frappe.throw(_("Unknown dashboard section: {0}").format(section), frappe.DoesNotExistError)
+    if not _section_allowed(chosen):
+        frappe.throw(_("You don't have access to the {0} dashboard").format(chosen["label"]), frappe.PermissionError)
 
     period = Period(from_date, to_date)
     company = company or _default_company()

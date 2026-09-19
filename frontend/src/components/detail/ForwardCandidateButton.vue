@@ -24,21 +24,16 @@
       <div v-else class="flex flex-col gap-4">
         <div class="flex flex-col gap-1.5">
           <label class="text-p-sm font-medium text-app-text-muted">Service</label>
-          <select v-model="service" class="h-9 w-full rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20">
-            <option value="" disabled>Select a service…</option>
-            <option v-for="s in options" :key="s" :value="s">{{ s }}</option>
-          </select>
+          <AppCombobox v-model="service" :options="options" placeholder="Select a service…" />
         </div>
 
         <div v-if="needsInterviewRound" class="flex flex-col gap-1.5">
           <label class="text-p-sm font-medium text-app-text-muted">Interview Round</label>
-          <select
+          <AppCombobox
             v-model="interviewRound"
-            class="h-9 w-full rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20"
-          >
-            <option value="" disabled>{{ interviewRoundOptions.length ? 'Select an interview round…' : 'No interview rounds scheduled yet' }}</option>
-            <option v-for="r in interviewRoundOptions" :key="r" :value="r">{{ r }}</option>
-          </select>
+            :options="interviewRoundOptions"
+            :placeholder="interviewRoundOptions.length ? 'Select an interview round…' : 'No interview rounds scheduled yet'"
+          />
         </div>
 
         <div v-if="isCR" class="flex flex-col gap-1.5">
@@ -82,6 +77,7 @@
 import { computed, ref, watch } from 'vue'
 import { Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'

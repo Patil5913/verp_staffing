@@ -508,3 +508,33 @@ export const subscriptionPlanConfig = {
     },
   ],
 }
+
+// Agreement (an order's filled-in PDF): mostly read-only — it's produced from
+// the Sales Order's Agreements tab. agreement.js's only button is Download.
+export const agreementConfig = {
+  doctype: 'Agreement',
+  timeline: 'full',
+  noDelete: true,
+  actions: [
+    {
+      component: DocAction,
+      props: {
+        label: 'Download Agreement',
+        icon: 'download',
+        method: 'verp_staffing.crm.api.agreement.download_agreement',
+        args: { agreement: '$name' },
+        then: 'open-file',
+      },
+      show: notNew,
+    },
+  ],
+  tabs: [
+    {
+      key: 'details',
+      label: 'Details',
+      sections: [
+        { type: 'fields', fieldnames: ['sales_order', 'template', 'status', 'sent_on', 'last_reminder_sent', 'certificate_id', 'signature_image', 'pdf'] },
+      ],
+    },
+  ],
+}

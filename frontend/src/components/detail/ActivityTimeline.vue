@@ -45,10 +45,19 @@
                   class="rounded-xl border border-app-border bg-app-panel px-4 py-3 shadow-sm"
                 >
                   <div class="flex items-baseline justify-between gap-2">
-                    <span class="truncate text-p-sm font-medium text-app-text">{{ entry.owner }}</span>
-                    <span class="shrink-0 text-p-xs text-app-text-muted">{{ formatDate(entry.creation) }}</span>
+                    <span class="truncate text-p-sm font-medium text-app-text">
+                      {{ entry.owner }}
+                      <Badge v-if="entry.from_doctype" variant="subtle" theme="gray" class="ml-1.5 align-middle">from {{ entry.from_doctype }}</Badge>
+                    </span>
+                    <span class="flex shrink-0 items-center gap-1 text-p-xs text-app-text-muted">
+                      {{ formatDate(entry.creation) }}
+                      <template v-if="entry.can_edit && entry.id">
+                        <AppButton variant="ghost" size="icon" icon="edit-2" title="Edit note" @click="openNoteEdit(entry)" />
+                        <AppButton variant="ghost" size="icon" icon="trash-2" title="Delete note" @click="removeNote(entry)" />
+                      </template>
+                    </span>
                   </div>
-                  <p class="mt-1 whitespace-pre-wrap text-p-sm text-app-text">{{ entry.content }}</p>
+                  <div class="note-html mt-1 text-p-sm text-app-text" v-html="clean(entry.html)" />
                 </div>
 
                 <!-- Field-change history -->
@@ -78,13 +87,28 @@
                   class="rounded-xl border border-app-border bg-app-panel px-4 py-3 shadow-sm"
                 >
                   <div class="flex items-start justify-between gap-2">
-                    <p class="min-w-0 text-p-sm text-app-text">
-                      <span class="font-medium">Task</span>
-                      <span v-if="entry.description"> · {{ entry.description }}</span>
-                    </p>
-                    <Badge variant="subtle" :theme="entry.is_completed ? 'green' : 'orange'">
-                      {{ entry.is_completed ? 'Completed' : 'Open' }}
-                    </Badge>
+                    <label class="flex min-w-0 items-start gap-2 text-p-sm text-app-text" :class="entry.can_edit ? 'cursor-pointer' : ''">
+                      <input
+                        type="checkbox"
+                        class="mt-1"
+                        :checked="entry.is_completed"
+                        :disabled="!entry.can_edit || changing"
+                        @change="(e) => toggleTask(entry, e.target.checked)"
+                      />
+                      <span :class="entry.is_completed ? 'line-through opacity-60' : ''">
+                        <span class="font-medium">Task</span>
+                        <span v-if="entry.description"> · {{ entry.description }}</span>
+                      </span>
+                    </label>
+                    <span class="flex shrink-0 items-center gap-1">
+                      <Badge variant="subtle" :theme="entry.is_completed ? 'green' : 'orange'">
+                        {{ entry.is_completed ? 'Completed' : 'Open' }}
+                      </Badge>
+                      <template v-if="entry.can_edit && !entry.is_completed">
+                        <AppButton variant="ghost" size="icon" icon="edit-2" title="Edit task" @click="openTaskEdit(entry)" />
+                      </template>
+                      <AppButton v-if="entry.can_delete && !entry.is_completed" variant="ghost" size="icon" icon="trash-2" title="Delete task" @click="removeActivity('CRM Task', entry, 'task')" />
+                    </span>
                   </div>
                   <p class="mt-1 text-p-xs text-app-text-muted">
                     <span v-if="entry.assigned_to">Assigned to {{ entry.assigned_to }} · </span>
@@ -99,7 +123,11 @@
                 >
                   <div class="flex items-start justify-between gap-2">
                     <p class="min-w-0 truncate text-p-sm font-medium text-app-text">{{ entry.summary }}</p>
-                    <Badge variant="subtle" theme="blue">{{ entry.category }}</Badge>
+                    <span class="flex shrink-0 items-center gap-1">
+                      <Badge variant="subtle" theme="blue">{{ entry.category }}</Badge>
+                      <AppButton v-if="entry.can_edit" variant="ghost" size="icon" icon="edit-2" title="Edit event" @click="openEventEdit(entry)" />
+                      <AppButton v-if="entry.can_delete" variant="ghost" size="icon" icon="trash-2" title="Delete event" @click="removeActivity('CRM Event', entry, 'event')" />
+                    </span>
                   </div>
                   <p v-if="entry.description" class="mt-1 whitespace-pre-wrap text-p-sm text-app-text">
                     {{ entry.description }}
@@ -148,6 +176,51 @@
       </div>
     </template>
 
+    <!-- Edit note: the desk form's rich-text editor, so HTML notes stay intact -->
+    <Dialog v-model="showNoteEdit" :options="{ title: 'Edit note', size: 'lg' }">
+      <template #body-content>
+        <TextEditor
+          :content="noteEdit.html"
+          editor-class="min-h-[140px] rounded-lg border border-app-border px-3 py-2 text-p-sm"
+          @change="(html) => (noteEdit.html = html)"
+        />
+      </template>
+      <template #actions>
+        <AppButton icon="check" :loading="changing" @click="saveNote">Update</AppButton>
+      </template>
+    </Dialog>
+
+    <!-- Edit task: only an admin can move the date, reassign or reword it; the
+    assignee can tick it off (CRM Task.validate enforces the same) -->
+    <Dialog v-model="showTaskEdit" :options="{ title: 'Edit task', size: 'md' }">
+      <template #body-content>
+        <div class="flex flex-col gap-4">
+          <FormControl type="textarea" label="Description" v-model="taskEdit.description" :disabled="!isSystemManager()" />
+          <FormControl type="datetime-local" label="Date & Time" v-model="taskEdit.date" :disabled="!isSystemManager()" />
+          <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="taskEdit.assignedTo" :disabled="!isSystemManager()" />
+          <label class="flex items-center gap-2 text-p-sm text-app-text"><input v-model="taskEdit.isCompleted" type="checkbox" /> Completed</label>
+        </div>
+      </template>
+      <template #actions>
+        <AppButton icon="check" :loading="changing" @click="saveTask">Update</AppButton>
+      </template>
+    </Dialog>
+
+    <Dialog v-model="showEventEdit" :options="{ title: 'Edit event', size: 'md' }">
+      <template #body-content>
+        <div class="flex flex-col gap-4">
+          <AppCombobox label="Category" required v-model="eventEdit.category" :options="EVENT_CATEGORIES" />
+          <FormControl type="datetime-local" label="Date & Time" required v-model="eventEdit.date" />
+          <FormControl type="text" label="Summary" required v-model="eventEdit.summary" />
+          <FormControl type="textarea" label="Description" v-model="eventEdit.description" />
+          <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="eventEdit.assignedTo" />
+        </div>
+      </template>
+      <template #actions>
+        <AppButton icon="check" :loading="changing" :disabled="!eventEdit.category || !eventEdit.summary.trim()" @click="saveEvent">Update</AppButton>
+      </template>
+    </Dialog>
+
     <!-- New Task: same fields/order as this app's desk "Add Task" — description,
     then date & time (defaulted to now), then assigned to -->
     <Dialog v-model="showTaskDialog" :options="{ title: 'New Task', size: 'md' }">
@@ -169,13 +242,7 @@
     <Dialog v-model="showEventDialog" :options="{ title: 'New Event', size: 'md' }">
       <template #body-content>
         <div class="flex flex-col gap-4">
-          <FormControl
-            type="select"
-            label="Category"
-            required
-            v-model="eventForm.category"
-            :options="EVENT_CATEGORIES"
-          />
+          <AppCombobox label="Category" required v-model="eventForm.category" :options="EVENT_CATEGORIES" />
           <FormControl type="datetime-local" label="Date & Time" required v-model="eventForm.date" />
           <FormControl type="text" label="Summary" required v-model="eventForm.summary" />
           <FormControl type="textarea" label="Description" v-model="eventForm.description" />
@@ -198,11 +265,15 @@
 
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue'
-import { Avatar, Badge, Dialog, FeatherIcon, FormControl, LoadingIndicator } from 'frappe-ui'
+import DOMPurify from 'dompurify'
+import { Avatar, Badge, Dialog, FeatherIcon, FormControl, LoadingIndicator, TextEditor } from 'frappe-ui'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useTimeline } from '@/composables/detail/useTimeline'
+import { confirmLeave } from '@/utils/common/confirmDialog'
+import { isSystemManager } from '@/utils/common/roles'
 
 const props = defineProps({
   doctype: { type: String, required: true },
@@ -228,6 +299,12 @@ const {
   creatingTask,
   createEvent,
   creatingEvent,
+  updateNote,
+  deleteNote,
+  updateTask,
+  updateEvent,
+  deleteActivity,
+  changing,
 } = useTimeline(
   computed(() => props.doctype),
   computed(() => props.name),
@@ -299,6 +376,66 @@ async function onCreateTask() {
     assigned_to: taskForm.assignedTo || undefined,
   })
   if (result) showTaskDialog.value = false
+}
+
+// ── existing entries: edit / complete / delete ──────────────────────────────
+// Notes are HTML written in the desk's editor; strip anything unsafe first.
+const clean = (html) => DOMPurify.sanitize(html || '')
+
+const inputDate = (value) => (value ? String(value).replace(' ', 'T').slice(0, 16) : '')
+
+async function confirmDelete(what) {
+  return confirmLeave({ title: `Delete this ${what}?`, message: "This can't be undone.", leaveLabel: 'Delete', cancelLabel: 'Cancel' })
+}
+
+const showNoteEdit = ref(false)
+const noteEdit = reactive({ id: '', html: '' })
+function openNoteEdit(entry) {
+  Object.assign(noteEdit, { id: entry.id, html: entry.html })
+  showNoteEdit.value = true
+}
+async function saveNote() {
+  if (!noteEdit.html?.replace(/<[^>]*>/g, '').trim()) return
+  if (await updateNote(noteEdit.id, noteEdit.html)) showNoteEdit.value = false
+}
+async function removeNote(entry) {
+  if (await confirmDelete('note')) deleteNote(entry.id)
+}
+
+const showTaskEdit = ref(false)
+const taskEdit = reactive({ id: '', description: '', date: '', assignedTo: '', isCompleted: false })
+function openTaskEdit(entry) {
+  Object.assign(taskEdit, { id: entry.id, description: entry.description || '', date: inputDate(entry.date), assignedTo: entry.assigned_to || '', isCompleted: !!entry.is_completed })
+  showTaskEdit.value = true
+}
+async function saveTask() {
+  const values = { is_completed: taskEdit.isCompleted ? 1 : 0 }
+  if (isSystemManager()) Object.assign(values, { description: taskEdit.description, date: taskEdit.date, assigned_to: taskEdit.assignedTo })
+  if (await updateTask(taskEdit.id, values)) showTaskEdit.value = false
+}
+function toggleTask(entry, done) {
+  updateTask(entry.id, { is_completed: done ? 1 : 0 })
+}
+
+const showEventEdit = ref(false)
+const eventEdit = reactive({ id: '', category: '', date: '', summary: '', description: '', assignedTo: '' })
+function openEventEdit(entry) {
+  Object.assign(eventEdit, { id: entry.id, category: entry.category || '', date: inputDate(entry.date), summary: entry.summary || '', description: entry.description || '', assignedTo: entry.assigned_to || '' })
+  showEventEdit.value = true
+}
+async function saveEvent() {
+  const done = await updateEvent(eventEdit.id, {
+    category: eventEdit.category,
+    date: eventEdit.date,
+    summary: eventEdit.summary.trim(),
+    description: eventEdit.description,
+    assigned_to: eventEdit.assignedTo,
+  })
+  if (done) showEventEdit.value = false
+}
+
+async function removeActivity(activityDoctype, entry, what) {
+  if (await confirmDelete(what)) deleteActivity(activityDoctype, entry.id)
 }
 
 const showEventDialog = ref(false)

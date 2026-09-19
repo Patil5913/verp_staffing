@@ -4,6 +4,7 @@ import CustomerHistoryPanel from '@/components/detail/CustomerHistoryPanel.vue'
 import ForwardAction from '@/components/detail/ForwardAction.vue'
 import ServiceResumePanel from '@/components/detail/ServiceResumePanel.vue'
 import CreateInterviewButton from '@/components/detail/marketing/CreateInterviewButton.vue'
+import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActions.vue'
 import InterviewRoundsField from '@/components/detail/marketing/InterviewRoundsField.vue'
 import JobApplicationGrid from '@/components/detail/marketing/JobApplicationGrid.vue'
 import MarketingInterviewsPanel from '@/components/detail/marketing/MarketingInterviewsPanel.vue'
@@ -27,6 +28,7 @@ export const marketingConfig = {
   actions: [
     { component: CreateInterviewButton, show: notNew },
     { component: ForwardAction, props: { fromServiceName: 'Marketing' } },
+    { component: FieldUpdateActions, props: { mode: 'service' }, show: notNew },
   ],
   tabs: [
     {
@@ -90,7 +92,10 @@ export function otherServicesConfig({ doctype, department }) {
     timeline: 'service',
     locked: isCompleted,
     readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer', 'service', 'department']),
-    actions: [{ component: ForwardAction, props: { serviceField: 'service' } }],
+    actions: [
+      { component: ForwardAction, props: { serviceField: 'service' } },
+      { component: FieldUpdateActions, props: { mode: 'service' }, show: notNew },
+    ],
     tabs: [
       {
         key: 'details',

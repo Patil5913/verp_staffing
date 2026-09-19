@@ -19,18 +19,10 @@
     </nav>
 
     <div class="flex shrink-0 items-center gap-2">
-      <select v-if="showCompany" v-model="company" class="h-7 max-w-[12rem] rounded-md border border-app-border bg-app-bg px-2 text-p-sm text-app-text focus:border-app-primary focus:outline-none" title="Company">
-        <option v-for="c in companies" :key="c" :value="c">{{ c }}</option>
-      </select>
+      <AppLinkField v-if="showCompany" v-model="company" doctype="Company" compact hide-add-new placeholder="Company" class="w-44 shrink-0" />
 
-      <template v-if="preset === 'custom'">
-        <input v-model="custom.from" type="date" class="h-7 rounded-md border border-app-border bg-app-bg px-2 text-p-sm text-app-text focus:border-app-primary focus:outline-none" />
-        <span class="text-p-xs text-app-text-muted">to</span>
-        <input v-model="custom.to" type="date" class="h-7 rounded-md border border-app-border bg-app-bg px-2 text-p-sm text-app-text focus:border-app-primary focus:outline-none" />
-      </template>
-      <select v-model="preset" class="h-7 rounded-md border border-app-border bg-app-bg px-2 text-p-sm text-app-text focus:border-app-primary focus:outline-none" title="Period">
-        <option v-for="p in PRESETS" :key="p.value" :value="p.value">{{ p.label }}</option>
-      </select>
+      <DateRangePicker v-if="preset === 'custom'" v-model="range" placeholder="Pick a range" variant="outline" input-class="!h-7 w-48 !text-p-sm" />
+      <AppCombobox v-model="preset" :options="PRESETS" compact placeholder="Period" class="w-36 shrink-0" />
 
       <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" :loading="loading" @click="$emit('refresh')" />
     </div>
@@ -39,7 +31,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Button } from 'frappe-ui'
+import { Button, DateRangePicker } from 'frappe-ui'
+import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppLinkField from '@/components/common/AppLinkField.vue'
 import { PRESETS } from '@/utils/dashboard/format'
 
 const props = defineProps({
@@ -53,6 +47,15 @@ defineEmits(['refresh'])
 const preset = defineModel('preset', { type: String, required: true })
 const company = defineModel('company', { type: String, default: '' })
 const custom = defineModel('custom', { type: Object, required: true })
+
+// DateRangePicker speaks "from,to"; the dashboard keeps them as two fields.
+const range = computed({
+  get: () => (custom.value.from && custom.value.to ? `${custom.value.from},${custom.value.to}` : ''),
+  set: (value) => {
+    const [from, to] = (value || '').split(',')
+    if (from && to) Object.assign(custom.value, { from, to })
+  },
+})
 
 // Only the money-bearing tabs depend on a company.
 const showCompany = computed(() => props.companies.length > 1 && ['overview', 'accounts', 'crm'].includes(props.section))

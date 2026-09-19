@@ -18,6 +18,7 @@
           from-service-name="Interview Support"
           @forwarded="detail.refresh"
         />
+        <FieldUpdateActions :detail="detail" :doctype="doctype" :name="name" mode="service" />
       </RecordActionBar>
     </template>
 
@@ -119,6 +120,7 @@ import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
+import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActions.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'

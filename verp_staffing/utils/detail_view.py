@@ -354,6 +354,18 @@ def save_lead_detail_view(lead_name, values):
     if not doc.has_permission("write"):
         frappe.throw(_("You do not have permission to edit this Lead Detail Form."), frappe.PermissionError)
 
+    # Once a Sales Order needs the candidate form, its owner can't edit it
+    # directly any more — changes go through Update Detail / Accept Updates
+    # (lead_detail_form.js locks the same form on the desk).
+    from verp_staffing.crm.api.permission_request import get_lead_detail_form_lock_status
+
+    lock = get_lead_detail_form_lock_status(lead_detail_doc=doc.name)
+    if lock.get("candidate_form_required") and lock.get("is_owner") and frappe.session.user != "Administrator":
+        frappe.throw(
+            _("This form is locked. Go to the Customer form and click 'Update Detail' to request changes."),
+            frappe.PermissionError,
+        )
+
     for fieldname, value in values.items():
         if fieldname not in allowed:
             continue
@@ -382,23 +394,30 @@ def add_comment(doctype, name, content):
     if not content:
         frappe.throw(_("Comment cannot be empty."))
 
-    comment = frappe.get_doc(
+    # A note is a CRM Note, the same record the desk form's Notes tab writes —
+    # so a note added here shows up there and the other way round. The desk
+    # editor stores HTML, so plain text is escaped and paragraphed.
+    from frappe.utils import escape_html, now_datetime
+
+    html = "".join(f"<p>{escape_html(line)}</p>" for line in content.splitlines() if line.strip())
+    frappe.get_doc(
         {
-            "doctype": "Comment",
-            "comment_type": "Comment",
+            "doctype": "CRM Note",
             "reference_doctype": doctype,
             "reference_name": name,
-            "content": content,
+            "current_doctype": doctype,
+            "note": html,
+            "added_by": frappe.session.user,
+            "added_on": now_datetime(),
         }
-    )
-    comment.insert(ignore_permissions=True)
+    ).insert(ignore_permissions=True)
 
     return get_comments(doctype, name)
 
 
 @frappe.whitelist()
 def get_timeline(doctype, name):
-    """Unified activity feed for a record's detail page: notes (Comment),
+    """Unified activity feed for a record's detail page: notes (CRM Note),
     field-change history (Version), and this app's own CRM Task / CRM Event
     records linked to this doc, merged into one creation-ordered list.
     Mirrors the mixed timeline the old desk form showed, but as a single
@@ -407,6 +426,36 @@ def get_timeline(doctype, name):
     _check_read(doctype, name)
 
     entries = []
+    user = frappe.session.user
+    privileged = user == "Administrator" or "System Manager" in frappe.get_roles(user)
+
+    def can_change(*people):
+        return privileged or user in [p for p in people if p]
+
+    # Notes: the desk's CRM Note records for this document. `from_doctype` is
+    # set when the note was written from a related document's form.
+    for n in frappe.get_all(
+        "CRM Note",
+        filters={"reference_doctype": doctype, "reference_name": name},
+        fields=["name", "note", "added_by", "added_on", "creation", "current_doctype"],
+        order_by="added_on desc",
+        limit_page_length=100,
+    ):
+        entries.append(
+            {
+                "type": "note",
+                "key": f"note-{n.name}",
+                "id": n.name,
+                "owner": n.added_by,
+                "creation": n.added_on or n.creation,
+                "html": n.note,
+                "from_doctype": n.current_doctype if n.current_doctype and n.current_doctype != doctype else None,
+                "can_edit": can_change(n.added_by),
+            }
+        )
+
+    # Notes written here before this used CRM Note are plain Comments; still shown.
+    from frappe.utils import escape_html
 
     for c in frappe.get_list(
         "Comment",
@@ -418,10 +467,13 @@ def get_timeline(doctype, name):
         entries.append(
             {
                 "type": "note",
-                "key": f"note-{c.name}",
+                "key": f"comment-{c.name}",
+                "id": None,
                 "owner": c.owner,
                 "creation": c.creation,
-                "content": c.content,
+                "html": f"<p>{escape_html(c.content or '')}</p>",
+                "from_doctype": None,
+                "can_edit": False,
             }
         )
 
@@ -465,6 +517,9 @@ def get_timeline(doctype, name):
             {
                 "type": "task",
                 "key": f"task-{t.name}",
+                "id": t.name,
+                "can_edit": can_change(t.assigned_to),
+                "can_delete": can_change(t.assigned_to, t.owner),
                 "owner": t.owner,
                 "creation": t.creation,
                 "description": t.description,
@@ -485,6 +540,9 @@ def get_timeline(doctype, name):
             {
                 "type": "event",
                 "key": f"event-{e.name}",
+                "id": e.name,
+                "can_edit": can_change(e.assigned_to, e.owner),
+                "can_delete": can_change(e.assigned_to, e.owner),
                 "owner": e.owner,
                 "creation": e.creation,
                 "category": e.category,

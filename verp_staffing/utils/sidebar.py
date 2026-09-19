@@ -3,6 +3,8 @@ from urllib.parse import quote
 
 import frappe
 
+from verp_staffing.utils.access import list_blocked
+
 CACHE_KEY_PREFIX = "verp_staffing:sidebar_permissions:"
 CACHE_TTL_SECONDS = 24 * 60 * 60
 
@@ -124,7 +126,7 @@ def _accessible(item: dict, is_admin: bool, user_roles: set, item_kind: str) -> 
                 frappe.has_permission(
                     item["doctype"], ptype="write", ignore_share_permissions=True
                 )
-            )
+            ) and not list_blocked(item["doctype"])
         except Exception:
             return False
 

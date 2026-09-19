@@ -43,6 +43,7 @@ const KEY_ICON_OVERRIDES = {
   // Staffing Master children
   'email-domain': 'globe',
   'email-account': 'mail',
+  'email-queue': 'mail-check',
   department: 'network',
   hierarchy: 'list-tree',
   'erp-configuration': 'sliders-horizontal',

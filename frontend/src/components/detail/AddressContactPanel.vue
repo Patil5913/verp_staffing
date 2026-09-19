@@ -24,7 +24,7 @@
       <template #body-content>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormControl label="Address Title" v-model="address.address_title" class="sm:col-span-2" />
-          <FormControl type="select" label="Address Type" v-model="address.address_type" :options="ADDRESS_TYPES" required />
+          <AppCombobox label="Address Type" v-model="address.address_type" :options="ADDRESS_TYPES" required />
           <div class="pt-6"><Checkbox label="Is Primary Address" v-model="address.is_primary_address" /></div>
           <FormControl label="Address Line 1" v-model="address.address_line1" required class="sm:col-span-2" />
           <FormControl label="Address Line 2" v-model="address.address_line2" class="sm:col-span-2" />
@@ -69,6 +69,7 @@
 // its own record for anything beyond these essentials.
 import { computed, reactive, ref, watch } from 'vue'
 import { call, Checkbox, Dialog, FormControl } from 'frappe-ui'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import SectionCard from '@/components/common/SectionCard.vue'

@@ -2,14 +2,16 @@
   <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
     <template #actions>
       <RecordActionBar
-        show-save
+        :show-save="detail.canWrite.value"
         :save-dirty="isDirty"
         :save-loading="detail.save.isLoading"
-        :show-delete="!detail.isNew.value && detail.canDelete.value"
+        :show-delete="!detail.isNew.value && detail.canDelete.value && !detail.locked.value"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
-      />
+      >
+        <AppButton v-if="hasSalesDepartment && !detail.isNew.value" variant="outline" icon="bar-chart-3" @click="openRevenueReport">Revenue Report</AppButton>
+      </RecordActionBar>
     </template>
 
     <template #tab-profile>
@@ -70,8 +72,9 @@
 // rather than being stacked under one Details grid. See router.js for how
 // /Employee/:name is routed here ahead of the generic /:doctype/:name.
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { Dialog } from 'frappe-ui'
+import { useRoute, useRouter } from 'vue-router'
+import { call, Dialog } from 'frappe-ui'
+import { isAdministrator, isSystemManager } from '@/utils/common/roles'
 import AppButton from '@/components/common/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
@@ -80,12 +83,26 @@ import ChildTableField from '@/components/detail/ChildTableField.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
 const route = useRoute()
+const router = useRouter()
 
 const doctype = computed(() => 'Employee')
 const name = computed(() => route.params.name)
 
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
+
+// employee.js's apply_employee_read_only_restriction: outside the HR
+// department (Administrator and System Manager excepted) the whole form is
+// read-only. Locked until the server has said which departments the user is
+// in, so it never flashes editable.
+if (!isAdministrator() && !isSystemManager()) {
+  detail.locked.value = true
+  call('verp_staffing.employee.doctype.employee.employee.get_user_departments')
+    .then((departments) => {
+      detail.locked.value = !(departments || []).some((d) => (d || '').toLowerCase() === 'hr')
+    })
+    .catch(() => {})
+}
 
 const TABS = [
   { key: 'profile', label: 'Profile' },
@@ -98,6 +115,13 @@ const activeTab = ref('profile')
 
 const PROFILE_FIELDS = ['employee_name', 'user', 'enabled', 'start_date']
 const TARGET_FIELDS = ['target', 'target_based_on']
+
+// employee.js: employees assigned to Sales get a shortcut to their own
+// Revenue Of Employee report.
+const hasSalesDepartment = computed(() => (detail.values.employee_assignment_details_table || []).some((row) => row.department === 'Sales'))
+function openRevenueReport() {
+  router.push({ path: '/report/Revenue%20Of%20Employee', query: { employee: name.value } })
+}
 
 const assignmentsTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'employee_assignment_details_table'))
 const linkedinTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'linkedin_credentials'))

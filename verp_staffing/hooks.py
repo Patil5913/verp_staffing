@@ -254,6 +254,7 @@ override_doctype_class = {
 # Hook on document methods and events
 
 doc_events = {
+    "Communication": {"after_insert": "verp_staffing.utils.mailbox.on_new_communication"},
     "Resume": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },
@@ -380,6 +381,7 @@ scheduler_events = {
         "verp_staffing.quota.utils.quota.nightly_reconcile",
     ],
     "cron": {
+        "0/10 * * * *": ["verp_staffing.utils.mailbox.sync_extra_all"],
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"

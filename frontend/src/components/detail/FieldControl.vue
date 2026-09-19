@@ -52,7 +52,7 @@
         variant="ghost"
         size="icon"
         icon="x"
-        @click="emit('update:modelValue', '')"
+        @click="clearFile"
       />
     </div>
   </div>
@@ -69,16 +69,14 @@
       :placeholder="placeholder"
       @input="(e) => onInput(e.target.value)"
     />
-    <select
+    <AppCombobox
       v-else-if="controlType === 'select'"
-      :class="fieldInputClasses"
-      :value="displayValue ?? ''"
+      :model-value="String(displayValue ?? '')"
+      :options="selectOptions"
       :disabled="disabled"
-      @change="(e) => onInput(e.target.value)"
-    >
-      <option value="" disabled hidden>{{ placeholder || 'Select an option' }}</option>
-      <option v-for="opt in selectOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-    </select>
+      :placeholder="placeholder || 'Select an option'"
+      @update:model-value="onInput"
+    />
     <input
       v-else
       :class="fieldInputClasses"
@@ -97,6 +95,7 @@
 import { computed } from 'vue'
 import { Checkbox, FileUploader } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import {
   isEmailField,
@@ -115,6 +114,10 @@ const props = defineProps({
   // { query?, filters? } for a Link field — a whitelisted standard query and/or
   // filters, like the desk's frm.set_query(fieldname, ...).
   linkQuery: { type: Object, default: null },
+  // Optional async (fieldname) => boolean for a file the server should delete
+  // straight away (Lead Detail Form, as on the desk) instead of just clearing
+  // the field until the next Save. Resolve false to keep the file.
+  removeFile: { type: Function, default: null },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -138,6 +141,11 @@ const TYPE_MAP = {
   Attach: 'attach',
   'Attach Image': 'attach',
   Password: 'password',
+}
+
+async function clearFile() {
+  if (props.removeFile && !(await props.removeFile(props.field.fieldname))) return
+  emit('update:modelValue', '')
 }
 
 const controlType = computed(() => {

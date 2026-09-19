@@ -33,8 +33,12 @@ export function useDocDetail(doctype, name) {
   // submittable always reports 0, so nothing below needs a special case.
   const isSubmittable = computed(() => !!meta.resource.data?.is_submittable)
   const docstatus = computed(() => meta.resource.data?.docstatus ?? 0)
+  // A page can freeze a record the user does have write permission on (the
+  // desk forms' role rules, e.g. Employee being HR-only): it sets `locked`
+  // and everything below that reads canWrite follows.
+  const locked = ref(false)
   // A submitted/cancelled doc is frozen, whatever the user's write perm is.
-  const canWrite = computed(() => !!meta.resource.data?.perms?.write && docstatus.value === 0)
+  const canWrite = computed(() => !!meta.resource.data?.perms?.write && docstatus.value === 0 && !locked.value)
   const canSubmit = computed(() => isSubmittable.value && docstatus.value === 0 && !!meta.resource.data?.perms?.submit)
   const canCancel = computed(() => isSubmittable.value && docstatus.value === 1 && !!meta.resource.data?.perms?.cancel)
   const canDelete = computed(() => !!meta.resource.data?.perms?.delete)
@@ -156,6 +160,7 @@ export function useDocDetail(doctype, name) {
     hidden,
     hiddenTables,
     canWrite,
+    locked,
     canDelete,
     isSubmittable,
     docstatus,

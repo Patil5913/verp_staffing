@@ -2,6 +2,10 @@
 // status vocabulary (works across doctypes, not just one specific status
 // field) — falls back to plain gray when nothing matches.
 const KEYWORD_THEMES = [
+  // mail delivery (Email Queue)
+  [/^sent$|delivered/, 'green'],
+  [/expired|partially/, 'orange'],
+  [/^sending$/, 'blue'],
   [/won|success|approved|complete|paid|active|accepted/, 'green'],
   [/lost|cancel|reject|fail|inactive|closed|error/, 'red'],
   [/pending|draft|hold|review|interested|waiting/, 'orange'],

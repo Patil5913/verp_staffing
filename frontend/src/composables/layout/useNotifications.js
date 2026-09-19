@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
-import { call, initSocket } from 'frappe-ui'
+import { call } from 'frappe-ui'
+import { getSocket } from '@/utils/common/realtime'
 import { notify } from '@/utils/common/notify'
 
 // Mirrors Frappe desk's own notification bell exactly on the backend side:
@@ -58,7 +59,7 @@ async function markAllAsRead() {
 let socket = null
 function connectRealtime() {
   if (socket) return
-  socket = initSocket()
+  socket = getSocket()
   socket.on('notification', () => load())
 }
 

@@ -18,6 +18,7 @@ export function useLeadDetailForm(leadName) {
   const fields = computed(() => detail.resource.data?.fields || [])
   const tables = computed(() => detail.resource.data?.tables || [])
   const canWrite = computed(() => !!detail.resource.data?.perms?.write)
+  const docname = computed(() => detail.resource.data?.docname || '')
 
   const values = reactive({})
   const snapshot = ref('')
@@ -39,6 +40,20 @@ export function useLeadDetailForm(leadName) {
   watch(() => detail.resource.data, applyData, { immediate: true })
 
   const isDirty = computed(() => JSON.stringify(values) !== snapshot.value)
+
+  // lead_detail_form.js's update_parent_skills: the skills summary is the
+  // manually typed skills plus every experience row's skills, de-duplicated.
+  // Only reacts to edits made since the form loaded, so opening a profile
+  // never marks it changed.
+  const splitSkills = (text) => String(text || '').split(',').map((s) => s.trim()).filter(Boolean)
+  watch(
+    () => [values.additional_skills, JSON.stringify((values.past_experience_table || []).map((r) => r.skills))],
+    () => {
+      if (!isDirty.value) return
+      const merged = [...new Set([...splitSkills(values.additional_skills), ...(values.past_experience_table || []).flatMap((r) => splitSkills(r.skills))])].join(', ')
+      if (merged !== (values.additional_skills || '')) values.additional_skills = merged
+    },
+  )
 
   const save = useResource({
     url: 'verp_staffing.utils.detail_view.save_lead_detail_view',
@@ -67,5 +82,5 @@ export function useLeadDetailForm(leadName) {
     return Math.round((filled / total) * 100)
   })
 
-  return { detail, exists, fields, tables, values, canWrite, isDirty, completeness, save, submit }
+  return { detail, exists, docname, fields, tables, values, canWrite, isDirty, completeness, save, submit }
 }

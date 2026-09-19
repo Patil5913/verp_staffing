@@ -36,7 +36,7 @@
 //     // insert it as a draft of `create` and open it
 //     create?: 'Payment Entry',
 //     // where to go after: a path template ('$name' / '$result' substituted)
-//     then?: 'refresh' (default) | 'stay' | '/some/$result' }
+//     then?: 'refresh' (default) | 'stay' | 'open-file' (the result's file_url) | '/some/$result' }
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { call, Dialog, FormControl } from 'frappe-ui'
@@ -122,6 +122,12 @@ async function run() {
     if (props.success) notify.success(props.success)
     if (props.then === 'refresh') props.detail.refresh()
     else if (props.then === 'stay') return
+    else if (props.then === 'open-file') {
+      // the method answered { file_url } — open the file in a new tab
+      const url = result?.file_url
+      if (url) window.open(url, '_blank', 'noopener')
+      else notify.error('No file found.')
+    }
     else router.push(props.then.replace('$name', encodeURIComponent(props.name)).replace('$result', encodeURIComponent(result ?? '')))
   } catch (error) {
     notify.error(normalizeError(error).message)

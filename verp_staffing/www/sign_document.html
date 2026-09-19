@@ -95,7 +95,7 @@
 </div>
 
 <div
-	id="modal-overlay"
+	id="modal-overlay" onclick="closeModal()"
 	style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; z-index: 999"
 ></div>
 
@@ -128,107 +128,70 @@
 	</p>
 </div>
 
-<div
-	id="signature-modal"
-	style="
-		display: none;
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		padding: 20px;
-		border: 1px solid #ccc;
-		z-index: 1000;
-		width: 95%;
-		max-width: 500px;
-		border-radius: 10px;
-	"
->
-	<h3>Add Your Signature</h3>
-
-	<!-- Tabs -->
-	<div style="display: flex; gap: 10px; margin-bottom: 15px">
-		<button onclick="switchMode('draw')">Draw</button>
-		<button onclick="switchMode('upload')">Upload</button>
-		<button onclick="switchMode('type')">Type</button>
+<div id="signature-modal" role="dialog" aria-modal="true" aria-labelledby="sg-title">
+	<div class="sg-head">
+		<h3 id="sg-title">Add your signature</h3>
+		<button type="button" class="sg-x" onclick="closeModal()" aria-label="Close">&times;</button>
 	</div>
 
-	<!-- DRAW SECTION -->
+	<div class="sg-tabs" role="tablist">
+		<button type="button" role="tab" data-mode="draw" class="active" onclick="switchMode('draw')">Draw</button>
+		<button type="button" role="tab" data-mode="type" onclick="switchMode('type')">Type</button>
+		<button type="button" role="tab" data-mode="upload" onclick="switchMode('upload')">Upload</button>
+	</div>
+
+	<!-- DRAW -->
 	<div id="draw-section">
-		<canvas
-			id="signature-canvas"
-			width="350"
-			height="120"
-			style="border: 1px solid #ccc; width: 100%"
-		></canvas>
+		<div class="sg-pad" id="sg-pad">
+			<canvas id="signature-canvas"></canvas>
+			<span class="sg-hint" id="sg-hint">Sign here with your mouse, finger or stylus</span>
+			<span class="sg-baseline"></span>
+		</div>
+		<div class="sg-tools">
+			<button type="button" class="sg-link" id="sg-undo" onclick="undoStroke()" disabled>Undo</button>
+			<button type="button" class="sg-link" id="sg-clear" onclick="clearCanvas()" disabled>Clear</button>
+		</div>
 	</div>
 
-	<!-- UPLOAD SECTION -->
-	<div id="upload-section" style="display: none">
-		<input type="file" id="upload-input" accept="image/*" />
-		<p style="color: red; margin-top: 5px">⚠️ Warning: Maximum allowed file size is 5 MB.</p>
-		<div id="upload-preview" style="margin-top: 10px"></div>
-	</div>
-
-	<!-- TYPE SECTION -->
+	<!-- TYPE -->
 	<div id="type-section" style="display: none">
 		<link
 			href="https://fonts.googleapis.com/css2?family=Pacifico&family=Great+Vibes&family=Dancing+Script&family=Alex+Brush&family=Playfair+Display&family=Roboto&family=Libre+Baskerville&family=Satisfy&display=swap"
 			rel="stylesheet"
 		/>
-		<input
-			type="text"
-			id="typed-name"
-			placeholder="Your Name"
-			style="width: 100%; padding: 8px; margin-bottom: 10px"
-		/>
-
-		<div id="font-options" class="font-grid">
-			<div class="font-box active" data-font="'Pacifico', cursive">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Great Vibes', cursive">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Dancing Script', cursive">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Alex Brush', cursive">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Satisfy', cursive">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Playfair Display', serif">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Libre Baskerville', serif">
-				<span class="font-preview">John Smith</span>
-			</div>
-
-			<div class="font-box" data-font="'Roboto', sans-serif">
-				<span class="font-preview">John Smith</span>
-			</div>
+		<input type="text" id="typed-name" placeholder="Type your full name" autocomplete="name" maxlength="60" />
+		<div class="sg-pad sg-pad-type">
+			<canvas id="typed-preview" width="1200" height="360"></canvas>
+			<span class="sg-baseline"></span>
 		</div>
-
-		<canvas
-			id="typed-preview"
-			width="400"
-			height="150"
-			style="border: 1px solid #ccc; width: 100%; margin-top: 10px"
-		></canvas>
+		<div id="font-options" class="font-grid">
+			<div class="font-box active" data-font="'Pacifico', cursive"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Great Vibes', cursive"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Dancing Script', cursive"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Alex Brush', cursive"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Satisfy', cursive"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Playfair Display', serif"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Libre Baskerville', serif"><span class="font-preview">John Smith</span></div>
+			<div class="font-box" data-font="'Roboto', sans-serif"><span class="font-preview">John Smith</span></div>
+		</div>
 	</div>
 
-	<br />
+	<!-- UPLOAD -->
+	<div id="upload-section" style="display: none">
+		<label class="sg-drop" for="upload-input">
+			<span>Choose an image of your signature</span>
+			<small>PNG or JPG, up to 5 MB</small>
+		</label>
+		<input type="file" id="upload-input" accept="image/*" hidden />
+		<div id="upload-preview"></div>
+	</div>
 
-	<button onclick="saveSignature()">Upload Signature</button>
-	<button onclick="closeModal()">Cancel</button>
+	<p class="sg-legal">By signing, you agree this is your legally binding electronic signature.</p>
+
+	<div class="sg-actions">
+		<button type="button" class="sg-cancel" onclick="closeModal()">Cancel</button>
+		<button type="button" class="sg-save" id="sg-save" onclick="saveSignature()">Apply signature</button>
+	</div>
 </div>
 {% endif %}
 
@@ -1072,169 +1035,91 @@
 		display: block;
 	}
 
-	/* ===== MODAL ===== */
+	/* ===== SIGNATURE DIALOG ===== */
 	#signature-modal {
-		background: #f7f4f4;
-		/* remove grey */
-		border: 1px solid #e5e7eb !important;
-		box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
-	}
-
-	/* ===== TABS ===== */
-	#signature-modal button {
-		background: #f8fafc;
-		border: 1px solid #e5e7eb;
-		color: #374151;
-		padding: 6px 12px;
-		border-radius: 6px;
-		font-size: 13px;
-	}
-
-	#signature-modal button:hover {
-		background: #f1f5f9;
-	}
-
-	/* ===== INPUT ===== */
-	#typed-name {
-		border: 1px solid #e5e7eb !important;
-		border-radius: 8px !important;
-		padding: 10px !important;
+		display: none;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 1000;
+		width: calc(100% - 24px);
+		max-width: 560px;
+		max-height: calc(100dvh - 24px);
+		overflow-y: auto;
+		box-sizing: border-box;
+		padding: 20px;
 		background: #fff;
+		border-radius: 16px;
+		box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+		font-family: Inter, sans-serif;
+		overscroll-behavior: contain;
 	}
+	#signature-modal button { font-family: inherit; }
+	.sg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+	.sg-head h3 { margin: 0; font-size: 18px; font-weight: 600; color: #0f172a; }
+	.sg-x { border: 0; background: none; font-size: 26px; line-height: 1; color: #64748b; cursor: pointer; padding: 0 4px; }
+	.sg-x:hover { color: #0f172a; }
 
-	#typed-name:focus {
-		border-color: #d1d5db !important;
-		outline: none;
+	.sg-tabs { display: flex; gap: 4px; padding: 4px; background: #f1f5f9; border-radius: 10px; margin-bottom: 14px; }
+	.sg-tabs button {
+		flex: 1; border: 0; background: transparent; padding: 9px 0; border-radius: 7px;
+		font-size: 14px; font-weight: 500; color: #475569; cursor: pointer; transition: background 0.15s, color 0.15s;
 	}
+	.sg-tabs button.active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
 
-	/* ===== FONT GRID ===== */
-	.font-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 10px;
+	.sg-pad {
+		position: relative; height: 200px; background: #fff; border: 1.5px dashed #cbd5e1; border-radius: 12px; overflow: hidden;
 	}
+	.sg-pad:focus-within, .sg-pad.active { border-color: #2563eb; }
+	.sg-pad-type { height: 130px; margin-bottom: 12px; }
+	#signature-canvas, #typed-preview { width: 100%; height: 100%; display: block; }
+	#signature-canvas { touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+	.sg-baseline { position: absolute; left: 6%; right: 6%; bottom: 32%; border-bottom: 1px solid #e2e8f0; pointer-events: none; }
+	.sg-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 14px; pointer-events: none; }
+	.sg-pad.has-ink .sg-hint { display: none; }
 
-	/* ===== FONT BOX (MAIN FIX) ===== */
-	.font-box {
-		padding: 10px;
-		border: 1px solid #f1f5f9;
-		/* very soft border */
-		border-radius: 8px;
-		background: #ffffff;
-		/* clean white */
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	/* Hover = very subtle */
-	.font-box:hover {
-		background: #fafafa;
-		border-color: #e5e7eb;
-	}
-
-	/* Active (selected) = subtle highlight */
-	.font-box.active {
-		background: #f8fafc;
-		/* very light */
-		border-color: #cbd5e1;
-	}
-
-	/* TEXT */
-	.font-preview {
-		font-size: 18px;
-		color: #111827;
-	}
-
-	/* ===== CANVAS ===== */
-	#signature-canvas,
-	#typed-preview {
-		border: 1px dashed #e5e7eb !important;
-		border-radius: 8px;
-		background: #fff;
-	}
-
-	/* ===== UPLOAD WARNING ===== */
-	#upload-section p {
-		color: #ef4444;
-		font-size: 12px;
-	}
-
-	/* ===== FOOTER BUTTONS ===== */
-	#signature-modal > button {
-		margin-top: 10px;
-		padding: 8px 14px;
-		border-radius: 6px;
-		border: 1px solid #e5e7eb;
-		background: #fff;
-		cursor: pointer;
-	}
-
-	/* Primary button */
-	#signature-modal > button:first-of-type {
-		background: #2563eb;
-		color: #fff;
-		border: none;
-	}
-
-	#signature-modal > button:first-of-type:hover {
-		background: #1d4ed8;
-	}
-
-	/* ===== FONT GRID ===== */
-	.font-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 12px;
-	}
-
-	/* ===== FONT BOX ===== */
-	.font-box {
-		padding: 12px;
-		border: 1px solid #e5e7eb;
-		border-radius: 10px;
-		text-align: center;
-		cursor: pointer;
-
-		/* KEY FIX */
-		background: #ffffff;
-
-		transition: all 0.2s ease;
-	}
-
-	/* ===== HOVER ===== */
-	.font-box:hover {
-		background: #f9fafb;
-		border-color: #d1d5db;
-	}
-
-	/* ===== ACTIVE (SELECTED) ===== */
-	.font-box.active {
-		background: #eff6ff;
-		/* very light blue */
-		border-color: #2563eb;
-		box-shadow: 0 0 0 1px #2563eb inset;
-	}
-
-	/* ===== TEXT ===== */
-	.font-preview {
-		font-size: 18px;
-		color: #111827;
-	}
+	.sg-tools { display: flex; justify-content: flex-end; gap: 14px; margin-top: 8px; }
+	.sg-link { border: 0; background: none; padding: 2px 0; font-size: 13px; font-weight: 500; color: #2563eb; cursor: pointer; }
+	.sg-link:disabled { color: #cbd5e1; cursor: default; }
 
 	#typed-name {
-		width: 100%;
-		padding: 10px;
-		border: 1px solid #e2e8f0;
-		border-radius: 8px;
-		margin-bottom: 12px;
-		font-size: 14px;
+		width: 100%; box-sizing: border-box; padding: 11px 12px; margin-bottom: 12px; font-size: 16px;
+		border: 1px solid #e2e8f0; border-radius: 10px; background: #fff;
 	}
+	#typed-name:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
 
-	#typed-name:focus {
-		border-color: #2563eb;
-		outline: none;
+	.font-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+	.font-box {
+		padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 10px; text-align: center; background: #fff;
+		cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: border-color 0.15s, background 0.15s;
 	}
+	.font-box:hover { background: #f8fafc; }
+	.font-box.active { background: #eff6ff; border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb inset; }
+	.font-preview { font-size: 20px; color: #111827; }
 
+	.sg-drop {
+		display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 140px;
+		border: 1.5px dashed #cbd5e1; border-radius: 12px; color: #334155; font-size: 14px; cursor: pointer; text-align: center;
+	}
+	.sg-drop:hover { border-color: #2563eb; background: #f8fafc; }
+	.sg-drop small { color: #94a3b8; font-size: 12px; }
+	#upload-preview { margin-top: 10px; text-align: center; }
+	#upload-preview img { max-width: 100%; max-height: 140px; }
+
+	.sg-legal { margin: 14px 0 0; font-size: 12px; color: #94a3b8; }
+	.sg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+	.sg-actions button { padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+	.sg-cancel { background: #fff; border: 1px solid #e2e8f0; color: #334155; }
+	.sg-cancel:hover { background: #f8fafc; }
+	.sg-save { background: #2563eb; border: 1px solid #2563eb; color: #fff; }
+	.sg-save:hover { background: #1d4ed8; }
+
+	@media (max-width: 520px) {
+		#signature-modal { top: auto; bottom: 0; left: 0; transform: none; width: 100%; max-width: none; border-radius: 16px 16px 0 0; padding: 16px 16px 20px; }
+		.sg-pad { height: 220px; }
+		.sg-actions button { flex: 1; }
+	}
 	.signed-image {
 		position: absolute;
 		z-index: 15;
@@ -1586,7 +1471,7 @@
 	let currentField = null;
 	window.csrf_token = "{{ frappe.session.csrf_token }}";
 	let currentMode = "draw";
-	let selectedFont = "Pacifico";
+	let selectedFont = "'Pacifico', cursive";
 	let uploadedImageData = null;
 	let drawing = false;
 	let otpInterval = null;
@@ -1599,11 +1484,18 @@
 		currentMode = mode;
 
 		document.getElementById("draw-section").style.display = mode === "draw" ? "block" : "none";
-
-		document.getElementById("upload-section").style.display =
-			mode === "upload" ? "block" : "none";
-
+		document.getElementById("upload-section").style.display = mode === "upload" ? "block" : "none";
 		document.getElementById("type-section").style.display = mode === "type" ? "block" : "none";
+
+		document.querySelectorAll(".sg-tabs button").forEach((b) => {
+			b.classList.toggle("active", b.dataset.mode === mode);
+		});
+
+		if (mode === "draw") sizeCanvas();
+		if (mode === "type") {
+			renderTypedSignature();
+			setTimeout(() => document.getElementById("typed-name").focus(), 0);
+		}
 	}
 
 	function updateStep(step) {
@@ -1838,67 +1730,192 @@
 		}
 	});
 
+	/* ══════════════════════════════
+	   SIGNATURE PAD (draw)
+	   Pointer events (mouse, touch, pen), canvas sized to its CSS box × devicePixelRatio,
+	   smoothed strokes, undo / clear, and export cropped to the ink.
+	══════════════════════════════ */
+	let strokes = []; // [[{x,y}, ...], ...] in CSS pixels
+	let currentStroke = null;
+	const PEN_WIDTH = 2.6;
+
+	function sizeCanvas() {
+		canvas = document.getElementById("signature-canvas");
+		if (!canvas) return;
+		const rect = canvas.getBoundingClientRect();
+		if (!rect.width) return; // hidden tab; sized when shown
+		const dpr = Math.max(window.devicePixelRatio || 1, 2);
+		canvas.width = Math.round(rect.width * dpr);
+		canvas.height = Math.round(rect.height * dpr);
+		ctx = canvas.getContext("2d");
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		redrawStrokes();
+	}
+
+	function styleStroke() {
+		ctx.lineWidth = PEN_WIDTH;
+		ctx.lineCap = "round";
+		ctx.lineJoin = "round";
+		ctx.strokeStyle = "#0f172a";
+		ctx.fillStyle = "#0f172a";
+	}
+
+	function drawStroke(pts) {
+		if (!pts.length) return;
+		styleStroke();
+		if (pts.length < 3) {
+			// a tap / very short mark: draw a dot
+			ctx.beginPath();
+			ctx.arc(pts[0].x, pts[0].y, PEN_WIDTH / 2, 0, Math.PI * 2);
+			ctx.fill();
+			return;
+		}
+		// quadratic curves through the midpoints of successive points = smooth line
+		ctx.beginPath();
+		ctx.moveTo(pts[0].x, pts[0].y);
+		for (let i = 1; i < pts.length - 1; i++) {
+			const mx = (pts[i].x + pts[i + 1].x) / 2;
+			const my = (pts[i].y + pts[i + 1].y) / 2;
+			ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+		}
+		const last = pts[pts.length - 1];
+		ctx.lineTo(last.x, last.y);
+		ctx.stroke();
+	}
+
+	function redrawStrokes() {
+		if (!canvas || !ctx) return;
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		ctx.restore();
+		strokes.forEach(drawStroke);
+		if (currentStroke) drawStroke(currentStroke);
+		updatePadState();
+	}
+
+	function updatePadState() {
+		const has = strokes.length > 0 || !!currentStroke;
+		const pad = document.getElementById("sg-pad");
+		if (pad) pad.classList.toggle("has-ink", has);
+		const undo = document.getElementById("sg-undo");
+		const clr = document.getElementById("sg-clear");
+		if (undo) undo.disabled = !strokes.length;
+		if (clr) clr.disabled = !has;
+	}
+
+	function pointFromEvent(e) {
+		const r = canvas.getBoundingClientRect();
+		return { x: e.clientX - r.left, y: e.clientY - r.top };
+	}
+
 	function initCanvas() {
 		canvas = document.getElementById("signature-canvas");
-
 		if (!canvas) return;
+		strokes = [];
+		currentStroke = null;
+		sizeCanvas();
 
-		ctx = canvas.getContext("2d");
+		if (canvas.dataset.bound) return;
+		canvas.dataset.bound = "1";
 
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		canvas.addEventListener("pointerdown", (e) => {
+			if (e.pointerType === "mouse" && e.button !== 0) return;
+			e.preventDefault();
+			canvas.setPointerCapture(e.pointerId);
+			currentStroke = [pointFromEvent(e)];
+			document.getElementById("sg-pad").classList.add("active");
+			redrawStrokes();
+		});
 
-		drawing = false;
+		canvas.addEventListener("pointermove", (e) => {
+			if (!currentStroke) return;
+			e.preventDefault();
+			// coalesced events = every sample the device produced, not just one per frame
+			const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+			(events.length ? events : [e]).forEach((ev) => {
+				const pt = pointFromEvent(ev);
+				const last = currentStroke[currentStroke.length - 1];
+				if (Math.hypot(pt.x - last.x, pt.y - last.y) >= 0.6) currentStroke.push(pt);
+			});
+			redrawStrokes();
+		});
 
-		canvas.onmousedown = (e) => {
-			drawing = true;
-			ctx.beginPath();
-			ctx.moveTo(e.offsetX, e.offsetY);
+		const end = (e) => {
+			if (!currentStroke) return;
+			strokes.push(currentStroke);
+			currentStroke = null;
+			document.getElementById("sg-pad").classList.remove("active");
+			redrawStrokes();
 		};
-
-		canvas.onmouseup = () => {
-			drawing = false;
-		};
-
-		canvas.onmousemove = (e) => {
-			if (!drawing) return;
-
-			ctx.lineWidth = 2;
-			ctx.lineCap = "round";
-			ctx.strokeStyle = "#000";
-
-			ctx.lineTo(e.offsetX, e.offsetY);
-			ctx.stroke();
-		};
+		canvas.addEventListener("pointerup", end);
+		canvas.addEventListener("pointercancel", end);
+		canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 	}
+
 	function clearCanvas() {
-		const canvas = document.getElementById("signature-canvas");
-
-		if (!canvas) return;
-
-		const ctx = canvas.getContext("2d");
-
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		strokes = [];
+		currentStroke = null;
+		redrawStrokes();
 	}
+
+	function undoStroke() {
+		strokes.pop();
+		redrawStrokes();
+	}
+
+	// Crop a canvas to its non-transparent pixels (+ padding) and return a PNG data URL,
+	// so the signature fills the field box instead of floating in empty space.
+	function exportCropped(src, pad = 12) {
+		const w = src.width,
+			h = src.height;
+		const data = src.getContext("2d").getImageData(0, 0, w, h).data;
+		let minX = w,
+			minY = h,
+			maxX = -1,
+			maxY = -1;
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				if (data[(y * w + x) * 4 + 3] > 8) {
+					if (x < minX) minX = x;
+					if (x > maxX) maxX = x;
+					if (y < minY) minY = y;
+					if (y > maxY) maxY = y;
+				}
+			}
+		}
+		if (maxX < 0) return null; // nothing drawn
+		minX = Math.max(0, minX - pad);
+		minY = Math.max(0, minY - pad);
+		maxX = Math.min(w - 1, maxX + pad);
+		maxY = Math.min(h - 1, maxY + pad);
+		const out = document.createElement("canvas");
+		out.width = maxX - minX + 1;
+		out.height = maxY - minY + 1;
+		out.getContext("2d").drawImage(src, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+		return out.toDataURL("image/png");
+	}
+
+	window.addEventListener("resize", () => {
+		if (document.getElementById("signature-modal").style.display === "block" && currentMode === "draw") sizeCanvas();
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && document.getElementById("signature-modal").style.display === "block") closeModal();
+	});
 
 	function openSignatureModal() {
 		document.getElementById("modal-overlay").style.display = "block";
 		document.getElementById("signature-modal").style.display = "block";
+		document.body.style.overflow = "hidden";
 
-		// CLEAR upload input
-		const fileInput = document.getElementById("upload-input");
-		if (fileInput) {
-			fileInput.value = "";
-		}
-
-		// CLEAR preview
-		const preview = document.getElementById("upload-preview");
-		if (preview) {
-			preview.innerHTML = "";
-		}
-
-		// RESET stored image
+		document.getElementById("upload-input").value = "";
+		document.getElementById("upload-preview").innerHTML = "";
 		uploadedImageData = null;
 
+		const typed = document.getElementById("typed-name");
+		if (typed) typed.value = "";
+
+		switchMode("draw");
 		initCanvas();
 	}
 
@@ -2206,7 +2223,7 @@
 
 				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-				uploadedImageData = canvas.toDataURL("image/jpeg", 0.6);
+				uploadedImageData = file.type === "image/png" ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.9);
 
 				document.getElementById("upload-preview").innerHTML =
 					`<img src="${uploadedImageData}" style="max-width:100%;">`;
@@ -2237,23 +2254,31 @@
 		return data;
 	}
 
-	function renderTypedSignature() {
-		const name = document.getElementById("typed-name").value || "John Smith";
+	async function renderTypedSignature() {
+		const raw = document.getElementById("typed-name").value.trim();
+		const name = raw || "John Smith";
 		const canvas = document.getElementById("typed-preview");
 		const ctx = canvas.getContext("2d");
-		const fieldConfig = window.esign_fields.find((f) => f.name === currentField);
-		const fontSize = parseInt(fieldConfig?.font_size || 12);
+
+		// make sure the web font is actually loaded before painting it to the canvas
+		try {
+			await document.fonts.load("64px " + selectedFont, name);
+		} catch (e) {}
 
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-		ctx.font = fontSize * 3 + "px " + selectedFont;
-		ctx.fillStyle = "#111";
+		ctx.fillStyle = raw ? "#0f172a" : "#cbd5e1";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 
-		ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+		// largest size that fits the canvas width
+		let size = 170;
+		ctx.font = size + "px " + selectedFont;
+		const maxW = canvas.width * 0.88;
+		const w = ctx.measureText(name).width;
+		if (w > maxW) size = Math.floor((size * maxW) / w);
+		ctx.font = size + "px " + selectedFont;
+		ctx.fillText(name, canvas.width / 2, canvas.height * 0.54);
 
-		// Update font boxes preview text
 		document.querySelectorAll(".font-preview").forEach((el) => {
 			el.innerText = name;
 		});
@@ -2311,25 +2336,17 @@
 		}, 1000);
 	}
 	function closeModal() {
-		if (canvas && ctx) {
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-		}
+		strokes = [];
+		currentStroke = null;
+		if (canvas && ctx) redrawStrokes();
 
 		uploadedImageData = null;
-
-		const preview = document.getElementById("upload-preview");
-		if (preview) preview.innerHTML = "";
-
-		const typedName = document.getElementById("typed-name");
-		if (typedName) typedName.value = "";
-
-		const typedCanvas = document.getElementById("typed-preview");
-		if (typedCanvas) {
-			typedCanvas.getContext("2d").clearRect(0, 0, typedCanvas.width, typedCanvas.height);
-		}
+		document.getElementById("upload-preview").innerHTML = "";
+		document.getElementById("typed-name").value = "";
 
 		document.getElementById("signature-modal").style.display = "none";
 		document.getElementById("modal-overlay").style.display = "none";
+		document.body.style.overflow = "";
 	}
 	if ("{{ is_verified }}" === "True") {
 		document.addEventListener("DOMContentLoaded", (event) => {
@@ -2365,8 +2382,11 @@
 		let imageData;
 
 		if (currentMode === "draw") {
-			const signCanvas = document.getElementById("signature-canvas");
-			imageData = signCanvas.toDataURL("image/png");
+			if (!strokes.length) {
+				alert("Please draw your signature first");
+				return;
+			}
+			imageData = exportCropped(document.getElementById("signature-canvas"));
 		}
 
 		if (currentMode === "upload") {
@@ -2378,8 +2398,11 @@
 		}
 
 		if (currentMode === "type") {
-			const typedCanvas = document.getElementById("typed-preview");
-			imageData = typedCanvas.toDataURL("image/png");
+			if (!document.getElementById("typed-name").value.trim()) {
+				alert("Please type your name");
+				return;
+			}
+			imageData = exportCropped(document.getElementById("typed-preview"));
 		}
 
 		if (!imageData) {

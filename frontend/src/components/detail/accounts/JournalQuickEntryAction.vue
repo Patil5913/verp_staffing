@@ -8,14 +8,7 @@
         <FormControl type="date" label="Date" v-model="form.posting_date" required />
         <AppLinkField label="Debit Account" doctype="Account" v-model="form.debit_account" :filters="accountFilters" hide-add-new />
         <AppLinkField label="Credit Account" doctype="Account" v-model="form.credit_account" :filters="accountFilters" hide-add-new />
-        <FormControl
-          v-if="seriesOptions.length > 1"
-          type="select"
-          label="Series"
-          v-model="form.naming_series"
-          :options="seriesOptions"
-          required
-        />
+        <AppCombobox v-if="seriesOptions.length > 1" label="Series" v-model="form.naming_series" :options="seriesOptions" required />
         <FormControl type="textarea" label="User Remark" v-model="form.user_remark" class="sm:col-span-2" />
       </div>
     </template>
@@ -33,6 +26,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { Dialog, FormControl } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import { notify } from '@/utils/common/notify'
 

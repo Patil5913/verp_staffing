@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { debounce } from 'frappe-ui'
 import { useResource } from './useResource'
+import { ROW_ACTIONS } from '@/detailConfigs/listOptions'
 
 const DEFAULT_PAGE_LENGTH = 15
 
@@ -44,7 +45,9 @@ export function useDocList(doctype) {
 
   const fieldsToFetch = computed(() => {
     const listFields = (meta.resource.data?.list_fields || []).map((f) => f.fieldname)
-    return [...new Set([...listFields, 'name', 'modified', 'creation'])]
+    // plus whatever a doctype's row buttons decide on (Email Queue: status)
+    const needed = (ROW_ACTIONS[doctype] || []).flatMap((action) => action.needs || [])
+    return [...new Set([...listFields, 'name', 'modified', 'creation', ...needed])]
   })
 
   const docs = useResource({

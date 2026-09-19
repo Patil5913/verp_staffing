@@ -9,7 +9,9 @@
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
-      />
+      >
+        <FieldUpdateActions :detail="detail" :doctype="doctype" :name="name" mode="service" />
+      </RecordActionBar>
     </template>
 
     <template #tab-details>
@@ -76,6 +78,7 @@ import { useRoute } from 'vue-router'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
+import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActions.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'

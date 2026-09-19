@@ -7,14 +7,14 @@
         :save-loading="detail.save.isLoading"
         :show-delete="!detail.isNew.value && detail.canDelete.value"
         :delete-loading="deleting"
-        @save="onSave"
+        @save="saveWithDefaults"
         @delete="showDeleteDialog = true"
       />
     </template>
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" />
+        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="visibleFields" />
       </div>
     </template>
 
@@ -70,6 +70,7 @@ import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
+import { isSystemManager } from '@/utils/common/roles'
 
 const route = useRoute()
 
@@ -78,6 +79,30 @@ const name = computed(() => route.params.name)
 
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
+
+// override/email_account.js: everything but these fields is hidden, and only a
+// System Manager gets to choose the default outgoing account. Outgoing,
+// incoming and the Basic auth method are fixed rather than chosen.
+const VISIBLE_FIELDS = [
+  'email_account_name',
+  'email_id',
+  'domain',
+  'password',
+  'brand_logo',
+  'footer',
+  'signature',
+  'add_signature',
+  'enable_auto_reply',
+  'auto_reply_message',
+  'attachment_limit',
+]
+const visibleFields = computed(() => (isSystemManager() ? [...VISIBLE_FIELDS, 'default_outgoing'] : VISIBLE_FIELDS))
+
+const FIXED_VALUES = { enable_outgoing: 1, enable_incoming: 1, auth_method: 'Basic' }
+function saveWithDefaults() {
+  Object.assign(detail.values, FIXED_VALUES)
+  return onSave()
+}
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },

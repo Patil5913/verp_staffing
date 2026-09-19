@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-// List / Tree / Kanban toggle for a doctype — which views exist comes from
+// List / Tree / Kanban / Calendar toggle for a doctype — which views exist comes from
 // listOptions.js's EXTRA_VIEWS, so a page just drops this in.
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -25,7 +25,7 @@ const props = defineProps({
   current: { type: String, default: 'list' },
 })
 const router = useRouter()
-const ICONS = { list: 'list', tree: 'git-branch', kanban: 'columns-3' }
+const ICONS = { list: 'list', tree: 'git-branch', kanban: 'columns-3', calendar: 'calendar' }
 const views = computed(() => EXTRA_VIEWS[props.doctype] || [])
 
 function go(view) {

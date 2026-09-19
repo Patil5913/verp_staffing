@@ -4,6 +4,8 @@ import { crConfig, onboardingsConfig } from '@/detailConfigs/customerCare'
 import * as accounts from '@/detailConfigs/accounts'
 import { itemConfig, itemCategoryConfig, uomConfig } from '@/detailConfigs/items'
 import { eSignConfig } from '@/detailConfigs/esign'
+import { emailQueueConfig } from '@/detailConfigs/emailQueue'
+import { accessTarget, canAccess } from '@/utils/common/routeAccess'
 
 // Doctypes whose detail page is just config on top of ConfigDetailPage (see
 // that file's header) — one route each, generated so adding a doctype is a
@@ -24,6 +26,7 @@ const CONFIG_ROUTES = [
   configPage('/Company/:name', 'CompanyDetail', accounts.companyConfig),
   configPage('/Fiscal%20Year/:name', 'FiscalYearDetail', accounts.fiscalYearConfig),
   configPage('/Account/:name', 'AccountDetail', accounts.accountConfig),
+  configPage('/Agreement/:name', 'AgreementDetail', accounts.agreementConfig),
   configPage('/Bank/:name', 'BankDetail', accounts.bankConfig),
   configPage('/Bank%20Account/:name', 'BankAccountDetail', accounts.bankAccountConfig),
   configPage('/Journal%20Entry/:name', 'JournalEntryDetail', accounts.journalEntryConfig),
@@ -39,6 +42,7 @@ const CONFIG_ROUTES = [
   configPage('/Item%20Category/:name', 'ItemCategoryDetail', itemCategoryConfig),
   configPage('/UOM/:name', 'UomDetail', uomConfig),
   configPage('/E%20Sign/:name', 'ESignDetail', eSignConfig),
+  configPage('/Email%20Queue/:name', 'EmailQueueDetail', emailQueueConfig),
 ]
 
 const routes = [
@@ -88,6 +92,12 @@ const routes = [
     component: () => import('@/pages/ReportPage.vue'),
   },
   {
+    // Where a route the user has no permission for lands (see the guard below).
+    path: '/forbidden',
+    name: 'Forbidden',
+    component: () => import('@/pages/Forbidden.vue'),
+  },
+  {
     path: '/permission-manager',
     name: 'PermissionManager',
     component: () => import('@/pages/PermissionManager.vue'),
@@ -123,6 +133,12 @@ const routes = [
     path: '/Account/view/tree',
     name: 'AccountTree',
     component: () => import('@/pages/AccountTreePage.vue'),
+  },
+  {
+    // Interview rounds on a month grid / timeline (see InterviewCalendarPage.vue).
+    path: '/Interview/view/calendar',
+    name: 'InterviewCalendar',
+    component: () => import('@/pages/InterviewCalendarPage.vue'),
   },
   {
     path: '/:doctype/view/kanban',
@@ -278,7 +294,7 @@ function isLoggedIn() {
   return Boolean(window.user) && window.user !== 'Guest'
 }
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (to.meta.public) {
     if (isLoggedIn() && to.name === 'Login') {
       return { path: '/' }
@@ -292,6 +308,13 @@ router.beforeEach((to) => {
     // Login.vue can treat both sources the same way.
     const target = to.fullPath === '/' ? '/verp' : `/verp${to.fullPath}`
     return { name: 'Login', query: { 'redirect-to': target } }
+  }
+
+  // Logged in isn't enough: a route the sidebar hides (no permission on its
+  // doctype, report or page) must not open by typing its URL either.
+  const target = accessTarget(to)
+  if (target && !(await canAccess(target))) {
+    return { name: 'Forbidden', query: { from: to.fullPath } }
   }
 
   return true

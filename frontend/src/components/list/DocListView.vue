@@ -73,6 +73,18 @@
         <AppButton v-if="canCreate" variant="primary" icon="plus" @click="showQuickCreate = true">
           Add New
         </AppButton>
+        <AppButton
+          v-for="action in bulkActions"
+          v-show="selected.size"
+          :key="action.label"
+          variant="outline"
+          :icon="action.icon"
+          :loading="runningAction === action.label"
+          :disabled="!!runningAction"
+          @click="runBulkAction(action)"
+        >
+          {{ action.label }} ({{ selected.size }})
+        </AppButton>
         <AppButton v-if="canDelete && selected.size" variant="danger" icon="trash-2" @click="confirmBulkDelete">
           Delete ({{ selected.size }})
         </AppButton>
@@ -106,6 +118,7 @@
       </div>
 
       <template v-else>
+        <component :is="headerComponent" v-if="headerComponent" ref="headerRef" :doctype="doctype" @filter="(text) => (searchText = text)" />
         <StateBanner
           v-if="docs.isPermissionError"
           icon="lock"
@@ -144,7 +157,7 @@
                     />
                   </span>
                 </th>
-                <th v-if="canDelete" class="sticky top-0 h-11 w-12 border-b border-app-border bg-app-panel-2 px-2" />
+                <th v-if="canDelete || rowActionDefs.length" class="sticky top-0 h-11 border-b border-app-border bg-app-panel-2 px-2" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
               </tr>
             </thead>
             <tbody>
@@ -174,12 +187,23 @@
                   />
                   <span v-else class="truncate">{{ row[column.key] }}</span>
                 </td>
-                <td v-if="canDelete" class="h-11 w-12 border-b border-app-border px-2 text-center" @click.stop>
-                  <Dropdown :options="rowActions(row)" placement="left">
-                    <template #default="{ open }">
-                      <Button variant="ghost" icon="more-horizontal" :class="open ? 'bg-app-panel-2' : ''" />
-                    </template>
-                  </Dropdown>
+                <td v-if="canDelete || rowActionDefs.length" class="h-11 border-b border-app-border px-2 text-right" :class="rowActionDefs.length ? 'w-36' : 'w-12 text-center'" @click.stop>
+                  <div class="flex items-center justify-end gap-1">
+                    <AppButton
+                      v-if="primaryRowAction && primaryRowAction.when(row)"
+                      variant="outline"
+                      size="sm"
+                      :icon="primaryRowAction.icon"
+                      :loading="runningAction === `${primaryRowAction.label}:${row.name}`"
+                      :disabled="!!runningAction"
+                      @click="runAction(primaryRowAction, [row.name], `${primaryRowAction.label}:${row.name}`)"
+                    >{{ primaryRowAction.label }}</AppButton>
+                    <Dropdown v-if="rowActions(row).length" :options="rowActions(row)" placement="left">
+                      <template #default="{ open }">
+                        <Button variant="ghost" icon="more-horizontal" :class="open ? 'bg-app-panel-2' : ''" />
+                      </template>
+                    </Dropdown>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -198,12 +222,12 @@
       v-if="showFooter"
       class="flex h-[57px] shrink-0 items-center justify-between gap-2 border-t border-app-border bg-app-panel px-6"
     >
-      <FormControl
-        type="select"
+      <AppCombobox
         :model-value="String(pageLength)"
         :options="pageLengthOptions"
+        compact
+        class="w-20"
         @update:model-value="setPageLength(Number($event))"
-        class="!w-20"
       />
       <span class="text-p-sm text-app-text-muted">
         {{ totalCount }} record{{ totalCount === 1 ? '' : 's' }}
@@ -241,14 +265,15 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Badge, Button, Checkbox, Dialog, Dropdown, FeatherIcon, FormControl, LoadingIndicator, Popover, TextInput } from 'frappe-ui'
+import { Badge, Button, Checkbox, Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, TextInput, call } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
-import { NO_MANUAL_CREATE } from '@/detailConfigs/listOptions'
+import { BULK_ACTIONS, LIST_HEADERS, NO_MANUAL_CREATE, ROW_ACTIONS } from '@/detailConfigs/listOptions'
 import { notify } from '@/utils/common/notify'
+import { normalizeError } from '@/utils/common/errors'
 import AppButton from '@/components/common/AppButton.vue'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
 import QuickCreateDialog from './QuickCreateDialog.vue'
@@ -385,6 +410,34 @@ const canCreate = computed(() => Boolean(meta.resource.data?.perms?.create) && !
 
 const selected = ref(new Set())
 
+// Doctype-specific extras (listOptions.js): server actions on the ticked rows,
+// and a header component (Email Queue's status strip).
+const bulkActions = computed(() => BULK_ACTIONS[props.doctype] || [])
+const headerComponent = computed(() => LIST_HEADERS[props.doctype] || null)
+const headerRef = ref(null)
+const runningAction = ref('')
+
+// Send now / Retry ... on one row or every ticked one; the server answers
+// { message, failed: [...] } and the list (and its header) reload after.
+async function runAction(action, names, busyKey = action.label) {
+  runningAction.value = busyKey
+  try {
+    const res = await call(action.method, { names: JSON.stringify(names) })
+    if (res?.failed?.length) notify.error(res.message)
+    else notify.success(res?.message || `${action.label} done`)
+    refresh()
+    headerRef.value?.reload?.()
+  } catch (e) {
+    notify.error(normalizeError(e).message)
+  } finally {
+    runningAction.value = ''
+  }
+}
+const runBulkAction = (action) => runAction(action, [...selected.value])
+
+const rowActionDefs = computed(() => ROW_ACTIONS[props.doctype] || [])
+const primaryRowAction = computed(() => rowActionDefs.value[0] || null)
+
 // Selection is scoped to the current page's rows — reset whenever the
 // visible page changes so stale names from a previous page can't linger.
 watch(rows, () => (selected.value = new Set()))
@@ -403,13 +456,14 @@ function toggleSelectRow(name) {
 }
 
 function rowActions(row) {
+  // the row's other server actions (Retry, ...), then Delete
+  const extras = rowActionDefs.value
+    .slice(1)
+    .filter((action) => action.when(row))
+    .map((action) => ({ label: action.label, icon: action.icon, onClick: () => runAction(action, [row.name], `${action.label}:${row.name}`) }))
   return [
-    {
-      label: 'Delete',
-      icon: 'trash-2',
-      theme: 'red',
-      onClick: () => confirmDelete([row.name]),
-    },
+    ...extras,
+    ...(canDelete.value ? [{ label: 'Delete', icon: 'trash-2', theme: 'red', onClick: () => confirmDelete([row.name]) }] : []),
   ]
 }
 

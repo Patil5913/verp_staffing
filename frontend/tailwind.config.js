@@ -1,5 +1,6 @@
 import frappeUIPreset from 'frappe-ui/tailwind'
 import { ALL_ICON_NAMES } from './src/utils/layout/sidebarIcons.js'
+import { DASHBOARD_ICON_NAMES } from './src/utils/dashboard/icons.js'
 
 export default {
   presets: [frappeUIPreset],
@@ -11,8 +12,9 @@ export default {
   // AppSidebar/CommandPalette build icon classes as `'lucide-' + name` at
   // runtime (the name comes from sidebar config data), so Tailwind's static
   // content scan can't discover them — safelist the closed vocabulary from
-  // sidebarIcons.js instead.
-  safelist: ALL_ICON_NAMES.map((name) => `lucide-${name}`),
+  // sidebarIcons.js instead. The dashboard's cards do the same with names
+  // that come from the server and from utils/dashboard/icons.js.
+  safelist: [...ALL_ICON_NAMES, ...DASHBOARD_ICON_NAMES].map((name) => `lucide-${name}`),
   theme: {
     extend: {
       colors: {

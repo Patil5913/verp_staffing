@@ -1,177 +1,209 @@
 <template>
-  <div class="mx-auto flex h-[calc(100vh-4rem)] max-w-6xl gap-4 px-6 py-8">
-    <!-- Message list -->
-    <div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg border border-app-border bg-app-panel">
-      <div class="flex items-center justify-between border-b border-app-border px-3 py-2">
-        <h1 class="text-p-base font-semibold text-app-text">Inbox</h1>
-        <Button variant="ghost" icon="refresh-cw" @click="list.resource.reload()" />
+  <div class="flex h-full min-h-0 bg-app-bg">
+    <StateBanner
+      v-if="loadedOnce && !hasAccount && !error"
+      icon="mail-x"
+      title="No mailbox is linked to your account"
+      description="Ask an administrator to add an email account under your user's Email Accounts, then reload."
+      class="m-auto max-w-md"
+    />
+
+    <template v-else>
+      <!-- Folders -->
+      <div class="hidden w-56 shrink-0 md:block">
+        <MailSidebar
+          :folder="folder"
+          :counts="counts"
+          :draft-count="drafts.length"
+          :accounts="accounts"
+          :account="account"
+          :can-compose="canSend"
+          @update:folder="folder = $event"
+          @update:account="account = $event"
+          @compose="compose()"
+        />
       </div>
 
-      <StateBanner
-        v-if="list.hasError"
-        icon="alert-triangle"
-        title="Couldn't load inbox"
-        :description="list.errorMessage"
-      />
-      <div v-else-if="list.isLoading && !list.resource.data" class="flex justify-center py-10">
-        <LoadingIndicator class="h-5 w-5 text-app-text-muted" />
-      </div>
-      <StateBanner v-else-if="!list.resource.data?.length" icon="inbox" title="No messages" />
+      <!-- Message list (a phone-sized screen shows either this or the reader) -->
+      <div class="min-w-0 border-r border-app-border" :class="[readerOpen ? 'hidden lg:block' : 'block flex-1', 'lg:w-[26rem] lg:flex-none']">
+        <!-- Folder picker for narrow screens, where the sidebar is hidden -->
+        <div class="flex items-center gap-2 border-b border-app-border bg-app-panel px-3 py-2 md:hidden">
+          <AppCombobox v-model="folder" :options="FOLDER_OPTIONS" compact class="flex-1" />
+          <button type="button" class="flex h-7 items-center gap-1 rounded-lg bg-app-primary px-3 text-p-xs font-medium text-white disabled:opacity-50" :disabled="!canSend" @click="compose()"><span class="lucide-pen-line size-3.5" />New</button>
+        </div>
 
-      <div v-else class="flex-1 overflow-y-auto">
-        <button
-          v-for="msg in list.resource.data"
-          :key="msg.name"
-          type="button"
-          class="flex w-full flex-col gap-0.5 border-b border-app-border px-3 py-2.5 text-left hover:bg-app-panel-2"
-          :class="[selected?.name === msg.name ? 'bg-app-panel-2' : '', !msg.seen ? 'font-semibold' : '']"
-          @click="select(msg)"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <span class="truncate text-p-base text-app-text">{{ msg.sender_full_name || msg.sender }}</span>
-            <span class="shrink-0 text-2xs text-app-text-muted">{{ formatRelativeTime(msg.communication_date) }}</span>
+        <MailList
+          v-if="!isDrafts"
+          :folder="folder"
+          :items="items"
+          :total="total"
+          :loading="loading || syncing"
+          :loading-more="loadingMore"
+          :has-more="hasMore"
+          :error="error"
+          :active-name="openName"
+          :checked="checked"
+          :all-checked="allChecked"
+          v-model:search="search"
+          v-model:filter="filter"
+          @open="open"
+          @toggle="toggleChecked"
+          @toggle-all="toggleAll"
+          @clear="checked.clear()"
+          @star="(m) => act([m.name], m.starred ? 'unstar' : 'star')"
+          @bulk="onBulk"
+          @more="load({ more: true })"
+          @refresh="sync()"
+          @empty="confirmEmpty"
+        />
+
+        <!-- Drafts live on this device -->
+        <section v-else class="flex h-full flex-col bg-app-bg">
+          <div class="flex h-10 items-center border-b border-app-border bg-app-panel px-4 text-p-xs text-app-text-muted">{{ drafts.length }} draft{{ drafts.length === 1 ? '' : 's' }} · saved on this device</div>
+          <div v-if="!drafts.length" class="flex flex-col items-center gap-2 px-6 py-16 text-center">
+            <span class="lucide-file-pen-line size-9 text-app-text-muted" />
+            <p class="text-p-base font-medium text-app-text">No drafts</p>
+            <p class="max-w-xs text-p-sm text-app-text-muted">Close a message you haven't sent and it's kept here.</p>
           </div>
-          <span class="truncate text-p-sm text-app-text-muted">{{ msg.subject || '(no subject)' }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Detail / reply -->
-    <div class="flex flex-1 flex-col overflow-hidden rounded-lg border border-app-border bg-app-panel">
-      <StateBanner v-if="!selected" icon="mail" title="Select a message" class="m-auto" />
-
-      <template v-else>
-        <div class="border-b border-app-border px-5 py-4">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="truncate text-lg font-semibold text-app-text">{{ selected.subject || '(no subject)' }}</div>
-              <div class="mt-1 text-p-sm text-app-text-muted">
-                {{ selected.sender_full_name || selected.sender }} &lt;{{ selected.sender }}&gt;
+          <div v-for="d in drafts" :key="d.id" role="button" tabindex="0" class="group flex cursor-pointer items-start gap-3 border-b border-app-border bg-app-panel px-4 py-3 transition-colors hover:bg-app-panel-2" @click="compose(d)" @keydown.enter="compose(d)">
+            <span class="lucide-file-pen-line mt-0.5 size-4 shrink-0 text-app-text-muted" />
+            <div class="min-w-0 flex-1">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="truncate text-p-sm font-medium text-app-text">{{ d.to?.length ? `To: ${d.to.join(', ')}` : 'No recipient' }}</span>
+                <span class="shrink-0 text-p-xs text-app-text-muted">{{ mailDate(d.updated) }}</span>
               </div>
+              <p class="truncate text-p-sm text-app-text">{{ d.subject || '(no subject)' }}</p>
+              <p class="truncate text-p-xs text-app-text-muted">{{ plain(d.content) }}</p>
             </div>
-            <div class="flex shrink-0 gap-1">
-              <Button variant="ghost" :icon="selected.seen ? 'mail' : 'mail-open'" @click="toggleRead" />
-              <Button variant="ghost" icon="alert-octagon" @click="onSpam" />
-              <Button variant="ghost" icon="trash-2" @click="onTrash" />
-            </div>
+            <button type="button" class="rounded p-1 text-app-text-muted opacity-0 transition-colors hover:bg-app-panel-2 hover:text-red-600 group-hover:opacity-100" title="Delete draft" @click.stop="removeDraft(d.id)"><span class="lucide-trash-2 size-4" /></button>
           </div>
-        </div>
+        </section>
+      </div>
 
-        <div class="flex-1 overflow-y-auto px-5 py-4 text-p-base text-app-text" v-html="selected.content" />
+      <!-- Reader -->
+      <div class="min-w-0 flex-1" :class="readerOpen ? 'block' : 'hidden lg:block'">
+        <MailReader
+          :message="message"
+          :message-loading="messageLoading"
+          :folder="folder"
+          :account="account"
+          @close="close"
+          @action="(a) => act([message.name], a)"
+          @reply="(m, html) => reply(m, false, html)"
+          @reply-all="(m) => reply(m, true)"
+          @forward="forward"
+          @outbox="outbox"
+          @sent="onSent"
+        />
+      </div>
+    </template>
 
-        <div class="border-t border-app-border p-4">
-          <TextEditor
-            :content="replyContent"
-            editor-class="min-h-[100px] rounded-b-lg border border-t-0 border-app-border px-3 py-2"
-            @change="(html) => (replyContent = html)"
-          />
-          <div class="mt-2 flex justify-end">
-            <Button variant="solid" :loading="reply.loading" :disabled="!replyContent" @click="onReply">
-              Send Reply
-            </Button>
-          </div>
-        </div>
-      </template>
-    </div>
+    <MailComposeDialog v-model="composing" :initial="composeInitial" :accounts="accounts" :default-account="account" @sent="onSent" @save-draft="saveDraft" @discard-draft="removeDraft" />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Button, LoadingIndicator, TextEditor } from 'frappe-ui'
-import { useResource } from '@/composables/list/useResource'
-import { formatRelativeTime } from '@/utils/list/formatValue'
-import { notify } from '@/utils/common/notify'
+// Email Inbox: folders (Inbox, Starred, Sent, Drafts, Outbox, Spam, Trash, All
+// mail) on the left, the message list with search / filters / bulk actions in
+// the middle, and the reading pane with reply, reply all, forward and a quick
+// reply on the right. New message opens the composer. Everything talks to
+// verp_staffing.utils.mailbox, which shows only the user's own accounts.
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
+import MailComposeDialog from '@/components/mail/MailComposeDialog.vue'
+import MailList from '@/components/mail/MailList.vue'
+import MailReader from '@/components/mail/MailReader.vue'
+import MailSidebar from '@/components/mail/MailSidebar.vue'
+import { useMailbox } from '@/composables/mail/useMailbox'
+import { confirmLeave } from '@/utils/common/confirmDialog'
+import { mailDate, quoteMessage, withPrefix, parseAddresses } from '@/utils/mail/format'
+import { getSocket } from '@/utils/common/realtime'
+import { notify } from '@/utils/common/notify'
 
-// Scoped to a unified inbox (list/read/reply/flag/trash/spam) — per-account
-// folder switching isn't wired up because frappe.email.inbox.get_email_accounts
-// (the method that would list them) isn't whitelisted, only its 4 action
-// methods are.
-const list = useResource({
-  url: 'frappe.client.get_list',
-  params: {
-    doctype: 'Communication',
-    filters: [
-      ['communication_type', '=', 'Communication'],
-      ['communication_medium', '=', 'Email'],
-      ['email_status', 'not in', ['Trash', 'Spam']],
-    ],
-    fields: [
-      'name', 'subject', 'sender', 'sender_full_name', 'content',
-      'communication_date', 'seen', 'email_status', 'reference_doctype', 'reference_name',
-    ],
-    order_by: 'communication_date desc',
-    limit_page_length: 50,
-  },
-  auto: true,
+const {
+  folder, filter, search, account,
+  items, total, counts, accounts, loading, loadingMore, error, loadedOnce, hasMore, hasAccount,
+  checked, allChecked, toggleAll, toggleChecked,
+  openName, message, messageLoading, open, close,
+  drafts, saveDraft, removeDraft, isDrafts,
+  load, sync, syncing, act, emptyFolder, outbox,
+} = useMailbox()
+
+const FOLDER_OPTIONS = [
+  { label: 'Inbox', value: 'inbox' },
+  { label: 'Starred', value: 'starred' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Drafts', value: 'drafts' },
+  { label: 'Outbox', value: 'outbox' },
+  { label: 'Spam', value: 'spam' },
+  { label: 'Trash', value: 'trash' },
+  { label: 'All mail', value: 'all' },
+]
+
+const readerOpen = computed(() => !!message.value)
+const canSend = computed(() => accounts.value.some((a) => a.enable_outgoing))
+const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)
+
+function onBulk(action) {
+  act([...checked], action)
+}
+
+async function confirmEmpty() {
+  const label = folder.value === 'spam' ? 'Spam' : 'Trash'
+  const ok = await confirmLeave({ title: `Empty ${label}?`, message: `Every message in ${label} is deleted permanently. This can't be undone.`, leaveLabel: 'Empty', cancelLabel: 'Cancel' })
+  if (ok) emptyFolder()
+}
+
+// ── composing ────────────────────────────────────────────────────────────
+const composing = ref(false)
+const composeInitial = ref({})
+
+function compose(draft) {
+  composeInitial.value = draft ? { ...draft, draftId: draft.id } : {}
+  composing.value = true
+}
+const others = (m, mine) => parseAddresses([m.recipients, m.cc].filter(Boolean).join(',')).map((a) => a.email).filter((e) => e && !mine.includes(e.toLowerCase()) && e.toLowerCase() !== m.sender.toLowerCase())
+
+function reply(m, all, html = '') {
+  const mine = accounts.value.map((a) => (a.email_id || '').toLowerCase())
+  composeInitial.value = {
+    to: [m.sender],
+    cc: all ? others(m, mine) : [],
+    subject: withPrefix(m.subject, 'Re'),
+    content: `${html}${quoteMessage(m)}`,
+    inReplyTo: m.name,
+    account: m.email_account || '',
+  }
+  composing.value = true
+}
+function forward(m) {
+  composeInitial.value = { subject: withPrefix(m.subject, 'Fwd'), content: quoteMessage(m, { forward: true }), account: m.email_account || '' }
+  composing.value = true
+}
+function onSent() {
+  // A sent message lands in Sent (or Outbox until it goes out) — refresh what's showing.
+  load({ quiet: true })
+}
+
+// Keep the list fresh while the page is open.
+let timer
+// The server announces mail as the scheduler pulls it in (utils/mailbox.py's
+// on_new_communication), so the list updates as it arrives; the timer is only a
+// safety net for a dropped connection.
+const socket = getSocket()
+function onNewMail(mail) {
+  notify.success(`New mail from ${mail?.sender || 'someone'}${mail?.subject ? `: ${mail.subject}` : ''}`)
+  if (!composing.value) load({ quiet: true })
+}
+onMounted(() => {
+  load()
+  sync({ quiet: true })
+  socket.on('verp_new_mail', onNewMail)
+  timer = setInterval(() => document.visibilityState === 'visible' && !composing.value && sync({ quiet: true }), 120_000)
 })
-
-const selected = ref(null)
-const replyContent = ref('')
-
-function select(msg) {
-  selected.value = msg
-  replyContent.value = ''
-  if (!msg.seen) markSeen(msg, 'Read')
-}
-
-const flag = useResource({ url: 'frappe.email.inbox.create_email_flag_queue' })
-
-function markSeen(msg, action) {
-  flag.resource.submit({ names: JSON.stringify([msg.name]), action }).then(() => {
-    msg.seen = action === 'Read' ? 1 : 0
-  })
-}
-
-function toggleRead() {
-  markSeen(selected.value, selected.value.seen ? 'Unread' : 'Read')
-}
-
-const trash = useResource({
-  url: 'frappe.email.inbox.mark_as_trash',
-  onSuccess() {
-    notify.success('Moved to trash.')
-    list.resource.reload()
-    selected.value = null
-  },
+onBeforeUnmount(() => {
+  clearInterval(timer)
+  socket.off('verp_new_mail', onNewMail)
 })
-function onTrash() {
-  trash.resource.submit({ communication: selected.value.name })
-}
-
-const spam = useResource({
-  url: 'frappe.email.inbox.mark_as_spam',
-  onSuccess() {
-    notify.success('Marked as spam.')
-    list.resource.reload()
-    selected.value = null
-  },
-})
-function onSpam() {
-  spam.resource.submit({ communication: selected.value.name, sender: selected.value.sender })
-}
-
-const reply = useResource({
-  url: 'frappe.core.doctype.communication.email.make',
-  onSuccess() {
-    notify.success('Reply sent.')
-    replyContent.value = ''
-    list.resource.reload()
-  },
-})
-function onReply() {
-  const msg = selected.value
-  reply.resource.submit({
-    doctype: msg.reference_doctype || undefined,
-    name: msg.reference_name || undefined,
-    content: replyContent.value,
-    subject: msg.subject?.startsWith('Re:') ? msg.subject : `Re: ${msg.subject || ''}`,
-    recipients: msg.sender,
-    communication_medium: 'Email',
-    sent_or_received: 'Sent',
-    send_email: 1,
-    in_reply_to: msg.name,
-  })
-}
 </script>

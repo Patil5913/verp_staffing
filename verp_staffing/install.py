@@ -1125,6 +1125,18 @@ FORM_TOURS = {
 }
 
 
+def ensure_email_queue_permissions():
+    from verp_staffing.utils.email_queue import (
+        ensure_email_queue_list_columns,
+        ensure_email_queue_permissions as _ensure,
+        ensure_email_queue_status_visible,
+    )
+
+    _ensure()
+    ensure_email_queue_status_visible()
+    ensure_email_queue_list_columns()
+
+
 def after_install():
     seed_master_sidebar_config()
     seed_services_and_departments()
@@ -1136,6 +1148,7 @@ def after_install():
     create_all_roles()
     seed_employee_departments()
     assign_permissions_to_roles(ROLE_PERMISSIONS)
+    ensure_email_queue_permissions()
     seed_hierarchy()
     remove_default_workspaces()
     # seed_bulk_users_with_password()
@@ -1186,6 +1199,16 @@ def get_default_sidebar_config():
                     "type": "doctype",
                     "route": "/app/email-account",
                     "doctype": "Email Account",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": []
+                },
+                {
+                    "key": "email-queue",
+                    "name": "Email Queue",
+                    "type": "doctype",
+                    "route": "/app/email-queue",
+                    "doctype": "Email Queue",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
                     "roles": []
