@@ -180,6 +180,8 @@ after_migrate = [
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
     # Demo data for a production site, once — guarded; see the file's docstring.
     "verp_staffing.utils.seed_production.after_migrate",
+    # ...and then its customers get their portal logins (own marker, so already-seeded sites get it too)
+    "verp_staffing.utils.seed_production.portal_access_after_migrate",
 ]
 
 # Uninstallation

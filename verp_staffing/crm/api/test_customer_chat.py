@@ -245,3 +245,34 @@ class TestCustomerPortalAccess(FrappeTestCase):
             self.assertFalse(PortalDownloadRenderer("printview", 200).can_render())
         finally:
             frappe.local.request = old
+
+    # -- demo customers get portal logins on migrate ---------------------------
+    def _demo_customer(self, name1):
+        customer = frappe.get_doc({"doctype": "Customer", "name1": name1})
+        customer.flags.ignore_mandatory = True
+        customer.insert(ignore_permissions=True)
+        return customer.name
+
+    def test_only_tracked_demo_customers_get_seeded_portal_access(self):
+        from frappe.utils.password import check_password
+
+        from verp_staffing.utils import sample_data_tracking as tracking
+        from verp_staffing.utils.seed_production import _login_label, grant_sample_customers_portal_access
+
+        self.assertEqual([_login_label(i) for i in (0, 1, 25, 26, 27, 51, 52)], ["a", "b", "z", "aa", "ab", "az", "ba"])
+
+        demo = self._demo_customer("Demo Portal Person")
+        real = self._demo_customer("Real Portal Person")
+        tracking.track("Customer", demo)
+
+        granted = dict((customer, login) for login, customer in grant_sample_customers_portal_access())
+        self.assertIn(demo, granted)
+        self.assertNotIn(real, granted)
+        login = granted[demo]
+        self.assertTrue(login.endswith("@vrugle.com"))
+        self.assertEqual(frappe.db.get_value("Customer", demo, ["chat_user", "chat_access"]), (login, "Active"))
+        self.assertEqual(frappe.db.get_value("User", login, "user_type"), "Website User")
+        self.assertEqual(check_password(login, "123"), login)  # the shared password works
+        self.assertFalse(frappe.db.get_value("Customer", real, "chat_user"))
+
+        self.assertEqual(grant_sample_customers_portal_access(), [])  # safe to run again

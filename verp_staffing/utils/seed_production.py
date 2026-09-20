@@ -27,6 +27,10 @@ import frappe
 MARKER = "verp_production_demo_seed_v1"
 COUNT = 20
 
+# Portal access for the demo customers (see portal_access_after_migrate)
+PORTAL_MARKER = "verp_production_demo_portal_access_v1"
+PORTAL_PASSWORD = "123"
+
 
 def after_migrate():
 	conf = frappe.conf
@@ -53,3 +57,94 @@ def after_migrate():
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(title="Production demo seed failed", message=frappe.get_traceback())
+
+
+def _login_label(i: int) -> str:
+	"""0 -> a, 25 -> z, 26 -> aa, 27 -> ab ..."""
+	label = ""
+	i += 1
+	while i:
+		i, r = divmod(i - 1, 26)
+		label = chr(ord("a") + r) + label
+	return label
+
+
+def grant_sample_customers_portal_access(password: str = PORTAL_PASSWORD) -> list[tuple[str, str]]:
+	"""Give every demo customer a portal + chat login: a@vrugle.com, b@vrugle.com, ... and one shared password.
+
+	Only customers the sample-data seeder created (the tracking log) are touched, never a real one.
+	Customers whose service already ended are skipped, as are ones that already have access, so it is
+	safe to run again. Nothing is emailed. The password is written straight to the password store, so
+	the site's password-strength policy is deliberately not applied. Returns [(login, customer)].
+	"""
+	from frappe.utils.password import update_password
+
+	from verp_staffing.crm.api.customer_chat import CHAT_ROLE, ENDED_STATUSES
+	from verp_staffing.utils import sample_data_tracking as tracking
+
+	sample = set(tracking._read_log().get("Customer", []))
+	if not sample:
+		return []
+
+	customers = frappe.get_all(
+		"Customer",
+		{"name": ["in", list(sample)], "chat_user": ["is", "not set"]},
+		["name", "name1", "lead_details", "overall_status"],
+		order_by="creation asc",
+	)
+	granted, n = [], 0
+	for c in customers:
+		if c.overall_status in ENDED_STATUSES or not c.lead_details:
+			continue
+		while True:
+			login = f"{_login_label(n)}@vrugle.com"
+			n += 1
+			if not frappe.db.exists("User", login):
+				break
+		frappe.db.set_value("Lead Detail Form", c.lead_details, "email", login, update_modified=False)
+		user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": login,
+				"first_name": c.name1 or c.name,
+				"user_type": "Website User",
+				"send_welcome_email": 0,
+				"roles": [{"role": CHAT_ROLE}],
+			}
+		)
+		user.flags.ignore_permissions = True
+		user.insert()
+		update_password(login, password)
+		frappe.db.set_value("Customer", c.name, {"chat_user": login, "chat_access": "Active"}, update_modified=False)
+		granted.append((login, c.name))
+	return granted
+
+
+def portal_access_after_migrate():
+	"""Once per site, after the demo data exists: give the demo customers their portal logins.
+
+	Same guards as the demo seed (never in developer mode without force_demo_seed, never with
+	skip_demo_seed). It also runs on sites that were seeded before this existed, because it has
+	its own marker. A site without the chat app is left for a later migrate.
+	"""
+	conf = frappe.conf
+	if conf.get("skip_demo_seed"):
+		return
+	if conf.get("developer_mode") and not conf.get("force_demo_seed"):
+		return
+	if frappe.db.get_global(PORTAL_MARKER):
+		return
+	if "vruglechat" not in frappe.get_installed_apps() or not frappe.db.exists("Role", "Chat External"):
+		return
+	if not frappe.db.get_global(MARKER):
+		return  # no demo data on this site (yet)
+
+	try:
+		granted = grant_sample_customers_portal_access()
+		frappe.db.set_global(PORTAL_MARKER, "1")
+		frappe.db.commit()
+		if granted:
+			frappe.logger().info(f"Portal access granted to {len(granted)} demo customers")
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(title="Demo customer portal access failed", message=frappe.get_traceback())
