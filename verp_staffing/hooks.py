@@ -26,10 +26,16 @@ add_to_apps_screen = [
 # SPA shell so deep links and page refreshes don't 404.
 website_route_rules = [
 	{"from_route": "/verp/<path:app_path>", "to_route": "verp"},
+	# old /customer links go on to the portal in the app (/verp/portal/...)
+	{"from_route": "/customer/<path:app_path>", "to_route": "customer"},
 ]
 
 # Serves the PWA service worker at /verp-sw.js (see utils/pwa.py).
-page_renderer = ["verp_staffing.utils.pwa.ServiceWorkerRenderer"]
+page_renderer = [
+	"verp_staffing.utils.pwa.ServiceWorkerRenderer",
+	# /verp/portal/invoices/<x>/print and the other customer downloads (see utils/portal_downloads.py)
+	"verp_staffing.utils.portal_downloads.PortalDownloadRenderer",
+]
 
 website_context = {
 	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
@@ -170,6 +176,7 @@ after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     # "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
+    "verp_staffing.crm.api.customer_chat.set_portal_home_page",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
     # Demo data for a production site, once — guarded; see the file's docstring.
     "verp_staffing.utils.seed_production.after_migrate",
@@ -208,6 +215,13 @@ after_migrate = [
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
+    **{
+        dt: "verp_staffing.utils.portal_guard.portal_query_conditions"
+        for dt in (
+            "CRM Task", "CRM Event", "CRM Note", "ToDo", "Event", "Contact", "Address",
+            "Communication", "Notification Log", "Tag Link", "Tag", "Personal Data Download Request",
+        )
+    },
     "Customer": "verp_staffing.crm.api.helpers.customer_query",
     "Sales Order": "verp_staffing.crm.api.helpers.sales_order_query",
     "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
@@ -226,6 +240,8 @@ permission_query_conditions = {
 }
 
 has_permission = {
+    # customers stay inside the portal (see utils/portal_guard.py); a no-op for everyone else
+    "*": "verp_staffing.utils.portal_guard.portal_has_permission",
     "Resume": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "RUC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "Marketing": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
@@ -242,6 +258,10 @@ has_permission = {
     "Lead": "verp_staffing.crm.api.helpers.lead_has_permission",
     "Interview": "verp_staffing.crm.api.helpers.interview_has_permission",
 }
+
+# Chat portal (vruglechat): a customer whose service has ended may no longer use the chat,
+# even if their user is still enabled. Each function gets the user id; False denies.
+chat_external_access = ["verp_staffing.crm.api.customer_chat.is_chat_access_active"]
 
 # DocType Class
 # ---------------
@@ -445,6 +465,7 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = [
+    "verp_staffing.utils.portal_guard.restrict_portal_api",
     "verp_staffing.utils.desk_routes.redirect_desk_to_spa",
     "verp_staffing.quota.utils.quota.site_expiry_check",
     "verp_staffing.quota.utils.quota.block_non_admin",

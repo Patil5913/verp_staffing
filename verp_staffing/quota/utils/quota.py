@@ -6,6 +6,10 @@ from verp_staffing.crm.api.helpers import send_notification
 
 # user limit validate
 def user_limit(doc=None, method=None):
+    # The limit is for staff seats; customers signing in to the chat don't use one.
+    if doc is not None and any(r.role == "Chat External" for r in doc.get("roles") or []):
+        return
+
     quota = frappe.get_site_config().get("quota", {})
     users_limit = quota.get("users_limit")
 
@@ -14,7 +18,16 @@ def user_limit(doc=None, method=None):
         frappe.throw("Invalid users_limit. Must be integer.")
 
     # count current users
-    total_users = frappe.db.count("User", filters={"enabled": 1})
+    total_users = frappe.db.sql(
+        """
+        SELECT COUNT(*) FROM `tabUser` u
+        WHERE u.enabled = 1
+          AND NOT EXISTS (
+              SELECT 1 FROM `tabHas Role` hr
+              WHERE hr.parent = u.name AND hr.parenttype = 'User' AND hr.role = 'Chat External'
+          )
+        """
+    )[0][0]
     if total_users >= users_limit:
         subject = "User Limit Exceeded"
         message = (

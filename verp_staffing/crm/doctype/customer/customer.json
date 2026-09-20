@@ -13,6 +13,8 @@
   "customer_owner",
   "column_break_emkf",
   "overall_status",
+  "chat_user",
+  "chat_access",
   "stage",
   "section_break_roxl",
   "lead_details_html",
@@ -150,13 +152,31 @@
    "in_standard_filter": 1,
    "label": "Overall Status",
    "read_only": 1
+  },
+  {
+   "description": "Website user this customer signs in to the chat with. Created automatically with the customer.",
+   "fieldname": "chat_user",
+   "fieldtype": "Link",
+   "label": "Chat User",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "description": "Ended automatically once the customer is placed, or Revoked by staff; the user is disabled while either applies.",
+   "fieldname": "chat_access",
+   "fieldtype": "Select",
+   "label": "Chat Access",
+   "no_copy": 1,
+   "options": "\nActive\nEnded\nRevoked",
+   "read_only": 1
   }
  ],
  "force_re_route_to_default_view": 1,
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-31 11:16:57.128202",
+ "modified": "2026-09-20 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer",

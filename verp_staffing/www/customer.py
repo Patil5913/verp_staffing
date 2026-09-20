@@ -1,14 +1,8 @@
 import frappe
 import json
-from verp_staffing.utils.customer_page import get_otp_status_web
 from frappe import _
 from verp_staffing.install import SERVICE_DOCTYPE_MAP
-import base64
-
-
-def safe_b64decode(data):
-    data += "=" * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data.encode()).decode()
+from verp_staffing.crm.api.customer_chat import chat_installed, customer_for_user, is_portal_user
 
 
 _DEPARTMENT_STATUS_STYLES = {
@@ -119,7 +113,6 @@ def _build_pending_feedback_items(history):
             else:  # Training
                 title = "Training Session"
                 context_lines = [
-                    ("Assigned To", rec.get("assign_to") or "-"),
                     ("Status", rec.get("status") or "-"),
                 ]
 
@@ -158,98 +151,127 @@ def _build_pending_feedback_items(history):
     return items
 
 
-def verify_token_and_get_email(token):
-    import hmac
-    import hashlib
+# Services delivered by the technical team; the portal shows them on their own page.
+TECHNICAL_DOCTYPES = {"RUC", "JDC", "Training", "Interview Support", "Technical Other Services"}
 
-    try:
-        decoded = safe_b64decode(token)
-        payload_str, signature = decoded.rsplit("|", 1)
 
-        expected_signature = hmac.new(
-            frappe.conf.get("encryption_key").encode(),
-            payload_str.encode(),
-            hashlib.sha256,
-        ).hexdigest()
+def _pick(row, keys):
+    return {k: row.get(k) for k in keys if k in row}
 
-        if signature != expected_signature:
-            return None
 
-        return payload_str
+def _portal_safe(history):
+    """The customer's view of their own history, by allow-list.
 
-    except Exception as e:
-        frappe.log_error(f"Token decode failed: {str(e)}")
-        return None
+    The raw history carries staff identities (assignees, the record owner), internal remarks and
+    file paths. A customer gets only what the portal displays; anything not named here is dropped.
+    """
+    departments = {}
+    for dept, records in (history.get("departments") or {}).items():
+        safe = []
+        for rec in records or []:
+            if dept == "Sales Order":
+                safe.append(_pick(rec, ["agreement"]))
+            elif dept == "Interview":
+                item = _pick(rec, ["name", "company", "role", "status"])
+                item["interview_rounds_table"] = [
+                    _pick(
+                        r,
+                        [
+                            "round", "type_of_interview", "date", "date_of_interview", "from_time",
+                            "to_time", "edt_est", "status", "feedback", "support",
+                        ],
+                    )
+                    for r in rec.get("interview_rounds_table") or []
+                ]
+                safe.append(item)
+            else:
+                item = _pick(
+                    rec,
+                    ["docname", "service_name", "status", "status_badge_style", "forward_events_display"],
+                )
+                item["department"] = dept
+                if rec.get("interview"):
+                    item["interview"] = _pick(rec["interview"], ["company", "role"])
+                if rec.get("interview_round_detail"):
+                    item["interview_round_detail"] = _pick(
+                        rec["interview_round_detail"],
+                        [
+                            "round", "support", "type_of_interview", "date_added", "date_of_interview",
+                            "from_time", "to_time", "status",
+                        ],
+                    )
+                item["session_details"] = [
+                    _pick(x, ["session_duration_in_hour", "date", "projects", "quality"])
+                    for x in rec.get("session_details") or []
+                ]
+                item["job_application_count"] = [
+                    _pick(x, ["small_application", "large_application", "total_application", "date"])
+                    for x in rec.get("job_application_count") or []
+                ]
+                if rec.get("latest_document_reference"):
+                    item["latest_document_reference"] = _pick(
+                        rec["latest_document_reference"], ["document_title", "date"]
+                    )
+                safe.append(item)
+        departments[dept] = safe
+    return {
+        "customer": {"customer_name": (history.get("customer") or {}).get("customer_name")},
+        "departments": departments,
+    }
+
+
+PORTAL_HOME = "/verp/portal/dashboard"
+
+
+def get_portal_customer() -> dict:
+    """The customer behind the signed-in portal user.
+
+    Portal users are website users created from the Customer form (see
+    crm/api/customer_chat.py); a user whose service has ended has no portal.
+    Everything on this page derives the customer from the session, never from
+    a request parameter.
+    """
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please sign in."), frappe.PermissionError)
+
+    customer = customer_for_user(frappe.session.user)
+    if not customer:
+        frappe.throw(_("Your portal access is not active."), frappe.PermissionError)
+
+    return {"email": frappe.session.user, "customer": customer}
 
 
 def get_context(context):
+    """The portal now lives in the app (/verp/portal/...); old /customer links land there."""
     context.no_cache = 1
+    frappe.local.flags.redirect_location = PORTAL_HOME
+    raise frappe.Redirect
 
-    raw_token = frappe.form_dict.get("t")
 
-    context.invalid_link = False
-    context.is_verified = False
-    context.otp_state = "idle"
-    context.otp_expires_in = 0
-    context.token = raw_token
-
-    if not raw_token:
-        context.invalid_link = True
-        return context
-
-    raw_token = str(raw_token)[:256]
-
-    try:
-        auth = authenticate_customer_request(
-            raw_token,
-            require_verified=False,
-        )
-    except Exception:
-        context.invalid_link = True
-        return context
-
-    email = auth["email"]
-    customer_name = auth["customer"]
-
-    if not email:
-        context.invalid_link = True
-        return context
-
-    # DO NOT STOP HERE
-    # token is valid, OTP can still proceed
-
-    status = get_otp_status_web(raw_token)
-    state = status.get("state")
-
-    context.otp_email = email
-
-    if state == "verified":
-        context.is_verified = True
-        context.otp_state = "verified"
-
-    elif state == "otp_sent":
-        context.otp_state = "otp_sent"
-        context.otp_expires_in = status.get("expires_in", 0)
-
-    else:
-        context.otp_state = "idle"
-
-        if not customer_name:
-            context.full_history = None
-            context.feedback_rounds = []
-            context.pending_feedback_items = []
-            context.lead_documents = []
-            return context
-
-    context.full_history = _augment_history_for_display(
-        get_customer_history(token=raw_token)
+@frappe.whitelist()
+def get_portal_data() -> dict:
+    """Everything the portal pages show, for the signed-in customer only."""
+    customer_name = get_portal_customer()["customer"]
+    data = frappe._dict(
+        customer=customer_name,
+        customer_title=frappe.db.get_value("Customer", customer_name, "name1") or customer_name,
+        user_name=frappe.db.get_value("User", frappe.session.user, "full_name") or frappe.session.user,
+        chat_enabled=chat_installed(),
     )
-    context.other_service_doctypes = list(OTHER_SERVICE_DOCTYPES)
-    context.interview_linked_doctypes = list(INTERVIEW_LINKED_DOCTYPES)
-    context.download_allowed_doctypes = list(DOWNLOAD_ALLOWED_DOCTYPES)
-    context.pending_feedback_items = _build_pending_feedback_items(context.full_history)
-    context.lead_documents = _build_lead_documents(customer_name)
 
+    history = _augment_history_for_display(_load_history(customer_name))
+    data.pending_feedback_items = _build_pending_feedback_items(history)
+    data.history = _portal_safe(history)  # nothing internal (staff, remarks, file paths) leaves the server
+    data.other_service_doctypes = list(OTHER_SERVICE_DOCTYPES)
+    data.interview_linked_doctypes = list(INTERVIEW_LINKED_DOCTYPES)
+    data.download_allowed_doctypes = list(DOWNLOAD_ALLOWED_DOCTYPES)
+    data.technical_doctypes = sorted(TECHNICAL_DOCTYPES)
+    data.lead_documents = _build_lead_documents(customer_name)
+    data.feedback_rounds = _pending_interview_feedback(customer_name)
+    return data
+
+
+def _pending_interview_feedback(customer_name):
     from frappe.utils import get_datetime, now_datetime
     import pytz
 
@@ -276,7 +298,7 @@ def get_context(context):
 
     # ================= FEEDBACK =================
 
-    context.feedback_rounds = []
+    rounds = []
 
     for interview in interviews:
         doc = frappe.get_doc("Interview", interview.name)
@@ -296,7 +318,7 @@ def get_context(context):
                     interview_dt = interview_dt.astimezone(tz)
 
                 if now_est >= interview_dt:
-                    context.feedback_rounds.append(
+                    rounds.append(
                         {
                             "round_name": round.name,
                             "title": "Interview — %s"
@@ -310,100 +332,15 @@ def get_context(context):
                         }
                     )
 
-    return context
+    return rounds
 
 
-@frappe.whitelist(allow_guest=True)
-def authenticate_customer_request(token, require_verified=True):
-    if not token:
-        frappe.throw(_("Unauthorized"))
-
-    token = str(token)[:256]
-
-    email = verify_token_and_get_email(token)
-
-    if not email:
-        frappe.throw(_("Invalid or expired link"))
-
-    if require_verified:
-        status = get_otp_status_web(token)
-
-        if status.get("state") != "verified":
-            frappe.throw(_("Please verify your email first"))
-
-    lead_name = frappe.db.get_value(
-        "Lead Detail Form",
-        {"email": email},
-        "name",
-    )
-
-    if not lead_name:
-        frappe.throw(_("Lead Detail Form not found"))
-
-    customer = frappe.db.get_value(
-        "Doctype Reference",
-        {
-            "parenttype": "Lead Detail Form",
-            "parent": lead_name,
-            "reference_doctype": "Customer",
-        },
-        "reference_person",
-    )
-
-    # fallback
-    if not customer:
-        lead_person = frappe.db.get_value(
-            "Doctype Reference",
-            {
-                "parenttype": "Lead Detail Form",
-                "parent": lead_name,
-                "reference_doctype": "Lead",
-            },
-            "reference_person",
-        )
-
-        if lead_person:
-            opportunity = frappe.db.get_value(
-                "Opportunity",
-                {"opportunity_from_lead": lead_person},
-                "name",
-            )
-
-            if opportunity:
-                customer = frappe.db.get_value(
-                    "Customer",
-                    {
-                        "party_name": opportunity,
-                        "customer_from": "Opportunity",
-                    },
-                    "name",
-                )
-
-            if not customer:
-                customer = frappe.db.get_value(
-                    "Customer",
-                    {
-                        "party_name": lead_person,
-                        "customer_from": "Lead",
-                    },
-                    "name",
-                )
-
-    if not customer:
-        frappe.throw(_("Customer not found"))
-
-    return {
-        "email": email,
-        "customer": customer,
-    }
-
-
-@frappe.whitelist(allow_guest=True)
-def save_interview_feedback(token, feedback_data):
+@frappe.whitelist()
+def save_interview_feedback(feedback_data):
     if not feedback_data:
         frappe.throw(_("No feedback data received"))
 
-    auth = authenticate_customer_request(token)
+    auth = get_portal_customer()
 
     customer = auth["customer"]
 
@@ -601,14 +538,18 @@ def _get_feedback_child_fieldname(doctype):
     return _feedback_child_fieldname_cache[doctype]
 
 
-@frappe.whitelist(allow_guest=True)
-def get_customer_history(
-    customer=None, token=None, interview_limit=5, interview_offset=0
-):
-    if frappe.session.user == "Guest":
-        auth = authenticate_customer_request(token, require_verified=False)
-        customer = auth["customer"]
+@frappe.whitelist()
+def get_customer_history(customer=None, interview_limit=5, interview_offset=0):
+    # Staff pass the customer they are looking at. A portal user always gets
+    # their own record, whatever they ask for, and only the customer-safe view of it.
+    if is_portal_user():
+        customer = get_portal_customer()["customer"]
+        history = _load_history(customer, interview_limit, interview_offset)
+        return _portal_safe(_augment_history_for_display(history))
+    return _load_history(customer, interview_limit, interview_offset)
 
+
+def _load_history(customer, interview_limit=5, interview_offset=0):
     customer_rows = frappe.get_all(
         "Customer",
         filters={"name": customer},
@@ -1072,9 +1013,9 @@ def _populate_interview_history(history, customer, interview_limit, interview_of
 FEEDBACK_DOCTYPES = {"Interview Round", "JDC", "Interview Support", "Training", "RUC"}
 
 
-@frappe.whitelist(allow_guest=True)
-def save_customer_feedback(token, doctype, docname, feedback, session_row_name=None):
-    auth = authenticate_customer_request(token)
+@frappe.whitelist()
+def save_customer_feedback(doctype, docname, feedback, session_row_name=None):
+    auth = get_portal_customer()
     customer = auth["customer"]
 
     if doctype not in FEEDBACK_DOCTYPES:
@@ -1147,7 +1088,7 @@ def save_customer_feedback(token, doctype, docname, feedback, session_row_name=N
 
 
 # ---------------------------------------------------------------------
-# Reusable document download (token-authenticated, guest-facing)
+# Reusable document download (signed-in portal user only)
 # ---------------------------------------------------------------------
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 from frappe.utils.file_manager import get_file_path
@@ -1179,14 +1120,13 @@ def _stream_file(file_url):
         frappe.local.response.type = "download"
 
 
-@frappe.whitelist(allow_guest=True)
-def download_document(doctype, docname, token):
-    """Reusable, token-authenticated download endpoint. Downloads the
+def download_document(doctype, docname):
+    """Reusable download endpoint. Downloads the
     most recent "Document References" row linked to the given parent
     doc, after verifying it belongs to the authenticated customer.
     Restricted to DOWNLOAD_ALLOWED_DOCTYPES — everything else is
     rejected even if the caller guesses a valid docname."""
-    auth = authenticate_customer_request(token, require_verified=False)
+    auth = get_portal_customer()
     customer = auth["customer"]
 
     if doctype not in DOWNLOAD_ALLOWED_DOCTYPES:
@@ -1209,14 +1149,6 @@ def download_document(doctype, docname, token):
 
     _stream_file(latest_ref[0].document)
 
-
-@frappe.whitelist(allow_guest=True)
-def download_resume(resume, token):
-    """Kept for backward compatibility with any existing links pointing
-    here directly. Delegates to download_document — see the note above
-    about this now downloading the latest Document References row
-    rather than the Resume.resume attach field."""
-    return download_document("Resume", resume, token)
 
 LEAD_DOCUMENT_FIELDS_META = [
     ("ead_card", "EAD Card"),
@@ -1276,11 +1208,10 @@ def _build_lead_documents(customer):
     return documents
 
 
-@frappe.whitelist(allow_guest=True)
-def download_lead_document(token, field):
-    """Token-authenticated download for one of the four Lead Detail
+def download_lead_document(field):
+    """Download for one of the four Lead Detail
     Form document fields."""
-    auth = authenticate_customer_request(token, require_verified=False)
+    auth = get_portal_customer()
     customer = auth["customer"]
 
     if field not in LEAD_DOCUMENT_FIELDS:
@@ -1301,18 +1232,18 @@ def download_lead_document(token, field):
     _stream_file(file_url)
 
 
-@frappe.whitelist(allow_guest=True)
-def upload_lead_document(token, field):
+@frappe.whitelist()
+def upload_lead_document(field):
     """Replaces one of the four Lead Detail Form document fields:
     deletes the old File (if any), creates a new one attached to the
     Lead Detail Form record, and repoints the field to it. Expects a
     multipart/form-data POST with a `file` part (same shape as
-    Frappe's own upload endpoint) plus `token` and `field`.
+    Frappe's own upload endpoint) plus `field`.
 
     5 MB limit enforced here as a backend backstop — the frontend
     should already be rejecting oversized files before they're sent,
     but this endpoint doesn't trust that."""
-    auth = authenticate_customer_request(token, require_verified=False)
+    auth = get_portal_customer()
     customer = auth["customer"]
 
     if field not in LEAD_DOCUMENT_FIELDS:

@@ -6,11 +6,13 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details, get_or_create_lead_detail
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.customer_chat import revoke_chat_access
 
 
 class Customer(Document):
     def on_trash(self):
         unlink_and_clean_lead_detail("Customer", self.name, self.lead_details)
+        revoke_chat_access(self.name)
 
     def autoname(self):
         name = self.name1
@@ -304,65 +306,6 @@ def generate_token(email: str):
 
     token = base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
     return token
-
-
-@frappe.whitelist()
-def send_portal_link(customer, customer_name):
-    if not customer:
-        frappe.throw("Customer is required")
-
-    # STEP 1: find Doctype Reference row
-    ref = frappe.get_all(
-        "Doctype Reference",
-        filters={
-            "reference_doctype": "Customer",
-            "reference_person": customer,
-        },
-        fields=["parent"],
-        limit=1,
-    )
-
-    if not ref:
-        frappe.throw("No reference found for this customer")
-
-    lead_name = ref[0].parent
-
-    # STEP 2: get email from Lead Detail Form
-    email = frappe.db.get_value("Lead Detail Form", lead_name, "email")
-
-    if not email:
-        frappe.throw(
-            title="Email Missing",
-            msg=f"Email is required to send agreement.<br><br>"
-            f'<a href="/verp/Lead%20Detail%20Form/{lead_name}" target="_blank">'
-            f"➜ Open Lead Detail Form</a>",
-        )
-
-    # STEP 3: generate token
-    token = generate_token(email)
-
-    # STEP 4: build link
-    base_url = frappe.utils.get_url()
-    portal_link = f"{base_url}/customer?t={token}"
-
-    # STEP 5: send email
-    email_template = frappe.get_doc("Email Template", "Customer Portal Link")
-
-    message = frappe.render_template(
-        email_template.response_html,
-        {
-            "customer_name": customer_name,
-            "portal_link": portal_link,
-        },
-    )
-
-    frappe.sendmail(
-        recipients=[email],
-        subject=email_template.subject,
-        message=message,
-    )
-
-    return True
 
 
 @frappe.whitelist()

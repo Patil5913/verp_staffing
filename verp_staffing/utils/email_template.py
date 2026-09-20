@@ -3703,6 +3703,140 @@ def seed_email_template():
 """
             + Common_Footer,
         },
+        {
+            "name": "Customer Portal Access",
+            "subject": "Your portal and chat access",
+            "html_content": """
+<table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:30px 10px;">
+
+      <!-- Outer wrapper -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- Top logo -->
+        <tr>
+          <td style="padding:0 0 20px 0;">
+            <img src="__LOGO_URL__"
+                 alt="__COMPANY_NAME__"
+                 width="140"
+                 height="36"
+                 style="display:block;object-fit:contain;" />
+          </td>
+        </tr>
+
+        <!-- Main card -->
+        <tr>
+          <td bgcolor="#ffffff"
+              style="border-radius:12px;
+                     box-shadow:0 4px 16px rgba(0,0,0,0.08);
+                     overflow:hidden;
+                     padding:40px 36px 36px 36px;">
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+
+              <!-- Title -->
+              <tr>
+                <td align="center" style="padding-bottom:24px;">
+                  <div style="font-size:26px;font-weight:800;color:#111111;line-height:1.3;font-family:Arial,sans-serif;">
+                    Your Customer Portal
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Greeting -->
+              <tr>
+                <td style="padding-bottom:12px;">
+                  <div style="font-size:14px;color:#e07b00;font-family:Arial,sans-serif;">
+                    Hi {{ customer_name or "Customer" }},
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Intro -->
+              <tr>
+                <td style="padding-bottom:24px;">
+                  <div style="font-size:14px;color:#444444;line-height:1.7;font-family:Arial,sans-serif;">
+                    {{ message | safe }}
+                  </div>
+                </td>
+              </tr>
+
+              <!-- CTA -->
+              <tr>
+                <td align="center" style="padding-bottom:28px;">
+                  <a href="{{ login_url }}"
+                     style="display:inline-block;
+                            background:#3b82f6;
+                            color:#ffffff;
+                            padding:13px 36px;
+                            text-decoration:none;
+                            border-radius:8px;
+                            font-weight:700;
+                            font-size:15px;
+                            font-family:Arial,sans-serif;">
+                    Open Portal
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Sign-in details -->
+              <tr>
+                <td style="padding-bottom:24px;">
+                  <table width="100%"
+                         cellpadding="0"
+                         cellspacing="0"
+                         style="border:1px solid #e5e7eb;
+                                border-radius:8px;
+                                overflow:hidden;
+                                font-size:14px;
+                                font-family:Arial,sans-serif;">
+
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                      <td style="padding:12px 16px;color:#555555;">Email</td>
+                      <td style="padding:12px 16px;color:#3b82f6;font-weight:600;">{{ email }}</td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding:12px 16px;color:#555555;">Password</td>
+                      <td style="padding:12px 16px;color:#333333;font-weight:600;">
+                        {{ password }}
+                      </td>
+                    </tr>
+
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Divider -->
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <hr style="border:none;border-top:1px solid #eeeeee;margin:0;">
+                </td>
+              </tr>
+
+              <!-- Footer Text -->
+              <tr>
+                <td>
+                  <div style="font-size:13px;color:#5b7fa6;line-height:1.7;font-style:italic;font-family:Arial,sans-serif;">
+                    If the button does not work, copy and paste this link into your browser:
+                    <br><br>
+                    <a href="{{ login_url }}" style="color:#3b82f6;word-break:break-all;font-style:normal;">{{ login_url }}</a>
+                    <br><br>
+                    Keep your password private. You can change it after signing in.
+                    Access ends once your services with us have been completed.
+                  </div>
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+
+"""
+            + Common_Footer,
+        },
     ]
     
     for t in templates:

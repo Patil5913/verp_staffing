@@ -204,6 +204,7 @@ def on_service_update(customer: str) -> None:
 # Hook shims
 # ---------------------------------------------------------------------------
 from verp_staffing.crm.api.customer_overall_status import compute_customer_status
+from verp_staffing.crm.api.customer_chat import sync_chat_access
 
 
 def on_service_update_hook(doc, method=None):
@@ -211,6 +212,7 @@ def on_service_update_hook(doc, method=None):
     try:
         status = compute_customer_status(doc.customer)
         frappe.db.set_value("Customer", doc.customer, "overall_status", status)
+        sync_chat_access(doc.customer)  # chat access ends once the customer is placed
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Customer Status Update Failed")
 

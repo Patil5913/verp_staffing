@@ -29,6 +29,15 @@ def get_context(context):
 	return context
 
 
+def _is_chat_customer() -> bool:
+	user = frappe.session.user
+	return (
+		user != "Guest"
+		and frappe.db.get_value("User", user, "user_type") == "Website User"
+		and "Chat External" in frappe.get_roles(user)
+	)
+
+
 def _is_login_path() -> bool:
 	return frappe.local.request.path.rstrip("/") == LOGIN_PATH
 
@@ -61,5 +70,8 @@ def get_boot():
 			# enforcement is Frappe's DocPerm/has_permission on every API
 			# call, not this list.
 			"roles": frappe.get_roles(user) if user and user != "Guest" else [],
+			# UX-only: customers get the portal shell instead of the staff one. Everything they
+			# can reach is still enforced server-side (session-derived customer, DocPerms).
+			"is_portal_user": _is_chat_customer(),
 		}
 	)

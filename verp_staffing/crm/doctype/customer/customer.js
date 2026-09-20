@@ -117,21 +117,26 @@ frappe.ui.form.on("Customer", {
 
 		window.add_forward_button(frm,service_name="Sales");
 
-		frm.add_custom_button("Send Portal Link", function () {
-			frappe.call({
-				method: "verp_staffing.crm.doctype.customer.customer.send_portal_link",
-				args: {
-					customer: frm.doc.name,
-					customer_name: frm.doc.name1,
-				},
-				freeze: true,
-				callback: function (r) {
-					if (r.message) {
-						frappe.msgprint("Portal link sent successfully");
+		if (frm.doc.chat_access !== "Active") {
+			frm.add_custom_button("Portal & Chat Access", () => open_portal_access_dialog(frm));
+		} else {
+			frm.add_custom_button("Revoke Portal Access", () => {
+				frappe.confirm(
+					"The customer will be signed out and lose access to the portal and chat straight away. You can restore it later by sending access again. Continue?",
+					() => {
+						frappe.call({
+							method: "verp_staffing.crm.api.customer_chat.revoke_portal_access",
+							args: { customer: frm.doc.name },
+							freeze: true,
+							callback() {
+								frappe.show_alert({ message: "Portal access revoked", indicator: "orange" });
+								frm.reload_doc();
+							},
+						});
 					}
-				},
+				);
 			});
-		});
+		}
 	},
 
 	sales_order: function (frm) {
@@ -310,6 +315,74 @@ function customer_show_accept_updates(frm) {
 			frm.add_custom_button(__("Accept Updates"), () => {
 				_open_accept_updates_dialog(frm, r.message, "owner");
 			});
+		},
+	});
+}
+
+// One button for the customer's portal and chat: it opens the email for review, and sending
+// it is what creates the customer's website user (nothing is created with the Customer).
+function open_portal_access_dialog(frm) {
+	frappe.call({
+		method: "verp_staffing.crm.api.customer_chat.get_portal_access_draft",
+		args: { customer: frm.doc.name },
+		freeze: true,
+		callback(r) {
+			const draft = r.message;
+			if (!draft) return;
+			if (!draft.chat_installed) {
+				frappe.msgprint("The Vrugle Chat app is not installed on this site.");
+				return;
+			}
+			if (draft.ended) {
+				frappe.msgprint("This customer's service has ended, so access cannot be issued.");
+				return;
+			}
+			if (!draft.to) {
+				frappe.msgprint({
+					title: "Email Missing",
+					message: "Add an email address to this customer's Lead Details first.",
+				});
+				return;
+			}
+
+			const dialog = new frappe.ui.Dialog({
+				title: draft.already_sent ? "Resend Portal & Chat Access" : "Send Portal & Chat Access",
+				size: "large",
+				fields: [
+					{ fieldname: "to", fieldtype: "Data", label: "To", read_only: 1, default: draft.to },
+					{ fieldname: "subject", fieldtype: "Data", label: "Subject", reqd: 1, default: draft.subject },
+					{ fieldname: "message", fieldtype: "Text Editor", label: "Message", default: draft.message },
+					{
+						fieldname: "details",
+						fieldtype: "HTML",
+						options: `<div class="text-muted small" style="border:1px solid var(--border-color);border-radius:8px;padding:10px 12px">
+							The email also contains the sign-in link (${frappe.utils.escape_html(draft.login_url)}),
+							their email <b>${frappe.utils.escape_html(draft.to)}</b> and a newly generated password.
+							${draft.already_sent ? "<br><b>Their current password will stop working.</b>" : ""}
+						</div>`,
+					},
+				],
+				primary_action_label: draft.already_sent ? "Resend" : "Send",
+				primary_action(values) {
+					dialog.disable_primary_action();
+					frappe.call({
+						method: "verp_staffing.crm.api.customer_chat.send_portal_access",
+						args: { customer: frm.doc.name, subject: values.subject, message: values.message },
+						freeze: true,
+						callback(res) {
+							if (res.message) {
+								dialog.hide();
+								frappe.show_alert({ message: "Portal & chat access sent", indicator: "green" });
+								frm.reload_doc();
+							}
+						},
+						error() {
+							dialog.enable_primary_action();
+						},
+					});
+				},
+			});
+			dialog.show();
 		},
 	});
 }
