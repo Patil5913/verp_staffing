@@ -36,6 +36,13 @@ const resolvedTheme = computed(() => {
   return preference.value
 })
 
+// Another tab, or the chat iframe (same origin, same key), changed the theme.
+window.addEventListener('storage', (e) => {
+  if (e.key === STORAGE_KEY && VALID_PREFERENCES.includes(e.newValue) && e.newValue !== preference.value) {
+    preference.value = e.newValue
+  }
+})
+
 watchEffect(() => {
   document.documentElement.setAttribute('data-theme', resolvedTheme.value)
   try {

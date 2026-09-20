@@ -62,6 +62,33 @@ def _frontend_route(item: dict, item_kind: str) -> str:
     return route
 
 
+# The chat lives in its own app (vruglechat) and is embedded at /verp/chat.
+# Its sidebar entry is added here, not stored in Sidebar Master, so it appears
+# the moment the app is installed and vanishes when it is not.
+CHAT_APP = "vruglechat"
+CHAT_ROLES = {"Chat User", "Chat Manager", "Chat Admin", "Chat External"}
+CHAT_ITEM = {
+    "key": "chat",
+    "label": "Chat",
+    "icon": "icon-setting-gear",  # drawn from KEY_ICON_OVERRIDES['chat'] on the frontend
+    "parent_type": "type_3",
+    "shortcut": "",
+    "roles": [],
+    "route": "/verp/chat",
+    "link_type": "page",
+}
+
+
+def _add_chat_item(filtered: list, is_admin: bool, user_roles: set) -> None:
+    if CHAT_APP not in frappe.get_installed_apps():
+        return
+    if not (is_admin or user_roles & CHAT_ROLES):
+        return
+    # right after the Email Inbox, the other communication entry; else last
+    at = next((i + 1 for i, cfg in enumerate(filtered) if cfg.get("key") == "email-inbox"), len(filtered))
+    filtered.insert(at, dict(CHAT_ITEM))
+
+
 def _cache_key(user: str) -> str:
     return f"{CACHE_KEY_PREFIX}{user}"
 
@@ -92,6 +119,7 @@ def _build_sidebar_payload(user: str) -> dict:
         if item is not None:
             filtered.append(item)
 
+    _add_chat_item(filtered, is_admin, user_roles)
     return {"config": filtered, "generated_for": user}
 
 

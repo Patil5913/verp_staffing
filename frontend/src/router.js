@@ -125,6 +125,13 @@ const routes = [
     component: () => import('@/pages/admin/ComponentsPage.vue'),
   },
   {
+    // The chat app (vruglechat) embedded in the shell; its sidebar entry only
+    // exists while that app is installed (see ChatEmbedPage.vue).
+    path: '/chat',
+    name: 'ChatEmbed',
+    component: () => import('@/pages/chat/ChatEmbedPage.vue'),
+  },
+  {
     path: '/email-inbox',
     name: 'EmailInbox',
     component: () => import('@/pages/mail/EmailInbox.vue'),

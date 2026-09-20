@@ -24,6 +24,7 @@ const KEY_ICON_OVERRIDES = {
   'staffing-master': 'building-2',
   users: 'users',
   'email-inbox': 'mail',
+  chat: 'message-square',
   lead: 'user-plus',
   sales: 'shopping-cart',
   technical: 'code-2',
