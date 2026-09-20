@@ -182,6 +182,21 @@ function toggleSidebar() {
   setSidebarOpen(!sidebarOpen.value)
 }
 
+// Phones: the sidebar is an off-canvas drawer instead of a collapsible rail.
+const mobileQuery = window.matchMedia('(max-width: 767px)')
+const isMobile = ref(mobileQuery.matches)
+const mobileNavOpen = ref(false)
+mobileQuery.addEventListener('change', (e) => {
+  isMobile.value = e.matches
+  if (!e.matches) mobileNavOpen.value = false
+})
+function toggleMobileNav() {
+  mobileNavOpen.value = !mobileNavOpen.value
+}
+function closeMobileNav() {
+  mobileNavOpen.value = false
+}
+
 // Stale-while-revalidate: a saved copy paints the sidebar at once, then the
 // server's answer (itself cached server-side) replaces it. Without the second
 // step a change — a new Staffing Master item, a changed role — stayed
@@ -240,6 +255,10 @@ export function useSidebar() {
     sidebarOpen,
     setSidebarOpen,
     toggleSidebar,
+    isMobile,
+    mobileNavOpen,
+    toggleMobileNav,
+    closeMobileNav,
     isRouteActive,
     firstAccessibleRoute,
     load,

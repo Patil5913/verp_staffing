@@ -40,7 +40,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 // Inline-editable child table (rows edited in place). ChildTableField is the
 // doctype-driven version that edits a row in a dialog.

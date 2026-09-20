@@ -34,7 +34,7 @@ import AppBadge from '@/components/ui/AppBadge.vue'
 // the record's `customer`); "owner" is the Customer form itself.
 import { computed, reactive, ref, watch } from 'vue'
 import { call } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import FieldUpdateDialog from './FieldUpdateDialog.vue'
 import FieldUpdateReviewDialog from './FieldUpdateReviewDialog.vue'
 import { notify } from '@/utils/common/notify'

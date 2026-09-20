@@ -31,7 +31,7 @@
 // form uses — so a Link filter is the same searchable picker, a Date the same
 // date input.
 import { computed, ref } from 'vue'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 
 const LIMIT = 8

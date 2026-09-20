@@ -48,7 +48,7 @@
           <div class="flex-1 space-y-2"><div class="h-3 w-1/3 rounded bg-app-panel-2" /><div class="h-3 w-3/4 rounded bg-app-panel-2" /></div>
         </div>
       </div>
-      <div v-else-if="!items.length" class="flex flex-col items-center gap-2 px-6 py-16 text-center">
+      <div v-else-if="!items.length" class="flex flex-col items-center gap-2 px-3 md:px-6 py-16 text-center">
         <span :class="`lucide-${empty.icon} size-9 text-app-text-muted`" />
         <p class="text-p-base font-medium text-app-text">{{ empty.title }}</p>
         <p class="max-w-xs text-p-sm text-app-text-muted">{{ empty.text }}</p>
@@ -108,7 +108,7 @@
 <script setup>
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { computed } from 'vue'
 import { Dropdown } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'

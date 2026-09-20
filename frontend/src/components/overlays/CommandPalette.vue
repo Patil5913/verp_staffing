@@ -77,7 +77,7 @@ import { Dialog } from 'frappe-ui'
 import router from '@/router'
 import { useSidebar } from '@/composables/layout/useSidebar'
 import { resolveIconName } from '@/utils/layout/sidebarIcons'
-import ScrollArea from '../common/ScrollArea.vue'
+import ScrollArea from '@/components/ui/ScrollArea.vue'
 
 const open = defineModel({ default: false })
 

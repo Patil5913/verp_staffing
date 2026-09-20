@@ -62,7 +62,7 @@
 import { computed, ref, useAttrs } from 'vue'
 import AppTextarea from './AppTextarea.vue'
 import AppDatePicker from './AppDatePicker.vue'
-import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 
 // The app's single control for text-like fields: text, number, date,
 // datetime-local, email, password — plus `textarea`, `select` and `date` /

@@ -2,18 +2,18 @@
   <div class="flex h-full flex-col bg-app-bg">
     <!-- Single navbar: back + title, tabs (dynamic per doctype), actions -->
     <div
-      class="flex h-14 shrink-0 items-center gap-4 border-b border-app-border bg-app-panel px-6 shadow-sm"
+      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-app-border bg-app-panel px-3 py-2 shadow-sm md:h-14 md:flex-nowrap md:gap-4 md:px-6 md:py-0"
     >
-      <div class="flex min-w-0 shrink-0 items-center gap-3">
+      <div class="flex min-w-0 flex-1 items-center gap-2 md:flex-none md:shrink-0 md:gap-3">
         <AppButton variant="ghost" size="icon" icon="arrow-left" @click="emit('back')" />
-        <h1 class="min-w-0 max-w-xs truncate text-p-lg font-medium text-app-text">{{ title }}</h1>
+        <h1 class="min-w-0 max-w-full truncate md:max-w-xs text-p-lg font-medium text-app-text">{{ title }}</h1>
         <slot name="title-extra" />
       </div>
 
-      <div class="h-6 w-px shrink-0 bg-app-border" />
+      <div class="hidden h-6 w-px shrink-0 bg-app-border md:block" />
 
       <!-- Reserve growth room here: tab count/labels vary by doctype -->
-      <nav class="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <nav class="[scrollbar-width:none] order-last flex h-full min-w-0 w-full items-center gap-3 overflow-x-auto md:order-none md:w-auto md:flex-1 md:gap-1">
         <button
           v-for="tab in tabs"
           :key="tab.key"
@@ -30,7 +30,7 @@
         </button>
       </nav>
 
-      <div class="flex shrink-0 items-center gap-2">
+      <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
         <slot name="actions" />
       </div>
     </div>
@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 defineProps({
   title: { type: String, default: '' },

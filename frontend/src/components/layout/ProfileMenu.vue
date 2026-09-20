@@ -44,7 +44,8 @@ import { useRouter } from 'vue-router'
 import { Avatar, Dropdown, call } from 'frappe-ui'
 import { useTheme } from '@/composables/common/useTheme'
 import { notify } from '@/utils/common/notify'
-import KeyboardShortcutsDialog from '../overlays/KeyboardShortcutsDialog.vue'
+import { useInstallPrompt } from '@/composables/common/useInstallPrompt'
+import KeyboardShortcutsDialog from '@/components/overlays/KeyboardShortcutsDialog.vue'
 
 defineProps({
   collapsed: { type: Boolean, default: false },
@@ -58,6 +59,12 @@ const userImage = window.user_image || null
 const { preference, setPreference } = useTheme()
 
 const showShortcuts = ref(false)
+const { canInstall, showIosHint, install } = useInstallPrompt()
+
+function installApp() {
+  if (canInstall.value) install()
+  else notify.info('To install: tap the Share button, then "Add to Home Screen".')
+}
 
 function openSettings() {
   // The user's own User record, in this app.
@@ -122,6 +129,9 @@ const menuOptions = computed(() => [
   {
     group: 'Account',
     items: [
+      ...(canInstall.value || showIosHint.value
+        ? [{ icon: 'lucide-download', label: 'Install app', onClick: installApp }]
+        : []),
       {
         icon: 'lucide-refresh-cw',
         label: 'Reload',

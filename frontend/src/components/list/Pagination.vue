@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 defineProps({
   page: { type: Number, required: true },

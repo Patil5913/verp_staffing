@@ -41,7 +41,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Dialog, LoadingIndicator } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import { useDocDetail } from '@/composables/detail/useDocDetail'

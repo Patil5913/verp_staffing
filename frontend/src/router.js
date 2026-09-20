@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { marketingConfig, interviewConfig, marketingOtherServicesConfig, otherServicesConfig } from '@/detailConfigs/marketing'
-import { crConfig, onboardingsConfig } from '@/detailConfigs/customerCare'
-import * as accounts from '@/detailConfigs/accounts'
-import { itemConfig, itemCategoryConfig, uomConfig } from '@/detailConfigs/items'
-import { eSignConfig } from '@/detailConfigs/esign'
-import { emailQueueConfig } from '@/detailConfigs/emailQueue'
+import { marketingConfig, interviewConfig, marketingOtherServicesConfig, otherServicesConfig } from '@/configs/detail/marketing'
+import { crConfig, onboardingsConfig } from '@/configs/detail/customerCare'
+import * as accounts from '@/configs/detail/accounts'
+import { itemConfig, itemCategoryConfig, uomConfig } from '@/configs/detail/items'
+import { eSignConfig } from '@/configs/detail/esign'
+import { emailQueueConfig } from '@/configs/detail/emailQueue'
 import { accessTarget, canAccess } from '@/utils/common/routeAccess'
 
 // Doctypes whose detail page is just config on top of ConfigDetailPage (see
@@ -13,7 +13,7 @@ import { accessTarget, canAccess } from '@/utils/common/routeAccess'
 const configPage = (path, name, config) => ({
   path,
   name,
-  component: () => import('@/pages/ConfigDetailPage.vue'),
+  component: () => import('@/pages/detail/ConfigDetailPage.vue'),
   props: { config },
 })
 const CONFIG_ROUTES = [
@@ -49,7 +49,7 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/pages/Login.vue'),
+    component: () => import('@/pages/auth/Login.vue'),
     meta: { public: true },
   },
   {
@@ -57,12 +57,12 @@ const routes = [
     // /dashboard/:section (accounts, crm, marketing, operations).
     path: '/',
     name: 'Home',
-    component: () => import('@/pages/DashboardPage.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
   },
   {
     path: '/dashboard/:section?',
     name: 'Dashboard',
-    component: () => import('@/pages/DashboardPage.vue'),
+    component: () => import('@/pages/dashboard/DashboardPage.vue'),
   },
   {
     // ERP Configuration is the one Single doctype with real customization
@@ -71,7 +71,7 @@ const routes = [
     // the generic /:doctype/:name.
     path: '/settings/ERP%20Configuration',
     name: 'ERPConfigurationDetail',
-    component: () => import('@/pages/ERPConfigurationDetailPage.vue'),
+    component: () => import('@/pages/detail/ERPConfigurationDetailPage.vue'),
   },
   {
     // Single doctypes (ERP Configuration, Accounts Settings) — old desk UI
@@ -79,55 +79,55 @@ const routes = [
     // the fallback for every single doctype without its own page above.
     path: '/settings/:doctype',
     name: 'SettingsForm',
-    component: () => import('@/pages/SettingsFormPage.vue'),
+    component: () => import('@/pages/admin/SettingsFormPage.vue'),
   },
   {
     path: '/reports',
     name: 'Reports',
-    component: () => import('@/pages/ReportsHub.vue'),
+    component: () => import('@/pages/reports/ReportsHub.vue'),
   },
   {
     path: '/report/:reportName',
     name: 'Report',
-    component: () => import('@/pages/ReportPage.vue'),
+    component: () => import('@/pages/reports/ReportPage.vue'),
   },
   {
     // Where a route the user has no permission for lands (see the guard below).
     path: '/forbidden',
     name: 'Forbidden',
-    component: () => import('@/pages/Forbidden.vue'),
+    component: () => import('@/pages/auth/Forbidden.vue'),
   },
   {
     path: '/permission-manager',
     name: 'PermissionManager',
-    component: () => import('@/pages/PermissionManager.vue'),
+    component: () => import('@/pages/admin/PermissionManager.vue'),
   },
   {
     path: '/pending-pe-requests',
     name: 'PendingPERequests',
-    component: () => import('@/pages/PendingPERequests.vue'),
+    component: () => import('@/pages/admin/PendingPERequests.vue'),
   },
   {
     path: '/setup',
     name: 'SetupGuide',
-    component: () => import('@/pages/SetupGuide.vue'),
+    component: () => import('@/pages/admin/SetupGuide.vue'),
   },
   {
     // "See all Activity" from the notification bell (see NotificationsPage.vue).
     path: '/notifications',
     name: 'Notifications',
-    component: () => import('@/pages/NotificationsPage.vue'),
+    component: () => import('@/pages/notifications/NotificationsPage.vue'),
   },
   {
     // Living catalogue of the app's reusable components (see ComponentsPage.vue).
     path: '/components',
     name: 'Components',
-    component: () => import('@/pages/ComponentsPage.vue'),
+    component: () => import('@/pages/admin/ComponentsPage.vue'),
   },
   {
     path: '/email-inbox',
     name: 'EmailInbox',
-    component: () => import('@/pages/EmailInbox.vue'),
+    component: () => import('@/pages/mail/EmailInbox.vue'),
   },
   {
     // A bare doctype route is the list view — its default view. Kept last
@@ -137,25 +137,25 @@ const routes = [
     // last for readers.
     path: '/:doctype',
     name: 'DocList',
-    component: () => import('@/pages/DocListPage.vue'),
+    component: () => import('@/pages/lists/DocListPage.vue'),
   },
   {
     // The Chart of Accounts is the Account tree, company-scoped with
     // balances — a literal path ranks above the generic /:doctype/view/tree.
     path: '/Account/view/tree',
     name: 'AccountTree',
-    component: () => import('@/pages/AccountTreePage.vue'),
+    component: () => import('@/pages/lists/AccountTreePage.vue'),
   },
   {
     // Interview rounds on a month grid / timeline (see InterviewCalendarPage.vue).
     path: '/Interview/view/calendar',
     name: 'InterviewCalendar',
-    component: () => import('@/pages/InterviewCalendarPage.vue'),
+    component: () => import('@/pages/lists/InterviewCalendarPage.vue'),
   },
   {
     path: '/:doctype/view/kanban',
     name: 'Kanban',
-    component: () => import('@/pages/KanbanPage.vue'),
+    component: () => import('@/pages/lists/KanbanPage.vue'),
   },
   {
     // Non-default views for a doctype live under /:doctype/view/<viewName>,
@@ -163,7 +163,7 @@ const routes = [
     // kanban/calendar/gantt get their own entry here once they exist.
     path: '/:doctype/view/tree',
     name: 'Tree',
-    component: () => import('@/pages/TreePage.vue'),
+    component: () => import('@/pages/lists/TreePage.vue'),
   },
   {
     // Doctypes whose detail page needs customization (extra tabs, extra
@@ -174,72 +174,72 @@ const routes = [
     // way /:doctype/view/tree ranks above it below.
     path: '/Lead/:name',
     name: 'LeadDetail',
-    component: () => import('@/pages/LeadDetailPage.vue'),
+    component: () => import('@/pages/detail/LeadDetailPage.vue'),
   },
   {
     path: '/User/:name',
     name: 'UserDetail',
-    component: () => import('@/pages/UserDetailPage.vue'),
+    component: () => import('@/pages/detail/UserDetailPage.vue'),
   },
   {
     path: '/Employee/:name',
     name: 'EmployeeDetail',
-    component: () => import('@/pages/EmployeeDetailPage.vue'),
+    component: () => import('@/pages/detail/EmployeeDetailPage.vue'),
   },
   {
     path: '/Outsource/:name',
     name: 'OutsourceDetail',
-    component: () => import('@/pages/OutsourceDetailPage.vue'),
+    component: () => import('@/pages/detail/OutsourceDetailPage.vue'),
   },
   {
     path: '/Role/:name',
     name: 'RoleDetail',
-    component: () => import('@/pages/RoleDetailPage.vue'),
+    component: () => import('@/pages/detail/RoleDetailPage.vue'),
   },
   {
     path: '/Opportunity/:name',
     name: 'OpportunityDetail',
-    component: () => import('@/pages/OpportunityDetailPage.vue'),
+    component: () => import('@/pages/detail/OpportunityDetailPage.vue'),
   },
   {
     path: '/Customer/:name',
     name: 'CustomerDetail',
-    component: () => import('@/pages/CustomerDetailPage.vue'),
+    component: () => import('@/pages/detail/CustomerDetailPage.vue'),
   },
   {
     path: '/Resume/:name',
     name: 'ResumeDetail',
-    component: () => import('@/pages/ResumeDetailPage.vue'),
+    component: () => import('@/pages/detail/ResumeDetailPage.vue'),
   },
   {
     path: '/RUC/:name',
     name: 'RucDetail',
-    component: () => import('@/pages/RucDetailPage.vue'),
+    component: () => import('@/pages/detail/RucDetailPage.vue'),
   },
   {
     path: '/JDC/:name',
     name: 'JdcDetail',
-    component: () => import('@/pages/JdcDetailPage.vue'),
+    component: () => import('@/pages/detail/JdcDetailPage.vue'),
   },
   {
     path: '/Cover%20Letter/:name',
     name: 'CoverLetterDetail',
-    component: () => import('@/pages/CoverLetterDetailPage.vue'),
+    component: () => import('@/pages/detail/CoverLetterDetailPage.vue'),
   },
   {
     path: '/Training/:name',
     name: 'TrainingDetail',
-    component: () => import('@/pages/TrainingDetailPage.vue'),
+    component: () => import('@/pages/detail/TrainingDetailPage.vue'),
   },
   {
     path: '/Interview%20Support/:name',
     name: 'InterviewSupportDetail',
-    component: () => import('@/pages/InterviewSupportDetailPage.vue'),
+    component: () => import('@/pages/detail/InterviewSupportDetailPage.vue'),
   },
   {
     path: '/Technical%20Other%20Services/:name',
     name: 'TechnicalOtherServicesDetail',
-    component: () => import('@/pages/TechnicalOtherServicesDetailPage.vue'),
+    component: () => import('@/pages/detail/TechnicalOtherServicesDetailPage.vue'),
   },
   {
     // %20 rather than a literal space: this string is matched against the
@@ -250,27 +250,27 @@ const routes = [
     // a literal space.
     path: '/Email%20Domain/:name',
     name: 'EmailDomainDetail',
-    component: () => import('@/pages/EmailDomainDetailPage.vue'),
+    component: () => import('@/pages/detail/EmailDomainDetailPage.vue'),
   },
   {
     path: '/Email%20Account/:name',
     name: 'EmailAccountDetail',
-    component: () => import('@/pages/EmailAccountDetailPage.vue'),
+    component: () => import('@/pages/detail/EmailAccountDetailPage.vue'),
   },
   {
     path: '/Department/:name',
     name: 'DepartmentDetail',
-    component: () => import('@/pages/DepartmentDetailPage.vue'),
+    component: () => import('@/pages/detail/DepartmentDetailPage.vue'),
   },
   {
     path: '/Hierarchy/:name',
     name: 'HierarchyDetail',
-    component: () => import('@/pages/HierarchyDetailPage.vue'),
+    component: () => import('@/pages/detail/HierarchyDetailPage.vue'),
   },
   {
     path: '/Pdf%20Agreement%20Template/:name',
     name: 'PdfAgreementTemplateDetail',
-    component: () => import('@/pages/PdfAgreementTemplateDetailPage.vue'),
+    component: () => import('@/pages/detail/PdfAgreementTemplateDetailPage.vue'),
   },
   ...CONFIG_ROUTES,
   {
@@ -280,7 +280,7 @@ const routes = [
     // This is the fallback for every doctype without its own page above.
     path: '/:doctype/:name',
     name: 'DocDetail',
-    component: () => import('@/pages/DocDetailPage.vue'),
+    component: () => import('@/pages/detail/DocDetailPage.vue'),
   },
   {
     // Catches anything left unmatched, e.g. /:doctype/view/<unbuilt-view>
@@ -288,7 +288,7 @@ const routes = [
     // ranks a param-with-regex path (this one) below every other pattern.
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    component: () => import('@/pages/NotFound.vue'),
+    component: () => import('@/pages/auth/NotFound.vue'),
   },
 ]
 

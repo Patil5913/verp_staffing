@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { debounce } from 'frappe-ui'
 import { useResource } from './useResource'
-import { ROW_ACTIONS } from '@/detailConfigs/listOptions'
+import { ROW_ACTIONS } from '@/configs/detail/listOptions'
 
 const DEFAULT_PAGE_LENGTH = 15
 

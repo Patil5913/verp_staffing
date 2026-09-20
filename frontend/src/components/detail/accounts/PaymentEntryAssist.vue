@@ -12,7 +12,7 @@
 
     <Dialog v-model="open" :options="{ title: fetchInvoices ? 'Get Outstanding Invoices' : 'Get Outstanding Orders', size: 'md' }">
       <template #body-content>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <AppInput type="date" label="From Date" v-model="filters.from_posting_date" />
           <AppInput type="date" label="To Date" v-model="filters.to_posting_date" />
           <AppInput type="number" label="Outstanding Greater Than" v-model="filters.outstanding_amt_greater_than" />
@@ -38,7 +38,7 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // server on save.
 import { computed, reactive, ref, watch } from 'vue'
 import { call, Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'

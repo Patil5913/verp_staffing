@@ -1,9 +1,9 @@
 <template>
-  <Popover placement="bottom-end" :popover-class="'w-96'">
+  <Popover placement="bottom-end" :popover-class="'w-[min(24rem,calc(100vw-1rem))]'">
     <template #target="{ togglePopover, isOpen }">
       <button
         type="button"
-        class="relative flex h-8 w-8 items-center justify-center rounded-full text-app-text-muted transition-colors hover:bg-app-panel-2 hover:text-app-text"
+        class="relative flex h-10 w-10 items-center md:h-8 md:w-8 justify-center rounded-full text-app-text-muted transition-colors hover:bg-app-panel-2 hover:text-app-text"
         aria-label="Notifications"
         @click="
           () => {
@@ -95,7 +95,7 @@ import DOMPurify from 'dompurify'
 import { dayjs, Popover } from 'frappe-ui'
 import { useRouter } from 'vue-router'
 import { useNotifications } from '@/composables/layout/useNotifications'
-import ScrollArea from '../common/ScrollArea.vue'
+import ScrollArea from '@/components/ui/ScrollArea.vue'
 
 const router = useRouter()
 const { notifications, loading, unreadCount, load, markAllAsRead, markAsRead, resolveRoute } =

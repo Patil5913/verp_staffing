@@ -57,7 +57,7 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // left for you to give its account (typically the bank / write-off account).
 import { computed, ref } from 'vue'
 import { call, Dialog, LoadingIndicator } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'

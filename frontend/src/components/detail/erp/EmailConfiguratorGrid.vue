@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Ports ERP Configuration's Email Usage Configuration grid (email_configuration
 // / email_configuration_detail) onto AppLinkField/Checkbox/AppButton instead
@@ -77,7 +77,7 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // per-row type dropdown excludes types already used elsewhere).
 import { computed, ref, watch } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 
 const TYPE_OPTIONS = ['HR', 'Contact', 'Notification', 'Agreement', 'Support', 'Sales', 'Finance', 'Marketing', 'Operations']

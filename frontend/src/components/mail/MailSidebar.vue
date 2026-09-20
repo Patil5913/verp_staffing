@@ -38,7 +38,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 
 const props = defineProps({
   folder: { type: String, required: true },

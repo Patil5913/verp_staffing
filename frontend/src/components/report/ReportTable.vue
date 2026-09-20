@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-0 flex-col rounded-xl border border-app-border bg-app-panel shadow-sm">
     <div v-if="searchable" class="flex items-center gap-3 border-b border-app-border px-4 py-2">
-      <AppSearchInput v-model="search" class="w-72" placeholder="Search this report">
+      <AppSearchInput v-model="search" class="w-full sm:w-72" placeholder="Search this report">
       </AppSearchInput>
       <span class="text-p-xs text-app-text-muted">{{ filtered.length }} of {{ dataRows.length }} rows</span>
     </div>
@@ -77,7 +77,7 @@ import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { formatReportValue, isNumeric, linkTarget } from '@/utils/report/formatReport'
 
 const PAGE = 200

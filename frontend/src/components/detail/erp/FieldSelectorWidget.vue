@@ -124,7 +124,7 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // of hand-built gradient HTML.
 import { computed, ref, watch } from 'vue'
 import { Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 
 const props = defineProps({

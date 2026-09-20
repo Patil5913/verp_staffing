@@ -10,7 +10,7 @@
 
     <template v-else>
       <!-- Scrollable feed: notes, field changes, tasks and events, newest first -->
-      <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <div class="min-h-0 flex-1 overflow-y-auto px-3 md:px-6 py-5">
         <div v-if="allowCreate" class="mx-auto mb-5 flex max-w-2xl justify-end gap-2">
           <AppButton variant="outline" size="sm" icon="check-square" @click="openTaskDialog">Task</AppButton>
           <AppButton variant="outline" size="sm" icon="calendar" @click="openEventDialog">Event</AppButton>
@@ -142,7 +142,7 @@
       </div>
 
       <!-- Composer docked to the bottom of the tab, not the page -->
-      <div v-if="showComposer" class="shrink-0 border-t border-app-border bg-app-panel-2 px-6 py-4">
+      <div v-if="showComposer" class="shrink-0 border-t border-app-border bg-app-panel-2 px-3 md:px-6 py-4">
         <div class="mx-auto flex max-w-2xl gap-3">
           <Avatar :label="currentUserLabel" size="md" class="mt-0.5 shrink-0" />
           <div
@@ -265,8 +265,8 @@ import AppInput from '@/components/ui/AppInput.vue'
 import { computed, nextTick, reactive, ref } from 'vue'
 import DOMPurify from 'dompurify'
 import { Avatar, Dialog, FeatherIcon, LoadingIndicator, TextEditor } from 'frappe-ui'
-import AppCombobox from '@/components/common/AppCombobox.vue'
-import AppButton from '@/components/common/AppButton.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useTimeline } from '@/composables/detail/useTimeline'

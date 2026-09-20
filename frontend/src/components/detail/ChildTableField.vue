@@ -67,7 +67,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from './FieldControl.vue'
 
 const props = defineProps({

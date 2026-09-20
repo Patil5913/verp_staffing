@@ -46,7 +46,7 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // rejected by the server) or rejects the lot.
 import { reactive, ref, watch } from 'vue'
 import { call, Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'

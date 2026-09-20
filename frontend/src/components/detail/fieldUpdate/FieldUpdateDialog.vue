@@ -67,7 +67,7 @@ import AppTextarea from '@/components/ui/AppTextarea.vue'
 // straight away for the head of the department).
 import { computed, reactive, ref, watch } from 'vue'
 import { call, Dialog, LoadingIndicator } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'

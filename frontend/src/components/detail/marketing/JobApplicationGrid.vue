@@ -50,7 +50,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // editable if you created it *and* it's dated today (the desk form's
 // apply_job_application_row_locks).
 import { computed } from 'vue'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { useIsSuperior } from '@/composables/detail/useIsSuperior'
 

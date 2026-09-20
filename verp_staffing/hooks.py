@@ -28,6 +28,9 @@ website_route_rules = [
 	{"from_route": "/verp/<path:app_path>", "to_route": "verp"},
 ]
 
+# Serves the PWA service worker at /verp-sw.js (see utils/pwa.py).
+page_renderer = ["verp_staffing.utils.pwa.ServiceWorkerRenderer"]
+
 website_context = {
 	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
 	"splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",

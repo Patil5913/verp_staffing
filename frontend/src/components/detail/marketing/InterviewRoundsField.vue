@@ -64,7 +64,7 @@
 //  * Cancelled / Rescheduled rounds require "Cancelled By" + a reason;
 //  * follow_up may only step up by exactly one.
 import { computed, ref, watch } from 'vue'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'

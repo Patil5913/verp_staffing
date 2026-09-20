@@ -18,7 +18,7 @@
 // listOptions.js's EXTRA_VIEWS, so a page just drops this in.
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { EXTRA_VIEWS } from '@/detailConfigs/listOptions'
+import { EXTRA_VIEWS } from '@/configs/detail/listOptions'
 
 const props = defineProps({
   doctype: { type: String, required: true },

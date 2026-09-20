@@ -38,7 +38,7 @@
 
 <script setup>
 import { FeatherIcon } from 'frappe-ui'
-import AppButton from './AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { useConfirmDialogState } from '@/utils/common/confirmDialog'
 
 const { state, settle, onSaveClick } = useConfirmDialogState()

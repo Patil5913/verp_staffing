@@ -95,7 +95,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // lands in the Payment Verification queue.
 import { computed, reactive, ref, watch } from 'vue'
 import { Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'

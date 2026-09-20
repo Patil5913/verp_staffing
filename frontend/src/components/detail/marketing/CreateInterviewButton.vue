@@ -24,7 +24,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { call, Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
 

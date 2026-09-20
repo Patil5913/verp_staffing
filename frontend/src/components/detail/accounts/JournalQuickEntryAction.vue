@@ -26,8 +26,8 @@ import AppInput from '@/components/ui/AppInput.vue'
 // hand-built table.
 import { computed, reactive, ref, watch } from 'vue'
 import { Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
-import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import { notify } from '@/utils/common/notify'
 

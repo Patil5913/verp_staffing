@@ -2,14 +2,14 @@
   <div class="flex h-full flex-col">
     <!-- Sub navbar: doc name, search, refresh -->
     <div
-      class="grid h-11 shrink-0 grid-cols-3 items-center border-b border-app-border bg-app-panel px-6"
+      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-app-border bg-app-panel px-3 py-2 md:grid md:h-11 md:grid-cols-3 md:gap-0 md:px-6 md:py-0"
     >
-      <div class="flex min-w-0 items-center gap-3">
+      <div class="flex min-w-0 flex-1 items-center gap-3 md:flex-none">
         <h1 class="min-w-0 shrink-0 truncate text-p-lg font-medium text-app-text">{{ doctype }}</h1>
         <ViewSwitcher :doctype="doctype" current="list" />
       </div>
 
-      <div class="flex min-w-0 flex-1 items-center gap-2">
+      <div class="order-last flex w-full min-w-0 items-center gap-2 md:order-none md:w-auto md:flex-1">
         <AppSearchInput
           v-model="searchText"
           class="w-full"
@@ -25,7 +25,7 @@
               </template>
               <template #body>
                 <div
-                  class="my-2 w-[26rem] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
+                  class="my-2 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
                 >
                   <div class="flex items-center gap-2 border-b border-app-border bg-app-panel-2 px-4 py-3">
                     <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
@@ -66,7 +66,7 @@
         />
       </div>
 
-      <div class="flex items-center justify-end gap-2">
+      <div class="ml-auto flex items-center justify-end gap-2">
         <AppButton v-if="canCreate" variant="primary" icon="plus" @click="showQuickCreate = true">
           Add New
         </AppButton>
@@ -97,7 +97,7 @@
     </div>
 
     <!-- Scrollable body: permission / error / loading states, or the table -->
-    <div class="flex min-h-0 flex-1 flex-col gap-3 px-6 py-3">
+    <div class="flex min-h-0 flex-1 flex-col gap-3 px-3 md:px-6 py-3">
       <StateBanner
         v-if="meta.isPermissionError"
         icon="lock"
@@ -133,7 +133,7 @@
           v-else
           class="doc-table-scroll max-h-full overflow-auto rounded-lg border border-app-border bg-app-panel"
         >
-          <table v-if="rows.length" class="doc-table w-full table-fixed border-collapse">
+          <table v-if="rows.length" class="doc-table w-full min-w-[42rem] table-fixed border-collapse md:min-w-0">
             <thead>
               <tr>
                 <th v-if="canDelete" class="sticky top-0 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
@@ -217,7 +217,7 @@
          flush with the sidebar's profile footer -->
     <div
       v-if="showFooter"
-      class="flex h-[57px] shrink-0 items-center justify-between gap-2 border-t border-app-border bg-app-panel px-6"
+      class="flex h-[57px] shrink-0 items-center justify-between gap-2 border-t border-app-border bg-app-panel px-3 md:px-6"
     >
       <AppCombobox
         :model-value="String(pageLength)"
@@ -263,7 +263,7 @@
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
-import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from 'frappe-ui'
@@ -272,14 +272,14 @@ import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme } from '@/utils/list/statusTheme'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
-import { BULK_ACTIONS, LIST_HEADERS, NO_MANUAL_CREATE, ROW_ACTIONS } from '@/detailConfigs/listOptions'
+import { BULK_ACTIONS, LIST_HEADERS, NO_MANUAL_CREATE, ROW_ACTIONS } from '@/configs/detail/listOptions'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
 import QuickCreateDialog from './QuickCreateDialog.vue'
 import Pagination from './Pagination.vue'
-import StateBanner from '../common/StateBanner.vue'
+import StateBanner from '@/components/common/StateBanner.vue'
 
 const props = defineProps({
   doctype: { type: String, required: true },

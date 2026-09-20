@@ -1,6 +1,6 @@
 <template>
   <section class="flex h-full min-h-0 w-full flex-col bg-app-panel">
-    <div v-if="!message" class="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+    <div v-if="!message" class="flex h-full flex-col items-center justify-center gap-2 px-3 md:px-6 text-center">
       <span class="lucide-mail-open size-12 text-app-text-muted/60" />
       <p class="text-p-lg font-medium text-app-text">Select a message to read</p>
       <p class="text-p-sm text-app-text-muted">{{ hint }}</p>
@@ -35,7 +35,7 @@
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <div class="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-5">
+        <div class="mx-auto flex max-w-3xl flex-col gap-4 px-3 md:px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <h2 class="text-xl font-semibold leading-snug text-app-text">{{ message.subject || '(no subject)' }}</h2>
             <span v-if="folder === 'spam'" class="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-p-xs font-medium text-red-700">Spam</span>
@@ -124,7 +124,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { LoadingIndicator, TextEditor } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import MailBody from './MailBody.vue'
 import { useSendMail } from '@/composables/mail/useSendMail'
 import { avatarTone, fileSize, initials, mailDate, quoteMessage, senderName, withPrefix } from '@/utils/mail/format'

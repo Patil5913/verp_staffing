@@ -1,5 +1,5 @@
 <template>
-  <div class="flex shrink-0 items-center gap-2">
+  <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
     <!-- Any record-specific actions (Create Opportunity, Send Reset
     Password Email, Enable/Disable, ...) always go before Save/Delete. -->
     <slot />
@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import AppButton from './AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 defineProps({
   showSave: { type: Boolean, default: false },

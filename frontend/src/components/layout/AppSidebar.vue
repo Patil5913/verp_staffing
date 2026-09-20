@@ -1,7 +1,9 @@
 <template>
+  <!-- Phones: off-canvas drawer (always the full-width variant). md+: the
+  collapsible rail beside the content. -->
   <nav
-    class="h-full shrink-0 overflow-hidden border-r border-app-border bg-app-panel transition-[width] duration-200 ease-in-out"
-    :class="sidebarOpen ? 'w-64' : 'w-16'"
+    class="fixed inset-y-0 left-0 z-40 h-full shrink-0 overflow-hidden border-r border-app-border bg-app-panel pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] transition-[width,transform] duration-200 ease-in-out md:static md:z-auto md:translate-x-0 md:pb-0 md:pt-0"
+    :class="[sidebarOpen ? 'w-64' : 'w-16', isMobile && !mobileNavOpen ? '-translate-x-full' : 'translate-x-0']"
   >
     <div class="flex h-full flex-col" :class="sidebarOpen ? 'w-64' : 'w-16'">
       <ScrollArea class="flex-1 px-2 py-3">
@@ -109,10 +111,11 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useSidebar } from '@/composables/layout/useSidebar'
 import { resolveIconName } from '@/utils/layout/sidebarIcons'
 import SidebarLink from './SidebarLink.vue'
-import ScrollArea from '../common/ScrollArea.vue'
+import ScrollArea from '@/components/ui/ScrollArea.vue'
 import ProfileMenu from './ProfileMenu.vue'
 
 const {
@@ -120,11 +123,16 @@ const {
   navItems,
   expandedKey,
   setExpandedKey,
-  sidebarOpen,
+  sidebarOpen: desktopSidebarOpen,
   setSidebarOpen,
+  isMobile,
+  mobileNavOpen,
   isRouteActive,
   loaded,
 } = useSidebar()
+
+// the drawer is never the collapsed icon rail
+const sidebarOpen = computed(() => isMobile.value || desktopSidebarOpen.value)
 
 function childActive(childKey) {
   const item = navItems.value[childKey]

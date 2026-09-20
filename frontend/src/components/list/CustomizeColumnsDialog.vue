@@ -6,7 +6,7 @@
         is a shared setting — it applies to every user and role, not just yours.
       </p>
 
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="flex min-w-0 flex-col gap-2">
           <h4 class="text-p-sm font-medium text-app-text-muted">Available columns</h4>
           <draggable
@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { computed, ref, watch } from 'vue'
 import { Dialog, FeatherIcon } from 'frappe-ui'
 import draggable from 'vuedraggable'

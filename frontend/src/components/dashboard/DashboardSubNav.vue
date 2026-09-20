@@ -3,10 +3,10 @@
   the section tabs (Overview / Accounts / CRM / Marketing / Operations) with
   the period, company and refresh on the right — SubNavbar's fixed three-column
   grid has no room for a row of tabs. -->
-  <div class="flex h-11 shrink-0 items-center gap-4 border-b border-app-border bg-app-panel px-6">
+  <div class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-app-border bg-app-panel px-3 py-2 md:h-11 md:flex-nowrap md:px-6 md:py-0">
     <h1 class="shrink-0 text-p-lg font-medium text-app-text">Dashboard</h1>
 
-    <nav class="[scrollbar-width:none] flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <nav class="[scrollbar-width:none] order-last flex w-full min-w-0 items-center gap-1 overflow-x-auto md:order-none md:w-auto md:flex-1">
       <router-link
         v-for="s in sections"
         :key="s.key"
@@ -18,8 +18,8 @@
       </router-link>
     </nav>
 
-    <div class="flex shrink-0 items-center gap-2">
-      <AppLinkField v-if="showCompany" v-model="company" doctype="Company" compact hide-add-new placeholder="Company" class="w-44 shrink-0" />
+    <div class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2 md:shrink-0 md:flex-nowrap">
+      <AppLinkField v-if="showCompany" v-model="company" doctype="Company" compact hide-add-new placeholder="Company" class="w-36 shrink-0 md:w-44" />
 
       <AppDatePicker v-if="preset === 'custom'" v-model="range" mode="range" compact placeholder="Pick a range" class="w-60 shrink-0" />
       <AppCombobox v-model="preset" :options="PRESETS" compact placeholder="Period" class="w-36 shrink-0" />
@@ -30,10 +30,10 @@
 </template>
 
 <script setup>
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { computed } from 'vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
-import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import { PRESETS } from '@/utils/dashboard/format'
 

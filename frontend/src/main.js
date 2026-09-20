@@ -5,7 +5,8 @@ import { FrappeUI, setConfig, frappeRequest } from 'frappe-ui'
 
 import App from './App.vue'
 import router from './router'
-import { deskToSpaPath, isDeskOnlyPath, isDeskPath } from './utils/common/deskRoute'
+import { registerServiceWorker } from '@/utils/pwa/registerServiceWorker'
+import { deskToSpaPath, isDeskOnlyPath, isDeskPath } from '@/utils/common/deskRoute'
 
 setConfig('resourceFetcher', frappeRequest)
 
@@ -42,3 +43,5 @@ app.use(FrappeUI)
 router.isReady().then(() => {
   app.mount('#app')
 })
+
+registerServiceWorker()

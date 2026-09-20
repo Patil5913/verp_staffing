@@ -79,3 +79,37 @@ body {
 [data-slot='item'][data-state='checked'] {
   background-color: var(--app-primary-tint) !important;
 }
+
+/* ---- Mobile / PWA ------------------------------------------------------ */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* no pull-to-refresh / rubber-banding of the whole app shell */
+  overscroll-behavior-y: none;
+}
+
+@media (max-width: 767px) {
+  /* iOS Safari zooms the page when a focused field is under 16px */
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Dialogs from frappe-ui: keep them inside the viewport on phones */
+@media (max-width: 639px) {
+  [role='dialog'] {
+    max-width: calc(100vw - 1rem);
+  }
+}
+
+/* Phone-sized touch targets for icon-only buttons */
+@media (pointer: coarse) {
+  button {
+    touch-action: manipulation;
+  }
+}

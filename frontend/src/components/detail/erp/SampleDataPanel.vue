@@ -62,7 +62,7 @@
 // the same "here's what gets deleted" listing either way.
 import { computed, ref } from 'vue'
 import { Dialog } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 

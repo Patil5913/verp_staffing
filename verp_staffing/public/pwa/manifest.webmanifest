@@ -1,0 +1,17 @@
+{
+  "name": "Vrugle Staffing",
+  "short_name": "Vrugle",
+  "description": "Vrugle Staffing ERP",
+  "id": "/verp",
+  "start_url": "/verp",
+  "scope": "/verp",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f8fb",
+  "theme_color": "#0057e5",
+  "icons": [
+    { "src": "/assets/verp_staffing/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/verp_staffing/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/verp_staffing/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

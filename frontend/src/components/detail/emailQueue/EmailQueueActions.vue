@@ -11,7 +11,7 @@
 // the queue for the scheduler).
 import { computed, ref } from 'vue'
 import { call } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
 

@@ -41,7 +41,7 @@
 // paged 5 at a time via get_linked_invoices.
 import { ref, watch } from 'vue'
 import { call } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'

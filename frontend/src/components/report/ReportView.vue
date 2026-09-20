@@ -13,7 +13,7 @@
       </template>
     </SubNavbar>
 
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 md:px-6 py-4">
       <StateBanner v-if="meta.hasError" icon="alert-triangle" title="Couldn't open this report" :description="meta.errorMessage" />
 
       <template v-else-if="ready">
@@ -55,13 +55,13 @@
 // funnels and target tracking all go through here; only the config differs.
 import { computed } from 'vue'
 import { AxisChart, LoadingIndicator } from 'frappe-ui'
-import AppButton from '@/components/common/AppButton.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ReportBarChart from '@/components/report/ReportBarChart.vue'
 import ReportFilterBar from '@/components/report/ReportFilterBar.vue'
 import ReportTable from '@/components/report/ReportTable.vue'
-import { REPORT_CONFIGS } from '@/reportConfigs'
+import { REPORT_CONFIGS } from '@/configs/reports'
 import { useReport } from '@/composables/report/useReport'
 import { downloadCsv, formatCurrency, toCsv } from '@/utils/report/formatReport'
 
