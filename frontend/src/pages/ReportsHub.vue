@@ -1,9 +1,8 @@
 <template>
   <div class="flex h-full flex-col bg-app-bg">
     <SubNavbar title="Reports">
-      <TextInput v-model="search" class="w-full" placeholder="Find a report">
-        <template #prefix><FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" /></template>
-      </TextInput>
+      <AppSearchInput v-model="search" class="w-full" placeholder="Find a report">
+      </AppSearchInput>
     </SubNavbar>
 
     <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -37,11 +36,12 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 // The reports hub: every report the user may open, grouped by area, so reports
 // are findable without knowing which sidebar section holds them (Trial Balance,
 // for one, isn't in the sidebar at all).
 import { computed, ref } from 'vue'
-import { FeatherIcon, LoadingIndicator, TextInput } from 'frappe-ui'
+import { FeatherIcon, LoadingIndicator } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import { useResource } from '@/composables/list/useResource'

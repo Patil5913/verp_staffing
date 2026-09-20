@@ -4,6 +4,7 @@
 import json
 
 import frappe
+from verp_staffing.utils.desk_routes import link_to_form
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.utils.hierarchy_roles import (
@@ -63,7 +64,7 @@ class Hierarchy(Document):
             for row in auto_cleared:
 
                 employees.append(
-					frappe.utils.get_link_to_form(
+					link_to_form(
 						"Employee",
 						row["employee"],
 					)

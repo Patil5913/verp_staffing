@@ -9,7 +9,7 @@
         <p v-if="!pending?.remarks" class="text-p-base text-app-text-muted">
           {{ pending?.confirm || `Mark this ${doctype} as ${pending?.action}? This cannot be undone.` }}
         </p>
-        <FormControl v-else type="textarea" label="Reason" v-model="remarks" required />
+        <AppInput v-else type="textarea" label="Reason" v-model="remarks" required />
       </template>
       <template #actions>
         <AppButton :loading="running" :disabled="pending?.remarks && !remarks.trim()" @click="run">
@@ -21,12 +21,13 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // The Actions-menu buttons on CR ("Resolve"/"Refund" with a reason) and
 // Onboardings ("Mark Completed"/"Mark Returned" with a confirm) — only
 // offered while the latest history row is still in its open status, and each
 // one calls the doctype's own whitelisted resolver, then reloads the record.
 import { computed, ref } from 'vue'
-import { Dialog, FormControl } from 'frappe-ui'
+import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'

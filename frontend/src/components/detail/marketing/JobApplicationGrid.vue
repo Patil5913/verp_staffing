@@ -19,23 +19,10 @@
         <tbody>
           <tr v-for="(row, idx) in rows" :key="row.name || `new-${idx}`" class="border-t border-app-border">
             <td class="px-3 py-1.5">
-              <input
-                type="date"
-                class="h-8 w-36 rounded-md border border-app-border bg-app-panel px-2 text-p-sm text-app-text disabled:opacity-60"
-                :value="row.date"
-                :disabled="!isSuperior || !editable"
-                @change="(e) => setField(idx, 'date', e.target.value)"
-              />
+              <AppInput type="date" compact class="w-36" :model-value="row.date" :disabled="!isSuperior || !editable" @update:model-value="(v) => setField(idx, 'date', v)" />
             </td>
             <td v-for="key in ['small_application', 'large_application']" :key="key" class="px-3 py-1.5">
-              <input
-                type="number"
-                min="0"
-                class="h-8 w-24 rounded-md border border-app-border bg-app-panel px-2 text-p-sm text-app-text disabled:opacity-60"
-                :value="row[key] ?? 0"
-                :disabled="rowLocked(row) || !editable"
-                @input="(e) => setCount(idx, key, e.target.value)"
-              />
+              <AppInput type="number" min="0" compact class="w-24" :model-value="row[key] ?? 0" :disabled="rowLocked(row) || !editable" @update:model-value="(v) => setCount(idx, key, v)" />
             </td>
             <td class="px-3 py-1.5 font-medium text-app-text">{{ row.total_application ?? 0 }}</td>
             <td class="px-3 py-1.5 text-app-text-muted">{{ row.owner || 'You' }}</td>
@@ -56,6 +43,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // Marketing's "Job Application Count" grid, ported from marketing.js:
 // total = small + large (recomputed on every edit), a new row defaults to
 // today, and — unless you're a superior of the assignee — a row is only

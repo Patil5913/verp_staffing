@@ -5,10 +5,30 @@ import { FrappeUI, setConfig, frappeRequest } from 'frappe-ui'
 
 import App from './App.vue'
 import router from './router'
+import { deskToSpaPath, isDeskOnlyPath, isDeskPath } from './utils/common/deskRoute'
 
 setConfig('resourceFetcher', frappeRequest)
 
 let app = createApp(App)
+
+// Server-written messages (msgprint, validation errors, notifications) still
+// carry classic-desk links like /app/sales-order/SO-1. Catch those clicks and
+// open the SPA equivalent instead of the old desk.
+document.addEventListener(
+  'click',
+  (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return
+    const a = e.target instanceof Element ? e.target.closest('a[href]') : null
+    const href = a?.getAttribute('href')
+    if (!isDeskPath(href) || isDeskOnlyPath(href)) return
+    e.preventDefault()
+    deskToSpaPath(href).then((path) => {
+      if (a.target === '_blank') window.open(`/verp${path === '/' ? '' : path}`, '_blank', 'noopener')
+      else router.push(path)
+    })
+  },
+  true,
+)
 
 app.use(router)
 app.use(FrappeUI)

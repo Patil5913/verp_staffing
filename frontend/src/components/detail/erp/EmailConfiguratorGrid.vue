@@ -5,7 +5,7 @@
         <thead>
           <tr>
             <th class="h-9 w-10 border-b border-app-border bg-app-panel-2 px-3">
-              <Checkbox :model-value="allSelected" :disabled="!rows.length" @update:model-value="toggleSelectAll" />
+              <AppCheckbox :model-value="allSelected" :indeterminate="!allSelected && selected.size > 0" :disabled="!rows.length" @update:model-value="toggleSelectAll" />
             </th>
             <th class="h-9 w-10 border-b border-app-border bg-app-panel-2 px-3 text-left text-p-sm font-semibold text-app-text-muted">
               No.
@@ -21,7 +21,7 @@
         <tbody>
           <tr v-for="(row, idx) in rows" :key="idx" class="align-top">
             <td class="border-b border-app-border p-2">
-              <Checkbox :model-value="selected.has(idx)" @update:model-value="(v) => toggleRow(idx, v)" />
+              <AppCheckbox :model-value="selected.has(idx)" @update:model-value="(v) => toggleRow(idx, v)" />
             </td>
             <td class="border-b border-app-border p-2 text-p-sm text-app-text-muted">{{ idx + 1 }}</td>
             <td class="w-72 border-b border-app-border p-2">
@@ -48,14 +48,7 @@
                     <FeatherIcon name="x" class="h-3 w-3" />
                   </button>
                 </span>
-                <select
-                  v-if="!disabled && selectableTypes(idx).length"
-                  class="h-7 rounded-md border border-app-border bg-app-panel px-1.5 text-p-xs text-app-text focus:border-app-primary focus:outline-none"
-                  @change="(e) => addType(idx, e.target.value, e.target)"
-                >
-                  <option value="">+ Add type</option>
-                  <option v-for="opt in selectableTypes(idx)" :key="opt" :value="opt">{{ opt }}</option>
-                </select>
+                <AppCombobox v-if="!disabled && selectableTypes(idx).length" compact class="w-36" model-value="" placeholder="+ Add type" :options="selectableTypes(idx)" @update:model-value="(v) => addType(idx, v)" />
                 <span v-else-if="!disabled" class="text-p-xs text-app-text-muted">All types used</span>
               </div>
             </td>
@@ -75,13 +68,15 @@
 </template>
 
 <script setup>
+import AppCombobox from '@/components/common/AppCombobox.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Ports ERP Configuration's Email Usage Configuration grid (email_configuration
 // / email_configuration_detail) onto AppLinkField/Checkbox/AppButton instead
 // of a hand-built HTML table — same row shape ({email_account, types}), same
 // "each type usable in only one row" constraint (enforced the same way: the
 // per-row type dropdown excludes types already used elsewhere).
 import { computed, ref, watch } from 'vue'
-import { Checkbox, FeatherIcon } from 'frappe-ui'
+import { FeatherIcon } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 
@@ -141,10 +136,9 @@ function selectableTypes(idx) {
   const rowTypes = rows.value[idx].types
   return TYPE_OPTIONS.filter((t) => !allUsedTypes.value.has(t) || rowTypes.includes(t)).filter((t) => !rowTypes.includes(t))
 }
-function addType(idx, type, selectEl) {
+function addType(idx, type) {
   if (!type) return
   if (!rows.value[idx].types.includes(type)) rows.value[idx].types.push(type)
-  if (selectEl) selectEl.value = ''
   emitUpdate()
 }
 function removeType(idx, type) {

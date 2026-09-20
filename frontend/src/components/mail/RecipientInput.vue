@@ -16,12 +16,12 @@
         <span class="lucide-x size-3" />
       </button>
     </span>
-    <input
+    <AppInput
       ref="input"
       v-model="draft"
-      type="text"
+      bare
       :placeholder="model.length ? '' : placeholder"
-      class="min-w-[8rem] flex-1 bg-transparent py-0.5 text-p-sm text-app-text placeholder:text-app-text-muted focus:outline-none"
+      class="min-w-[8rem] flex-1 py-0.5"
       @keydown.enter.prevent="commit"
       @keydown.tab="commit"
       @keydown="onKey"
@@ -32,6 +32,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // A field of email "chips": type an address and press Enter, comma, space or
 // Tab; paste a list; Backspace on an empty field removes the last one. Bad
 // addresses stay visible in red so they can be fixed rather than vanishing.

@@ -19,7 +19,7 @@
     </div>
 
     <div v-else class="flex flex-col gap-4 rounded-lg border border-app-border bg-app-panel p-6">
-      <FormControl
+      <AppInput
         v-for="field in fields"
         :key="field.fieldname"
         :type="controlType(field)"
@@ -31,16 +31,18 @@
       />
 
       <div v-if="canWrite" class="flex justify-end border-t border-app-border pt-4">
-        <Button variant="solid" :loading="save.loading" @click="onSave">Save</Button>
+        <AppButton variant="solid" :loading="save.loading" @click="onSave">Save</AppButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/common/AppButton.vue'
 import { computed, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Button, FormControl, LoadingIndicator } from 'frappe-ui'
+import { LoadingIndicator } from 'frappe-ui'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 import StateBanner from '@/components/common/StateBanner.vue'

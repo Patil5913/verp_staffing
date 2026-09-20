@@ -41,15 +41,13 @@
           <ChildTableField :table="t.table" :rows="tableRows[t.fieldname] || []" @update:rows="(rows) => (tableRows[t.fieldname] = rows)" />
         </div>
 
-        <div v-if="selected.size" class="flex flex-col gap-1.5">
-          <label class="text-p-sm font-medium text-app-text-muted">Reason for update <span class="text-red-600">*</span></label>
-          <textarea
-            v-model="reason"
-            rows="3"
-            class="w-full resize-none rounded-lg border border-app-border bg-app-panel px-3 py-2 text-p-sm text-app-text focus:border-app-primary focus:outline-none"
-            placeholder="Explain why these details need to change."
-          />
-        </div>
+        <AppTextarea
+          v-if="selected.size"
+          v-model="reason"
+          label="Reason for update"
+          required
+          placeholder="Explain why these details need to change."
+        />
       </div>
     </template>
     <template #actions>
@@ -61,6 +59,7 @@
 </template>
 
 <script setup>
+import AppTextarea from '@/components/ui/AppTextarea.vue'
 // The "Update Detail" dialog (permission_feature.js's _open_update_detail_dialog):
 // a department member — or the customer's owner — picks which Lead Detail Form
 // fields need changing, enters new values and a reason, and the request is

@@ -2,11 +2,10 @@
   <div class="flex h-full flex-col bg-app-bg">
     <SubNavbar :title="doctype">
       <template #left><ViewSwitcher :doctype="doctype" current="kanban" /></template>
-      <TextInput v-model="search" class="w-full" placeholder="Search cards">
-        <template #prefix><FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" /></template>
-      </TextInput>
+      <AppSearchInput v-model="search" class="w-full" placeholder="Search cards">
+      </AppSearchInput>
       <template #right>
-        <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="load" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="load" />
       </template>
     </SubNavbar>
 
@@ -42,8 +41,8 @@
     <Dialog v-model="reason.open" :options="{ title: `Mark as ${reason.to}`, size: 'md' }">
       <template #body-content>
         <div class="flex flex-col gap-4">
-          <FormControl type="select" label="Cancelled By" v-model="reason.by" :options="['', 'Company', 'Candidate']" required />
-          <FormControl type="textarea" label="Reason" v-model="reason.text" required />
+          <AppInput type="select" label="Cancelled By" v-model="reason.by" :options="['', 'Company', 'Candidate']" required />
+          <AppInput type="textarea" label="Reason" v-model="reason.text" required />
         </div>
       </template>
       <template #actions>
@@ -54,13 +53,15 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
+import AppInput from '@/components/ui/AppInput.vue'
 // Kanban view of a doctype (today: Interview, ported from interview_list.js).
 // Loads every card, groups them by status column, and turns a drag into the
 // doctype's own move method — optimistic, rolled back if the server refuses
 // (e.g. a round that's already Completed can't be moved again).
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button, call, Dialog, FeatherIcon, FormControl, LoadingIndicator, TextInput } from 'frappe-ui'
+import { call, Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import StateBanner from '@/components/common/StateBanner.vue'

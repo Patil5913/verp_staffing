@@ -4,8 +4,8 @@
   <Dialog v-model="open" :options="{ title: 'Create Interview', size: 'md' }">
     <template #body-content>
       <div class="flex flex-col gap-4">
-        <FormControl label="Company" v-model="company" required />
-        <FormControl label="Role" v-model="role" required />
+        <AppInput label="Company" v-model="company" required />
+        <AppInput label="Role" v-model="role" required />
       </div>
     </template>
     <template #actions>
@@ -17,12 +17,13 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // marketing.js's "Create Interview" dialog: company + role, status taken
 // from ERP Configuration's default_interview_status, inserted with the
 // Marketing record as its link, then straight to the new Interview.
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { call, Dialog, FormControl } from 'frappe-ui'
+import { call, Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'

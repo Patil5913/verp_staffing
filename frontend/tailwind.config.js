@@ -1,3 +1,4 @@
+import colors from 'tailwindcss/colors'
 import frappeUIPreset from 'frappe-ui/tailwind'
 import { ALL_ICON_NAMES } from './src/utils/layout/sidebarIcons.js'
 import { DASHBOARD_ICON_NAMES } from './src/utils/dashboard/icons.js'
@@ -18,6 +19,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        // frappe-ui's preset replaces Tailwind's palette and ships only
+        // amber/blue/green/red/violet (+ its own grays), so classes like
+        // bg-emerald-500 or border-sky-300 silently generated nothing — no
+        // dots on the Chart of Accounts, no info banners. Bring back the
+        // families this app uses.
+        emerald: colors.emerald,
+        rose: colors.rose,
+        sky: colors.sky,
+        teal: colors.teal,
+        pink: colors.pink,
+        indigo: colors.indigo,
+        slate: colors.slate,
         // brand blue, derived from the Vrugle "/V" logo mark (#0057E5)
         brand: {
           50: '#F0F6FF',

@@ -26,7 +26,7 @@
           class="flex items-center gap-2 rounded-lg border border-app-border px-3 py-2 transition-colors"
           :class="canWrite ? 'cursor-pointer hover:border-app-primary/40 hover:bg-app-panel-2' : 'opacity-70'"
         >
-          <Checkbox :model-value="checked.has(role)" :disabled="!canWrite" @update:model-value="toggle(role)" />
+          <AppCheckbox :model-value="checked.has(role)" :disabled="!canWrite" @update:model-value="toggle(role)" />
           <span class="truncate text-p-sm text-app-text">{{ role }}</span>
         </label>
       </div>
@@ -37,8 +37,9 @@
 </template>
 
 <script setup>
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import { computed } from 'vue'
-import { Checkbox, LoadingIndicator } from 'frappe-ui'
+import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useUserRoles } from '@/composables/detail/useUserRoles'

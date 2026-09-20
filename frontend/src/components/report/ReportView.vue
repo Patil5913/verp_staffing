@@ -9,7 +9,7 @@
       <p v-if="description" class="truncate text-p-sm text-app-text-muted">{{ description }}</p>
       <template #right>
         <AppButton variant="outline" size="sm" icon="download" :disabled="!rows.length" @click="exportCsv">Export CSV</AppButton>
-        <Button variant="ghost" icon="refresh-cw" tooltip="Run again" :loading="run.isLoading" @click="execute" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Run again" :loading="run.isLoading" @click="execute" />
       </template>
     </SubNavbar>
 
@@ -54,7 +54,7 @@
 // presentation config (reportConfigs.js). Financial statements, ledgers,
 // funnels and target tracking all go through here; only the config differs.
 import { computed } from 'vue'
-import { AxisChart, Button, LoadingIndicator } from 'frappe-ui'
+import { AxisChart, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'

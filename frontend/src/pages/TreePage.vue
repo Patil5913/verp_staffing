@@ -2,13 +2,12 @@
   <div class="flex h-full flex-col bg-app-bg">
     <SubNavbar :title="doctype">
       <template #left><ViewSwitcher :doctype="doctype" current="tree" /></template>
-      <TextInput v-model="search" class="w-full" placeholder="Search">
-        <template #prefix><FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" /></template>
-      </TextInput>
+      <AppSearchInput v-model="search" class="w-full" placeholder="Search">
+      </AppSearchInput>
       <template #right>
         <AppButton variant="outline" size="sm" icon="chevrons-down" @click="tree?.expandAll()">Expand all</AppButton>
         <AppButton variant="outline" size="sm" icon="chevrons-up" @click="tree?.collapseAll()">Collapse</AppButton>
-        <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
       </template>
     </SubNavbar>
 
@@ -26,12 +25,13 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 // Generic tree view for any tree doctype (Company, Item Category, ...) via
 // Frappe's stock treeview endpoint. The Account tree has its own page
 // (AccountTreePage.vue) — it needs company scoping and balances.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button, call, FeatherIcon, TextInput } from 'frappe-ui'
+import { call, FeatherIcon } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'

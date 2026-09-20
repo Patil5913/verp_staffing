@@ -61,14 +61,7 @@
             editor-class="min-h-[120px] rounded-lg border border-app-border px-3 py-2 text-p-sm"
             @change="(html) => (values[keyOf(b)] = html)"
           />
-          <input
-            v-else
-            :type="b.type === 'Number' ? 'number' : b.type === 'Date' ? 'date' : 'text'"
-            :placeholder="`Enter ${b.label || b.name}…`"
-            :value="values[keyOf(b)] || ''"
-            class="h-9 w-full rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20"
-            @input="(e) => (values[keyOf(b)] = e.target.value)"
-          />
+          <AppInput v-else :type="b.type === 'Number' ? 'number' : b.type === 'Date' ? 'date' : 'text'" :placeholder="`Enter ${b.label || b.name}…`" :model-value="values[keyOf(b)] || ''" @update:model-value="(v) => (values[keyOf(b)] = v)" />
         </div>
       </div>
 
@@ -82,6 +75,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // The Sales Order "Agreements" module (public/js/salesOrder.js's
 // render_agreement_module): every agreement raised for this order with its
 // PDF and email status (Send / Resend, throttled server-side to one every

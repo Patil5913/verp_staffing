@@ -1062,7 +1062,7 @@ function _open_accept_updates_dialog(frm, pending_requests, mode, field_meta = {
 		val = String(val).trim();
 		const meta = field_meta[fn] || {};
 		if (meta.fieldtype === "Link")
-			return `<a href="/app/file/${encodeURIComponent(val)}" target="_blank" style="color:var(--primary, var(--text-color));font-weight:500;">📎 ${frappe.utils.escape_html(val)}</a>`;
+			return `<a href="/verp/File/${encodeURIComponent(val)}" target="_blank" style="color:var(--primary, var(--text-color));font-weight:500;">📎 ${frappe.utils.escape_html(val)}</a>`;
 		return frappe.utils.escape_html(val);
 	}
 
@@ -1285,7 +1285,7 @@ function _fg_rebuild(dialog, fields, current_values, saved) {
 			inp_html = `<input type="checkbox" class="fg-new-input" data-fieldname="${fn}" data-old="${old_val}" ${saved_val == "1" ? "checked" : ""} />`;
 		} else if (fieldtype === "Link") {
 			const cur_html = old_val
-				? `<a href="/app/file/${encodeURIComponent(old_val)}" target="_blank" style="color:var(--primary, var(--text-color));font-weight:500;">📎 View Current File</a>`
+				? `<a href="/verp/File/${encodeURIComponent(old_val)}" target="_blank" style="color:var(--primary, var(--text-color));font-weight:500;">📎 View Current File</a>`
 				: `<span style="color:var(--color-text-tertiary);font-style:italic;">empty</span>`;
 			container.append(`<div class="fg-input-block" style="margin-bottom:18px;padding:12px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary);color:var(--text-color);">
 				<div style="font-size:12px;font-weight:600;margin-bottom:10px;">${frappe.utils.escape_html(label)}</div>

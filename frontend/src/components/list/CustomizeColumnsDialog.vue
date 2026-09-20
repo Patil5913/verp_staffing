@@ -48,7 +48,7 @@
               >
                 <FeatherIcon name="move" class="h-3.5 w-3.5 shrink-0 text-app-text-muted" />
                 <span class="min-w-0 flex-1 truncate">{{ element.label }}</span>
-                <Button variant="ghost" icon="x" size="sm" @click="removeColumn(element)" />
+                <AppButton variant="ghost" icon="x" size="sm" @click="removeColumn(element)" />
               </div>
             </template>
             <template #footer>
@@ -63,7 +63,7 @@
 
     <template #actions>
       <div class="flex w-full items-center justify-between">
-        <Button
+        <AppButton
           variant="outline"
           theme="red"
           icon-left="rotate-ccw"
@@ -72,10 +72,10 @@
           @click="onReset"
         >
           Reset to default
-        </Button>
+        </AppButton>
         <div class="flex gap-2">
-          <Button variant="outline" icon-left="x" @click="isOpen = false">Cancel</Button>
-          <Button
+          <AppButton variant="outline" icon-left="x" @click="isOpen = false">Cancel</AppButton>
+          <AppButton
             variant="solid"
             icon-left="save"
             :disabled="!selected.length || !isDirty"
@@ -83,7 +83,7 @@
             @click="onSave"
           >
             Save
-          </Button>
+          </AppButton>
         </div>
       </div>
     </template>
@@ -91,8 +91,9 @@
 </template>
 
 <script setup>
+import AppButton from '@/components/common/AppButton.vue'
 import { computed, ref, watch } from 'vue'
-import { Button, Dialog, FeatherIcon } from 'frappe-ui'
+import { Dialog, FeatherIcon } from 'frappe-ui'
 import draggable from 'vuedraggable'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'

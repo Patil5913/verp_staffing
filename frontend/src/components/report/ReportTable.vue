@@ -1,9 +1,8 @@
 <template>
   <div class="flex min-h-0 flex-col rounded-xl border border-app-border bg-app-panel shadow-sm">
     <div v-if="searchable" class="flex items-center gap-3 border-b border-app-border px-4 py-2">
-      <TextInput v-model="search" class="w-72" placeholder="Search this report">
-        <template #prefix><FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" /></template>
-      </TextInput>
+      <AppSearchInput v-model="search" class="w-72" placeholder="Search this report">
+      </AppSearchInput>
       <span class="text-p-xs text-app-text-muted">{{ filtered.length }} of {{ dataRows.length }} rows</span>
     </div>
 
@@ -69,6 +68,7 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 // The result grid. Flat reports get sortable columns, search and "show more";
 // statements ('tree' layout) keep the server's row order, indent by level, bold
 // their totals and pin the account column while you scroll across periods.
@@ -76,7 +76,7 @@
 // links that open the linked record), and a report config can tint rows.
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { FeatherIcon, TextInput } from 'frappe-ui'
+import { FeatherIcon } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import { formatReportValue, isNumeric, linkTarget } from '@/utils/report/formatReport'
 

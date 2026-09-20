@@ -40,6 +40,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Avatar, Dropdown, call } from 'frappe-ui'
 import { useTheme } from '@/composables/common/useTheme'
 import { notify } from '@/utils/common/notify'
@@ -49,6 +50,7 @@ defineProps({
   collapsed: { type: Boolean, default: false },
 })
 
+const router = useRouter()
 const fullName = window.full_name || window.user || 'User'
 const userEmail = window.user && window.user !== fullName ? window.user : ''
 const userImage = window.user_image || null
@@ -58,12 +60,8 @@ const { preference, setPreference } = useTheme()
 const showShortcuts = ref(false)
 
 function openSettings() {
-  // The user's own User doctype record, not the generic "user-profile" page.
-  if (window.user) {
-    window.location.href = `/app/user/${encodeURIComponent(window.user)}`
-  } else {
-    window.location.href = '/app/user-profile'
-  }
+  // The user's own User record, in this app.
+  router.push(window.user ? `/User/${encodeURIComponent(window.user)}` : '/')
 }
 
 async function logout() {

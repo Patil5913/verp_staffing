@@ -5,17 +5,17 @@
       title="Page not found"
       :description="`There's nothing at ${path}.`"
     >
-      <Button variant="solid" theme="blue" @click="router.push('/')">
+      <AppButton variant="solid" theme="blue" @click="router.push('/')">
         Go to Dashboard
-      </Button>
+      </AppButton>
     </StateBanner>
   </div>
 </template>
 
 <script setup>
+import AppButton from '@/components/common/AppButton.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 
 const route = useRoute()

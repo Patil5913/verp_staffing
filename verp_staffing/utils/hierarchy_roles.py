@@ -1,5 +1,6 @@
 import json
 import frappe
+from verp_staffing.utils.desk_routes import link_to_form
 from frappe import _
 
 
@@ -363,7 +364,7 @@ def validate_changed_relationships(doc):
         rows = []
 
         for conflict in conflicts:
-            employee_link = frappe.utils.get_link_to_form(
+            employee_link = link_to_form(
                 "Employee",
                 conflict["employee"],
             )

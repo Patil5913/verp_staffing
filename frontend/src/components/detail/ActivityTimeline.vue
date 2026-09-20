@@ -47,7 +47,7 @@
                   <div class="flex items-baseline justify-between gap-2">
                     <span class="truncate text-p-sm font-medium text-app-text">
                       {{ entry.owner }}
-                      <Badge v-if="entry.from_doctype" variant="subtle" theme="gray" class="ml-1.5 align-middle">from {{ entry.from_doctype }}</Badge>
+                      <AppBadge v-if="entry.from_doctype" theme="gray" class="ml-1.5 align-middle">from {{ entry.from_doctype }}</AppBadge>
                     </span>
                     <span class="flex shrink-0 items-center gap-1 text-p-xs text-app-text-muted">
                       {{ formatDate(entry.creation) }}
@@ -87,23 +87,16 @@
                   class="rounded-xl border border-app-border bg-app-panel px-4 py-3 shadow-sm"
                 >
                   <div class="flex items-start justify-between gap-2">
-                    <label class="flex min-w-0 items-start gap-2 text-p-sm text-app-text" :class="entry.can_edit ? 'cursor-pointer' : ''">
-                      <input
-                        type="checkbox"
-                        class="mt-1"
-                        :checked="entry.is_completed"
-                        :disabled="!entry.can_edit || changing"
-                        @change="(e) => toggleTask(entry, e.target.checked)"
-                      />
+                    <AppCheckbox class="min-w-0 !items-start" :model-value="Boolean(entry.is_completed)" :disabled="!entry.can_edit || changing" @update:model-value="(v) => toggleTask(entry, v)">
                       <span :class="entry.is_completed ? 'line-through opacity-60' : ''">
                         <span class="font-medium">Task</span>
                         <span v-if="entry.description"> · {{ entry.description }}</span>
                       </span>
-                    </label>
+                    </AppCheckbox>
                     <span class="flex shrink-0 items-center gap-1">
-                      <Badge variant="subtle" :theme="entry.is_completed ? 'green' : 'orange'">
+                      <AppBadge :theme="entry.is_completed ? 'green' : 'orange'">
                         {{ entry.is_completed ? 'Completed' : 'Open' }}
-                      </Badge>
+                      </AppBadge>
                       <template v-if="entry.can_edit && !entry.is_completed">
                         <AppButton variant="ghost" size="icon" icon="edit-2" title="Edit task" @click="openTaskEdit(entry)" />
                       </template>
@@ -124,7 +117,7 @@
                   <div class="flex items-start justify-between gap-2">
                     <p class="min-w-0 truncate text-p-sm font-medium text-app-text">{{ entry.summary }}</p>
                     <span class="flex shrink-0 items-center gap-1">
-                      <Badge variant="subtle" theme="blue">{{ entry.category }}</Badge>
+                      <AppBadge theme="blue">{{ entry.category }}</AppBadge>
                       <AppButton v-if="entry.can_edit" variant="ghost" size="icon" icon="edit-2" title="Edit event" @click="openEventEdit(entry)" />
                       <AppButton v-if="entry.can_delete" variant="ghost" size="icon" icon="trash-2" title="Delete event" @click="removeActivity('CRM Event', entry, 'event')" />
                     </span>
@@ -155,12 +148,13 @@
           <div
             class="flex-1 rounded-xl border border-app-border bg-app-panel transition-colors focus-within:border-app-primary"
           >
-            <textarea
+            <AppTextarea
               ref="textareaRef"
               v-model="draft"
-              rows="1"
+              bare
+              :rows="1"
               placeholder="Add a note…"
-              class="w-full resize-none bg-transparent px-3 pt-2.5 text-p-sm text-app-text placeholder:text-app-text-muted focus:outline-none"
+              class="px-3 pt-2.5"
               @input="autoGrow"
               @keydown.meta.enter="onAdd"
               @keydown.ctrl.enter="onAdd"
@@ -195,10 +189,10 @@
     <Dialog v-model="showTaskEdit" :options="{ title: 'Edit task', size: 'md' }">
       <template #body-content>
         <div class="flex flex-col gap-4">
-          <FormControl type="textarea" label="Description" v-model="taskEdit.description" :disabled="!isSystemManager()" />
-          <FormControl type="datetime-local" label="Date & Time" v-model="taskEdit.date" :disabled="!isSystemManager()" />
+          <AppInput type="textarea" label="Description" v-model="taskEdit.description" :disabled="!isSystemManager()" />
+          <AppInput type="datetime-local" label="Date & Time" v-model="taskEdit.date" :disabled="!isSystemManager()" />
           <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="taskEdit.assignedTo" :disabled="!isSystemManager()" />
-          <label class="flex items-center gap-2 text-p-sm text-app-text"><input v-model="taskEdit.isCompleted" type="checkbox" /> Completed</label>
+          <AppCheckbox v-model="taskEdit.isCompleted" label="Completed" />
         </div>
       </template>
       <template #actions>
@@ -210,9 +204,9 @@
       <template #body-content>
         <div class="flex flex-col gap-4">
           <AppCombobox label="Category" required v-model="eventEdit.category" :options="EVENT_CATEGORIES" />
-          <FormControl type="datetime-local" label="Date & Time" required v-model="eventEdit.date" />
-          <FormControl type="text" label="Summary" required v-model="eventEdit.summary" />
-          <FormControl type="textarea" label="Description" v-model="eventEdit.description" />
+          <AppInput type="datetime-local" label="Date & Time" required v-model="eventEdit.date" />
+          <AppInput type="text" label="Summary" required v-model="eventEdit.summary" />
+          <AppInput type="textarea" label="Description" v-model="eventEdit.description" />
           <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="eventEdit.assignedTo" />
         </div>
       </template>
@@ -226,8 +220,8 @@
     <Dialog v-model="showTaskDialog" :options="{ title: 'New Task', size: 'md' }">
       <template #body-content>
         <div class="flex flex-col gap-4">
-          <FormControl type="textarea" label="Description" v-model="taskForm.description" />
-          <FormControl type="datetime-local" label="Date & Time" v-model="taskForm.date" />
+          <AppInput type="textarea" label="Description" v-model="taskForm.description" />
+          <AppInput type="datetime-local" label="Date & Time" v-model="taskForm.date" />
           <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="taskForm.assignedTo" />
         </div>
       </template>
@@ -243,9 +237,9 @@
       <template #body-content>
         <div class="flex flex-col gap-4">
           <AppCombobox label="Category" required v-model="eventForm.category" :options="EVENT_CATEGORIES" />
-          <FormControl type="datetime-local" label="Date & Time" required v-model="eventForm.date" />
-          <FormControl type="text" label="Summary" required v-model="eventForm.summary" />
-          <FormControl type="textarea" label="Description" v-model="eventForm.description" />
+          <AppInput type="datetime-local" label="Date & Time" required v-model="eventForm.date" />
+          <AppInput type="text" label="Summary" required v-model="eventForm.summary" />
+          <AppInput type="textarea" label="Description" v-model="eventForm.description" />
           <AppLinkField label="Assigned To" doctype="User" :filters="{ user_type: 'System User' }" v-model="eventForm.assignedTo" />
         </div>
       </template>
@@ -264,9 +258,13 @@
 </template>
 
 <script setup>
+import AppTextarea from '@/components/ui/AppTextarea.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
+import AppInput from '@/components/ui/AppInput.vue'
 import { computed, nextTick, reactive, ref } from 'vue'
 import DOMPurify from 'dompurify'
-import { Avatar, Badge, Dialog, FeatherIcon, FormControl, LoadingIndicator, TextEditor } from 'frappe-ui'
+import { Avatar, Dialog, FeatherIcon, LoadingIndicator, TextEditor } from 'frappe-ui'
 import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
@@ -338,7 +336,7 @@ function onAdd() {
   addNote(draft.value)
   draft.value = ''
   nextTick(() => {
-    if (textareaRef.value) textareaRef.value.style.height = 'auto'
+    if (textareaRef.value?.el) textareaRef.value.el.style.height = 'auto'
   })
 }
 

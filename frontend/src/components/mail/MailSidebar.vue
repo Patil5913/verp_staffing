@@ -6,7 +6,7 @@
       :disabled="!canCompose"
       @click="$emit('compose')"
     >
-      <span class="lucide-pen-line size-4" />New message
+      <span class="lucide-pen-line size-4 text-white" />New message
     </button>
 
     <nav class="flex flex-col gap-0.5">

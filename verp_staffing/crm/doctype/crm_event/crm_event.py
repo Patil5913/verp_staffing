@@ -26,7 +26,7 @@ def send_assignment_notification(doc):
         return
     message = f"""
     ⏰ Event Assigned: <b>{doc.category}</b> at {doc.date}<br><br>
-    <a href="/app/crm-event/{doc.name}" target="_blank">
+    <a href="/verp/CRM%20Event/{doc.name}" target="_blank">
     👉 Open Event!!
     </a>
     """

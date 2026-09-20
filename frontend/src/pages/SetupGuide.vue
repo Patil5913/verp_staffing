@@ -22,10 +22,10 @@
           Your organization is fully configured and ready for daily operations.
         </p>
         <div class="mt-2 flex gap-2">
-          <Button variant="solid" @click="router.push('/')">Go to Dashboard</Button>
-          <Button variant="outline" :loading="hide.loading" @click="hide.resource.submit()">
+          <AppButton variant="solid" @click="router.push('/')">Go to Dashboard</AppButton>
+          <AppButton variant="outline" :loading="hide.loading" @click="hide.resource.submit()">
             Hide Setup Workspace
-          </Button>
+          </AppButton>
         </div>
       </div>
 
@@ -58,8 +58,8 @@
           </div>
 
           <div class="flex flex-wrap gap-2">
-            <Button variant="solid" @click="continueSetup">Continue Setup →</Button>
-            <Button variant="outline" @click="progress.resource.reload()">Refresh</Button>
+            <AppButton variant="solid" @click="continueSetup">Continue Setup →</AppButton>
+            <AppButton variant="outline" @click="progress.resource.reload()">Refresh</AppButton>
           </div>
         </div>
 
@@ -85,15 +85,15 @@
                 <div class="text-p-base font-medium text-app-text">{{ step.label }}</div>
                 <div class="text-p-sm text-app-text-muted">{{ step.desc }}</div>
               </div>
-              <Badge :theme="stepBadgeTheme(step.key)" :label="stepBadgeLabel(step.key)" />
+              <AppBadge :theme="stepBadgeTheme(step.key)" :label="stepBadgeLabel(step.key)" />
             </div>
           </div>
         </div>
 
         <div class="flex justify-end">
-          <Button variant="ghost" :loading="hide.loading" @click="hide.resource.submit()">
+          <AppButton variant="ghost" :loading="hide.loading" @click="hide.resource.submit()">
             Hide Setup Workspace
-          </Button>
+          </AppButton>
         </div>
       </template>
     </template>
@@ -101,9 +101,11 @@
 </template>
 
 <script setup>
+import AppBadge from '@/components/ui/AppBadge.vue'
+import AppButton from '@/components/common/AppButton.vue'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Badge, Button, LoadingIndicator } from 'frappe-ui'
+import { LoadingIndicator } from 'frappe-ui'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 import StateBanner from '@/components/common/StateBanner.vue'
@@ -117,16 +119,6 @@ const STEPS = [
   { key: 'erp_configuration', label: 'ERP Configuration', desc: 'Configure core ERP settings for payroll, attendance, and compliance.', icon: '⚙️' },
   { key: 'pdf_agreement_template', label: 'Agreement Templates', desc: 'Upload offer letter and employment agreement PDF templates.', icon: '📄' },
 ]
-
-// Next-action routes from the backend are classic desk create-new-doc URLs
-// (e.g. "/app/employee/new") — this pass only ports list views, not a
-// generic create form, so "Continue Setup" lands on the corresponding list
-// instead of a blank new-record form.
-const NEXT_ACTION_LIST_ROUTE = {
-  employee: '/Employee',
-  erp_configuration: '/settings/ERP%20Configuration',
-  pdf_agreement_template: '/Pdf%20Agreement%20Template',
-}
 
 const progress = useResource({
   url: 'verp_staffing.utils.onboarding_setup_helper.get_setup_progress',
@@ -160,7 +152,8 @@ function stepBadgeLabel(key) {
 }
 
 function continueSetup() {
-  const route = NEXT_ACTION_LIST_ROUTE[data.value.current_step]
-  if (route) router.push(route)
+  // The backend's next-action route is a /verp path; the router's own path space excludes that base.
+  const route = data.value.next_action?.route
+  if (route) router.push(route.replace(/^\/verp/, '') || '/')
 }
 </script>

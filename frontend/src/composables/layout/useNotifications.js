@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { call } from 'frappe-ui'
 import { getSocket } from '@/utils/common/realtime'
 import { notify } from '@/utils/common/notify'
+import { deskToSpaPath, isDeskPath } from '@/utils/common/deskRoute'
 
 // Mirrors Frappe desk's own notification bell exactly on the backend side:
 // same "Notification Log" whitelisted methods, same realtime channel — see
@@ -63,22 +64,17 @@ function connectRealtime() {
   socket.on('notification', () => load())
 }
 
-function slugifyDoctype(doctype) {
-  return (doctype || '').toLowerCase().trim().replace(/\s+/g, '-')
-}
-
 // Same link-resolution priority as get_form_link() in core: an explicit
-// `link` override wins, otherwise build the doctype form route, optionally
-// anchored to a source document.
-function resolveRoute(n) {
-  if (n.link) return n.link
+// `link` override wins, otherwise the record the notification is about. The
+// result is a router path — the SPA's own page, never the classic desk.
+async function resolveRoute(n) {
+  if (n.link) {
+    if (isDeskPath(n.link)) return (await deskToSpaPath(n.link)) || '/'
+    return n.link.replace(/^\/verp(?=\/|$)/, '') || '/'
+  }
   const doctype = n.document_type || 'Notification Log'
   const name = n.document_name || n.name
-  let route = `/app/${slugifyDoctype(doctype)}/${encodeURIComponent(name)}`
-  if (n.source_doctype && n.source_name) {
-    route += `#${slugifyDoctype(n.source_doctype)}-${encodeURIComponent(n.source_name)}`
-  }
-  return route
+  return `/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`
 }
 
 export function useNotifications() {

@@ -79,9 +79,9 @@ function render_link_or_text(doctype, docname, label, extra_style = "") {
 	}
 
 	if (can_view) {
-		const route = doctype.toLowerCase().replace(/\s+/g, "-");
+		const route = encodeURIComponent(doctype);
 		return `<a
-				href="/app/${route}/${encodeURIComponent(docname)}"
+				href="/verp/${route}/${encodeURIComponent(docname)}"
 				target="_blank"
 				style="color:var(--text-color);text-decoration:underline;${extra_style}"
 			>${frappe.utils.escape_html(label)}</a>`;

@@ -31,7 +31,7 @@
           </template>
 
           <label class="text-p-sm text-app-text-muted">Subject</label>
-          <input v-model="form.subject" type="text" placeholder="Subject" class="h-9 w-full rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text placeholder:text-app-text-muted focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20" />
+          <AppInput v-model="form.subject" placeholder="Subject" />
         </div>
 
         <TextEditor :content="form.content" editor-class="min-h-[220px] max-h-[45vh] overflow-y-auto rounded-lg border border-app-border px-3 py-2 text-p-sm" placeholder="Write your message…" @change="(html) => (form.content = html)" />
@@ -66,6 +66,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // New message / reply / reply all / forward. Closing with something written
 // keeps it as a draft (on this device); Send goes through the mailbox API,
 // which sends as one of the user's own accounts.

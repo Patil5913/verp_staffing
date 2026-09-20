@@ -111,12 +111,12 @@
       <template #body-content>
         <div class="flex flex-col gap-4">
           <label class="flex items-center gap-2">
-            <Checkbox v-model="draft.if_owner" />
+            <AppCheckbox v-model="draft.if_owner" />
             <span class="text-p-sm text-app-text">Only if creator</span>
           </label>
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <label v-for="pt in PTYPES" :key="pt" class="flex items-center gap-2">
-              <Checkbox v-model="draft[pt]" />
+              <AppCheckbox v-model="draft[pt]" />
               <span class="text-p-sm capitalize text-app-text">{{ pt }}</span>
             </label>
           </div>
@@ -132,15 +132,7 @@
       <template #body-content>
         <div class="flex flex-col gap-4">
           <AppLinkField doctype="Role" label="Role" v-model="newRole" placeholder="Search for a role…" />
-          <div class="flex flex-col gap-1.5">
-            <label class="text-p-sm font-medium text-app-text-muted">Permission Level</label>
-            <input
-              v-model.number="newPermlevel"
-              type="number"
-              min="0"
-              class="h-9 w-full rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20"
-            />
-          </div>
+          <AppInput label="Permission Level" type="number" min="0" :model-value="newPermlevel" @update:model-value="(v) => (newPermlevel = Number(v))" />
         </div>
       </template>
       <template #actions>
@@ -151,6 +143,8 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Permission Manager: DocType and Role filters both work standalone (pick
 // just one) or together — the backend already supports every combination
 // (get_permissions falls back to "every role" when role is blank, and to
@@ -160,7 +154,7 @@
 // a server call on every checkbox click.
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Checkbox, Dialog, LoadingIndicator } from 'frappe-ui'
+import { Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import { useResource } from '@/composables/list/useResource'

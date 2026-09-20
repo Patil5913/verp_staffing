@@ -264,7 +264,7 @@ def send_existing_agreement(agreement):
             frappe.throw(
                 title="Email Missing",
                 msg=f"Email is required to send agreement.<br><br>"
-                f'<a href="/app/lead-detail-form/{customer_lead_details}" target="_blank">'
+                f'<a href="/verp/Lead%20Detail%20Form/{customer_lead_details}" target="_blank">'
                 f"➜ Open Lead Detail Form</a>",
             )
 

@@ -3,15 +3,15 @@
     <section
       v-for="column in columns"
       :key="column"
-      class="flex w-72 shrink-0 flex-col rounded-xl border bg-app-panel-2/60 transition-colors"
-      :class="overColumn === column ? 'border-app-primary bg-app-primary-tint' : 'border-app-border'"
+      class="flex w-72 shrink-0 flex-col rounded-xl border transition-colors"
+      :class="overColumn === column ? 'border-app-primary bg-app-primary-tint' : [stage(column).tint, stage(column).border]"
       @dragover.prevent="overColumn = column"
       @dragleave="overColumn === column && (overColumn = '')"
       @drop.prevent="onDrop(column)"
     >
       <header class="flex items-center justify-between gap-2 px-3 py-2.5">
         <div class="flex min-w-0 items-center gap-2">
-          <span class="size-2 shrink-0 rounded-full" :class="dotClass(column)" />
+          <span class="size-2 shrink-0 rounded-full" :class="stage(column).dot" />
           <h2 class="truncate text-p-sm font-semibold text-app-text">{{ column }}</h2>
         </div>
         <span class="rounded-full bg-app-panel px-2 py-0.5 text-p-xs font-medium text-app-text-muted">{{ grouped[column].length }}</span>
@@ -63,8 +63,19 @@ const grouped = computed(() => {
   return out
 })
 
-const DOTS = ['bg-sky-500', 'bg-emerald-500', 'bg-green-600', 'bg-rose-500', 'bg-orange-500', 'bg-violet-500', 'bg-red-600']
-const dotClass = (column) => DOTS[props.columns.indexOf(column) % DOTS.length]
+// One soft tint per stage — the same hue as its dot, at low opacity so it
+// reads on both the light and dark backgrounds. Full class names (no string
+// building) so Tailwind can see them.
+const STAGES = [
+  { dot: 'bg-sky-500', tint: 'bg-sky-500/10', border: 'border-sky-500/25' },
+  { dot: 'bg-emerald-500', tint: 'bg-emerald-500/10', border: 'border-emerald-500/25' },
+  { dot: 'bg-violet-500', tint: 'bg-violet-500/10', border: 'border-violet-500/25' },
+  { dot: 'bg-amber-500', tint: 'bg-amber-500/10', border: 'border-amber-500/25' },
+  { dot: 'bg-rose-500', tint: 'bg-rose-500/10', border: 'border-rose-500/25' },
+  { dot: 'bg-teal-500', tint: 'bg-teal-500/10', border: 'border-teal-500/25' },
+  { dot: 'bg-indigo-500', tint: 'bg-indigo-500/10', border: 'border-indigo-500/25' },
+]
+const stage = (column) => STAGES[props.columns.indexOf(column) % STAGES.length]
 
 function onDrop(column) {
   const card = props.cards.find((c) => c.name === dragging.value)

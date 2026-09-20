@@ -2,16 +2,7 @@
   <section class="flex h-full min-h-0 w-full flex-col bg-app-bg">
     <!-- Search + filters -->
     <div class="flex flex-col gap-2 border-b border-app-border bg-app-panel px-3 py-2.5">
-      <div class="relative">
-        <span class="lucide-search pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-app-text-muted" />
-        <input
-          :value="search"
-          type="search"
-          :placeholder="`Search ${folderLabel.toLowerCase()}…`"
-          class="h-9 w-full rounded-lg border border-app-border bg-app-bg pl-9 pr-3 text-p-sm text-app-text placeholder:text-app-text-muted focus:border-app-primary focus:outline-none"
-          @input="$emit('update:search', $event.target.value)"
-        />
-      </div>
+      <AppSearchInput :model-value="search" :placeholder="`Search ${folderLabel.toLowerCase()}…`" @update:model-value="(v) => $emit('update:search', v)" />
       <div v-if="filterable" class="flex flex-wrap items-center gap-1.5">
         <button
           v-for="f in FILTERS"
@@ -26,13 +17,13 @@
 
     <!-- Bulk toolbar -->
     <div class="flex h-10 shrink-0 items-center gap-1 border-b border-app-border bg-app-panel px-3">
-      <Checkbox :model-value="allChecked" :disabled="!items.length" @click.stop @update:model-value="$emit('toggle-all')" />
+      <AppCheckbox :model-value="allChecked" :indeterminate="!allChecked && checked.size > 0" :disabled="!items.length" @click.stop @update:model-value="$emit('toggle-all')" />
       <template v-if="checkedCount">
         <span class="ml-2 text-p-sm font-medium text-app-text">{{ checkedCount }} selected</span>
         <div class="ml-auto">
           <Dropdown :options="menuOptions" placement="left">
             <template #default="{ open }">
-              <Button variant="ghost" icon="more-horizontal" tooltip="Actions for the selected messages" :class="open ? 'bg-app-panel-2' : ''" />
+              <AppButton variant="ghost" icon="more-horizontal" tooltip="Actions for the selected messages" :class="open ? 'bg-app-panel-2' : ''" />
             </template>
           </Dropdown>
         </div>
@@ -76,7 +67,7 @@
         >
           <span v-if="!m.seen && m.kind !== 'queue'" class="absolute left-0 top-0 h-full w-1 bg-app-primary" />
           <div class="mt-2.5 shrink-0" @click.stop>
-            <Checkbox :model-value="checked.has(m.name)" @click.stop @update:model-value="$emit('toggle', m.name)" />
+            <AppCheckbox :model-value="checked.has(m.name)" @click.stop @update:model-value="$emit('toggle', m.name)" />
           </div>
           <div class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-p-xs font-semibold" :class="avatarTone(counterpart(m))">{{ initials(counterpartName(m)) }}</div>
           <div class="min-w-0 flex-1">
@@ -115,8 +106,11 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
+import AppButton from '@/components/common/AppButton.vue'
 import { computed } from 'vue'
-import { Button, Checkbox, Dropdown } from 'frappe-ui'
+import { Dropdown } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { avatarTone, initials, mailDate, senderName } from '@/utils/mail/format'
 

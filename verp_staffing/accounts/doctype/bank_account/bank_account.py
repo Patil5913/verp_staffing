@@ -8,7 +8,9 @@ from frappe.contacts.address_and_contact import (
 	delete_contact_and_address,
 	load_address_and_contact,
 )
-from frappe.utils import comma_and, get_link_to_form, validate_iban
+from frappe.utils import comma_and, validate_iban
+
+from verp_staffing.utils.desk_routes import link_to_form as get_link_to_form
 
 
 class BankAccount(Document):

@@ -14,7 +14,7 @@
           </p>
 
           <form class="flex flex-col gap-4" @submit.prevent="submitLogin">
-            <FormControl
+            <AppInput
               type="text"
               label="Email"
               v-model="form.email"
@@ -32,7 +32,7 @@
 
             <ErrorMessage :message="errorMessage" />
 
-            <Button
+            <AppButton
               type="submit"
               variant="solid"
               theme="blue"
@@ -40,7 +40,7 @@
               :loading="login.loading"
             >
               Sign in
-            </Button>
+            </AppButton>
 
             <button
               type="button"
@@ -61,7 +61,7 @@
           </p>
 
           <form class="flex flex-col gap-4" @submit.prevent="submitReset">
-            <FormControl
+            <AppInput
               type="text"
               label="Email"
               v-model="resetEmail"
@@ -70,7 +70,7 @@
               required
             />
 
-            <Button
+            <AppButton
               type="submit"
               variant="solid"
               theme="blue"
@@ -78,7 +78,7 @@
               :loading="reset.loading"
             >
               Send reset link
-            </Button>
+            </AppButton>
 
             <button
               type="button"
@@ -95,12 +95,12 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/common/AppButton.vue'
 import { computed, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
-  Button,
   ErrorMessage,
-  FormControl,
   Password,
   createResource,
 } from 'frappe-ui'

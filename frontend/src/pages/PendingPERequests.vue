@@ -17,12 +17,11 @@
         </div>
       </template>
 
-      <TextInput v-model="search" class="w-full" placeholder="Search party, entry or mode of payment">
-        <template #prefix><FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" /></template>
-      </TextInput>
+      <AppSearchInput v-model="search" class="w-full" placeholder="Search party, entry or mode of payment">
+      </AppSearchInput>
 
       <template #right>
-        <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="reload" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="reload" />
       </template>
     </SubNavbar>
 
@@ -111,7 +110,7 @@
 
     <Dialog v-model="rejectDialog.show" :options="{ title: `Reject ${actingOn}`, size: 'md' }">
       <template #body-content>
-        <FormControl
+        <AppInput
           type="textarea"
           label="Remarks"
           v-model="rejectDialog.remarks"
@@ -129,6 +128,8 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
+import AppInput from '@/components/ui/AppInput.vue'
 // Payment Verification queue (the old "Pending PE Requests" page): payment
 // entries raised against a Sales Order's payment terms wait here to be
 // verified — Verify submits the entry and marks the term verified, Reject
@@ -137,7 +138,7 @@
 // history the desk page didn't have.
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, Dialog, FeatherIcon, FormControl, LoadingIndicator, TextInput } from 'frappe-ui'
+import { Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import StateBanner from '@/components/common/StateBanner.vue'

@@ -13,11 +13,11 @@
     <Dialog v-model="open" :options="{ title: fetchInvoices ? 'Get Outstanding Invoices' : 'Get Outstanding Orders', size: 'md' }">
       <template #body-content>
         <div class="grid grid-cols-2 gap-4">
-          <FormControl type="date" label="From Date" v-model="filters.from_posting_date" />
-          <FormControl type="date" label="To Date" v-model="filters.to_posting_date" />
-          <FormControl type="number" label="Outstanding Greater Than" v-model="filters.outstanding_amt_greater_than" />
-          <FormControl type="number" label="Outstanding Less Than" v-model="filters.outstanding_amt_less_than" />
-          <div class="col-span-2"><Checkbox label="Allocate payment amount" v-model="filters.allocate_payment_amount" /></div>
+          <AppInput type="date" label="From Date" v-model="filters.from_posting_date" />
+          <AppInput type="date" label="To Date" v-model="filters.to_posting_date" />
+          <AppInput type="number" label="Outstanding Greater Than" v-model="filters.outstanding_amt_greater_than" />
+          <AppInput type="number" label="Outstanding Less Than" v-model="filters.outstanding_amt_less_than" />
+          <div class="col-span-2"><AppCheckbox label="Allocate payment amount" v-model="filters.allocate_payment_amount" /></div>
         </div>
       </template>
       <template #actions>
@@ -28,6 +28,8 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // The client-side help the desk Payment Entry form gives while you fill it
 // in (payment_entry.js): choosing a party fills its receivable/payable
 // account, currency and name; choosing an account fills its currency;
@@ -35,7 +37,7 @@
 // the references table. Allocation totals themselves are recomputed by the
 // server on save.
 import { computed, reactive, ref, watch } from 'vue'
-import { call, Checkbox, Dialog, FormControl } from 'frappe-ui'
+import { call, Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { formatFieldValue } from '@/utils/list/formatValue'

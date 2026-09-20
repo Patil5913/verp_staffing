@@ -5,7 +5,7 @@
     <template #body-content>
       <div class="flex flex-col gap-4">
         <p v-if="confirm" class="text-p-base text-app-text-muted">{{ confirm }}</p>
-        <FormControl
+        <AppInput
           v-for="field in prompt"
           :key="field.fieldname"
           :type="field.type || 'text'"
@@ -22,6 +22,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // One "server action" button for any record's action bar, configured from
 // detailConfigs: click (optionally after a confirm / a small prompt), call a
 // whitelisted method, then either refresh the record, open the doc the
@@ -39,7 +40,7 @@
 //     then?: 'refresh' (default) | 'stay' | 'open-file' (the result's file_url) | '/some/$result' }
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { call, Dialog, FormControl } from 'frappe-ui'
+import { call, Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'

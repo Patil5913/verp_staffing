@@ -10,14 +10,11 @@
       </div>
 
       <div class="flex min-w-0 flex-1 items-center gap-2">
-        <TextInput
+        <AppSearchInput
           v-model="searchText"
           class="w-full"
           placeholder='Try: "status=open", "modified between 17 sept to 25 sept"'
         >
-          <template #prefix>
-            <FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" />
-          </template>
           <template #suffix>
             <Popover trigger="hover" :hover-delay="0.15" :leave-delay="0.15" placement="bottom-end">
               <template #target>
@@ -57,9 +54,9 @@
               </template>
             </Popover>
           </template>
-        </TextInput>
+        </AppSearchInput>
 
-        <Button
+        <AppButton
           variant="outline"
           theme="red"
           icon="x"
@@ -88,14 +85,14 @@
         <AppButton v-if="canDelete && selected.size" variant="danger" icon="trash-2" @click="confirmBulkDelete">
           Delete ({{ selected.size }})
         </AppButton>
-        <Button
+        <AppButton
           v-if="isAdmin"
           variant="ghost"
           icon="settings"
           tooltip="Customize columns"
           @click="showCustomizeColumns = true"
         />
-        <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="refresh" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="refresh" />
       </div>
     </div>
 
@@ -140,7 +137,7 @@
             <thead>
               <tr>
                 <th v-if="canDelete" class="sticky top-0 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
-                  <Checkbox :model-value="allSelected" @click.stop @update:model-value="toggleSelectAll" />
+                  <AppCheckbox :model-value="allSelected" :indeterminate="!allSelected && selected.size > 0" @click.stop @update:model-value="toggleSelectAll" />
                 </th>
                 <th
                   v-for="column in columns"
@@ -168,7 +165,7 @@
                 @click="openRow(row)"
               >
                 <td v-if="canDelete" class="h-11 w-10 border-b border-app-border px-3" @click.stop>
-                  <Checkbox
+                  <AppCheckbox
                     :model-value="selected.has(row.name)"
                     @click.stop
                     @update:model-value="toggleSelectRow(row.name)"
@@ -179,7 +176,7 @@
                   :key="column.key"
                   class="h-11 truncate border-b border-app-border px-3 text-base"
                 >
-                  <Badge
+                  <AppBadge
                     v-if="isSelectColumn(column.key)"
                     :label="row[column.key]"
                     :theme="statusBadgeTheme(row[column.key])"
@@ -200,7 +197,7 @@
                     >{{ primaryRowAction.label }}</AppButton>
                     <Dropdown v-if="rowActions(row).length" :options="rowActions(row)" placement="left">
                       <template #default="{ open }">
-                        <Button variant="ghost" icon="more-horizontal" :class="open ? 'bg-app-panel-2' : ''" />
+                        <AppButton variant="ghost" icon="more-horizontal" :class="open ? 'bg-app-panel-2' : ''" />
                       </template>
                     </Dropdown>
                   </div>
@@ -263,9 +260,13 @@
 </template>
 
 <script setup>
+import AppBadge from '@/components/ui/AppBadge.vue'
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Badge, Button, Checkbox, Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, TextInput, call } from 'frappe-ui'
+import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'

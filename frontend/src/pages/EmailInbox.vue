@@ -29,7 +29,7 @@
         <!-- Folder picker for narrow screens, where the sidebar is hidden -->
         <div class="flex items-center gap-2 border-b border-app-border bg-app-panel px-3 py-2 md:hidden">
           <AppCombobox v-model="folder" :options="FOLDER_OPTIONS" compact class="flex-1" />
-          <button type="button" class="flex h-7 items-center gap-1 rounded-lg bg-app-primary px-3 text-p-xs font-medium text-white disabled:opacity-50" :disabled="!canSend" @click="compose()"><span class="lucide-pen-line size-3.5" />New</button>
+          <button type="button" class="flex h-7 items-center gap-1 rounded-lg bg-app-primary px-3 text-p-xs font-medium text-white disabled:opacity-50" :disabled="!canSend" @click="compose()"><span class="lucide-pen-line size-3.5 text-white" />New</button>
         </div>
 
         <MailList

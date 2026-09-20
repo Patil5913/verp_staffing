@@ -334,7 +334,7 @@ def send_portal_link(customer, customer_name):
         frappe.throw(
             title="Email Missing",
             msg=f"Email is required to send agreement.<br><br>"
-            f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
+            f'<a href="/verp/Lead%20Detail%20Form/{lead_name}" target="_blank">'
             f"➜ Open Lead Detail Form</a>",
         )
 

@@ -23,17 +23,17 @@
     <Dialog v-model="addressOpen" :options="{ title: 'New Address', size: 'lg' }">
       <template #body-content>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormControl label="Address Title" v-model="address.address_title" class="sm:col-span-2" />
+          <AppInput label="Address Title" v-model="address.address_title" class="sm:col-span-2" />
           <AppCombobox label="Address Type" v-model="address.address_type" :options="ADDRESS_TYPES" required />
-          <div class="pt-6"><Checkbox label="Is Primary Address" v-model="address.is_primary_address" /></div>
-          <FormControl label="Address Line 1" v-model="address.address_line1" required class="sm:col-span-2" />
-          <FormControl label="Address Line 2" v-model="address.address_line2" class="sm:col-span-2" />
-          <FormControl label="City / Town" v-model="address.city" required />
-          <FormControl label="State / Province" v-model="address.state" />
+          <div class="pt-6"><AppCheckbox label="Is Primary Address" v-model="address.is_primary_address" /></div>
+          <AppInput label="Address Line 1" v-model="address.address_line1" required class="sm:col-span-2" />
+          <AppInput label="Address Line 2" v-model="address.address_line2" class="sm:col-span-2" />
+          <AppInput label="City / Town" v-model="address.city" required />
+          <AppInput label="State / Province" v-model="address.state" />
           <AppLinkField label="Country" doctype="Country" v-model="address.country" hide-add-new />
-          <FormControl label="Postal Code" v-model="address.pincode" />
-          <FormControl type="email" label="Email" v-model="address.email_id" />
-          <FormControl label="Phone" v-model="address.phone" />
+          <AppInput label="Postal Code" v-model="address.pincode" />
+          <AppInput type="email" label="Email" v-model="address.email_id" />
+          <AppInput label="Phone" v-model="address.phone" />
         </div>
       </template>
       <template #actions>
@@ -44,13 +44,13 @@
     <Dialog v-model="contactOpen" :options="{ title: 'New Contact', size: 'lg' }">
       <template #body-content>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormControl label="First Name" v-model="contact.first_name" required />
-          <FormControl label="Last Name" v-model="contact.last_name" />
-          <FormControl type="email" label="Email" v-model="contact.email_id" />
-          <FormControl label="Phone" v-model="contact.phone" />
-          <FormControl label="Designation" v-model="contact.designation" />
-          <FormControl label="Department" v-model="contact.department" />
-          <div class="pt-6 sm:col-span-2"><Checkbox label="Is Primary Contact" v-model="contact.is_primary_contact" /></div>
+          <AppInput label="First Name" v-model="contact.first_name" required />
+          <AppInput label="Last Name" v-model="contact.last_name" />
+          <AppInput type="email" label="Email" v-model="contact.email_id" />
+          <AppInput label="Phone" v-model="contact.phone" />
+          <AppInput label="Designation" v-model="contact.designation" />
+          <AppInput label="Department" v-model="contact.department" />
+          <div class="pt-6 sm:col-span-2"><AppCheckbox label="Is Primary Contact" v-model="contact.is_primary_contact" /></div>
         </div>
       </template>
       <template #actions>
@@ -61,6 +61,8 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Addresses and Contacts linked to this record (desk's address_html /
 // contact_html blocks). Lists what's linked, and — new — creates either one
 // linked back to this record (the Dynamic Link row Frappe's own "New Address"
@@ -68,7 +70,7 @@
 // can get its address and contacts without leaving the page. Each entry opens
 // its own record for anything beyond these essentials.
 import { computed, reactive, ref, watch } from 'vue'
-import { call, Checkbox, Dialog, FormControl } from 'frappe-ui'
+import { call, Dialog } from 'frappe-ui'
 import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'

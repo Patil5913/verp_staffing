@@ -56,9 +56,9 @@
           <ul v-else class="divide-y divide-app-border">
             <li v-for="item in notifications" :key="item.name">
               <a
-                :href="resolveRoute(item)"
+                href="#"
+                @click.prevent="onItemClick(item, close)"
                 class="flex gap-2.5 px-4 py-3 text-left transition-colors hover:bg-app-panel-2"
-                @click="onItemClick(item, close)"
               >
                 <span
                   class="mt-1.5 size-1.5 shrink-0 rounded-full"
@@ -78,12 +78,13 @@
           </ul>
         </ScrollArea>
 
-        <a
-          href="/app/List/Notification%20Log"
+        <router-link
+          to="/notifications"
           class="block border-t border-app-border px-4 py-2.5 text-center text-p-sm text-app-primary hover:bg-app-panel-2"
+          @click="close()"
         >
           See all Activity
-        </a>
+        </router-link>
       </div>
     </template>
   </Popover>
@@ -92,9 +93,11 @@
 <script setup>
 import DOMPurify from 'dompurify'
 import { dayjs, Popover } from 'frappe-ui'
+import { useRouter } from 'vue-router'
 import { useNotifications } from '@/composables/layout/useNotifications'
 import ScrollArea from '../common/ScrollArea.vue'
 
+const router = useRouter()
 const { notifications, loading, unreadCount, load, markAllAsRead, markAsRead, resolveRoute } =
   useNotifications()
 
@@ -112,9 +115,9 @@ function sanitize(html) {
   })
 }
 
-function onItemClick(item, close) {
+async function onItemClick(item, close) {
   markAsRead(item.name)
   close()
-  // real navigation into desk — left as a normal <a> click otherwise
+  router.push(await resolveRoute(item))
 }
 </script>

@@ -179,7 +179,7 @@ async function handle_create_customer(frm) {
 			.map(
 				(c) =>
 					`<li>
-						<a href="/app/customer/${c.name}" target="_blank">
+						<a href="/verp/Customer/${c.name}" target="_blank">
 							${c.name1} (${c.name})
 						</a>
 					</li>`,

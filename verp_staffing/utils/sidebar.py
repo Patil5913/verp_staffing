@@ -50,7 +50,14 @@ def _frontend_route(item: dict, item_kind: str) -> str:
         return route
 
     if item_kind == "page":
-        return PAGE_ROUTE_OVERRIDES.get(route, route)
+        route = PAGE_ROUTE_OVERRIDES.get(route, route)
+
+    # Whatever is still a classic-desk route (old stored config, a kind not
+    # handled above) opens its /verp counterpart; E Sign stays on the desk.
+    if route and route.startswith("/app"):
+        from verp_staffing.utils.desk_routes import desk_path_to_spa
+
+        return desk_path_to_spa(route) or route
 
     return route
 

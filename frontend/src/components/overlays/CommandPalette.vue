@@ -6,12 +6,12 @@
           class="flex items-center gap-2 border-b border-app-border px-4 py-3"
         >
           <span class="lucide-search size-4 shrink-0 text-app-text-muted" />
-          <input
+          <AppInput
             ref="inputRef"
             v-model="query"
-            type="text"
+            bare
             placeholder="Search modules, doctypes, reports..."
-            class="h-8 w-full flex-1 border-0 bg-transparent p-0 text-base text-app-text placeholder-app-text-muted focus:outline-none focus:ring-0"
+            class="h-8 flex-1 justify-center"
             @keydown.down.prevent="move(1)"
             @keydown.up.prevent="move(-1)"
             @keydown.enter.prevent="select(activeIndex)"
@@ -71,6 +71,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { Dialog } from 'frappe-ui'
 import router from '@/router'

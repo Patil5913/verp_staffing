@@ -64,16 +64,16 @@
 
           <template v-if="!active.sales_invoice">
             <AppLinkField label="Company" doctype="Company" v-model="form.company" hide-add-new />
-            <FormControl v-if="foreign" type="number" :label="`Exchange Rate (1 ${detail.values.currency} = ?)`" v-model="form.conversion_rate" required />
+            <AppInput v-if="foreign" type="number" :label="`Exchange Rate (1 ${detail.values.currency} = ?)`" v-model="form.conversion_rate" required />
             <p v-if="form.company" class="text-p-sm text-app-text-muted">
               Received: <b>{{ formatFieldValue(received, { fieldtype: 'Currency' }) }} {{ targetCurrency }}</b>
             </p>
           </template>
 
-          <FormControl label="Payer's Account Name" v-model="form.payer_account_name" required />
-          <FormControl label="Reference Id / Transaction No / Cheque No" v-model="form.reference_no" required />
-          <FormControl type="textarea" label="Remarks (amount paid in which account)" v-model="form.remarks" required />
-          <FormControl type="date" label="Reference Date" v-model="form.reference_date" required />
+          <AppInput label="Payer's Account Name" v-model="form.payer_account_name" required />
+          <AppInput label="Reference Id / Transaction No / Cheque No" v-model="form.reference_no" required />
+          <AppInput type="textarea" label="Remarks (amount paid in which account)" v-model="form.remarks" required />
+          <AppInput type="date" label="Reference Date" v-model="form.reference_date" required />
         </div>
       </template>
       <template #actions>
@@ -86,6 +86,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // The Sales Order's payment schedule with its "Mark as Paid" / "Re-request"
 // flow, ported from sales_order.js (render_payment_term_actions /
 // open_mark_as_paid_dialog): the dialog collects who paid and the reference,
@@ -93,7 +94,7 @@
 // order's), and create_payment_entry_from_term raises a Payment Entry that
 // lands in the Payment Verification queue.
 import { computed, reactive, ref, watch } from 'vue'
-import { Dialog, FormControl } from 'frappe-ui'
+import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'

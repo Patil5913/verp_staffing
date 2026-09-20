@@ -4,16 +4,17 @@
     class="inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-p-sm font-medium tracking-tight transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
     :class="[sizeClasses, variantClasses]"
     :disabled="disabled || loading"
+    :title="tooltip || undefined"
     @click="(e) => !loading && !disabled && emit('click', e)"
   >
     <LoadingIndicator v-if="loading" class="h-3.5 w-3.5" />
-    <FeatherIcon v-else-if="icon" :name="icon" class="h-3.5 w-3.5 shrink-0" />
-    <span v-if="$slots.default"><slot /></span>
+    <FeatherIcon v-else-if="iconName" :name="iconName" class="h-3.5 w-3.5 shrink-0" />
+    <span v-if="$slots.default || label"><slot>{{ label }}</slot></span>
   </button>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import { FeatherIcon, LoadingIndicator } from 'frappe-ui'
 
 // This app's own button, in place of frappe-ui's stock <Button> — a pill
@@ -21,23 +22,41 @@ import { FeatherIcon, LoadingIndicator } from 'frappe-ui'
 // look, so primary actions (Save, Create Opportunity, etc.) read as this
 // product's UI rather than an embedded Frappe form.
 const props = defineProps({
-  variant: { type: String, default: 'primary' }, // primary | outline | ghost | danger
+  // primary | outline | ghost | danger. `solid` / `subtle` (frappe-ui's names) map to
+  // primary / outline, and theme="red" turns either into its destructive form.
+  variant: { type: String, default: 'primary' },
+  theme: { type: String, default: '' },
   size: { type: String, default: 'md' }, // sm | md | icon
   icon: { type: String, default: '' },
+  iconLeft: { type: String, default: '' },
+  label: { type: String, default: '' },
+  tooltip: { type: String, default: '' },
   loading: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
 })
 const emit = defineEmits(['click'])
+const slots = useSlots()
+
+const iconName = computed(() => props.iconLeft || props.icon)
+// A button with an icon and no text is a square icon button.
+const iconOnly = computed(() => Boolean(iconName.value) && !slots.default && !props.label)
+const resolvedVariant = computed(() => {
+  const v = props.variant === 'solid' ? 'primary' : props.variant === 'subtle' ? 'outline' : props.variant
+  return props.theme === 'red' && v === 'primary' ? 'danger' : v
+})
 
 const sizeClasses = computed(() => {
   if (props.size === 'icon') return 'h-9 w-9'
+  if (iconOnly.value) return props.size === 'sm' ? 'h-8 w-8' : 'h-9 w-9'
   return props.size === 'sm' ? 'h-8 px-3.5' : 'h-9 px-4'
 })
 
 const variantClasses = computed(() => {
-  switch (props.variant) {
+  switch (resolvedVariant.value) {
     case 'outline':
-      return 'border border-app-border bg-app-panel text-app-text hover:border-app-primary/50 hover:text-app-primary active:scale-[0.98]'
+      return props.theme === 'red'
+        ? 'border border-red-300 bg-app-panel text-red-600 hover:bg-red-50 active:scale-[0.98]'
+        : 'border border-app-border bg-app-panel text-app-text hover:border-app-primary/50 hover:text-app-primary active:scale-[0.98]'
     case 'ghost':
       return 'text-app-text-muted hover:bg-app-panel-2 hover:text-app-text active:scale-[0.98]'
     case 'danger':

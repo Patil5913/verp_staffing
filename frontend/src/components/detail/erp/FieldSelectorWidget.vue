@@ -37,13 +37,13 @@
       <div v-else class="flex flex-col gap-4 rounded-lg border border-app-border bg-app-panel p-4">
         <div v-if="isCandidateForm" class="flex flex-col gap-2 border-b border-app-border pb-4">
           <div class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Service Options</div>
-          <Checkbox
+          <AppCheckbox
             label="Is Agreement Required"
             :disabled="disabled"
             :model-value="getFlag(currentItem, 'is_agreement_required')"
             @update:model-value="(v) => setFlag(currentItem, 'is_agreement_required', v)"
           />
-          <Checkbox
+          <AppCheckbox
             label="Is Candidate Form Required"
             :disabled="disabled"
             :model-value="getFlag(currentItem, 'is_candidate_form_required')"
@@ -52,12 +52,7 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search fields…"
-            class="h-8 flex-1 rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text placeholder:text-app-text-muted focus:border-app-primary focus:outline-none"
-          />
+          <AppSearchInput v-model="search" compact placeholder="Search fields…" class="flex-1" />
           <AppButton variant="outline" size="sm" :disabled="disabled" @click="toggleSelectAll">
             {{ allSelected ? 'Deselect all' : 'Select all' }}
           </AppButton>
@@ -77,25 +72,20 @@
                 class="flex items-center justify-between gap-2 rounded-md px-2 py-1"
                 :class="isFieldSelected(currentItem, field.fieldname) ? 'bg-app-panel-2' : ''"
               >
-                <Checkbox
+                <AppCheckbox
                   :label="field.label"
                   :disabled="disabled"
                   :model-value="isFieldSelected(currentItem, field.fieldname)"
                   @update:model-value="(v) => toggleFieldSelected(currentItem, field.fieldname, v)"
                 />
-                <label
+                <AppCheckbox
                   v-if="isCandidateForm && isFieldSelected(currentItem, field.fieldname)"
-                  class="flex shrink-0 items-center gap-1 text-p-xs text-app-text-muted"
-                >
-                  <input
-                    type="checkbox"
-                    class="h-3 w-3"
-                    :disabled="disabled"
-                    :checked="isFieldRequired(currentItem, field.fieldname)"
-                    @change="(e) => setFieldRequired(currentItem, field.fieldname, e.target.checked)"
-                  />
-                  Required
-                </label>
+                  label="Required"
+                  class="shrink-0 !text-p-xs"
+                  :disabled="disabled"
+                  :model-value="isFieldRequired(currentItem, field.fieldname)"
+                  @update:model-value="(v) => setFieldRequired(currentItem, field.fieldname, v)"
+                />
               </div>
             </div>
           </div>
@@ -122,6 +112,8 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Ports the old desk render_field_selector_widget() (ERP Configuration's
 // Candidate Form Fields / Department Display Fields / Department Access
 // Fields tabs) onto this app's own components — same CONFIG shape (a JSON
@@ -131,7 +123,7 @@
 // select-all/copy-from behavior — just Checkbox/AppButton/Dialog instead
 // of hand-built gradient HTML.
 import { computed, ref, watch } from 'vue'
-import { Checkbox, Dialog } from 'frappe-ui'
+import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 

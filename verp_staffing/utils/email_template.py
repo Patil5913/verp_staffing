@@ -2841,7 +2841,7 @@ def seed_email_template():
 
                   <!-- CTA Button -->
                   <div style="text-align:center;margin:24px 0;">
-                    <a href="{{ frappe.utils.get_url_to_form('Sales Invoice', doc.name) }}"
+                    <a href="{{ frappe.utils.get_url('/verp/Sales%20Invoice/' ~ (doc.name | urlencode)) }}"
                        style="background:#00aef7;color:#ffffff;text-decoration:none;
                               padding:13px 36px;border-radius:8px;font-size:15px;
                               font-weight:700;display:inline-block;letter-spacing:0.2px;">
@@ -3272,7 +3272,7 @@ def seed_email_template():
 
                   <!-- CTA Button -->
                   <div style="text-align:center;margin:24px 0;">
-                    <a href="{{ frappe.utils.get_url_to_form('Purchase Invoice', doc.name) }}"
+                    <a href="{{ frappe.utils.get_url('/verp/Purchase%20Invoice/' ~ (doc.name | urlencode)) }}"
                        style="background:#00aef7;color:#ffffff;text-decoration:none;
                               padding:13px 36px;border-radius:8px;font-size:15px;
                               font-weight:700;display:inline-block;letter-spacing:0.2px;">

@@ -356,7 +356,7 @@ class SalesOrder(Document):
                 title="Email Missing",
                 msg=(
                     "Email is required to send Lead Detail Form.<br><br>"
-                    f'<a href="/app/lead-detail-form/{customer_lead_details}" target="_blank">'
+                    f'<a href="/verp/Lead%20Detail%20Form/{customer_lead_details}" target="_blank">'
                     "➜ Open Lead Detail Form</a>"
                 ),
             )
@@ -1012,7 +1012,7 @@ def handle_background_failure(title, sales_order, error, message):
     frappe.log_error(error, title)
     # Notification Message
     sales_order_link = (
-        f'<a href="/app/sales-order/{sales_order}" target="_blank">{sales_order}</a>'
+        f'<a href="/verp/Sales%20Order/{sales_order}" target="_blank">{sales_order}</a>'
     )
 
     full_message = f"{message}<br><br>Sales Order: {sales_order_link}"

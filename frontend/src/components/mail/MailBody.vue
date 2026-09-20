@@ -37,14 +37,32 @@ const css = () => {
   </style>`
 }
 
+// The frame's document is about:srcdoc, so a logo or footer image stored as a
+// site-relative path ("/files/logo.png") has nothing to resolve against —
+// <base href> points those at this site.
+const origin = window.location.origin
+
 const doc = computed(() => {
   const clean = DOMPurify.sanitize(props.html || '', { FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe', 'object', 'embed'], ADD_ATTR: ['target'] })
-  return `<!doctype html><html><head><meta charset="utf-8"><base target="_blank">${css()}</head><body>${clean || '<p style="opacity:.6">(no content)</p>'}</body></html>`
+  return `<!doctype html><html><head><meta charset="utf-8"><base href="${origin}/" target="_blank">${css()}</head><body>${clean || '<p style="opacity:.6">(no content)</p>'}</body></html>`
 })
+
+// A logo/footer image that has no source or fails to load would show the
+// browser's broken-image icon — take it out instead. The sandbox blocks the
+// message's own scripts, so listen from out here.
+function dropBrokenImages(body) {
+  for (const img of body.querySelectorAll('img')) {
+    const remove = () => img.remove()
+    if (!img.getAttribute('src')?.trim()) remove()
+    else if (img.complete && img.naturalWidth === 0) remove()
+    else img.addEventListener('error', remove, { once: true })
+  }
+}
 
 function fit() {
   const body = frame.value?.contentDocument?.body
   if (!body) return
+  dropBrokenImages(body)
   const measure = () => (height.value = Math.max(60, body.scrollHeight + 4))
   measure()
   observer?.disconnect()

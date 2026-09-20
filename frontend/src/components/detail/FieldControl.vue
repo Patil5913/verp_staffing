@@ -13,7 +13,7 @@
   </div>
 
   <div v-else-if="controlType === 'checkbox'" class="pt-6">
-    <Checkbox
+    <AppCheckbox
       :label="field.label"
       :model-value="Boolean(modelValue)"
       :disabled="disabled"
@@ -60,14 +60,12 @@
   <div v-else class="flex flex-col gap-1.5">
     <label v-if="field.label" class="text-p-sm font-medium text-app-text-muted">{{ field.label }}</label>
 
-    <textarea
+    <AppTextarea
       v-if="controlType === 'textarea'"
-      :class="[fieldInputClasses, 'h-auto resize-none py-1.5']"
-      rows="3"
-      :value="displayValue ?? ''"
+      :model-value="displayValue ?? ''"
       :disabled="disabled"
       :placeholder="placeholder"
-      @input="(e) => onInput(e.target.value)"
+      @update:model-value="onInput"
     />
     <AppCombobox
       v-else-if="controlType === 'select'"
@@ -77,14 +75,13 @@
       :placeholder="placeholder || 'Select an option'"
       @update:model-value="onInput"
     />
-    <input
+    <AppInput
       v-else
-      :class="fieldInputClasses"
       :type="controlType"
-      :value="displayValue ?? ''"
+      :model-value="displayValue ?? ''"
       :disabled="disabled"
       :placeholder="placeholder"
-      @input="(e) => onInput(e.target.value)"
+      @update:model-value="onInput"
     />
 
     <p v-if="error" class="text-p-xs text-red-600">{{ error }}</p>
@@ -92,11 +89,14 @@
 </template>
 
 <script setup>
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import { computed } from 'vue'
-import { Checkbox, FileUploader } from 'frappe-ui'
+import { FileUploader } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppTextarea from '@/components/ui/AppTextarea.vue'
 import {
   isEmailField,
   isMonthYearField,
@@ -188,14 +188,6 @@ const error = computed(() => {
   if (!props.showErrors) return ''
   return validateFieldValue(props.field, props.modelValue)
 })
-
-// This app's own field styling, in place of frappe-ui's stock gray form
-// inputs — matches AppButton's rounded, app-token-driven look so a detail
-// form reads as this product's UI rather than an embedded Frappe form.
-const fieldInputClasses =
-  'w-full h-9 rounded-lg border border-app-border bg-app-panel px-3 text-p-sm text-app-text ' +
-  'placeholder:text-app-text-muted transition-colors focus:border-app-primary focus:outline-none ' +
-  'focus:ring-2 focus:ring-app-primary/20 disabled:cursor-not-allowed disabled:opacity-60'
 
 defineExpose({ error })
 </script>

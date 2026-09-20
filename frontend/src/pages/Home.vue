@@ -12,9 +12,9 @@
         module screen by screen.
       </p>
       <div class="flex items-center gap-2">
-        <Button variant="solid" theme="blue" @click="ping">
+        <AppButton variant="solid" theme="blue" @click="ping">
           Ping backend
-        </Button>
+        </AppButton>
         <span v-if="pong" class="text-p-base text-app-text-muted">
           {{ pong }}
         </span>
@@ -24,8 +24,9 @@
 </template>
 
 <script setup>
+import AppButton from '@/components/common/AppButton.vue'
 import { ref } from 'vue'
-import { Button, call } from 'frappe-ui'
+import { call } from 'frappe-ui'
 import { notify } from '@/utils/common/notify'
 
 const pong = ref('')

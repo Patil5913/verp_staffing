@@ -2,24 +2,17 @@
   <div class="flex h-full flex-col bg-app-bg">
     <SubNavbar title="Chart of Accounts">
       <template #left>
-        <select
-          v-model="company"
-          class="h-8 max-w-[14rem] rounded-lg border border-app-border bg-app-panel px-2.5 text-p-sm text-app-text focus:border-app-primary focus:outline-none"
-          :disabled="!companies.length"
-        >
-          <option v-for="c in companies" :key="c" :value="c">{{ c }}</option>
-        </select>
+        <AppCombobox v-model="company" class="w-56" compact :options="companies" :disabled="!companies.length" />
       </template>
 
-      <TextInput v-model="search" class="w-full" placeholder="Search account name, number or type">
-        <template #prefix><FeatherIcon name="search" class="h-4 w-4 text-app-text-muted" /></template>
-      </TextInput>
+      <AppSearchInput v-model="search" class="w-full" placeholder="Search account name, number or type">
+      </AppSearchInput>
 
       <template #right>
         <AppButton variant="outline" size="sm" icon="chevrons-down" @click="tree?.expandAll()">Expand all</AppButton>
         <AppButton variant="outline" size="sm" icon="chevrons-up" @click="tree?.collapseAll()">Collapse</AppButton>
         <AppButton v-if="canCreate" size="sm" icon="plus" @click="openNew(null)">New Account</AppButton>
-        <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
       </template>
     </SubNavbar>
 
@@ -59,8 +52,8 @@
             <span v-if="node.balanceText" :class="node.balance > 0 ? 'text-app-text' : 'text-app-text-muted'">{{ node.balanceText }}</span>
           </template>
           <template #actions="{ node }">
-            <Button v-if="canCreate && node.expandable" variant="ghost" size="sm" icon="plus" tooltip="Add child account" @click="openNew(node)" />
-            <Button v-if="canReadLedger" variant="ghost" size="sm" icon="book-open" tooltip="View ledger" @click="viewLedger(node)" />
+            <AppButton v-if="canCreate && node.expandable" variant="ghost" size="sm" icon="plus" tooltip="Add child account" @click="openNew(node)" />
+            <AppButton v-if="canReadLedger" variant="ghost" size="sm" icon="book-open" tooltip="View ledger" @click="viewLedger(node)" />
           </template>
         </DocTreeView>
       </template>
@@ -69,10 +62,10 @@
     <Dialog v-model="showNew" :options="{ title: newParent ? `Add account under ${newParent.label}` : 'New root account', size: 'lg' }">
       <template #body-content>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormControl label="Account Name" v-model="form.account_name" required class="sm:col-span-2" />
-          <FormControl label="Account Number" v-model="form.account_number" description="Included as a prefix in the account's name." />
-          <div class="pt-6"><Checkbox label="Is Group" v-model="form.is_group" /></div>
-          <FormControl
+          <AppInput label="Account Name" v-model="form.account_name" required class="sm:col-span-2" />
+          <AppInput label="Account Number" v-model="form.account_number" description="Included as a prefix in the account's name." />
+          <div class="pt-6"><AppCheckbox label="Is Group" v-model="form.is_group" /></div>
+          <AppInput
             v-if="!newParent"
             type="select"
             label="Root Type"
@@ -80,7 +73,7 @@
             :options="['Asset', 'Liability', 'Equity', 'Income', 'Expense']"
             required
           />
-          <FormControl type="select" label="Account Type" v-model="form.account_type" :options="accountTypes" />
+          <AppInput type="select" label="Account Type" v-model="form.account_type" :options="accountTypes" />
           <AppLinkField label="Currency" doctype="Currency" v-model="form.account_currency" hide-add-new />
           <template v-if="form.account_type === 'Bank'">
             <AppLinkField label="Bank" doctype="Bank" v-model="form.bank" />
@@ -96,6 +89,10 @@
 </template>
 
 <script setup>
+import AppSearchInput from '@/components/ui/AppSearchInput.vue'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
+import AppCombobox from '@/components/common/AppCombobox.vue'
 // Chart of Accounts — the Account tree, company-scoped. Ported from
 // account_tree.js: nodes come from accounts.utils.get_children (which is
 // company-aware; the stock treeview isn't, which is why accounts from every
@@ -104,7 +101,7 @@
 // through add_ac.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button, call, Checkbox, Dialog, FeatherIcon, FormControl, TextInput } from 'frappe-ui'
+import { call, Dialog, FeatherIcon } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import StateBanner from '@/components/common/StateBanner.vue'

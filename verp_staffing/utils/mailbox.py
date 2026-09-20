@@ -100,14 +100,25 @@ def _snippet(text_content, content) -> str:
     return re.sub(r"\s+", " ", text).strip()[:160]
 
 
+def _account_name(account: str | None) -> str:
+    """The Email Account's own name (its "Email Account Name" field) — what a
+    manually sent mail shows as its sender, rather than the user's name."""
+    if not account:
+        return ""
+    return frappe.db.get_value("Email Account", account, "email_account_name") or account
+
+
 def _row(c, user: str) -> dict:
+    sender_full_name = c.sender_full_name or ""
+    if c.sent_or_received == "Sent" and c.get("email_account"):
+        sender_full_name = _account_name(c.email_account) or sender_full_name
     liked_by = frappe.parse_json(c.get("_liked_by") or "[]") if c.get("_liked_by") else []
     return {
         "name": c.name,
         "kind": "message",
         "subject": c.subject or "",
         "sender": c.sender,
-        "sender_full_name": c.sender_full_name or "",
+        "sender_full_name": sender_full_name,
         "recipients": c.recipients or "",
         "snippet": _snippet(c.get("text_content"), c.get("content")),
         "communication_date": c.communication_date or c.creation,
@@ -125,7 +136,7 @@ def _row(c, user: str) -> dict:
 _LIST_COLUMNS = (
     "c.name, c.subject, c.sender, c.sender_full_name, c.recipients, c.content, c.text_content, "
     "c.communication_date, c.creation, c.seen, c._seen, c._liked_by, c.has_attachment, "
-    "c.reference_doctype, c.reference_name, c.email_status, c.sent_or_received, c.delivery_status"
+    "c.reference_doctype, c.reference_name, c.email_status, c.sent_or_received, c.delivery_status, c.email_account"
 )
 
 
@@ -515,19 +526,22 @@ def send_mail(
         if attached_to != user and user != "Administrator":
             frappe.throw(_("You can only attach files you uploaded."), frappe.PermissionError)
 
+    # now=1: deliver straight away (what Email Queue's "Send Now" does) rather than
+    # leaving the mail for the scheduler, so an inbox message goes out at once.
     result = make(
         doctype=reference_doctype or None,
         name=reference_name or None,
         content=content,
         subject=subject or _("(no subject)"),
         sender=chosen["email_id"],
-        sender_full_name=frappe.db.get_value("User", user, "full_name") or user,
+        sender_full_name=_account_name(chosen["account"]),
         recipients=to,
         cc=cc or None,
         bcc=bcc or None,
         communication_medium="Email",
         sent_or_received="Sent",
         send_email=1,
+        now=1,
         attachments=files or None,
         in_reply_to=in_reply_to or None,
     )

@@ -4,8 +4,8 @@
     <p class="mb-4 text-p-sm text-app-text-muted">Set a new password for this user.</p>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <FormControl type="password" label="New Password" v-model="newPassword" />
-      <FormControl type="password" label="Confirm Password" v-model="confirmPassword" />
+      <AppInput type="password" label="New Password" v-model="newPassword" />
+      <AppInput type="password" label="Confirm Password" v-model="confirmPassword" />
     </div>
     <p v-if="mismatch" class="mt-2 text-p-xs text-red-600">Passwords don't match.</p>
 
@@ -16,8 +16,8 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 import { computed, ref } from 'vue'
-import { FormControl } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'

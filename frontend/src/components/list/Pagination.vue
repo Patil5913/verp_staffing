@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center gap-1">
-    <Button
+    <AppButton
       variant="outline"
       icon="chevron-left"
       :disabled="page <= 1"
@@ -9,7 +9,7 @@
     <span class="px-2 text-p-base text-app-text-muted">
       Page {{ page }} of {{ pageCount }}
     </span>
-    <Button
+    <AppButton
       variant="outline"
       icon="chevron-right"
       :disabled="page >= pageCount"
@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { Button } from 'frappe-ui'
+import AppButton from '@/components/common/AppButton.vue'
 
 defineProps({
   page: { type: Number, required: true },

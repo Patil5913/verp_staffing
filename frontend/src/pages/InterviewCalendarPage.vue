@@ -15,11 +15,11 @@
         </button>
       </div>
       <template #right>
-        <Button variant="ghost" icon="chevron-left" tooltip="Previous month" @click="shift(-1)" />
+        <AppButton variant="ghost" icon="chevron-left" tooltip="Previous month" @click="shift(-1)" />
         <span class="min-w-[8.5rem] text-center text-p-sm font-medium text-app-text">{{ monthLabel }}</span>
-        <Button variant="ghost" icon="chevron-right" tooltip="Next month" @click="shift(1)" />
-        <Button variant="ghost" label="Today" @click="goToday" />
-        <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" :loading="events.isLoading" @click="load" />
+        <AppButton variant="ghost" icon="chevron-right" tooltip="Next month" @click="shift(1)" />
+        <AppButton variant="ghost" label="Today" @click="goToday" />
+        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" :loading="events.isLoading" @click="load" />
       </template>
     </SubNavbar>
 
@@ -100,13 +100,14 @@
 </template>
 
 <script setup>
+import AppButton from '@/components/common/AppButton.vue'
 // Calendar and timeline views of the Interview rounds — the desk's
 // interview_calendar.js / interview_list.js Gantt on top of the same server
 // methods (get_interview_round_events), which already scope rows to what the
 // user may see. A round is one event; clicking it opens its Interview.
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, LoadingIndicator } from 'frappe-ui'
+import { LoadingIndicator } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'

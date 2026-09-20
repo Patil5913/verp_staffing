@@ -229,7 +229,7 @@ function render_interviews(data, append = false) {
 			<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#f9fafb;">
 
 				<div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-					<a href="/app/interview/${dept.id}" target="_blank"
+					<a href="/verp/Interview/${dept.id}" target="_blank"
 						style="font-weight:600;color:#260fea;">
 						${dept.id}
 					</a>

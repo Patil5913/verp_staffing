@@ -158,7 +158,7 @@ def validate_removed_department_roles(doc):
 
     for row in assignments:
         employee_links.append(
-            f'<a href="/app/employee/{row.parent}">{row.parent}</a> ({row.designation})'
+            f'<a href="/verp/Employee/{row.parent}">{row.parent}</a> ({row.designation})'
         )
 
     frappe.throw(
@@ -201,7 +201,7 @@ def validate_department_delete(doc):
 
     for row in assignments:
         employee_links.append(
-            f'<a href="/app/employee/{row.parent}">{row.parent}</a> ({row.designation})'
+            f'<a href="/verp/Employee/{row.parent}">{row.parent}</a> ({row.designation})'
         )
 
     frappe.throw(

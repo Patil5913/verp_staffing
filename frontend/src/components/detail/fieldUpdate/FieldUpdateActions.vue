@@ -2,7 +2,7 @@
   <template v-if="state.canUpdate">
     <AppButton variant="outline" icon="pencil" :loading="preparing" @click="openUpdate">Update Detail</AppButton>
   </template>
-  <Badge v-else-if="state.myPending" variant="subtle" theme="orange" class="self-center">Your update request is pending approval</Badge>
+  <AppBadge v-else-if="state.myPending" theme="orange" class="self-center">Your update request is pending approval</AppBadge>
 
   <AppButton v-if="state.requests.length" variant="outline" icon="check-check" :loading="preparing" @click="openReview">
     Accept Updates ({{ state.requests.length }})
@@ -23,6 +23,7 @@
 </template>
 
 <script setup>
+import AppBadge from '@/components/ui/AppBadge.vue'
 // The field-change request flow from permission_feature.js / customer.js, as
 // two buttons on a record's action bar:
 //  * Update Detail — for the record's assignee or the customer's owner: ask to
@@ -32,7 +33,7 @@
 // `mode` "service" is a department form (Resume, RUC, ... — the customer is
 // the record's `customer`); "owner" is the Customer form itself.
 import { computed, reactive, ref, watch } from 'vue'
-import { call, Badge } from 'frappe-ui'
+import { call } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import FieldUpdateDialog from './FieldUpdateDialog.vue'
 import FieldUpdateReviewDialog from './FieldUpdateReviewDialog.vue'

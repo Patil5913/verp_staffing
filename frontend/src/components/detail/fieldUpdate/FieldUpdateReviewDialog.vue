@@ -7,13 +7,14 @@
             <p class="text-p-sm font-medium text-app-text">Requested by {{ req.requested_by }}</p>
             <p class="text-p-sm text-app-text-muted">Reason: {{ req.reason }}</p>
           </div>
-          <label
+          <AppCheckbox
             v-for="(change, fieldname) in req.field_updates"
             :key="fieldname"
-            class="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 transition-colors"
+            class="!items-start !gap-3 rounded-lg border [&_input]:mt-1 px-3 py-2 transition-colors"
             :class="isPicked(req, fieldname) ? 'border-app-primary bg-app-primary-tint' : 'border-app-border hover:bg-app-panel-2'"
+            :model-value="isPicked(req, fieldname)"
+            @update:model-value="(v) => pick(req, fieldname, v)"
           >
-            <input type="checkbox" class="mt-1" :checked="isPicked(req, fieldname)" @change="(e) => pick(req, fieldname, e.target.checked)" />
             <span class="min-w-0 flex-1">
               <span class="block text-p-sm font-medium text-app-text">{{ labelOf(fieldname) }}</span>
               <template v-if="Array.isArray(change.new)">
@@ -26,7 +27,7 @@
                 <span class="text-app-text">{{ show(change.new) }}</span>
               </span>
             </span>
-          </label>
+          </AppCheckbox>
         </div>
       </div>
     </template>
@@ -38,6 +39,7 @@
 </template>
 
 <script setup>
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // The approver's "Accept Updates" dialog (permission_feature.js's
 // _open_accept_updates_dialog): each pending request lists the fields it wants
 // changed as old → new; the approver ticks the ones to apply (the rest are

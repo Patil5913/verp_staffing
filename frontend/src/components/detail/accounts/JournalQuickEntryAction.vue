@@ -4,12 +4,12 @@
   <Dialog v-model="open" :options="{ title: 'Quick Journal Entry', size: 'lg' }">
     <template #body-content>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormControl type="number" label="Amount" v-model="form.amount" required />
-        <FormControl type="date" label="Date" v-model="form.posting_date" required />
+        <AppInput type="number" label="Amount" v-model="form.amount" required />
+        <AppInput type="date" label="Date" v-model="form.posting_date" required />
         <AppLinkField label="Debit Account" doctype="Account" v-model="form.debit_account" :filters="accountFilters" hide-add-new />
         <AppLinkField label="Credit Account" doctype="Account" v-model="form.credit_account" :filters="accountFilters" hide-add-new />
         <AppCombobox v-if="seriesOptions.length > 1" label="Series" v-model="form.naming_series" :options="seriesOptions" required />
-        <FormControl type="textarea" label="User Remark" v-model="form.user_remark" class="sm:col-span-2" />
+        <AppInput type="textarea" label="User Remark" v-model="form.user_remark" class="sm:col-span-2" />
       </div>
     </template>
     <template #actions>
@@ -19,12 +19,13 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // journal_entry.js's "Quick Entry": one amount moved from a credit account to a
 // debit account. Fills the entry's two rows (and date / remark / series) and
 // saves it straight away, so a simple transfer is one dialog rather than a
 // hand-built table.
 import { computed, reactive, ref, watch } from 'vue'
-import { Dialog, FormControl } from 'frappe-ui'
+import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'

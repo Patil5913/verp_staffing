@@ -246,21 +246,21 @@ async function render_headline(frm) {
 			message:
 				"Finished Creating Employee? The next step is configuring the ERP so the system can automate your workflow.",
 			button: "Configure ERP Settings",
-			route: "/app/erp-configuration",
+			route: "/verp/settings/ERP%20Configuration",
 			color: "blue",
 		},
 		pdf_agreement_template: {
 			message:
 				"ERP configuration is complete. Create an agreement template to streamline candidate onboarding.",
 			button: "Create Agreement Template",
-			route: "/app/pdf-agreement-template/new",
+			route: "/verp/Pdf%20Agreement%20Template",
 			color: "blue",
 		},
 		completed: {
 			message:
 				"Congratulations. Your organization setup is complete and ready for operations.",
 			button: "Go To Dashboard",
-			route: "/app",
+			route: "/verp",
 			color: "blue",
 		},
 	};

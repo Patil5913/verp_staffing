@@ -21,17 +21,18 @@
     <div class="flex shrink-0 items-center gap-2">
       <AppLinkField v-if="showCompany" v-model="company" doctype="Company" compact hide-add-new placeholder="Company" class="w-44 shrink-0" />
 
-      <DateRangePicker v-if="preset === 'custom'" v-model="range" placeholder="Pick a range" variant="outline" input-class="!h-7 w-48 !text-p-sm" />
+      <AppDatePicker v-if="preset === 'custom'" v-model="range" mode="range" compact placeholder="Pick a range" class="w-60 shrink-0" />
       <AppCombobox v-model="preset" :options="PRESETS" compact placeholder="Period" class="w-36 shrink-0" />
 
-      <Button variant="ghost" icon="refresh-cw" tooltip="Refresh" :loading="loading" @click="$emit('refresh')" />
+      <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" :loading="loading" @click="$emit('refresh')" />
     </div>
   </div>
 </template>
 
 <script setup>
+import AppButton from '@/components/common/AppButton.vue'
 import { computed } from 'vue'
-import { Button, DateRangePicker } from 'frappe-ui'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import AppCombobox from '@/components/common/AppCombobox.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import { PRESETS } from '@/utils/dashboard/format'
@@ -48,7 +49,7 @@ const preset = defineModel('preset', { type: String, required: true })
 const company = defineModel('company', { type: String, default: '' })
 const custom = defineModel('custom', { type: Object, required: true })
 
-// DateRangePicker speaks "from,to"; the dashboard keeps them as two fields.
+// AppDatePicker (range mode) speaks "from,to"; the dashboard keeps them as two fields.
 const range = computed({
   get: () => (custom.value.from && custom.value.to ? `${custom.value.from},${custom.value.to}` : ''),
   set: (value) => {

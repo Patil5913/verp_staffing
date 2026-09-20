@@ -113,6 +113,18 @@ const routes = [
     component: () => import('@/pages/SetupGuide.vue'),
   },
   {
+    // "See all Activity" from the notification bell (see NotificationsPage.vue).
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/pages/NotificationsPage.vue'),
+  },
+  {
+    // Living catalogue of the app's reusable components (see ComponentsPage.vue).
+    path: '/components',
+    name: 'Components',
+    component: () => import('@/pages/ComponentsPage.vue'),
+  },
+  {
     path: '/email-inbox',
     name: 'EmailInbox',
     component: () => import('@/pages/EmailInbox.vue'),

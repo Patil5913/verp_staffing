@@ -17,7 +17,7 @@
           <table class="w-full text-left text-p-sm">
             <thead class="sticky top-0 bg-app-panel-2 text-p-xs text-app-text-muted">
               <tr>
-                <th class="w-10 px-3 py-2"><Checkbox :model-value="allSelected" @update:model-value="toggleAll" /></th>
+                <th class="w-10 px-3 py-2"><AppCheckbox :model-value="allSelected" :indeterminate="!allSelected && selected.size > 0" @update:model-value="toggleAll" /></th>
                 <th class="px-3 py-2 font-medium">Invoice</th>
                 <th class="px-3 py-2 font-medium">Party</th>
                 <th class="px-3 py-2 font-medium">Account</th>
@@ -27,7 +27,7 @@
             </thead>
             <tbody>
               <tr v-for="inv in invoices" :key="inv.name" class="cursor-pointer border-t border-app-border hover:bg-app-panel-2" @click="toggle(inv.name)">
-                <td class="px-3 py-2" @click.stop><Checkbox :model-value="selected.has(inv.name)" @update:model-value="toggle(inv.name)" /></td>
+                <td class="px-3 py-2" @click.stop><AppCheckbox :model-value="selected.has(inv.name)" @update:model-value="toggle(inv.name)" /></td>
                 <td class="px-3 py-2 font-medium text-app-text">{{ inv.name }}</td>
                 <td class="px-3 py-2">{{ inv[kind.partyField] }}</td>
                 <td class="px-3 py-2 text-app-text-muted">{{ inv[kind.accountField] }}</td>
@@ -48,6 +48,7 @@
 </template>
 
 <script setup>
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // journal_entry.js's "Get Outstanding Invoices": for a write-off, list the
 // company's open Sales (receivable) or Purchase (payable) invoices, and turn
 // the ticked ones into entry rows — one per invoice, each referencing it and
@@ -55,7 +56,7 @@
 // get_outstanding the desk row uses) — plus a balancing row with the total,
 // left for you to give its account (typically the bank / write-off account).
 import { computed, ref } from 'vue'
-import { call, Checkbox, Dialog, LoadingIndicator } from 'frappe-ui'
+import { call, Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'

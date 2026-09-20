@@ -5,7 +5,7 @@
         <p class="text-p-sm text-app-text-muted">
           The Opportunity is assigned to a Sales employee automatically, unless you choose the owner yourself.
         </p>
-        <Checkbox label="Want to assign Opportunity Owner Manually?" v-model="manualAssign" />
+        <AppCheckbox label="Want to assign Opportunity Owner Manually?" v-model="manualAssign" />
         <AppLinkField v-if="manualAssign" label="Opportunity Owner" doctype="Employee" :filters="{ department: 'Sales' }" v-model="owner" />
       </div>
     </template>
@@ -16,11 +16,12 @@
 </template>
 
 <script setup>
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // The "Create Opportunity" dialog from lead.js (open_create_opportunity_dialog):
 // auto-assign to Sales via get_auto_assign_employee, or pick the owner by
 // hand, then create_opportunity_from_lead.
 import { ref } from 'vue'
-import { call, Checkbox, Dialog } from 'frappe-ui'
+import { call, Dialog } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import { notify } from '@/utils/common/notify'

@@ -16,7 +16,7 @@ add_to_apps_screen = [
 		"name": "verp_staffing",
 		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png",
 		"title": "Vrugle Staffing ERP",
-		"route": "/app",
+		"route": "/verp",
 		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"
 	}
 ]
@@ -131,8 +131,9 @@ treeviews = [
 # Home Pages
 # ----------
 
-# application home page (will override Website Settings)
-# home_page = "login"
+# application home page (will override Website Settings): the site root opens
+# the app; www/verp.py sends a signed-out visitor on to /verp/login.
+home_page = "verp"
 
 # website user home page (by Role)
 # role_home_page = {
@@ -441,6 +442,7 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = [
+    "verp_staffing.utils.desk_routes.redirect_desk_to_spa",
     "verp_staffing.quota.utils.quota.site_expiry_check",
     "verp_staffing.quota.utils.quota.block_non_admin",
     "verp_staffing.overrides.email_template.patch",

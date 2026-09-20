@@ -24,13 +24,7 @@
           <p v-if="!recipients.length" class="text-p-xs text-app-text-muted">Add a recipient to start placing fields.</p>
         </div>
         <div v-if="!disabled" class="mt-2 flex gap-1.5">
-          <input
-            v-model="newEmail"
-            type="email"
-            placeholder="signer@email.com"
-            class="h-8 min-w-0 flex-1 rounded-lg border border-app-border bg-app-panel px-2.5 text-p-sm text-app-text focus:border-app-primary focus:outline-none"
-            @keyup.enter="addRecipient"
-          />
+          <AppInput v-model="newEmail" type="email" compact placeholder="signer@email.com" class="flex-1" @keyup.enter="addRecipient" />
           <AppButton size="sm" variant="outline" icon="plus" @click="addRecipient" />
         </div>
       </div>
@@ -117,9 +111,9 @@
         <AppCombobox :model-value="selected.signer_email" :options="recipients" :disabled="disabled" placeholder="Select a recipient" @update:model-value="(v) => patch(selected, { signer_email: v })" />
       </div>
       <template v-if="selected.field_type !== 'checkbox'">
-        <FormControl label="Field label" :model-value="selected.field_label" :disabled="disabled" required @update:model-value="(v) => patch(selected, { field_label: v })" />
-        <FormControl label="Placeholder text" :model-value="selected.placeholder_text" :disabled="disabled" @update:model-value="(v) => patch(selected, { placeholder_text: v })" />
-        <FormControl
+        <AppInput label="Field label" :model-value="selected.field_label" :disabled="disabled" required @update:model-value="(v) => patch(selected, { field_label: v })" />
+        <AppInput label="Placeholder text" :model-value="selected.placeholder_text" :disabled="disabled" @update:model-value="(v) => patch(selected, { placeholder_text: v })" />
+        <AppInput
           v-if="selected.field_type !== 'signature'"
           type="number"
           label="Font size"
@@ -133,6 +127,7 @@
 </template>
 
 <script setup>
+import AppInput from '@/components/ui/AppInput.vue'
 // The E Sign document editor, ported from e_sign.js: the original PDF is
 // rendered page by page and each recipient's fields (signature / text / date
 // / number / checkbox) are dragged onto it, moved and resized in
@@ -141,7 +136,7 @@
 // table: read from the detail's hiddenTables until edited, then written into
 // `values` so the page's normal Save persists them.
 import { computed, ref } from 'vue'
-import { LoadingIndicator, FormControl } from 'frappe-ui'
+import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/common/AppButton.vue'
 import AppCombobox from '@/components/common/AppCombobox.vue'
 import StateBanner from '@/components/common/StateBanner.vue'

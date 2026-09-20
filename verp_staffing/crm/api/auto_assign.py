@@ -57,7 +57,7 @@ def get_auto_assign_employee(
             2. Assign the department to an employee.<br>
             3. Create a new employee and configure the assignment.<br><br>
 
-            <a href="/app/employee"
+            <a href="/verp/Employee"
             class="btn btn-primary btn-sm">
             Open Employee List
             </a>

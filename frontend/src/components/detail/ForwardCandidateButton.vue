@@ -36,25 +36,9 @@
           />
         </div>
 
-        <div v-if="isCR" class="flex flex-col gap-1.5">
-          <label class="text-p-sm font-medium text-app-text-muted">Reason For Forwarding</label>
-          <textarea
-            v-model="reasonForForwarding"
-            rows="3"
-            class="w-full resize-none rounded-lg border border-app-border bg-app-panel px-3 py-1.5 text-p-sm text-app-text focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20"
-          />
-        </div>
+        <AppTextarea v-if="isCR" v-model="reasonForForwarding" label="Reason For Forwarding" />
 
-        <div class="flex flex-col gap-1.5">
-          <label class="text-p-sm font-medium text-app-text-muted">
-            Note{{ isRUC ? '' : ' (optional)' }}
-          </label>
-          <textarea
-            v-model="note"
-            rows="3"
-            class="w-full resize-none rounded-lg border border-app-border bg-app-panel px-3 py-1.5 text-p-sm text-app-text focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-app-primary/20"
-          />
-        </div>
+        <AppTextarea v-model="note" :label="`Note${isRUC ? '' : ' (optional)'}`" />
       </div>
     </template>
     <template #actions>
@@ -66,6 +50,7 @@
 </template>
 
 <script setup>
+import AppTextarea from '@/components/ui/AppTextarea.vue'
 // Shared "Forward Candidate" flow — every service record page (Training,
 // Interview Support, Technical Other Services, Resume, RUC, JDC, Cover
 // Letter, ...) exposes the same action (see add_forward_button in
