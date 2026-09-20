@@ -312,3 +312,37 @@ class TestCustomerPortalAccess(FrappeTestCase):
 
             self.assertTrue(_journey(customer, 1, ctx, commit=False))
             self.assertEqual(counts(), first)  # nothing is added the second time
+
+    # -- clean-up of customer logins that ended up as staff ------------------------
+    def _make_it_look_like_staff(self):
+        self.send()
+        for role in ("Inbox User", "System Manager"):
+            frappe.get_doc({"doctype": "Has Role", "parent": EMAIL, "parenttype": "User", "parentfield": "roles",
+                            "role": role, "name": frappe.generate_hash(length=10)}).db_insert()
+        frappe.db.set_value("User", EMAIL, "user_type", "System User")
+
+    def test_fix_portal_roles_lists_first_then_applies(self):
+        from verp_staffing.crm.api.customer_chat import enforce_portal_roles
+
+        self._make_it_look_like_staff()
+        report = enforce_portal_roles(dry_run=True, commit=False)
+        mine = next(c for c in report["changed"] if c["user"] == EMAIL)
+        self.assertEqual(mine["remove_roles"], ["Inbox User", "System Manager"])
+        self.assertEqual(frappe.db.get_value("User", EMAIL, "user_type"), "System User")  # a dry run writes nothing
+
+        enforce_portal_roles(commit=False)
+        self.assertEqual(frappe.db.get_value("User", EMAIL, "user_type"), "Website User")
+        self.assertEqual(frappe.get_all("Has Role", {"parent": EMAIL, "parenttype": "User"}, pluck="role"), ["Chat External"])
+        self.assertFalse(frappe.db.get_value("Role", "Chat External", "desk_access"))
+        self.assertTrue(frappe.db.get_value("User", EMAIL, "enabled"))  # nothing else about the account changes
+        self.assertFalse([c for c in enforce_portal_roles(dry_run=True, commit=False)["changed"] if c["user"] == EMAIL])  # already right
+
+    def test_fix_portal_roles_never_touches_staff(self):
+        from verp_staffing.crm.api.customer_chat import enforce_portal_roles
+
+        self._make_it_look_like_staff()
+        with patch("verp_staffing.crm.api.customer_chat._is_staff", lambda user: user == EMAIL):
+            report = enforce_portal_roles(commit=False)
+        self.assertIn(EMAIL, report["skipped_staff"])
+        self.assertEqual(frappe.db.get_value("User", EMAIL, "user_type"), "System User")
+        self.assertIn("System Manager", frappe.get_all("Has Role", {"parent": EMAIL, "parenttype": "User"}, pluck="role"))

@@ -79,7 +79,7 @@ def grant_sample_customers_portal_access(password: str = PORTAL_PASSWORD) -> lis
 	"""
 	from frappe.utils.password import update_password
 
-	from verp_staffing.crm.api.customer_chat import CHAT_ROLE, ENDED_STATUSES
+	from verp_staffing.crm.api.customer_chat import CHAT_ROLE, ENDED_STATUSES, enforce_portal_account
 	from verp_staffing.utils import sample_data_tracking as tracking
 
 	sample = set(tracking._read_log().get("Customer", []))
@@ -114,6 +114,7 @@ def grant_sample_customers_portal_access(password: str = PORTAL_PASSWORD) -> lis
 		)
 		user.flags.ignore_permissions = True
 		user.insert()
+		enforce_portal_account(login)
 		update_password(login, password)
 		frappe.db.set_value("Customer", c.name, {"chat_user": login, "chat_access": "Active"}, update_modified=False)
 		granted.append((login, c.name))

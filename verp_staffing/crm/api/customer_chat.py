@@ -161,6 +161,7 @@ def _create_user(email: str, full_name: str, password: str) -> None:
     )
     user.flags.ignore_permissions = True
     user.insert()
+    enforce_portal_account(email)
 
 
 def _ensure_role(email: str) -> None:
@@ -169,6 +170,7 @@ def _ensure_role(email: str) -> None:
         user.append("roles", {"role": CHAT_ROLE})
         user.flags.ignore_permissions = True
         user.save()
+    enforce_portal_account(email)
 
 
 def _send_access_email(customer, customer_name, email, password, subject=None, message=None) -> None:
@@ -266,6 +268,86 @@ def is_chat_access_active(user: str) -> bool:
     if not frappe.db.exists("Customer", {"chat_user": user}):
         return True  # not a customer login (e.g. a candidate): not ours to judge
     return _has_active_customer(user)
+
+
+# -- keeping customer accounts to exactly what the portal needs ------------------------
+
+
+def _is_staff(user: str) -> bool:
+    """Never touched by the role clean-up: the Administrator, and anyone who is an employee."""
+    return user == "Administrator" or bool(frappe.db.exists("Employee", {"user": user}))
+
+
+def portal_account_users() -> list[str]:
+    """Every login that is (or should be) a customer's: linked to a Customer, or holding the portal role."""
+    linked = frappe.get_all("Customer", {"chat_user": ["is", "set"]}, pluck="chat_user")
+    holders = frappe.get_all("Has Role", {"role": CHAT_ROLE, "parenttype": "User"}, pluck="parent")
+    return sorted({u for u in (*linked, *holders) if u and u not in ("Administrator", "Guest")})
+
+
+def enforce_portal_account(user: str, dry_run: bool = False) -> dict | None:
+    """Make one customer login a Website User whose only role is Chat External.
+
+    Removes every other role (and any role/module profile that would put them back), sets the user
+    type, and signs out their old sessions so the portal, not the staff app, is what they load next.
+    Returns what was (or, on a dry run, would be) changed, or None if it was already right.
+    """
+    row = frappe.db.get_value("User", user, ["user_type", "role_profile_name", "module_profile"], as_dict=True)
+    if not row:
+        return None
+    roles = frappe.get_all("Has Role", {"parent": user, "parenttype": "User"}, pluck="role")
+    extra = sorted(set(roles) - {CHAT_ROLE})
+    change = {
+        "user": user,
+        "user_type": row.user_type,
+        "remove_roles": extra,
+        "add_role": CHAT_ROLE not in roles,
+        "clear_profiles": bool(row.role_profile_name or row.module_profile),
+    }
+    if row.user_type == "Website User" and not (extra or change["add_role"] or change["clear_profiles"]):
+        return None
+    if dry_run:
+        return change
+
+    if extra:
+        frappe.db.delete("Has Role", {"parent": user, "parenttype": "User", "role": ["!=", CHAT_ROLE]})
+    if change["add_role"]:
+        frappe.get_doc({"doctype": "Has Role", "parent": user, "parenttype": "User", "parentfield": "roles",
+                        "role": CHAT_ROLE, "name": frappe.generate_hash(length=10)}).db_insert()
+    frappe.db.set_value(
+        "User", user, {"user_type": "Website User", "role_profile_name": None, "module_profile": None}, update_modified=False
+    )
+    frappe.clear_cache(user=user)
+    try:
+        from verp_staffing.utils.sidebar import clear_sidebar_cache_for_user
+
+        clear_sidebar_cache_for_user(user)
+    except Exception:
+        pass
+    frappe.sessions.clear_sessions(user, force=True)
+    return change
+
+
+def enforce_portal_roles(dry_run: bool = False, commit: bool = True) -> dict:
+    """Bring every customer login to Website User + Chat External only.
+
+    Run it through verp_staffing.utils.fix_portal_roles.run, which lists first and applies only when asked.
+    Staff (the Administrator and anyone with an Employee
+    record) are never touched, even if they hold the portal role; they are reported as skipped.
+    """
+    if frappe.db.exists("Role", CHAT_ROLE) and not dry_run:
+        frappe.db.set_value("Role", CHAT_ROLE, "desk_access", 0)
+    changed, skipped = [], []
+    for user in portal_account_users():
+        if _is_staff(user):
+            skipped.append(user)
+            continue
+        result = enforce_portal_account(user, dry_run=dry_run)
+        if result:
+            changed.append(result)
+    if changed and not dry_run and commit:
+        frappe.db.commit()
+    return {"dry_run": dry_run, "changed": changed, "skipped_staff": skipped, "checked": len(portal_account_users())}
 
 
 def set_portal_home_page() -> None:
