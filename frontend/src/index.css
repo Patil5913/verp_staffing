@@ -113,3 +113,10 @@ body {
     touch-action: manipulation;
   }
 }
+
+/* Dropdown menus are portaled to <body>; without a z-index they render
+   behind the fixed mobile sidebar drawer (z-40), so the profile menu in
+   the drawer looked unclickable. reka copies this onto its popper wrapper. */
+.dropdown-content {
+  z-index: 60;
+}
