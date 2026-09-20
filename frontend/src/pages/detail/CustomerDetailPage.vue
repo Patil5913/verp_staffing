@@ -11,13 +11,21 @@
         @delete="showDeleteDialog = true"
       >
         <AppButton
-          v-if="!detail.isNew.value"
+          v-if="!detail.isNew.value && detail.values.chat_access !== 'Active'"
           variant="outline"
           icon="send"
-          :loading="sendingPortalLink"
-          @click="onSendPortalLink"
+          @click="showPortalAccess = true"
         >
-          Send Portal Link
+          Portal &amp; Chat Access
+        </AppButton>
+        <AppButton
+          v-if="!detail.isNew.value && detail.values.chat_access === 'Active'"
+          variant="outline"
+          theme="red"
+          icon="user-x"
+          @click="showRevoke = true"
+        >
+          Revoke Portal Access
         </AppButton>
         <AppButton v-if="!detail.isNew.value" variant="outline" icon="shopping-cart" @click="onCreateSalesOrder">
           Create Sales Order
@@ -53,6 +61,19 @@
     </template>
   </DetailPageLayout>
 
+  <PortalAccessDialog v-if="!detail.isNew.value" v-model="showPortalAccess" :customer="name" @sent="detail.refresh()" />
+  <Dialog
+    v-model="showRevoke"
+    :options="{
+      title: 'Revoke portal access',
+      message: 'The customer will be signed out and lose access to the portal and chat straight away. You can restore it later by sending access again.',
+      icon: { name: 'user-x', appearance: 'danger' },
+    }"
+  >
+    <template #actions>
+      <AppButton variant="danger" icon="user-x" :loading="revoking" @click="onRevoke">Revoke</AppButton>
+    </template>
+  </Dialog>
   <Dialog
     v-model="showDeleteDialog"
     :options="{
@@ -69,9 +90,9 @@
 
 <script setup>
 // Customer's detail page: the generic Details/Notes/Activity tabs, plus two
-// actions ported from customer.js — "Send Portal Link" (calls the
-// doctype's whitelisted send_portal_link, same as the desk form's button)
-// and "Create Sales Order" (desk form's sales_order Button field just does
+// actions ported from customer.js — "Portal & Chat Access" (opens the email
+// for review; sending it creates the customer's website user) and "Create
+// Sales Order" (desk form's sales_order Button field just does
 // frappe.new_doc("Sales Order", {customer}); Sales Order isn't one of this
 // app's ported doctypes yet, so this opens its own new-record route without
 // the customer prefill the desk form has).
@@ -84,16 +105,16 @@
 // equivalent yet.
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Dialog } from 'frappe-ui'
+import { Dialog, call } from 'frappe-ui'
+import { notify } from '@/utils/common/notify'
 import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActions.vue'
+import PortalAccessDialog from '@/components/detail/customer/PortalAccessDialog.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
-import { useResource } from '@/composables/list/useResource'
-import { notify } from '@/utils/common/notify'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,26 +133,27 @@ const DEFAULT_TABS = [
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
 const activeTab = ref('details')
 
-const DETAIL_FIELDS = ['name1', 'customer_from', 'party_name', 'customer_owner', 'overall_status']
+const DETAIL_FIELDS = ['name1', 'customer_from', 'party_name', 'customer_owner', 'overall_status', 'chat_user', 'chat_access']
 
 // customer_from/party_name are set_only_once on the doctype — the desk form
 // never lets you re-pick where a Customer came from after creation.
 const readOnlyFields = computed(() => (detail.isNew.value ? [] : ['customer_from', 'party_name']))
 
-const sendingPortalLink = ref(false)
-const portalLink = useResource({
-  url: 'verp_staffing.crm.doctype.customer.customer.send_portal_link',
-})
-async function onSendPortalLink() {
-  sendingPortalLink.value = true
+const showPortalAccess = ref(false)
+
+const showRevoke = ref(false)
+const revoking = ref(false)
+async function onRevoke() {
+  revoking.value = true
   try {
-    const ok = await portalLink.resource.submit({
-      customer: name.value,
-      customer_name: detail.values.name1,
-    })
-    if (ok) notify.success('Portal link sent successfully.')
+    await call('verp_staffing.crm.api.customer_chat.revoke_portal_access', { customer: name.value })
+    notify.success('Portal access revoked.')
+    showRevoke.value = false
+    detail.refresh()
+  } catch (e) {
+    notify.error(e?.messages?.[0] || e?.message || 'Could not revoke access')
   } finally {
-    sendingPortalLink.value = false
+    revoking.value = false
   }
 }
 

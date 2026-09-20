@@ -18,6 +18,7 @@
       </button>
     </div>
 
+    <ChatBell />
     <NotificationBell />
 
     <CommandPalette v-model="paletteOpen" />
@@ -26,6 +27,7 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import ChatBell from '@/components/layout/ChatBell.vue'
 import NotificationBell from '@/components/overlays/NotificationBell.vue'
 import CommandPalette from '@/components/overlays/CommandPalette.vue'
 

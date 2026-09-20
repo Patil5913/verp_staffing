@@ -13,6 +13,7 @@ import { useRoute } from 'vue-router'
 import { FrappeUIProvider } from 'frappe-ui'
 import AppShell from '@/layouts/AppShell.vue'
 import BlankLayout from '@/layouts/BlankLayout.vue'
+import PortalShell from '@/layouts/PortalShell.vue'
 import UnsavedChangesDialog from '@/components/common/UnsavedChangesDialog.vue'
 
 const route = useRoute()
@@ -21,5 +22,5 @@ const route = useRoute()
 // crucially never mount AppShell — which is what was firing the
 // permission-filtered sidebar fetch (and its "failed to load" toast) for a
 // Guest on the login page.
-const layout = computed(() => (route.meta.public ? BlankLayout : AppShell))
+const layout = computed(() => (route.meta.public ? BlankLayout : route.meta.portal ? PortalShell : AppShell))
 </script>

@@ -100,11 +100,8 @@ async function reload() {
 }
 
 const menuOptions = computed(() => [
-  {
-    icon: 'lucide-settings',
-    label: 'My Settings',
-    onClick: openSettings,
-  },
+  // a customer has no staff user record to edit
+  ...(window.is_portal_user ? [] : [{ icon: 'lucide-settings', label: 'My Settings', onClick: openSettings }]),
   {
     icon: 'lucide-monitor',
     label: 'Theme',

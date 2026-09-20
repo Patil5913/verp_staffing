@@ -45,7 +45,23 @@ const CONFIG_ROUTES = [
   configPage('/Email%20Queue/:name', 'EmailQueueDetail', emailQueueConfig),
 ]
 
+// The customer portal: the same shell as the staff app with its own pages. Only
+// portal users (window.is_portal_user, set by www/verp.py) can open these, and
+// they can open nothing else — the guard below enforces both ways; the server
+// still derives the customer from the session on every call.
+const PORTAL_ROUTES = [
+  { path: '/portal', redirect: '/portal/dashboard' },
+  { path: '/portal/dashboard', name: 'PortalDashboard', component: () => import('@/pages/portal/PortalDashboardPage.vue'), meta: { portal: true, title: 'Dashboard' } },
+  { path: '/portal/services', name: 'PortalServices', component: () => import('@/pages/portal/PortalServicesPage.vue'), meta: { portal: true, title: 'Services' } },
+  { path: '/portal/interviews', name: 'PortalInterviews', component: () => import('@/pages/portal/PortalInterviewsPage.vue'), meta: { portal: true, title: 'Interviews' } },
+  { path: '/portal/technical', name: 'PortalTechnical', component: () => import('@/pages/portal/PortalTechnicalPage.vue'), meta: { portal: true, title: 'Technical' } },
+  { path: '/portal/accounts', name: 'PortalAccounts', component: () => import('@/pages/portal/PortalAccountsPage.vue'), meta: { portal: true, title: 'Accounts' } },
+  { path: '/portal/documents', name: 'PortalDocuments', component: () => import('@/pages/portal/PortalDocumentsPage.vue'), meta: { portal: true, title: 'Documents' } },
+  { path: '/portal/messages', name: 'PortalMessages', component: () => import('@/pages/portal/PortalMessagesPage.vue'), meta: { portal: true, title: 'Messages' } },
+]
+
 const routes = [
+  ...PORTAL_ROUTES,
   {
     path: '/login',
     name: 'Login',
@@ -328,6 +344,12 @@ router.beforeEach(async (to) => {
     const target = to.fullPath === '/' ? '/verp' : `/verp${to.fullPath}`
     return { name: 'Login', query: { 'redirect-to': target } }
   }
+
+  // Customers get the portal and nothing else; staff never see the portal.
+  if (window.is_portal_user) {
+    return to.meta.portal || to.path === '/portal' ? true : { path: '/portal/dashboard' }
+  }
+  if (to.meta.portal || to.path === '/portal') return { path: '/' }
 
   // Logged in isn't enough: a route the sidebar hides (no permission on its
   // doctype, report or page) must not open by typing its URL either.
