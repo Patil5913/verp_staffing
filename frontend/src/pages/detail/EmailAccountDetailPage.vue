@@ -63,7 +63,7 @@
 // /:doctype/:name.
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Dialog } from 'frappe-ui'
+import { Dialog, call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
@@ -99,7 +99,18 @@ const VISIBLE_FIELDS = [
 const visibleFields = computed(() => (isSystemManager() ? [...VISIBLE_FIELDS, 'default_outgoing'] : VISIBLE_FIELDS))
 
 const FIXED_VALUES = { enable_outgoing: 1, enable_incoming: 1, auth_method: 'Basic' }
-function saveWithDefaults() {
+// The desk form copies these from the Email Domain client-side; the server
+// doesn't, so without them Frappe falls back to plain SMTP (no SSL) and the
+// connection check times out on implicit-SSL ports like 465.
+const DOMAIN_FIELDS = [
+  'email_server', 'use_imap', 'use_ssl', 'use_starttls', 'use_tls', 'attachment_limit',
+  'smtp_server', 'smtp_port', 'use_ssl_for_outgoing', 'append_emails_to_sent_folder', 'incoming_port',
+]
+async function saveWithDefaults() {
+  if (detail.values.domain) {
+    const domain = await call('frappe.client.get', { doctype: 'Email Domain', name: detail.values.domain })
+    for (const f of DOMAIN_FIELDS) detail.values[f] = domain[f]
+  }
   Object.assign(detail.values, FIXED_VALUES)
   // Email Account.validate rejects IMAP incoming with no folder; the desk form
   // seeds Inbox, this one hides the table so it has to be seeded here.
