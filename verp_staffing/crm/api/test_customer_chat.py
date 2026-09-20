@@ -147,6 +147,7 @@ class TestCustomerPortalAccess(FrappeTestCase):
             "/api/method/verp_staffing.www.customer.get_portal_data",
             "/api/method/verp_staffing.crm.api.customer_portal.get_portal_accounts",
             "/api/method/upload_file",
+            "/api/method/login",
             "/api/method/logout",
             "/verp/portal/dashboard",
         ):

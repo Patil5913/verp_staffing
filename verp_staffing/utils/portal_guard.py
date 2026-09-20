@@ -20,8 +20,10 @@ CHAT_ROLE = "Chat External"
 # doctypes a portal user needs at document level (the chat's own hooks decide what they see)
 ALLOWED_DOCTYPES = {"Chat Room", "Chat Message", "File"}
 
-# whitelisted methods a portal user may call
-ALLOWED_METHODS = {"upload_file", "logout", "ping", "frappe.sessions.clear"}
+# whitelisted methods a portal user may call. "login" is here because Frappe authenticates the
+# user while it initialises the request, i.e. before this guard runs, so a customer's own sign-in
+# already looks like a portal user calling it; without this their login screen reports a failure.
+ALLOWED_METHODS = {"login", "upload_file", "logout", "ping", "frappe.sessions.clear"}
 ALLOWED_PREFIXES = (
     "verp_staffing.www.customer.",
     "verp_staffing.crm.api.customer_portal.",
