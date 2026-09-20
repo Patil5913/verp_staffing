@@ -101,6 +101,9 @@ const visibleFields = computed(() => (isSystemManager() ? [...VISIBLE_FIELDS, 'd
 const FIXED_VALUES = { enable_outgoing: 1, enable_incoming: 1, auth_method: 'Basic' }
 function saveWithDefaults() {
   Object.assign(detail.values, FIXED_VALUES)
+  // Email Account.validate rejects IMAP incoming with no folder; the desk form
+  // seeds Inbox, this one hides the table so it has to be seeded here.
+  if (!detail.values.imap_folder?.length) detail.values.imap_folder = [{ folder_name: 'INBOX' }]
   return onSave()
 }
 
