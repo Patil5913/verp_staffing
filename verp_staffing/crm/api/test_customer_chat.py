@@ -276,3 +276,39 @@ class TestCustomerPortalAccess(FrappeTestCase):
         self.assertFalse(frappe.db.get_value("Customer", real, "chat_user"))
 
         self.assertEqual(grant_sample_customers_portal_access(), [])  # safe to run again
+
+    def test_demo_journey_gives_a_customer_everything_to_test_with_and_is_idempotent(self):
+        from verp_staffing.utils import sample_data_tracking as tracking
+        from verp_staffing.utils.seed_demo_journeys import _Context, _journey
+        from verp_staffing.utils.seed_production import grant_sample_customers_portal_access
+
+        name = self._demo_customer("Journey Person")
+        tracking.track("Customer", name)
+        frappe.flags.mute_messages = True
+        with patch("frappe.enqueue"), patch("frappe.sendmail"):
+            grant_sample_customers_portal_access()
+            customer = frappe.db.get_value("Customer", name, ["name", "name1", "chat_user", "overall_status"], as_dict=True)
+            self.assertTrue(customer.chat_user)
+            ctx = _Context()
+
+            def counts():
+                marketing = frappe.db.get_value("Marketing", {"customer": name}, "name")
+                return {
+                    "services": sum(frappe.db.count(d, {"customer": name}) for d in ("Marketing", "Resume", "Cover Letter", "RUC", "Training")),
+                    "interviews": frappe.db.count("Interview", {"marketing_link": marketing}),
+                    "orders": frappe.db.count("Sales Order", {"customer": name, "docstatus": 1}),
+                    "invoices": frappe.db.count("Sales Invoice", {"customer": name, "docstatus": 1}),
+                    "agreements": frappe.db.count("Agreement", {"sales_order": ["in", frappe.get_all("Sales Order", {"customer": name}, pluck="name") or ["-"]]}),
+                    "messages": frappe.db.count("Chat Message", {"room": frappe.db.get_value("Chat Room", {"direct_key": "|".join(sorted(("Administrator", customer.chat_user)))}, "name") or "-"}),
+                }
+
+            self.assertTrue(_journey(customer, 1, ctx, commit=False))
+            first = counts()
+            self.assertGreaterEqual(first["services"], 5)
+            self.assertGreaterEqual(first["interviews"], 3)
+            self.assertGreaterEqual(first["orders"], 3)
+            self.assertGreaterEqual(first["invoices"], 2)  # one paid in full, one part-paid
+            self.assertGreaterEqual(first["messages"], 4)
+
+            self.assertTrue(_journey(customer, 1, ctx, commit=False))
+            self.assertEqual(counts(), first)  # nothing is added the second time

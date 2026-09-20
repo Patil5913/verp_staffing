@@ -182,6 +182,8 @@ after_migrate = [
     "verp_staffing.utils.seed_production.after_migrate",
     # ...and then its customers get their portal logins (own marker, so already-seeded sites get it too)
     "verp_staffing.utils.seed_production.portal_access_after_migrate",
+    # ...and they get services, interviews, orders/payments, agreements and chats to test with
+    "verp_staffing.utils.seed_demo_journeys.demo_journeys_after_migrate",
 ]
 
 # Uninstallation
