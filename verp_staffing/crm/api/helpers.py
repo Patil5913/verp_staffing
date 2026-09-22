@@ -877,6 +877,17 @@ def lead_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
+    # This hook only narrows access to an *existing* Lead down to its team
+    # (owner, or Sales users with a linked Opportunity) — it has nothing
+    # meaningful to check on a brand-new, unsaved Lead (no owner set yet, no
+    # Opportunity can reference a name that doesn't exist yet), so it always
+    # fell through to False and blocked every "create" check regardless of
+    # the user's actual Lead create permission (role-based DocPerms already
+    # gate that separately). Blocked a Sales Master Manager who otherwise had
+    # permission from ever creating a Lead.
+    if ptype == "create":
+        return True
+
     team = get_visible_employee_names_cached()
     if not team:
         return False

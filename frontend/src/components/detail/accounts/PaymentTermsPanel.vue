@@ -113,9 +113,10 @@ const terms = computed(() => props.detail.values.payment_terms || [])
 const total = computed(() => terms.value.reduce((s, t) => s + Number(t.amount || 0), 0))
 const subtitle = computed(() => `${terms.value.length} ${terms.value.length === 1 ? 'term' : 'terms'} · ${formatFieldValue(total.value, { fieldtype: 'Currency' })} scheduled`)
 
-// A term can be paid only once the order itself is saved & submitted-ready,
+// A term can be paid only once the order itself is submitted (docstatus 1),
 // and never while it's already verified / awaiting verification.
-const canAct = (term) => term.payment_status !== 'Verified' && term.payment_status !== 'Pending Verification' && !props.detail.isNew.value && props.detail.docstatus.value !== 2
+const canAct = (term) =>
+  term.payment_status !== 'Verified' && term.payment_status !== 'Pending Verification' && props.detail.docstatus.value === 1
 
 const open = ref(false)
 const active = ref(null)

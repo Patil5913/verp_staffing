@@ -2,15 +2,19 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 
-// The Lead's linked "Lead Detail Form" record (candidate-facing fields:
-// education, experience, visa status, etc.), scoped to whatever fields the
-// Administrator has exposed for Lead — see verp_staffing.utils.detail_view.
-// Mirrors useDocDetail's shape so LeadProfilePanel.vue can reuse
-// FieldControl/ChildTableField the same way DocDetailView.vue does.
-export function useLeadDetailForm(leadName) {
+// A Lead / Opportunity / Customer's linked "Lead Detail Form" record
+// (candidate-facing fields: education, experience, visa status, etc.),
+// scoped to whatever fields the Administrator has exposed for that
+// reference doctype — see verp_staffing.utils.detail_view. Mirrors
+// useDocDetail's shape so LeadProfilePanel.vue can reuse FieldControl/
+// ChildTableField the same way DocDetailView.vue does. Shared by Lead's own
+// Candidate Profile tab and the equivalent tab on Opportunity/Customer
+// (their doctypes carry the same `lead_details` link, previously only
+// rendered inline via a now-dropped desk HTML field with no Vue equivalent).
+export function useLeadDetailForm(referenceDoctype, referenceName) {
   const detail = useResource({
-    url: 'verp_staffing.utils.detail_view.get_lead_detail_view',
-    makeParams: () => ({ lead_name: leadName.value }),
+    url: 'verp_staffing.utils.detail_view.get_reference_detail_view',
+    makeParams: () => ({ reference_doctype: referenceDoctype, reference_name: referenceName.value }),
     auto: true,
   })
 
@@ -56,7 +60,7 @@ export function useLeadDetailForm(leadName) {
   )
 
   const save = useResource({
-    url: 'verp_staffing.utils.detail_view.save_lead_detail_view',
+    url: 'verp_staffing.utils.detail_view.save_reference_detail_view',
     onSuccess(data) {
       detail.resource.setData(data)
       applyData(data)
@@ -65,7 +69,11 @@ export function useLeadDetailForm(leadName) {
   })
 
   async function submit() {
-    const result = await save.resource.submit({ lead_name: leadName.value, values: { ...values } })
+    const result = await save.resource.submit({
+      reference_doctype: referenceDoctype,
+      reference_name: referenceName.value,
+      values: { ...values },
+    })
     return !!result
   }
 

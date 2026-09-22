@@ -24,6 +24,7 @@
             <PdfFieldBuilder
               :pdf-url="detail.values.upload_pdf_template"
               :disabled="!detail.canWrite.value"
+              :dirty="isDirty"
               v-model="builderFields"
               @save="onSave"
             />

@@ -196,6 +196,7 @@ import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDocDetail } from '@/composables/detail/useDocDetail'
 import { useResource } from '@/composables/list/useResource'
 import { useUnsavedChangesGuard } from '@/composables/common/useUnsavedChangesGuard'
+import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
 import { notify } from '@/utils/common/notify'
 
 const route = useRoute()
@@ -450,6 +451,7 @@ async function onSave() {
 }
 
 const { bypassNext } = useUnsavedChangesGuard(isDirty, onSave)
+useSaveShortcut(isDirty, onSave)
 
 function goBack() {
   router.push({ name: 'DocList', params: { doctype: doctype.value } })

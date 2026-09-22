@@ -80,6 +80,22 @@
       <AppButton variant="danger" icon="trash-2" :loading="deleting" @click="onDelete">Delete</AppButton>
     </template>
   </Dialog>
+
+  <Dialog
+    v-model="showCreateEmployeePrompt"
+    :options="{
+      title: 'Create an Employee for this user?',
+      message: `${createdUserName} isn't linked to an Employee record yet — most of the app treats a user as staff through their Employee, not the User doctype directly.`,
+      icon: { name: 'user-plus' },
+    }"
+  >
+    <template #actions>
+      <div class="flex w-full items-center justify-between gap-2">
+        <AppButton variant="outline" @click="goToEmployeeList">View Employee List</AppButton>
+        <AppButton variant="primary" icon="user-plus" @click="goToCreateEmployee">Create Employee</AppButton>
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
@@ -89,8 +105,8 @@
 // form sections. See router.js for how /User/:name is routed here ahead of
 // the generic /:doctype/:name.
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { Dialog } from 'frappe-ui'
+import { useRoute, useRouter } from 'vue-router'
+import { Dialog, call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
@@ -103,12 +119,42 @@ import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 
 const route = useRoute()
+const router = useRouter()
 
 const doctype = computed(() => 'User')
 const name = computed(() => route.params.name)
 
-const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
+const { detail, recordTitle, isDirty, onSave: baseSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
+
+// warn_if_employee_missing (overrides/user.py) flags a just-created User
+// that has no linked Employee yet — check once, right after a create,
+// rather than on every save.
+const showCreateEmployeePrompt = ref(false)
+const createdUserName = ref('')
+
+async function onSave() {
+  const wasNew = detail.isNew.value
+  const ok = await baseSave()
+  if (ok && wasNew) {
+    createdUserName.value = detail.meta.resource.data?.name || name.value
+    const missing = await call('verp_staffing.overrides.user.check_employee_missing', {
+      user: createdUserName.value,
+    })
+    if (missing) showCreateEmployeePrompt.value = true
+  }
+  return ok
+}
+
+function goToEmployeeList() {
+  showCreateEmployeePrompt.value = false
+  router.push({ name: 'DocList', params: { doctype: 'Employee' } })
+}
+
+function goToCreateEmployee() {
+  showCreateEmployeePrompt.value = false
+  router.push(`/Employee/new?user=${encodeURIComponent(createdUserName.value)}`)
+}
 
 const TABS = [
   { key: 'profile', label: 'Profile' },

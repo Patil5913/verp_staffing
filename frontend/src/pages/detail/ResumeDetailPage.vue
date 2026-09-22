@@ -10,13 +10,21 @@
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
+        <ForwardCandidateButton
+          v-if="!detail.isNew.value && detail.values.customer"
+          doctype="Resume"
+          :name="name"
+          :customer="detail.values.customer"
+          from-service-name="Resume"
+          @forwarded="detail.refresh"
+        />
         <FieldUpdateActions :detail="detail" :doctype="doctype" :name="name" mode="service" />
       </RecordActionBar>
     </template>
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="DETAIL_FIELDS" />
+        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="DETAIL_FIELDS" :read-only-fields="locked ? ['status'] : []" />
       </div>
     </template>
 
@@ -26,20 +34,18 @@
           v-if="resumeTable"
           :table="resumeTable"
           :rows="detail.values.resume_table || []"
-          :disabled="!detail.canWrite.value"
+          :disabled="!detail.canWrite.value || locked"
           @update:rows="(rows) => (detail.values.resume_table = rows)"
         />
       </div>
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['note', 'update']"
-        show-composer
-        empty-text="Nothing here yet — add the first note below."
-      />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+    </template>
+
+    <template #tab-updates>
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['update']" empty-text="No updates yet." />
     </template>
 
     <template #tab-activity>
@@ -87,6 +93,7 @@ import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
+import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
 const route = useRoute()
@@ -97,10 +104,13 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
+const locked = computed(() => detail.values.status === 'Completed')
+
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
   { key: 'attachments', label: 'Attachments' },
   { key: 'notes', label: 'Notes' },
+  { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },
 ]
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))

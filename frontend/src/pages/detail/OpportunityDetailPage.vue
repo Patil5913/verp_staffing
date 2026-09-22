@@ -42,6 +42,12 @@
       </div>
     </template>
 
+    <template #tab-profile>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <LeadProfilePanel :form="profile" :tried-save="triedSaveProfile" />
+      </div>
+    </template>
+
     <template #tab-notes>
       <ActivityTimeline
         :doctype="doctype"
@@ -93,11 +99,14 @@ import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
+import LeadProfilePanel from '@/components/detail/lead/LeadProfilePanel.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
+import { useLeadDetailForm } from '@/composables/detail/useLeadDetailForm'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 import { isAdministrator } from '@/utils/common/roles'
+import { validateFieldValue } from '@/utils/detail/fieldFormats'
 
 const route = useRoute()
 const router = useRouter()
@@ -105,15 +114,37 @@ const router = useRouter()
 const doctype = computed(() => 'Opportunity')
 const name = computed(() => route.params.name)
 
-const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
-  useDetailPageController(doctype, name)
+// The linked Lead Detail Form's candidate-facing fields (education,
+// experience, visa status...) — same "Candidate Profile" tab Lead's own
+// detail page has, and the same split-save (this form has its own save
+// endpoint, folded into the one navbar Save via extraIsDirty/extraSave
+// below) so editing it here doesn't silently only update the in-memory
+// copy: Opportunity previously had no way to view/edit these fields at all
+// (the old desk form embedded them inline via an HTML field with no Vue
+// equivalent), so "saving" them looked successful but there was nowhere
+// for the edit to actually go.
+const profile = useLeadDetailForm('Opportunity', name)
+const triedSaveProfile = ref(false)
+async function saveProfile() {
+  triedSaveProfile.value = true
+  const invalid = profile.fields.value.find((f) => !f.read_only && validateFieldValue(f, profile.values[f.fieldname]))
+  if (invalid) return false
+  return profile.submit()
+}
 
-const DEFAULT_TABS = [
+const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } = useDetailPageController(
+  doctype,
+  name,
+  { extraIsDirty: computed(() => profile.isDirty.value), extraSave: saveProfile },
+)
+
+const DEFAULT_TABS = computed(() => [
   { key: 'details', label: 'Details' },
+  ...(profile.exists.value ? [{ key: 'profile', label: 'Candidate Profile' }] : []),
   { key: 'notes', label: 'Notes' },
   { key: 'activity', label: 'Activity' },
-]
-const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
+])
+const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.value.filter((t) => t.key === 'details') : DEFAULT_TABS.value))
 const activeTab = ref('details')
 
 const DETAIL_FIELDS = [

@@ -22,7 +22,12 @@
         <div class="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
           <div v-for="col in previewColumns" :key="col.fieldname" class="min-w-0">
             <p class="truncate text-p-xs text-app-text-muted">{{ col.label }}</p>
-            <p class="truncate text-p-sm text-app-text">{{ formatCell(col, row[col.fieldname]) }}</p>
+            <TruncatedText
+              v-if="isWide(col)"
+              :text="formatCell(col, row[col.fieldname])"
+              class="text-p-sm text-app-text"
+            />
+            <p v-else class="truncate text-p-sm text-app-text">{{ formatCell(col, row[col.fieldname]) }}</p>
           </div>
         </div>
         <AppButton
@@ -43,22 +48,24 @@
       <template #body-content>
         <div class="flex flex-wrap gap-3">
           <div
-            v-for="col in table.columns"
+            v-for="col in visibleColumns"
             :key="col.fieldname"
             :class="isWide(col) ? 'w-full' : 'w-[calc(50%-0.375rem)]'"
           >
             <FieldControl
               :field="col"
-              v-model="draft[col.fieldname]"
-              :link-query="linkQueries?.[col.fieldname]"
-              :disabled="disabled"
+              :model-value="draft[col.fieldname]"
+              :link-query="resolvedLinkQueries?.[col.fieldname]"
+              :disabled="disabled || col.read_only"
               show-errors
+              @update:model-value="(v) => onFieldInput(col.fieldname, v)"
             />
           </div>
+          <p v-if="rowError" class="w-full text-p-sm text-red-600">{{ rowError }}</p>
         </div>
       </template>
       <template #actions>
-        <AppButton variant="primary" @click="commitRow">Done</AppButton>
+        <AppButton variant="primary" :loading="validating" @click="commitRow">Done</AppButton>
       </template>
     </Dialog>
   </div>
@@ -68,16 +75,58 @@
 import { computed, ref } from 'vue'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import TruncatedText from '@/components/ui/TruncatedText.vue'
 import FieldControl from './FieldControl.vue'
+import { dependsOnPasses } from '@/utils/detail/dependsOn'
 
 const props = defineProps({
   table: { type: Object, required: true },
   rows: { type: Array, required: true },
   disabled: { type: Boolean, default: false },
   // { <link column>: { query?, filters? } } — see FieldControl's linkQuery.
-  linkQueries: { type: Object, default: null },
+  // Either a static object, or a function of the row currently being
+  // edited — (draft, rows, editingIndex) => { <col>: {query?, filters?} } —
+  // for a column whose valid options depend on another field in the same
+  // row (e.g. Role depends on that row's own Department) or on sibling
+  // rows (e.g. "don't offer a role already used in another row").
+  linkQueries: { type: [Object, Function], default: null },
+  // Optional cross-field validation beyond a single column's own reqd/
+  // fieldtype rules — (draft, rows, editingIndex) => error string | null.
+  // Blocks "Done" and shows the message inline when it returns one.
+  validateRow: { type: Function, default: null },
+  // Column fieldnames to always keep out of the dialog — e.g. Sales
+  // Order's Income Account, meant to be fetched and set automatically
+  // (onFieldChange below), never picked by hand.
+  hiddenColumns: { type: Array, default: () => [] },
+  // Cross-field row logic beyond a plain value assignment — mirrors the old
+  // desk child-table row event handlers (Sales Order's Items Table: picking
+  // an Item sets Type to "Sales", fetches its UOM and the company's default
+  // Income Account). (fieldname, value, draft) => a patch object merged
+  // into draft, or a Promise resolving to one for an async lookup.
+  onFieldChange: { type: Function, default: null },
 })
 const emit = defineEmits(['update:rows'])
+
+const resolvedLinkQueries = computed(() =>
+  typeof props.linkQueries === 'function'
+    ? props.linkQueries(draft.value, props.rows, editingIndex.value)
+    : props.linkQueries,
+)
+
+// e.g. Lead Past Experience's End Month: depends_on "eval:
+// !doc.is_currently_working" in its own doctype JSON, ignored here until now
+// — every column rendered unconditionally regardless of what the doctype
+// itself declares.
+const visibleColumns = computed(() =>
+  props.table.columns.filter((col) => !props.hiddenColumns.includes(col.fieldname) && dependsOnPasses(col, draft.value)),
+)
+
+async function onFieldInput(fieldname, value) {
+  draft.value[fieldname] = value
+  if (!props.onFieldChange) return
+  const patch = await props.onFieldChange(fieldname, value, draft.value)
+  if (patch) Object.assign(draft.value, patch)
+}
 
 const previewColumns = computed(() => props.table.columns.slice(0, 4))
 
@@ -99,13 +148,45 @@ const dialogTitle = computed(() =>
   editingIndex.value === null ? `Add ${props.table.label}` : `Edit ${props.table.label}`,
 )
 
+// Frappe's two dynamic default tokens — everything else is a literal
+// default value, applied as-is.
+function resolveDefault(raw) {
+  if (raw === 'Now') return new Date().toISOString().slice(0, 19).replace('T', ' ')
+  if (raw === 'Today') return new Date().toISOString().slice(0, 10)
+  return raw
+}
+
 function openRow(idx) {
   editingIndex.value = idx
-  draft.value = idx === null ? {} : { ...props.rows[idx] }
+  if (idx === null) {
+    // A new row starts blank in the browser — Desk applies each column's
+    // own `default` when a row is added; this didn't, so a column like
+    // Document References' `date` (default "Now", read_only) showed empty
+    // instead of the current time.
+    draft.value = Object.fromEntries(
+      props.table.columns.filter((c) => c.default != null && c.default !== '').map((c) => [c.fieldname, resolveDefault(c.default)]),
+    )
+  } else {
+    draft.value = { ...props.rows[idx] }
+  }
+  rowError.value = ''
   dialogOpen.value = true
 }
 
-function commitRow() {
+const rowError = ref('')
+const validating = ref(false)
+
+async function commitRow() {
+  if (props.validateRow) {
+    validating.value = true
+    try {
+      rowError.value = (await props.validateRow(draft.value, props.rows, editingIndex.value)) || ''
+    } finally {
+      validating.value = false
+    }
+    if (rowError.value) return
+  }
+
   const rows = [...props.rows]
   if (editingIndex.value === null) {
     rows.push({ ...draft.value })

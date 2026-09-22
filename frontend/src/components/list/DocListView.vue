@@ -67,7 +67,7 @@
       </div>
 
       <div class="ml-auto flex items-center justify-end gap-2">
-        <AppButton v-if="canCreate" variant="primary" icon="plus" @click="showQuickCreate = true">
+        <AppButton v-if="canCreate" variant="primary" icon="plus" @click="onAddNew">
           Add New
         </AppButton>
         <AppButton
@@ -133,7 +133,10 @@
           v-else
           class="doc-table-scroll max-h-full overflow-auto rounded-lg border border-app-border bg-app-panel"
         >
-          <table v-if="rows.length" class="doc-table w-full min-w-[42rem] table-fixed border-collapse md:min-w-0">
+          <div v-if="docs.isLoading && !docs.resource.data" class="flex justify-center py-16">
+            <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
+          </div>
+          <table v-else-if="rows.length" class="doc-table w-full min-w-[42rem] table-fixed border-collapse md:min-w-0">
             <thead>
               <tr>
                 <th v-if="canDelete" class="sticky top-0 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
@@ -177,9 +180,21 @@
                   class="h-11 truncate border-b border-app-border px-3 text-base"
                 >
                   <AppBadge
-                    v-if="isSelectColumn(column.key)"
+                    v-if="isDocstatusColumn(column.key) && listStatusColumn(doctype, rawRowByName[row.name])"
+                    :label="listStatusColumn(doctype, rawRowByName[row.name]).label"
+                    :theme="listStatusColumn(doctype, rawRowByName[row.name]).theme"
+                    size="md"
+                  />
+                  <AppBadge
+                    v-else-if="isDocstatusColumn(column.key)"
+                    :label="docstatusBadge(row[column.key]).label"
+                    :theme="docstatusBadge(row[column.key]).theme"
+                    size="md"
+                  />
+                  <AppBadge
+                    v-else-if="isSelectColumn(column.key)"
                     :label="row[column.key]"
-                    :theme="statusBadgeTheme(row[column.key])"
+                    :theme="statusBadgeTheme(row[column.key], { doctype, fieldname: column.key })"
                     size="md"
                   />
                   <span v-else class="truncate">{{ row[column.key] }}</span>
@@ -242,7 +257,13 @@
       @saved="onColumnsSaved"
     />
 
-    <QuickCreateDialog v-if="showQuickCreate" v-model="showQuickCreate" :doctype="doctype" @created="refresh" />
+    <PersonQuickCreateDialog
+      v-if="showQuickCreate && isPersonDoctype"
+      v-model="showQuickCreate"
+      :doctype="doctype"
+      @created="refresh"
+    />
+    <QuickCreateDialog v-else-if="showQuickCreate" v-model="showQuickCreate" :doctype="doctype" @created="refresh" />
 
     <Dialog
       v-model="showDeleteDialog"
@@ -270,7 +291,7 @@ import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from '
 import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
 import { formatFieldValue } from '@/utils/list/formatValue'
-import { statusBadgeTheme } from '@/utils/list/statusTheme'
+import { statusBadgeTheme, docstatusBadge, listStatusColumn, hasStatusOverride } from '@/utils/list/statusTheme'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
 import { BULK_ACTIONS, LIST_HEADERS, NO_MANUAL_CREATE, ROW_ACTIONS } from '@/configs/detail/listOptions'
 import { notify } from '@/utils/common/notify'
@@ -278,6 +299,8 @@ import { normalizeError } from '@/utils/common/errors'
 import AppButton from '@/components/ui/AppButton.vue'
 import CustomizeColumnsDialog from './CustomizeColumnsDialog.vue'
 import QuickCreateDialog from './QuickCreateDialog.vue'
+import PersonQuickCreateDialog from '@/components/common/PersonQuickCreateDialog.vue'
+import { PERSON_DOCTYPES, STATUS_COLUMN_FIELDS_TO_HIDE } from '@/configs/detail/listOptions'
 import Pagination from './Pagination.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 
@@ -296,6 +319,20 @@ function openRow(row) {
 }
 
 const showQuickCreate = ref(false)
+const isPersonDoctype = computed(() => PERSON_DOCTYPES.has(props.doctype))
+
+// Decide quick-dialog-vs-full-form *before* opening anything — meta.resource
+// is already loaded by the time this button is clickable, so this is
+// synchronous, unlike the generic QuickCreateDialog's own after-the-fact
+// check (which used to flash the dialog open for a moment before redirecting
+// once it discovered quick_entry was off).
+function onAddNew() {
+  if (isPersonDoctype.value || meta.resource.data?.quick_entry) {
+    showQuickCreate.value = true
+  } else {
+    router.push(`/${encodeURIComponent(props.doctype)}/new`)
+  }
+}
 
 const {
   meta,
@@ -375,10 +412,31 @@ function onColumnsSaved(data) {
   docs.resource.reload()
 }
 
-const columns = computed(() => listFields.value.map((f) => ({ key: f.fieldname, label: f.label })))
+const isSubmittable = computed(() => Boolean(meta.resource.data?.is_submittable))
+
+// A fixed, non-customizable leading column — not part of list_fields/the
+// Customize Columns picker, since it's derived from docstatus rather than a
+// real doctype field.
+const columns = computed(() => {
+  const hideFields = STATUS_COLUMN_FIELDS_TO_HIDE[props.doctype] || new Set()
+  const cols = listFields.value.filter((f) => !hideFields.has(f.fieldname)).map((f) => ({ key: f.fieldname, label: f.label }))
+  return isSubmittable.value ? [{ key: 'docstatus', label: 'Status' }, ...cols] : cols
+})
 
 function isSelectColumn(key) {
-  return fieldMap.value[key]?.fieldtype === 'Select'
+  // Customer.overall_status is a Data field carrying status-like text
+  // (Pending Verification, Ready, ...), not a Select — it still needs the
+  // same badge/color treatment (statusBadgeTheme's DOCTYPE_FIELD_OVERRIDES
+  // already has its exact mapping), so badge eligibility can't be gated on
+  // fieldtype alone, only on "does the theme resolver have anything to say
+  // about it" — a plain Select column trivially always does (falls through
+  // its generic keyword vocabulary), one of these fieldtype-agnostic
+  // overrides only fires for the specific doctype.fieldname it targets.
+  return fieldMap.value[key]?.fieldtype === 'Select' || hasStatusOverride(props.doctype, key)
+}
+
+function isDocstatusColumn(key) {
+  return key === 'docstatus' && isSubmittable.value
 }
 
 function onSort(fieldname) {
@@ -399,6 +457,11 @@ const rows = computed(() =>
     return displayRow
   }),
 )
+
+// The raw (unformatted) row a display row came from — needed by
+// listStatusColumn (payment_term_row/verification_status aren't
+// list_fields, so they never make it into displayRow above).
+const rawRowByName = computed(() => Object.fromEntries((docs.resource.data || []).map((r) => [r.name, r])))
 
 // Row selection + delete (single-row via the action menu, or bulk via the
 // header checkbox) — both funnel through the same confirm dialog and the

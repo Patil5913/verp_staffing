@@ -40,6 +40,7 @@ class Employee(Document):
 
     def validate(self):
         # self.validate_employee_edit_permission()
+        self._validate_user_not_already_linked()
 
         rows = self.employee_assignment_details_table or []
 
@@ -48,6 +49,20 @@ class Employee(Document):
 
         self._validate_assignment_rows(rows)
         validate_employee_assignment_hierarchy(self)
+
+    def _validate_user_not_already_linked(self):
+        # get_users_not_linked_to_employee already filters the User Link
+        # field's own options client-side; this is the same "one Employee
+        # per User" rule enforced server-side, since a hidden/disabled
+        # client-side filter is never the security boundary.
+        if not self.user:
+            return
+        existing = frappe.db.get_value("Employee", {"user": self.user, "name": ["!=", self.name or ""]}, "name")
+        if existing:
+            frappe.throw(
+                _("User {0} is already linked to Employee {1}.").format(self.user, existing),
+                frappe.ValidationError,
+            )
 
     def _validate_assignment_rows(self, rows):
         seen_departments = set()
@@ -197,6 +212,54 @@ def get_users_not_linked_to_employee(
             int(start),
         ]
     )
+
+    return list(frappe.db.sql(query, values))
+
+
+@frappe.whitelist()
+def get_employees_by_department(doctype, txt, searchfield, start, page_len, filters):
+    """Employees who have an Employee Assignment Details row for `department`
+    (one name, or a list of names) — Employee has no plain `department`
+    column of its own, so a field like Lead's Lead Owner (or Customer's
+    Customer Owner) that needs "employees in Sales" can't filter on Employee
+    directly and needs this join, same shape as get_employees_by_assignment
+    above.
+    """
+    department = filters.get("department")
+    if not department:
+        return []
+    departments = department if isinstance(department, (list, tuple)) else [department]
+
+    txt = (txt or "").strip()
+    values = [departments]
+
+    query = """
+        SELECT
+            e.name,
+            e.employee_name
+        FROM `tabEmployee Assignment Detail` d
+        INNER JOIN `tabEmployee` e
+            ON e.name = d.parent
+        WHERE
+            d.department in %s
+    """
+
+    if txt:
+        query += """
+            AND (
+                e.name LIKE %s
+                OR e.employee_name LIKE %s
+            )
+        """
+        like_txt = f"%{txt}%"
+        values.extend([like_txt, like_txt])
+
+    query += """
+        GROUP BY e.name
+        ORDER BY e.employee_name ASC
+        LIMIT %s OFFSET %s
+    """
+    values.extend([int(page_len), int(start)])
 
     return list(frappe.db.sql(query, values))
 

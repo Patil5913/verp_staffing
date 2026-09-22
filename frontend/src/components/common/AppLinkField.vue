@@ -1,6 +1,8 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <label v-if="label" class="text-p-sm font-medium text-app-text-muted">{{ label }}</label>
+    <label v-if="label" class="text-p-sm font-medium text-app-text-muted">
+      {{ label }}<span v-if="required" class="text-red-600"> *</span>
+    </label>
 
     <Combobox
       v-model="model"
@@ -23,8 +25,16 @@
       </template>
     </Combobox>
 
+    <PersonQuickCreateDialog
+      v-if="!hideAddNew && showQuickCreate && isPersonDoctype"
+      v-model="showQuickCreate"
+      :doctype="doctype"
+      :initial-value="query"
+      :navigate-on-create="false"
+      @created="onCreated"
+    />
     <QuickCreateDialog
-      v-if="!hideAddNew && showQuickCreate"
+      v-else-if="!hideAddNew && showQuickCreate"
       v-model="showQuickCreate"
       :doctype="doctype"
       :initial-value="query"
@@ -36,14 +46,18 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Combobox, FeatherIcon, debounce } from 'frappe-ui'
+import { useRouter } from 'vue-router'
+import { Combobox, FeatherIcon, debounce, call } from 'frappe-ui'
 import { useResource } from '@/composables/list/useResource'
 import QuickCreateDialog from '@/components/list/QuickCreateDialog.vue'
+import PersonQuickCreateDialog from '@/components/common/PersonQuickCreateDialog.vue'
+import { PERSON_DOCTYPES } from '@/configs/detail/listOptions'
 
 const props = defineProps({
   doctype: { type: String, required: true },
   modelValue: { default: '' },
   label: { type: String, default: '' },
+  required: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   // The 28px toolbar-height control instead of the 36px form field.
@@ -71,9 +85,12 @@ const model = computed({
   set: (value) => emit('update:modelValue', value),
 })
 
+const router = useRouter()
+
 const isOpen = ref(false)
 const query = ref('')
 const showQuickCreate = ref(false)
+const isPersonDoctype = computed(() => PERSON_DOCTYPES.has(props.doctype))
 
 const search = useResource({
   url: 'frappe.desk.search.search_link',
@@ -89,8 +106,20 @@ const search = useResource({
   transform: (data) => (data || []).map((doc) => ({ label: doc.label || doc.value, value: doc.value })),
 })
 
-function loadOptions(txt) {
-  search.resource.fetch(txt)
+// Guards against an out-of-order response: two overlapping searches (e.g.
+// typing a term, then clearing it right after) can resolve in either
+// order — without this, a slower earlier request finishing after a faster
+// later one silently overwrites the fresher results, leaving the dropdown
+// stuck showing the stale filtered list even once the search box is empty.
+// `results` only accepts a response whose request is still the latest one
+// issued, so `comboOptions` never regresses to a superseded search.
+let requestSeq = 0
+const results = ref([])
+
+async function loadOptions(txt) {
+  const seq = ++requestSeq
+  await search.resource.fetch(txt)
+  if (seq === requestSeq) results.value = search.resource.data || []
 }
 
 const debouncedLoad = debounce((txt) => loadOptions(txt), 300)
@@ -106,11 +135,24 @@ watch(
   { immediate: true, deep: true },
 )
 
-const comboOptions = computed(() => search.resource.data || [])
+const comboOptions = computed(() => results.value)
 
-function openQuickCreate() {
+async function openQuickCreate() {
   isOpen.value = false
-  showQuickCreate.value = true
+  if (isPersonDoctype.value) {
+    showQuickCreate.value = true
+    return
+  }
+  // Checked up front, same reason as DocListView's onAddNew — no meta for
+  // this doctype is preloaded here (unlike a list page), so this one extra
+  // round trip replaces the generic QuickCreateDialog's own after-the-fact
+  // check, which used to flash the dialog open before redirecting.
+  const quickEntry = await call('verp_staffing.utils.detail_view.get_quick_entry_flag', { doctype: props.doctype }).catch(() => false)
+  if (quickEntry) {
+    showQuickCreate.value = true
+  } else {
+    router.push(`/${encodeURIComponent(props.doctype)}/new`)
+  }
 }
 
 function onCreated(newName) {

@@ -46,7 +46,7 @@
         :key="table.fieldname"
         :table="table"
         :rows="form.values[table.fieldname] || []"
-        :disabled="locked || !form.canWrite.value"
+        :disabled="locked || !form.canWrite.value || table.read_only"
         @update:rows="(rows) => (form.values[table.fieldname] = rows)"
       />
     </section>

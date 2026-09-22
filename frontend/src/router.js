@@ -320,6 +320,21 @@ const router = createRouter({
   routes,
 })
 
+// A route's lazy-loaded chunk (import('...DetailPage.vue')) 404s once a
+// new deploy has replaced it with a different content-hashed filename —
+// the tab still has the *old* index.html's chunk map in memory. Rather
+// than a dead "Failed to fetch dynamically imported module" error, reload
+// once to pick up the new build; the sessionStorage flag stops a genuine,
+// repeated failure (offline, a real 404) from reload-looping forever.
+router.onError((error, to) => {
+  const isChunkLoadError = /Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(error?.message || '')
+  if (!isChunkLoadError) return
+  const key = 'verp:chunk-reload'
+  if (sessionStorage.getItem(key) === to.fullPath) return
+  sessionStorage.setItem(key, to.fullPath)
+  window.location.href = to.fullPath
+})
+
 // window.user is set server-side on every full page load, straight from
 // frappe.session.user (see verp_staffing/www/verp.py get_context, no_cache
 // = 1), and Guests are already redirected to /verp/login there before the

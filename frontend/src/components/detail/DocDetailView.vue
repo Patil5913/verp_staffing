@@ -32,19 +32,30 @@
             v-model="detail.values[field.fieldname]"
             :disabled="forceDisabled || !detail.canWrite.value || field.read_only || readOnlyFields.includes(field.fieldname)"
             :show-errors="detail.triedSave.value"
+            :link-query="fieldLinkQueries[field.fieldname]"
+            :dynamic-doctype="field.fieldtype === 'Dynamic Link' ? detail.values[field.options] : ''"
           />
         </div>
       </div>
 
       <template v-if="!fieldnames">
-        <ChildTableField
-          v-for="table in detail.tables.value"
-          :key="table.fieldname"
-          :table="table"
-          :rows="detail.values[table.fieldname] || []"
-          :disabled="forceDisabled || !detail.canWrite.value"
-          @update:rows="(rows) => (detail.values[table.fieldname] = rows)"
-        />
+        <template v-for="table in detail.tables.value" :key="table.fieldname">
+          <TableMultiSelectField
+            v-if="table.fieldtype === 'Table MultiSelect'"
+            :table="table"
+            :rows="detail.values[table.fieldname] || []"
+            :disabled="forceDisabled || !detail.canWrite.value"
+            :query="tableQueries[table.fieldname]"
+            @update:rows="(rows) => (detail.values[table.fieldname] = rows)"
+          />
+          <ChildTableField
+            v-else
+            :table="table"
+            :rows="detail.values[table.fieldname] || []"
+            :disabled="forceDisabled || !detail.canWrite.value"
+            @update:rows="(rows) => (detail.values[table.fieldname] = rows)"
+          />
+        </template>
       </template>
     </div>
   </div>
@@ -56,6 +67,8 @@ import { LoadingIndicator } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 import FieldControl from './FieldControl.vue'
 import ChildTableField from './ChildTableField.vue'
+import TableMultiSelectField from './TableMultiSelectField.vue'
+import { dependsOnPasses } from '@/utils/detail/dependsOn'
 
 const props = defineProps({
   doctype: { type: String, required: true },
@@ -70,30 +83,32 @@ const props = defineProps({
   // Heading shown at the top of the field card — detail configs use it to
   // split a long doctype (Payment Entry, invoices) into named groups.
   title: { type: String, default: '' },
+  // { <Table MultiSelect fieldname>: '<whitelisted query method>' } — see
+  // AppLinkField's `query` prop / TableMultiSelectField.
+  tableQueries: { type: Object, default: () => ({}) },
+  // { <top-level Link fieldname>: { query?, filters? } } — see FieldControl's
+  // linkQuery prop, for a scalar Link field whose options need filtering
+  // (e.g. Lead Owner scoped to a department), same idea as tableQueries but
+  // for fields outside a child table.
+  fieldLinkQueries: { type: Object, default: () => ({}) },
+  // Skips a read-only field with no value instead of rendering it as an
+  // empty, uneditable box — e.g. Customer's Overall Status/Chat User/Chat
+  // Access are all blank on a fresh Customer. Opt-in (default off) since a
+  // blank read-only field is sometimes exactly what a page wants shown as
+  // a placeholder — this is for pages where it isn't.
+  hideEmptyReadOnly: { type: Boolean, default: false },
 })
 
-// Frappe's `depends_on`: an "eval:<js expression>" over `doc`, or a bare
-// fieldname meaning "that field has a value". The expressions come from the
-// doctype JSON in this app's own repo (not user input). One that can't be
-// evaluated shows its field — hiding a field on a parse error would be worse.
-function dependsOnPasses(field) {
-  const expr = field.depends_on
-  if (!expr) return true
-  const doc = { ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }
-  try {
-    if (expr.startsWith('eval:')) {
-      const inList = (list, value) => Array.isArray(list) && list.includes(value)
-      // eslint-disable-next-line no-new-func
-      return Boolean(new Function('doc', 'in_list', `return (${expr.slice(5)})`)(doc, inList))
-    }
-    return Boolean(doc[expr])
-  } catch {
-    return true
-  }
-}
-
 const fields = computed(() => {
-  const all = props.detail.fields.value.filter(dependsOnPasses)
+  const doc = { ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }
+  let all = props.detail.fields.value.filter((f) => dependsOnPasses(f, doc))
+  if (props.hideEmptyReadOnly) {
+    all = all.filter((f) => {
+      if (!f.read_only && !props.readOnlyFields.includes(f.fieldname)) return true
+      const value = props.detail.values[f.fieldname]
+      return value !== null && value !== undefined && value !== ''
+    })
+  }
   if (!props.fieldnames) return all
   const order = props.fieldnames
   return all

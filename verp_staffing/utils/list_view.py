@@ -117,7 +117,13 @@ def get_list_view_meta(doctype):
 
     fields = []
     for df in meta.fields:
-        if df.fieldtype not in DISPLAYABLE_FIELDTYPES or df.hidden:
+        if df.fieldtype not in DISPLAYABLE_FIELDTYPES:
+            continue
+        # in_list_view=1 shows in the list regardless of `hidden` — that's
+        # an explicit opt-in to the list view; `hidden` only means "don't
+        # show this on the detail form" (Payment Entry's verification_status
+        # is exactly this: hidden on the form, in_list_view for the list).
+        if df.hidden and not df.in_list_view:
             continue
         fields.append(
             {
@@ -179,6 +185,14 @@ def get_list_view_meta(doctype):
         "fields": fields,
         "list_fields": list_fields,
         "searchable_fields": searchable_fields,
+        # Lets the list view show a Draft/Submitted/Cancelled status badge
+        # for submittable doctypes — Desk shows this for every submittable
+        # list, the generic frontend list view never had it.
+        "is_submittable": bool(meta.is_submittable),
+        # Lets the "+ Add New" button on this list decide, before opening
+        # anything, whether to show the Quick Entry dialog or jump straight
+        # to the full new-record form.
+        "quick_entry": bool(meta.quick_entry),
         # Whether list_fields above is the Administrator's custom column
         # set (vs. the doctype's own in_list_view default) — drives the
         # "Reset to default" affordance in the Customize Columns dialog.
@@ -313,12 +327,14 @@ def _field_key_index(meta):
     which show up in meta.fields directly. Keys are normalized (lowercased,
     internal whitespace/underscores collapsed to a single space) so
     "lead_owner", "lead owner" and "Lead Owner" all resolve the same way.
-    Mirrors get_list_view_meta's own visibility rules (displayable, not
-    hidden).
+    Mirrors get_list_view_meta's own visibility rules (displayable, and
+    either not hidden or explicitly in_list_view).
     """
     index = {}
     for df in meta.fields:
-        if df.fieldtype not in DISPLAYABLE_FIELDTYPES or df.hidden:
+        if df.fieldtype not in DISPLAYABLE_FIELDTYPES:
+            continue
+        if df.hidden and not df.in_list_view:
             continue
         field_def = {"fieldname": df.fieldname, "fieldtype": df.fieldtype, "options": df.options}
         index[_normalize_key(df.fieldname)] = field_def

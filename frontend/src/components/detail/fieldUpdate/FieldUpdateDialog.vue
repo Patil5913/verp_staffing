@@ -13,7 +13,7 @@
       <div v-else class="flex flex-col gap-5">
         <p class="text-p-sm text-app-text-muted">
           Pick the details you need changed and enter the new values.
-          {{ isHigherAuthority ? 'As you head this department the changes apply straight away.' : 'They are sent to your manager for approval.' }}
+          {{ isHigherAuthority ? "You are the top of your department's hierarchy, so on save the data will be directly updated — Please be sure before confirming." : 'Your update request are sent to your manager for approval.' }}
         </p>
 
         <div class="flex flex-wrap gap-2">

@@ -36,7 +36,7 @@
       </div>
 
       <div class="mt-auto flex flex-col gap-2 border-t border-app-border pt-4">
-        <AppButton :disabled="disabled" @click="emit('save')">Save Template</AppButton>
+        <AppButton :disabled="disabled || !dirty" @click="emit('save')">Save Template</AppButton>
         <AppButton variant="outline" :disabled="disabled || !localFields.length" @click="clearAll">Clear</AppButton>
       </div>
     </div>
@@ -161,6 +161,10 @@ const props = defineProps({
   pdfUrl: { type: String, default: '' },
   modelValue: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
+  // The page's own isDirty (doc fields + fields_json together) — "Save
+  // Template" used to call save() on every click regardless of whether
+  // anything had actually changed.
+  dirty: { type: Boolean, default: true },
 })
 const emit = defineEmits(['update:modelValue', 'save'])
 
@@ -255,11 +259,22 @@ const newFieldType = ref('')
 const newFieldDropPos = ref(null)
 const draft = ref({ name: '', placeholder: '', font_size: 12, line_height: 1.2 })
 
+// New fields are always created at this size (see confirmCreateField) —
+// centering the drop point on it, rather than treating the drop point as
+// the top-left corner, is what made a dropped field land noticeably off
+// from where it was actually released.
+const NEW_FIELD_WIDTH = 150
+const NEW_FIELD_HEIGHT = 30
+
 function onDrop(pageNumber, event) {
   if (props.disabled || !draggingTool.value) return
   const rect = event.currentTarget.getBoundingClientRect()
   newFieldType.value = draggingTool.value
-  newFieldDropPos.value = { page: pageNumber, x: event.clientX - rect.left, y: event.clientY - rect.top }
+  newFieldDropPos.value = {
+    page: pageNumber,
+    x: event.clientX - rect.left - NEW_FIELD_WIDTH / 2,
+    y: event.clientY - rect.top - NEW_FIELD_HEIGHT / 2,
+  }
   draft.value = { name: '', placeholder: '', font_size: 12, line_height: 1.2 }
   showCreateDialog.value = true
 }
@@ -275,8 +290,8 @@ function confirmCreateField() {
     name: draft.value.name.trim(),
     type: newFieldType.value,
     page: newFieldDropPos.value.page,
-    x: Math.round(newFieldDropPos.value.x),
-    y: Math.round(newFieldDropPos.value.y),
+    x: Math.round(Math.max(0, newFieldDropPos.value.x)),
+    y: Math.round(Math.max(0, newFieldDropPos.value.y)),
     width: 150,
     height: 30,
     font_size: draft.value.font_size || 12,
@@ -389,8 +404,11 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
   cursor: move;
-  overflow: hidden;
   touch-action: none;
+  /* Not overflow:hidden here — .field-close and .resize-handle are its own
+     absolutely-positioned children sitting just outside its box (top:-10px
+     etc.), and hiding this box's overflow clipped them to invisible.
+     .pdf-field-preview below clips the field's text content on its own. */
 }
 .pdf-field.selected {
   border-color: var(--app-primary);

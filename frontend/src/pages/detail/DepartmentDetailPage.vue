@@ -14,7 +14,7 @@
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" />
+        <DocDetailView :doctype="doctype" :detail="detail" :table-queries="TABLE_QUERIES" />
       </div>
     </template>
 
@@ -87,4 +87,13 @@ const DEFAULT_TABS = [
 ]
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
 const activeTab = ref('details')
+
+// Excludes a role/service already picked for this department, or any other
+// department (role is a global one-department-only assignment) — see
+// get_department_role_query / get_department_service_query in
+// department.py, ported from the old desk department.js set_query calls.
+const TABLE_QUERIES = {
+  role: 'verp_staffing.settings.doctype.department.department.get_department_role_query',
+  services: 'verp_staffing.settings.doctype.department.department.get_department_service_query',
+}
 </script>

@@ -16,7 +16,13 @@
 
     <template #tab-profile>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="PROFILE_FIELDS" />
+        <DocDetailView
+          :doctype="doctype"
+          :detail="detail"
+          :fieldnames="PROFILE_FIELDS"
+          :read-only-fields="userFieldReadOnly"
+          :field-link-queries="userFieldLinkQueries"
+        />
       </div>
     </template>
 
@@ -27,6 +33,9 @@
           :table="assignmentsTable"
           :rows="detail.values.employee_assignment_details_table || []"
           :disabled="!detail.canWrite.value"
+          :link-queries="assignmentLinkQueries"
+          :validate-row="validateAssignmentRow"
+          :on-field-change="onAssignmentFieldChange"
           @update:rows="(rows) => (detail.values.employee_assignment_details_table = rows)"
         />
       </div>
@@ -71,7 +80,7 @@
 // tables (assignment details, LinkedIn credentials) each get their own tab
 // rather than being stacked under one Details grid. See router.js for how
 // /Employee/:name is routed here ahead of the generic /:doctype/:name.
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call, Dialog } from 'frappe-ui'
 import { isAdministrator, isSystemManager } from '@/utils/common/roles'
@@ -110,19 +119,107 @@ const TABS = [
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'target', label: 'Target' },
 ]
-const tabs = computed(() => TABS)
+// Linkedin/Target aren't relevant to every employee — Linkedin only for one
+// assigned to the Lead department, Target only for Sales (per its own
+// Employee Assignment Details rows, not the employee's single top-level
+// department) — both tabs were showing for everyone.
+const tabs = computed(() =>
+  TABS.filter((t) => {
+    if (t.key === 'linkedin') return hasLeadDepartment.value
+    if (t.key === 'target') return hasSalesDepartment.value
+    return true
+  }),
+)
 const activeTab = ref('profile')
 
-const PROFILE_FIELDS = ['employee_name', 'user', 'enabled', 'start_date']
-const TARGET_FIELDS = ['target', 'target_based_on']
+const PROFILE_FIELDS = ['employee_name', 'user', 'enabled']
+// Once the Employee exists, the linked User can't be changed out from under
+// it — matches employee.js leaving `user` unset_only_once-style read-only
+// after creation.
+const userFieldReadOnly = computed(() => (detail.isNew.value ? [] : ['user']))
+// Only offer a User that isn't already the User of some other Employee —
+// enforced server-side too (Employee.validate), this is just so a duplicate
+// is never picked in the first place.
+const userFieldLinkQueries = {
+  user: { query: 'verp_staffing.employee.doctype.employee.employee.get_users_not_linked_to_employee' },
+}
 
-// employee.js: employees assigned to Sales get a shortcut to their own
-// Revenue Of Employee report.
-const hasSalesDepartment = computed(() => (detail.values.employee_assignment_details_table || []).some((row) => row.department === 'Sales'))
+// employee.js's user(frm) handler: picking a User fills Employee Full Name
+// from it. Only while still creating — once saved, `user` is read-only
+// above, so this would never fire again anyway.
+watch(
+  () => detail.values.user,
+  async (user) => {
+    if (!user || !detail.isNew.value) return
+    const fullName = await call('frappe.client.get_value', {
+      doctype: 'User',
+      filters: user,
+      fieldname: 'full_name',
+    }).catch(() => null)
+    if (fullName?.full_name) detail.values.employee_name = fullName.full_name
+  },
+)
+// start_date sits right next to target/target_based_on in the doctype's own
+// field order — it's the Target's start date, not a general employee start
+// date, so it belongs on the Target tab, not Profile.
+const TARGET_FIELDS = ['start_date', 'target', 'target_based_on']
+
+function hasDepartmentAssignment(department) {
+  return (detail.values.employee_assignment_details_table || []).some((row) => row.department === department)
+}
+const hasSalesDepartment = computed(() => hasDepartmentAssignment('Sales'))
+const hasLeadDepartment = computed(() => hasDepartmentAssignment('Lead'))
 function openRevenueReport() {
   router.push({ path: '/report/Revenue%20Of%20Employee', query: { employee: name.value } })
 }
 
 const assignmentsTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'employee_assignment_details_table'))
 const linkedinTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'linkedin_credentials'))
+
+// designation options come from the row's own Department's Hierarchy (same
+// API as ERP Configuration's Permission Request Configuration — see
+// hierarchy.py), minus designations already used by sibling rows.
+// assigned_to options come from employees holding the *parent* role of the
+// row's own designation (who that designation reports to) in the same
+// hierarchy — get_assign_to_query resolves both steps server-side.
+function assignmentLinkQueries(draft, rows, editingIndex) {
+  return {
+    designation: {
+      query: 'verp_staffing.settings.doctype.hierarchy.hierarchy.get_department_hierarchy_roles_query',
+      filters: {
+        department: draft.department,
+        exclude: rows
+          .filter((_, i) => i !== editingIndex)
+          .map((r) => r.designation)
+          .filter(Boolean),
+      },
+    },
+    assigned_to: {
+      query: 'verp_staffing.settings.doctype.hierarchy.hierarchy.get_assign_to_query',
+      filters: { department: draft.department, designation: draft.designation, current_emp: name.value },
+    },
+  }
+}
+
+// Department and Designation each narrow what the fields below them can be
+// — changing either invalidates whatever was already picked further down
+// the row, the same as the desk form clearing dependent fields on change.
+function onAssignmentFieldChange(fieldname, value, draft) {
+  if (fieldname === 'department') return { designation: '', assigned_to: '' }
+  if (fieldname === 'designation') return { assigned_to: '' }
+  return null
+}
+
+// Ported from employee.js's validate(frm) — written but its frappe.throw was
+// left commented out there, so it never actually ran. Assigned To is
+// required unless the row's designation is a top-level (root) role in its
+// department's hierarchy.
+async function validateAssignmentRow(draft) {
+  if (!draft.department || !draft.designation || draft.assigned_to) return null
+  const isTop = await call('verp_staffing.settings.doctype.hierarchy.hierarchy.is_role_top_level', {
+    department: draft.department,
+    role: draft.designation,
+  })
+  return isTop ? null : `Assigned To is required for designation ${draft.designation} in department ${draft.department}.`
+}
 </script>

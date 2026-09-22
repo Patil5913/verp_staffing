@@ -1,6 +1,7 @@
 @import 'frappe-ui/style.css';
 
 :root {
+  color-scheme: light;
   --app-bg: #f6f8fb;
   --app-panel: #ffffff;
   --app-panel-2: #f0f3f8;
@@ -13,6 +14,7 @@
 }
 
 [data-theme='dark'] {
+  color-scheme: dark;
   --app-bg: #0a0e16;
   --app-panel: #131a26;
   --app-panel-2: #1a2230;
@@ -22,6 +24,43 @@
   --app-primary: #4c8fff;
   --app-primary-hover: #7aadff;
   --app-primary-tint: rgba(76, 143, 255, 0.16);
+}
+
+/* Without an explicit color-scheme, browsers render native scrollbars
+   (and other UA widgets) in their light-mode style even on a dark
+   background, so every plain `overflow: auto` element showed a
+   white-track scrollbar in dark mode. Setting color-scheme above fixes
+   Firefox's `scrollbar-color: auto` and Chromium's default scrollbar
+   automatically; these rules give every scrollable element the same
+   themed thin scrollbar that ScrollArea.vue already opts into, instead
+   of only fixing the color-scheme mismatch. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--app-border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-text-muted);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 html,
@@ -52,6 +91,21 @@ body {
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
     0 12px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* frappe-ui's Dialog (DialogPortal, portalled to <body> like Combobox
+   below) never sets its own z-index — its overlay/content just relies on
+   DOM order within whatever stacking context they land in. That put a
+   Dialog with z-index:auto behind this app's own fixed/sticky chrome that
+   *does* set one (the sidebar is z-40; a detail page's sticky in-page nav,
+   e.g. LeadProfilePanel's completeness bar, is z-10) — most visibly, a
+   ChildTableField "Add Row" dialog opened from a page with such a sticky
+   bar rendered underneath it instead of on top. Global, not scoped: the
+   portal target means no component's own <style> can reach it, and every
+   dialog in the app needs to always win this stack regardless of what
+   sticky chrome happens to be on the page underneath it. */
+.dialog-overlay {
+  z-index: 100;
 }
 
 /* App-wide Combobox/Link popover theming.

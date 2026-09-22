@@ -12,6 +12,7 @@
         <div class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">
           Choose a {{ selectorLabel }}
         </div>
+        <div class="flex max-h-96 flex-col gap-1.5 overflow-y-auto pr-1">
         <button
           v-for="item in itemsList"
           :key="item"
@@ -27,6 +28,7 @@
           <span class="truncate">{{ item }}</span>
           <span class="shrink-0 text-p-xs text-app-text-muted">{{ fieldCount(item) }}</span>
         </button>
+        </div>
       </div>
 
       <!-- Field picker -->
@@ -145,6 +147,18 @@ watch(
   () => props.modelValue,
   (val) => {
     localConfig.value = JSON.parse(JSON.stringify(val || {}))
+    // Normalize once, right after loading — not lazily inside a getter that
+    // runs during template render (see normalizeEntry below). A getter
+    // called from `:class`/`:model-value` bindings runs on every render, and
+    // for old-format entries (a plain array, pre-dating is_required) it used
+    // to *write* localConfig.value[name] to migrate the shape — a reactive
+    // mutation during render, which re-triggers the render that mutates it
+    // again, crashing the Candidate Form Fields tab (the only tab whose
+    // entries ever take the old array shape) with a "Maximum recursive
+    // updates" loop.
+    if (props.isCandidateForm) {
+      Object.keys(localConfig.value).forEach(normalizeEntry)
+    }
   },
   { immediate: true, deep: true },
 )
@@ -171,7 +185,10 @@ function normalizeEntry(name) {
 
 function getFieldObjects(name) {
   if (!props.isCandidateForm) return []
-  normalizeEntry(name)
+  // Read-only — normalization already happened once when localConfig was
+  // loaded (see the modelValue watcher above), never here: this is called
+  // from template bindings evaluated on every render, and a write here
+  // instead of a read used to crash the tab (see that watcher's comment).
   return localConfig.value[name]?.fields || []
 }
 function getFields(name) {

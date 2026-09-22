@@ -1,3 +1,6 @@
+import { call } from 'frappe-ui'
+import { notify } from '@/utils/common/notify'
+import { computeInvoiceStatus } from '@/utils/list/statusTheme'
 import AddressContactPanel from '@/components/detail/customer/AddressContactPanel.vue'
 import DocAction from '@/components/detail/actions/DocAction.vue'
 import NoticeBanner from '@/components/common/NoticeBanner.vue'
@@ -17,8 +20,112 @@ const num = (v) => Number(v) || 0
 const sum = (rows, key) => (rows || []).reduce((s, r) => s + num(r[key]), 0)
 
 const strip = (items) => ({ type: 'component', component: SummaryStrip, props: { items } })
-const fields = (fieldnames, title) => ({ type: 'fields', fieldnames, title })
+const fields = (fieldnames, title, extra = {}) => ({ type: 'fields', fieldnames, title, ...extra })
 const table = (fieldname, extra = {}) => ({ type: 'table', fieldname, ...extra })
+// A grid section is always column-curated (a grid has no room for every
+// field a row-dialog would show) — `columns` is required, `readOnlyColumns`
+// optional. See GridTableField.vue.
+const grid = (fieldname, columns, extra = {}) => ({ type: 'grid', fieldname, columns, ...extra })
+
+// Ported from the old desk sales_order.js / sales_invoice.js /
+// purchase_order.js / purchase_invoice.js's near-identical Items Table row
+// handlers (all four share the same "Items Table" child doctype):
+// picking an Item auto-fills Type to "Sales" (Sales Order/Sales Invoice) or
+// "Purchase" (Purchase Order/Purchase Invoice) and fetches its stock UOM
+// plus the document's company's default Income Account or Expense Account
+// respectively (kept off the dialog entirely via the items table() config's
+// hiddenColumns — meant to be set automatically, never picked by hand);
+// Qty/Rate recompute Amount, which the doctype itself marks read_only (see
+// ChildTableField's Amount column) — none of that was happening
+// client-side, so every row's Amount stayed at 0 until the next full
+// save/reload.
+function makeItemsTableFieldChange({ type, accountField }) {
+  return async function itemsTableFieldChange(fieldname, value, draft, { detail }) {
+    if (fieldname === 'item' && value) {
+      const patch = { type }
+      const item = await call('frappe.client.get_value', {
+        doctype: 'Item',
+        filters: value,
+        fieldname: 'stock_uom',
+      }).catch(() => null)
+      if (item?.stock_uom) patch.uom = item.stock_uom
+
+      const company = detail.values.company
+      if (company) {
+        const account = await call('verp_staffing.accounts.api.get_defaults.get_default_company_account', {
+          company,
+          fieldname: accountField,
+        }).catch(() => null)
+        if (account) patch[accountField === 'default_income_account' ? 'income_account' : 'expense_account'] = account
+      }
+
+      const qty = num(draft.qty) || 1
+      patch.qty = qty
+      if (draft.rate) patch.amount = qty * num(draft.rate)
+      return patch
+    }
+
+    if (fieldname === 'qty' || fieldname === 'rate') {
+      const qty = fieldname === 'qty' ? num(value) : num(draft.qty)
+      const rate = fieldname === 'rate' ? num(value) : num(draft.rate)
+      return { amount: qty * rate }
+    }
+
+    return null
+  }
+}
+// Same rule the list view badge (statusTheme.js's listStatusColumn) uses —
+// see computeInvoiceStatus there for the actual formula.
+const invoiceStatusText = (d) => computeInvoiceStatus(d.values)
+
+const salesItemsFieldChange = makeItemsTableFieldChange({ type: 'Sales', accountField: 'default_income_account' })
+const purchaseItemsFieldChange = makeItemsTableFieldChange({ type: 'Purchase', accountField: 'default_expense_account' })
+
+function addDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00`)
+  d.setDate(d.getDate() + Number(days || 0))
+  return d.toISOString().slice(0, 10)
+}
+const today = () => new Date().toISOString().slice(0, 10)
+
+// Ported from sales_order.js's Customer Payment Terms row handlers
+// (payment_condition / counter / start_date): switching condition clears
+// whichever fields don't apply to the new one, and "Number of Interviews"
+// re-fetches the customer's live interview count via the same
+// get_interview_count_for_customer this app's PaymentTermsPanel already
+// calls indirectly. due_date = start_date + counter days, recomputed on
+// either changing (Number of Days only).
+async function paymentTermFieldChange(fieldname, value, row, { detail }) {
+  if (fieldname === 'payment_condition') {
+    if (value === 'Not Applied') {
+      return { start_date: null, due_date: null, counter: 0, current_interview_count: 0 }
+    }
+    if (value === 'Number of Days') {
+      return { due_date: null, current_interview_count: 0 }
+    }
+    // Number of Interviews
+    const count = await call('verp_staffing.accounts.doctype.sales_order.sales_order.get_interview_count_for_customer', {
+      customer: detail.values.customer,
+    }).catch(() => 0)
+    return { start_date: null, due_date: null, current_interview_count: count || 0 }
+  }
+
+  if (fieldname === 'counter' && row.payment_condition === 'Number of Days' && row.start_date) {
+    return { due_date: addDays(row.start_date, value) }
+  }
+
+  if (fieldname === 'start_date') {
+    if (value && value < today()) {
+      notify.error('Start date cannot be before today.')
+      return { start_date: today() }
+    }
+    if (row.payment_condition === 'Number of Days' && row.counter) {
+      return { due_date: addDays(value, row.counter) }
+    }
+  }
+
+  return null
+}
 
 const ledgerAction = (queryExtra = {}) => ({
   component: LinkAction,
@@ -241,11 +348,35 @@ export const journalEntryConfig = {
   ],
 }
 
+// Ported from the old desk payment_entry.js's set_query("paid_from"/"paid_to").
+// Frappe's standard Party Type records fix each type's account_type
+// (Customer → Receivable, Supplier → Payable, Employee → Payable,
+// Shareholder → Equity) — hardcoded here rather than round-tripped from the
+// server, same shortcut the rest of this generic-config layer takes
+// (linkQueries has to resolve synchronously).
+const PARTY_ACCOUNT_TYPE = { Customer: 'Receivable', Supplier: 'Payable', Employee: 'Payable', Shareholder: 'Equity' }
+function paidAccountFilters(bankCashPaymentTypes) {
+  return ({ detail }) => {
+    const partyAccountType = PARTY_ACCOUNT_TYPE[detail.values.party_type] || 'Receivable'
+    const accountTypes = bankCashPaymentTypes.includes(detail.values.payment_type)
+      ? ['Bank', 'Cash']
+      : [partyAccountType, ...(detail.values.party_type === 'Shareholder' ? ['Equity'] : [])]
+    return { filters: { account_type: ['in', accountTypes], is_group: 0, disabled: 0, company: detail.values.company } }
+  }
+}
+
 export const paymentEntryConfig = {
   doctype: 'Payment Entry',
   timeline: 'full',
   // Rejected entries are frozen (payment_entry.py's validate).
   locked: (d) => d.hidden.verification_status === 'Rejected',
+  // Once a Payment Entry is tied to a Sales Order's payment term,
+  // verification_status (Pending Verification / Verified / Rejected) is
+  // the status that actually matters — plain docstatus stays "Submitted"
+  // throughout that whole review, telling the viewer nothing. A Payment
+  // Entry with no payment_term isn't part of that flow, so it keeps the
+  // ordinary Draft/Submitted/Cancelled badge.
+  statusField: (d) => (d.hidden.payment_term_row ? 'verification_status' : null),
   actions: [ledgerAction()],
   tabs: [
     {
@@ -260,10 +391,33 @@ export const paymentEntryConfig = {
         ]),
         fields(['naming_series', 'payment_type', 'posting_date', 'company', 'mode_of_payment', 'party_type', 'party', 'party_name', 'payer_account_name'], 'Payment'),
         { type: 'component', component: PaymentEntryAssist },
-        fields(['paid_from', 'paid_from_account_currency', 'paid_to', 'paid_to_account_currency', 'currency', 'conversion_rate', 'paid_amount', 'base_paid_amount'], 'Accounts & Amount'),
+        fields(
+          ['paid_from', 'paid_from_account_currency', 'paid_to', 'paid_to_account_currency', 'currency', 'conversion_rate', 'paid_amount', 'base_paid_amount'],
+          'Accounts & Amount',
+          {
+            linkQueries: (ctx) => ({
+              paid_from: paidAccountFilters(['Pay', 'Internal Transfer'])(ctx),
+              paid_to: paidAccountFilters(['Receive', 'Internal Transfer'])(ctx),
+            }),
+          },
+        ),
         table('references'),
         table('deductions'),
-        { ...table('taxes'), show: (d) => ['Supplier', 'Customer'].includes(d.values.party_type) },
+        {
+          ...table('taxes', {
+            linkQueries: ({ detail }) => ({
+              account_head: {
+                filters: {
+                  account_type: ['in', ['Tax', 'Chargeable', 'Indirect Expense', 'Direct Expense', 'Expense Account', 'Income Account']],
+                  is_group: 0,
+                  disabled: 0,
+                  company: detail.values.company,
+                },
+              },
+            }),
+          }),
+          show: (d) => ['Supplier', 'Customer'].includes(d.values.party_type),
+        },
         fields(['reference_no', 'reference_date', 'clearance_date', 'remarks', 'is_opening'], 'Reference'),
       ],
     },
@@ -289,6 +443,7 @@ const invoiceActions = (payTo) => [
 export const salesInvoiceConfig = {
   doctype: 'Sales Invoice',
   timeline: 'full',
+  statusText: invoiceStatusText,
   actions: [
     ...invoiceActions('sales'),
     {
@@ -318,7 +473,7 @@ export const salesInvoiceConfig = {
         ]),
         fields(['naming_series', 'customer', 'company', 'posting_date', 'due_date', 'sales_order', 'update_outstanding_for_self'], 'Invoice'),
         fields(['currency', 'conversion_rate', 'tax_category'], 'Currency'),
-        table('items'),
+        table('items', { hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange }),
         table('taxes'),
         fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
         fields(['debit_to', 'cash_bank_account', 'is_paid', 'paid_amount'], 'Accounting'),
@@ -345,7 +500,7 @@ export const purchaseInvoiceConfig = {
         ]),
         fields(['naming_series', 'supplier', 'company', 'posting_date', 'due_date', 'bill_no', 'bill_date', 'purchase_order', 'is_paid', 'update_outstanding_for_self'], 'Invoice'),
         fields(['currency', 'conversion_rate', 'tax_category'], 'Currency'),
-        table('items'),
+        table('items', { hiddenColumns: ['expense_account'], onFieldChange: purchaseItemsFieldChange }),
         table('taxes'),
         fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
         fields(['credit_to', 'cashbank_account', 'mode_of_payment', 'paid_amount', 'is_opening'], 'Accounting'),
@@ -355,29 +510,53 @@ export const purchaseInvoiceConfig = {
   ],
 }
 
+// Payment term fields that only make sense for one payment_condition each
+// are read-only outside that condition — counter/start_date only mean
+// anything for "Number of Days", and due_date is always computed
+// (paymentTermFieldChange), never typed directly.
+function paymentTermReadOnly(col, row) {
+  if (col.fieldname === 'due_date') return true
+  if (col.fieldname === 'payment_status') return true
+  if (col.fieldname === 'counter' && row.payment_condition !== 'Number of Days') return true
+  if (col.fieldname === 'start_date' && row.payment_condition !== 'Number of Days') return true
+  return false
+}
+
 export const salesOrderConfig = {
   doctype: 'Sales Order',
   timeline: 'full',
   actions: [{ component: SendDetailsFormAction, show: notNew }],
+  // Sales Order's own `status` (Open/Closed, server-computed) only ever
+  // matters once it reads "Closed" — otherwise the ordinary Draft/
+  // Submitted/Cancelled docstatus badge tells the fuller story.
+  statusField: (d) => (d.values.status === 'Closed' ? 'status' : null),
   tabs: [
     {
       key: 'details',
       label: 'Details',
       sections: [
-        strip([
-          { label: 'Grand Total', field: 'grand_total' },
-          { label: 'Outstanding', field: 'outstanding_amount', tone: (v) => (num(v) > 0 ? 'text-orange-600' : 'text-green-600') },
-          { label: 'Status', field: 'status', type: 'text' },
-        ]),
         fields(['customer', 'posting_date', 'currency', 'conversion_rate'], 'Order'),
-        table('items'),
-        table('payment_terms'),
+        grid('items', ['item', 'qty', 'rate', 'amount'], {
+          readOnlyColumns: ['amount'],
+          onFieldChange: salesItemsFieldChange,
+        }),
         table('taxes'),
         fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
         fields(['total_qty', 'total', 'net_total', 'total_taxes_and_charges', 'grand_total', 'rounding_adjustment', 'rounded_total', 'in_words'], 'Totals'),
       ],
     },
-    { key: 'payments', label: 'Payments', show: notNew, sections: [{ type: 'component', component: PaymentTermsPanel }] },
+    {
+      key: 'payments',
+      label: 'Payments',
+      show: notNew,
+      sections: [
+        grid('payment_terms', ['payment_condition', 'counter', 'start_date', 'due_date', 'amount', 'received_amount', 'payment_status'], {
+          readOnlyColumns: paymentTermReadOnly,
+          onFieldChange: paymentTermFieldChange,
+        }),
+        { type: 'component', component: PaymentTermsPanel },
+      ],
+    },
     { key: 'agreements', label: 'Agreements', show: notNew, sections: [{ type: 'component', component: AgreementPanel }] },
     { key: 'invoices', label: 'Invoices', show: notNew, sections: [{ type: 'component', component: LinkedInvoicesPanel }] },
   ],
@@ -398,7 +577,7 @@ export const purchaseOrderConfig = {
           { label: 'Status', field: 'status', type: 'text' },
         ]),
         fields(['naming_series', 'supplier', 'company', 'posting_date', 'schedule_date', 'currency', 'conversion_rate'], 'Order'),
-        table('items'),
+        table('items', { hiddenColumns: ['expense_account'], onFieldChange: purchaseItemsFieldChange }),
         table('taxes'),
         fields(['tax_category', 'additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
         fields(['total_qty', 'total', 'net_total', 'total_taxes_and_charges', 'grand_total', 'rounding_adjustment', 'rounded_total', 'in_words', 'total_advance', 'outstanding_amount'], 'Totals'),

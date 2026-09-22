@@ -45,7 +45,14 @@
             <span class="lucide-chevron-right size-4 text-app-text-muted" />
           </button>
 
-          <DocDetailView :doctype="doctype" :detail="detail" :force-disabled="leadLocked" :read-only-fields="readOnlyFields" title="Lead" />
+          <DocDetailView
+            :doctype="doctype"
+            :detail="detail"
+            :force-disabled="leadLocked"
+            :read-only-fields="readOnlyFields"
+            :field-link-queries="fieldLinkQueries"
+            title="Lead"
+          />
         </div>
       </div>
     </template>
@@ -132,7 +139,7 @@ const route = useRoute()
 const doctype = computed(() => 'Lead')
 const name = computed(() => route.params.name)
 
-const profile = useLeadDetailForm(name)
+const profile = useLeadDetailForm('Lead', name)
 const triedSaveProfile = ref(false)
 
 const opportunity = useResource({
@@ -178,6 +185,16 @@ const readOnlyFields = computed(() => {
   if (window.user !== 'Administrator') fields.push('lead_owner')
   return fields
 })
+
+// Lead Owner: Sales or Lead department employees only (Employee has no
+// plain department field — see get_employees_by_department), matching the
+// old desk lead.js set_query("lead_owner", { department: ["in", [...]] }).
+const fieldLinkQueries = {
+  lead_owner: {
+    query: 'verp_staffing.employee.doctype.employee.employee.get_employees_by_department',
+    filters: { department: ['Sales', 'Lead'] },
+  },
+}
 
 const completeness = computed(() => profile.completeness.value)
 

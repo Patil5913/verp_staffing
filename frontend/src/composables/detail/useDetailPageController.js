@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { useDocDetail } from '@/composables/detail/useDocDetail'
 import { useResource } from '@/composables/list/useResource'
 import { useUnsavedChangesGuard } from '@/composables/common/useUnsavedChangesGuard'
+import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
 import { notify } from '@/utils/common/notify'
 
 // Shared shell behind every doctype's detail page — the generic
@@ -48,8 +49,14 @@ export function useDetailPageController(doctype, name, options = {}) {
     // isDirty clears synchronously — no separate detail.refresh() round-trip
     // needed (that gap was letting a just-saved page still look "dirty" for
     // a moment, triggering the leave-guard even right after a save).
+    //
+    // Goes through saveAll() (main doc + the extra form, e.g. a Lead's
+    // Candidate Profile), not detail.submit() alone — this is the button/
+    // Ctrl+S save path, and previously only saveAll() (used solely by the
+    // unsaved-changes-guard's own "Save and leave" option) saved the extra
+    // form at all, so a normal Save silently only saved the main doc.
     const wasNew = detail.isNew.value
-    const ok = await detail.submit()
+    const ok = await saveAll()
     if (ok && wasNew) {
       // The doc now has a real name (save's onSuccess already re-snapshotted
       // detail.meta off the insert response) — swap the URL in place so a
@@ -105,6 +112,8 @@ export function useDetailPageController(doctype, name, options = {}) {
     bypassNext()
     router.push({ name: 'DocList', params: { doctype: doctype.value } })
   }
+
+  useSaveShortcut(isDirty, onSave)
 
   return {
     detail,

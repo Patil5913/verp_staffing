@@ -3,8 +3,8 @@
     <template #title-extra>
       <DocStatusBadge
         v-if="!detail.isNew.value"
-        :status="!detail.isSubmittable.value ? statusText : ''"
-        :docstatus="detail.isSubmittable.value ? detail.docstatus.value : null"
+        :status="!detail.isSubmittable.value || overridesDocstatus ? statusText : ''"
+        :docstatus="detail.isSubmittable.value && !overridesDocstatus ? detail.docstatus.value : null"
       />
     </template>
 
@@ -15,7 +15,7 @@
         :save-loading="detail.save.isLoading"
         :show-delete="!detail.isNew.value && detail.canDelete.value && !config.noDelete"
         :delete-loading="deleting"
-        :show-submit="!detail.isNew.value && detail.canSubmit.value"
+        :show-submit="!detail.isNew.value && detail.canSubmit.value && !locked"
         :submit-loading="detail.transitioning.value"
         :show-cancel="!detail.isNew.value && detail.canCancel.value"
         @save="onSave"
@@ -58,6 +58,7 @@
               :title="section.title"
               :force-disabled="locked || section.readOnly === true"
               :read-only-fields="readOnlyFields"
+              :field-link-queries="linkQueriesFor(section)"
             />
             <ChildTableField
               v-else-if="section.type === 'table' && tableFor(section.fieldname)"
@@ -65,6 +66,18 @@
               :rows="detail.values[section.fieldname] || []"
               :disabled="locked || !detail.canWrite.value || section.readOnly === true"
               :link-queries="linkQueriesFor(section)"
+              :hidden-columns="section.hiddenColumns"
+              :on-field-change="onFieldChangeFor(section)"
+              @update:rows="(rows) => (detail.values[section.fieldname] = rows)"
+            />
+            <GridTableField
+              v-else-if="section.type === 'grid' && tableFor(section.fieldname)"
+              :table="tableFor(section.fieldname)"
+              :rows="detail.values[section.fieldname] || []"
+              :columns="section.columns"
+              :read-only-columns="section.readOnlyColumns"
+              :disabled="locked || !detail.canWrite.value || section.readOnly === true"
+              :on-field-change="onFieldChangeFor(section)"
               @update:rows="(rows) => (detail.values[section.fieldname] = rows)"
             />
             <component
@@ -145,6 +158,7 @@ import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
+import GridTableField from '@/components/detail/GridTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
@@ -174,8 +188,26 @@ const {
 
 const locked = computed(() => Boolean(props.config.locked?.(detail)) || detail.docstatus.value !== 0)
 const readOnlyFields = computed(() => props.config.readOnlyFields?.(detail) || [])
+// statusField is usually a plain fieldname, but can be a function of the
+// record when which status field applies is conditional — Payment Entry
+// shows verification_status instead of docstatus, but only once
+// doc.payment_term is set (see paymentEntryConfig); otherwise it's a plain
+// docstatus-driven Draft/Submitted/Cancelled payment like any other.
+const resolvedStatusField = computed(() =>
+  typeof props.config.statusField === 'function' ? props.config.statusField(detail) : props.config.statusField,
+)
+// A purely computed status label (Sales Invoice's Paid/Unpaid/Partly Paid
+// from outstanding_amount — not backed by any real field) instead of a
+// fieldname to read off the doc — takes precedence over statusField.
+const computedStatusText = computed(() => props.config.statusText?.(detail) ?? null)
+// Whether the status badge should override docstatus even on an otherwise-
+// submittable doctype (true when either mechanism actually produced text).
+const overridesDocstatus = computed(
+  () => computedStatusText.value != null || (typeof props.config.statusField === 'function' && !!resolvedStatusField.value),
+)
 const statusText = computed(() => {
-  const field = props.config.statusField || 'status'
+  if (computedStatusText.value != null) return computedStatusText.value
+  const field = resolvedStatusField.value || 'status'
   return detail.values[field] || detail.hidden[field] || ''
 })
 
@@ -244,5 +276,11 @@ const visibleSections = (tab) => (tab.sections || []).filter((s) => !s.show || s
 // picker excludes companies already in another year).
 const linkQueriesFor = (section) =>
   typeof section.linkQueries === 'function' ? section.linkQueries({ detail, name: name.value }) : section.linkQueries
+// A table section's onFieldChange (row cross-field logic — see
+// ChildTableField's own prop) gets the same { detail, name } context a
+// component section does, since it often needs sibling doc fields (Sales
+// Order's Items Table needs the doc's own `company`).
+const onFieldChangeFor = (section) =>
+  section.onFieldChange ? (fieldname, value, draft) => section.onFieldChange(fieldname, value, draft, { detail, name: name.value }) : null
 const tableFor = (fieldname) => detail.tables.value.find((t) => t.fieldname === fieldname)
 </script>

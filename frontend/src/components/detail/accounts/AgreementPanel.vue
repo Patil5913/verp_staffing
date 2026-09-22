@@ -58,7 +58,8 @@
           <TextEditor
             v-if="b.type === 'Rich_Text'"
             :content="values[keyOf(b)] || ''"
-            editor-class="min-h-[120px] rounded-lg border border-app-border px-3 py-2 text-p-sm"
+            fixed-menu
+            editor-class="min-h-[120px] rounded-b-lg border border-t-0 border-app-border px-3 py-2 text-p-sm"
             @change="(html) => (values[keyOf(b)] = html)"
           />
           <AppInput v-else :type="b.type === 'Number' ? 'number' : b.type === 'Date' ? 'date' : 'text'" :placeholder="`Enter ${b.label || b.name}…`" :model-value="values[keyOf(b)] || ''" @update:model-value="(v) => (values[keyOf(b)] = v)" />

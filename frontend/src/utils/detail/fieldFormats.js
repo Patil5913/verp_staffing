@@ -4,7 +4,16 @@
 // to declare it explicitly.
 const EMAIL_FIELDS = new Set(['email', 'email_id', 'email_address'])
 const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date'])
-const PHONE_FIELDS = new Set(['phone_number', 'phone', 'mobile', 'mobile_no', 'personal_phone_number'])
+// Lead Detail Form has two phone fields (personal + marketing) — both need
+// the same sanitize-then-regex validation.
+const PHONE_FIELDS = new Set([
+  'phone_number',
+  'phone',
+  'mobile',
+  'mobile_no',
+  'personal_phone_number',
+  'number_for_marketing',
+])
 
 export function isEmailField(fieldname) {
   return EMAIL_FIELDS.has((fieldname || '').toLowerCase())
@@ -22,16 +31,21 @@ export function isSsnField(fieldname) {
   return (fieldname || '').toLowerCase().includes('ssn')
 }
 
+// These fields are already stored as the literal string "MM-YYYY" — the old
+// desk lead_details_form.js's is_valid_mm_yyyy validates and saves it
+// exactly as typed, no reformatting. toMonthYear/fromMonthYear used to
+// treat the stored value as "YYYY-MM" and swap the two halves for display
+// (then swap back — with a spurious trailing "-01" — on save), which
+// silently transposed month and year on every value that came straight
+// from the database instead of round-tripping through a save here first
+// (e.g. typing "01-2025" would then display as "2025-01"). The value is
+// already in the right shape both ways; there's nothing to convert.
 export function toMonthYear(value) {
-  if (!value) return ''
-  const parts = String(value).split('-')
-  return parts.length >= 2 ? `${parts[1]}-${parts[0]}` : String(value)
+  return value || ''
 }
 
 export function fromMonthYear(value) {
-  if (!value) return ''
-  const match = String(value).match(/^(\d{2})-(\d{4})$/)
-  return match ? `${match[2]}-${match[1]}-01` : value
+  return value || ''
 }
 
 export function isValidMonthYear(value) {
@@ -66,17 +80,22 @@ export function validateFieldValue(field, value) {
   }
   if (!strValue) return ''
 
-  if (isEmailField(field.fieldname) && !isValidEmail(strValue)) {
-    return `${label} must be a valid email address`
-  }
-  if (isMonthYearField(field.fieldname) && !isValidMonthYear(strValue)) {
-    return `${label} must be in MM-YYYY format`
-  }
-  if (isPhoneField(field.fieldname) && !isValidPhone(strValue)) {
-    return `${label} must include country code`
-  }
-  if (isSsnField(field.fieldname) && !/^\d{4}$/.test(strValue)) {
-    return `${label} must be exactly 4 digits`
+  // These fieldname heuristics only apply to a Data field — a same-named
+  // field elsewhere with a real fieldtype (e.g. Employee.start_date, a real
+  // Date) isn't the Lead Detail Form-style string these heuristics target.
+  if (field.fieldtype === 'Data') {
+    if (isEmailField(field.fieldname) && !isValidEmail(strValue)) {
+      return `${label} must be a valid email address`
+    }
+    if (isMonthYearField(field.fieldname) && !isValidMonthYear(strValue)) {
+      return `${label} must be in MM-YYYY format`
+    }
+    if (isPhoneField(field.fieldname) && !isValidPhone(strValue)) {
+      return `${label} must include country code`
+    }
+    if (isSsnField(field.fieldname) && !/^\d{4}$/.test(strValue)) {
+      return `${label} must be exactly 4 digits`
+    }
   }
   if (['Int', 'Float', 'Currency', 'Percent', 'Duration'].includes(field.fieldtype) && isNaN(strValue)) {
     return `${label} must be a number`

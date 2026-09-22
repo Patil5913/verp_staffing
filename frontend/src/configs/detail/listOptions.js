@@ -7,6 +7,23 @@ import EmailQueueStrip from '@/components/list/EmailQueueStrip.vue'
 // typed in by hand (cr_list.js / onboardings_list.js hide the New button).
 export const NO_MANUAL_CREATE = new Set(['CR', 'Onboardings', 'Email Queue'])
 
+// These three share one "person" concept via the Lead Detail Form (see
+// PersonQuickCreateDialog.vue) — their quick-create is name + phone + email,
+// not the generic meta-driven required-fields dialog every other doctype
+// uses.
+export const PERSON_DOCTYPES = new Set(['Lead', 'Opportunity', 'Customer'])
+
+// The synthetic Status column DocListView adds for a submittable doctype
+// (docstatus, or this doctype's own override — see statusTheme.js's
+// listStatusColumn) already tells the whole status story for these two —
+// showing their own status/verification_status field as a second column
+// alongside it was confusing (Sales Order: plain docstatus already covers
+// it; Payment Entry: the override already shows verification_status).
+export const STATUS_COLUMN_FIELDS_TO_HIDE = {
+  'Sales Order': new Set(['status']),
+  'Payment Entry': new Set(['status', 'verification_status']),
+}
+
 // Server actions offered on the rows ticked in a doctype's list, beside Delete.
 // `method` gets { names: '["a","b"]' } and answers { message, failed: [...] }.
 export const BULK_ACTIONS = {

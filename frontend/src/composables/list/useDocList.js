@@ -47,7 +47,17 @@ export function useDocList(doctype) {
     const listFields = (meta.resource.data?.list_fields || []).map((f) => f.fieldname)
     // plus whatever a doctype's row buttons decide on (Email Queue: status)
     const needed = (ROW_ACTIONS[doctype] || []).flatMap((action) => action.needs || [])
-    return [...new Set([...listFields, 'name', 'modified', 'creation', ...needed])]
+    // docstatus is cheap to fetch even for non-submittable doctypes (always
+    // 0) and DocListView needs it to render the Draft/Submitted/Cancelled
+    // badge for submittable ones. Payment Entry / Sales Invoice additionally
+    // need these for their own list-status overrides (see statusTheme.js's
+    // listStatusColumn).
+    const STATUS_OVERRIDE_FIELDS = {
+      'Payment Entry': ['payment_term_row', 'verification_status'],
+      'Sales Invoice': ['outstanding_amount', 'rounded_total', 'grand_total', 'disable_rounded_total'],
+    }
+    const statusOverrideFields = STATUS_OVERRIDE_FIELDS[doctype] || []
+    return [...new Set([...listFields, 'name', 'modified', 'creation', 'docstatus', ...statusOverrideFields, ...needed])]
   })
 
   const docs = useResource({

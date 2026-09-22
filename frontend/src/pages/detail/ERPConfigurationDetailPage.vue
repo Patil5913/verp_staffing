@@ -25,7 +25,13 @@
             <div class="flex items-center justify-between">
               <h3 class="text-p-base font-medium text-app-text">Permission Request Configuration</h3>
             </div>
-            <ChildTableField :table="permissionTable" :rows="tableRows" :disabled="!canWrite" @update:rows="(rows) => (tableRows = rows)" />
+            <ChildTableField
+              :table="permissionTable"
+              :rows="tableRows"
+              :disabled="!canWrite"
+              :link-queries="permissionRoleLinkQueries"
+              @update:rows="(rows) => (tableRows = rows)"
+            />
           </div>
 
           <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
@@ -43,7 +49,7 @@
 
           <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
             <h3 class="text-p-base font-medium text-app-text">Sample Data</h3>
-            <SampleDataPanel @removed="loadHiddenFields" />
+            <SampleDataPanel :is-sample-data-removed="values.is_sample_data_removed" @removed="loadHiddenFields" />
           </div>
         </div>
       </div>
@@ -122,6 +128,7 @@
 // isNew/delete/unsaved-changes-guard machinery entirely.
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
@@ -181,6 +188,20 @@ const permissionTable = {
   ],
 }
 const tableRows = ref([])
+// Role options come from the row's own Department's Hierarchy, not every
+// Role in the system — same get_department_hierarchy_roles_query used by
+// Employee's Assignment Details table (see EmployeeDetailPage.vue).
+function permissionRoleLinkQueries(draft, rows, editingIndex) {
+  return {
+    role: {
+      query: 'verp_staffing.settings.doctype.hierarchy.hierarchy.get_department_hierarchy_roles_query',
+      filters: {
+        department: draft.department,
+        exclude: rows.filter((_, i) => i !== editingIndex).map((r) => r.role).filter(Boolean),
+      },
+    },
+  }
+}
 const emailConfigRows = ref([])
 const candidateFormConfig = ref({})
 const deptDisplayConfig = ref({})
@@ -268,10 +289,24 @@ async function onSave() {
     })
     if (!result) return
 
+    // frappe.client.set_value's response is the doc as it now stands on the
+    // server — re-seed metaResource's cache from it directly instead of
+    // calling seedValues() against the pre-save cached meta (which was
+    // stale until the next full page load/refresh, making a just-saved
+    // page look like it had reverted to its old values).
+    metaResource.resource.setData({ ...metaResource.resource.data, values: result })
     seedValues()
     notify.success('Saved.')
   } finally {
     saving.value = false
   }
 }
+
+// This page's Save button has no dirty-tracking of its own (`save-dirty` is
+// a bare always-on attribute above) — Ctrl+S matches that same always-save
+// behavior rather than inventing dirty-tracking across the half-dozen
+// independent reactive pieces (values/tableRows/emailConfigRows/
+// candidateFormConfig/deptDisplayConfig/deptAccessConfig/systemSettings)
+// this page manages.
+useSaveShortcut(computed(() => true), onSave)
 </script>

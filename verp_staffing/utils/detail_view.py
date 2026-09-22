@@ -34,6 +34,12 @@ def _serialize_field(df):
         "read_only": bool(df.read_only),
         "depends_on": df.depends_on,
         "description": df.description,
+        # Only meaningful for a child-table column so far (a brand-new row
+        # added client-side starts with no defaults applied at all — see
+        # ChildTableField.vue's openRow) — e.g. Document References' `date`
+        # defaults to "Now" and is read-only, so a freshly added Proof Of
+        # Work row should show the current time, not a blank field.
+        "default": df.default,
     }
 
 
@@ -74,6 +80,12 @@ def _doc_fields_and_tables(meta, doc):
                     "fieldname": df.fieldname,
                     "label": df.label or df.fieldname,
                     "child_doctype": df.options,
+                    # "Table" (a real child table, edited row-by-row through
+                    # a dialog) vs "Table MultiSelect" (Desk renders this as
+                    # chip-style multiselect over the child doctype's one
+                    # Link column, not a row-editing dialog) — the frontend
+                    # needs to tell them apart to render the right control.
+                    "fieldtype": df.fieldtype,
                     "columns": columns,
                     "reqd": bool(df.reqd),
                     "section": section,
@@ -85,6 +97,19 @@ def _doc_fields_and_tables(meta, doc):
         serialized["section"] = section
         fields.append(serialized)
     return fields, tables
+
+
+@frappe.whitelist()
+def get_quick_entry_flag(doctype):
+    """Whether Desk would show the Quick Entry dialog for `doctype`, cheap
+    enough to call right before deciding whether to open one — a caller that
+    can't reuse an already-fetched get_doc_meta/get_list_view_meta payload
+    (the quick-create trigger inside a Link field's "Add New" footer, where
+    no meta for the target doctype has been fetched yet) needs to know this
+    *before* opening anything, not after, or the dialog flashes open and
+    then immediately redirects to the full form.
+    """
+    return bool(frappe.get_meta(doctype).quick_entry)
 
 
 @frappe.whitelist()
@@ -137,6 +162,11 @@ def get_doc_meta(doctype, name=None):
         "name": None if is_new else name,
         "title_field": meta.title_field or "name",
         "is_submittable": bool(meta.is_submittable),
+        # Whether Desk would show the "Quick Entry" dialog for this doctype
+        # (only its required fields) instead of jumping straight to the full
+        # form — the frontend's QuickCreateDialog needs to respect the same
+        # flag instead of always opening for every doctype.
+        "quick_entry": bool(meta.quick_entry),
         # 0 draft / 1 submitted / 2 cancelled — always 0 for a doctype that
         # isn't submittable, so the frontend never has to special-case it.
         "docstatus": 0 if is_new else int(doc.docstatus or 0),
@@ -271,29 +301,49 @@ def save_doc_fields(doctype, name=None, values=None):
     return get_doc_meta(doctype, doc.name)
 
 
-def _department_access_fields(doctype_name):
-    """Administrator-configured list of Lead Detail Form fieldnames a
-    department may see/edit for `doctype_name`, mirroring the old desk
-    lead.js's getDepartmentFields("Lead"). Stored as JSON on the single
-    ERP Configuration doctype, keyed by reference doctype name.
+def _department_config_fields(config_fieldname, doctype_name):
+    """Administrator-configured list of Lead Detail Form fieldnames for
+    `doctype_name`, read from one of ERP Configuration's two JSON config
+    fields — `department_access_form_fields` (editable) or
+    `department_display_form_fields` (view-only). Keyed case-insensitively,
+    matching the old desk reusable.js's get_display_fields (`k.toLowerCase()
+    === doctype.toLowerCase()`) — the access-fields side used to key
+    case-sensitively instead, silently dropping a match on any casing drift
+    between how a doctype name got saved into the config and its real name.
     """
-    raw = frappe.db.get_single_value("ERP Configuration", "department_access_form_fields")
+    raw = frappe.db.get_single_value("ERP Configuration", config_fieldname)
     if not raw:
         return []
     try:
         data = json.loads(raw)
     except (TypeError, ValueError):
         return []
-    return data.get(doctype_name) or []
+    key = next((k for k in data if k.lower() == doctype_name.lower()), None)
+    fields = data.get(key) if key else None
+    return fields if isinstance(fields, list) else []
 
 
-def _find_lead_detail_form(lead_name):
+def _department_access_fields(doctype_name):
+    """Fields a department may both see and edit for `doctype_name` —
+    mirrors the old desk lead.js's getDepartmentFields("Lead")."""
+    return _department_config_fields("department_access_form_fields", doctype_name)
+
+
+def _department_display_fields(doctype_name):
+    """Fields a department may see but not edit for `doctype_name` — mirrors
+    the old desk reusable.js's get_display_fields, previously never read on
+    this generic Candidate Profile view at all, so a field configured only
+    for display (not access) never showed up here."""
+    return _department_config_fields("department_display_form_fields", doctype_name)
+
+
+def _find_lead_detail_form(reference_doctype, reference_name):
     rows = frappe.get_list(
         "Lead Detail Form",
         fields=["name"],
         filters=[
-            ["Doctype Reference", "reference_doctype", "=", "Lead"],
-            ["Doctype Reference", "reference_person", "=", lead_name],
+            ["Doctype Reference", "reference_doctype", "=", reference_doctype],
+            ["Doctype Reference", "reference_person", "=", reference_name],
         ],
         limit_page_length=1,
     )
@@ -301,18 +351,28 @@ def _find_lead_detail_form(lead_name):
 
 
 @frappe.whitelist()
-def get_lead_detail_view(lead_name):
-    """The Lead Detail Form fields the current setup exposes for `lead_name`
-    (its reference-linked "Lead Detail Form" record), scoped to the
-    Administrator-configured field allowlist for Lead. Returns
-    {"exists": False} when there's no linked Lead Detail Form yet, or no
-    fields are configured — the caller renders nothing in that case, same
-    as lead.js's early-return.
+def get_reference_detail_view(reference_doctype, reference_name):
+    """The Lead Detail Form fields the current setup exposes for
+    `reference_name` (a Lead, Opportunity or Customer — whichever is linked
+    to a "Lead Detail Form" record via Doctype Reference), scoped to the
+    Administrator-configured field allowlist for `reference_doctype` (ERP
+    Configuration's Department Access Fields already lists Lead, Opportunity
+    and Customer as configurable targets — see erp_configuration's
+    servicesPlus/servicesPlusForDisplay). Returns {"exists": False} when
+    there's no linked Lead Detail Form yet, or no fields are configured —
+    the caller renders nothing in that case, same as the old desk
+    lead.js/opportunity.js's early-return for their embedded profile.
     """
-    _check_read("Lead", lead_name)
+    _check_read(reference_doctype, reference_name)
 
-    allowed = set(_department_access_fields("Lead"))
-    docname = _find_lead_detail_form(lead_name)
+    access = set(_department_access_fields(reference_doctype))
+    display = set(_department_display_fields(reference_doctype))
+    # display-only fields are shown too, just not editable — see
+    # _department_display_fields; a field access-listed for one department
+    # and display-listed (read-only) for another still shows as editable
+    # here, since this view isn't department-scoped by itself.
+    allowed = access | display
+    docname = _find_lead_detail_form(reference_doctype, reference_name)
     if not allowed or not docname:
         return {"exists": False}
 
@@ -322,6 +382,14 @@ def get_lead_detail_view(lead_name):
     all_fields, all_tables = _doc_fields_and_tables(meta, doc)
     fields = [f for f in all_fields if f["fieldname"] in allowed]
     tables = [t for t in all_tables if t["fieldname"] in allowed]
+    # display-only (not access-listed) is read-only here, on top of
+    # whatever the doctype's own field definition already says.
+    for f in fields:
+        if f["fieldname"] not in access:
+            f["read_only"] = True
+    for t in tables:
+        if t["fieldname"] not in access:
+            t["read_only"] = True
 
     values = {f["fieldname"]: doc.get(f["fieldname"]) for f in fields}
 
@@ -338,17 +406,21 @@ def get_lead_detail_view(lead_name):
 
 
 @frappe.whitelist()
-def save_lead_detail_view(lead_name, values):
-    """Saves `values` onto lead_name's linked Lead Detail Form, restricted to
-    the same Administrator-configured allowlist get_lead_detail_view reads
-    from — a client can never write a field it wasn't handed.
+def save_reference_detail_view(reference_doctype, reference_name, values):
+    """Saves `values` onto reference_name's linked Lead Detail Form,
+    restricted to the same Administrator-configured allowlist
+    get_reference_detail_view reads from — a client can never write a field
+    it wasn't handed. Returns the refreshed view (same shape as
+    get_reference_detail_view), like save_doc_fields does for a plain
+    doctype — the caller re-snapshots its dirty-check off this response
+    rather than a separate reload, so a save reflects as saved immediately.
     """
     values = frappe.parse_json(values) if isinstance(values, str) else (values or {})
 
-    allowed = set(_department_access_fields("Lead"))
-    docname = _find_lead_detail_form(lead_name)
+    allowed = set(_department_access_fields(reference_doctype))
+    docname = _find_lead_detail_form(reference_doctype, reference_name)
     if not docname:
-        frappe.throw(_("No Lead Detail Form is linked to this Lead."))
+        frappe.throw(_("No Lead Detail Form is linked to this {0}.").format(reference_doctype))
 
     doc = frappe.get_doc("Lead Detail Form", docname)
     if not doc.has_permission("write"):
@@ -372,7 +444,7 @@ def save_lead_detail_view(lead_name, values):
         doc.set(fieldname, value)
     doc.save()
 
-    return get_lead_detail_view(lead_name)
+    return get_reference_detail_view(reference_doctype, reference_name)
 
 
 @frappe.whitelist()

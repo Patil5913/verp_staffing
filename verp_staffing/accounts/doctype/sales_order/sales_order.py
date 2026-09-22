@@ -887,6 +887,8 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
             "company",
             "posting_date",
             "grand_total",
+            "rounded_total",
+            "disable_rounded_total",
             "outstanding_amount",
             "currency",
             "docstatus",

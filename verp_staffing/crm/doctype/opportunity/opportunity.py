@@ -93,10 +93,20 @@ class Opportunity(Document):
         # CASE 2: Standalone
         # =========================
         else:
+            # The quick-create dialog collects phone/email alongside the
+            # name but they don't live on Opportunity itself — same
+            # `_<fieldname>` convention as Lead.create_lead_detail, carried
+            # straight into the new Lead Detail Form.
+            custom_values = {
+                field: value
+                for field in ("personal_phone_number", "email")
+                if (value := getattr(self, f"_{field}", None))
+            }
             lead_detail_name = create_lead_details(
                 "Opportunity",
                 self.name,
                 self.name1,
+                custom_values=custom_values or None,
             )
 
         # =========================

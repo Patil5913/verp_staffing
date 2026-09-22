@@ -25,7 +25,10 @@
             <td class="px-3 py-2">{{ inv.owner_fullname || inv.owner }}</td>
             <td class="px-3 py-2 text-right tabular-nums">{{ formatFieldValue(inv.grand_total, { fieldtype: 'Currency' }) }} {{ inv.currency }}</td>
             <td class="px-3 py-2 text-right tabular-nums">{{ formatFieldValue(inv.outstanding_amount, { fieldtype: 'Currency' }) }}</td>
-            <td class="px-3 py-2"><DocStatusBadge :docstatus="inv.docstatus" /></td>
+            <td class="px-3 py-2 flex flex-wrap gap-1">
+              <DocStatusBadge :docstatus="inv.docstatus" />
+              <DocStatusBadge :status="computeInvoiceStatus(inv)" />
+            </td>
           </tr>
         </tbody>
       </table>
@@ -45,6 +48,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'
+import { computeInvoiceStatus } from '@/utils/list/statusTheme'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({

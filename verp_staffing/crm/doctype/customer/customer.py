@@ -14,6 +14,27 @@ class Customer(Document):
         unlink_and_clean_lead_detail("Customer", self.name, self.lead_details)
         revoke_chat_access(self.name)
 
+    def before_insert(self):
+        self._set_default_customer_owner()
+
+    def _set_default_customer_owner(self):
+        # Ported from the old desk customer.js's set_customer_owner(frm) —
+        # enforced here (not just client-side) so it applies no matter which
+        # UI created the Customer (the full form, or the quick-create
+        # dialog, which has no equivalent of that client script at all).
+        if self.customer_owner:
+            return
+
+        if self.customer_from == "Opportunity" and self.party_name:
+            owner = frappe.db.get_value("Opportunity", self.party_name, "opportunity_owner")
+            if owner:
+                self.customer_owner = owner
+                return
+
+        employee = frappe.db.get_value("Employee", {"user": frappe.session.user}, "name")
+        if employee:
+            self.customer_owner = employee
+
     def autoname(self):
         name = self.name1
 
@@ -48,7 +69,17 @@ class Customer(Document):
 
         # CASE 2: No party selected → create standalone Lead Details
         else:
-            lead_detail_name = create_lead_details("Customer", self.name, self.name1)
+            # Same `_<fieldname>` convention as Lead.create_lead_detail /
+            # Opportunity.after_insert — the quick-create dialog's
+            # phone/email inputs, carried into the new Lead Detail Form.
+            custom_values = {
+                field: value
+                for field in ("personal_phone_number", "email")
+                if (value := getattr(self, f"_{field}", None))
+            }
+            lead_detail_name = create_lead_details(
+                "Customer", self.name, self.name1, custom_values=custom_values or None
+            )
 
         # Link Customer → Lead Details in BOTH cases
         if lead_detail_name:

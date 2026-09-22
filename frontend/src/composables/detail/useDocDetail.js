@@ -53,8 +53,12 @@ export function useDocDetail(doctype, name) {
   const hiddenTables = reactive({})
   // JSON snapshot of `values` right after a load/save — isDirty just diffs
   // against it, so it's the single source of truth both ChildTableField
-  // (via values[fieldname]) and FieldControl write into.
-  const snapshot = ref('')
+  // (via values[fieldname]) and FieldControl write into. Must start as
+  // JSON.stringify(values) (i.e. '{}'), not '' — otherwise isDirty reads
+  // true the instant the page mounts, before the doc has even loaded
+  // ('{}' !== ''), so leaving the page in that window (e.g. clicking back
+  // immediately) wrongly triggered the unsaved-changes prompt.
+  const snapshot = ref(JSON.stringify(values))
 
   // Shared by the initial load and by a successful save — save_doc_fields
   // returns the same {values, tables, ...} shape get_doc_meta does, so

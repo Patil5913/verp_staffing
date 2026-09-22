@@ -100,11 +100,20 @@ const canSubmit = computed(() => {
   return true
 })
 
+// Customer itself uses a different, simpler endpoint (no doctype/docname —
+// it already knows it's forwarding *from* the Customer) with a plain-list
+// return instead of the service version's {options: [...]} shape — desk's
+// add_forward_button branches the same way on frm.doctype === "Customer".
+const isCustomerDoctype = computed(() => props.doctype === 'Customer')
 const departments = useResource({
   url: 'verp_staffing.crm.doctype.customer.customer.get_forwardable_departments_from_service',
   notifyOnError: false,
 })
-const loadingOptions = computed(() => departments.isLoading)
+const customerDepartments = useResource({
+  url: 'verp_staffing.crm.doctype.customer.customer.get_forwardable_departments',
+  notifyOnError: false,
+})
+const loadingOptions = computed(() => departments.isLoading || customerDepartments.isLoading)
 
 async function openDialog() {
   open.value = true
@@ -117,14 +126,17 @@ async function openDialog() {
   interviewRound.value = ''
   interviewRoundOptions.value = []
 
-  const res = await departments.resource.submit({ doctype: props.doctype, docname: props.name })
+  const res = isCustomerDoctype.value
+    ? await customerDepartments.resource.submit({ customer: props.customer })
+    : await departments.resource.submit({ doctype: props.doctype, docname: props.name })
   if (!res) return
   if (res.blocked) {
     blocked.value = true
     activeIn.value = res.active_in || []
     return
   }
-  options.value = (res.options || []).filter((s) => s.toLowerCase() !== props.doctype.toLowerCase())
+  const rawOptions = Array.isArray(res) ? res : res.options || []
+  options.value = rawOptions.filter((s) => s.toLowerCase() !== props.doctype.toLowerCase())
 }
 
 const interviews = useResource({

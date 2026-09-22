@@ -87,6 +87,17 @@ watch(
   { immediate: true },
 )
 
+// Desk only shows the Quick Entry dialog for a doctype with quick_entry=1
+// on its DocType — everything else jumps straight to the full form. This
+// dialog was opening unconditionally instead.
+watch(
+  () => detail.meta.resource.data,
+  (data) => {
+    if (data && !data.quick_entry) openFullForm()
+  },
+  { immediate: true },
+)
+
 function openFullForm() {
   isOpen.value = false
   // A plain path, not a named route: some doctypes (Lead, User) have their

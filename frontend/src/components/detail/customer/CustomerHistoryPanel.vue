@@ -16,7 +16,7 @@
       :title="group.department"
       :subtitle="`${group.entries.length} ${group.entries.length === 1 ? 'record' : 'records'}`"
     >
-      <div class="flex flex-col gap-3">
+      <div class="flex max-h-96 flex-col gap-3 overflow-y-auto pr-1">
         <div
           v-for="entry in group.entries"
           :key="entry.id"
@@ -88,6 +88,15 @@
               <span class="text-app-text-muted">{{ formatDate(f.date) }} —</span> {{ f.feedback }}
             </p>
           </div>
+
+          <div v-if="entry.forward_events?.length" class="flex flex-col gap-1 text-p-sm">
+            <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Forward History</p>
+            <ol class="ml-4 list-decimal text-app-text">
+              <li v-for="(e, i) in entry.forward_events" :key="i">
+                Forwarded to <b>{{ e.department || '-' }} Dept.</b> — {{ formatForwardEventTime(e.timestamp) }}
+              </li>
+            </ol>
+          </div>
         </div>
       </div>
     </SectionCard>
@@ -154,6 +163,16 @@ const hasMoreInterviews = computed(() => {
 function loadMoreInterviews() {
   interviewLimit.value += PAGE
   history.resource.submit({ customer: customer.value, interview_limit: interviewLimit.value, interview_offset: 0 })
+}
+
+// Matches customer_history.js's format_display_datetime exactly — "25 Aug
+// 2026, 20:40" (24-hour, no am/pm) — this staff-facing view's own format,
+// distinct from the portal template's 12-hour "%b %d, %Y, %I:%M %p".
+function formatForwardEventTime(value) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function roundRows(r) {
