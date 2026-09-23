@@ -9,6 +9,7 @@ import InterviewRoundsField from '@/components/detail/marketing/InterviewRoundsF
 import JobApplicationGrid from '@/components/detail/marketing/JobApplicationGrid.vue'
 import MarketingInterviewsPanel from '@/components/detail/marketing/MarketingInterviewsPanel.vue'
 import MarketingTargetPanel from '@/components/detail/marketing/MarketingTargetPanel.vue'
+import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
 const isCompleted = (detail) => detail.values.status === 'Completed'
 const notNew = (detail) => !detail.isNew.value
@@ -19,6 +20,8 @@ const notNew = (detail) => !detail.isNew.value
 export const marketingConfig = {
   doctype: 'Marketing',
   timeline: 'service',
+  // Forwarded/auto-created off a Customer's own workflow — no manual delete.
+  noDelete: true,
   // status locks once Completed; the customer can't be re-picked after the
   // record exists (marketing.js sets it read_only when !is_new()).
   readOnlyFields: (detail) => [
@@ -68,15 +71,19 @@ export const interviewConfig = {
   doctype: 'Interview',
   timeline: false,
   // Once created, everything but the rounds is fixed (interview.js sets
-  // customer/role/company/status read_only on existing records).
-  readOnlyFields: (detail) => (detail.isNew.value ? ['status'] : ['customer', 'role', 'company', 'status']),
+  // role/company/status read_only on existing records). `customer` isn't
+  // shown at all — it's purely derived from marketing_link, redundant next
+  // to Company/Role, and used to show up (unhidden, unlike the doctype's
+  // own display) on the create form specifically since this generic
+  // renderer doesn't otherwise know to drop it.
+  readOnlyFields: (detail) => (detail.isNew.value ? ['status'] : ['role', 'company', 'status']),
   tabs: [
     {
       key: 'details',
       label: 'Details',
       sections: [
         { type: 'fields', fieldnames: ['marketing_link'], show: (d) => d.isNew.value },
-        { type: 'fields', fieldnames: ['company', 'role', 'status', 'customer'] },
+        { type: 'fields', fieldnames: ['company', 'role', 'status'] },
         { type: 'component', component: ServiceResumePanel, show: notNew },
         { type: 'component', component: InterviewRoundsField },
       ],
@@ -90,6 +97,8 @@ export function otherServicesConfig({ doctype, department }) {
   return {
     doctype,
     timeline: 'service',
+    // Forwarded/auto-created off a Customer's own workflow — no manual delete.
+    noDelete: true,
     locked: isCompleted,
     readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer', 'service', 'department']),
     actions: [
@@ -113,7 +122,7 @@ export function otherServicesConfig({ doctype, department }) {
           { type: 'component', component: ServiceResumePanel, show: notNew },
         ],
       },
-      { key: 'proof-of-work', label: 'Proof Of Work', show: notNew, sections: [{ type: 'table', fieldname: 'proof_of_work' }] },
+      { key: 'proof-of-work', label: 'Proof Of Work', show: notNew, sections: [{ type: 'table', fieldname: 'proof_of_work', onFileMeta: autoTitleFromFile }] },
       {
         key: 'customer',
         label: 'Customer',

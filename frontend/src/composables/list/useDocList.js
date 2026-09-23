@@ -19,7 +19,12 @@ const DEFAULT_PAGE_LENGTH = 15
 // replacing them. A plain createResource fetch always replaces `.data`, so
 // each page fetched here fully replaces the previous one, as numbered
 // pagination needs.
-export function useDocList(doctype) {
+export function useDocList(doctype, options = {}) {
+  // Optional extra get_list-style filter tuples merged on top of the
+  // search-resolved ones — e.g. Interview's "Select Customer" scoping
+  // (marketing_link in [...]), which isn't something the search box's own
+  // syntax can express and shouldn't have to be.
+  const extraFilters = options.extraFilters ?? computed(() => [])
   const meta = useResource({
     url: 'verp_staffing.utils.list_view.get_list_view_meta',
     params: { doctype },
@@ -39,7 +44,7 @@ export function useDocList(doctype) {
     notifyOnError: false,
   })
 
-  const combinedFilters = computed(() => search.resource.data?.filters || [])
+  const combinedFilters = computed(() => [...(search.resource.data?.filters || []), ...extraFilters.value])
 
   const orderBy = computed(() => `${sortField.value} ${sortOrder.value}`)
 

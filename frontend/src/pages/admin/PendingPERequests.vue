@@ -85,7 +85,7 @@
                 <td class="truncate px-3 py-3 text-app-text-muted">{{ row.mode_of_payment || '—' }}</td>
                 <td class="px-3 py-3" @click.stop>
                   <div v-if="row.verification_status !== 'Verified'" class="flex justify-end gap-2">
-                    <AppButton size="sm" icon="check" :loading="verify.isLoading && actingOn === row.name" @click="onVerify(row.name)">
+                    <AppButton size="sm" icon="check" @click="openVerify(row)">
                       Verify
                     </AppButton>
                     <AppButton
@@ -107,6 +107,19 @@
         </div>
       </template>
     </div>
+
+    <Dialog v-model="verifyDialog.show" :options="{ title: `Submit ${actingOn}?`, size: 'md', icon: { name: 'check-circle', appearance: 'success' } }">
+      <template #body-content>
+        <div class="flex flex-col gap-4">
+          <div v-html="verifyConfirmHtml" />
+          <AppLinkField label="Paid From" doctype="Account" v-model="verifyDialog.paidFrom" :filters="paidFromFilters" />
+          <AppLinkField label="Paid To" doctype="Account" v-model="verifyDialog.paidTo" :filters="paidToFilters" />
+        </div>
+      </template>
+      <template #actions>
+        <AppButton icon="check" :loading="verify.isLoading" @click="submitVerify">Submit</AppButton>
+      </template>
+    </Dialog>
 
     <Dialog v-model="rejectDialog.show" :options="{ title: `Reject ${actingOn}`, size: 'md' }">
       <template #body-content>
@@ -140,12 +153,15 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppLinkField from '@/components/common/AppLinkField.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import { useResource } from '@/composables/list/useResource'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
+import { paidAccountFilterFor } from '@/utils/detail/paymentAccounts'
+import { paymentEntrySubmitConfirm } from '@/configs/detail/accounts'
 
 const router = useRouter()
 
@@ -168,6 +184,9 @@ const rows = useResource({
     fields: [
       'name', 'party', 'party_name', 'posting_date', 'paid_amount', 'currency', 'mode_of_payment',
       'reference_no', 'verification_status', 'modified',
+      // Needed for the Verify dialog's Paid From/Paid To pickers — same
+      // filter inputs Payment Entry's own detail page uses.
+      'party_type', 'payment_type', 'company', 'paid_from', 'paid_to',
     ],
     order_by: 'modified desc',
     limit_page_length: 500,
@@ -216,16 +235,55 @@ const emptyText = computed(
 
 const actingOn = ref(null)
 
+// Same submit-confirmation content as Payment Entry's own detail page
+// (verify_payment_entry submits the entry, same as that page's Submit
+// button), plus its Paid From/Paid To — filtered exactly the same way as
+// there — so the verifier can confirm or correct them without leaving this
+// queue.
+const verifyDialog = ref({ show: false, paidFrom: '', paidTo: '' })
+const verifyingRow = ref(null)
+const verifyConfirmHtml = computed(() => (verifyingRow.value ? paymentEntrySubmitConfirm({ values: verifyingRow.value }) : ''))
+const paidFromFilters = computed(() =>
+  verifyingRow.value
+    ? paidAccountFilterFor({
+        partyType: verifyingRow.value.party_type,
+        paymentType: verifyingRow.value.payment_type,
+        company: verifyingRow.value.company,
+        bankCashPaymentTypes: ['Pay', 'Internal Transfer'],
+      }).filters
+    : {},
+)
+const paidToFilters = computed(() =>
+  verifyingRow.value
+    ? paidAccountFilterFor({
+        partyType: verifyingRow.value.party_type,
+        paymentType: verifyingRow.value.payment_type,
+        company: verifyingRow.value.company,
+        bankCashPaymentTypes: ['Receive', 'Internal Transfer'],
+      }).filters
+    : {},
+)
+
+function openVerify(row) {
+  actingOn.value = row.name
+  verifyingRow.value = row
+  verifyDialog.value = { show: true, paidFrom: row.paid_from || '', paidTo: row.paid_to || '' }
+}
+
 const verify = useResource({
   url: 'verp_staffing.accounts.doctype.sales_order.sales_order.verify_payment_entry',
   onSuccess() {
     notify.success(`${actingOn.value} verified.`)
+    verifyDialog.value.show = false
     reload()
   },
 })
-function onVerify(name) {
-  actingOn.value = name
-  verify.resource.submit({ payment_entry: name })
+function submitVerify() {
+  verify.resource.submit({
+    payment_entry: actingOn.value,
+    paid_from: verifyDialog.value.paidFrom || undefined,
+    paid_to: verifyDialog.value.paidTo || undefined,
+  })
 }
 
 const reject = useResource({

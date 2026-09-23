@@ -45,6 +45,41 @@
             </div>
           </dl>
 
+          <!-- The Interview department's own card: every round it's had,
+               in table format — customer_history.js's Interview list item. -->
+          <div v-if="entry.interview_rounds_table" class="overflow-x-auto">
+            <table class="w-full text-left text-p-sm">
+              <thead class="text-p-xs text-app-text-muted">
+                <tr>
+                  <th class="py-1.5 pr-4 font-medium">Round</th>
+                  <th class="py-1.5 pr-4 font-medium">Type</th>
+                  <th class="py-1.5 pr-4 font-medium">Added On</th>
+                  <th class="py-1.5 pr-4 font-medium">Interview Date</th>
+                  <th class="py-1.5 pr-4 font-medium">Time</th>
+                  <th class="py-1.5 pr-4 font-medium">Status</th>
+                  <th class="py-1.5 font-medium">Feedback</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!entry.interview_rounds_table.length">
+                  <td colspan="7" class="py-2 text-center text-app-text-muted">No rounds</td>
+                </tr>
+                <tr v-for="(r, i) in entry.interview_rounds_table" :key="i" class="border-t border-app-border">
+                  <td class="py-1.5 pr-4">
+                    {{ r.round || '—' }}
+                    <span v-if="r.support" title="Support Taken" class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-app-primary/10 text-[10px] font-bold text-app-primary">S</span>
+                  </td>
+                  <td class="py-1.5 pr-4">{{ r.type_of_interview || '—' }}</td>
+                  <td class="py-1.5 pr-4">{{ formatDate(r.date) || '—' }}</td>
+                  <td class="py-1.5 pr-4">{{ formatDate(r.date_of_interview) || '—' }}</td>
+                  <td class="py-1.5 pr-4">{{ r.from_time && r.to_time ? `${r.from_time} - ${r.to_time}` : '—' }}</td>
+                  <td class="py-1.5 pr-4"><DocStatusBadge :status="r.status" /></td>
+                  <td class="py-1.5 max-w-xs"><TruncatedText v-if="r.feedback" :text="r.feedback" :limit="20" /><template v-else>—</template></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <div v-if="entry.job_application_count?.length" class="overflow-x-auto">
             <table class="w-full text-left text-p-sm">
               <thead class="text-p-xs text-app-text-muted">
@@ -116,6 +151,7 @@ import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
+import TruncatedText from '@/components/ui/TruncatedText.vue'
 import { useResource } from '@/composables/list/useResource'
 import { formatDate } from '@/utils/list/formatValue'
 

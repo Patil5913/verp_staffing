@@ -10,6 +10,15 @@ LAYOUT_FIELDTYPES = {"Section Break", "Column Break", "Tab Break", "HTML", "Butt
 TABLE_FIELDTYPES = {"Table", "Table MultiSelect"}
 
 
+def _prettify(fieldname):
+    """Fallback label for a field/table with no `label` set on the doctype
+    itself (Lead Detail Form's educational_details/address_history/
+    past_experience_table are exactly this) — "educational_details" ->
+    "Educational Details", matching Desk's own df.label fallback instead of
+    showing the raw fieldname verbatim."""
+    return (fieldname or "").replace("_", " ").strip().title()
+
+
 def _check_read(doctype, name=None):
     if name:
         if not frappe.has_permission(doctype, "read", doc=name):
@@ -27,7 +36,7 @@ def _check_read(doctype, name=None):
 def _serialize_field(df):
     return {
         "fieldname": df.fieldname,
-        "label": df.label or df.fieldname,
+        "label": df.label or _prettify(df.fieldname),
         "fieldtype": df.fieldtype,
         "options": df.options,
         "reqd": bool(df.reqd),
@@ -78,7 +87,7 @@ def _doc_fields_and_tables(meta, doc):
             tables.append(
                 {
                     "fieldname": df.fieldname,
-                    "label": df.label or df.fieldname,
+                    "label": df.label or _prettify(df.fieldname),
                     "child_doctype": df.options,
                     # "Table" (a real child table, edited row-by-row through
                     # a dialog) vs "Table MultiSelect" (Desk renders this as
@@ -406,7 +415,7 @@ def get_reference_detail_view(reference_doctype, reference_name):
 
 
 @frappe.whitelist()
-def save_reference_detail_view(reference_doctype, reference_name, values):
+def save_reference_detail_view(reference_doctype, reference_name, values, access_key=None):
     """Saves `values` onto reference_name's linked Lead Detail Form,
     restricted to the same Administrator-configured allowlist
     get_reference_detail_view reads from — a client can never write a field
@@ -414,10 +423,17 @@ def save_reference_detail_view(reference_doctype, reference_name, values):
     get_reference_detail_view), like save_doc_fields does for a plain
     doctype — the caller re-snapshots its dirty-check off this response
     rather than a separate reload, so a save reflects as saved immediately.
+
+    `access_key` lets a caller look up the access allowlist under a
+    different key than `reference_doctype` — e.g. the Customer Details
+    panel on a service record (Resume, Marketing, ...) always resolves the
+    Lead Detail Form via reference_doctype="Customer", but the department
+    whose access config actually applies is that service's own department
+    (its `displayKey`), not "Customer".
     """
     values = frappe.parse_json(values) if isinstance(values, str) else (values or {})
 
-    allowed = set(_department_access_fields(reference_doctype))
+    allowed = set(_department_access_fields(access_key or reference_doctype))
     docname = _find_lead_detail_form(reference_doctype, reference_name)
     if not docname:
         frappe.throw(_("No Lead Detail Form is linked to this {0}.").format(reference_doctype))
@@ -450,7 +466,10 @@ def save_reference_detail_view(reference_doctype, reference_name, values):
 @frappe.whitelist()
 def get_comments(doctype, name):
     _check_read(doctype, name)
-    return frappe.get_list(
+    # See get_timeline's Comment/Version query below for why this is
+    # get_all, not get_list: Comment is System/Website Manager-only by
+    # default, and access here is already gated by _check_read above.
+    return frappe.get_all(
         "Comment",
         filters={"reference_doctype": doctype, "reference_name": name, "comment_type": "Comment"},
         fields=["name", "content", "owner", "creation"],
@@ -529,7 +548,17 @@ def get_timeline(doctype, name):
     # Notes written here before this used CRM Note are plain Comments; still shown.
     from frappe.utils import escape_html
 
-    for c in frappe.get_list(
+    # Comment and Version below are core doctypes read_only to System
+    # Manager (Comment: also Website Manager) by default — get_list would
+    # enforce read permission on *that* doctype for the current user, on
+    # top of the _check_read(doctype, name) already done above for the
+    # record being viewed. Every non-System-Manager user hit "User does not
+    # have doctype access via role permission for this document Version" on
+    # every single page's Notes/Activity tab as a result. get_all skips that
+    # per-doctype check — safe here since access to this whole feed is
+    # already gated on the parent record, not on these two logging
+    # doctypes themselves.
+    for c in frappe.get_all(
         "Comment",
         filters={"reference_doctype": doctype, "reference_name": name, "comment_type": "Comment"},
         fields=["name", "content", "owner", "creation"],
@@ -549,7 +578,7 @@ def get_timeline(doctype, name):
             }
         )
 
-    versions = frappe.get_list(
+    versions = frappe.get_all(
         "Version",
         filters={"ref_doctype": doctype, "docname": name},
         fields=["name", "owner", "creation", "data"],
@@ -729,7 +758,7 @@ def get_doctype_field_sections(doctype, exclude_fieldnames=None):
         if not df.fieldname or df.fieldname in exclude or df.hidden or df.read_only:
             continue
         current["fields"].append(
-            {"fieldname": df.fieldname, "label": df.label or df.fieldname, "fieldtype": df.fieldtype}
+            {"fieldname": df.fieldname, "label": df.label or _prettify(df.fieldname), "fieldtype": df.fieldtype}
         )
 
     if current["fields"]:

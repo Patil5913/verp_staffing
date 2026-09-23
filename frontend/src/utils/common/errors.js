@@ -113,3 +113,10 @@ export const isPermissionError = (error) => normalizeError(error).type === 'perm
 export const isNotFoundError = (error) => normalizeError(error).type === 'not_found'
 export const isAuthError = (error) => normalizeError(error).type === 'unauthenticated'
 export const isNetworkError = (error) => normalizeError(error).type === 'network'
+
+// Sales Order's pre-submit checks (validate_candidate_form_requirements)
+// and agreement.py's send_existing_agreement both throw this exact wording
+// when the customer has no email on file to send the candidate form/
+// agreement to — matched here so the caller can offer to collect one and
+// retry, instead of just dead-ending on the error.
+export const isEmailMissingError = (error) => /email is required to send/i.test(normalizeError(error).message)

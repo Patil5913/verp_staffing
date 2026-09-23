@@ -45,6 +45,9 @@ const customerTabs = (extraFields = []) => [
 export const crConfig = {
   doctype: 'CR',
   timeline: false,
+  // Forwarded off a Customer's own workflow, never created by hand — no
+  // manual delete either.
+  noDelete: true,
   // A resolved / refunded case is read-only (cr.js: disable_form()).
   locked: (detail) => notNew(detail) && !!latestStatus(detail, 'cr_history') && latestStatus(detail, 'cr_history') !== 'Dispute Pending',
   readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer']),
@@ -86,6 +89,7 @@ export const crConfig = {
 export const onboardingsConfig = {
   doctype: 'Onboardings',
   timeline: false,
+  noDelete: true,
   locked: (detail) => notNew(detail) && !!latestStatus(detail, 'onboarding_history') && latestStatus(detail, 'onboarding_history') !== 'Active',
   readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer']),
   actions: [

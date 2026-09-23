@@ -92,12 +92,23 @@ const query = ref('')
 const showQuickCreate = ref(false)
 const isPersonDoctype = computed(() => PERSON_DOCTYPES.has(props.doctype))
 
+// frappe-ui's resource.fetch(params) falls back to its *previous* params
+// object whenever the new params are falsy ("params = params || out.params"
+// in resources.js) — an empty search string is falsy, so re-searching with
+// txt="" (clearing the box, refocusing, or a filters/query change
+// retriggering the watch below) would otherwise hand that whole leftover
+// params object back into makeParams as if it were the new `txt`, sending
+// the server e.g. `{doctype: "Employee", filters: {...}, ...}` as the txt
+// argument itself. Reading the current search text from a ref instead of
+// makeParams' own argument sidesteps that fallback entirely — the fetch
+// call's argument is never used for anything but a truthy "go" signal.
+const searchText = ref('')
 const search = useResource({
   url: 'frappe.desk.search.search_link',
   method: 'POST',
-  makeParams: (txt) => ({
+  makeParams: () => ({
     doctype: props.doctype,
-    txt: txt || '',
+    txt: searchText.value || '',
     filters: props.filters,
     page_length: props.pageLength,
     query: props.query || undefined,
@@ -117,8 +128,9 @@ let requestSeq = 0
 const results = ref([])
 
 async function loadOptions(txt) {
+  searchText.value = txt || ''
   const seq = ++requestSeq
-  await search.resource.fetch(txt)
+  await search.resource.fetch(true)
   if (seq === requestSeq) results.value = search.resource.data || []
 }
 

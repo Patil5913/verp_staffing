@@ -1,5 +1,5 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #title-extra>
       <DocStatusBadge v-if="!detail.isNew.value" :status="detail.values.status" />
     </template>

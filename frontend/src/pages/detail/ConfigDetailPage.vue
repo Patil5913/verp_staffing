@@ -1,10 +1,19 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout
+    :title="recordTitle"
+    :tabs="tabs"
+    v-model:active-tab="activeTab"
+    :detail="detail"
+    :hide-draft-notice="hideDraftNotice"
+    @back="goBack"
+  >
     <template #title-extra>
       <DocStatusBadge
         v-if="!detail.isNew.value"
         :status="!detail.isSubmittable.value || overridesDocstatus ? statusText : ''"
         :docstatus="detail.isSubmittable.value && !overridesDocstatus ? detail.docstatus.value : null"
+        :doctype="doctype"
+        :field="resolvedStatusField"
       />
     </template>
 
@@ -20,7 +29,7 @@
         :show-cancel="!detail.isNew.value && detail.canCancel.value"
         @save="onSave"
         @delete="showDeleteDialog = true"
-        @submit="onSubmit"
+        @submit="triggerSubmit"
         @cancel="showCancelDialog = true"
       >
         <component
@@ -67,7 +76,9 @@
               :disabled="locked || !detail.canWrite.value || section.readOnly === true"
               :link-queries="linkQueriesFor(section)"
               :hidden-columns="section.hiddenColumns"
+              :field-overrides="section.fieldOverrides"
               :on-field-change="onFieldChangeFor(section)"
+              :on-file-meta="section.onFileMeta"
               @update:rows="(rows) => (detail.values[section.fieldname] = rows)"
             />
             <GridTableField
@@ -109,13 +120,35 @@
   </Dialog>
 
   <Dialog
+    v-model="showSubmitDialog"
+    :options="{
+      title: `Submit this ${doctype}?`,
+      icon: { name: 'check-circle', appearance: 'success' },
+    }"
+  >
+    <template #body-content>
+      <div v-html="submitConfirmHtml" />
+    </template>
+    <template #actions>
+      <AppButton variant="solid" icon="check" :loading="detail.transitioning.value" @click="confirmSubmit">
+        Submit
+      </AppButton>
+    </template>
+  </Dialog>
+
+  <MissingEmailDialog v-model="missingEmailOpen" :customer="detail.values.customer" @saved="onEmailSaved" />
+
+  <Dialog
     v-model="showCancelDialog"
     :options="{
       title: `Cancel this ${doctype}?`,
-      message: `Cancelling reverses this document's postings. This can't be undone.`,
+      message: cancelConfirmHtml ? undefined : `Cancelling reverses this document's postings. This can't be undone.`,
       icon: { name: 'x-circle', appearance: 'danger' },
     }"
   >
+    <template v-if="cancelConfirmHtml" #body-content>
+      <div v-html="cancelConfirmHtml" />
+    </template>
     <template #actions>
       <AppButton variant="danger" icon="x-circle" :loading="detail.transitioning.value" @click="onCancelDoc">
         Cancel document
@@ -146,8 +179,24 @@
 //   actions?: [{ component, props?, show?(detail) }],  // before Save/Delete; also get `save` (the
 //                                                       // page's Save, incl. new-record redirect)
 //   statusField?: 'status',
+//   hideDraftNotice?(detail): boolean,      // suppress the generic "submit
+//                                            // this to confirm" draft banner
+//                                            // (Payment Entry: hidden while
+//                                            // Rejected, its own messaging)
 //   fieldGuards?: [{ field, check(value, saved, detail) }],  // confirm / block a field edit
 //   noDelete?: boolean,
+//   autoCalculate?: boolean,                // live-recompute Items/Taxes/
+//                                            // Totals client-side on every
+//                                            // relevant edit (docCalculator.js
+//                                            // — same math as the server's
+//                                            // run_calculation), instead of
+//                                            // only reflecting the last save
+//   submitConfirm?(detail): string,         // HTML body for a confirm
+//                                            // dialog before Submit; omitted
+//                                            // = Submit fires immediately
+//   cancelConfirm?(detail): string,         // HTML body for Cancel's
+//                                            // confirm dialog; omitted =
+//                                            // the generic one-line message
 // }
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -160,9 +209,11 @@ import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import GridTableField from '@/components/detail/GridTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
+import MissingEmailDialog from '@/components/common/MissingEmailDialog.vue'
 import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
+import { recalcDocTotals } from '@/utils/detail/docCalculator'
 
 const props = defineProps({
   config: { type: Object, required: true },
@@ -186,6 +237,59 @@ const {
   showCancelDialog,
 } = useDetailPageController(doctype, name)
 
+// A config can supply submitConfirm(detail)/cancelConfirm(detail) returning
+// an HTML string for a doctype-specific "here's what this actually does"
+// dialog (Payment Entry: submitting locks it in as Verified, cancelling
+// reverses the GL entries) — Submit had no confirmation at all before this,
+// and Cancel only ever showed one generic sentence regardless of doctype.
+// A config without either keeps exactly the previous behavior (submit
+// fires immediately; cancel shows the generic message).
+const showSubmitDialog = ref(false)
+const submitConfirmHtml = computed(() => props.config.submitConfirm?.(detail) || '')
+const cancelConfirmHtml = computed(() => props.config.cancelConfirm?.(detail) || '')
+
+// A submit that fails because the customer has no email to send the
+// candidate form/agreement to (Sales Order's pre-submit checks) offers a
+// small dialog to collect one instead of dead-ending — see
+// useDetailPageController's onSubmit / MissingEmailDialog.vue.
+const missingEmailOpen = ref(false)
+function onEmailSaved() {
+  triggerSubmit()
+}
+
+async function triggerSubmit() {
+  if (props.config.submitConfirm) {
+    showSubmitDialog.value = true
+  } else {
+    const result = await onSubmit()
+    if (result?.emailMissing) missingEmailOpen.value = true
+  }
+}
+async function confirmSubmit() {
+  const result = await onSubmit()
+  showSubmitDialog.value = false
+  if (result?.emailMissing) missingEmailOpen.value = true
+}
+
+// Items/Taxes/discount/rounding/currency — the full set docCalculator.js's
+// recalcDocTotals reads. Deep so an edit inside an existing item/tax row
+// (not just adding/removing one) triggers it too; recalcDocTotals writing
+// the same numbers back doesn't cause a loop since Vue skips a reactive set
+// that doesn't actually change the value.
+watch(
+  () => [
+    detail.values.items,
+    detail.values.taxes,
+    detail.values.additional_discount_percentage,
+    detail.values.disable_rounded_total,
+    detail.values.conversion_rate,
+  ],
+  () => {
+    if (props.config.autoCalculate) recalcDocTotals(detail.values)
+  },
+  { deep: true },
+)
+
 const locked = computed(() => Boolean(props.config.locked?.(detail)) || detail.docstatus.value !== 0)
 const readOnlyFields = computed(() => props.config.readOnlyFields?.(detail) || [])
 // statusField is usually a plain fieldname, but can be a function of the
@@ -205,6 +309,11 @@ const computedStatusText = computed(() => props.config.statusText?.(detail) ?? n
 const overridesDocstatus = computed(
   () => computedStatusText.value != null || (typeof props.config.statusField === 'function' && !!resolvedStatusField.value),
 )
+// The generic draft notice ("submit this to confirm") is suppressed when the
+// config opts out — Payment Entry's own verification_status already covers
+// "Rejected" with more specific messaging, so the generic one would be
+// redundant/confusing there.
+const hideDraftNotice = computed(() => Boolean(props.config.hideDraftNotice?.(detail)))
 const statusText = computed(() => {
   if (computedStatusText.value != null) return computedStatusText.value
   const field = resolvedStatusField.value || 'status'

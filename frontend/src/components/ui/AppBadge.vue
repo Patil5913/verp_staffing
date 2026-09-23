@@ -12,7 +12,7 @@
 // existing `theme="green"` call sites carry over.
 defineProps({
   label: { type: String, default: '' },
-  theme: { type: String, default: 'gray' }, // gray | blue | green | orange | red
+  theme: { type: String, default: 'gray' }, // gray | blue | green | orange | yellow | red
   size: { type: String, default: 'sm' }, // sm | md
 })
 
@@ -21,6 +21,7 @@ const TONES = {
   blue: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
   green: 'bg-green-500/10 text-green-700 dark:text-green-300',
   orange: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  yellow: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300',
   red: 'bg-red-500/10 text-red-700 dark:text-red-300',
 }
 </script>

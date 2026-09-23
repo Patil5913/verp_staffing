@@ -15,31 +15,48 @@ export function useCustomerContext(customerRef, displayKey, fixedFields) {
     auto: !fixedFields?.value,
   })
 
-  const fields = computed(() => {
-    if (fixedFields?.value) return fixedFields.value
+  // Same allowlist shape, but the editable side — a field configured here
+  // renders as an upload/edit control instead of a readonly value (see
+  // detail_view.py's department_access_form_fields, used the same way by
+  // Lead/Opportunity/Customer's Candidate Profile tab).
+  const accessFields = useResource({
+    url: 'frappe.client.get_single_value',
+    params: { doctype: 'ERP Configuration', field: 'department_access_form_fields' },
+    notifyOnError: false,
+    auto: !fixedFields?.value,
+  })
+
+  function lookup(resource) {
     let config = {}
     try {
-      config = JSON.parse(displayFields.resource.data || '{}')
+      config = JSON.parse(resource.resource.data || '{}')
     } catch {
       config = {}
     }
     const wanted = String(displayKey.value || '').toLowerCase()
     const key = Object.keys(config).find((k) => k.toLowerCase() === wanted)
     return key && Array.isArray(config[key]) ? config[key] : []
-  })
+  }
+
+  const fields = computed(() => (fixedFields?.value ? fixedFields.value : lookup(displayFields)))
+  const writableFields = computed(() => (fixedFields?.value ? [] : lookup(accessFields)))
 
   const records = useResource({
     url: 'verp_staffing.quota.utils.customer_data.get_data_by_customer',
     notifyOnError: false,
   })
 
+  // A field configured as access (editable) should show even if it isn't
+  // also in the display allowlist — merge both lists for the actual fetch.
+  const fetchFields = computed(() => [...new Set([...fields.value, ...writableFields.value])])
+
   watch(
-    [customerRef, fields],
+    [customerRef, fetchFields],
     ([customer, list]) => {
       if (customer && list.length) records.resource.submit({ customer, fields: list })
     },
     { immediate: true },
   )
 
-  return { fields, displayFields, records }
+  return { fields, writableFields, displayFields, records }
 }

@@ -15,6 +15,7 @@
         </button>
       </div>
       <template #right>
+        <AppButton variant="outline" size="sm" icon="users" @click="showCustomerDialog = true">Select Customer</AppButton>
         <AppButton variant="ghost" icon="chevron-left" tooltip="Previous month" @click="shift(-1)" />
         <span class="min-w-[8.5rem] text-center text-p-sm font-medium text-app-text">{{ monthLabel }}</span>
         <AppButton variant="ghost" icon="chevron-right" tooltip="Next month" @click="shift(1)" />
@@ -96,6 +97,8 @@
 
       <div v-if="events.resource.data?.length === 0 && !events.isLoading" class="mt-4 text-center text-p-sm text-app-text-muted">No interview rounds scheduled in {{ monthLabel }}.</div>
     </div>
+
+    <SelectCustomerDialog v-model="showCustomerDialog" @applied="load" />
   </div>
 </template>
 
@@ -111,9 +114,13 @@ import { LoadingIndicator } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
+import SelectCustomerDialog from '@/components/list/SelectCustomerDialog.vue'
 import { useResource } from '@/composables/list/useResource'
+import { useMarketingCustomerFilter } from '@/composables/list/useMarketingCustomerFilter'
 
 const router = useRouter()
+const showCustomerDialog = ref(false)
+const { selectedCustomers, ensureDefaultCustomers } = useMarketingCustomerFilter()
 const doctype = 'Interview'
 const MODES = [
   { key: 'month', label: 'Month', icon: 'calendar' },
@@ -152,11 +159,18 @@ const weeks = computed(() => {
 
 const events = useResource({
   url: 'verp_staffing.marketing.doctype.interview.interview.get_interview_round_events',
-  makeParams: () => ({ start: weeks.value[0][0].iso, end: weeks.value.at(-1).at(-1).iso }),
+  makeParams: () => ({
+    start: weeks.value[0][0].iso,
+    end: weeks.value.at(-1).at(-1).iso,
+    marketing_link: selectedCustomers.value.length ? selectedCustomers.value : undefined,
+  }),
   notifyOnError: false,
-  auto: true,
 })
-const load = () => events.resource.reload()
+async function load() {
+  await ensureDefaultCustomers()
+  events.resource.submit()
+}
+load()
 watch(anchor, load)
 
 const list = computed(() =>

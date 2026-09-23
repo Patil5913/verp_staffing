@@ -1,20 +1,20 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #actions>
       <RecordActionBar
         show-save
         :save-dirty="isDirty"
         :save-loading="detail.save.isLoading"
-        :show-delete="!detail.isNew.value && detail.canDelete.value"
+        :show-delete="false"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
         <ForwardCandidateButton
-          v-if="!detail.isNew.value && detail.values.customer"
+          v-if="!detail.isNew.value && detail.hidden.customer"
           doctype="RUC"
           :name="name"
-          :customer="detail.values.customer"
+          :customer="detail.hidden.customer"
           from-service-name="RUC"
           @forwarded="detail.refresh"
         />
@@ -24,7 +24,13 @@
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="DETAIL_FIELDS" :read-only-fields="locked ? ['status'] : []" />
+        <DocDetailView
+          :doctype="doctype"
+          :detail="detail"
+          :fieldnames="DETAIL_FIELDS"
+          :field-link-queries="{ assign_to: { query: assignToQuery, filters: assignToFilters } }"
+          :read-only-fields="locked ? ['status'] : []"
+        />
       </div>
     </template>
 
@@ -56,6 +62,12 @@
         allow-create
         empty-text="No tasks or events linked to this record yet."
       />
+    </template>
+
+    <template #tab-customer>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <CustomerContextPanel :customer="detail.hidden.customer" display-key="RUC" />
+      </div>
     </template>
   </DetailPageLayout>
 
@@ -91,6 +103,7 @@ import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
+import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
 const route = useRoute()
@@ -106,6 +119,7 @@ const locked = computed(() => detail.values.status === 'Completed')
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
   { key: 'sessions', label: 'Sessions' },
+  { key: 'customer', label: 'Customer' },
   { key: 'notes', label: 'Notes' },
   { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },
@@ -116,4 +130,7 @@ const activeTab = ref('details')
 const DETAIL_FIELDS = ['assign_to', 'status', 'outsource']
 
 const sessionTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'session_details'))
+
+const assignToQuery = 'verp_staffing.crm.api.helpers.get_assign_to_by_service'
+const assignToFilters = computed(() => ({ service: 'RUC', customer: detail.hidden.customer }))
 </script>

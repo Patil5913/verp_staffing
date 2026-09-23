@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe, json
+from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details, get_or_create_lead_detail
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
@@ -371,3 +372,28 @@ def get_customer_email(customer, return_ldf=False):
         return None
 
     return email_value
+
+
+@frappe.whitelist()
+def save_customer_email(customer, email):
+    """Sets the email on a Customer's linked Lead Detail Form — the recovery
+    step for the "Email is required to send ..." errors raised by Sales
+    Order's pre-submit checks and agreement.py's send_existing_agreement:
+    rather than dead-ending there, the caller collects an email and retries
+    through this, so the original submit/send can then proceed.
+    """
+    email = (email or "").strip()
+    if not email:
+        frappe.throw(_("Email is required."))
+    frappe.utils.validate_email_address(email, throw=True)
+
+    _, lead_detail_name = get_customer_email(customer, return_ldf=True)
+
+    doc = frappe.get_doc("Lead Detail Form", lead_detail_name)
+    if not doc.has_permission("write"):
+        frappe.throw(_("You do not have permission to edit this Lead Detail Form."), frappe.PermissionError)
+
+    doc.email = email
+    doc.save(ignore_permissions=True)
+
+    return email

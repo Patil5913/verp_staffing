@@ -1,20 +1,20 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #actions>
       <RecordActionBar
         show-save
         :save-dirty="isDirty"
         :save-loading="detail.save.isLoading"
-        :show-delete="!detail.isNew.value && detail.canDelete.value"
+        :show-delete="false"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
         <ForwardCandidateButton
-          v-if="!detail.isNew.value && detail.values.customer"
+          v-if="!detail.isNew.value && detail.hidden.customer"
           doctype="Interview Support"
           :name="name"
-          :customer="detail.values.customer"
+          :customer="detail.hidden.customer"
           from-service-name="Interview Support"
           @forwarded="detail.refresh"
         />
@@ -48,23 +48,21 @@
             </dl>
           </div>
 
-          <div class="flex flex-col gap-1.5">
-            <label class="text-p-sm font-medium text-app-text-muted">Assign To</label>
-            <AppLinkField
-              doctype="Employee"
-              v-model="detail.values.assign_to"
-              :disabled="!detail.canWrite.value || locked"
-              :query="assignToQuery"
-              :filters="assignToFilters"
-            />
-          </div>
           <DocDetailView
             :doctype="doctype"
             :detail="detail"
-            :fieldnames="['status', 'candidate_feedback']"
-            :read-only-fields="locked ? ['status'] : []"
+            :fieldnames="['assign_to', 'status']"
+            :field-link-queries="{ assign_to: { query: assignToQuery, filters: assignToFilters } }"
+            :read-only-fields="locked ? ['assign_to', 'status'] : []"
           />
-          <ServiceResumePanel :customer="detail.values.customer" />
+
+          <div class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
+            <h3 class="mb-2 text-p-base font-medium text-app-text">Candidate Feedback</h3>
+            <p v-if="detail.values.candidate_feedback" class="whitespace-pre-wrap text-p-sm text-app-text">{{ detail.values.candidate_feedback }}</p>
+            <p v-else class="py-4 text-center text-p-sm text-app-text-muted">No Feedback Yet</p>
+          </div>
+
+          <ServiceResumePanel :customer="detail.hidden.customer" />
         </div>
       </div>
     </template>
@@ -76,6 +74,7 @@
           :table="proofOfWorkTable"
           :rows="detail.values.proof_of_work || []"
           :disabled="!detail.canWrite.value || locked"
+          :on-file-meta="autoTitleFromFile"
           @update:rows="(rows) => (detail.values.proof_of_work = rows)"
         />
       </div>
@@ -91,6 +90,12 @@
 
     <template #tab-activity>
       <ActivityTimeline :doctype="doctype" :name="name" :types="['task', 'event']" allow-create empty-text="No tasks or events linked to this record yet." />
+    </template>
+
+    <template #tab-customer>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <CustomerContextPanel :customer="detail.hidden.customer" display-key="Interview Support" />
+      </div>
     </template>
   </DetailPageLayout>
 
@@ -127,8 +132,10 @@ import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ServiceResumePanel from '@/components/detail/lead/ServiceResumePanel.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
+import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { useResource } from '@/composables/list/useResource'
+import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
 const route = useRoute()
 
@@ -143,6 +150,7 @@ const locked = computed(() => detail.values.status === 'Completed')
 const TABS = [
   { key: 'details', label: 'Details' },
   { key: 'proof-of-work', label: 'Proof Of Work' },
+  { key: 'customer', label: 'Customer' },
   { key: 'notes', label: 'Notes' },
   { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },
@@ -153,7 +161,7 @@ const activeTab = ref('details')
 const proofOfWorkTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'proof_of_work'))
 
 const assignToQuery = 'verp_staffing.crm.api.helpers.get_assign_to_by_service'
-const assignToFilters = computed(() => ({ service: 'Interview Support', customer: detail.values.customer }))
+const assignToFilters = computed(() => ({ service: 'Interview Support', customer: detail.hidden.customer }))
 
 const interviewDetails = useResource({
   url: 'verp_staffing.technical.doctype.interview_support.interview_support.get_interview_details',

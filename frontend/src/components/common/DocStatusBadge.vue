@@ -14,6 +14,18 @@ import { statusBadgeTheme } from '@/utils/list/statusTheme'
 const props = defineProps({
   status: { type: String, default: '' },
   docstatus: { type: Number, default: null },
+  // Opts into DOCTYPE_FIELD_OVERRIDES (statusTheme.js) for a status field
+  // whose vocabulary doesn't fit the generic keyword matching — e.g. Sales
+  // Order's payment_status / Payment Entry's verification_status, both
+  // Pending Verification/Verified/Rejected. Optional: omitted, this badge
+  // behaves exactly as before (generic keyword theming only).
+  doctype: { type: String, default: '' },
+  field: { type: String, default: '' },
+  // Skips theme lookup entirely and uses this instead — for a status that
+  // isn't a real field at all (e.g. Sales Invoice's computed Paid/Unpaid/
+  // Partly Paid), so there's no doctype+field to key a DOCTYPE_FIELD_
+  // OVERRIDES entry on in the first place.
+  theme: { type: String, default: '' },
 })
 
 const DOCSTATUS = { 0: ['Draft', 'orange'], 1: ['Submitted', 'green'], 2: ['Cancelled', 'red'] }
@@ -23,7 +35,8 @@ const label = computed(() => {
   return props.docstatus === null ? '' : DOCSTATUS[props.docstatus]?.[0] || ''
 })
 const theme = computed(() => {
-  if (props.status) return statusBadgeTheme(props.status)
+  if (props.theme) return props.theme
+  if (props.status) return statusBadgeTheme(props.status, { doctype: props.doctype, fieldname: props.field })
   return DOCSTATUS[props.docstatus]?.[1] || 'gray'
 })
 </script>

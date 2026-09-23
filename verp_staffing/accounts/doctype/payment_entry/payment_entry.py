@@ -25,6 +25,22 @@ class PaymentEntry(Document):
                     "Re-request verification from the Sales Order to reactivate it.",
                     title="Action Blocked",
                 )
+        # Was previously done in on_submit — too late to ever persist:
+        # on_submit runs *after* the row is already written to the
+        # database, so setting these there only ever changed the in-memory
+        # doc for the rest of that request, never the saved record. Moved
+        # here so it actually sticks, and runs on every save (not only
+        # submit) — e.g. the Payment Verification queue's Verify dialog can
+        # now set paid_from/paid_to and have their currencies land in the
+        # same save.
+        if not self.paid_from_account_currency and self.paid_from:
+            self.paid_from_account_currency = frappe.get_cached_value(
+                "Account", self.paid_from, "account_currency"
+            )
+        if not self.paid_to_account_currency and self.paid_to:
+            self.paid_to_account_currency = frappe.get_cached_value(
+                "Account", self.paid_to, "account_currency"
+            )
         validate_party_type_in_master(self)
         self.validate_references_not_tampered()
         validate_party_type_matches_payment_direction(self)
@@ -47,6 +63,12 @@ class PaymentEntry(Document):
                 "Please re-request verification from the Sales Order payment terms.",
                 title="Action Blocked",
             )
+
+        if flt(self.difference_amount):
+            frappe.throw(_("Difference Amount must be zero before submitting."))
+
+        # currencies are fetched in validate() now, which already ran as
+        # part of this same submit — just enforce they actually landed.
         # Enforce account fields before submit
         mandatory_on_submit = {
             "paid_from": "Account Paid From",
@@ -63,18 +85,6 @@ class PaymentEntry(Document):
                     ", ".join(f"<b>{m}</b>" for m in missing)
                 ),
                 title=_("Missing Account Details"),
-            )
-
-        if flt(self.difference_amount):
-            frappe.throw(_("Difference Amount must be zero before submitting."))
-
-        if not self.paid_from_account_currency and self.paid_from:
-            self.paid_from_account_currency = frappe.get_cached_value(
-                "Account", self.paid_from, "account_currency"
-            )
-        if not self.paid_to_account_currency and self.paid_to:
-            self.paid_to_account_currency = frappe.get_cached_value(
-                "Account", self.paid_to, "account_currency"
             )
 
         # Any submit = approved — sync verification status and term row

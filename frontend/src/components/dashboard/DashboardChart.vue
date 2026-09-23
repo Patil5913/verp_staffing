@@ -67,13 +67,22 @@ const rowsCopy = computed(() => (props.chart.data || []).map((r) => ({ ...r })))
 const donutConfig = computed(() => ({ data: rowsCopy.value, title: '', categoryColumn: 'label', valueColumn: 'value', colors: PALETTE, maxSliceCount: 8 }))
 const funnelConfig = computed(() => ({ data: rowsCopy.value, title: '', categoryColumn: 'label', valueColumn: 'value', colors: PALETTE, showPercentages: true }))
 
+// frappe-ui's axis chart always renders the y-axis name as `↑ ${yAxis.title}`
+// (axisChartOptions.ts/getYAxisOptions) — leaving `title` unset doesn't hide
+// it, it renders the literal text "↑ undefined". Every axis chart here needs
+// a real title, not just an empty string, to fix that at the source instead
+// of blanking it: derive one from the same `format` tag formatMetric already
+// keys off, so it stays in sync however many chart types get added.
+const Y_AXIS_TITLES = { currency: 'Amount', percent: 'Percent', hours: 'Hours' }
+const yAxisTitle = computed(() => Y_AXIS_TITLES[props.chart.format] || 'Count')
+
 const axisConfig = computed(() => {
   const stacked = props.chart.type === 'stacked'
   return {
     data: props.chart.data || [],
     title: '',
     xAxis: { key: 'label', type: 'category' },
-    yAxis: {},
+    yAxis: { title: yAxisTitle.value },
     stacked,
     series: props.chart.series.map((s, i) => ({ ...s, color: s.color || PALETTE[i % PALETTE.length] })),
   }

@@ -1,20 +1,20 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #actions>
       <RecordActionBar
         show-save
         :save-dirty="isDirty"
         :save-loading="detail.save.isLoading"
-        :show-delete="!detail.isNew.value && detail.canDelete.value"
+        :show-delete="false"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
         <ForwardCandidateButton
-          v-if="!detail.isNew.value && detail.values.customer"
+          v-if="!detail.isNew.value && detail.hidden.customer"
           doctype="JDC"
           :name="name"
-          :customer="detail.values.customer"
+          :customer="detail.hidden.customer"
           from-service-name="JDC"
           @forwarded="detail.refresh"
         />
@@ -24,7 +24,27 @@
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="DETAIL_FIELDS" :read-only-fields="locked ? ['status'] : []" />
+        <div class="flex flex-col gap-6">
+          <DocDetailView
+            :doctype="doctype"
+            :detail="detail"
+            :fieldnames="DETAIL_FIELDS"
+            :field-link-queries="{ assign_to: { query: assignToQuery, filters: assignToFilters } }"
+            :read-only-fields="locked ? LOCK_FIELDS : []"
+          />
+
+          <div class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
+            <h3 class="mb-3 text-p-base font-medium text-app-text">Customer Feedback</h3>
+            <ChildTableField
+              v-if="feedbackTable && (detail.values.customer_feedback || []).length"
+              :table="feedbackTable"
+              :rows="detail.values.customer_feedback || []"
+              disabled
+              @update:rows="() => {}"
+            />
+            <p v-else class="py-4 text-center text-p-sm text-app-text-muted">No Feedback Yet</p>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -35,19 +55,8 @@
           :table="proofTable"
           :rows="detail.values.proof_of_work || []"
           :disabled="!detail.canWrite.value || locked"
+          :on-file-meta="autoTitleFromFile"
           @update:rows="(rows) => (detail.values.proof_of_work = rows)"
-        />
-      </div>
-    </template>
-
-    <template #tab-feedback>
-      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <ChildTableField
-          v-if="feedbackTable"
-          :table="feedbackTable"
-          :rows="detail.values.customer_feedback || []"
-          disabled
-          @update:rows="() => {}"
         />
       </div>
     </template>
@@ -68,6 +77,12 @@
         allow-create
         empty-text="No tasks or events linked to this record yet."
       />
+    </template>
+
+    <template #tab-customer>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <CustomerContextPanel :customer="detail.hidden.customer" display-key="JDC" />
+      </div>
     </template>
   </DetailPageLayout>
 
@@ -104,7 +119,9 @@ import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
+import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
+import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
 const route = useRoute()
 
@@ -119,7 +136,7 @@ const locked = computed(() => detail.values.status === 'Completed')
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
   { key: 'proof', label: 'Proof of Work' },
-  { key: 'feedback', label: 'Feedback' },
+  { key: 'customer', label: 'Customer' },
   { key: 'notes', label: 'Notes' },
   { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },
@@ -128,6 +145,12 @@ const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.k
 const activeTab = ref('details')
 
 const DETAIL_FIELDS = ['interview_round', 'assign_to', 'status', 'scheduled_on', 'from_time', 'to_time']
+// Once Completed, the schedule is frozen along with status — matches the
+// desk form locking Schedule On/From/To the same moment it locks Status.
+const LOCK_FIELDS = ['status', 'scheduled_on', 'from_time', 'to_time']
+
+const assignToQuery = 'verp_staffing.crm.api.helpers.get_assign_to_by_service'
+const assignToFilters = computed(() => ({ service: 'JDC', customer: detail.hidden.customer }))
 
 const proofTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'proof_of_work'))
 const feedbackTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'customer_feedback'))

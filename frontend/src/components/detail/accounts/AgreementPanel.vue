@@ -72,6 +72,8 @@
         <AppButton variant="outline" icon="send" :loading="saving && sendAfter" :disabled="saving" @click="create(true)">Save &amp; Send</AppButton>
       </div>
     </SectionCard>
+
+    <MissingEmailDialog v-model="missingEmailOpen" :customer="detail.values.customer" @saved="onEmailSaved" />
   </div>
 </template>
 
@@ -94,9 +96,11 @@ import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
+import MissingEmailDialog from '@/components/common/MissingEmailDialog.vue'
 import { useResource } from '@/composables/list/useResource'
 import { formatDatetime } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
+import { isEmailMissingError } from '@/utils/common/errors'
 import { normalizeError } from '@/utils/common/errors'
 
 defineOptions({ inheritAttrs: false })
@@ -134,10 +138,28 @@ async function send(ag) {
     else notify.error('Failed to send the agreement.')
     loadCards()
   } catch (error) {
-    notify.error(normalizeError(error).message)
+    if (isEmailMissingError(error)) {
+      openMissingEmail(() => send(ag))
+    } else {
+      notify.error(normalizeError(error).message)
+    }
   } finally {
     sendingName.value = ''
   }
+}
+
+// Shared recovery UI for both Send and Save & Send below: collects the
+// customer's email, saves it to their Lead Detail Form, then re-runs
+// whatever was blocked on it — no more dead-ending on "Email is required
+// to send ...".
+const missingEmailOpen = ref(false)
+const missingEmailRetry = ref(null)
+function openMissingEmail(retry) {
+  missingEmailRetry.value = retry
+  missingEmailOpen.value = true
+}
+function onEmailSaved() {
+  missingEmailRetry.value?.()
 }
 
 // ── builder ───────────────────────────────────────────────────────────
@@ -220,7 +242,20 @@ async function create(send) {
     template.value = ''
     loadCards()
   } catch (error) {
-    notify.error(normalizeError(error).message)
+    if (isEmailMissingError(error)) {
+      // The Agreement itself was already created server-side before this
+      // throw (submit_and_generate only fails the *send* step) — retrying
+      // the whole create call would make a duplicate, so this just collects
+      // the email and points at the new card's own Send button instead of
+      // auto-retrying.
+      template.value = ''
+      loadCards()
+      openMissingEmail(() =>
+        notify.success('Email saved — click Send Email on the new agreement below.'),
+      )
+    } else {
+      notify.error(normalizeError(error).message)
+    }
   } finally {
     saving.value = false
   }

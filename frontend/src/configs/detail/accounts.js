@@ -1,6 +1,7 @@
 import { call } from 'frappe-ui'
-import { notify } from '@/utils/common/notify'
 import { computeInvoiceStatus } from '@/utils/list/statusTheme'
+import { formatFieldValue } from '@/utils/list/formatValue'
+import { paidAccountFilterFor } from '@/utils/detail/paymentAccounts'
 import AddressContactPanel from '@/components/detail/customer/AddressContactPanel.vue'
 import DocAction from '@/components/detail/actions/DocAction.vue'
 import NoticeBanner from '@/components/common/NoticeBanner.vue'
@@ -12,12 +13,19 @@ import JournalQuickEntryAction from '@/components/detail/accounts/JournalQuickEn
 import OutstandingInvoicesPanel from '@/components/detail/accounts/OutstandingInvoicesPanel.vue'
 import LinkedInvoicesPanel from '@/components/detail/accounts/LinkedInvoicesPanel.vue'
 import PaymentEntryAssist from '@/components/detail/accounts/PaymentEntryAssist.vue'
-import PaymentTermsPanel from '@/components/detail/accounts/PaymentTermsPanel.vue'
+import PaymentTermsField from '@/components/detail/accounts/PaymentTermsField.vue'
 
 const notNew = (d) => !d.isNew.value
 const submitted = (d) => d.docstatus.value === 1
 const num = (v) => Number(v) || 0
 const sum = (rows, key) => (rows || []).reduce((s, r) => s + num(r[key]), 0)
+// Sales Order hides `company` (auto-set from ERP Configuration's default,
+// set_only_once) — get_doc_meta drops hidden fields from `values` entirely,
+// so it only ever shows up in `hidden`. Every other doctype here shows it
+// plainly in `values`. Checking both keeps one accessor working across all
+// of them instead of every company-scoped filter/lookup silently getting
+// undefined on Sales Order specifically.
+const companyOf = (detail) => detail.values.company || detail.hidden.company
 
 const strip = (items) => ({ type: 'component', component: SummaryStrip, props: { items } })
 const fields = (fieldnames, title, extra = {}) => ({ type: 'fields', fieldnames, title, ...extra })
@@ -50,7 +58,7 @@ function makeItemsTableFieldChange({ type, accountField }) {
       }).catch(() => null)
       if (item?.stock_uom) patch.uom = item.stock_uom
 
-      const company = detail.values.company
+      const company = companyOf(detail)
       if (company) {
         const account = await call('verp_staffing.accounts.api.get_defaults.get_default_company_account', {
           company,
@@ -81,51 +89,10 @@ const invoiceStatusText = (d) => computeInvoiceStatus(d.values)
 const salesItemsFieldChange = makeItemsTableFieldChange({ type: 'Sales', accountField: 'default_income_account' })
 const purchaseItemsFieldChange = makeItemsTableFieldChange({ type: 'Purchase', accountField: 'default_expense_account' })
 
-function addDays(dateStr, days) {
-  const d = new Date(`${dateStr}T00:00:00`)
-  d.setDate(d.getDate() + Number(days || 0))
-  return d.toISOString().slice(0, 10)
-}
-const today = () => new Date().toISOString().slice(0, 10)
-
-// Ported from sales_order.js's Customer Payment Terms row handlers
-// (payment_condition / counter / start_date): switching condition clears
-// whichever fields don't apply to the new one, and "Number of Interviews"
-// re-fetches the customer's live interview count via the same
-// get_interview_count_for_customer this app's PaymentTermsPanel already
-// calls indirectly. due_date = start_date + counter days, recomputed on
-// either changing (Number of Days only).
-async function paymentTermFieldChange(fieldname, value, row, { detail }) {
-  if (fieldname === 'payment_condition') {
-    if (value === 'Not Applied') {
-      return { start_date: null, due_date: null, counter: 0, current_interview_count: 0 }
-    }
-    if (value === 'Number of Days') {
-      return { due_date: null, current_interview_count: 0 }
-    }
-    // Number of Interviews
-    const count = await call('verp_staffing.accounts.doctype.sales_order.sales_order.get_interview_count_for_customer', {
-      customer: detail.values.customer,
-    }).catch(() => 0)
-    return { start_date: null, due_date: null, current_interview_count: count || 0 }
-  }
-
-  if (fieldname === 'counter' && row.payment_condition === 'Number of Days' && row.start_date) {
-    return { due_date: addDays(row.start_date, value) }
-  }
-
-  if (fieldname === 'start_date') {
-    if (value && value < today()) {
-      notify.error('Start date cannot be before today.')
-      return { start_date: today() }
-    }
-    if (row.payment_condition === 'Number of Days' && row.counter) {
-      return { due_date: addDays(value, row.counter) }
-    }
-  }
-
-  return null
-}
+// Payment Terms' own condition-based clearing/interview-count/due-date
+// logic now lives in PaymentTermsField.vue (the grid+row-expand component
+// that replaced both the old plain grid section and the separate
+// PaymentTermsPanel display table) — nothing config-level needs it anymore.
 
 const ledgerAction = (queryExtra = {}) => ({
   component: LinkAction,
@@ -348,26 +315,82 @@ export const journalEntryConfig = {
   ],
 }
 
-// Ported from the old desk payment_entry.js's set_query("paid_from"/"paid_to").
-// Frappe's standard Party Type records fix each type's account_type
-// (Customer → Receivable, Supplier → Payable, Employee → Payable,
-// Shareholder → Equity) — hardcoded here rather than round-tripped from the
-// server, same shortcut the rest of this generic-config layer takes
-// (linkQueries has to resolve synchronously).
-const PARTY_ACCOUNT_TYPE = { Customer: 'Receivable', Supplier: 'Payable', Employee: 'Payable', Shareholder: 'Equity' }
 function paidAccountFilters(bankCashPaymentTypes) {
-  return ({ detail }) => {
-    const partyAccountType = PARTY_ACCOUNT_TYPE[detail.values.party_type] || 'Receivable'
-    const accountTypes = bankCashPaymentTypes.includes(detail.values.payment_type)
-      ? ['Bank', 'Cash']
-      : [partyAccountType, ...(detail.values.party_type === 'Shareholder' ? ['Equity'] : [])]
-    return { filters: { account_type: ['in', accountTypes], is_group: 0, disabled: 0, company: detail.values.company } }
+  return ({ detail }) =>
+    paidAccountFilterFor({
+      partyType: detail.values.party_type,
+      paymentType: detail.values.payment_type,
+      company: companyOf(detail),
+      bankCashPaymentTypes,
+    })
+}
+
+// account_head (the taxes/charges child table shared by Sales Order/Sales
+// Invoice/Purchase Order/Purchase Invoice/Payment Entry, one Item Tax-style
+// row per line) and additional_discount_account (Discount & Rounding on
+// every one of those five) both had no filter at all before this — every
+// account in the company showed up, groups and disabled ones included, and
+// nothing scoped to the transaction's own company.
+const TAX_ACCOUNT_TYPES = ['Tax', 'Chargeable', 'Indirect Expense', 'Direct Expense', 'Expense Account', 'Income Account']
+function taxAccountLinkQueries({ detail }) {
+  return {
+    account_head: {
+      filters: { account_type: ['in', TAX_ACCOUNT_TYPES], is_group: 0, disabled: 0, company: companyOf(detail) },
+    },
   }
 }
+function discountAccountLinkQueries({ detail }) {
+  return {
+    additional_discount_account: { filters: { is_group: 0, disabled: 0, company: companyOf(detail) } },
+  }
+}
+
+const fmtAmount = (d) => `${formatFieldValue(d.values.paid_amount, { fieldtype: 'Currency' })} ${d.values.currency || ''}`.trim()
+
+// Ported verbatim (content-wise) from the old desk payment_entry.js's
+// Submit/Cancel confirmation dialogs — Submit had no confirmation at all
+// before ConfigDetailPage's submitConfirm/cancelConfirm hooks, and Cancel
+// only ever showed one generic sentence.
+export const paymentEntrySubmitConfirm = (d) => `
+  <div style="line-height:1.6">
+    <p><b>You are about to submit this Payment Entry.</b></p>
+    <p>Submitting confirms that:</p>
+    <ul style="padding-left:16px">
+      <li>The payment of <b>${fmtAmount(d)}</b> has been <b>received</b></li>
+      <li>This will be recorded as a <b>Verified Payment</b></li>
+      <li>This <b>cannot be edited</b> after submission.</li>
+    </ul>
+    <p class="text-app-text-muted" style="font-size:12px">
+      If unsure, ask your accounts manager to verify instead.
+    </p>
+  </div>
+`
+
+const paymentEntryCancelConfirm = (d) => `
+  <div style="line-height:1.6">
+    <p><b>You are about to cancel this Payment Entry.</b></p>
+    <p>Cancelling means:</p>
+    <ul style="padding-left:16px">
+      <li>The payment of <b>${fmtAmount(d)}</b> will be <b>reversed</b></li>
+      <li>All accounting entries (GL) will be <b>cancelled</b></li>
+      ${
+        d.hidden.payment_term_row
+          ? `<li>The linked payment term will be <b>reset to Unpaid</b></li>`
+          : `<li>Outstanding amounts on linked invoices will be <b>restored</b></li>`
+      }
+      <li>This action <b>cannot be undone</b></li>
+    </ul>
+    <p class="text-app-text-muted" style="font-size:12px">
+      Only cancel if the payment was made in error.
+    </p>
+  </div>
+`
 
 export const paymentEntryConfig = {
   doctype: 'Payment Entry',
   timeline: 'full',
+  submitConfirm: paymentEntrySubmitConfirm,
+  cancelConfirm: paymentEntryCancelConfirm,
   // Rejected entries are frozen (payment_entry.py's validate).
   locked: (d) => d.hidden.verification_status === 'Rejected',
   // Once a Payment Entry is tied to a Sales Order's payment term,
@@ -377,6 +400,10 @@ export const paymentEntryConfig = {
   // Entry with no payment_term isn't part of that flow, so it keeps the
   // ordinary Draft/Submitted/Cancelled badge.
   statusField: (d) => (d.hidden.payment_term_row ? 'verification_status' : null),
+  // The generic "submit this to confirm" draft banner is redundant once
+  // Rejected already has its own (locked, verification_status badge) —
+  // only suppress it for that specific state, not for every draft.
+  hideDraftNotice: (d) => d.hidden.verification_status === 'Rejected',
   actions: [ledgerAction()],
   tabs: [
     {
@@ -404,18 +431,7 @@ export const paymentEntryConfig = {
         table('references'),
         table('deductions'),
         {
-          ...table('taxes', {
-            linkQueries: ({ detail }) => ({
-              account_head: {
-                filters: {
-                  account_type: ['in', ['Tax', 'Chargeable', 'Indirect Expense', 'Direct Expense', 'Expense Account', 'Income Account']],
-                  is_group: 0,
-                  disabled: 0,
-                  company: detail.values.company,
-                },
-              },
-            }),
-          }),
+          ...table('taxes', { linkQueries: taxAccountLinkQueries }),
           show: (d) => ['Supplier', 'Customer'].includes(d.values.party_type),
         },
         fields(['reference_no', 'reference_date', 'clearance_date', 'remarks', 'is_opening'], 'Reference'),
@@ -443,6 +459,7 @@ const invoiceActions = (payTo) => [
 export const salesInvoiceConfig = {
   doctype: 'Sales Invoice',
   timeline: 'full',
+  autoCalculate: true,
   statusText: invoiceStatusText,
   actions: [
     ...invoiceActions('sales'),
@@ -474,8 +491,10 @@ export const salesInvoiceConfig = {
         fields(['naming_series', 'customer', 'company', 'posting_date', 'due_date', 'sales_order', 'update_outstanding_for_self'], 'Invoice'),
         fields(['currency', 'conversion_rate', 'tax_category'], 'Currency'),
         table('items', { hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange }),
-        table('taxes'),
-        fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
+        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
+          linkQueries: discountAccountLinkQueries,
+        }),
         fields(['debit_to', 'cash_bank_account', 'is_paid', 'paid_amount'], 'Accounting'),
         fields(['total_qty', 'total', 'base_total', 'net_total', 'base_net_total', 'grand_total', 'base_grand_total', 'rounding_adjustment', 'rounded_total', 'in_words'], 'Totals'),
       ],
@@ -486,6 +505,7 @@ export const salesInvoiceConfig = {
 export const purchaseInvoiceConfig = {
   doctype: 'Purchase Invoice',
   timeline: 'full',
+  autoCalculate: true,
   actions: invoiceActions('purchase'),
   tabs: [
     {
@@ -501,8 +521,10 @@ export const purchaseInvoiceConfig = {
         fields(['naming_series', 'supplier', 'company', 'posting_date', 'due_date', 'bill_no', 'bill_date', 'purchase_order', 'is_paid', 'update_outstanding_for_self'], 'Invoice'),
         fields(['currency', 'conversion_rate', 'tax_category'], 'Currency'),
         table('items', { hiddenColumns: ['expense_account'], onFieldChange: purchaseItemsFieldChange }),
-        table('taxes'),
-        fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
+        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
+          linkQueries: discountAccountLinkQueries,
+        }),
         fields(['credit_to', 'cashbank_account', 'mode_of_payment', 'paid_amount', 'is_opening'], 'Accounting'),
         fields(['total_qty', 'total', 'base_total', 'net_total', 'base_net_total', 'grand_total', 'base_grand_total', 'rounding_adjustment', 'rounded_total', 'in_words', 'total_advance'], 'Totals'),
       ],
@@ -510,21 +532,10 @@ export const purchaseInvoiceConfig = {
   ],
 }
 
-// Payment term fields that only make sense for one payment_condition each
-// are read-only outside that condition — counter/start_date only mean
-// anything for "Number of Days", and due_date is always computed
-// (paymentTermFieldChange), never typed directly.
-function paymentTermReadOnly(col, row) {
-  if (col.fieldname === 'due_date') return true
-  if (col.fieldname === 'payment_status') return true
-  if (col.fieldname === 'counter' && row.payment_condition !== 'Number of Days') return true
-  if (col.fieldname === 'start_date' && row.payment_condition !== 'Number of Days') return true
-  return false
-}
-
 export const salesOrderConfig = {
   doctype: 'Sales Order',
   timeline: 'full',
+  autoCalculate: true,
   actions: [{ component: SendDetailsFormAction, show: notNew }],
   // Sales Order's own `status` (Open/Closed, server-computed) only ever
   // matters once it reads "Closed" — otherwise the ordinary Draft/
@@ -540,31 +551,30 @@ export const salesOrderConfig = {
           readOnlyColumns: ['amount'],
           onFieldChange: salesItemsFieldChange,
         }),
-        table('taxes'),
-        fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
+        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
+          linkQueries: discountAccountLinkQueries,
+        }),
         fields(['total_qty', 'total', 'net_total', 'total_taxes_and_charges', 'grand_total', 'rounding_adjustment', 'rounded_total', 'in_words'], 'Totals'),
       ],
     },
     {
       key: 'payments',
-      label: 'Payments',
+      label: 'Invoices and Payments',
       show: notNew,
       sections: [
-        grid('payment_terms', ['payment_condition', 'counter', 'start_date', 'due_date', 'amount', 'received_amount', 'payment_status'], {
-          readOnlyColumns: paymentTermReadOnly,
-          onFieldChange: paymentTermFieldChange,
-        }),
-        { type: 'component', component: PaymentTermsPanel },
+        { type: 'component', component: PaymentTermsField },
+        { type: 'component', component: LinkedInvoicesPanel },
       ],
     },
     { key: 'agreements', label: 'Agreements', show: notNew, sections: [{ type: 'component', component: AgreementPanel }] },
-    { key: 'invoices', label: 'Invoices', show: notNew, sections: [{ type: 'component', component: LinkedInvoicesPanel }] },
   ],
 }
 
 export const purchaseOrderConfig = {
   doctype: 'Purchase Order',
   timeline: 'full',
+  autoCalculate: true,
   tabs: [
     {
       key: 'details',
@@ -578,8 +588,10 @@ export const purchaseOrderConfig = {
         ]),
         fields(['naming_series', 'supplier', 'company', 'posting_date', 'schedule_date', 'currency', 'conversion_rate'], 'Order'),
         table('items', { hiddenColumns: ['expense_account'], onFieldChange: purchaseItemsFieldChange }),
-        table('taxes'),
-        fields(['tax_category', 'additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding'),
+        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        fields(['tax_category', 'additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
+          linkQueries: discountAccountLinkQueries,
+        }),
         fields(['total_qty', 'total', 'net_total', 'total_taxes_and_charges', 'grand_total', 'rounding_adjustment', 'rounded_total', 'in_words', 'total_advance', 'outstanding_amount'], 'Totals'),
       ],
     },

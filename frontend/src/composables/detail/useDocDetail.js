@@ -116,24 +116,39 @@ export function useDocDetail(doctype, name) {
 
   // submit/cancel both answer with the same refreshed meta payload a save
   // does, so they re-snapshot through the same applyData.
-  function transitionResource(url) {
+  function transitionResource(url, notifyOnError = true) {
     return useResource({
       url,
+      notifyOnError,
       onSuccess(data) {
         meta.resource.setData(data)
         applyData(data)
       },
     })
   }
-  const submitResource = transitionResource('verp_staffing.utils.detail_view.submit_doc')
+  // Submit's own errors aren't auto-toasted (notifyOnError: false) — the
+  // caller (useDetailPageController's onSubmit) checks for the one specific
+  // "Email is required to send ..." case (Sales Order's pre-submit checks)
+  // to offer a recovery dialog instead, and shows a normal toast itself for
+  // anything else. Cancel has no such case, so it keeps the default
+  // auto-toast behavior.
+  const submitResource = transitionResource('verp_staffing.utils.detail_view.submit_doc', false)
   const cancelResource = transitionResource('verp_staffing.utils.detail_view.cancel_doc')
   async function runTransition(resource, message) {
     const result = await resource.resource.submit({ doctype: doctype.value, name: name.value })
     if (result) notify.success(message)
     return !!result
   }
-  const submitDoc = () => runTransition(submitResource, 'Submitted.')
   const cancelDoc = () => runTransition(cancelResource, 'Cancelled.')
+
+  async function submitDoc() {
+    const result = await submitResource.resource.submit({ doctype: doctype.value, name: name.value })
+    if (result) {
+      notify.success('Submitted.')
+      return { ok: true }
+    }
+    return { ok: false, error: submitResource.resource.error }
+  }
 
   const triedSave = ref(false)
 

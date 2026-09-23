@@ -7,7 +7,7 @@
           {{ rows.length }} {{ rows.length === 1 ? 'row' : 'rows' }}
         </p>
       </div>
-      <AppButton v-if="!disabled" variant="outline" size="sm" icon="plus" @click="openRow(null)">
+      <AppButton v-if="!disabled && !atMaxRows" variant="outline" size="sm" icon="plus" @click="openRow(null)">
         Add Row
       </AppButton>
     </div>
@@ -59,6 +59,7 @@
               :disabled="disabled || col.read_only"
               show-errors
               @update:model-value="(v) => onFieldInput(col.fieldname, v)"
+              @file-meta="(f) => onFileMeta(col.fieldname, f)"
             />
           </div>
           <p v-if="rowError" class="w-full text-p-sm text-red-600">{{ rowError }}</p>
@@ -104,8 +105,25 @@ const props = defineProps({
   // Income Account). (fieldname, value, draft) => a patch object merged
   // into draft, or a Promise resolving to one for an async lookup.
   onFieldChange: { type: Function, default: null },
+  // Per-column field patches (e.g. { document: { accept: '.pdf,.jpg,.png' } })
+  // merged onto the backend-provided column meta — for restrictions/config
+  // that only apply to this particular table's use of a shared child
+  // doctype (e.g. Resume/Proof Of Work's "Document References" table).
+  fieldOverrides: { type: Object, default: () => ({}) },
+  // Called with (fieldname, fileMeta, draft) after an Attach/Attach Image
+  // upload succeeds — fileMeta is the uploaded File doc (file_name,
+  // file_url, ...). Returns a patch object merged into draft, e.g. to
+  // auto-fill Document Title from the uploaded filename.
+  onFileMeta: { type: Function, default: null },
+  // Caps the table at this many rows — hides "Add Row" once reached (e.g.
+  // Resume's resume_table only ever holds one row; validate_resume_
+  // submission enforces the same limit server-side, this is just the UI
+  // half so the button doesn't invite an add that would fail on save).
+  maxRows: { type: Number, default: null },
 })
 const emit = defineEmits(['update:rows'])
+
+const atMaxRows = computed(() => props.maxRows != null && props.rows.length >= props.maxRows)
 
 const resolvedLinkQueries = computed(() =>
   typeof props.linkQueries === 'function'
@@ -118,13 +136,21 @@ const resolvedLinkQueries = computed(() =>
 // — every column rendered unconditionally regardless of what the doctype
 // itself declares.
 const visibleColumns = computed(() =>
-  props.table.columns.filter((col) => !props.hiddenColumns.includes(col.fieldname) && dependsOnPasses(col, draft.value)),
+  props.table.columns
+    .filter((col) => !props.hiddenColumns.includes(col.fieldname) && dependsOnPasses(col, draft.value))
+    .map((col) => (props.fieldOverrides[col.fieldname] ? { ...col, ...props.fieldOverrides[col.fieldname] } : col)),
 )
 
 async function onFieldInput(fieldname, value) {
   draft.value[fieldname] = value
   if (!props.onFieldChange) return
   const patch = await props.onFieldChange(fieldname, value, draft.value)
+  if (patch) Object.assign(draft.value, patch)
+}
+
+async function onFileMeta(fieldname, fileMeta) {
+  if (!props.onFileMeta) return
+  const patch = await props.onFileMeta(fieldname, fileMeta, draft.value)
   if (patch) Object.assign(draft.value, patch)
 }
 

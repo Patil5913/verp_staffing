@@ -35,6 +35,16 @@
       </div>
     </div>
 
+    <!-- Same "submit this to confirm" nudge desk shows on any submittable
+    doctype's draft — generic here so every detail page gets it for free
+    instead of each one adding its own banner. -->
+    <p
+      v-if="showDraftNotice"
+      class="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-p-xs font-medium text-amber-700 dark:text-amber-400 md:px-6"
+    >
+      This document is a draft. Please submit it to confirm.
+    </p>
+
     <!-- Body: each tab owns its own scrolling, so a tab like Activity can
     dock a composer to its bottom instead of scrolling away with the page. -->
     <div class="min-h-0 flex-1 overflow-hidden">
@@ -44,12 +54,30 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import AppButton from '@/components/ui/AppButton.vue'
 
-defineProps({
+const props = defineProps({
   title: { type: String, default: '' },
   tabs: { type: Array, required: true }, // [{ key, label }]
   activeTab: { type: String, required: true },
+  // The page's own useDocDetail/useDetailPageController `detail` object —
+  // optional, only needed to drive the draft notice below. Left unset, the
+  // notice simply never shows (a page that doesn't pass it opts out).
+  detail: { type: Object, default: null },
+  // Suppresses the notice even on a submittable draft — e.g. Payment
+  // Entry doesn't want it once verification_status is "Rejected" (that
+  // state has its own, more specific messaging instead).
+  hideDraftNotice: { type: Boolean, default: false },
 })
 const emit = defineEmits(['back', 'update:activeTab'])
+
+const showDraftNotice = computed(
+  () =>
+    !!props.detail &&
+    !props.hideDraftNotice &&
+    props.detail.isSubmittable?.value &&
+    props.detail.docstatus?.value === 0 &&
+    !props.detail.isNew?.value,
+)
 </script>

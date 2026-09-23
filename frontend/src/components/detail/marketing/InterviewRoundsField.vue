@@ -49,22 +49,46 @@
       Only the latest round is editable — a manager can change earlier rounds.
     </p>
   </SectionCard>
+
+  <!-- interview_list.js's prompt_cancellation_details, ported: collects
+  who it's attributed to + a reason before a round can actually move into
+  Cancelled/Rescheduled/Rejected — extended here to also cover Rejected,
+  which the desk dialog never did. -->
+  <Dialog v-model="statusDialogOpen" :options="{ title: `Confirm ${pendingStatus}`, size: 'sm' }">
+    <template #body-content>
+      <div class="flex flex-col gap-4">
+        <AppCombobox :label="`${pendingStatus} By`" :options="['Company', 'Candidate']" v-model="statusForm.cancelled_by" required />
+        <AppInput :label="`Reason of ${pendingStatus}`" v-model="statusForm.reason_of_cancel" required />
+      </div>
+    </template>
+    <template #actions>
+      <AppButton :disabled="!statusForm.cancelled_by || !statusForm.reason_of_cancel.trim()" @click="confirmStatusDialog">
+        Confirm
+      </AppButton>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
 // The Interview's rounds table, with the desk form's rules from
-// interview.js kept intact:
+// interview.js/interview_list.js kept intact:
 //  * rounds are append-only, numbered by position — a superior can take back a
 //    round they just added, and only Administrator can remove a saved one
 //    (interview.js's cannot_delete_rows);
 //  * unless you're a superior of the Marketing assignee, only the latest
 //    round is editable;
-//  * a round whose *saved* status is Cancelled / Rescheduled / Completed can
-//    never change status again, and choosing one asks for confirmation first;
-//  * Cancelled / Rescheduled rounds require "Cancelled By" + a reason;
+//  * a round whose status is Cancelled / Rescheduled / Rejected / Completed
+//    (case-insensitive) is fully locked, every field, the moment it's set —
+//    not just once saved;
+//  * Cancelled / Rescheduled / Rejected all go through the same
+//    confirmation dialog first, collecting who it's attributed to and a
+//    reason (interview_list.js's prompt_cancellation_details);
 //  * follow_up may only step up by exactly one.
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppCombobox from '@/components/ui/AppCombobox.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
@@ -74,8 +98,14 @@ import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
 import { isAdministrator } from '@/utils/common/roles'
 
-const CANCELLED_LIKE = ['Cancelled', 'Rescheduled']
-const FINAL = ['Cancelled', 'Rescheduled', 'Completed']
+// Rejected joins the desk's own Cancelled/Rescheduled grouping here — same
+// "ask who it's attributed to + why" dialog, same terminal lock. Matched
+// case-insensitively against the row's live status (not just what was last
+// saved), so a round is disabled the moment it's actually set to one of
+// these, same edit session or not.
+const CANCELLED_LIKE = ['cancelled', 'rescheduled', 'rejected']
+const FINAL = ['cancelled', 'rescheduled', 'rejected', 'completed']
+const statusOf = (row) => String(row?.status || '').toLowerCase()
 
 const props = defineProps({
   detail: { type: Object, required: true },
@@ -88,15 +118,10 @@ const columns = computed(() => (table.value?.columns || []).filter((c) => c.fiel
 const rows = computed(() => props.detail.values.interview_rounds_table || [])
 const editable = computed(() => !props.locked && props.detail.canWrite.value)
 
-// Status as last saved — what "already finalized" is judged against, so
-// flipping a round to Completed and back inside one edit session is fine.
-const snapshot = ref({})
-watch(
-  () => table.value?.rows,
-  (saved) => (snapshot.value = Object.fromEntries((saved || []).map((r) => [r.name, r.status]))),
-  { immediate: true },
-)
-const finalized = (row) => Boolean(row.name) && FINAL.includes(snapshot.value[row.name])
+// A round whose *current* status (live, not just what was last saved) is
+// Rescheduled/Rejected/Completed/Cancelled is fully locked — every field,
+// not only Status.
+const finalized = (row) => FINAL.includes(statusOf(row))
 
 // Superior of the Marketing record's assignee, resolved off marketing_link.
 const marketing = useResource({ url: 'frappe.client.get_value', notifyOnError: false })
@@ -127,12 +152,12 @@ watch(
 
 function fieldDisabled(col, row, idx) {
   if (!editable.value || col.read_only) return true
+  if (finalized(row)) return true
   if (!isSuperior.value && idx !== rows.value.length - 1) return true
-  if (col.fieldname === 'status' && finalized(row)) return true
   return false
 }
 const showColumn = (col, row) =>
-  !['cancelled_by', 'reason_of_cancel'].includes(col.fieldname) || CANCELLED_LIKE.includes(row.status)
+  !['cancelled_by', 'reason_of_cancel'].includes(col.fieldname) || CANCELLED_LIKE.includes(statusOf(row))
 const wide = (col) => ['Small Text', 'Long Text'].includes(col.fieldtype)
 
 function commit(next) {
@@ -149,6 +174,27 @@ function addRound() {
 }
 const removeRound = (idx) => commit(rows.value.filter((_, i) => i !== idx))
 
+// interview_list.js's prompt_cancellation_details — asks who it's
+// attributed to (cancelled_by, doubling as "rejected by" here) and a
+// reason before a Cancelled/Rescheduled/Rejected status actually commits.
+const statusDialogOpen = ref(false)
+const statusForm = reactive({ cancelled_by: '', reason_of_cancel: '' })
+const pending = ref(null) // { idx, value }
+const pendingStatus = computed(() => pending.value?.value || '')
+
+function openStatusDialog(idx, value) {
+  pending.value = { idx, value }
+  Object.assign(statusForm, { cancelled_by: '', reason_of_cancel: '' })
+  statusDialogOpen.value = true
+}
+function confirmStatusDialog() {
+  if (!statusForm.cancelled_by || !statusForm.reason_of_cancel.trim()) return
+  const { idx, value } = pending.value
+  patch(idx, { status: value, cancelled_by: statusForm.cancelled_by, reason_of_cancel: statusForm.reason_of_cancel.trim() })
+  statusDialogOpen.value = false
+  pending.value = null
+}
+
 async function onChange(idx, fieldname, value) {
   const row = rows.value[idx]
 
@@ -161,14 +207,21 @@ async function onChange(idx, fieldname, value) {
     }
   }
 
-  if (fieldname === 'status' && FINAL.includes(value) && value !== row.status) {
-    const ok = await confirmLeave({
-      title: 'Lock this round?',
-      message: `Once this round's status is set to '${value}', it cannot be changed again. Continue?`,
-      leaveLabel: 'Continue',
-      cancelLabel: 'Cancel',
-    })
-    if (!ok) return
+  if (fieldname === 'status' && value !== row.status) {
+    const next = String(value || '').toLowerCase()
+    if (CANCELLED_LIKE.includes(next)) {
+      openStatusDialog(idx, value)
+      return
+    }
+    if (FINAL.includes(next)) {
+      const ok = await confirmLeave({
+        title: 'Lock this round?',
+        message: `Once this round's status is set to '${value}', it cannot be changed again. Continue?`,
+        leaveLabel: 'Continue',
+        cancelLabel: 'Cancel',
+      })
+      if (!ok) return
+    }
   }
 
   patch(idx, { [fieldname]: value })

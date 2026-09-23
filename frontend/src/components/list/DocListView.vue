@@ -92,6 +92,9 @@
           tooltip="Customize columns"
           @click="showCustomizeColumns = true"
         />
+        <AppButton v-if="doctype === 'Interview'" variant="outline" size="sm" icon="users" @click="showCustomerDialog = true">
+          Select Customer
+        </AppButton>
         <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="refresh" />
       </div>
     </div>
@@ -277,6 +280,8 @@
         <AppButton variant="danger" icon="trash-2" :loading="deleting" @click="onConfirmDelete">Delete</AppButton>
       </template>
     </Dialog>
+
+    <SelectCustomerDialog v-if="doctype === 'Interview'" v-model="showCustomerDialog" @applied="refresh" />
   </div>
 </template>
 
@@ -290,6 +295,8 @@ import { useRouter } from 'vue-router'
 import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
+import { useMarketingCustomerFilter } from '@/composables/list/useMarketingCustomerFilter'
+import SelectCustomerDialog from './SelectCustomerDialog.vue'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { statusBadgeTheme, docstatusBadge, listStatusColumn, hasStatusOverride } from '@/utils/list/statusTheme'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
@@ -309,6 +316,15 @@ const props = defineProps({
 })
 
 const router = useRouter()
+
+// Interview's "Select Customer" scoping — same shared selection Kanban/
+// Calendar read/write, applied here as an extra get_list filter.
+const showCustomerDialog = ref(false)
+const { selectedCustomers, ensureDefaultCustomers } = useMarketingCustomerFilter()
+const interviewExtraFilters = computed(() =>
+  props.doctype === 'Interview' && selectedCustomers.value.length ? [['marketing_link', 'in', selectedCustomers.value]] : [],
+)
+if (props.doctype === 'Interview') ensureDefaultCustomers()
 
 function openRow(row) {
   // A plain path, not a named route: some doctypes (Lead, User) have their
@@ -349,7 +365,7 @@ const {
   toggleSortOrder,
   clearFilters,
   refresh,
-} = useDocList(props.doctype)
+} = useDocList(props.doctype, { extraFilters: interviewExtraFilters })
 
 const pageLengthOptions = [15, 30, 50, 100].map((n) => ({ label: String(n), value: String(n) }))
 

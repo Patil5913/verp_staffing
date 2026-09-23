@@ -174,3 +174,17 @@ body {
 .dropdown-content {
   z-index: 60;
 }
+
+/* Same underlying issue as .dialog-overlay above, the other direction: every
+   reka-ui Popper-based popover (AppDatePicker's calendar, Combobox dropdowns,
+   ...) portals to <body> with a position:fixed wrapper that never sets its
+   own z-index either. Opened from *inside* a Dialog (e.g. a date field in a
+   ChildTableField "Add Row" dialog), that wrapper's implicit z-index:auto
+   loses to the dialog's explicit z-index:100, so the calendar rendered
+   underneath the dialog it belongs to. Global, not scoped, for the same
+   reason .dialog-overlay is: the portal target means no component's own
+   <style> can reach it, and it must win regardless of which dialog (if any)
+   it was opened inside. */
+[data-reka-popper-content-wrapper] {
+  z-index: 110;
+}

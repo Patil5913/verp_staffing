@@ -37,7 +37,10 @@
       No applications logged yet.
     </p>
     <p v-if="editable && !isSuperior" class="text-p-xs text-app-text-muted">
-      You can only edit today's row that you created — a manager can change earlier days.
+      You can only edit the counts on today's row that you created.
+    </p>
+    <p v-else-if="editable && isSuperior" class="text-p-xs text-app-text-muted">
+      As a manager you can correct the Date on any row — counts still only editable by whoever created that row, on the day it was created.
     </p>
   </SectionCard>
 </template>
@@ -74,8 +77,11 @@ const summary = computed(() => {
   return `${rows.value.length} ${rows.value.length === 1 ? 'day' : 'days'} logged · ${total} applications`
 })
 
+// Being a superior only unlocks the Date column (see the Date input's own
+// :disabled binding above) — it never unlocks the counts on someone else's
+// row. Small/Large stay locked to "your own row, dated today" regardless
+// of superior status.
 function rowLocked(row) {
-  if (isSuperior.value) return false
   const own = !row.owner || row.owner === window.user
   return !(own && row.date === today())
 }

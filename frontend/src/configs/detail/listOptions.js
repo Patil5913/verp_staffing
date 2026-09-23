@@ -5,7 +5,23 @@ import EmailQueueStrip from '@/components/list/EmailQueueStrip.vue'
 
 // Records made only by forwarding a candidate from another department, never
 // typed in by hand (cr_list.js / onboardings_list.js hide the New button).
-export const NO_MANUAL_CREATE = new Set(['CR', 'Onboardings', 'Email Queue'])
+// These are all forwarded/auto-created off a Customer's own workflow, never
+// started by hand from their own list — no "Add New" button for any of them.
+export const NO_MANUAL_CREATE = new Set([
+  'CR',
+  'Onboardings',
+  'Email Queue',
+  'Resume',
+  'RUC',
+  'Cover Letter',
+  'Training',
+  'JDC',
+  'Interview Support',
+  'Technical Other Services',
+  'Marketing',
+  'Marketing Other Services',
+  'Other Services',
+])
 
 // These three share one "person" concept via the Lead Detail Form (see
 // PersonQuickCreateDialog.vue) — their quick-create is name + phone + email,
@@ -72,8 +88,8 @@ export const KANBAN = {
     // A move rewrites the *latest round's* status server-side.
     moveMethod: 'verp_staffing.marketing.doctype.interview.interview.update_interview_status_from_kanban',
     moveArg: 'interview',
-    // These two statuses must say who cancelled and why.
-    reasonStatuses: ['Cancelled', 'Rescheduled'],
+    // These statuses must say who cancelled/rejected and why.
+    reasonStatuses: ['Cancelled', 'Rescheduled', 'Rejected'],
     summaryMethod: 'verp_staffing.marketing.doctype.interview.interview.get_round_summary_for_kanban',
   },
 }

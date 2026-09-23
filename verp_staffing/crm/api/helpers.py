@@ -830,6 +830,14 @@ def generic_assign_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
+    # Same class of bug fixed in lead_has_permission below: this hook only
+    # narrows access to an *existing* record down to its assignee — a
+    # brand-new, unsaved doc has no assign_to yet, so the check always fell
+    # through to False and blocked "create" for every non-admin user
+    # regardless of their actual role-based create permission.
+    if ptype == "create":
+        return True
+
     team = get_visible_employee_names_cached()
     if not team:
         return False
@@ -842,6 +850,11 @@ def customer_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
+    # See generic_assign_has_permission — a new Customer has no
+    # customer_owner yet, so this must not gate "create".
+    if ptype == "create":
+        return True
+
     team = get_visible_employee_names_cached()
     if not team:
         return False
@@ -852,6 +865,12 @@ def customer_has_permission(doc, ptype="read", user=None):
 def opportunity_has_permission(doc, ptype="read", user=None):
     user = user or frappe.session.user
     if user == "Administrator":
+        return True
+
+    # See generic_assign_has_permission — a new Opportunity has no
+    # opportunity_owner yet (and no name for the Customer lookup below to
+    # match against), so this must not gate "create".
+    if ptype == "create":
         return True
 
     team = get_visible_employee_names_cached()
@@ -911,6 +930,12 @@ def sales_order_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
+    # See generic_assign_has_permission — a new Sales Order has no `customer`
+    # linked yet to resolve an owner/assignment through, so this must not
+    # gate "create".
+    if ptype == "create":
+        return True
+
     departments = get_user_departments(user)
 
     # Accounting sees everything
@@ -950,6 +975,11 @@ def sales_order_has_permission(doc, ptype="read", user=None):
 def interview_has_permission(doc, ptype="read", user=None):
     user = user or frappe.session.user
     if user == "Administrator":
+        return True
+
+    # See generic_assign_has_permission — a new Interview has no owner yet
+    # (`doc.owner` only gets set on insert), so this must not gate "create".
+    if ptype == "create":
         return True
 
     visible_users = get_visible_user_names_cached()

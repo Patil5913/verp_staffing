@@ -17,6 +17,7 @@
           :shortcut="cfg.shortcut"
           :active="isRouteActive(cfg.route)"
           :collapsed="!sidebarOpen"
+          :doctype="cfg.doctype"
         />
 
         <!-- type_1: parent itself links somewhere AND always shows children -->
@@ -28,6 +29,7 @@
             :shortcut="cfg.shortcut"
             :active="isRouteActive(cfg.route) || groupHasActiveChild(cfg)"
             :collapsed="!sidebarOpen"
+            :doctype="cfg.doctype"
           />
           <ul v-if="sidebarOpen && cfg.children?.length" class="mt-0.5">
             <li v-for="child in cfg.children" :key="child.key">
@@ -38,6 +40,7 @@
                 :icon="resolveIconName(navItems[child.key].icon, child.key)"
                 :shortcut="navItems[child.key].shortcut"
                 :active="childActive(child.key)"
+                :doctype="navItems[child.key].doctype"
                 nested
               />
             </li>
@@ -51,8 +54,12 @@
         <div v-else-if="cfg.parent_type === 'type_2'" class="mb-0.5">
           <button
             type="button"
-            class="flex h-[34px] w-full items-center gap-2.5 rounded-md text-p-sm text-app-text transition-colors hover:bg-app-panel-2"
-            :class="sidebarOpen ? 'px-2.5' : 'justify-center px-0'"
+            class="flex h-[34px] w-full items-center gap-2.5 rounded-md text-p-sm transition-colors"
+            :class="[
+              sidebarOpen ? 'px-2.5' : 'justify-center px-0',
+              parentHighlighted(cfg) ? 'text-app-primary' : 'text-app-text hover:bg-app-panel-2',
+            ]"
+            :style="parentHighlighted(cfg) ? { backgroundColor: 'var(--app-primary-tint)' } : {}"
             :aria-expanded="isExpanded(cfg)"
             :title="!sidebarOpen ? cfg.label : undefined"
             @click="toggleGroup(cfg)"
@@ -62,7 +69,7 @@
                 'lucide-' + resolveIconName(cfg.icon, cfg.key),
                 'size-4',
                 'shrink-0',
-                'text-app-text-muted',
+                parentHighlighted(cfg) ? 'text-app-primary' : 'text-app-text-muted',
               ]"
             />
             <template v-if="sidebarOpen">
@@ -89,6 +96,7 @@
                   :icon="resolveIconName(navItems[child.key].icon, child.key)"
                   :shortcut="navItems[child.key].shortcut"
                   :active="childActive(child.key)"
+                  :doctype="navItems[child.key].doctype"
                   nested
                 />
               </li>
@@ -111,7 +119,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useSidebar } from '@/composables/layout/useSidebar'
 import { resolveIconName } from '@/utils/layout/sidebarIcons'
 import SidebarLink from './SidebarLink.vue'
@@ -143,8 +151,18 @@ function groupHasActiveChild(cfg) {
   return (cfg.children || []).some((c) => childActive(c.key))
 }
 
+// Purely the user's own open/closed choice — an active child no longer
+// forces this true, so collapsing a dropdown always sticks even while one
+// of its links is the current route (see parentHighlighted for how that
+// case still shows *where* you are once collapsed).
 function isExpanded(cfg) {
-  return groupHasActiveChild(cfg) || expandedKey.value === cfg.key
+  return expandedKey.value === cfg.key
+}
+
+// Collapsed but the active route lives inside it — highlight the parent
+// button itself as the next best indicator once its children aren't shown.
+function parentHighlighted(cfg) {
+  return !isExpanded(cfg) && (isRouteActive(cfg.route) || groupHasActiveChild(cfg))
 }
 
 function toggleGroup(cfg) {
@@ -158,4 +176,23 @@ function toggleGroup(cfg) {
   }
   setExpandedKey(expandedKey.value === cfg.key ? null : cfg.key)
 }
+
+// First-ever paint with nothing expanded yet (no persisted choice): open
+// whichever group already contains the current route, so a deep link or
+// refresh doesn't land with everything closed. Runs once the config loads,
+// and never again — it must not override a collapse the user chose
+// afterwards just because navigation kept the same active child.
+let defaultedOpen = false
+watch(
+  config,
+  (list) => {
+    if (defaultedOpen || expandedKey.value || !list.length) return
+    const activeGroup = list.find((cfg) => cfg.parent_type === 'type_2' && groupHasActiveChild(cfg))
+    if (activeGroup) {
+      defaultedOpen = true
+      setExpandedKey(activeGroup.key)
+    }
+  },
+  { immediate: true },
+)
 </script>

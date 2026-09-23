@@ -17,6 +17,20 @@ const KEYWORD_THEMES = [
 // is Data) so wouldn't otherwise get badge treatment at all — see
 // hasStatusOverride, used by DocListView's isSelectColumn to widen badge
 // eligibility past "is this a Select field". Keyed by `Doctype.fieldname`.
+// Sales Order's per-row Payment Terms status and Payment Entry's
+// verification_status share the same three-value vocabulary — neither fits
+// the generic KEYWORD_THEMES below well: "Verified" matches none of those
+// patterns and fell through to plain gray, and "Pending Verification" only
+// got the same orange every other "pending" status does instead of a
+// distinct color.
+const verificationStatusTheme = (value) => {
+  const status = String(value || '')
+  if (status === 'Verified') return 'green'
+  if (status === 'Rejected') return 'red'
+  if (status === 'Pending Verification') return 'yellow'
+  return 'gray'
+}
+
 const DOCTYPE_FIELD_OVERRIDES = {
   'Customer.overall_status': (value) => {
     const status = String(value || '')
@@ -27,6 +41,8 @@ const DOCTYPE_FIELD_OVERRIDES = {
     if (status === 'Ready') return 'gray'
     return 'gray'
   },
+  'Sales Order.payment_status': verificationStatusTheme,
+  'Payment Entry.verification_status': verificationStatusTheme,
 }
 
 export function hasStatusOverride(doctype, fieldname) {
@@ -76,12 +92,24 @@ export function computeInvoiceStatus(values) {
   return 'Partly Paid'
 }
 
+// statusBadgeTheme's generic KEYWORD_THEMES matches "paid" as a plain
+// substring — "Unpaid" and "Partly Paid" both contain it, so every one of
+// these three ended up the same green as "Paid" itself. Dedicated mapping
+// instead of trying to make the generic matcher word-boundary-aware (that
+// would ripple into every other status in the app that happens to contain
+// "paid").
+export function invoiceStatusTheme(label) {
+  if (label === 'Paid') return 'green'
+  if (label === 'Partly Paid') return 'yellow'
+  return 'red' // Unpaid
+}
+
 const LIST_STATUS_OVERRIDES = {
   'Payment Entry': (row) =>
     row.payment_term_row ? { label: row.verification_status, theme: statusBadgeTheme(row.verification_status) } : null,
   'Sales Invoice': (row) => {
     const label = computeInvoiceStatus(row)
-    return { label, theme: statusBadgeTheme(label) }
+    return { label, theme: invoiceStatusTheme(label) }
   },
 }
 

@@ -1,20 +1,20 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #actions>
       <RecordActionBar
         show-save
         :save-dirty="isDirty"
         :save-loading="detail.save.isLoading"
-        :show-delete="!detail.isNew.value && detail.canDelete.value"
+        :show-delete="false"
         :delete-loading="deleting"
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
         <ForwardCandidateButton
-          v-if="!detail.isNew.value && detail.values.customer"
+          v-if="!detail.isNew.value && detail.hidden.customer"
           doctype="Technical Other Services"
           :name="name"
-          :customer="detail.values.customer"
+          :customer="detail.hidden.customer"
           :from-service-name="detail.values.service || 'Technical Other Services'"
           @forwarded="detail.refresh"
         />
@@ -27,7 +27,7 @@
         <div class="flex flex-col gap-6">
           <div class="flex flex-col gap-1.5">
             <label class="text-p-sm font-medium text-app-text-muted">Customer</label>
-            <AppLinkField doctype="Customer" v-model="detail.values.customer" :disabled="!detail.canWrite.value || !detail.isNew.value" />
+            <AppLinkField doctype="Customer" v-model="detail.hidden.customer" :disabled="!detail.canWrite.value || !detail.isNew.value" />
           </div>
           <div class="flex flex-col gap-1.5">
             <label class="text-p-sm font-medium text-app-text-muted">Service</label>
@@ -44,7 +44,7 @@
             />
           </div>
           <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="['status']" :read-only-fields="locked ? ['status'] : []" />
-          <ServiceResumePanel :customer="detail.values.customer" />
+          <ServiceResumePanel :customer="detail.hidden.customer" />
         </div>
       </div>
     </template>
@@ -56,6 +56,7 @@
           :table="proofOfWorkTable"
           :rows="detail.values.proof_of_work || []"
           :disabled="!detail.canWrite.value || locked"
+          :on-file-meta="autoTitleFromFile"
           @update:rows="(rows) => (detail.values.proof_of_work = rows)"
         />
       </div>
@@ -71,6 +72,12 @@
 
     <template #tab-activity>
       <ActivityTimeline :doctype="doctype" :name="name" :types="['task', 'event']" allow-create empty-text="No tasks or events linked to this record yet." />
+    </template>
+
+    <template #tab-customer>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <CustomerContextPanel :customer="detail.hidden.customer" display-key="Technical Other Services" />
+      </div>
     </template>
   </DetailPageLayout>
 
@@ -108,7 +115,9 @@ import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ServiceResumePanel from '@/components/detail/lead/ServiceResumePanel.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
+import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
+import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
 const route = useRoute()
 
@@ -123,6 +132,7 @@ const locked = computed(() => detail.values.status === 'Completed')
 const TABS = [
   { key: 'details', label: 'Details' },
   { key: 'proof-of-work', label: 'Proof Of Work' },
+  { key: 'customer', label: 'Customer' },
   { key: 'notes', label: 'Notes' },
   { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },

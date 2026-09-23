@@ -2,7 +2,7 @@
   <component
     :is="isInternal ? 'router-link' : 'a'"
     v-bind="isInternal ? { to: internalTo } : { href: route }"
-    class="relative flex h-[34px] items-center gap-2.5 rounded-md text-p-sm transition-colors"
+    class="group relative flex h-[34px] items-center gap-2.5 rounded-md text-p-sm transition-colors"
     :class="[
       collapsed ? 'justify-center px-0' : 'px-2.5',
       !collapsed && nested ? 'ml-[19px]' : '',
@@ -27,11 +27,23 @@
       ]"
     />
     <span v-if="!collapsed" class="min-w-0 flex-1 truncate">{{ label }}</span>
+    <button
+      v-if="showQuickCreate && !collapsed"
+      type="button"
+      class="flex size-5 shrink-0 items-center justify-center rounded text-app-text-muted opacity-0 transition-opacity hover:bg-app-panel hover:text-app-primary group-hover:opacity-100 focus-visible:opacity-100"
+      :title="`New ${doctype}`"
+      @click.stop.prevent="onQuickCreate"
+      @mousedown.stop
+    >
+      <span class="lucide-plus size-3.5" />
+    </button>
   </component>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { canQuickCreateFromSidebar } from '@/utils/layout/sidebarPlus'
 
 const props = defineProps({
   route: { type: String, default: '' },
@@ -41,7 +53,19 @@ const props = defineProps({
   active: { type: Boolean, default: false },
   nested: { type: Boolean, default: false },
   collapsed: { type: Boolean, default: false },
+  // The Doctype this link points at, if any — drives the "+" quick-create
+  // action. Left unset for non-Doctype links (Dashboard, Reports, ...) and
+  // never set at all for type_2 dropdown parent buttons, which aren't
+  // SidebarLink instances in the first place.
+  doctype: { type: String, default: '' },
 })
+
+const router = useRouter()
+const showQuickCreate = computed(() => canQuickCreateFromSidebar(props.doctype))
+
+function onQuickCreate() {
+  router.push(`/${encodeURIComponent(props.doctype)}/new`)
+}
 
 // Pages already ported into this SPA live under /verp and use vue-router;
 // everything else still points at the classic desk (/app/...) and needs a

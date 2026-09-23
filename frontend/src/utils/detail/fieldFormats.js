@@ -27,6 +27,14 @@ export function isMonthYearField(fieldname) {
   return MONTH_YEAR_FIELDS.has((fieldname || '').toLowerCase())
 }
 
+// reusable.js special-cases exactly personal_linkedin/marketing_linkedin as
+// a clickable URL when read-only; generalized to any *linkedin* fieldname
+// so a differently-named field (e.g. linkedin_profile) gets the same
+// treatment without another hardcoded list to keep in sync.
+export function isLinkedinField(fieldname) {
+  return (fieldname || '').toLowerCase().includes('linkedin')
+}
+
 export function isSsnField(fieldname) {
   return (fieldname || '').toLowerCase().includes('ssn')
 }

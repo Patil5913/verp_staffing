@@ -23,6 +23,7 @@ def calculate_totals(doc):
     total = sum(flt(item.amount) for item in doc.items)
     doc.total = total
     doc.net_total = total
+    doc.total_qty = sum(flt(item.qty) for item in doc.items)
 
 
 # Taxes and charges
@@ -64,7 +65,7 @@ def apply_discount(doc):
 
     # Calculate based on percentage
     if doc.additional_discount_percentage:
-        doc.discount_amount = flt(total * doc.additional_discount_percentage / 100)
+        doc.discount_amount = flt(total * flt(doc.additional_discount_percentage) / 100)
 
     discount = flt(doc.discount_amount or 0)
 

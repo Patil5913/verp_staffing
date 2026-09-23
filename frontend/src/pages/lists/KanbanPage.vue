@@ -5,6 +5,9 @@
       <AppSearchInput v-model="search" class="w-full" placeholder="Search cards">
       </AppSearchInput>
       <template #right>
+        <AppButton v-if="doctype === 'Interview'" variant="outline" size="sm" icon="users" @click="showCustomerDialog = true">
+          Select Customer
+        </AppButton>
         <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="load" />
       </template>
     </SubNavbar>
@@ -41,14 +44,16 @@
     <Dialog v-model="reason.open" :options="{ title: `Mark as ${reason.to}`, size: 'md' }">
       <template #body-content>
         <div class="flex flex-col gap-4">
-          <AppInput type="select" label="Cancelled By" v-model="reason.by" :options="['', 'Company', 'Candidate']" required />
-          <AppInput type="textarea" label="Reason" v-model="reason.text" required />
+          <AppInput type="select" :label="`${reason.to} By`" v-model="reason.by" :options="['', 'Company', 'Candidate']" required />
+          <AppInput type="textarea" :label="`Reason of ${reason.to}`" v-model="reason.text" required />
         </div>
       </template>
       <template #actions>
         <AppButton :disabled="!reason.by || !reason.text.trim()" :loading="moving" @click="submitReason">Confirm</AppButton>
       </template>
     </Dialog>
+
+    <SelectCustomerDialog v-if="doctype === 'Interview'" v-model="showCustomerDialog" @applied="load" />
   </div>
 </template>
 
@@ -68,8 +73,10 @@ import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
 import KanbanBoard from '@/components/list/KanbanBoard.vue'
+import SelectCustomerDialog from '@/components/list/SelectCustomerDialog.vue'
 import { KANBAN } from '@/configs/detail/listOptions'
 import { useResource } from '@/composables/list/useResource'
+import { useMarketingCustomerFilter } from '@/composables/list/useMarketingCustomerFilter'
 import { formatDate } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
@@ -79,6 +86,13 @@ const router = useRouter()
 const doctype = computed(() => route.params.doctype)
 const config = computed(() => KANBAN[doctype.value])
 const search = ref('')
+const showCustomerDialog = ref(false)
+
+// interview_list.js's apply_marketing_auto_filter: the board only ever
+// shows cards for whichever customers are currently selected — every
+// customer assigned to the user the first time, whatever "Select Customer"
+// was last set to after that.
+const { selectedCustomers, ensureDefaultCustomers } = useMarketingCustomerFilter()
 
 const cards = ref([])
 const rounds = ref({})
@@ -88,6 +102,7 @@ const cardsResource = useResource({
   makeParams: () => ({
     doctype: doctype.value,
     fields: ['name', config.value.statusField, ...config.value.cardFields],
+    filters: doctype.value === 'Interview' && selectedCustomers.value.length ? { marketing_link: ['in', selectedCustomers.value] } : undefined,
     order_by: 'modified desc',
     limit_page_length: 500,
   }),
@@ -106,8 +121,10 @@ async function loadRounds() {
   }
 }
 
-function load() {
-  if (config.value) cardsResource.resource.submit()
+async function load() {
+  if (!config.value) return
+  if (doctype.value === 'Interview') await ensureDefaultCustomers()
+  cardsResource.resource.submit()
 }
 watch(doctype, load, { immediate: true })
 

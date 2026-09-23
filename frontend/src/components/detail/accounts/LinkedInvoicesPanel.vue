@@ -27,7 +27,7 @@
             <td class="px-3 py-2 text-right tabular-nums">{{ formatFieldValue(inv.outstanding_amount, { fieldtype: 'Currency' }) }}</td>
             <td class="px-3 py-2 flex flex-wrap gap-1">
               <DocStatusBadge :docstatus="inv.docstatus" />
-              <DocStatusBadge :status="computeInvoiceStatus(inv)" />
+              <DocStatusBadge :status="computeInvoiceStatus(inv)" :theme="invoiceStatusTheme(computeInvoiceStatus(inv))" />
             </td>
           </tr>
         </tbody>
@@ -48,7 +48,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'
-import { computeInvoiceStatus } from '@/utils/list/statusTheme'
+import { computeInvoiceStatus, invoiceStatusTheme } from '@/utils/list/statusTheme'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -76,9 +76,17 @@ async function loadPage() {
   }
 }
 
+// Re-fetches on `name` changing (a fresh record) *and* whenever the Sales
+// Order itself is reloaded — not just `name`, which never changes for an
+// existing order. Creating a Sales Invoice from a payment term (Mark as
+// Paid) calls detail.refresh() afterwards; that replaces
+// detail.meta.resource.data with a new object every time (get_doc_meta's
+// response), so watching its identity catches every refresh, not just a
+// docname change. Without this, a newly raised invoice never showed up
+// here until a full page reload.
 watch(
-  () => props.name,
-  (name) => {
+  () => [props.name, props.detail.meta.resource.data],
+  ([name]) => {
     invoices.value = []
     if (name && name !== 'new') loadPage()
   },

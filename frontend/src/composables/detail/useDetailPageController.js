@@ -5,6 +5,7 @@ import { useResource } from '@/composables/list/useResource'
 import { useUnsavedChangesGuard } from '@/composables/common/useUnsavedChangesGuard'
 import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
 import { notify } from '@/utils/common/notify'
+import { isEmailMissingError, normalizeError } from '@/utils/common/errors'
 
 // Shared shell behind every doctype's detail page — the generic
 // DocDetailPage and any doctype-specific one (LeadDetailPage,
@@ -76,9 +77,16 @@ export function useDetailPageController(doctype, name, options = {}) {
   // the form. Cancel asks first — it's the one irreversible transition.
   const showCancelDialog = ref(false)
 
+  // Returns { emailMissing: boolean } so the caller (ConfigDetailPage) can
+  // offer to collect an email and retry — see useDocDetail.js's submitDoc
+  // for why submit's own errors aren't auto-toasted like everything else.
   async function onSubmit() {
-    if (detail.isDirty.value && !(await detail.submit())) return
-    await detail.submitDoc()
+    if (detail.isDirty.value && !(await detail.submit())) return { emailMissing: false }
+    const result = await detail.submitDoc()
+    if (result.ok) return { emailMissing: false }
+    if (isEmailMissingError(result.error)) return { emailMissing: true }
+    notify.error(normalizeError(result.error).message)
+    return { emailMissing: false }
   }
 
   async function onCancelDoc() {

@@ -60,13 +60,13 @@ class SalesOrder(Document):
     def before_update_after_submit(self):
         # Same validations must run post-submit too
         self.validate_payment_terms_deletion()
-        # self.validate_payment_terms_total()
+        self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
 
     def validate(self):
         self.validate_payment_terms_deletion()
-        # self.validate_payment_terms_total()
+        self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
         self.validate_mandatory()
@@ -369,7 +369,7 @@ class SalesOrder(Document):
         )
 
         if not has_agreement:
-            frappe.throw(_("No agreement found for this Sales Order"))
+            frappe.throw(_("No agreement found for this Sales Order.\n Please create a agreement and save it as you have selected a service in which agreement is required"))
 
         missing_pdf = frappe.db.exists(
             "Agreement",
@@ -779,7 +779,7 @@ def _create_invoice_for_term(so, payment_term, payment_term_row):
     si.conversion_rate = 1
     si.sales_order = so.name
     si.payment_term_row = payment_term_row
-    si.disable_rounded_total = so.disable_rounded_total
+    si.disable_rounded_total = 1
 
     _append_prorated_items(si, so, payment_term)
 
@@ -924,7 +924,7 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
 
 
 @frappe.whitelist()
-def verify_payment_entry(payment_entry):
+def verify_payment_entry(payment_entry, paid_from=None, paid_to=None):
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
@@ -934,6 +934,14 @@ def verify_payment_entry(payment_entry):
         frappe.throw(
             _("Only Pending Verification or Rejected entries can be approved.")
         )
+
+    # Let the verifier confirm/correct which accounts this was actually paid
+    # from/to right here, same as the Payment Entry form's own Paid From/
+    # Paid To — only ever overwrites when a value is actually sent.
+    if paid_from:
+        pe.paid_from = paid_from
+    if paid_to:
+        pe.paid_to = paid_to
 
     now = frappe.utils.now_datetime()
     now_str = frappe.utils.format_datetime(now)

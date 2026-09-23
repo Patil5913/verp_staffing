@@ -1,5 +1,5 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #actions>
       <RecordActionBar
         :show-save="detail.canWrite.value"
@@ -184,6 +184,20 @@ const linkedinTable = computed(() => detail.tables.value.find((t) => t.fieldname
 // hierarchy — get_assign_to_query resolves both steps server-side.
 function assignmentLinkQueries(draft, rows, editingIndex) {
   return {
+    // One row per Department — a department already used by a sibling row
+    // can't be picked again (matches Designation's own sibling-exclusion
+    // just below).
+    department: {
+      filters: {
+        name: [
+          'not in',
+          rows
+            .filter((_, i) => i !== editingIndex)
+            .map((r) => r.department)
+            .filter(Boolean),
+        ],
+      },
+    },
     designation: {
       query: 'verp_staffing.settings.doctype.hierarchy.hierarchy.get_department_hierarchy_roles_query',
       filters: {

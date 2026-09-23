@@ -25,14 +25,27 @@ export function useLeadDetailForm(referenceDoctype, referenceName) {
   const docname = computed(() => detail.resource.data?.docname || '')
 
   const values = reactive({})
-  const snapshot = ref('')
+  // Matches values' initial empty-object shape, not ''. Left as '' before,
+  // any customer/lead/opportunity with no linked Lead Detail Form at all
+  // (exists: false, so applyData's early return below never touches this)
+  // permanently read as dirty — JSON.stringify({}) ('{}') is never ''. The
+  // panel then renders nothing to edit, but the main page's Save button
+  // still folds this "dirty" form into its save and unconditionally called
+  // submit(), which the server rejects with "No Lead Detail Form is linked
+  // to this {doctype}." on every single save of the page, whether or not
+  // the user touched the Candidate Profile tab at all.
+  const snapshot = ref(JSON.stringify(values))
 
   // Shared by the initial load and by a successful save — save_lead_detail_view
   // returns the same {values, tables, ...} shape get_lead_detail_view does,
   // so re-snapshotting off of either keeps isDirty accurate without a
   // separate reload() round-trip after every save.
   function applyData(data) {
-    if (!data?.exists) return
+    if (!data?.exists) {
+      Object.keys(values).forEach((k) => delete values[k])
+      snapshot.value = JSON.stringify(values)
+      return
+    }
     Object.keys(values).forEach((k) => delete values[k])
     Object.assign(values, data.values)
     for (const table of data.tables || []) {
@@ -69,6 +82,12 @@ export function useLeadDetailForm(referenceDoctype, referenceName) {
   })
 
   async function submit() {
+    // Nothing to save when there's no linked Lead Detail Form to begin with
+    // (the panel renders no fields either way) — belt-and-suspenders
+    // alongside the isDirty fix above, so a caller that submits regardless
+    // of isDirty still can't hit the server's "No Lead Detail Form is
+    // linked" throw.
+    if (!exists.value) return true
     const result = await save.resource.submit({
       reference_doctype: referenceDoctype,
       reference_name: referenceName.value,

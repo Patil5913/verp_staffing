@@ -479,7 +479,7 @@ function render_customer_history(frm, fieldname, data, append_interviews = false
 										${is_resume ? "" : `<th style="${th}">Description</th>`}
 										<th style="${th}">Attachment</th>
 									</tr>
-								</thead>
+								</thead>`
 								<tbody>
 									${dept.document_references
 										.map(

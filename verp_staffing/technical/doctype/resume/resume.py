@@ -93,9 +93,13 @@ class Resume(Document):
         ):
             return
 
-        new_rows = self.get_new_resume_rows()
+        # Only one resume row is ever allowed (validate_resume_submission),
+        # so completion just tracks whether that one row currently has an
+        # attachment — covers both adding the first row and re-uploading
+        # (editing) the existing one, not only a brand-new row.
+        rows = self.resume_table or []
 
-        if len(new_rows) == 1 and new_rows[0].document:
+        if len(rows) == 1 and rows[0].document:
             self.status = "Completed"
 
     def get_new_resume_rows(self):

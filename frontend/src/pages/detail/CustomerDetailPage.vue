@@ -1,5 +1,5 @@
 <template>
-  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
+  <DetailPageLayout :title="recordTitle" :tabs="tabs" v-model:active-tab="activeTab" :detail="detail" @back="goBack">
     <template #actions>
       <RecordActionBar
         show-save
@@ -207,7 +207,7 @@ const readOnlyFields = computed(() => (detail.isNew.value ? [] : ['customer_from
 const fieldLinkQueries = {
   customer_from: { filters: { name: ['in', ['Lead', 'Opportunity']] } },
   customer_owner: {
-    query: 'verp_staffing.employee.doctype.employee.employee.get_employees_by_department',
+    query: 'verp_staffing.crm.api.helpers.get_subordinate_employees',
     filters: { department: 'Sales' },
   },
 }

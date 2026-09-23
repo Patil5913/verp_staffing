@@ -71,6 +71,10 @@ function openSettings() {
   router.push(window.user ? `/User/${encodeURIComponent(window.user)}` : '/')
 }
 
+function openSidebarCustomization() {
+  router.push('/Sidebar Master')
+}
+
 async function logout() {
   notify.info('Logging you out...')
   try {
@@ -102,6 +106,7 @@ async function reload() {
 const menuOptions = computed(() => [
   // a customer has no staff user record to edit
   ...(window.is_portal_user ? [] : [{ icon: 'lucide-settings', label: 'My Settings', onClick: openSettings }]),
+  ...(window.is_portal_user ? [] : [{ icon: 'lucide-layout-panel-left', label: 'Customize Sidebar', onClick: openSidebarCustomization }]),
   {
     icon: 'lucide-monitor',
     label: 'Theme',
