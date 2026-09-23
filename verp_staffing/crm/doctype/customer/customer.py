@@ -104,7 +104,7 @@ def get_forwardable_departments(customer):
 
     active_in = []
 
-    if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
+    if frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]}):
         active_in.append("CR")
 
     if frappe.db.exists("Onboardings", {"customer": customer,  "status": ["in", ["Active","Completed"]]}):
@@ -237,7 +237,7 @@ def is_service_completed(service, customer):
 
 def check_CR_Onboarding_departments_active(customer):
     active = []
-    if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
+    if frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]}):
         active.append("CR")
     if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
         active.append("Onboarding")
@@ -268,19 +268,19 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
-    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"})
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]})
     onboarding_active = frappe.db.exists(
         "Onboardings", {"customer": customer, "status": ["in", ["Active","Completed"]]}
     )
-    if doctype not in ["CR", "Onboardings"]:
-        if cr_active or onboarding_active:
-            active_in = []
-            if cr_active:
-                active_in.append("CR")
-            if onboarding_active:
-                active_in.append("Onboarding")
-            # Return a special response instead of a plain list
-            return {"blocked": True, "active_in": active_in}
+
+    if cr_active or onboarding_active:
+        active_in = []
+        if cr_active:
+            active_in.append("CR")
+        if onboarding_active:
+            active_in.append("Onboarding")
+        # Return a special response instead of a plain list
+        return {"blocked": True, "active_in": active_in}
 
     services = get_services_for_customer(customer)
     if not services:

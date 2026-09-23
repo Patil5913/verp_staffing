@@ -36,6 +36,23 @@
           />
         </div>
 
+        <template v-if="isOnboarding">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-p-sm font-medium text-app-text-muted">Select Interview</label>
+            <AppCombobox
+              v-model="interview"
+              :options="interviewOptions"
+              :placeholder="interviewOptions.length ? 'Select an interview…' : 'No interviews found'"
+            />
+          </div>
+          <!-- Pre-filled from the customer's existing Lead Detail Form
+          credentials (get_onboarding_credentials) and read-only, same as
+          reusable.js's dialog — there's no separate "type it fresh" path,
+          only verify what's already on file. -->
+          <AppInput label="Candidate Email (Used For Marketing)" :model-value="email" disabled />
+          <AppInput label="Email Password" :model-value="password" disabled />
+        </template>
+
         <AppTextarea v-if="isCR" v-model="reasonForForwarding" label="Reason For Forwarding" />
 
         <AppTextarea v-model="note" :label="`Note${isRUC ? '' : ' (optional)'}`" />
@@ -56,16 +73,17 @@ import AppTextarea from '@/components/ui/AppTextarea.vue'
 // Letter, ...) exposes the same action (see add_forward_button in
 // public/js/reusable.js). Covers the common branches (plain forward, RUC's
 // required note, JDC/Interview Support's required interview round, CR's
-// required reason) — Onboarding's extra email/password credential capture
-// is deliberately not ported here; forwarding to Onboarding still works,
-// just without pre-filling/collecting those fields.
+// required reason, Onboarding's interview + read-only email/password
+// pulled from the customer's existing Lead Detail Form credentials).
 import { computed, ref, watch } from 'vue'
 import { Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppInput from '@/components/ui/AppInput.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
+import { isValidEmail } from '@/utils/detail/fieldFormats'
 
 const props = defineProps({
   doctype: { type: String, required: true },
@@ -87,9 +105,14 @@ const note = ref('')
 const reasonForForwarding = ref('')
 const interviewRound = ref('')
 const interviewRoundOptions = ref([])
+const interview = ref('')
+const interviewOptions = ref([])
+const email = ref('')
+const password = ref('')
 
 const isRUC = computed(() => service.value === 'RUC')
 const isCR = computed(() => service.value.toLowerCase() === 'cr')
+const isOnboarding = computed(() => service.value.toLowerCase() === 'onboarding')
 const needsInterviewRound = computed(() => ['JDC', 'Interview Support'].includes(service.value))
 
 const canSubmit = computed(() => {
@@ -97,6 +120,7 @@ const canSubmit = computed(() => {
   if (isRUC.value && !note.value.trim()) return false
   if (needsInterviewRound.value && !interviewRound.value) return false
   if (isCR.value && !reasonForForwarding.value.trim()) return false
+  if (isOnboarding.value && (!interview.value || !email.value || !password.value || !isValidEmail(email.value))) return false
   return true
 })
 
@@ -125,6 +149,10 @@ async function openDialog() {
   reasonForForwarding.value = ''
   interviewRound.value = ''
   interviewRoundOptions.value = []
+  interview.value = ''
+  interviewOptions.value = []
+  email.value = ''
+  password.value = ''
 
   const res = isCustomerDoctype.value
     ? await customerDepartments.resource.submit({ customer: props.customer })
@@ -150,8 +178,33 @@ async function loadInterviewRounds() {
   interviewRoundOptions.value = res || []
 }
 
+// Onboarding's own interview list (get_customer_interviews with
+// service='onboarding' returns {label, value} per Interview, not per
+// round) plus a pre-fill of whatever candidate email/password already sit
+// on this customer's Lead Detail Form — reusable.js's toggle_fields
+// onboarding branch, verified/edited here rather than typed from scratch.
+const onboardingInterviews = useResource({
+  url: 'verp_staffing.crm.api.auto_assign.get_customer_interviews',
+  notifyOnError: false,
+})
+const credentials = useResource({
+  url: 'verp_staffing.crm.doctype.customer.customer.get_onboarding_credentials',
+  notifyOnError: false,
+})
+async function loadOnboardingFields() {
+  interview.value = ''
+  const [interviewRes, credRes] = await Promise.all([
+    onboardingInterviews.resource.submit({ customer: props.customer, service: 'onboarding' }),
+    credentials.resource.submit({ customer: props.customer }),
+  ])
+  interviewOptions.value = interviewRes || []
+  email.value = credRes?.marketing_email_id || ''
+  password.value = credRes?.marketing_email_password || ''
+}
+
 watch(service, (val) => {
   if (['JDC', 'Interview Support'].includes(val)) loadInterviewRounds()
+  else if (val.toLowerCase() === 'onboarding') loadOnboardingFields()
 })
 
 const addingNote = useResource({
@@ -168,6 +221,9 @@ async function onSubmit() {
     customer: props.customer,
     service: service.value,
     interview_round: interviewRound.value || null,
+    interview: interview.value || null,
+    email: email.value || null,
+    password: password.value || null,
     reason_for_forwarding: reasonForForwarding.value || null,
     from_service_name: props.fromServiceName || null,
   })
