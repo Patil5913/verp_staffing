@@ -242,7 +242,7 @@ def send_existing_agreement(agreement):
             frappe.throw("Agreement is required")
 
         doc = frappe.get_doc("Agreement", agreement)
-        if doc.status != "Ready To Send" and doc.status != "Sent For Signature":
+        if doc.status != "Ready To Send" and doc.status != "Sent":
             frappe.throw("Agreement is not in sendable state")
 
         if not doc.sales_order:

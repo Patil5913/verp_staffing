@@ -824,7 +824,7 @@ async function custom_submit_handler() {
 		}
 
 		if (shouldValidate("ssn_digit", candidateFields)) {
-			let ssn_digit = frappe.web_form.get_value("ssn_digit");
+			let ssn_digit = String(frappe.web_form.get_value("ssn_digit"));
 			if (ssn_digit && ssn_digit.trim() && !validate_ssn_digit(ssn_digit.trim()))
 				return false;
 		}
