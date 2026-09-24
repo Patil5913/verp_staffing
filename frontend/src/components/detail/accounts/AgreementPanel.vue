@@ -44,7 +44,7 @@
       </div>
     </SectionCard>
 
-    <SectionCard v-if="!detail.isNew.value && !locked" title="Create Agreement" subtitle="Fill a template with this order's details.">
+    <SectionCard v-if="!detail.isNew.value && detail.docstatus.value !== 2" title="Create Agreement" subtitle="Fill a template with this order's details.">
       <div class="flex max-w-md flex-col gap-1.5">
         <label class="text-p-sm font-medium text-app-text-muted">Template</label>
         <AppCombobox v-model="template" :options="templateOptions" placeholder="Select template…" />

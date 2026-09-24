@@ -1,5 +1,6 @@
 <template>
-  <AppButton v-if="required" variant="outline" icon="mail" :loading="sending" @click="send">Send Details Form</AppButton>
+  <AppButton v-if="required" variant="outline" icon="mail" @click="onClick">Send Details Form</AppButton>
+  <UnlockFormDialog v-if="required" v-model="showUnlock" :customer="customer" :sales-order="name" />
 </template>
 
 <script setup>
@@ -11,9 +12,8 @@
 import { computed, ref } from 'vue'
 import { call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import UnlockFormDialog from '@/components/detail/customer/UnlockFormDialog.vue'
 import { useResource } from '@/composables/list/useResource'
-import { notify } from '@/utils/common/notify'
-import { normalizeError } from '@/utils/common/errors'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -41,27 +41,7 @@ const required = computed(() => {
   })
 })
 
-const sending = ref(false)
-async function send() {
-  sending.value = true
-  try {
-    const customer = props.detail.values.customer
-    const recipient = await call('verp_staffing.crm.doctype.customer.customer.get_customer_email', { customer })
-    if (!recipient) {
-      notify.error('This customer has no email on their Lead Detail Form — add one before sending.')
-      return
-    }
-    const ok = await call('verp_staffing.accounts.doctype.sales_order.sales_order.send_details_form_notification', {
-      recipient,
-      sales_order: props.name,
-      customer,
-    })
-    if (!ok) notify.error('Failed to send the email — try again.')
-    else notify.success('Details form sent successfully.')
-  } catch (error) {
-    notify.error(normalizeError(error).message)
-  } finally {
-    sending.value = false
-  }
-}
+const showUnlock = ref(false)
+const customer = computed(() => props.detail.values.customer)
+const onClick = () => (showUnlock.value = true)
 </script>

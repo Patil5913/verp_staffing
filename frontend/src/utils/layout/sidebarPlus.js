@@ -29,6 +29,9 @@ export const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
   'Bank Account Type',
   'Bank Account Subtype',
   'Sidebar Master',
+  'Email Queue',
+  'Erp Configuration',
+  'Accounts Settings'
 ])
 
 export function canQuickCreateFromSidebar(doctype) {

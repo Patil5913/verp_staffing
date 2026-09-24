@@ -57,15 +57,8 @@
           />
 
           <div class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
-            <h3 class="mb-2 text-p-base font-medium text-app-text">Customer Feedback</h3>
-            <ChildTableField
-              v-if="feedbackTable && (detail.values.customer_feedback || []).length"
-              :table="feedbackTable"
-              :rows="detail.values.customer_feedback || []"
-              disabled
-              @update:rows="() => {}"
-            />
-            <p v-else-if="detail.values.candidate_feedback" class="whitespace-pre-wrap text-p-sm text-app-text">{{ detail.values.candidate_feedback }}</p>
+            <h3 class="mb-2 text-p-base font-medium text-app-text">Candidate Feedback</h3>
+            <p v-if="detail.values.candidate_feedback" class="whitespace-pre-wrap text-p-sm text-app-text">{{ detail.values.candidate_feedback }}</p>
             <p v-else class="py-4 text-center text-p-sm text-app-text-muted">No Feedback Yet</p>
           </div>
 
@@ -166,7 +159,6 @@ const tabs = computed(() => (detail.isNew.value ? TABS.filter((t) => t.key === '
 const activeTab = ref('details')
 
 const proofOfWorkTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'proof_of_work'))
-const feedbackTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'customer_feedback'))
 
 const assignToQuery = 'verp_staffing.crm.api.helpers.get_assign_to_by_service'
 const assignToFilters = computed(() => ({ service: 'Interview Support', customer: detail.hidden.customer }))

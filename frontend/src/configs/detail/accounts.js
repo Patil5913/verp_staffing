@@ -2,11 +2,13 @@ import { call } from 'frappe-ui'
 import { computeInvoiceStatus } from '@/utils/list/statusTheme'
 import { formatFieldValue } from '@/utils/list/formatValue'
 import { paidAccountFilterFor } from '@/utils/detail/paymentAccounts'
+import { notify } from '@/utils/common/notify'
 import AddressContactPanel from '@/components/detail/customer/AddressContactPanel.vue'
 import DocAction from '@/components/detail/actions/DocAction.vue'
 import NoticeBanner from '@/components/common/NoticeBanner.vue'
 import LinkAction from '@/components/detail/actions/LinkAction.vue'
 import SummaryStrip from '@/components/detail/SummaryStrip.vue'
+import { agreementRequired } from '@/utils/detail/agreementRequired'
 import AgreementPanel from '@/components/detail/accounts/AgreementPanel.vue'
 import SendDetailsFormAction from '@/components/detail/accounts/SendDetailsFormAction.vue'
 import JournalQuickEntryAction from '@/components/detail/accounts/JournalQuickEntryAction.vue'
@@ -105,214 +107,89 @@ const ledgerAction = (queryExtra = {}) => ({
   show: (d) => notNew(d) && d.docstatus.value > 0,
 })
 
-// ─── Accounts Master ──────────────────────────────────────────────────
+// ─── Taxes and Charges (shared across Sales Invoice, Purchase Invoice, ───
+// ─── Sales Order, Purchase Order) ─────────────────────────────────────
+//
+// Ported from the old desk script's `frappe.ui.form.on("Taxes and
+// Charges", {...})` handlers (charge_type / rate / tax_amount / row_id /
+// taxes_add / taxes_remove, all funneling into validate_taxes_and_charges).
+// Kept as ONE shared pair of functions, not a per-doctype factory like
+// items — unlike items (different `type` and account field per Sales/
+// Purchase), nothing about this validation differs by doctype; it was a
+// single doctype-level script in Desk, and stays a single function here.
+//
+// This is wired to `grid()`, not `table()` — see the taxes sections below
+// for why (GridTableField's readOnlyColumns is the only place this
+// per-row-conditional editability can live; ChildTableField's dialog has
+// no equivalent). Column set is a best guess at Taxes and Charges' own
+// fields (charge_type, account_head, rate, tax_amount, total) — confirm
+// against the actual doctype before shipping and add/remove columns as
+// needed; description or included_in_print_rate may belong here too.
+const TAXES_GRID_COLUMNS = ['charge_type', 'account_head', 'rate', 'tax_amount', 'total']
 
-export const companyConfig = {
-  doctype: 'Company',
-  timeline: 'full',
-  // The abbreviation and chart-of-accounts choice are fixed at creation
-  // (company.js locks them once the record exists).
-  readOnlyFields: (d) => (d.isNew.value ? [] : ['abbr', 'create_chart_of_accounts_based_on', 'chart_of_accounts', 'existing_company']),
-  actions: [
-    {
-      component: LinkAction,
-      props: { label: 'Chart of Accounts', icon: 'list-tree', to: '/Account/view/tree', query: { company: '$name' } },
-      show: notNew,
-    },
-  ],
-  tabs: [
-    {
-      key: 'details',
-      label: 'Details',
-      sections: [
-        fields(['company_name', 'abbr', 'default_currency', 'country', 'parent_company', 'is_group', 'date_of_establishment'], 'Company'),
-        fields(['company_logo', 'date_of_commencement', 'date_of_incorporation', 'phone_no', 'email'], 'Contact'),
-        fields(['create_chart_of_accounts_based_on', 'existing_company', 'chart_of_accounts'], 'Chart of Accounts'),
-      ],
-    },
-    {
-      key: 'accounts',
-      label: 'Default Accounts',
-      sections: [
-        fields(
-          [
-            'default_bank_account', 'default_cash_account', 'default_receivable_account', 'default_payable_account',
-            'default_income_account', 'default_expense_account', 'default_discount_account', 'write_off_account',
-            'round_off_account', 'allow_account_creation_against_child_company',
-          ],
-          'Default Accounts',
-        ),
-      ],
-    },
-    { key: 'contacts', label: 'Address & Contact', show: notNew, sections: [{ type: 'component', component: AddressContactPanel }] },
-  ],
+function taxesReadOnlyColumns(col, row) {
+  if (col.fieldname === 'rate') return row.charge_type === 'Actual'
+  if (col.fieldname === 'tax_amount') return row.charge_type !== 'Actual'
+  return false
 }
 
-export const fiscalYearConfig = {
-  doctype: 'Fiscal Year',
-  timeline: 'full',
-  // A disabled Fiscal Year is permanently locked (fiscal_year.js's
-  // _enforce_disabled_state) — judged by the *saved* value, so ticking the
-  // box mid-edit doesn't lock the form before it's been saved.
-  locked: (d) => notNew(d) && Boolean(d.meta.resource.data?.values?.disabled),
-  // Ticking "disabled" is irreversible, so it asks first (fiscal_year.js's
-  // `disabled` handler); a saved-disabled year can't be re-enabled at all.
-  fieldGuards: [
-    {
-      field: 'disabled',
-      check: (value, saved) => {
-        if (!value && Number(saved)) return { block: 'A disabled Fiscal Year is permanently locked and cannot be re-enabled.' }
-        if (value) {
-          return {
-            confirm: {
-              title: 'Disable this Fiscal Year?',
-              message:
-                'This permanently locks the Fiscal Year: no new transactions can be posted against it and the record becomes fully read-only. This action cannot be undone.',
-              confirmLabel: 'Disable Fiscal Year',
-            },
-          }
-        }
-        return null
-      },
-    },
-  ],
-  tabs: [
-    {
-      key: 'details',
-      label: 'Details',
-      sections: [
-        fields(['year', 'year_start_date', 'year_end_date', 'is_short_year', 'disabled'], 'Fiscal Year'),
-        // Only companies not already in another active year (get_available_companies).
-        table('included_companies', {
-          linkQueries: ({ name }) => ({
-            company: {
-              query: 'verp_staffing.accounts.doctype.fiscal_year.fiscal_year.get_available_companies',
-              filters: { current_fiscal_year: name || '' },
-            },
-          }),
-        }),
-      ],
-    },
-  ],
-}
+// GridTableField calls onFieldChange(fieldname, value, row, rowIndex);
+// ConfigDetailPage's onFieldChangeFor forwards rowIndex as `idx` on the
+// context object (see that file's onFieldChangeFor) since only grid
+// sections have a stable row position — a table() dialog edits one row in
+// isolation with no equivalent notion of "which row is this."
+//
+// GridTableField has no per-row error banner the way ChildTableField's
+// dialog does (no `validateRow`/inline message slot), so where the desk
+// script did `frappe.throw(msg)` — which both showed a message AND
+// aborted the change — this can only do the second half via a returned
+// patch, and surfaces the message as a toast (notify.error, the same
+// utility fieldGuards already uses in ConfigDetailPage) as the closest
+// equivalent.
+function taxesFieldChange(fieldname, value, draft, { idx }) {
+  if (fieldname !== 'charge_type' && fieldname !== 'row_id') return null
 
-export const accountConfig = {
-  doctype: 'Account',
-  timeline: 'full',
-  // A root account (no parent) is read-only; company / is_group can't change
-  // once created (account.js: toggle_enable(..., is_new())).
-  locked: (d) => notNew(d) && !d.values.parent_account,
-  readOnlyFields: (d) => (d.isNew.value ? [] : ['is_group', 'company']),
-  actions: [
-    { component: LinkAction, props: { label: 'Chart of Accounts', icon: 'list-tree', to: '/Account/view/tree', query: { company: '$values.company' } }, show: notNew },
-    {
-      component: DocAction,
-      props: {
-        label: 'Convert to Non-Group',
-        icon: 'file-text',
-        method: 'run_doc_method',
-        args: { dt: '$doctype', dn: '$name', method: 'convert_group_to_ledger' },
-        confirm: 'Convert this group account to a ledger (non-group) account?',
-        success: 'Converted to a ledger account.',
-      },
-      show: (d) => notNew(d) && d.values.parent_account && Number(d.values.is_group) === 1,
-    },
-    {
-      component: LinkAction,
-      props: { label: 'General Ledger', icon: 'book-open', to: '/report/General%20Ledger', query: { account: '$name', company: '$values.company' } },
-      show: (d) => notNew(d) && Number(d.values.is_group) === 0,
-    },
-  ],
-  tabs: [
-    {
-      key: 'details',
-      label: 'Details',
-      sections: [
-        {
-          type: 'component',
-          component: NoticeBanner,
-          props: { message: 'This is a root account and cannot be edited.' },
-          show: (d) => notNew(d) && !d.values.parent_account,
-        },
-        fields(['account_name', 'account_number', 'company', 'parent_account', 'is_group', 'disabled'], 'Account'),
-        fields(['root_type', 'report_type', 'account_type', 'account_currency'], 'Classification'),
-        { ...fields(['bank', 'bank_account_type', 'ifsc_code'], 'Bank Details'), show: (d) => d.values.account_type === 'Bank' },
-      ],
-    },
-  ],
-}
+  const row = { ...draft, [fieldname]: value }
+  const patch = {}
 
-export const bankConfig = {
-  doctype: 'Bank',
-  timeline: 'full',
-  tabs: [
-    { key: 'details', label: 'Details', sections: [fields(['bank_name', 'swift_number'], 'Bank Details')] },
-    { key: 'contacts', label: 'Address & Contact', show: notNew, sections: [{ type: 'component', component: AddressContactPanel }] },
-  ],
-}
+  if (fieldname === 'charge_type') {
+    // charge_type cleared while row_id/rate/tax_amount were already set —
+    // desk reset all three ("Please select Charge Type first").
+    if (!value && (row.row_id || row.rate || row.tax_amount)) {
+      notify.error('Please select Charge Type first')
+      return { row_id: '', rate: 0, tax_amount: 0 }
+    }
+    // Actual: rate isn't used at all — desk zeroed it; which of rate/
+    // tax_amount is editable is handled separately by taxesReadOnlyColumns.
+    if (value === 'Actual') patch.rate = 0
+    // Only "On Previous Row Amount/Total" may reference another row.
+    if (['Actual', 'On Net Total', 'On Paid Amount'].includes(value) && row.row_id) {
+      notify.error("Can refer row only if charge type is 'On Previous Row Amount' or 'On Previous Row Total'")
+      patch.row_id = ''
+    }
+    if (['On Previous Row Amount', 'On Previous Row Total'].includes(value)) {
+      // idx is 0-based; desk's tax.idx is 1-based, so idx === 0 is desk's
+      // tax.idx === 1 (the first row — nothing to reference).
+      if (idx === 0) {
+        notify.error("Cannot select 'On Previous Row' charge type for the first row")
+        return { charge_type: '' }
+      }
+      // Default row_id to the previous row — desk's `tax.idx - 1`, which
+      // in 0-based terms is just this row's own idx.
+      if (!row.row_id) patch.row_id = idx
+    }
+  }
 
-export const bankAccountConfig = {
-  doctype: 'Bank Account',
-  timeline: 'full',
-  tabs: [
-    {
-      key: 'details',
-      label: 'Details',
-      sections: [
-        fields(['account_name', 'bank', 'account', 'account_type', 'company', 'is_company_account', 'disabled'], 'Bank Account'),
-        fields(['party_type', 'party'], 'Party'),
-        fields(['bank_account_no', 'iban', 'ifsc_code'], 'Account Details'),
-      ],
-    },
-    { key: 'contacts', label: 'Address & Contact', show: notNew, sections: [{ type: 'component', component: AddressContactPanel }] },
-  ],
-}
+  if (fieldname === 'row_id' && ['On Previous Row Amount', 'On Previous Row Total'].includes(row.charge_type)) {
+    // row_id must reference an earlier row — desk's `row_id >= idx` (1-based)
+    // is `row_id >= idx + 1` here (0-based).
+    if (row.row_id !== '' && Number(row.row_id) >= idx + 1) {
+      notify.error('Row ID must be less than the current row number')
+      patch.row_id = ''
+    }
+  }
 
-// ─── Accounting ───────────────────────────────────────────────────────
-
-export const journalEntryConfig = {
-  doctype: 'Journal Entry',
-  timeline: 'full',
-  actions: [
-    { component: JournalQuickEntryAction },
-    ledgerAction(),
-    {
-      component: DocAction,
-      props: {
-        label: 'Reverse Journal Entry',
-        icon: 'rotate-ccw',
-        method: 'verp_staffing.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry',
-        args: { source_name: '$name' },
-        create: 'Journal Entry',
-        success: 'Reversal drafted.',
-      },
-      show: (d) => notNew(d) && submitted(d),
-    },
-  ],
-  tabs: [
-    {
-      key: 'details',
-      label: 'Details',
-      sections: [
-        // Live figures — recomputed from the rows as they're typed, so an
-        // unbalanced entry is obvious before the server refuses it.
-        strip([
-          { label: 'Total Debit', value: (d) => sum(d.values.accounts, 'debit') || sum(d.values.accounts, 'debit_in_account_currency') },
-          { label: 'Total Credit', value: (d) => sum(d.values.accounts, 'credit') || sum(d.values.accounts, 'credit_in_account_currency') },
-          {
-            label: 'Difference',
-            value: (d) => Math.abs((sum(d.values.accounts, 'debit') || sum(d.values.accounts, 'debit_in_account_currency')) - (sum(d.values.accounts, 'credit') || sum(d.values.accounts, 'credit_in_account_currency'))),
-            tone: (v) => (num(v) === 0 ? 'text-green-600' : 'text-red-600'),
-          },
-        ]),
-        fields(['voucher_type', 'naming_series', 'company', 'posting_date', 'finance_book', 'multi_currency', 'from_template', 'reversal_of'], 'Journal Entry'),
-        table('accounts'),
-        fields(['cheque_no', 'cheque_date', 'user_remark'], 'Notes'),
-        fields(['clearance_date', 'bill_no', 'bill_date', 'due_date', 'is_opening', 'mode_of_payment'], 'More Information'),
-        { type: 'component', component: OutstandingInvoicesPanel, show: (d) => d.docstatus.value === 0 },
-      ],
-    },
-  ],
+  return Object.keys(patch).length ? patch : null
 }
 
 function paidAccountFilters(bankCashPaymentTypes) {
@@ -430,6 +307,12 @@ export const paymentEntryConfig = {
         ),
         table('references'),
         table('deductions'),
+        // NOTE: not converted to grid() — Payment Entry's taxes table was
+        // out of scope for this pass (only Sales Invoice / Purchase
+        // Invoice / Sales Order / Purchase Order were asked for). It's the
+        // same shared child doctype and would benefit from the same
+        // treatment (taxesReadOnlyColumns / taxesFieldChange) — flagging
+        // for a follow-up rather than changing it here.
         {
           ...table('taxes', { linkQueries: taxAccountLinkQueries }),
           show: (d) => ['Supplier', 'Customer'].includes(d.values.party_type),
@@ -491,11 +374,29 @@ export const salesInvoiceConfig = {
         fields(['naming_series', 'customer', 'company', 'posting_date', 'due_date', 'sales_order', 'update_outstanding_for_self'], 'Invoice'),
         fields(['currency', 'conversion_rate', 'tax_category'], 'Currency'),
         table('items', { hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange }),
-        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        grid('taxes', TAXES_GRID_COLUMNS, {
+          readOnlyColumns: taxesReadOnlyColumns,
+          onFieldChange: taxesFieldChange,
+          linkQueries: taxAccountLinkQueries,
+        }),
         fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
           linkQueries: discountAccountLinkQueries,
         }),
         fields(['debit_to', 'cash_bank_account', 'is_paid', 'paid_amount'], 'Accounting'),
+        // depends_on for the currency-mismatch-only base_* fields (see
+        // handle_currency_ui/toggle_base_fields in the old desk script)
+        // belongs on the DocType field itself, not here — DocDetailView
+        // already runs every field through dependsOnPasses before this
+        // fieldnames list is applied, so setting
+        // depends_on: "eval:doc.currency && doc.company_currency &&
+        // doc.currency != doc.company_currency" on base_total,
+        // base_net_total, base_grand_total (and base_rounded_total /
+        // base_discount_amount / base_total_taxes_and_charges /
+        // base_rounding_adjustment / base_in_words if you want full parity
+        // with desk — they're not all listed below yet) is sufficient with
+        // no frontend change. Add the missing base_* fieldnames to this
+        // list once that's done, or they'll stay hidden regardless of
+        // depends_on.
         fields(['total_qty', 'total', 'base_total', 'net_total', 'base_net_total', 'grand_total', 'base_grand_total', 'rounding_adjustment', 'rounded_total', 'in_words'], 'Totals'),
       ],
     },
@@ -521,11 +422,16 @@ export const purchaseInvoiceConfig = {
         fields(['naming_series', 'supplier', 'company', 'posting_date', 'due_date', 'bill_no', 'bill_date', 'purchase_order', 'is_paid', 'update_outstanding_for_self'], 'Invoice'),
         fields(['currency', 'conversion_rate', 'tax_category'], 'Currency'),
         table('items', { hiddenColumns: ['expense_account'], onFieldChange: purchaseItemsFieldChange }),
-        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        grid('taxes', TAXES_GRID_COLUMNS, {
+          readOnlyColumns: taxesReadOnlyColumns,
+          onFieldChange: taxesFieldChange,
+          linkQueries: taxAccountLinkQueries,
+        }),
         fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
           linkQueries: discountAccountLinkQueries,
         }),
         fields(['credit_to', 'cashbank_account', 'mode_of_payment', 'paid_amount', 'is_opening'], 'Accounting'),
+        // Same depends_on note as salesInvoiceConfig above applies here.
         fields(['total_qty', 'total', 'base_total', 'net_total', 'base_net_total', 'grand_total', 'base_grand_total', 'rounding_adjustment', 'rounded_total', 'in_words', 'total_advance'], 'Totals'),
       ],
     },
@@ -536,6 +442,7 @@ export const salesOrderConfig = {
   doctype: 'Sales Order',
   timeline: 'full',
   autoCalculate: true,
+  allowOnSubmitEdit: true,
   actions: [{ component: SendDetailsFormAction, show: notNew }],
   // Sales Order's own `status` (Open/Closed, server-computed) only ever
   // matters once it reads "Closed" — otherwise the ordinary Draft/
@@ -546,12 +453,16 @@ export const salesOrderConfig = {
       key: 'details',
       label: 'Details',
       sections: [
-        fields(['customer', 'posting_date', 'currency', 'conversion_rate'], 'Order'),
+        fields(['customer', 'posting_date', 'conversion_rate'], 'Order'),
         grid('items', ['item', 'qty', 'rate', 'amount'], {
           readOnlyColumns: ['amount'],
           onFieldChange: salesItemsFieldChange,
         }),
-        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        grid('taxes', TAXES_GRID_COLUMNS, {
+          readOnlyColumns: taxesReadOnlyColumns,
+          onFieldChange: taxesFieldChange,
+          linkQueries: taxAccountLinkQueries,
+        }),
         fields(['additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
           linkQueries: discountAccountLinkQueries,
         }),
@@ -567,7 +478,7 @@ export const salesOrderConfig = {
         { type: 'component', component: LinkedInvoicesPanel },
       ],
     },
-    { key: 'agreements', label: 'Agreements', show: notNew, sections: [{ type: 'component', component: AgreementPanel }] },
+    { key: 'agreements', label: 'Agreements', show: (d) => notNew(d) && agreementRequired(d), sections: [{ type: 'component', component: AgreementPanel }] },
   ],
 }
 
@@ -588,7 +499,11 @@ export const purchaseOrderConfig = {
         ]),
         fields(['naming_series', 'supplier', 'company', 'posting_date', 'schedule_date', 'currency', 'conversion_rate'], 'Order'),
         table('items', { hiddenColumns: ['expense_account'], onFieldChange: purchaseItemsFieldChange }),
-        table('taxes', { linkQueries: taxAccountLinkQueries }),
+        grid('taxes', TAXES_GRID_COLUMNS, {
+          readOnlyColumns: taxesReadOnlyColumns,
+          onFieldChange: taxesFieldChange,
+          linkQueries: taxAccountLinkQueries,
+        }),
         fields(['tax_category', 'additional_discount_percentage', 'discount_amount', 'additional_discount_account', 'disable_rounded_total'], 'Discount & Rounding', {
           linkQueries: discountAccountLinkQueries,
         }),

@@ -531,10 +531,10 @@ def get_requirements_from_config(doc, config):
 def send_details_form_notification(recipient, sales_order, customer):
 
     try:
-        # Generate form URL
-        form_url = generate_form_url(
-            recipient, sales_order, customer, agreement=None, p=None, ia=False
-        )
+        # The customer now fills details from their portal (signed in, no
+        # token) — the link goes to that page, and sending it reopens the form.
+        form_url = f"{frappe.utils.get_url()}/verp/portal/candidate-details"
+        frappe.db.set_value("Customer", customer, "lock_form", 0, update_modified=False)
         # Try Email Template
         template = frappe.db.get_value(
             "Email Template",

@@ -68,11 +68,25 @@ function isNetworkFailure(error) {
 // Returns { type, title, message, messages, statusCode, raw }.
 // `type` is one of the keys in TITLES above.
 export function normalizeError(error) {
+  // frappe-ui's `call` does JSON.parse on the error body and then reads
+  // `.exc_type`; a crashed server returns a non-JSON body, so it throws this
+  // TypeError instead of the real error.
+  if (error instanceof TypeError && /exc_type/.test(error.message || '')) {
+    return {
+      type: 'server',
+      title: 'Server error',
+      message: 'The server failed while handling this request and returned no details. Check the server logs.',
+      messages: [],
+      statusCode: null,
+      raw: error,
+    }
+  }
+
   if (isNetworkFailure(error)) {
     return {
       type: 'network',
       title: TITLES.network,
-      message: 'Could not reach the server. Check your connection and try again.',
+      message: 'The server did not respond. Check your connection, or the server logs if it persists, and try again.',
       messages: [],
       statusCode: null,
       raw: error,

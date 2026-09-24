@@ -57,6 +57,8 @@ const PORTAL_ROUTES = [
   { path: '/portal/technical', name: 'PortalTechnical', component: () => import('@/pages/portal/PortalTechnicalPage.vue'), meta: { portal: true, title: 'Technical' } },
   { path: '/portal/accounts', name: 'PortalAccounts', component: () => import('@/pages/portal/PortalAccountsPage.vue'), meta: { portal: true, title: 'Accounts' } },
   { path: '/portal/documents', name: 'PortalDocuments', component: () => import('@/pages/portal/PortalDocumentsPage.vue'), meta: { portal: true, title: 'Documents' } },
+  { path: '/portal/agreement', name: 'PortalAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, title: 'Sign Agreement' } },
+  { path: '/portal/candidate-details', name: 'PortalCandidateDetails', component: () => import('@/pages/portal/PortalCandidateDetailsPage.vue'), meta: { portal: true, title: 'Candidate Details' } },
   { path: '/portal/messages', name: 'PortalMessages', component: () => import('@/pages/portal/PortalMessagesPage.vue'), meta: { portal: true, title: 'Messages' } },
 ]
 

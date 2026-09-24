@@ -21,6 +21,7 @@
     </Transition>
 
     <PendingFeedbackGate />
+    <CandidateFormGate />
   </div>
 </template>
 
@@ -34,6 +35,7 @@ import SidebarHeader from '@/components/layout/SidebarHeader.vue'
 import PortalNavbar from '@/components/portal/PortalNavbar.vue'
 import PortalSidebar from '@/components/portal/PortalSidebar.vue'
 import PendingFeedbackGate from '@/components/portal/PendingFeedbackGate.vue'
+import CandidateFormGate from '@/components/portal/CandidateFormGate.vue'
 import { useSidebar } from '@/composables/layout/useSidebar'
 import { usePortal } from '@/composables/portal/usePortal'
 

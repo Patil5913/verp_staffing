@@ -153,7 +153,11 @@ export function useDocDetail(doctype, name) {
   const triedSave = ref(false)
 
   function firstInvalidField() {
-    return fields.value.find((f) => !f.read_only && validateFieldValue(f, values[f.fieldname]))
+    return fields.value.find((f) => {
+      // Server-derived (fetch_from) fields are filled on save when empty.
+      if (f.read_only || (f.fetch_from && !values[f.fieldname])) return false
+      return validateFieldValue(f, values[f.fieldname])
+    })
   }
 
   // Runs the same field-level validation FieldControl shows inline, so a
@@ -161,7 +165,15 @@ export function useDocDetail(doctype, name) {
   // because it doesn't render the fields itself.
   async function submit(changedValues) {
     triedSave.value = true
-    if (!changedValues && firstInvalidField()) return false
+    if (!changedValues) {
+      // Say which field blocked the save — it may be on another tab or a
+      // grid row, where the inline error isn't visible and Save looked dead.
+      const invalid = firstInvalidField()
+      if (invalid) {
+        notify.error(validateFieldValue(invalid, values[invalid.fieldname]))
+        return false
+      }
+    }
 
     const result = await save.resource.submit({
       doctype: doctype.value,

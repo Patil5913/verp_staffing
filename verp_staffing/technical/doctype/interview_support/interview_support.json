@@ -16,7 +16,6 @@
   "proof_of_work",
   "proof_of_work_html",
   "candidate_feedback",
-  "customer_feedback",
   "section_break_yeoz",
   "lead_details",
   "notes_tab",
@@ -101,14 +100,6 @@
    "fieldname": "candidate_feedback",
    "fieldtype": "Small Text",
    "label": "Candidate Feedback",
-   "read_only": 1
-  },
-  {
-   "fieldname": "customer_feedback",
-   "fieldtype": "Table",
-   "label": "Customer Feedback",
-   "no_copy": 1,
-   "options": "Customer Feedback",
    "read_only": 1
   },
   {

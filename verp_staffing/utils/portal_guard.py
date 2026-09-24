@@ -23,9 +23,20 @@ ALLOWED_DOCTYPES = {"Chat Room", "Chat Message", "File"}
 # whitelisted methods a portal user may call. "login" is here because Frappe authenticates the
 # user while it initialises the request, i.e. before this guard runs, so a customer's own sign-in
 # already looks like a portal user calling it; without this their login screen reports a failure.
-ALLOWED_METHODS = {"login", "upload_file", "logout", "ping", "frappe.sessions.clear"}
+ALLOWED_METHODS = {
+    "login",
+    "upload_file",
+    "logout",
+    "ping",
+    "frappe.sessions.clear",
+    # agreement signing on the portal (signature image upload + audit fingerprint)
+    "verp_staffing.crm.api.upload.upload_file",
+    "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_ip_and_device",
+}
 ALLOWED_PREFIXES = (
     "verp_staffing.www.customer.",
+    "verp_staffing.www.candidate_details.",
+    "verp_staffing.www.agreement_sign.",
     "verp_staffing.crm.api.customer_portal.",
     "vruglechat.api.",
     "frappe.realtime.",

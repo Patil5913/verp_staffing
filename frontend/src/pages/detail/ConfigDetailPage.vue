@@ -320,7 +320,13 @@ const statusText = computed(() => {
   return detail.values[field] || detail.hidden[field] || ''
 })
 
-const showSave = computed(() => !locked.value || detail.isNew.value)
+// A submitted doc is normally frozen, but a config can opt in to keeping Save
+// available for the fields the doctype marks allow_on_submit (Sales Order's
+// payment_terms) — the server only applies those on a submitted doc.
+const canEditAfterSubmit = computed(
+  () => Boolean(props.config.allowOnSubmitEdit) && detail.docstatus.value === 1 && !!detail.meta.resource.data?.perms?.write,
+)
+const showSave = computed(() => !locked.value || detail.isNew.value || canEditAfterSubmit.value)
 
 const TIMELINE_TABS = {
   full: [

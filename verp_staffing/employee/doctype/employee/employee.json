@@ -116,7 +116,6 @@
  "name": "Employee",
  "naming_rule": "By script",
  "owner": "Administrator",
- "quick_entry": 1,
  "permissions": [
   {
    "read": 1,

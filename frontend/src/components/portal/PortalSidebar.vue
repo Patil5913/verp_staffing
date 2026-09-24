@@ -34,7 +34,7 @@ const { sidebarOpen, isMobile, mobileNavOpen } = useSidebar()
 const { data, technicalServices } = usePortal()
 
 // Icon classes are written out in full so Tailwind's icon plugin generates them: lucide-layout-dashboard
-// lucide-briefcase lucide-calendar-days lucide-wrench lucide-receipt lucide-file-text lucide-message-square
+// lucide-user-round lucide-briefcase lucide-calendar-days lucide-wrench lucide-receipt lucide-file-text lucide-message-square
 const items = computed(() => [
   { route: '/verp/portal/dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
   { route: '/verp/portal/services', label: 'Services', icon: 'briefcase' },
@@ -43,6 +43,7 @@ const items = computed(() => [
   ...(technicalServices.value.length ? [{ route: '/verp/portal/technical', label: 'Technical', icon: 'wrench' }] : []),
   { route: '/verp/portal/accounts', label: 'Accounts', icon: 'receipt' },
   { route: '/verp/portal/documents', label: 'Documents', icon: 'file-text' },
+  { route: '/verp/portal/candidate-details', label: 'Candidate Details', icon: 'user-round' },
   ...(data.value?.chat_enabled ? [{ route: '/verp/portal/messages', label: 'Messages', icon: 'message-square' }] : []),
 ])
 </script>

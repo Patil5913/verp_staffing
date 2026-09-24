@@ -192,7 +192,9 @@ def _send_access_email(customer, customer_name, email, password, subject=None, m
             "<p>Email: <b>{{ email }}</b><br>Password: <b>{{ password }}</b></p>",
             context,
         )
-    frappe.sendmail(
+    from verp_staffing.crm.api.helpers import send_email
+
+    send_email(
         recipients=[email],
         subject=subject,
         message=body,

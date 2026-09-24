@@ -91,7 +91,7 @@
                   v-if="!disabled && !isRowReadOnly(row) && !isRowActive(idx)"
                   variant="ghost"
                   size="icon"
-                  icon="pencil-1"
+                  icon="edit-2"
                   title="Edit row"
                   @click.stop="activate(idx)"
                 />
@@ -195,7 +195,12 @@ const props = defineProps({
   locked: { type: Boolean, default: false },
 })
 
-const disabled = computed(() => props.locked || !props.detail.canWrite.value)
+// payment_terms is allow_on_submit: still editable after the Sales Order is
+// submitted (the generic `locked`/canWrite freeze everything on docstatus 1).
+const editableAfterSubmit = computed(
+  () => props.detail.docstatus.value === 1 && !!props.detail.meta.resource.data?.perms?.write,
+)
+const disabled = computed(() => !(editableAfterSubmit.value || (!props.locked && props.detail.canWrite.value)))
 const rows = computed(() => props.detail.values.payment_terms || [])
 const soCurrency = computed(() => props.detail.values.currency || '')
 const soTotal = computed(() =>

@@ -40,6 +40,9 @@ def _serialize_field(df):
         "fieldtype": df.fieldtype,
         "options": df.options,
         "reqd": bool(df.reqd),
+        # Frappe fills a fetch_from field (e.g. Sales Order.currency <-
+        # company.default_currency) on save, so the form must not demand it.
+        "fetch_from": df.fetch_from,
         "read_only": bool(df.read_only),
         "depends_on": df.depends_on,
         "description": df.description,
@@ -293,9 +296,16 @@ def save_doc_fields(doctype, name=None, values=None):
                 _("You do not have permission to edit {0} {1}").format(doctype, name),
                 frappe.PermissionError,
             )
+        submitted = doc.docstatus == 1
         for fieldname, value in values.items():
+            # A submitted doc only accepts allow_on_submit fields; the rest
+            # arrive unchanged from the form and must not be re-applied (a
+            # float-format difference alone would trip UpdateAfterSubmit).
+            if submitted and not (doc.meta.get_field(fieldname) or {}).get("allow_on_submit"):
+                continue
             doc.set(fieldname, value)
-        _fill_transaction_defaults(doc)
+        if not submitted:
+            _fill_transaction_defaults(doc)
         doc.save()
     else:
         if not frappe.has_permission(doctype, "create"):

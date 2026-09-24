@@ -705,6 +705,21 @@ def _populate_department_history(history, stage_data, customer):
         )
         feedback_map = _group_by_parent(rows)
 
+    # Interview Support takes exactly one feedback, stored on the doc itself
+    # (candidate_feedback) rather than in the Customer Feedback child table
+    # the other feedback-tracked doctypes use — surfaced here in the same
+    # row shape so the count/due logic below treats it uniformly.
+    for d in docs_by_doctype.get("Interview Support", []):
+        text = frappe.db.get_value("Interview Support", d.name, "candidate_feedback")
+        if text:
+            feedback_map[d.name] = [
+                {
+                    "parent": d.name,
+                    "feedback": text,
+                    "date": frappe.db.get_value("Interview Support", d.name, "modified"),
+                }
+            ]
+
     session_map = {}
     if docs_by_doctype.get("RUC"):
         ruc_names = [d.name for d in docs_by_doctype["RUC"]]
@@ -1059,7 +1074,23 @@ def save_customer_feedback(doctype, docname, feedback, session_row_name=None):
         frappe.db.commit()
         return {"status": "success", "message": "Feedback submitted successfully"}
 
-    # JDC / Interview Support / Training — child table append, count-gated
+    if doctype == "Interview Support":
+        # One feedback only, stored directly on the doc (no child table).
+        status, existing = frappe.db.get_value(
+            "Interview Support", docname, ["status", "candidate_feedback"]
+        )
+        if existing:
+            frappe.throw(_("Feedback already submitted for this item"))
+        if status != COMPLETED_STATUS:
+            frappe.throw(_("Feedback can only be submitted once this is marked Completed"))
+
+        frappe.db.set_value(
+            "Interview Support", docname, "candidate_feedback", feedback, update_modified=False
+        )
+        frappe.db.commit()
+        return {"status": "success", "message": "Feedback submitted successfully"}
+
+    # JDC / Training — child table append, count-gated
     forward_count, feedback_count, status = _get_pending_feedback_info(
         doctype, docname, customer
     )

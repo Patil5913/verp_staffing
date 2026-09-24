@@ -10,6 +10,7 @@
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
+        <AppButton v-if="!detail.isNew.value && Number(detail.hidden?.lock_form)" variant="outline" icon="lock-open" @click="showUnlock = true">Unlock Form</AppButton>
         <AppButton
           v-if="!detail.isNew.value && detail.values.chat_access !== 'Active'"
           variant="outline"
@@ -94,6 +95,7 @@
     </template>
   </DetailPageLayout>
 
+  <UnlockFormDialog v-if="!detail.isNew.value" v-model="showUnlock" :customer="name" />
   <PortalAccessDialog v-if="!detail.isNew.value" v-model="showPortalAccess" :customer="name" @sent="detail.refresh()" />
   <Dialog
     v-model="showRevoke"
@@ -146,6 +148,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActions.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
+import UnlockFormDialog from '@/components/detail/customer/UnlockFormDialog.vue'
 import PortalAccessDialog from '@/components/detail/customer/PortalAccessDialog.vue'
 import CustomerHistoryPanel from '@/components/detail/customer/CustomerHistoryPanel.vue'
 import CustomerSalesOrdersPanel from '@/components/detail/customer/CustomerSalesOrdersPanel.vue'
@@ -242,6 +245,7 @@ watch(
 )
 
 const showPortalAccess = ref(false)
+const showUnlock = ref(false)
 
 const showRevoke = ref(false)
 const revoking = ref(false)
