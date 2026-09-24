@@ -28,9 +28,20 @@
   "notes_html",
   "updates_html",
   "activities_tab",
-  "open_activities_html"
+  "open_activities_html",
+  "lock_form"
  ],
  "fields": [
+  {
+   "default": "0",
+   "fieldname": "lock_form",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Lock Form",
+   "no_copy": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
   {
    "fieldname": "note_tab",
    "fieldtype": "Tab Break",
