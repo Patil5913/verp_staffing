@@ -40,6 +40,7 @@
           v-if="sessionTable"
           :table="sessionTable"
           :rows="detail.values.session_details || []"
+          :empty-read-only-texts="{ candidate_feedback: 'No Feedback Yet' }"
           :disabled="!detail.canWrite.value || locked"
           @update:rows="(rows) => (detail.values.session_details = rows)"
         />

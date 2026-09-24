@@ -185,6 +185,8 @@ body {
    reason .dialog-overlay is: the portal target means no component's own
    <style> can reach it, and it must win regardless of which dialog (if any)
    it was opened inside. */
+/* !important: reka-ui writes an inline z-index on this wrapper (copied from the
+   content's computed value — "auto"), which beats any normal stylesheet rule. */
 [data-reka-popper-content-wrapper] {
-  z-index: 110;
+  z-index: 110 !important;
 }

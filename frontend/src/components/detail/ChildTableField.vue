@@ -52,7 +52,14 @@
             :key="col.fieldname"
             :class="isWide(col) ? 'w-full' : 'w-[calc(50%-0.375rem)]'"
           >
+            <!-- A read-only field nobody has filled in (e.g. the candidate's own feedback)
+                 says so, instead of an empty disabled box. -->
+            <div v-if="col.read_only && emptyReadOnlyTexts[col.fieldname] && !draft[col.fieldname]" class="flex flex-col gap-1.5">
+              <label class="text-p-sm font-medium text-app-text-muted">{{ col.label }}</label>
+              <p class="rounded-lg border border-app-border bg-app-panel-2/40 px-3 py-2 text-p-sm text-app-text-muted">{{ emptyReadOnlyTexts[col.fieldname] }}</p>
+            </div>
             <FieldControl
+              v-else
               :field="col"
               :model-value="draft[col.fieldname]"
               :link-query="resolvedLinkQueries?.[col.fieldname]"
@@ -110,6 +117,8 @@ const props = defineProps({
   // that only apply to this particular table's use of a shared child
   // doctype (e.g. Resume/Proof Of Work's "Document References" table).
   fieldOverrides: { type: Object, default: () => ({}) },
+  // { fieldname: 'text' } — shown in the row dialog in place of an empty read-only field.
+  emptyReadOnlyTexts: { type: Object, default: () => ({}) },
   // Called with (fieldname, fileMeta, draft) after an Attach/Attach Image
   // upload succeeds — fileMeta is the uploaded File doc (file_name,
   // file_url, ...). Returns a patch object merged into draft, e.g. to
