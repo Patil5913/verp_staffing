@@ -375,7 +375,7 @@ class SalesOrder(Document):
             "Agreement",
             {
                 "sales_order": self.name,
-                "status": ["!=", "Sent For Signature"],
+                "status": ["!=", "Sent"],
                 "pdf": ["in", ["", None]],
             },
         )
@@ -421,7 +421,7 @@ def send_agreement_job(sales_order):
             "Agreement",
             filters={
                 "sales_order": sales_order,
-                "status": ["!=", "Sent For Signature"],
+                "status": ["!=", "Sent"],
             },
             fields=["name"],
         )

@@ -279,7 +279,7 @@ def send_existing_agreement(agreement):
 
         doc.db_set(
             {
-                "status": "Sent For Signature",
+                "status": "Sent",
                 "sent_on": now_datetime(),
                 "last_reminder_sent": None,
             }
@@ -301,7 +301,7 @@ def send_agreement_reminders():
 
     agreements = frappe.get_all(
         "Agreement",
-        filters={"status": "Sent For Signature"},
+        filters={"status": "Sent"},
         fields=[
             "name",
             "status",
