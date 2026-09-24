@@ -82,6 +82,9 @@ def get_boot():
 			# UX-only: customers get the portal shell instead of the staff one. Everything they
 			# can reach is still enforced server-side (session-derived customer, DocPerms).
 			"is_portal_user": _is_chat_customer(),
+			# The site's time zone (System Settings, edited from ERP Configuration) — what
+			# "today" means in the calendar, whatever the browser's own zone is.
+			"site_time_zone": frappe.utils.get_system_timezone(),
 			# Fresh-site detection, same source as Desk's boot (frappe.is_setup_complete):
 			# false sends a System Manager to the setup wizard.
 			"setup_complete": bool(frappe.is_setup_complete()),

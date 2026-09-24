@@ -329,6 +329,8 @@ doc_events = {
     },
     "User": {
         "before_insert": "verp_staffing.quota.utils.quota.user_limit",
+        # sets the flag the new frontend reads to offer "Create Employee" after a User is created
+        "after_insert": "verp_staffing.overrides.user.after_insert",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
         "on_update": "verp_staffing.utils.sidebar.on_user_change",
         "validate": "verp_staffing.utils.sidebar.on_user_validate",

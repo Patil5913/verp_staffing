@@ -103,6 +103,7 @@
 </template>
 
 <script setup>
+import { siteTodayDate, siteTodayIso } from '@/utils/common/siteTime'
 import AppButton from '@/components/ui/AppButton.vue'
 // Calendar and timeline views of the Interview rounds — the desk's
 // interview_calendar.js / interview_list.js Gantt on top of the same server
@@ -130,11 +131,15 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const LIMIT = 3
 
 const mode = ref('month')
-const anchor = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const monthStartOfSiteToday = () => {
+  const t = siteTodayDate()
+  return new Date(t.getFullYear(), t.getMonth(), 1)
+}
+const anchor = ref(monthStartOfSiteToday())
 const expanded = ref('')
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const todayIso = iso(new Date())
+const todayIso = siteTodayIso()
 const monthLabel = computed(() => anchor.value.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))
 
 const monthDays = computed(() => {
@@ -213,5 +218,5 @@ const timeText = (e) => (e.allDay ? 'All day' : `${hhmm(e.from_time)} – ${hhmm
 
 const open = (e) => router.push(`/Interview/${encodeURIComponent(e.name)}`)
 const shift = (n) => (anchor.value = new Date(anchor.value.getFullYear(), anchor.value.getMonth() + n, 1))
-const goToday = () => (anchor.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const goToday = () => (anchor.value = monthStartOfSiteToday())
 </script>

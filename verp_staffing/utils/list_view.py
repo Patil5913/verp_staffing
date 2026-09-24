@@ -36,6 +36,12 @@ DISPLAYABLE_FIELDTYPES = {
     "Code",
     "JSON",
     "Read Only",
+    "Phone",
+    "Autocomplete",
+    "Color",
+    "Icon",
+    "HTML Editor",
+    "Markdown Editor",
 }
 SEARCHABLE_FIELDTYPES = {"Data", "Text", "Small Text", "Long Text", "Select", "Link", "Read Only"}
 
@@ -99,7 +105,7 @@ def _displayable_fieldnames(meta):
         df.fieldname
         for df in meta.fields
         if df.fieldtype in DISPLAYABLE_FIELDTYPES and not df.hidden
-    } | {LAST_UPDATED_FIELD["fieldname"]}
+    } | {LAST_UPDATED_FIELD["fieldname"], "name"}
 
 
 @frappe.whitelist()
@@ -139,8 +145,25 @@ def get_list_view_meta(doctype):
 
     title_field = meta.title_field or "name"
 
+    # `name` (the ID) isn't a docfield, so it's offered as a column of its own.
+    # A doctype with no title field (Role, ...) has nothing else to identify a
+    # row by, so its ID shows by default; one with a title field (Customer's
+    # name1) may leave the ID out.
+    name_field = {
+        "fieldname": "name",
+        "label": "ID",
+        "fieldtype": "Data",
+        "options": None,
+        "in_list_view": False,
+        "in_standard_filter": False,
+        "reqd": False,
+    }
+    fields = [name_field] + fields
+
     default_list_fields = [f for f in fields if f["in_list_view"]]
-    if not any(f["fieldname"] in ("name", title_field) for f in default_list_fields):
+    if not meta.title_field:
+        default_list_fields = [name_field] + default_list_fields
+    elif not any(f["fieldname"] in ("name", title_field) for f in default_list_fields):
         id_field = next((f for f in fields if f["fieldname"] == title_field), None)
         default_list_fields = ([id_field] if id_field else []) + default_list_fields
     if not default_list_fields:
