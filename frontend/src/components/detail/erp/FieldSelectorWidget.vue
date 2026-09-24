@@ -12,7 +12,7 @@
         <div class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">
           Choose a {{ selectorLabel }}
         </div>
-        <div class="flex max-h-96 flex-col gap-1.5 overflow-y-auto pr-1">
+        <div class="flex max-h-[calc(100vh-16rem)] flex-col gap-1.5 overflow-y-auto pr-1">
         <button
           v-for="item in itemsList"
           :key="item"
@@ -64,7 +64,7 @@
           <span class="shrink-0 text-p-xs text-app-text-muted">{{ getFields(currentItem).length }} selected</span>
         </div>
 
-        <div class="flex max-h-96 flex-col gap-4 overflow-y-auto">
+        <div class="flex max-h-[calc(100vh-16rem)] flex-col gap-4 overflow-y-auto">
           <div v-for="section in filteredSections" :key="section.label" class="flex flex-col gap-1.5">
             <div class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ section.label }}</div>
             <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">

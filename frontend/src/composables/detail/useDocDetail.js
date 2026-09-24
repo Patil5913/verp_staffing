@@ -2,6 +2,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
+import { confirmSampleDataLinks } from '@/utils/detail/sampleDataGuard'
 import { validateFieldValue } from '@/utils/detail/fieldFormats'
 
 // Generic single-record detail/form view on top of useResource: field +
@@ -142,12 +143,19 @@ export function useDocDetail(doctype, name) {
   const cancelDoc = () => runTransition(cancelResource, 'Cancelled.')
 
   async function submitDoc() {
-    const result = await submitResource.resource.submit({ doctype: doctype.value, name: name.value })
-    if (result) {
-      notify.success('Submitted.')
-      return { ok: true }
+    // resource.submit() rethrows after onError, so a failed submit lands here as
+    // an exception (not a falsy result) — catch it, or the error is swallowed
+    // and nothing is shown.
+    try {
+      const result = await submitResource.resource.submit({ doctype: doctype.value, name: name.value })
+      if (result) {
+        notify.success('Submitted.')
+        return { ok: true }
+      }
+      return { ok: false, error: submitResource.resource.error }
+    } catch (error) {
+      return { ok: false, error }
     }
-    return { ok: false, error: submitResource.resource.error }
   }
 
   const triedSave = ref(false)
@@ -174,6 +182,9 @@ export function useDocDetail(doctype, name) {
         return false
       }
     }
+
+    // Only the moment the link is first created (a new doc) — same rule as Desk.
+    if (isNew.value && !(await confirmSampleDataLinks(doctype.value, { ...(changedValues ?? values) }))) return false
 
     const result = await save.resource.submit({
       doctype: doctype.value,

@@ -97,11 +97,16 @@ const props = defineProps({
   // blank read-only field is sometimes exactly what a page wants shown as
   // a placeholder — this is for pages where it isn't.
   hideEmptyReadOnly: { type: Boolean, default: false },
+  // { fieldname: partial field meta } merged onto the server's — e.g.
+  // { upload_pdf_template: { accept: ['.pdf'] } } to restrict an Attach field.
+  fieldOverrides: { type: Object, default: () => ({}) },
 })
 
 const fields = computed(() => {
-  const doc = { ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }
-  let all = props.detail.fields.value.filter((f) => dependsOnPasses(f, doc))
+  const doc = { ...props.detail.hidden, ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }
+  let all = props.detail.fields.value
+    .filter((f) => dependsOnPasses(f, doc))
+    .map((f) => (props.fieldOverrides[f.fieldname] ? { ...f, ...props.fieldOverrides[f.fieldname] } : f))
   if (props.hideEmptyReadOnly) {
     all = all.filter((f) => {
       if (!f.read_only && !props.readOnlyFields.includes(f.fieldname)) return true

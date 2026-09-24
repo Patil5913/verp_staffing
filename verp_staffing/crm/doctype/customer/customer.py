@@ -387,7 +387,10 @@ def save_customer_email(customer, email):
         frappe.throw(_("Email is required."))
     frappe.utils.validate_email_address(email, throw=True)
 
-    _, lead_detail_name = get_customer_email(customer, return_ldf=True)
+    # The Customer's own lead_details link first, else the Doctype Reference lookup.
+    lead_detail_name = frappe.db.get_value("Customer", customer, "lead_details")
+    if not lead_detail_name or not frappe.db.exists("Lead Detail Form", lead_detail_name):
+        lead_detail_name = get_customer_email(customer, return_ldf=True)[1]
 
     doc = frappe.get_doc("Lead Detail Form", lead_detail_name)
     if not doc.has_permission("write"):

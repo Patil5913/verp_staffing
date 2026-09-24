@@ -19,6 +19,7 @@
         <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
       </div>
       <KanbanBoard
+        :column-colors="config.columnColors"
         v-else-if="config"
         :columns="config.columns"
         :cards="filtered"
@@ -98,9 +99,9 @@ const cards = ref([])
 const rounds = ref({})
 
 const cardsResource = useResource({
-  url: 'frappe.client.get_list',
+  url: doctype.value === 'Interview' ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list' : 'frappe.client.get_list',
   makeParams: () => ({
-    doctype: doctype.value,
+    ...(doctype.value === 'Interview' ? {} : { doctype: doctype.value }),
     fields: ['name', config.value.statusField, ...config.value.cardFields],
     filters: doctype.value === 'Interview' && selectedCustomers.value.length ? { marketing_link: ['in', selectedCustomers.value] } : undefined,
     order_by: 'modified desc',
@@ -157,6 +158,11 @@ async function moveCard(card, to, extra = {}) {
 }
 
 function onMove({ card, to }) {
+  // Interview's Today column is derived from the round's date — nothing to set.
+  if (doctype.value === 'Interview' && to === 'Today') {
+    notify.info("'Today' is worked out automatically from the round's date.")
+    return
+  }
   if (config.value.reasonStatuses?.includes(to)) {
     Object.assign(reason, { open: true, card, to, by: '', text: '' })
     return

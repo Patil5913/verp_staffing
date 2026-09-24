@@ -114,6 +114,20 @@
           <div v-html="verifyConfirmHtml" />
           <AppLinkField label="Paid From" doctype="Account" v-model="verifyDialog.paidFrom" :filters="paidFromFilters" />
           <AppLinkField label="Paid To" doctype="Account" v-model="verifyDialog.paidTo" :filters="paidToFilters" />
+
+          <div class="flex flex-col gap-2 rounded-lg border border-app-border p-3">
+            <AppInput label="Platform / Other Charges (optional)" type="number" v-model="verifyDialog.charges" placeholder="0" />
+            <p class="text-p-xs text-app-text-muted">
+              Enter a negative amount if charges were deducted from your end (e.g. -60), positive if the customer paid extra. Refer to the final received amount below.
+            </p>
+            <AppLinkField v-if="chargesAmount" label="Expense Account (required)" doctype="Account" v-model="verifyDialog.chargesAccount" :filters="chargesAccountFilters" />
+            <div v-if="chargesAmount" class="rounded-md bg-app-panel-2 p-3 text-p-sm">
+              <div class="flex justify-between"><span class="text-app-text-muted">Payment received</span><span>{{ money(paidAmount) }}</span></div>
+              <div class="flex justify-between"><span class="text-app-text-muted">Charges</span><span :class="chargesAmount < 0 ? 'text-red-600' : 'text-green-600'">{{ chargesAmount > 0 ? '+' : '' }}{{ money(chargesAmount) }}</span></div>
+              <div class="mt-1 flex justify-between border-t border-app-border pt-1 font-semibold"><span>Final received amount</span><span :class="finalAmount <= 0 ? 'text-red-600' : ''">{{ money(finalAmount) }}</span></div>
+              <p v-if="finalAmount <= 0" class="mt-1 text-p-xs text-red-600">Charges cannot be larger than the amount paid.</p>
+            </div>
+          </div>
         </div>
       </template>
       <template #actions>
@@ -161,7 +175,7 @@ import { useResource } from '@/composables/list/useResource'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
 import { paidAccountFilterFor } from '@/utils/detail/paymentAccounts'
-import { paymentEntrySubmitConfirm } from '@/configs/detail/accounts'
+import { paymentEntrySubmitConfirm, TAX_ACCOUNT_TYPES } from '@/configs/detail/accounts'
 
 const router = useRouter()
 
@@ -240,7 +254,18 @@ const actingOn = ref(null)
 // button), plus its Paid From/Paid To — filtered exactly the same way as
 // there — so the verifier can confirm or correct them without leaving this
 // queue.
-const verifyDialog = ref({ show: false, paidFrom: '', paidTo: '' })
+const verifyDialog = ref({ show: false, paidFrom: '', paidTo: '', charges: '', chargesAccount: '' })
+const chargesAmount = computed(() => Number(verifyDialog.value.charges) || 0)
+const paidAmount = computed(() => Number(verifyingRow.value?.paid_amount) || 0)
+const finalAmount = computed(() => paidAmount.value + chargesAmount.value)
+const money = (v) => `${formatFieldValue(v, { fieldtype: 'Currency' })} ${verifyingRow.value?.currency || ''}`.trim()
+// Same filter the Payment Entry's tax rows use for account_head.
+const chargesAccountFilters = computed(() => ({
+  account_type: ['in', TAX_ACCOUNT_TYPES],
+  is_group: 0,
+  disabled: 0,
+  company: verifyingRow.value?.company,
+}))
 const verifyingRow = ref(null)
 const verifyConfirmHtml = computed(() => (verifyingRow.value ? paymentEntrySubmitConfirm({ values: verifyingRow.value }) : ''))
 const paidFromFilters = computed(() =>
@@ -267,7 +292,7 @@ const paidToFilters = computed(() =>
 function openVerify(row) {
   actingOn.value = row.name
   verifyingRow.value = row
-  verifyDialog.value = { show: true, paidFrom: row.paid_from || '', paidTo: row.paid_to || '' }
+  verifyDialog.value = { show: true, paidFrom: row.paid_from || '', paidTo: row.paid_to || '', charges: '', chargesAccount: '' }
 }
 
 const verify = useResource({
@@ -279,7 +304,13 @@ const verify = useResource({
   },
 })
 function submitVerify() {
+  if (chargesAmount.value) {
+    if (!verifyDialog.value.chargesAccount) return notify.error('Select the expense account for the charges.')
+    if (finalAmount.value <= 0) return notify.error('Charges cannot be larger than the amount paid.')
+  }
   verify.resource.submit({
+    charges: chargesAmount.value || undefined,
+    charges_account: chargesAmount.value ? verifyDialog.value.chargesAccount : undefined,
     payment_entry: actingOn.value,
     paid_from: verifyDialog.value.paidFrom || undefined,
     paid_to: verifyDialog.value.paidTo || undefined,

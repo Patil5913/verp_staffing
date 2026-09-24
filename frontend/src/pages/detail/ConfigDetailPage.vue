@@ -70,11 +70,11 @@
               :field-link-queries="linkQueriesFor(section)"
             />
             <ChildTableField
-              v-else-if="section.type === 'table' && tableFor(section.fieldname)"
+              v-else-if="sectionKind(section) === 'table' && tableFor(section.fieldname)"
               :table="tableFor(section.fieldname)"
               :rows="detail.values[section.fieldname] || []"
               :disabled="locked || !detail.canWrite.value || section.readOnly === true"
-              :link-queries="linkQueriesFor(section)"
+              :link-queries="rowQueriesFor(section)"
               :hidden-columns="section.hiddenColumns"
               :field-overrides="section.fieldOverrides"
               :on-field-change="onFieldChangeFor(section)"
@@ -82,12 +82,14 @@
               @update:rows="(rows) => (detail.values[section.fieldname] = rows)"
             />
             <GridTableField
-              v-else-if="section.type === 'grid' && tableFor(section.fieldname)"
+              v-else-if="sectionKind(section) === 'grid' && tableFor(section.fieldname)"
               :table="tableFor(section.fieldname)"
               :rows="detail.values[section.fieldname] || []"
               :columns="section.columns"
+              :hidden-columns="section.hiddenColumns"
               :read-only-columns="section.readOnlyColumns"
               :disabled="locked || !detail.canWrite.value || section.readOnly === true"
+              :link-queries="rowQueriesFor(section)"
               :on-field-change="onFieldChangeFor(section)"
               @update:rows="(rows) => (detail.values[section.fieldname] = rows)"
             />
@@ -171,6 +173,7 @@
 //   tabs: [{ key, label, sections: [
 //     { type: 'fields', fieldnames: [...], readOnly?, show?(detail) },
 //     { type: 'table', fieldname, readOnly?, show?(detail) },
+//     { type: 'grid', fieldname, columns: [...], readOnlyColumns?, show?(detail) },
 //     { type: 'component', component, props?, show?(detail) },   // gets detail/doctype/name/locked
 //   ] }],
 //   timeline: 'full' | 'service' | false,   // Notes/Activity (+Updates) tabs
@@ -214,6 +217,7 @@ import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { recalcDocTotals } from '@/utils/detail/docCalculator'
+import { useInvoiceDynamics } from '@/composables/detail/useInvoiceDynamics'
 
 const props = defineProps({
   config: { type: Object, required: true },
@@ -285,10 +289,14 @@ watch(
     detail.values.conversion_rate,
   ],
   () => {
-    if (props.config.autoCalculate) recalcDocTotals(detail.values)
+    // Only a draft is being edited; a submitted doc's totals (and its outstanding
+    // amount, which Payment Entries reduce) must not be recomputed from scratch.
+    if (props.config.autoCalculate && detail.docstatus.value === 0) recalcDocTotals(detail.values)
   },
   { deep: true },
 )
+
+if (props.config.autoCalculate) useInvoiceDynamics(detail, { expenseSide: /^Purchase/.test(props.config.doctype) })
 
 const locked = computed(() => Boolean(props.config.locked?.(detail)) || detail.docstatus.value !== 0)
 const readOnlyFields = computed(() => props.config.readOnlyFields?.(detail) || [])
@@ -394,8 +402,32 @@ const linkQueriesFor = (section) =>
 // A table section's onFieldChange (row cross-field logic — see
 // ChildTableField's own prop) gets the same { detail, name } context a
 // component section does, since it often needs sibling doc fields (Sales
-// Order's Items Table needs the doc's own `company`).
+// Order's Items Table needs the doc's own `company`). GridTableField also
+// passes a 4th argument (the row's index) that ChildTableField has no
+// equivalent for (a dialog edits one row in isolation, with no stable
+// index) — that index is forwarded here as `idx` on the context object
+// rather than as a bare positional argument, so existing onFieldChange
+// signatures (fieldname, value, draft, { detail, name }) don't silently
+// break; a grid-backed section that needs it just destructures `idx` too.
+// Previously this argument was dropped entirely, which is fine for a table
+// section (idx is always undefined there) but was a real gap for any grid
+// section whose logic depends on row position (e.g. Taxes and Charges'
+// "no previous row for the first row" check).
 const onFieldChangeFor = (section) =>
-  section.onFieldChange ? (fieldname, value, draft) => section.onFieldChange(fieldname, value, draft, { detail, name: name.value }) : null
+  section.onFieldChange
+    ? (fieldname, value, draft, idx) => section.onFieldChange(fieldname, value, draft, { detail, name: name.value, idx })
+    : null
+// type 'auto': the child doctype's own "Editable Grid" flag decides between the
+// inline grid and the per-row dialog; 'grid' / 'table' force one.
+const sectionKind = (section) =>
+  section.type === 'auto' ? (tableFor(section.fieldname)?.editable_grid ? 'grid' : 'table') : section.type
+// The section's static/record-level link queries plus an optional per-row
+// `rowLinkQueries(row, rows, idx, { detail })` (e.g. Items: exclude items already
+// picked in other rows) — returned as one (row, rows, idx) function.
+const rowQueriesFor = (section) => {
+  const base = linkQueriesFor(section)
+  if (!section.rowLinkQueries) return base
+  return (row, rows, idx) => ({ ...(base || {}), ...section.rowLinkQueries(row, rows, idx, { detail }) })
+}
 const tableFor = (fieldname) => detail.tables.value.find((t) => t.fieldname === fieldname)
 </script>

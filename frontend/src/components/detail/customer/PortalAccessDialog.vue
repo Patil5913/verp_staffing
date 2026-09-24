@@ -52,6 +52,7 @@
       </div>
     </template>
   </Dialog>
+  <MissingEmailDialog v-model="showMissing" :customer="customer" @saved="open = true" />
 </template>
 
 <script setup>
@@ -61,6 +62,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { Dialog, TextEditor, call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import MissingEmailDialog from '@/components/common/MissingEmailDialog.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import { notify } from '@/utils/common/notify'
 
@@ -68,6 +70,7 @@ const open = defineModel({ type: Boolean, default: false })
 const props = defineProps({ customer: { type: String, required: true } })
 const emit = defineEmits(['sent'])
 
+const showMissing = ref(false)
 const loading = ref(false)
 const sending = ref(false)
 const draft = ref({})
@@ -92,6 +95,11 @@ watch(open, async (isOpen) => {
     draft.value = await call('verp_staffing.crm.api.customer_chat.get_portal_access_draft', { customer: props.customer })
     form.subject = draft.value.subject
     form.message = draft.value.message
+    // No email on the customer's Lead Details: collect one, then come back here.
+    if (!draft.value.to && draft.value.chat_installed && !draft.value.ended) {
+      open.value = false
+      showMissing.value = true
+    }
   } catch (e) {
     notify.error(errorText(e))
     open.value = false

@@ -94,14 +94,16 @@ def calculate_rounding(doc):
 			doc.rounded_total = doc.grand_total
 			doc.rounding_adjustment = 0
 			doc.base_rounded_total = doc.base_grand_total
-			doc.outstanding_amount = doc.rounded_total
+			if doc.docstatus == 0:  # once submitted, Payment Entries own it
+				doc.outstanding_amount = doc.rounded_total
 			return
 
 		rounded = round(flt(doc.grand_total))
 
 		doc.rounded_total = rounded
 		doc.rounding_adjustment = flt(rounded - doc.grand_total)
-		doc.outstanding_amount = rounded
+		if doc.docstatus == 0:
+			doc.outstanding_amount = rounded
 
 		# base currency
 		if doc.conversion_rate:

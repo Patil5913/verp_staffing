@@ -71,14 +71,15 @@
             />
             <div
               v-else
-              class="absolute flex cursor-move touch-none items-center overflow-hidden rounded border-2 text-p-xs font-semibold"
+              class="absolute flex cursor-move touch-none items-start overflow-hidden rounded border-2 text-p-xs font-semibold"
               :class="keyOf(row) === selectedKey ? 'ring-2 ring-offset-1' : ''"
               :style="{ ...boxStyle(row), borderColor: colorFor(row.signer_email), background: colorFor(row.signer_email) + '22', color: colorFor(row.signer_email), '--tw-ring-color': colorFor(row.signer_email) }"
               @pointerdown="startMove(row, page, $event)"
               @click.stop="selectedKey = keyOf(row)"
             >
-              <span v-if="row.field_type === 'checkbox'" class="lucide-check-square mx-auto size-4" />
-              <span v-else class="truncate px-1.5">{{ row.field_label || row.placeholder_text || labelFor(row.field_type) }}</span>
+              <span v-if="row.field_type === 'checkbox'" class="lucide-check-square mx-auto mt-0.5 size-4" />
+              <!-- Builder-only text: the placeholder (the label is for the signer, shown in the sidebar). -->
+              <span v-else class="truncate px-1.5 pt-0.5">{{ row.placeholder_text || labelFor(row.field_type) }}</span>
               <button
                 v-if="!disabled"
                 type="button"
@@ -111,8 +112,14 @@
         <AppCombobox :model-value="selected.signer_email" :options="recipients" :disabled="disabled" placeholder="Select a recipient" @update:model-value="(v) => patch(selected, { signer_email: v })" />
       </div>
       <template v-if="selected.field_type !== 'checkbox'">
-        <AppInput label="Field label" :model-value="selected.field_label" :disabled="disabled" required @update:model-value="(v) => patch(selected, { field_label: v })" />
-        <AppInput label="Placeholder text" :model-value="selected.placeholder_text" :disabled="disabled" @update:model-value="(v) => patch(selected, { placeholder_text: v })" />
+        <div class="flex flex-col gap-1">
+          <AppInput label="Field label" :model-value="selected.field_label" :disabled="disabled" required @update:model-value="(v) => patch(selected, { field_label: v })" />
+          <p class="text-p-xs text-app-text-muted">This will be shown to the signer.</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <AppInput label="Placeholder text" :model-value="selected.placeholder_text" :disabled="disabled" @update:model-value="(v) => patch(selected, { placeholder_text: v })" />
+          <p class="text-p-xs text-app-text-muted">This will be shown in the builder only.</p>
+        </div>
         <AppInput
           v-if="selected.field_type !== 'signature'"
           type="number"

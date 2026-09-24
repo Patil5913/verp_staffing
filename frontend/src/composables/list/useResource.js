@@ -19,6 +19,7 @@ export function useResource(options, vm) {
       ...rest,
       onError(error) {
         if (notifyOnError) {
+          if (error && typeof error === 'object') error.__notified = true
           notify.error(normalizeError(error).message)
         }
         onError?.call(this, error)

@@ -136,7 +136,7 @@ def generate_form_url(
         # Agreement signing lives in the customer portal (session-authenticated,
         # same token); everything else keeps the webform link.
         if ia:
-            return f"{base_url}/verp/portal/agreement?t={token}"
+            return f"{base_url}/verp/sign-agreement?t={token}"
         return f"{base_url}/details-form/new?t={token}"
 
     except Exception as e:

@@ -5,10 +5,21 @@ import { FrappeUI, setConfig, frappeRequest } from 'frappe-ui'
 
 import App from './App.vue'
 import router from './router'
+import { notify } from '@/utils/common/notify'
+import { normalizeError } from '@/utils/common/errors'
 import { registerServiceWorker } from '@/utils/pwa/registerServiceWorker'
 import { deskToSpaPath, isDeskOnlyPath, isDeskPath } from '@/utils/common/deskRoute'
 
 setConfig('resourceFetcher', frappeRequest)
+
+// Safety net: a server error nobody caught or toasted (e.g. a resource with
+// notifyOnError off whose rejection isn't handled) must still be shown, never
+// swallowed. Errors already toasted by useResource are marked and skipped.
+window.addEventListener('unhandledrejection', (event) => {
+  const error = event.reason
+  if (!error || error.__notified || !(error.exc_type || error.messages || error.exc || error.status)) return
+  notify.error(normalizeError(error).message)
+})
 
 let app = createApp(App)
 

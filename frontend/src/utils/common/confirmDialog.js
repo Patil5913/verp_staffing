@@ -7,6 +7,8 @@ const state = reactive({
   open: false,
   title: '',
   message: '',
+  html: '',
+  leaveIcon: 'log-out',
   leaveLabel: 'Leave without saving',
   cancelLabel: 'Stay',
   // Optional async () => boolean — when given, the dialog offers a "Save"
@@ -22,6 +24,8 @@ const state = reactive({
 export function confirmLeave({
   title = 'Unsaved changes',
   message = "You have unsaved changes. If you leave now, they'll be lost.",
+  html = '',
+  leaveIcon = 'log-out',
   leaveLabel = 'Leave without saving',
   cancelLabel = 'Stay',
   onSave = null,
@@ -29,6 +33,8 @@ export function confirmLeave({
   return new Promise((resolve) => {
     state.title = title
     state.message = message
+    state.html = html
+    state.leaveIcon = leaveIcon
     state.leaveLabel = leaveLabel
     state.cancelLabel = cancelLabel
     state.onSave = onSave

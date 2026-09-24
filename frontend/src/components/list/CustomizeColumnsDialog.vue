@@ -13,7 +13,7 @@
             v-model="available"
             :group="{ name: 'columns' }"
             item-key="fieldname"
-            class="flex min-h-52 flex-col gap-1 rounded-md border border-dashed border-app-border p-2"
+            class="flex max-h-72 min-h-52 flex-col gap-1 overflow-y-auto rounded-md border border-dashed border-app-border p-2"
           >
             <template #item="{ element }">
               <div
@@ -40,7 +40,7 @@
             v-model="selected"
             :group="{ name: 'columns' }"
             item-key="fieldname"
-            class="flex min-h-52 flex-col gap-1 rounded-md border border-app-border p-2"
+            class="flex max-h-72 min-h-52 flex-col gap-1 overflow-y-auto rounded-md border border-app-border p-2"
           >
             <template #item="{ element }">
               <div

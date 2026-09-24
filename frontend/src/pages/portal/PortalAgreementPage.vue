@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto flex max-w-4xl flex-col gap-5 px-3 py-6 md:px-6">
+  <div class="mx-auto flex min-h-screen max-w-4xl flex-col gap-5 px-3 py-6 md:px-6">
     <h1 class="text-xl font-semibold text-app-text">Sign Agreement</h1>
 
     <div v-if="loading" class="flex justify-center py-16"><LoadingIndicator class="h-6 w-6 text-app-text-muted" /></div>
@@ -12,7 +12,7 @@
       <p class="text-base font-semibold text-green-700 dark:text-green-300">
         {{ done ? 'Agreement signed. Thank you!' : 'This agreement has already been signed.' }}
       </p>
-      <AppButton class="mt-4" variant="outline" @click="router.push('/portal')">Go to dashboard</AppButton>
+      <AppButton class="mt-4" icon="arrow-right" @click="router.push('/portal/dashboard')">Go to Portal</AppButton>
     </div>
 
     <div v-else-if="state === 'expired'" class="rounded-xl border border-red-500/40 bg-red-500/10 p-8 text-center">

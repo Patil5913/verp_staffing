@@ -27,4 +27,39 @@ def _guard_errprint():
         pass
 
 
+class _PipeSafe:
+    """Wraps a std stream so a write to a dead pipe is dropped, not raised."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, data):
+        try:
+            return self._stream.write(data)
+        except (BrokenPipeError, OSError, ValueError):
+            return len(data) if data else 0
+
+    def flush(self):
+        try:
+            return self._stream.flush()
+        except (BrokenPipeError, OSError, ValueError):
+            return None
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def _guard_std_streams():
+    """Same dead-stdout problem as above, but for any print()/logging/library
+    output (e.g. PDF or mail libraries), not just frappe.errprint: without this
+    the request fails with BrokenPipeError and hides the real result."""
+    import sys
+
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        if stream is not None and not isinstance(stream, _PipeSafe):
+            setattr(sys, name, _PipeSafe(stream))
+
+
 _guard_errprint()
+_guard_std_streams()

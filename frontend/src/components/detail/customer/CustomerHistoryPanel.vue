@@ -35,7 +35,9 @@
           <p class="text-p-sm text-app-text-muted">
             <span v-if="entry.service_name">{{ entry.service_name }} · </span>
             <span v-if="entry.interview">{{ entry.interview.company }} · {{ entry.interview.role }} · </span>
-            Assigned to {{ entry.assign_to || '—' }}
+            <!-- An Interview's own card has no assignee — it shows its company (and role). -->
+            <template v-if="entry.interview_rounds_table">{{ entry.company || '—' }}<span v-if="entry.role"> · {{ entry.role }}</span></template>
+            <template v-else>Assigned to {{ entry.assign_to || '—' }}</template>
           </p>
 
           <dl v-if="entry.interview_round_detail" class="grid grid-cols-2 gap-x-4 gap-y-1 text-p-sm sm:grid-cols-4">

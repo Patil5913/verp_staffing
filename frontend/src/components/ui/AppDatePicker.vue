@@ -6,18 +6,38 @@
 
     <Popover placement="bottom-start" class="w-full" @update:show="(v) => v && syncView()">
       <template #target="{ isOpen, togglePopover }">
-        <button
-          type="button"
-          :disabled="disabled"
-          class="group flex w-full min-w-0 items-center gap-2 rounded-lg border bg-app-panel text-left text-p-sm outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+        <div
+          role="group"
+          class="group flex w-full min-w-0 items-center gap-2 rounded-lg border bg-app-panel text-left text-p-sm outline-none transition-colors"
           :class="[
             compact ? 'h-8 px-2' : 'h-9 px-3',
-            error ? 'border-red-500' : isOpen ? 'border-app-primary ring-2 ring-app-primary/20' : 'border-app-border hover:border-app-primary/50',
+            disabled ? 'cursor-not-allowed opacity-60' : '',
+            error || typedError ? 'border-red-500' : isOpen ? 'border-app-primary ring-2 ring-app-primary/20' : 'border-app-border hover:border-app-primary/50',
           ]"
-          @click="togglePopover()"
+          @click="!typable && !disabled && togglePopover()"
         >
-          <span class="lucide-calendar size-4 shrink-0 text-app-text-muted group-hover:text-app-primary" />
-          <span class="min-w-0 flex-1 truncate" :class="display ? 'text-app-text' : 'text-app-text-muted'">
+          <span
+            class="lucide-calendar size-4 shrink-0 text-app-text-muted group-hover:text-app-primary"
+            :class="disabled ? '' : 'cursor-pointer'"
+            @click.stop="!disabled && togglePopover()"
+          />
+          <!-- Typable on a keyboard (date / datetime): 1-1-2026, 01/01/2026, 2026-01-01,
+               1 Jan 2026. The calendar stays for touch and mouse. -->
+          <input
+            v-if="typable"
+            type="text"
+            inputmode="numeric"
+            :disabled="disabled"
+            :value="typing ? typed : display"
+            maxlength="16"
+            :placeholder="placeholder || (mode === 'datetime' ? 'DD-MM-YYYY HH:mm' : 'DD-MM-YYYY')"
+            class="min-w-0 flex-1 bg-transparent text-p-sm text-app-text outline-none placeholder:text-app-text-muted disabled:cursor-not-allowed"
+            @focus="startTyping"
+            @input="onTypedInput($event)"
+            @blur="commitTyped"
+            @keydown.enter.prevent="commitTyped"
+          />
+          <span v-else class="min-w-0 flex-1 truncate" :class="display ? 'text-app-text' : 'text-app-text-muted'">
             {{ display || placeholder }}
           </span>
           <span
@@ -27,7 +47,7 @@
             aria-label="Clear date"
             @click.stop="clear"
           />
-        </button>
+        </div>
       </template>
 
       <template #body="{ close }">
@@ -99,7 +119,7 @@
       </template>
     </Popover>
 
-    <p v-if="error" class="text-p-xs text-red-600">{{ error }}</p>
+    <p v-if="error || typedError" class="text-p-xs text-red-600">{{ error || typedError }}</p>
   </div>
 </template>
 
@@ -267,6 +287,76 @@ function goToday(close) {
     emit('update:modelValue', t)
   }
   close()
+}
+// --- typing ----------------------------------------------------------------
+const typable = computed(() => props.mode !== 'range')
+const typing = ref(false)
+const typed = ref('')
+const typedError = ref('')
+function startTyping() {
+  typing.value = true
+  typed.value = display.value
+}
+// Digits go straight in — "-" is added for you: 26 02 2026 -> 26-02-2026 (a
+// 2-digit year works too: 26-02-26). Anything that looks like a full typed
+// date (letters, other separators, ISO) is left alone for parseTyped.
+function autoFormat(raw) {
+  const [datePart, ...rest] = raw.split(' ')
+  if (!/^[\d-]*$/.test(datePart) || /^\d{4}-/.test(datePart)) return raw
+  const digits = datePart.replace(/\D/g, '').slice(0, 8)
+  const d = digits.slice(0, 2)
+  const m = digits.slice(2, 4)
+  const y = digits.slice(4)
+  const formatted = [d, m, y].filter(Boolean).join('-')
+  return rest.length ? `${formatted} ${rest.join(' ')}` : formatted
+}
+function onTypedInput(event) {
+  const isDelete = event.inputType?.startsWith('delete')
+  typed.value = isDelete ? event.target.value : autoFormat(event.target.value)
+  typedError.value = ''
+}
+const MONTH_INDEX = Object.fromEntries(MONTHS.map((m, i) => [m.slice(0, 3).toLowerCase(), i]))
+// -> { y, m (0-based), d } or null; day-first for the dd-mm-yyyy family.
+function parseTyped(text) {
+  const t = text.trim().replace(/,/g, ' ').replace(/\s+/g, ' ')
+  let m
+  let y, mo, d
+  if ((m = t.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/))) [y, mo, d] = [m[1], m[2] - 1, m[3]]
+  else if ((m = t.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4}|\d{2})(?!\d)/))) [d, mo, y] = [m[1], m[2] - 1, m[3].length === 2 ? `20${m[3]}` : m[3]]
+  else if ((m = t.match(/^(\d{1,2}) ([a-z]{3})[a-z]* (\d{4})/i)) && m[2].toLowerCase() in MONTH_INDEX)
+    [d, mo, y] = [m[1], MONTH_INDEX[m[2].toLowerCase()], m[3]]
+  else return null
+  y = Number(y)
+  mo = Number(mo)
+  d = Number(d)
+  const check = new Date(y, mo, d)
+  if (check.getFullYear() !== y || check.getMonth() !== mo || check.getDate() !== d) return null
+  const tm = t.match(/(\d{1,2}):(\d{2})\s*$/)
+  return { y, m: mo, d, h: tm ? Math.min(23, Number(tm[1])) : null, min: tm ? Math.min(59, Number(tm[2])) : null }
+}
+function commitTyped() {
+  if (!typing.value) return
+  typing.value = false
+  const text = typed.value.trim()
+  typedError.value = ''
+  if (!text) {
+    if (!props.required && props.modelValue) emit('update:modelValue', '')
+    return
+  }
+  if (text === display.value) return
+  const p = parseTyped(text)
+  if (!p) {
+    typedError.value = 'Enter a valid date, e.g. 01-01-2026'
+    return
+  }
+  const iso = toIso(p.y, p.m, p.d)
+  if (props.mode === 'datetime') {
+    if (p.h !== null) [time.h, time.m] = [p.h, p.min]
+    emit('update:modelValue', `${iso}T${pad(time.h)}:${pad(time.m)}`)
+  } else {
+    emit('update:modelValue', iso)
+  }
+  syncView()
 }
 function clear() {
   pendingStart.value = ''

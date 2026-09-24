@@ -8,7 +8,7 @@
             <th v-for="col in visibleColumns" :key="col.fieldname" class="h-9 truncate border-b border-app-border px-2 text-p-xs font-medium text-app-text-muted">
               {{ col.label }}<span v-if="col.reqd" class="text-red-600"> *</span>
             </th>
-            <th v-if="!disabled" class="h-9 w-9 border-b border-app-border" />
+            <th v-if="!disabled" class="h-9 w-20 border-b border-app-border" />
           </tr>
         </thead>
         <tbody>
@@ -18,11 +18,13 @@
                 :field="col"
                 :model-value="row[col.fieldname]"
                 :disabled="disabled || isColumnReadOnly(col, row)"
+                :link-query="linkQueryFor(row, idx)?.[col.fieldname]"
                 @update:model-value="(v) => onFieldInput(idx, col.fieldname, v)"
               />
             </td>
-            <td v-if="!disabled" class="px-2 py-1.5 text-right align-top">
-              <AppButton variant="ghost" size="icon" icon="trash-2" @click="removeRow(idx)" />
+            <td v-if="!disabled" class="whitespace-nowrap px-2 py-1.5 text-right align-top">
+              <AppButton variant="ghost" size="icon" icon="edit-2" title="Edit row" @click="openRow(idx)" />
+              <AppButton variant="ghost" size="icon" icon="trash-2" title="Delete row" @click="removeRow(idx)" />
             </td>
           </tr>
           <tr v-if="!rows.length">
@@ -36,6 +38,28 @@
     <div v-if="!disabled">
       <AppButton variant="outline" size="sm" icon="plus" @click="addRow">Add Row</AppButton>
     </div>
+
+    <!-- Row dialog (the pencil): every column the doctype shows for a row, with
+         its own read-only / depends_on / fetch_from rules, not just the grid's. -->
+    <Dialog v-model="dialog.show" :options="{ title: table.label ? `Edit ${table.label} row` : 'Edit row', size: '2xl' }">
+      <template #body-content>
+        <div class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+          <FieldControl
+            v-for="col in dialogColumns"
+            :key="col.fieldname"
+            :field="col"
+            :model-value="dialog.draft[col.fieldname]"
+            :disabled="isColumnReadOnly(col, dialog.draft)"
+            :link-query="linkQueryFor(dialog.draft, dialog.idx)?.[col.fieldname]"
+            :class="['Small Text', 'Long Text', 'Text Editor'].includes(col.fieldtype) ? 'sm:col-span-2' : ''"
+            @update:model-value="(v) => onDraftInput(col.fieldname, v)"
+          />
+        </div>
+      </template>
+      <template #actions>
+        <AppButton icon="check" @click="saveDialog">Done</AppButton>
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -49,8 +73,14 @@
 // enough template to merge without one becoming a worse version of the
 // other, but they DO share the same onFieldChange contract, so cross-field
 // logic (clearing dependents, computing Amount) plugs into either the same
-// way.
-import { computed } from 'vue'
+// way. Taxes and Charges also lives here now (not ChildTableField) for the
+// same reason it always lived in Desk's inline grid, not a row dialog: the
+// desk form's charge_type handler toggles rate/tax_amount editability per
+// row (grid_rows_by_docname[...].toggle_editable), which only this
+// component's readOnlyColumns-as-function can express.
+import { computed, reactive } from 'vue'
+import { Dialog } from 'frappe-ui'
+import { dependsOnPasses } from '@/utils/detail/dependsOn'
 import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 
@@ -59,26 +89,73 @@ const props = defineProps({
   rows: { type: Array, required: true },
   // Ordered subset of table.columns' fieldnames to actually show as grid
   // columns — a grid has no room for every field a dialog would show.
-  columns: { type: Array, required: true },
+  // Omitted => the doctype's own in_list_view columns (the Desk grid's columns).
+  columns: { type: Array, default: null },
+  // Columns left out of the row dialog (e.g. an account picked by default).
+  hiddenColumns: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
   // fieldname[] always read-only (e.g. Amount, computed) — or a function
   // (col, row) => boolean for a condition that depends on the row itself
-  // (e.g. Current Interview Count only editable for one payment_condition).
+  // (e.g. Current Interview Count only editable for one payment_condition;
+  // Taxes and Charges' rate/tax_amount depending on that row's charge_type).
   readOnlyColumns: { type: [Array, Function], default: () => [] },
   // (fieldname, value, row, rowIndex) => patch object | Promise<patch>,
   // merged into the row — same contract as ChildTableField's onFieldChange.
   onFieldChange: { type: Function, default: null },
+  // { <link column>: { query?, filters? } } — or a function of the row
+  // being edited, (row, rows, rowIndex) => { <col>: {query?, filters?} },
+  // for a column whose valid options depend on another field in the same
+  // row (Taxes and Charges' account_head scoped to the document's company)
+  // or on sibling rows. Mirrors ChildTableField's linkQueries prop — this
+  // was previously missing here entirely, which is fine as long as no
+  // grid-rendered table has a filtered Link column; Taxes and Charges does,
+  // so this had to be added rather than left out.
+  linkQueries: { type: [Object, Function], default: null },
 })
 const emit = defineEmits(['update:rows'])
 
-const visibleColumns = computed(() =>
-  props.columns.map((fieldname) => props.table.columns.find((c) => c.fieldname === fieldname)).filter(Boolean),
+const visibleColumns = computed(() => {
+  if (props.columns) {
+    return props.columns.map((fieldname) => props.table.columns.find((c) => c.fieldname === fieldname)).filter(Boolean)
+  }
+  const listed = props.table.columns.filter((c) => c.in_list_view)
+  return listed.length ? listed : props.table.columns.slice(0, 4)
+})
+
+const dialog = reactive({ show: false, idx: -1, draft: {} })
+const dialogColumns = computed(() =>
+  props.table.columns.filter((c) => !props.hiddenColumns.includes(c.fieldname) && dependsOnPasses(c, dialog.draft)),
 )
+function openRow(idx) {
+  dialog.idx = idx
+  dialog.draft = { ...props.rows[idx] }
+  dialog.show = true
+}
+async function onDraftInput(fieldname, value) {
+  dialog.draft[fieldname] = value
+  if (props.onFieldChange) {
+    const patch = await props.onFieldChange(fieldname, value, dialog.draft, dialog.idx)
+    if (patch) Object.assign(dialog.draft, patch)
+  }
+}
+function saveDialog() {
+  const rows = props.rows.map((r) => ({ ...r }))
+  rows[dialog.idx] = { ...dialog.draft }
+  emit('update:rows', rows)
+  dialog.show = false
+}
 
 function isColumnReadOnly(col, row) {
   if (col.read_only) return true
   if (typeof props.readOnlyColumns === 'function') return props.readOnlyColumns(col, row)
   return props.readOnlyColumns.includes(col.fieldname)
+}
+
+// Resolved per-row (not as a single computed) since a grid renders every
+// row at once — there's no single "current row" the way ChildTableField's
+// dialog has one draft.
+function linkQueryFor(row, idx) {
+  return typeof props.linkQueries === 'function' ? props.linkQueries(row, props.rows, idx) : props.linkQueries
 }
 
 async function onFieldInput(idx, fieldname, value) {

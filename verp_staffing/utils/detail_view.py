@@ -40,6 +40,7 @@ def _serialize_field(df):
         "fieldtype": df.fieldtype,
         "options": df.options,
         "reqd": bool(df.reqd),
+        "in_list_view": bool(df.in_list_view),
         # Frappe fills a fetch_from field (e.g. Sales Order.currency <-
         # company.default_currency) on save, so the form must not demand it.
         "fetch_from": df.fetch_from,
@@ -99,6 +100,9 @@ def _doc_fields_and_tables(meta, doc):
                     # needs to tell them apart to render the right control.
                     "fieldtype": df.fieldtype,
                     "columns": columns,
+                    # The child doctype's own "Editable Grid" flag: edit rows
+                    # inline in a grid instead of one dialog per row.
+                    "editable_grid": bool(child_meta.editable_grid) if child_meta else False,
                     "reqd": bool(df.reqd),
                     "section": section,
                     "rows": [row.as_dict() for row in (doc.get(df.fieldname) or [])] if doc else [],

@@ -5,8 +5,17 @@ import { createResource } from 'frappe-ui'
 const config = createResource({
   url: 'frappe.client.get_single_value',
   params: { doctype: 'ERP Configuration', field: 'candidate_details_form_fields' },
-  auto: true,
+  // Not auto: this module loads with the app config bundle, possibly before the
+  // session is usable — a fetch then would fail once and never retry.
+  auto: false,
 })
+let requested = false
+function ensureLoaded() {
+  if (config.data !== null && config.data !== undefined) return
+  if (config.loading || requested) return
+  requested = true
+  config.fetch()
+}
 
 function serviceFlags() {
   try {
@@ -20,6 +29,7 @@ function serviceFlags() {
 // from the order as last SAVED (the meta snapshot the save response refreshes),
 // not the live form — editing items doesn't change it until Save.
 export function agreementRequired(detail) {
+  ensureLoaded()
   const rows = detail.meta.resource.data?.tables?.find((t) => t.fieldname === 'items')?.rows || []
   const flags = serviceFlags()
   return rows.some((row) => {

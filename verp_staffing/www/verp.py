@@ -49,6 +49,15 @@ def _login_url_with_redirect() -> str:
 	return f"{LOGIN_PATH}?redirect-to={quote(current)}"
 
 
+def _sample_data_removed():
+	try:
+		from verp_staffing.utils.sample_data_tracking import is_sample_data_removed
+
+		return int(bool(is_sample_data_removed()))
+	except Exception:
+		return 0
+
+
 def get_boot():
 	user = frappe.session.user
 	full_name = None
@@ -73,5 +82,10 @@ def get_boot():
 			# UX-only: customers get the portal shell instead of the staff one. Everything they
 			# can reach is still enforced server-side (session-derived customer, DocPerms).
 			"is_portal_user": _is_chat_customer(),
+			# Fresh-site detection, same source as Desk's boot (frappe.is_setup_complete):
+			# false sends a System Manager to the setup wizard.
+			"setup_complete": bool(frappe.is_setup_complete()),
+			# Lets the sample-data warning skip its server check once sample data is gone.
+			"is_sample_data_removed": _sample_data_removed(),
 		}
 	)

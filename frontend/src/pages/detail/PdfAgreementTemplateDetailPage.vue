@@ -16,7 +16,7 @@
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
         <div class="flex flex-col gap-6">
           <div class="rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <DocDetailView :doctype="doctype" :detail="detail" />
+            <DocDetailView :doctype="doctype" :detail="detail" :field-overrides="{ upload_pdf_template: { accept: ['application/pdf', '.pdf'] } }" />
           </div>
 
           <div class="flex flex-col gap-3">

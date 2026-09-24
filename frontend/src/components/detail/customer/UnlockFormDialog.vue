@@ -18,6 +18,7 @@
       <AppButton v-else icon="send" :loading="sending" :disabled="!recipient" @click="send">Send Email</AppButton>
     </template>
   </Dialog>
+  <MissingEmailDialog v-model="showMissing" :customer="customer" @saved="open = true" />
   <PortalAccessDialog v-model="showAccess" :customer="customer" @sent="onAccessSent" />
 </template>
 
@@ -27,6 +28,7 @@
 // portal link. Shared by the Customer page and the Sales Order button.
 import { ref, watch } from 'vue'
 import { call, Dialog } from 'frappe-ui'
+import MissingEmailDialog from '@/components/common/MissingEmailDialog.vue'
 import PortalAccessDialog from '@/components/detail/customer/PortalAccessDialog.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { notify } from '@/utils/common/notify'
@@ -43,6 +45,7 @@ const recipient = ref('')
 const loading = ref(false)
 const sending = ref(false)
 const hasAccess = ref(true)
+const showMissing = ref(false)
 const showAccess = ref(false)
 
 async function checkAccess() {
@@ -65,6 +68,11 @@ watch(open, async (isOpen) => {
   try {
     await checkAccess()
     recipient.value = (await call('verp_staffing.crm.doctype.customer.customer.get_customer_email', { customer: props.customer })) || ''
+    // No email on file: collect one (saved to the Lead Detail Form), then return here.
+    if (!recipient.value && hasAccess.value) {
+      open.value = false
+      showMissing.value = true
+    }
   } catch {
     recipient.value = ''
   } finally {

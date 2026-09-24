@@ -22,5 +22,5 @@ const route = useRoute()
 // crucially never mount AppShell — which is what was firing the
 // permission-filtered sidebar fetch (and its "failed to load" toast) for a
 // Guest on the login page.
-const layout = computed(() => (route.meta.public ? BlankLayout : route.meta.portal ? PortalShell : AppShell))
+const layout = computed(() => (route.meta.public || route.meta.standalone ? BlankLayout : route.meta.portal ? PortalShell : AppShell))
 </script>

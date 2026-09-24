@@ -51,6 +51,8 @@ const props = defineProps({
   columns: { type: Array, required: true },
   cards: { type: Array, required: true },
   statusField: { type: String, default: 'status' },
+  // { column: 'cyan' | 'yellow' | 'blue' | 'gray' | 'orange' | 'green' | 'red' }
+  columnColors: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['move', 'open'])
 
@@ -75,7 +77,18 @@ const STAGES = [
   { dot: 'bg-teal-500', tint: 'bg-teal-500/10', border: 'border-teal-500/25' },
   { dot: 'bg-indigo-500', tint: 'bg-indigo-500/10', border: 'border-indigo-500/25' },
 ]
-const stage = (column) => STAGES[props.columns.indexOf(column) % STAGES.length]
+// Named colours (per column) win over the rotating palette; full class names so
+// Tailwind can see them.
+const NAMED_STAGES = {
+  cyan: { dot: 'bg-cyan-500', tint: 'bg-cyan-500/10', border: 'border-cyan-500/25' },
+  yellow: { dot: 'bg-yellow-500', tint: 'bg-yellow-500/10', border: 'border-yellow-500/25' },
+  blue: { dot: 'bg-blue-500', tint: 'bg-blue-500/10', border: 'border-blue-500/25' },
+  gray: { dot: 'bg-slate-400', tint: 'bg-slate-500/10', border: 'border-slate-500/25' },
+  orange: { dot: 'bg-orange-500', tint: 'bg-orange-500/10', border: 'border-orange-500/25' },
+  green: { dot: 'bg-green-500', tint: 'bg-green-500/10', border: 'border-green-500/25' },
+  red: { dot: 'bg-red-500', tint: 'bg-red-500/10', border: 'border-red-500/25' },
+}
+const stage = (column) => NAMED_STAGES[props.columnColors?.[column]] || STAGES[props.columns.indexOf(column) % STAGES.length]
 
 function onDrop(column) {
   const card = props.cards.find((c) => c.name === dragging.value)

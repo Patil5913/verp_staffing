@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 from frappe.model.document import Document
 from verp_staffing.crm.api.customer import update_customer_stage
 from verp_staffing.crm.api.naming import generate_name_series
@@ -18,8 +19,16 @@ class Marketing(Document):
         self.name = generate_name_series("Marketing", customer_name)
 
     def validate(self):
-        if self.target is not None and self.target != int(self.target):
-            frappe.throw(_("Target must be a whole number"))
+        # validate() runs before Frappe casts Int fields, so `target` can still
+        # be the raw string the client sent ("5", "5.0") — compare as a number.
+        if self.target not in (None, ""):
+            try:
+                target = flt(self.target)
+            except (TypeError, ValueError):
+                frappe.throw(_("Target must be a number"))
+            if target != int(target):
+                frappe.throw(_("Target must be a whole number"))
+            self.target = int(target)
         if self.start_date and (not self.target or self.target <= 0):
             frappe.throw(_("Target must be greater than 0 when Start Date is set"))
 

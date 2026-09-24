@@ -36,13 +36,14 @@
 
           <div class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
             <h3 class="mb-3 text-p-base font-medium text-app-text">Customer Feedback</h3>
-            <ChildTableField
-              v-if="customerFeedbackTable && (detail.hidden.customer_feedback || []).length"
-              :table="customerFeedbackTable"
-              :rows="detail.hidden.customer_feedback || []"
-              disabled
-              @update:rows="() => {}"
-            />
+            <!-- Customer Feedback is a normal (visible) child table: its rows live in
+                 values, not hidden. Read-only list: when it was given, then what was said. -->
+            <ul v-if="feedbackRows.length" class="flex flex-col gap-3">
+              <li v-for="(row, i) in feedbackRows" :key="row.name || i" class="rounded-lg border border-app-border bg-app-panel-2/40 p-3">
+                <p class="text-p-xs font-medium text-app-text-muted">{{ formatDatetime(row.date) || '—' }}</p>
+                <p class="mt-1 whitespace-pre-wrap text-p-sm text-app-text">{{ row.feedback || '—' }}</p>
+              </li>
+            </ul>
             <p v-else class="py-4 text-center text-p-sm text-app-text-muted">No Feedback Yet</p>
           </div>
         </div>
@@ -110,6 +111,7 @@ import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActio
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
+import { formatDatetime } from '@/utils/list/formatValue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ServiceResumePanel from '@/components/detail/lead/ServiceResumePanel.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
@@ -139,7 +141,7 @@ const tabs = computed(() => (detail.isNew.value ? TABS.filter((t) => t.key === '
 const activeTab = ref('details')
 
 const proofOfWorkTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'proof_of_work'))
-const customerFeedbackTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'customer_feedback'))
+const feedbackRows = computed(() => detail.values.customer_feedback || [])
 
 const assignToQuery = 'verp_staffing.crm.api.helpers.get_assign_to_by_service'
 const assignToFilters = computed(() => ({ service: 'Training', customer: detail.hidden.customer }))

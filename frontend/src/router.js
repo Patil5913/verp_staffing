@@ -5,6 +5,7 @@ import * as accounts from '@/configs/detail/accounts'
 import { itemConfig, itemCategoryConfig, uomConfig } from '@/configs/detail/items'
 import { eSignConfig } from '@/configs/detail/esign'
 import { emailQueueConfig } from '@/configs/detail/emailQueue'
+import { hasRole } from '@/utils/common/roles'
 import { accessTarget, canAccess } from '@/utils/common/routeAccess'
 
 // Doctypes whose detail page is just config on top of ConfigDetailPage (see
@@ -57,7 +58,10 @@ const PORTAL_ROUTES = [
   { path: '/portal/technical', name: 'PortalTechnical', component: () => import('@/pages/portal/PortalTechnicalPage.vue'), meta: { portal: true, title: 'Technical' } },
   { path: '/portal/accounts', name: 'PortalAccounts', component: () => import('@/pages/portal/PortalAccountsPage.vue'), meta: { portal: true, title: 'Accounts' } },
   { path: '/portal/documents', name: 'PortalDocuments', component: () => import('@/pages/portal/PortalDocumentsPage.vue'), meta: { portal: true, title: 'Documents' } },
-  { path: '/portal/agreement', name: 'PortalAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, title: 'Sign Agreement' } },
+  // First-run setup for a fresh site (see the beforeEach guard: sent here while
+  // the site's setup isn't complete). Blank layout, like the agreement page.
+  { path: '/setup-wizard', name: 'SetupWizard', component: () => import('@/pages/setup/SetupWizardPage.vue'), meta: { standalone: true, title: 'Set up' } },
+  { path: '/sign-agreement', name: 'SignAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, standalone: true, title: 'Sign Agreement' } },
   { path: '/portal/candidate-details', name: 'PortalCandidateDetails', component: () => import('@/pages/portal/PortalCandidateDetailsPage.vue'), meta: { portal: true, title: 'Candidate Details' } },
   { path: '/portal/messages', name: 'PortalMessages', component: () => import('@/pages/portal/PortalMessagesPage.vue'), meta: { portal: true, title: 'Messages' } },
 ]
@@ -361,6 +365,13 @@ router.beforeEach(async (to) => {
     const target = to.fullPath === '/' ? '/verp' : `/verp${to.fullPath}`
     return { name: 'Login', query: { 'redirect-to': target } }
   }
+
+  // Fresh site: Frappe (desk.js/router.js) sends the admin to its setup wizard
+  // while boot.setup_complete is false; same rule here, for System Managers.
+  if (!window.is_portal_user && window.setup_complete === false && hasRole('System Manager')) {
+    return to.path === '/setup-wizard' ? true : { path: '/setup-wizard' }
+  }
+  if (to.path === '/setup-wizard') return { path: '/' }
 
   // Customers get the portal and nothing else; staff never see the portal.
   if (window.is_portal_user) {

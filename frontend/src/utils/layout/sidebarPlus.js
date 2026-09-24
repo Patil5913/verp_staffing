@@ -34,6 +34,9 @@ export const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
   'Accounts Settings'
 ])
 
+// Compared case-insensitively: the doctype is "ERP Configuration", not "Erp Configuration".
+const blocked = new Set([...NO_PLUS_BUTTON_DISPLAY_DOCTYPES].map((d) => d.toLowerCase()))
+
 export function canQuickCreateFromSidebar(doctype) {
-  return !!doctype && !NO_PLUS_BUTTON_DISPLAY_DOCTYPES.has(doctype)
+  return !!doctype && !blocked.has(String(doctype).toLowerCase())
 }

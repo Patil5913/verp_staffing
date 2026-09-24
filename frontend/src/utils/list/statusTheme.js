@@ -31,7 +31,20 @@ const verificationStatusTheme = (value) => {
   return 'gray'
 }
 
+// Interview status palette (STATUS_INDICATOR_MAP in interview_common.js): the
+// desk's colours per status, anything else falls back to the generic vocabulary.
+export const INTERVIEW_STATUS_THEMES = {
+  Scheduled: 'cyan',
+  Today: 'yellow',
+  Completed: 'blue',
+  Cancelled: 'gray',
+  Rescheduled: 'orange',
+  'Get The Offer': 'green',
+  Rejected: 'red',
+}
+
 const DOCTYPE_FIELD_OVERRIDES = {
+  'Interview.status': (value) => INTERVIEW_STATUS_THEMES[value] || genericStatusTheme(value),
   'Customer.overall_status': (value) => {
     const status = String(value || '')
     if (status.includes('Pending')) return 'red'
@@ -68,15 +81,18 @@ export function docstatusBadge(docstatus) {
 // the detail page's own badge). Row-based rather than a single toggle since
 // it varies per record, not per doctype. Returns null to fall back to
 // docstatusBadge.
-export function statusBadgeTheme(value, { doctype, fieldname } = {}) {
-  const override = DOCTYPE_FIELD_OVERRIDES[`${doctype}.${fieldname}`]
-  if (override) return override(value)
-
+function genericStatusTheme(value) {
   const v = String(value || '').toLowerCase()
   for (const [pattern, theme] of KEYWORD_THEMES) {
     if (pattern.test(v)) return theme
   }
   return 'gray'
+}
+
+export function statusBadgeTheme(value, { doctype, fieldname } = {}) {
+  const override = DOCTYPE_FIELD_OVERRIDES[`${doctype}.${fieldname}`]
+  if (override) return override(value)
+  return genericStatusTheme(value)
 }
 
 // Sales Invoice has no real "payment status" field — Paid/Unpaid/Partly

@@ -81,6 +81,8 @@ export const EXTRA_VIEWS = {
 export const KANBAN = {
   Interview: {
     statusField: 'status',
+    // Column colours: the desk's status palette (see utils/list/statusTheme.js).
+    columnColors: { Scheduled: 'cyan', Today: 'yellow', Completed: 'blue', Cancelled: 'gray', Rescheduled: 'orange', 'Get The Offer': 'green', Rejected: 'red' },
     columns: ['Scheduled', 'Today', 'Completed', 'Cancelled', 'Rescheduled', 'Get The Offer', 'Rejected'],
     title: 'company',
     subtitle: 'role',

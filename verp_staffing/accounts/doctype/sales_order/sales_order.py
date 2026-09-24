@@ -923,8 +923,50 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
     }
 
 
+PLATFORM_CHARGES_LABEL = "Platform / Other Charges"
+CHARGE_ACCOUNT_TYPES = ["Tax", "Chargeable", "Indirect Expense", "Direct Expense", "Expense Account", "Income Account"]
+
+
+def _apply_platform_charges(pe, charges, charges_account):
+    """Records what the platform/bank kept (or added) as one 'Actual' row in the
+    Payment Entry's taxes: the entered amount as-is (negative = deducted from
+    what we received, positive = extra received), so the Payment Entry's own tax
+    totals give the net. Replaces a row from an earlier verification attempt."""
+    charges = flt(charges)
+    pe.set("taxes", [row for row in pe.get("taxes") if row.description != PLATFORM_CHARGES_LABEL])
+    if not charges:
+        return
+
+    if not charges_account:
+        frappe.throw(_("Select the expense account for the charges."))
+    account = frappe.db.get_value(
+        "Account", charges_account, ["company", "is_group", "disabled", "account_type"], as_dict=True
+    )
+    if (
+        not account
+        or account.company != pe.company
+        or account.is_group
+        or account.disabled
+        or account.account_type not in CHARGE_ACCOUNT_TYPES
+    ):
+        frappe.throw(_("{0} is not a valid expense account for this company.").format(charges_account))
+    if flt(pe.paid_amount) + charges <= 0:
+        frappe.throw(_("Charges cannot be larger than the amount paid."))
+
+    pe.append(
+        "taxes",
+        {
+            "charge_type": "Actual",
+            "account_head": charges_account,
+            "description": PLATFORM_CHARGES_LABEL,
+            "tax_amount": charges,
+            "add_deduct_tax": "Add",
+        },
+    )
+
+
 @frappe.whitelist()
-def verify_payment_entry(payment_entry, paid_from=None, paid_to=None):
+def verify_payment_entry(payment_entry, paid_from=None, paid_to=None, charges=None, charges_account=None):
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
@@ -942,6 +984,8 @@ def verify_payment_entry(payment_entry, paid_from=None, paid_to=None):
         pe.paid_from = paid_from
     if paid_to:
         pe.paid_to = paid_to
+
+    _apply_platform_charges(pe, charges, charges_account)
 
     now = frappe.utils.now_datetime()
     now_str = frappe.utils.format_datetime(now)

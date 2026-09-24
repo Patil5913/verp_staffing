@@ -15,6 +15,9 @@ from verp_staffing.employee.doctype.employee.employee import get_employee_from_u
 CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
 DEFAULT_ROUND_STATUS = "Scheduled"
+TODAY_STATUS = "Today"
+# An interview whose latest round is in one of these is over — never shown as "Today".
+TODAY_EXCLUDED_STATUSES = FINAL_ROUND_STATUSES | {"Rejected", "Get The Offer", TODAY_STATUS}
 
 
 class Interview(Document):
@@ -262,6 +265,11 @@ def update_interview_status_from_kanban(
             )
         )
 
+    if status == TODAY_STATUS:
+        frappe.throw(
+            _("'Today' is worked out automatically from the round's date and can't be set by hand.")
+        )
+
     last_round = max(doc.interview_rounds_table, key=lambda r: r.idx)
 
     if last_round.status in FINAL_ROUND_STATUSES and last_round.status != status:
@@ -284,6 +292,134 @@ def update_interview_status_from_kanban(
     doc.save()
 
     return {"name": doc.name, "status": doc.status}
+
+
+# ---------------------------------------------------------------------------
+# "Today" — derived, never stored
+# ---------------------------------------------------------------------------
+# An interview with a round dated today (that isn't over) shows as
+# "Today" in the list and on the Kanban. Nothing is written back: the stored
+# status stays what the round says, so there's no "Today" to un-set later.
+# One indexed query over just today's rounds (bounded by a day's interviews),
+# rather than touching every interview.
+
+
+def _todays_interview_names(names=None):
+    """Interviews with a still-open round dated today (any round — an earlier
+    one can be today while a later one is already booked)."""
+    query = """
+        SELECT DISTINCT r.parent
+        FROM `tabInterview Round` r
+        INNER JOIN `tabInterview` i ON i.name = r.parent
+        WHERE r.parenttype = 'Interview'
+          AND r.date_of_interview = %(today)s
+          AND IFNULL(r.status, '') NOT IN %(excluded)s
+          AND IFNULL(i.status, '') NOT IN %(excluded)s
+    """
+    values = {"today": frappe.utils.today(), "excluded": tuple(TODAY_EXCLUDED_STATUSES)}
+    if names:
+        query += " AND r.parent IN %(names)s"
+        values["names"] = tuple(names)
+    return set(frappe.db.sql_list(query, values))
+
+
+def _status_wanted(filters):
+    """Pulls plain `status = x` / `status in [...]` conditions out of `filters`
+    (dict, or [field, op, value] / [doctype, field, op, value] lists).
+    Returns (remaining filters as a list, wanted status set or None)."""
+    filters = frappe.parse_json(filters) if isinstance(filters, str) else filters
+    rest, wanted = [], None
+
+    def take(values):
+        nonlocal wanted
+        values = set(values)
+        wanted = values if wanted is None else wanted & values
+
+    if isinstance(filters, dict):
+        items = []
+        for field, cond in filters.items():
+            if isinstance(cond, (list, tuple)) and len(cond) == 2:
+                items.append([field, cond[0], cond[1]])
+            else:
+                items.append([field, "=", cond])
+    else:
+        items = list(filters or [])
+
+    for item in items:
+        field, op, value = (item[1], item[2], item[3]) if len(item) == 4 else (item[0], item[1], item[2])
+        op = str(op).lower()
+        if field == "status" and op == "=":
+            take([value])
+        elif field == "status" and op == "in":
+            take(value if isinstance(value, (list, tuple)) else str(value).split(","))
+        else:
+            rest.append(item)
+    return rest, wanted
+
+
+def _interview_query_args(filters):
+    """(filters, or_filters, empty) for get_list, with the status filters
+    translated to the derived "Today" status."""
+    rest, wanted = _status_wanted(filters)
+    if wanted is None:
+        return rest, None, False, set()
+
+    today = _todays_interview_names()
+    if TODAY_STATUS in wanted:
+        others = wanted - {TODAY_STATUS}
+        if others:
+            or_filters = [["name", "in", list(today) or [""]], ["status", "in", list(others)]]
+            return rest, or_filters, False, today
+        if not today:
+            return rest, None, True, today
+        return rest + [["name", "in", list(today)]], None, False, today
+
+    out = rest + [["status", "in", list(wanted)]]
+    if today:
+        out.append(["name", "not in", list(today)])
+    return out, None, False, today
+
+
+@frappe.whitelist()
+def get_interview_list(
+    fields=None, filters=None, order_by=None, limit_start=0, limit_page_length=20
+):
+    """frappe.client.get_list for Interview, with status = "Today" derived."""
+    fields = frappe.parse_json(fields) if isinstance(fields, str) else fields
+    filters, or_filters, empty, _today = _interview_query_args(filters)
+    if empty:
+        return []
+
+    rows = frappe.get_list(
+        "Interview",
+        fields=fields or ["name"],
+        filters=filters,
+        or_filters=or_filters,
+        order_by=order_by,
+        limit_start=frappe.utils.cint(limit_start),
+        limit_page_length=frappe.utils.cint(limit_page_length),
+    )
+    if rows and any("status" in r for r in rows):
+        today = _todays_interview_names([r["name"] for r in rows if r.get("name")])
+        for r in rows:
+            if r.get("name") in today:
+                r["status"] = TODAY_STATUS
+    return rows
+
+
+@frappe.whitelist()
+def get_interview_count(filters=None):
+    filters, or_filters, empty, _today = _interview_query_args(filters)
+    if empty:
+        return 0
+    rows = frappe.get_list(
+        "Interview",
+        fields=["count(name) as total"],
+        filters=filters,
+        or_filters=or_filters,
+        limit_page_length=0,
+    )
+    return rows[0].total if rows else 0
 
 
 @frappe.whitelist()

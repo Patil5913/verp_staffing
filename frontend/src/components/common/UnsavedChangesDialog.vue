@@ -15,7 +15,8 @@
             </div>
             <div class="min-w-0 pt-1">
               <h2 class="text-p-lg font-medium text-app-text">{{ state.title }}</h2>
-              <p class="mt-1 text-p-sm text-app-text-muted">{{ state.message }}</p>
+              <div v-if="state.html" class="mt-1 text-p-sm text-app-text-muted [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_b]:text-app-text" v-html="state.html" />
+              <p v-else class="mt-1 text-p-sm text-app-text-muted">{{ state.message }}</p>
             </div>
           </div>
 
@@ -23,7 +24,7 @@
             <AppButton variant="outline" :disabled="state.saving" @click="settle(false)">
               {{ state.cancelLabel }}
             </AppButton>
-            <AppButton variant="danger" icon="log-out" :disabled="state.saving" @click="settle(true)">
+            <AppButton variant="danger" :icon="state.leaveIcon" :disabled="state.saving" @click="settle(true)">
               {{ state.leaveLabel }}
             </AppButton>
             <AppButton v-if="state.onSave" variant="primary" icon="save" :loading="state.saving" @click="onSaveClick">

@@ -66,9 +66,11 @@ export function useDocList(doctype, options = {}) {
   })
 
   const docs = useResource({
-    url: 'frappe.client.get_list',
+    // Interview's "Today" status is derived (not stored), so its list/count come
+    // from its own API — same arguments as get_list.
+    url: doctype === 'Interview' ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list' : 'frappe.client.get_list',
     makeParams: () => ({
-      doctype,
+      ...(doctype === 'Interview' ? {} : { doctype }),
       fields: fieldsToFetch.value,
       filters: combinedFilters.value,
       order_by: orderBy.value,
@@ -78,8 +80,8 @@ export function useDocList(doctype, options = {}) {
   })
 
   const count = useResource({
-    url: 'frappe.client.get_count',
-    makeParams: () => ({ doctype, filters: combinedFilters.value }),
+    url: doctype === 'Interview' ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_count' : 'frappe.client.get_count',
+    makeParams: () => (doctype === 'Interview' ? { filters: combinedFilters.value } : { doctype, filters: combinedFilters.value }),
     notifyOnError: false,
   })
 
