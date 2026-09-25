@@ -946,11 +946,12 @@ def _create_sales_orders(c, ctx):
 			}
 		)
 		_insert(so)
-		_stamp("Sales Order", so.name, posting)
-		_set_owner("Sales Order", so.name, frappe.db.get_value("Employee", c.get("sales_owner"), "user") if c.get("sales_owner") else None)
 		# a couple of "sales" customers keep their order as a draft, everything else is submitted
 		if not (stage == "sales" and c["plan"] == "none" and c["index"] % 2 == 0):
 			_submit_sales_order(so)
+		# backdate only after submitting: submit checks `modified` against the copy in memory
+		_stamp("Sales Order", so.name, posting)
+		_set_owner("Sales Order", so.name, frappe.db.get_value("Employee", c.get("sales_owner"), "user") if c.get("sales_owner") else None)
 		out.append((so.name, str(posting)))
 	return out
 

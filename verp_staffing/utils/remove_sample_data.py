@@ -388,7 +388,7 @@ DISABLE_FIELD_CANDIDATES = [
     ("enabled", 0),
 ]
 
-MAX_AUTO_DELETE = 500
+MAX_AUTO_DELETE = 5000
 
 
 def _get_company_scoped_doctypes():
