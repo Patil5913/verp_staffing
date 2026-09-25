@@ -1,6 +1,6 @@
 <template>
   <div v-if="!pdfUrl" class="rounded-xl border border-dashed border-app-border p-8 text-center text-p-sm text-app-text-muted">
-    Upload the original PDF (Details tab) and save — then place signature fields here.
+    Upload the original PDF (Details tab) and save - then place signature fields here.
   </div>
 
   <div v-else class="relative flex h-[calc(100dvh-160px)] flex-col md:flex-row min-h-[540px] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-sm">
@@ -79,7 +79,7 @@
             >
               <span v-if="row.field_type === 'checkbox'" class="lucide-check-square mx-auto mt-0.5 size-4" />
               <!-- Builder-only text: the placeholder (the label is for the signer, shown in the sidebar).
-                   Wraps inside the box, line spacing 1, and is cut off where the box ends — the
+                   Wraps inside the box, line spacing 1, and is cut off where the box ends - the
                    same way the PDF drawer (e_sign.py render_text) lays it out. -->
               <span v-if="row.field_type === 'checkbox'" class="lucide-check-square absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2" />
               <div v-else class="pointer-events-none absolute inset-0 overflow-hidden" :style="textStyle">{{ row.placeholder_text || labelFor(row.field_type) }}</div>
@@ -141,7 +141,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // The E Sign document editor, ported from e_sign.js: the original PDF is
 // rendered page by page and each recipient's fields (signature / text / date
 // / number / checkbox) are dragged onto it, moved and resized in
-// page-relative percentages — the same x/y/width/height_percent the server
+// page-relative percentages - the same x/y/width/height_percent the server
 // uses to draw the final PDF. Rows live in the hidden `signature_fields`
 // table: read from the detail's hiddenTables until edited, then written into
 // `values` so the page's normal Save persists them.

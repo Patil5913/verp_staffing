@@ -15,7 +15,7 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <router-link :to="`/Agreement/${encodeURIComponent(ag.name)}`" class="text-p-sm font-medium text-app-primary hover:underline">{{ ag.name }}</router-link>
-              <p class="text-p-xs text-app-text-muted">Template: <span class="text-app-text">{{ ag.template || '—' }}</span></p>
+              <p class="text-p-xs text-app-text-muted">Template: <span class="text-app-text">{{ ag.template || '-' }}</span></p>
             </div>
             <DocStatusBadge :status="ag.status || 'Draft'" />
           </div>
@@ -83,9 +83,9 @@ import AppInput from '@/components/ui/AppInput.vue'
 // The Sales Order "Agreements" module (public/js/salesOrder.js's
 // render_agreement_module): every agreement raised for this order with its
 // PDF and email status (Send / Resend, throttled server-side to one every
-// ten minutes), and a builder that fills a Pdf Agreement Template — Text /
+// ten minutes), and a builder that fills a Pdf Agreement Template - Text /
 // Number / Date / rich-text blocks, de-duplicated by type+name exactly as on
-// desk — then previews it (a PDF in a new tab) or saves it, optionally
+// desk - then previews it (a PDF in a new tab) or saves it, optionally
 // emailing it straight away.
 //
 // Not ported: the desk's "auto mode" (draft an agreement while the Sales Order
@@ -171,7 +171,7 @@ async function send(ag) {
 
 // Shared recovery UI for both Send and Save & Send below: collects the
 // customer's email, saves it to their Lead Detail Form, then re-runs
-// whatever was blocked on it — no more dead-ending on "Email is required
+// whatever was blocked on it - no more dead-ending on "Email is required
 // to send ...".
 const missingEmailOpen = ref(false)
 const missingEmailRetry = ref(null)
@@ -265,14 +265,14 @@ async function create(send) {
   } catch (error) {
     if (isEmailMissingError(error)) {
       // The Agreement itself was already created server-side before this
-      // throw (submit_and_generate only fails the *send* step) — retrying
+      // throw (submit_and_generate only fails the *send* step) - retrying
       // the whole create call would make a duplicate, so this just collects
       // the email and points at the new card's own Send button instead of
       // auto-retrying.
       template.value = ''
       loadCards()
       openMissingEmail(() =>
-        notify.success('Email saved — click Send Email on the new agreement below.'),
+        notify.success('Email saved - click Send Email on the new agreement below.'),
       )
     } else {
       notify.error(normalizeError(error).message)

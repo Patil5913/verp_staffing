@@ -4,7 +4,7 @@
 // picking through `exc_type` strings or guessing which of `.status` /
 // `.response.status` actually holds the real HTTP status (frappeRequest
 // sets `.status` from the already-consumed text body, so it's `undefined`
-// there — `.response.status` is the one that's reliable in that path).
+// there - `.response.status` is the one that's reliable in that path).
 //
 // Status codes below mirror apps/frappe/frappe/exceptions.py's
 // http_status_code values.
@@ -131,6 +131,6 @@ export const isNetworkError = (error) => normalizeError(error).type === 'network
 // Sales Order's pre-submit checks (validate_candidate_form_requirements)
 // and agreement.py's send_existing_agreement both throw this exact wording
 // when the customer has no email on file to send the candidate form/
-// agreement to — matched here so the caller can offer to collect one and
+// agreement to - matched here so the caller can offer to collect one and
 // retry, instead of just dead-ending on the error.
 export const isEmailMissingError = (error) => /email is required to send/i.test(normalizeError(error).message)

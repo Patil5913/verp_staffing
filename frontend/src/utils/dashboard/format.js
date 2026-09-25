@@ -5,7 +5,7 @@
 export const PALETTE = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0d9488', '#db2777', '#dc2626', '#64748b', '#0891b2', '#84cc16']
 
 export function formatMetric(value, format = 'number', currency = '', { compact = false } = {}) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return '-'
   const n = Number(value)
   if (Number.isNaN(n)) return String(value)
   const notation = compact ? { notation: 'compact', maximumFractionDigits: 2 } : { maximumFractionDigits: 2 }

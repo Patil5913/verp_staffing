@@ -23,7 +23,7 @@
 <script setup>
 import AppInput from '@/components/ui/AppInput.vue'
 // The Actions-menu buttons on CR ("Resolve"/"Refund" with a reason) and
-// Onboardings ("Mark Completed"/"Mark Returned" with a confirm) — only
+// Onboardings ("Mark Completed"/"Mark Returned" with a confirm) - only
 // offered while the latest history row is still in its open status, and each
 // one calls the doctype's own whitelisted resolver, then reloads the record.
 import { computed, ref } from 'vue'

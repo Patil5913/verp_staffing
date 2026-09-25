@@ -24,7 +24,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-// The default record detail/form view — used by every doctype that doesn't
+// The default record detail/form view - used by every doctype that doesn't
 // need its own page (see LeadDetailPage.vue / UserDetailPage.vue for
 // examples of doctypes that do, and router.js for how they're routed ahead
 // of this one). Keep this file doctype-agnostic: a customization specific
@@ -83,7 +83,7 @@ const DEFAULT_TABS = [
   { key: 'activity', label: 'Activity' },
 ]
 // Notes/Activity are keyed off a real docname (comments, versions, linked
-// tasks/events) — nothing to show for a record that hasn't been saved yet.
+// tasks/events) - nothing to show for a record that hasn't been saved yet.
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
 const activeTab = ref('details')
 </script>

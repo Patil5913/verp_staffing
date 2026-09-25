@@ -15,7 +15,7 @@
 <script setup>
 // The recovery step for Sales Order's pre-submit checks (validate_
 // candidate_form_requirements) and agreement.py's send_existing_agreement
-// both throwing "Email is required to send ..." — instead of a dead-end
+// both throwing "Email is required to send ..." - instead of a dead-end
 // error, this collects one, saves it to the customer's Lead Detail Form
 // (customer.py's save_customer_email), and lets the caller retry whatever
 // it was originally trying to do.
@@ -28,7 +28,7 @@ import { notify } from '@/utils/common/notify'
 const show = defineModel({ type: Boolean, default: false })
 const props = defineProps({
   customer: { type: String, required: true },
-  message: { type: String, default: 'This customer has no email on file yet — add one to continue.' },
+  message: { type: String, default: 'This customer has no email on file yet - add one to continue.' },
 })
 const emit = defineEmits(['saved'])
 

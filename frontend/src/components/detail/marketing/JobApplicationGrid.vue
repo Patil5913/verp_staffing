@@ -40,7 +40,7 @@
       You can only edit the counts on today's row that you created.
     </p>
     <p v-else-if="editable && isSuperior" class="text-p-xs text-app-text-muted">
-      As a manager you can correct the Date on any row — counts still only editable by whoever created that row, on the day it was created.
+      As a manager you can correct the Date on any row - counts still only editable by whoever created that row, on the day it was created.
     </p>
   </SectionCard>
 </template>
@@ -49,7 +49,7 @@
 import AppInput from '@/components/ui/AppInput.vue'
 // Marketing's "Job Application Count" grid, ported from marketing.js:
 // total = small + large (recomputed on every edit), a new row defaults to
-// today, and — unless you're a superior of the assignee — a row is only
+// today, and - unless you're a superior of the assignee - a row is only
 // editable if you created it *and* it's dated today (the desk form's
 // apply_job_application_row_locks).
 import { computed } from 'vue'
@@ -78,7 +78,7 @@ const summary = computed(() => {
 })
 
 // Being a superior only unlocks the Date column (see the Date input's own
-// :disabled binding above) — it never unlocks the counts on someone else's
+// :disabled binding above) - it never unlocks the counts on someone else's
 // row. Small/Large stay locked to "your own row, dated today" regardless
 // of superior status.
 function rowLocked(row) {

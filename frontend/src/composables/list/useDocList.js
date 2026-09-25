@@ -7,12 +7,12 @@ const DEFAULT_PAGE_LENGTH = 15
 
 // Orchestrates a generic doctype list view on top of useResource: field
 // metadata (backed by verp_staffing.utils.list_view), a search box resolved
-// server-side into a list of get_list filters — field-scoped ("status=open")
+// server-side into a list of get_list filters - field-scoped ("status=open")
 // and/or free-text terms, AND'd or OR'd together (see resolve_search_filter
-// for the full syntax) — sorting, and fixed-page-size (10) pagination.
+// for the full syntax) - sorting, and fixed-page-size (10) pagination.
 //
 // Deliberately built on useResource (frappe.client.get_list) rather than
-// useList (createListResource) — createListResource's reload()/next()
+// useList (createListResource) - createListResource's reload()/next()
 // always *concatenate* once `start > 0` (it's built for infinite-scroll
 // "load more" lists, see listResource.js's `out.originalData.concat(data)`),
 // which would silently merge page 2's rows onto page 1's instead of
@@ -21,7 +21,7 @@ const DEFAULT_PAGE_LENGTH = 15
 // pagination needs.
 export function useDocList(doctype, options = {}) {
   // Optional extra get_list-style filter tuples merged on top of the
-  // search-resolved ones — e.g. Interview's "Select Customer" scoping
+  // search-resolved ones - e.g. Interview's "Select Customer" scoping
   // (marketing_link in [...]), which isn't something the search box's own
   // syntax can express and shouldn't have to be.
   const extraFilters = options.extraFilters ?? computed(() => [])
@@ -67,7 +67,7 @@ export function useDocList(doctype, options = {}) {
 
   const docs = useResource({
     // Interview's "Today" status is derived (not stored), so its list/count come
-    // from its own API — same arguments as get_list.
+    // from its own API - same arguments as get_list.
     url: doctype === 'Interview' ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list' : 'frappe.client.get_list',
     makeParams: () => ({
       ...(doctype === 'Interview' ? {} : { doctype }),
@@ -168,7 +168,7 @@ export function useDocList(doctype, options = {}) {
     pageLength,
     searchText,
     // `search` is a reactive() object (see useResource.js), so `search.isLoading`
-    // unwraps to a plain boolean *at this access* — re-wrapping in computed()
+    // unwraps to a plain boolean *at this access* - re-wrapping in computed()
     // here keeps it live instead of freezing it at whatever it was when
     // useDocList() ran.
     searchLoading: computed(() => search.isLoading),

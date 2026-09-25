@@ -1,6 +1,6 @@
 // Icons for the dashboard's cards. KPI, section and alert icons arrive from the
 // server (utils/dashboard.py) as plain names, and chart / table icons are
-// picked here from the card's id — so every `lucide-<name>` class is built at
+// picked here from the card's id - so every `lucide-<name>` class is built at
 // runtime and Tailwind's content scan never sees it. tailwind.config.js
 // safelists DASHBOARD_ICON_NAMES: add a name to any list below and it renders.
 

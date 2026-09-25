@@ -10,7 +10,7 @@
           They'll get an email with a link to the form.
         </p>
         <p v-if="recipient" class="text-app-text-muted">Email will be sent to <b class="text-app-text">{{ recipient }}</b>.</p>
-        <p v-else-if="!loading" class="text-red-600">This customer has no email on their Lead Detail Form — add one before sending.</p>
+        <p v-else-if="!loading" class="text-red-600">This customer has no email on their Lead Detail Form - add one before sending.</p>
       </div>
     </template>
     <template #actions>

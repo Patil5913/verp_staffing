@@ -13,7 +13,7 @@
 
 <script setup>
 // The rounded "panel" every detail-page block (customer details, history,
-// summaries, ...) sits in — same chrome as DocDetailView's field card and
+// summaries, ...) sits in - same chrome as DocDetailView's field card and
 // ChildTableField, so custom panels line up with the generic ones.
 defineProps({
   title: { type: String, default: '' },

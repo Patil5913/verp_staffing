@@ -19,7 +19,7 @@
 
       <template v-else>
         <p v-if="!requiredFieldnames.length" class="text-p-sm text-app-text-muted">
-          {{ doctype }} has no required fields — save to create it as-is, or open the full form to fill in more.
+          {{ doctype }} has no required fields - save to create it as-is, or open the full form to fill in more.
         </p>
         <DocDetailView v-else :doctype="doctype" :detail="detail" :fieldnames="requiredFieldnames" />
       </template>
@@ -88,7 +88,7 @@ watch(
 )
 
 // Desk only shows the Quick Entry dialog for a doctype with quick_entry=1
-// on its DocType — everything else jumps straight to the full form. This
+// on its DocType - everything else jumps straight to the full form. This
 // dialog was opening unconditionally instead.
 watch(
   () => detail.meta.resource.data,
@@ -101,8 +101,8 @@ watch(
 function openFullForm() {
   isOpen.value = false
   // A plain path, not a named route: some doctypes (Lead, User) have their
-  // own detail page routed ahead of the generic DocDetail one — see
-  // router.js — and this lets vue-router pick whichever one matches instead
+  // own detail page routed ahead of the generic DocDetail one - see
+  // router.js - and this lets vue-router pick whichever one matches instead
   // of this dialog having to know which doctypes are customized.
   router.push(`/${encodeURIComponent(props.doctype)}/new`)
 }

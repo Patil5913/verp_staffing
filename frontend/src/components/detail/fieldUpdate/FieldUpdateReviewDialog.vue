@@ -57,7 +57,7 @@ const open = defineModel({ type: Boolean, default: false })
 const props = defineProps({
   customer: { type: String, required: true },
   requests: { type: Array, default: () => [] },
-  // { fieldname: { label } } — nicer names than the raw fieldnames
+  // { fieldname: { label } } - nicer names than the raw fieldnames
   labels: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['done'])
@@ -80,7 +80,7 @@ watch(open, (o) => {
 
 const prettify = (name) => name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 const labelOf = (fieldname) => props.labels[fieldname]?.label || prettify(fieldname)
-const show = (v) => (v === null || v === undefined || v === '' ? '—' : String(v))
+const show = (v) => (v === null || v === undefined || v === '' ? '-' : String(v))
 const rowText = (row) =>
   Object.entries(row)
     .filter(([k, v]) => v !== null && v !== '' && !['name', 'idx', 'parent', 'parentfield', 'parenttype', 'doctype'].includes(k))

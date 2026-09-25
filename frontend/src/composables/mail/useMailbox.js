@@ -5,7 +5,7 @@ import { normalizeError } from '@/utils/common/errors'
 
 // State + calls behind the Email Inbox page (verp_staffing.utils.mailbox):
 // the current folder / filter / search, a paged message list, the open
-// message, bulk actions, and drafts (kept on this device — Frappe has no
+// message, bulk actions, and drafts (kept on this device - Frappe has no
 // server-side draft for email).
 const API = 'verp_staffing.utils.mailbox'
 const PAGE = 30

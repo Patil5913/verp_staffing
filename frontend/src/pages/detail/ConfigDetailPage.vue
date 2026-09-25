@@ -162,7 +162,7 @@
 
 <script setup>
 // One config-driven detail page for every doctype whose form is "some field
-// groups + some child tables + a few custom panels/actions" — i.e. all of
+// groups + some child tables + a few custom panels/actions" - i.e. all of
 // them except the handful with a bespoke layout (Lead, User, Hierarchy, ...).
 // A doctype's page is just its config (see detailConfigs/), routed through
 // router.js; this file owns the chrome once: tabs, Save/Delete, Submit/Cancel
@@ -192,7 +192,7 @@
 //   autoCalculate?: boolean,                // live-recompute Items/Taxes/
 //                                            // Totals client-side on every
 //                                            // relevant edit (docCalculator.js
-//                                            // — same math as the server's
+//                                            // - same math as the server's
 //                                            // run_calculation), instead of
 //                                            // only reflecting the last save
 //   submitConfirm?(detail): string,         // HTML body for a confirm
@@ -246,7 +246,7 @@ const {
 // A config can supply submitConfirm(detail)/cancelConfirm(detail) returning
 // an HTML string for a doctype-specific "here's what this actually does"
 // dialog (Payment Entry: submitting locks it in as Verified, cancelling
-// reverses the GL entries) — Submit had no confirmation at all before this,
+// reverses the GL entries) - Submit had no confirmation at all before this,
 // and Cancel only ever showed one generic sentence regardless of doctype.
 // A config without either keeps exactly the previous behavior (submit
 // fires immediately; cancel shows the generic message).
@@ -256,7 +256,7 @@ const cancelConfirmHtml = computed(() => props.config.cancelConfirm?.(detail) ||
 
 // A submit that fails because the customer has no email to send the
 // candidate form/agreement to (Sales Order's pre-submit checks) offers a
-// small dialog to collect one instead of dead-ending — see
+// small dialog to collect one instead of dead-ending - see
 // useDetailPageController's onSubmit / MissingEmailDialog.vue.
 const missingEmailOpen = ref(false)
 function onEmailSaved() {
@@ -277,7 +277,7 @@ async function confirmSubmit() {
   if (result?.emailMissing) missingEmailOpen.value = true
 }
 
-// Items/Taxes/discount/rounding/currency — the full set docCalculator.js's
+// Items/Taxes/discount/rounding/currency - the full set docCalculator.js's
 // recalcDocTotals reads. Deep so an edit inside an existing item/tax row
 // (not just adding/removing one) triggers it too; recalcDocTotals writing
 // the same numbers back doesn't cause a loop since Vue skips a reactive set
@@ -299,7 +299,7 @@ watch(
 )
 
 // Company-driven defaults (default company, company currency, default accounts,
-// account currencies) — opt in per doctype via config.companyDefaults.
+// account currencies) - opt in per doctype via config.companyDefaults.
 if (props.config.companyDefaults) useCompanyDefaults(detail, props.config.companyDefaults)
 // A config may register its own reactive form logic (Company: abbr, chart options).
 props.config.setup?.(detail)
@@ -309,7 +309,7 @@ if (props.config.autoCalculate) useInvoiceDynamics(detail, { expenseSide: /^Purc
 const locked = computed(() => Boolean(props.config.locked?.(detail)) || detail.docstatus.value !== 0)
 const readOnlyFields = computed(() => props.config.readOnlyFields?.(detail) || [])
 // statusField is usually a plain fieldname, but can be a function of the
-// record when which status field applies is conditional — Payment Entry
+// record when which status field applies is conditional - Payment Entry
 // shows verification_status instead of docstatus, but only once
 // doc.payment_term is set (see paymentEntryConfig); otherwise it's a plain
 // docstatus-driven Draft/Submitted/Cancelled payment like any other.
@@ -317,8 +317,8 @@ const resolvedStatusField = computed(() =>
   typeof props.config.statusField === 'function' ? props.config.statusField(detail) : props.config.statusField,
 )
 // A purely computed status label (Sales Invoice's Paid/Unpaid/Partly Paid
-// from outstanding_amount — not backed by any real field) instead of a
-// fieldname to read off the doc — takes precedence over statusField.
+// from outstanding_amount - not backed by any real field) instead of a
+// fieldname to read off the doc - takes precedence over statusField.
 const computedStatusText = computed(() => props.config.statusText?.(detail) ?? null)
 // Whether the status badge should override docstatus even on an otherwise-
 // submittable doctype (true when either mechanism actually produced text).
@@ -326,7 +326,7 @@ const overridesDocstatus = computed(
   () => computedStatusText.value != null || (typeof props.config.statusField === 'function' && !!resolvedStatusField.value),
 )
 // The generic draft notice ("submit this to confirm") is suppressed when the
-// config opts out — Payment Entry's own verification_status already covers
+// config opts out - Payment Entry's own verification_status already covers
 // "Rejected" with more specific messaging, so the generic one would be
 // redundant/confusing there.
 const hideDraftNotice = computed(() => Boolean(props.config.hideDraftNotice?.(detail)))
@@ -338,7 +338,7 @@ const statusText = computed(() => {
 
 // A submitted doc is normally frozen, but a config can opt in to keeping Save
 // available for the fields the doctype marks allow_on_submit (Sales Order's
-// payment_terms) — the server only applies those on a submitted doc.
+// payment_terms) - the server only applies those on a submitted doc.
 const canEditAfterSubmit = computed(
   () => Boolean(props.config.allowOnSubmitEdit) && detail.docstatus.value === 1 && !!detail.meta.resource.data?.perms?.write,
 )
@@ -346,11 +346,11 @@ const showSave = computed(() => !locked.value || detail.isNew.value || canEditAf
 
 const TIMELINE_TABS = {
   full: [
-    { key: 'notes', label: 'Notes', timeline: { types: ['note', 'update'], composer: true, empty: 'Nothing here yet — add the first note below.' } },
+    { key: 'notes', label: 'Notes', timeline: { types: ['note', 'update'], composer: true, empty: 'Nothing here yet - add the first note below.' } },
     { key: 'activity', label: 'Activity', timeline: { types: ['task', 'event'], create: true, empty: 'No tasks or events linked to this record yet.' } },
   ],
   service: [
-    { key: 'notes', label: 'Notes', timeline: { types: ['note'], composer: true, empty: 'Nothing here yet — add the first note below.' } },
+    { key: 'notes', label: 'Notes', timeline: { types: ['note'], composer: true, empty: 'Nothing here yet - add the first note below.' } },
     { key: 'updates', label: 'Updates', timeline: { types: ['update'], empty: 'No updates yet.' } },
     { key: 'activity', label: 'Activity', timeline: { types: ['task', 'event'], create: true, empty: 'No tasks or events linked to this record yet.' } },
   ],
@@ -364,11 +364,11 @@ const allTabs = computed(() => [
 const tabs = computed(() => (detail.isNew.value ? allTabs.value.slice(0, 1) : allTabs.value))
 const activeTab = ref(props.config.tabs[0].key)
 
-// fieldGuards: [{ field, check(value, savedValue, detail) }] — intercepts the
+// fieldGuards: [{ field, check(value, savedValue, detail) }] - intercepts the
 // user's own edit of a field (never a value loading in from the server). check
 // returns { block: 'message' } to refuse the change, { confirm: { title,
 // message, confirmLabel } } to ask first, or nothing to allow it. Either way a
-// refused change snaps back — the desk form's frappe.confirm() on a checkbox.
+// refused change snaps back - the desk form's frappe.confirm() on a checkbox.
 for (const guard of props.config.fieldGuards || []) {
   let reverting = false
   watch(
@@ -407,13 +407,13 @@ const visibleSections = (tab) => (tab.sections || []).filter((s) => !s.show || s
 // picker excludes companies already in another year).
 const linkQueriesFor = (section) =>
   typeof section.linkQueries === 'function' ? section.linkQueries({ detail, name: name.value }) : section.linkQueries
-// A table section's onFieldChange (row cross-field logic — see
+// A table section's onFieldChange (row cross-field logic - see
 // ChildTableField's own prop) gets the same { detail, name } context a
 // component section does, since it often needs sibling doc fields (Sales
 // Order's Items Table needs the doc's own `company`). GridTableField also
 // passes a 4th argument (the row's index) that ChildTableField has no
 // equivalent for (a dialog edits one row in isolation, with no stable
-// index) — that index is forwarded here as `idx` on the context object
+// index) - that index is forwarded here as `idx` on the context object
 // rather than as a bare positional argument, so existing onFieldChange
 // signatures (fieldname, value, draft, { detail, name }) don't silently
 // break; a grid-backed section that needs it just destructures `idx` too.
@@ -431,7 +431,7 @@ const sectionKind = (section) =>
   section.type === 'auto' ? (tableFor(section.fieldname)?.editable_grid ? 'grid' : 'table') : section.type
 // The section's static/record-level link queries plus an optional per-row
 // `rowLinkQueries(row, rows, idx, { detail })` (e.g. Items: exclude items already
-// picked in other rows) — returned as one (row, rows, idx) function.
+// picked in other rows) - returned as one (row, rows, idx) function.
 const rowQueriesFor = (section) => {
   const base = linkQueriesFor(section)
   if (!section.rowLinkQueries) return base

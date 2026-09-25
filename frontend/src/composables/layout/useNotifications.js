@@ -5,7 +5,7 @@ import { notify } from '@/utils/common/notify'
 import { deskToSpaPath, isDeskPath } from '@/utils/common/deskRoute'
 
 // Mirrors Frappe desk's own notification bell exactly on the backend side:
-// same "Notification Log" whitelisted methods, same realtime channel — see
+// same "Notification Log" whitelisted methods, same realtime channel - see
 // apps/frappe/frappe/desk/doctype/notification_log/notification_log.py and
 // apps/frappe/frappe/public/js/frappe/ui/notifications/notifications.js.
 const GET_LOGS = 'frappe.desk.doctype.notification_log.notification_log.get_notification_logs'
@@ -66,7 +66,7 @@ function connectRealtime() {
 
 // Same link-resolution priority as get_form_link() in core: an explicit
 // `link` override wins, otherwise the record the notification is about. The
-// result is a router path — the SPA's own page, never the classic desk.
+// result is a router path - the SPA's own page, never the classic desk.
 async function resolveRoute(n) {
   if (n.link) {
     if (isDeskPath(n.link)) return (await deskToSpaPath(n.link)) || '/'

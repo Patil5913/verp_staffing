@@ -31,7 +31,7 @@
 // A horizontal bar chart for single-series reports (interviews per customer,
 // the lead funnel, revenue vs target). Unlike a stock axis chart it can colour
 // each bar by a rule from the report's config, label bars with long names in
-// full, and — in funnel mode — show every stage as a share of the first.
+// full, and - in funnel mode - show every stage as a share of the first.
 import { computed } from 'vue'
 
 const TONES = { danger: 'bg-red-500', success: 'bg-green-500', warning: 'bg-amber-500' }

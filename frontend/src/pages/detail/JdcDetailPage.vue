@@ -62,7 +62,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-updates>
@@ -102,7 +102,7 @@
 
 <script setup>
 // JDC's (interview session) detail page: Details/Proof of Work/Feedback/
-// Notes/Activity — `customer_feedback` is read_only on the doctype itself
+// Notes/Activity - `customer_feedback` is read_only on the doctype itself
 // (filled in by the customer's own feedback flow, not edited here), so its
 // tab renders the child table disabled rather than letting edits queue up
 // with nowhere to go. `customer` is hidden + set_only_once server-side and
@@ -145,7 +145,7 @@ const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.k
 const activeTab = ref('details')
 
 const DETAIL_FIELDS = ['interview_round', 'assign_to', 'status', 'scheduled_on', 'from_time', 'to_time']
-// Once Completed, the schedule is frozen along with status — matches the
+// Once Completed, the schedule is frozen along with status - matches the
 // desk form locking Schedule On/From/To the same moment it locks Status.
 const LOCK_FIELDS = ['status', 'scheduled_on', 'from_time', 'to_time']
 

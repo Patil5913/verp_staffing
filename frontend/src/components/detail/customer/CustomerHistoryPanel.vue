@@ -35,20 +35,20 @@
           <p class="text-p-sm text-app-text-muted">
             <span v-if="entry.service_name">{{ entry.service_name }} · </span>
             <span v-if="entry.interview">{{ entry.interview.company }} · {{ entry.interview.role }} · </span>
-            <!-- An Interview's own card has no assignee — it shows its company (and role). -->
-            <template v-if="entry.interview_rounds_table">{{ entry.company || '—' }}<span v-if="entry.role"> · {{ entry.role }}</span></template>
-            <template v-else>Assigned to {{ entry.assign_to || '—' }}</template>
+            <!-- An Interview's own card has no assignee - it shows its company (and role). -->
+            <template v-if="entry.interview_rounds_table">{{ entry.company || '-' }}<span v-if="entry.role"> · {{ entry.role }}</span></template>
+            <template v-else>Assigned to {{ entry.assign_to || '-' }}</template>
           </p>
 
           <dl v-if="entry.interview_round_detail" class="grid grid-cols-2 gap-x-4 gap-y-1 text-p-sm sm:grid-cols-4">
             <div v-for="row in roundRows(entry.interview_round_detail)" :key="row.label">
               <dt class="text-p-xs text-app-text-muted">{{ row.label }}</dt>
-              <dd class="text-app-text">{{ row.value || '—' }}</dd>
+              <dd class="text-app-text">{{ row.value || '-' }}</dd>
             </div>
           </dl>
 
           <!-- The Interview department's own card: every round it's had,
-               in table format — customer_history.js's Interview list item. -->
+               in table format - customer_history.js's Interview list item. -->
           <div v-if="entry.interview_rounds_table" class="overflow-x-auto">
             <table class="w-full text-left text-p-sm">
               <thead class="text-p-xs text-app-text-muted">
@@ -68,15 +68,15 @@
                 </tr>
                 <tr v-for="(r, i) in entry.interview_rounds_table" :key="i" class="border-t border-app-border">
                   <td class="py-1.5 pr-4">
-                    {{ r.round || '—' }}
+                    {{ r.round || '-' }}
                     <span v-if="r.support" title="Support Taken" class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-app-primary/10 text-[10px] font-bold text-app-primary">S</span>
                   </td>
-                  <td class="py-1.5 pr-4">{{ r.type_of_interview || '—' }}</td>
-                  <td class="py-1.5 pr-4">{{ formatDate(r.date) || '—' }}</td>
-                  <td class="py-1.5 pr-4">{{ formatDate(r.date_of_interview) || '—' }}</td>
-                  <td class="py-1.5 pr-4">{{ r.from_time && r.to_time ? `${r.from_time} - ${r.to_time}` : '—' }}</td>
+                  <td class="py-1.5 pr-4">{{ r.type_of_interview || '-' }}</td>
+                  <td class="py-1.5 pr-4">{{ formatDate(r.date) || '-' }}</td>
+                  <td class="py-1.5 pr-4">{{ formatDate(r.date_of_interview) || '-' }}</td>
+                  <td class="py-1.5 pr-4">{{ r.from_time && r.to_time ? `${r.from_time} - ${r.to_time}` : '-' }}</td>
                   <td class="py-1.5 pr-4"><DocStatusBadge :status="r.status" /></td>
-                  <td class="py-1.5 max-w-xs"><TruncatedText v-if="r.feedback" :text="r.feedback" :limit="20" /><template v-else>—</template></td>
+                  <td class="py-1.5 max-w-xs"><TruncatedText v-if="r.feedback" :text="r.feedback" :limit="20" /><template v-else>-</template></td>
                 </tr>
               </tbody>
             </table>
@@ -122,7 +122,7 @@
           <div v-if="entry.feedback_entries?.length" class="flex flex-col gap-1 text-p-sm">
             <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Customer feedback</p>
             <p v-for="(f, i) in entry.feedback_entries" :key="i" class="text-app-text">
-              <span class="text-app-text-muted">{{ formatDate(f.date) }} —</span> {{ f.feedback }}
+              <span class="text-app-text-muted">{{ formatDate(f.date) }} -</span> {{ f.feedback }}
             </p>
           </div>
 
@@ -130,7 +130,7 @@
             <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Forward History</p>
             <ol class="ml-4 list-decimal text-app-text">
               <li v-for="(e, i) in entry.forward_events" :key="i">
-                Forwarded to <b>{{ e.department || '-' }} Dept.</b> — {{ formatForwardEventTime(e.timestamp) }}
+                Forwarded to <b>{{ e.department || '-' }} Dept.</b> - {{ formatForwardEventTime(e.timestamp) }}
               </li>
             </ol>
           </div>
@@ -146,7 +146,7 @@
 
 <script setup>
 // The customer's full trail across departments (Marketing, Resume, RUC,
-// Interview Support, ...) — the desk "History" tab, backed by the same
+// Interview Support, ...) - the desk "History" tab, backed by the same
 // get_customer_history the customer portal uses.
 import { computed, ref, watch } from 'vue'
 import { LoadingIndicator } from 'frappe-ui'
@@ -161,7 +161,7 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({
   customer: { type: String, default: '' },
   detail: { type: Object, default: null },
-  // When set, shows only this department (doctype) — e.g. Marketing's
+  // When set, shows only this department (doctype) - e.g. Marketing's
   // History tab only cares about its own trail plus interviews.
   departments: { type: Array, default: null },
 })
@@ -203,8 +203,8 @@ function loadMoreInterviews() {
   history.resource.submit({ customer: customer.value, interview_limit: interviewLimit.value, interview_offset: 0 })
 }
 
-// Matches customer_history.js's format_display_datetime exactly — "25 Aug
-// 2026, 20:40" (24-hour, no am/pm) — this staff-facing view's own format,
+// Matches customer_history.js's format_display_datetime exactly - "25 Aug
+// 2026, 20:40" (24-hour, no am/pm) - this staff-facing view's own format,
 // distinct from the portal template's 12-hour "%b %d, %Y, %I:%M %p".
 function formatForwardEventTime(value) {
   if (!value) return '-'

@@ -2,7 +2,7 @@ import { computed, watch } from 'vue'
 import { useResource } from '@/composables/list/useResource'
 
 // Whether the current user sits above `assignTo` in `department`'s
-// assignment chain — the check the desk Marketing/Interview forms use to
+// assignment chain - the check the desk Marketing/Interview forms use to
 // unlock target, dates and past rows for a manager while keeping them
 // locked for the assignee. Fails closed: until the server answers (or if it
 // errors) nobody is treated as a superior.

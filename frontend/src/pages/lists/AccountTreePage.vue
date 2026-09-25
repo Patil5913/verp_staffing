@@ -21,7 +21,7 @@
         v-if="!companies.length && !loadingCompanies"
         icon="building"
         title="No company yet"
-        description="Create a Company first — accounts belong to one."
+        description="Create a Company first - accounts belong to one."
       />
       <template v-else-if="company">
         <div class="flex flex-wrap items-center gap-2 text-p-xs text-app-text-muted">
@@ -93,7 +93,7 @@ import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
-// Chart of Accounts — the Account tree, company-scoped. Ported from
+// Chart of Accounts - the Account tree, company-scoped. Ported from
 // account_tree.js: nodes come from accounts.utils.get_children (which is
 // company-aware; the stock treeview isn't, which is why accounts from every
 // company used to pile into one list), balances from get_account_balances
@@ -204,7 +204,7 @@ async function attachBalances(nodes) {
       node.balanceText = `${fmt(row.balance, row.company_currency)} ${row.balance > 0 ? 'Dr' : row.balance < 0 ? 'Cr' : ''}`.trim()
     }
   } catch {
-    // Balances are decoration — a failure here shouldn't hide the chart.
+    // Balances are decoration - a failure here shouldn't hide the chart.
   }
 }
 

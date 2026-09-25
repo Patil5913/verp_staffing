@@ -17,7 +17,7 @@ const latestStatus = (detail, field) => {
 }
 
 // Both doctypes are made by forwarding a candidate, not by hand, so there's
-// no Add New in their lists (see listOptions.js) — this page is for working
+// no Add New in their lists (see listOptions.js) - this page is for working
 // the case: assign it, resolve it, and read the customer's context.
 const CUSTOMER_INFO_FIELDS = [
   'agreement_link', 'signature_image', 'my_electronic_signature_has_same_effect_as_handwritten',
@@ -45,7 +45,7 @@ const customerTabs = (extraFields = []) => [
 export const crConfig = {
   doctype: 'CR',
   timeline: false,
-  // Forwarded off a Customer's own workflow, never created by hand — no
+  // Forwarded off a Customer's own workflow, never created by hand - no
   // manual delete either.
   noDelete: true,
   // A resolved / refunded case is read-only (cr.js: disable_form()).

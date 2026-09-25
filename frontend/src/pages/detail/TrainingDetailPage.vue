@@ -40,8 +40,8 @@
                  values, not hidden. Read-only list: when it was given, then what was said. -->
             <ul v-if="feedbackRows.length" class="flex flex-col gap-3">
               <li v-for="(row, i) in feedbackRows" :key="row.name || i" class="rounded-lg border border-app-border bg-app-panel-2/40 p-3">
-                <p class="text-p-xs font-medium text-app-text-muted">{{ formatDatetime(row.date) || '—' }}</p>
-                <p class="mt-1 whitespace-pre-wrap text-p-sm text-app-text">{{ row.feedback || '—' }}</p>
+                <p class="text-p-xs font-medium text-app-text-muted">{{ formatDatetime(row.date) || '-' }}</p>
+                <p class="mt-1 whitespace-pre-wrap text-p-sm text-app-text">{{ row.feedback || '-' }}</p>
               </li>
             </ul>
             <p v-else class="py-4 text-center text-p-sm text-app-text-muted">No Feedback Yet</p>
@@ -64,7 +64,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-updates>
@@ -97,7 +97,7 @@
 </template>
 
 <script setup>
-// Training's detail page — a "service record" for a Customer, same shape
+// Training's detail page - a "service record" for a Customer, same shape
 // as Interview Support and Technical Other Services (see those pages'
 // header comments and public/js/reusable.js's refresh() for the desk form
 // this mirrors). assign_to/status lock once status is "Completed", same as

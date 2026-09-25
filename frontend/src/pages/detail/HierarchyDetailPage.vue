@@ -117,7 +117,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-// Hierarchy's own detail page — ports the old desk hierarchy.js widget
+// Hierarchy's own detail page - ports the old desk hierarchy.js widget
 // (role_table_html + hierarchy_diagram + auto_assign_config) onto this
 // app's reusable components (AppLinkField, FieldControl, AppButton,
 // Dialog, HierarchyDiagram) instead of hand-built jQuery/HTML, but keeps
@@ -177,7 +177,7 @@
 // storage fields (excluded from the generic get_doc_meta payload, same as
 // any other hidden field), so they're fetched once via the same generic
 // frappe.client.get the old widget itself used, and written back through
-// the generic save_doc_fields — no new backend endpoints needed. The
+// the generic save_doc_fields - no new backend endpoints needed. The
 // unused-department-role precheck/confirm dance and every structural
 // validation (self-loops, cycles, duplicate children, roles must belong to
 // the department, ...) still run in hierarchy.py exactly as before; this
@@ -303,14 +303,14 @@ watch(
 )
 
 // Clear an auto-assign role that no longer belongs to the (possibly just
-// changed) department — mirrors hierarchy.js's department() handler.
+// changed) department - mirrors hierarchy.js's department() handler.
 watch(departmentRoles, (roles) => {
   if (autoAssignRole.value && !roles.includes(autoAssignRole.value)) autoAssignRole.value = ''
 })
 
 // Seed rows/auto-assign/snapshots once the record loads. role_hierarchy_json
 // and auto_assign_config are hidden fields, so get_doc_meta never returns
-// them — fetched once here via the same generic frappe.client.get the old
+// them - fetched once here via the same generic frappe.client.get the old
 // widget's own load_department_roles() used.
 watch(
   () => detail.meta.resource.data,

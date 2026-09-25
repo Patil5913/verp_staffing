@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-// List / Tree / Kanban / Calendar toggle for a doctype — which views exist comes from
+// List / Tree / Kanban / Calendar toggle for a doctype - which views exist comes from
 // listOptions.js's EXTRA_VIEWS, so a page just drops this in.
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'

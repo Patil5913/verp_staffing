@@ -6,7 +6,7 @@
 
     <!-- Rule, enforced structurally rather than by convention: Save is
     always immediately beside Delete, in this order, regardless of what
-    else this page adds — a future action added via the slot above can
+    else this page adds - a future action added via the slot above can
     never land between them. -->
     <AppButton v-if="showSubmit" variant="primary" icon="check-circle" :loading="submitLoading" @click="$emit('submit')">
       Submit
@@ -33,13 +33,13 @@ import AppButton from '@/components/ui/AppButton.vue'
 
 defineProps({
   showSave: { type: Boolean, default: false },
-  // Save dims (disabled) until there's an actual unsaved change — flip
+  // Save dims (disabled) until there's an actual unsaved change - flip
   // this from the page's dirty-tracking (see useDocDetail's isDirty).
   saveDirty: { type: Boolean, default: true },
   saveLoading: { type: Boolean, default: false },
   showDelete: { type: Boolean, default: false },
   deleteLoading: { type: Boolean, default: false },
-  // Submittable doctypes only — see useDetailPageController's onSubmit /
+  // Submittable doctypes only - see useDetailPageController's onSubmit /
   // onCancelDoc. Submit sits before Save/Delete like any other page action.
   showSubmit: { type: Boolean, default: false },
   submitLoading: { type: Boolean, default: false },

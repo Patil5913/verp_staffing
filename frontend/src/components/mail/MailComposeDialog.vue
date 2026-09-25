@@ -95,7 +95,7 @@ const formKey = ref(0)
 const showCc = ref(false)
 const showBcc = ref(false)
 const problem = ref('')
-let handled = false // sent, saved or discarded — nothing left to auto-save
+let handled = false // sent, saved or discarded - nothing left to auto-save
 
 const title = computed(() => (form.inReplyTo ? 'Reply' : form.subject.startsWith('Fwd:') ? 'Forward' : 'New message'))
 const outgoing = computed(() => props.accounts.filter((a) => a.enable_outgoing))

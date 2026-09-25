@@ -51,12 +51,12 @@
 </template>
 
 <script setup>
-// Quick-create for Lead / Opportunity / Customer — these don't use the
+// Quick-create for Lead / Opportunity / Customer - these don't use the
 // generic meta-driven QuickCreateDialog (see DocListView.vue's per-doctype
 // override wiring). Only `name1` is a real field on the doctype itself;
 // phone/email go to the linked Lead Detail Form instead, via the same
 // `_<fieldname>` convention Lead.create_lead_detail / Opportunity.after_insert
-// / Customer.after_insert read off the in-memory doc at insert time — see
+// / Customer.after_insert read off the in-memory doc at insert time - see
 // those controllers for the other half of this.
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -100,7 +100,7 @@ const phoneEntered = computed(() => phone.value.trim() && phone.value.trim() !==
 const email = ref('')
 const triedSave = ref(false)
 
-// Only Customer actually has a "where did this come from" concept — a
+// Only Customer actually has a "where did this come from" concept - a
 // Customer quick-created without it is indistinguishable from one
 // created standalone (Customer.after_insert's CASE 2), losing the link to
 // whichever Lead/Opportunity it should trace back to.

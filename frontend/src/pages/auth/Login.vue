@@ -2,15 +2,15 @@
   <div class="flex min-h-screen items-center justify-center bg-app-bg px-4">
     <div class="w-full max-w-sm">
       <div class="mb-8 flex flex-col items-center gap-3">
-        <img :src="logoSrc" alt="Vrugle" class="h-10 w-10" />
-        <h1 class="text-xl font-semibold text-app-text">Vrugle Staffing</h1>
+        <img :src="appLogo" :alt="appName" class="h-10 w-10" />
+        <h1 class="text-xl font-semibold text-app-text">{{ appName }}</h1>
       </div>
 
       <div class="rounded-lg border border-app-border bg-app-panel p-6">
         <template v-if="mode === 'login'">
           <h2 class="mb-1 text-lg font-semibold text-app-text">Sign in</h2>
           <p class="mb-5 text-p-sm text-app-text-muted">
-            Use your Vrugle account to continue.
+            Use your account to continue.
           </p>
 
           <form class="flex flex-col gap-4" @submit.prevent="submitLogin">
@@ -104,11 +104,10 @@ import {
   Password,
   createResource,
 } from 'frappe-ui'
+import { useBranding } from '@/composables/layout/useBranding'
 import { notify } from '@/utils/common/notify'
 
-// dynamic binding so Vite's template compiler doesn't try to resolve this
-// as a local build asset — it's served at runtime by the Frappe backend
-const logoSrc = '/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png'
+const { appName, appLogo } = useBranding()
 
 const route = useRoute()
 const mode = ref('login')
@@ -117,7 +116,7 @@ const form = reactive({ email: '', password: '' })
 
 // Frappe's own `login` whitelisted endpoint validates the credentials,
 // creates the session cookie, and loads the user's roles/permissions.
-// Nothing about authentication is implemented on our side here — this is
+// Nothing about authentication is implemented on our side here - this is
 // just a styled form posting to it.
 const login = createResource({
   url: 'login',
@@ -151,7 +150,7 @@ async function submitLogin() {
 const resetEmail = ref('')
 
 // frappe.core.doctype.user.user.reset_password is Frappe's own, rate-limited,
-// allow_guest whitelisted method — it always replies with the same generic
+// allow_guest whitelisted method - it always replies with the same generic
 // message whether or not the account exists, so we never learn (or leak)
 // anything about the account here either.
 const reset = createResource({

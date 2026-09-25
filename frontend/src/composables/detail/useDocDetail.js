@@ -12,7 +12,7 @@ import { validateFieldValue } from '@/utils/detail/fieldFormats'
 export function useDocDetail(doctype, name) {
   const route = useRoute()
   // The list view's "New" button routes here with name: 'new' (no real
-  // docname yet) — treated the same as no name at all.
+  // docname yet) - treated the same as no name at all.
   const isNew = computed(() => !name.value || name.value === 'new')
 
   const meta = useResource({
@@ -24,7 +24,7 @@ export function useDocDetail(doctype, name) {
   // vue-router reuses this page's component instance when only the route's
   // :name param changes (e.g. navigating from one Lead straight to another
   // without an intervening list view), so `auto: true`'s one-shot fetch at
-  // creation isn't enough — refetch whenever the record identity changes.
+  // creation isn't enough - refetch whenever the record identity changes.
   watch([doctype, name], () => meta.resource.reload())
 
   const fields = computed(() => meta.resource.data?.fields || [])
@@ -46,22 +46,22 @@ export function useDocDetail(doctype, name) {
   const titleField = computed(() => meta.resource.data?.title_field || 'name')
 
   const values = reactive({})
-  // Read-only mirror of the doctype's hidden fields (see get_doc_meta) — for
+  // Read-only mirror of the doctype's hidden fields (see get_doc_meta) - for
   // page logic only, never rendered or saved.
   const hidden = reactive({})
-  // Rows of hidden child tables (see get_doc_meta) — read by custom panels,
+  // Rows of hidden child tables (see get_doc_meta) - read by custom panels,
   // which write edits into `values[<table>]` to have them saved.
   const hiddenTables = reactive({})
-  // JSON snapshot of `values` right after a load/save — isDirty just diffs
+  // JSON snapshot of `values` right after a load/save - isDirty just diffs
   // against it, so it's the single source of truth both ChildTableField
   // (via values[fieldname]) and FieldControl write into. Must start as
-  // JSON.stringify(values) (i.e. '{}'), not '' — otherwise isDirty reads
+  // JSON.stringify(values) (i.e. '{}'), not '' - otherwise isDirty reads
   // true the instant the page mounts, before the doc has even loaded
   // ('{}' !== ''), so leaving the page in that window (e.g. clicking back
   // immediately) wrongly triggered the unsaved-changes prompt.
   const snapshot = ref(JSON.stringify(values))
 
-  // Shared by the initial load and by a successful save — save_doc_fields
+  // Shared by the initial load and by a successful save - save_doc_fields
   // returns the same {values, tables, ...} shape get_doc_meta does, so
   // re-snapshotting directly off the save response keeps isDirty accurate
   // without waiting on a second reload() round-trip (which was the race:
@@ -76,7 +76,7 @@ export function useDocDetail(doctype, name) {
     Object.keys(hiddenTables).forEach((k) => delete hiddenTables[k])
     Object.assign(hiddenTables, data.hidden_tables || {})
     // Table rows aren't part of `values` from the server (get_doc_meta's
-    // `values` is scalar-fields-only) — seed them here too, since
+    // `values` is scalar-fields-only) - seed them here too, since
     // ChildTableField reads/writes `values[table.fieldname]` the same
     // way FieldControl does for scalar fields.
     for (const table of data.tables || []) {
@@ -88,7 +88,7 @@ export function useDocDetail(doctype, name) {
   watch(() => meta.resource.data, applyData, { immediate: true })
 
   // "Create X for this customer" style links carry defaults in the query
-  // string (/Sales Order/new?customer=CUST-1) — the desk's frappe.new_doc(
+  // string (/Sales Order/new?customer=CUST-1) - the desk's frappe.new_doc(
   // doctype, { customer }). Only a new doc takes them, only for fields this
   // doctype actually has, and they land after the snapshot so the form
   // starts dirty (there is something to save).
@@ -127,7 +127,7 @@ export function useDocDetail(doctype, name) {
       },
     })
   }
-  // Submit's own errors aren't auto-toasted (notifyOnError: false) — the
+  // Submit's own errors aren't auto-toasted (notifyOnError: false) - the
   // caller (useDetailPageController's onSubmit) checks for the one specific
   // "Email is required to send ..." case (Sales Order's pre-submit checks)
   // to offer a recovery dialog instead, and shows a normal toast itself for
@@ -144,7 +144,7 @@ export function useDocDetail(doctype, name) {
 
   async function submitDoc() {
     // resource.submit() rethrows after onError, so a failed submit lands here as
-    // an exception (not a falsy result) — catch it, or the error is swallowed
+    // an exception (not a falsy result) - catch it, or the error is swallowed
     // and nothing is shown.
     try {
       const result = await submitResource.resource.submit({ doctype: doctype.value, name: name.value })
@@ -174,7 +174,7 @@ export function useDocDetail(doctype, name) {
   async function submit(changedValues) {
     triedSave.value = true
     if (!changedValues) {
-      // Say which field blocked the save — it may be on another tab or a
+      // Say which field blocked the save - it may be on another tab or a
       // grid row, where the inline error isn't visible and Save looked dead.
       const invalid = firstInvalidField()
       if (invalid) {
@@ -183,7 +183,7 @@ export function useDocDetail(doctype, name) {
       }
     }
 
-    // Only the moment the link is first created (a new doc) — same rule as Desk.
+    // Only the moment the link is first created (a new doc) - same rule as Desk.
     if (isNew.value && !(await confirmSampleDataLinks(doctype.value, { ...(changedValues ?? values) }))) return false
 
     const result = await save.resource.submit({

@@ -80,8 +80,8 @@
 </template>
 
 <script setup>
-// A doctype-agnostic tree rendered as an indented table — chevron/folder/leaf
-// per row, extra columns, hover row actions — replacing the bare frappe-ui
+// A doctype-agnostic tree rendered as an indented table - chevron/folder/leaf
+// per row, extra columns, hover row actions - replacing the bare frappe-ui
 // <Tree> list the tree page used to show. The page supplies `loader(parent)`
 // (children of a node, or the roots when parent is null) and gets back
 // expand/collapse-all, search that keeps matches' ancestors, and reload.
@@ -93,7 +93,7 @@ import { normalizeError } from '@/utils/common/errors'
 const props = defineProps({
   // async (parentValue | null) => [{ value, label?, expandable, ...extra }]
   loader: { type: Function, required: true },
-  // Called with every batch of freshly loaded nodes — where a page enriches
+  // Called with every batch of freshly loaded nodes - where a page enriches
   // them (e.g. Account balances) by mutating the node objects in place.
   afterLoad: { type: Function, default: null },
   columns: { type: Array, default: () => [] }, // [{ key, label, width?, align? }]

@@ -13,7 +13,7 @@
       <div v-else class="flex flex-col gap-5">
         <p class="text-p-sm text-app-text-muted">
           Pick the details you need changed and enter the new values.
-          {{ isHigherAuthority ? "You are the top of your department's hierarchy, so on save the data will be directly updated — Please be sure before confirming." : 'Your update request are sent to your manager for approval.' }}
+          {{ isHigherAuthority ? "You are the top of your department's hierarchy, so on save the data will be directly updated - Please be sure before confirming." : 'Your update request are sent to your manager for approval.' }}
         </p>
 
         <div class="flex flex-wrap gap-2">
@@ -61,7 +61,7 @@
 <script setup>
 import AppTextarea from '@/components/ui/AppTextarea.vue'
 // The "Update Detail" dialog (permission_feature.js's _open_update_detail_dialog):
-// a department member — or the customer's owner — picks which Lead Detail Form
+// a department member - or the customer's owner - picks which Lead Detail Form
 // fields need changing, enters new values and a reason, and the request is
 // routed to an approver by verp_staffing.crm.api.permission_request (or applied
 // straight away for the head of the department).
@@ -80,7 +80,7 @@ const API = 'verp_staffing.crm.api.permission_request'
 const open = defineModel({ type: Boolean, default: false })
 const props = defineProps({
   customer: { type: String, required: true },
-  // 'service' — a department form (Resume, RUC, ...); 'owner' — the Customer form.
+  // 'service' - a department form (Resume, RUC, ...); 'owner' - the Customer form.
   mode: { type: String, default: 'service' },
   // service mode: which department's field list, and which record asked
   fieldsKey: { type: String, default: '' },
@@ -136,8 +136,8 @@ const tableList = computed(() =>
 )
 
 const show = (value) => {
-  if (Array.isArray(value)) return value.length ? `${value.length} row${value.length === 1 ? '' : 's'}` : '—'
-  return value === null || value === undefined || value === '' ? '—' : String(value)
+  if (Array.isArray(value)) return value.length ? `${value.length} row${value.length === 1 ? '' : 's'}` : '-'
+  return value === null || value === undefined || value === '' ? '-' : String(value)
 }
 
 function toggle(f) {

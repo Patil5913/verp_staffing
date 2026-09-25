@@ -22,7 +22,7 @@
         </p>
         <p v-if="summary?.unexpected_doctypes?.length" class="text-p-sm text-app-text">
           The doctype(s) below aren't safe to remove automatically (some are shared structural records, not just
-          demo transactions) — they'll be left as-is; everything else will still be deleted. Review these manually
+          demo transactions) - they'll be left as-is; everything else will still be deleted. Review these manually
           if you want them gone too.
         </p>
 
@@ -51,7 +51,7 @@
 
 <script setup>
 // Simplified port of ERP Configuration's "Remove Sample Data" flow
-// (get_sample_data_summary / remove_sample_data — both existing backend
+// (get_sample_data_summary / remove_sample_data - both existing backend
 // endpoints, no change there). The old widget split this into 3 separate
 // dialog variants (plain / conflicts / unexpected-doctypes); this collapses
 // them into one dialog whose body adapts, since visually they were mostly
@@ -89,7 +89,7 @@ const dialogTitle = computed(() => {
   return 'Remove Sample Data'
 })
 
-// Every tracked doctype is listed — unexpected ones just get an extra
+// Every tracked doctype is listed - unexpected ones just get an extra
 // "will be skipped" note (see the template) rather than being the only
 // thing shown, now that they no longer block deleting the rest.
 const relevantRecords = computed(() => summary.value?.records || {})
@@ -130,13 +130,13 @@ async function onConfirmRemove() {
 
   // The server marks sample data removed once this run finishes regardless
   // of skipped_unexpected (that's a deliberate "don't auto-delete shared
-  // structural masters" carve-out, not a failure) — real problems only show
+  // structural masters" carve-out, not a failure) - real problems only show
   // up as result.errors. is_sample_data_removed in the response is instead
   // "was every tracked record actually gone", which is never true while
   // anything was intentionally skipped, so it's not what should decide
   // whether this counts as success.
   if (result.errors?.length) {
-    notify.error(`${deletedTotal} record(s) deleted; ${result.errors.length} failed — see the error log for details.`)
+    notify.error(`${deletedTotal} record(s) deleted; ${result.errors.length} failed - see the error log for details.`)
   } else if (skippedDoctypes.length) {
     notify.success(`${deletedTotal} record(s) deleted. Left as-is (needs manual review): ${skippedDoctypes.join(', ')}.`)
   } else {

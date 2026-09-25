@@ -1,10 +1,10 @@
-// How each report is *presented* — its filters and data come from the server
+// How each report is *presented* - its filters and data come from the server
 // (utils/reports.py + the Script Report itself). Everything here is optional;
 // a report with no entry renders as a plain sortable table.
 //
 //   layout        'table' (default) | 'tree' (indented statement rows)
 //   hidden        column fieldnames that carry data but aren't shown
-//   rowClass(row) 'danger' | 'success' | 'muted' | 'strong' | 'total' — row tint
+//   rowClass(row) 'danger' | 'success' | 'muted' | 'strong' | 'total' - row tint
 //   chart         { mode: 'bars' | 'funnel' | 'axis', colorBy?(row), horizontal? }
 //   linkRow(row)  a path a whole row opens (GL rows open their voucher)
 //   empty         a hint shown when the report returns nothing
@@ -46,7 +46,7 @@ export const REPORT_CONFIGS = {
     rowClass: (row) => ((row.total_revenue || 0) < (row.target || 0) ? 'danger' : ''),
     hidden: ['currency'],
     chart: { mode: 'bars', horizontal: true, colorBy: (row) => ((row.total_revenue || 0) < (row.target || 0) ? 'danger' : 'success'), legend: [['success', 'Target met'], ['danger', 'Below target']] },
-    empty: 'No sales revenue for this company in the period — revenue counts submitted Sales Orders by their owner.',
+    empty: 'No sales revenue for this company in the period - revenue counts submitted Sales Orders by their owner.',
   },
   'Lead Conversion Funnel': { chart: { mode: 'funnel' } },
   'Interviews Per Customer': { chart: { mode: 'bars', horizontal: true }, searchable: true },

@@ -151,7 +151,7 @@ function groupHasActiveChild(cfg) {
   return (cfg.children || []).some((c) => childActive(c.key))
 }
 
-// Purely the user's own open/closed choice — an active child no longer
+// Purely the user's own open/closed choice - an active child no longer
 // forces this true, so collapsing a dropdown always sticks even while one
 // of its links is the current route (see parentHighlighted for how that
 // case still shows *where* you are once collapsed).
@@ -159,7 +159,7 @@ function isExpanded(cfg) {
   return expandedKey.value === cfg.key
 }
 
-// Collapsed but the active route lives inside it — highlight the parent
+// Collapsed but the active route lives inside it - highlight the parent
 // button itself as the next best indicator once its children aren't shown.
 function parentHighlighted(cfg) {
   return !isExpanded(cfg) && (isRouteActive(cfg.route) || groupHasActiveChild(cfg))
@@ -167,7 +167,7 @@ function parentHighlighted(cfg) {
 
 function toggleGroup(cfg) {
   // when the sidebar is collapsed to its icon rail, the group's children
-  // aren't rendered at all, so a click can't just accordion-toggle — expand
+  // aren't rendered at all, so a click can't just accordion-toggle - expand
   // the sidebar back to full width and open this group instead
   if (!sidebarOpen.value) {
     setSidebarOpen(true)
@@ -180,7 +180,7 @@ function toggleGroup(cfg) {
 // First-ever paint with nothing expanded yet (no persisted choice): open
 // whichever group already contains the current route, so a deep link or
 // refresh doesn't land with everything closed. Runs once the config loads,
-// and never again — it must not override a collapse the user chose
+// and never again - it must not override a collapse the user chose
 // afterwards just because navigation kept the same active child.
 let defaultedOpen = false
 watch(

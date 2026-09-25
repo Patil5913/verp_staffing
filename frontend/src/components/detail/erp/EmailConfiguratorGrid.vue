@@ -72,7 +72,7 @@ import AppCombobox from '@/components/ui/AppCombobox.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Ports ERP Configuration's Email Usage Configuration grid (email_configuration
 // / email_configuration_detail) onto AppLinkField/Checkbox/AppButton instead
-// of a hand-built HTML table — same row shape ({email_account, types}), same
+// of a hand-built HTML table - same row shape ({email_account, types}), same
 // "each type usable in only one row" constraint (enforced the same way: the
 // per-row type dropdown excludes types already used elsewhere).
 import { computed, ref, watch } from 'vue'

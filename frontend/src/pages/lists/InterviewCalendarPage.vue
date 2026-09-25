@@ -105,7 +105,7 @@
 <script setup>
 import { siteTodayDate, siteTodayIso } from '@/utils/common/siteTime'
 import AppButton from '@/components/ui/AppButton.vue'
-// Calendar and timeline views of the Interview rounds — the desk's
+// Calendar and timeline views of the Interview rounds - the desk's
 // interview_calendar.js / interview_list.js Gantt on top of the same server
 // methods (get_interview_round_events), which already scope rows to what the
 // user may see. A round is one event; clicking it opens its Interview.
@@ -195,7 +195,7 @@ const timelineRows = computed(() => {
   const rows = new Map()
   for (const e of list.value) {
     if (!e.day.startsWith(iso(anchor.value).slice(0, 7))) continue
-    if (!rows.has(e.name)) rows.set(e.name, { interview: e.name, label: `${e.company} — ${e.role}`, customer: e.customer, rounds: [] })
+    if (!rows.has(e.name)) rows.set(e.name, { interview: e.name, label: `${e.company} - ${e.role}`, customer: e.customer, rounds: [] })
     rows.get(e.name).rounds.push({ ...e, dayIndex: Number(e.day.slice(8, 10)) - 1 })
   }
   return [...rows.values()]

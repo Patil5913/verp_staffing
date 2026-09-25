@@ -28,7 +28,7 @@
 // The filter panel above a report. Which filters show, their link queries and
 // their cascading behaviour come from the server's definitions (see
 // utils/reports.py); this only draws them, reusing the same FieldControl every
-// form uses — so a Link filter is the same searchable picker, a Date the same
+// form uses - so a Link filter is the same searchable picker, a Date the same
 // date input.
 import { computed, ref } from 'vue'
 import AppButton from '@/components/ui/AppButton.vue'

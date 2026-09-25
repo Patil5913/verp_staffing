@@ -43,7 +43,7 @@
                   :options="CONDITION_OPTIONS"
                   @update:model-value="(v) => onChange(idx, 'payment_condition', v)"
                 />
-                <span v-else class="truncate">{{ row.payment_condition || '—' }}</span>
+                <span v-else class="truncate">{{ row.payment_condition || '-' }}</span>
               </td>
               <td class="px-2 py-1.5" @click.stop>
                 <AppInput
@@ -53,7 +53,7 @@
                   :model-value="row.counter ?? ''"
                   @update:model-value="(v) => onChange(idx, 'counter', v)"
                 />
-                <span v-else class="truncate">{{ row.counter ?? '—' }}</span>
+                <span v-else class="truncate">{{ row.counter ?? '-' }}</span>
               </td>
               <td class="px-2 py-1.5" @click.stop>
                 <AppDatePicker
@@ -63,9 +63,9 @@
                   :model-value="row.start_date || ''"
                   @update:model-value="(v) => onChange(idx, 'start_date', v)"
                 />
-                <span v-else class="truncate">{{ formatDate(row.start_date) || '—' }}</span>
+                <span v-else class="truncate">{{ formatDate(row.start_date) || '-' }}</span>
               </td>
-              <td class="px-2 py-1.5 truncate text-app-text-muted">{{ formatDate(row.due_date) || '—' }}</td>
+              <td class="px-2 py-1.5 truncate text-app-text-muted">{{ formatDate(row.due_date) || '-' }}</td>
               <td class="px-2 py-1.5" @click.stop>
                 <div v-if="isRowActive(idx)" class="flex items-center gap-1">
                   <AppInput type="number" compact :model-value="row.amount ?? ''" @update:model-value="(v) => onChange(idx, 'amount', v)" />
@@ -99,7 +99,7 @@
               </td>
             </tr>
 
-            <!-- Expanded: every field on the row — all read-only, Description
+            <!-- Expanded: every field on the row - all read-only, Description
             included (auto-generated from the row's other fields, same as
             the desk form; never manually typed there either). -->
             <tr v-if="expandedIdx === idx" class="border-b border-app-border bg-app-panel-2/30 last:border-0">
@@ -113,7 +113,7 @@
                 </div>
 
                 <!-- Verify/Reject/Re-request history (_append_verification_log
-                on the backend) — one timestamped line per event, never shown
+                on the backend) - one timestamped line per event, never shown
                 anywhere in this SPA before now. -->
                 <div v-if="row.verification_log" class="mt-4 border-t border-app-border pt-3">
                   <p class="mb-1.5 text-p-xs font-medium text-app-text-muted">Verification Log</p>
@@ -166,15 +166,15 @@
 </template>
 
 <script setup>
-// Sales Order's Payment Terms — the ONLY place they're editable (no
+// Sales Order's Payment Terms - the ONLY place they're editable (no
 // separate dialog-per-row, no second read-only display table below this
 // one): each row is a summary line that becomes inline-editable on click,
 // with an expand arrow for the rest of its fields (only Description is
-// ever editable there — everything else is server/workflow-derived), and
+// ever editable there - everything else is server/workflow-derived), and
 // its own "Mark as Paid" trigger folded in rather than living in a
 // duplicate component. Ported from sales_order.js's Customer Payment Terms
 // row handlers (condition-based clearing / interview-count fetch / due-date
-// calc) and the old PaymentTermsPanel.vue's Mark as Paid dialog — both
+// calc) and the old PaymentTermsPanel.vue's Mark as Paid dialog - both
 // consolidated here instead of split across two components.
 import { computed, reactive, ref, watch } from 'vue'
 import { Dialog, FeatherIcon, call } from 'frappe-ui'
@@ -207,7 +207,7 @@ const soTotal = computed(() =>
   Number(props.detail.values.disable_rounded_total ? props.detail.values.grand_total : props.detail.values.rounded_total || props.detail.values.grand_total) || 0,
 )
 const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.amount) || 0), 0))
-// "Add Row" only makes sense while there's still budget left to schedule —
+// "Add Row" only makes sense while there's still budget left to schedule -
 // a new row always starts at 0 and would either sit stuck there or trip
 // amountWithinBudget the instant it's given anything, so hide the action
 // entirely once the terms already account for the full order total.
@@ -220,7 +220,7 @@ const expandedIdx = ref(null)
 const isRowActive = (idx) => activeIdx.value === idx
 
 // A row already in the verification pipeline (or already verified) is
-// frozen — its condition/amount can't retroactively change what a
+// frozen - its condition/amount can't retroactively change what a
 // Payment Entry was already raised against. Gated on payment_entry itself
 // being set, not just the status text: a row with no linked Payment Entry
 // yet has nothing to protect, so it must stay editable regardless of what
@@ -229,7 +229,7 @@ function isRowReadOnly(row) {
   return !!row.payment_entry && ['Pending Verification', 'Verified'].includes(row.payment_status)
 }
 // A term that already has a Sales Invoice raised against it can't be edited or removed at
-// all — only Mark as Paid / Re-request remain (canMarkAsPaid below looks at isRowReadOnly).
+// all - only Mark as Paid / Re-request remain (canMarkAsPaid below looks at isRowReadOnly).
 function isTermLocked(row) {
   return isRowReadOnly(row) || !!row.sales_invoice
 }
@@ -280,7 +280,7 @@ function addDays(dateStr, days) {
 const today = () => new Date().toISOString().slice(0, 10)
 
 // Decided Amount can never push the scheduled total past the order's own
-// rounded_total — rejects the edit outright (row keeps its previous value)
+// rounded_total - rejects the edit outright (row keeps its previous value)
 // with a clear error, rather than silently clamping to whatever room is
 // left, which just left the user wondering why their typed number didn't
 // stick.
@@ -332,8 +332,8 @@ async function onChange(idx, fieldname, value) {
   setRows(next)
 }
 
-// Ported from sales_order.js's update_payment_term_description — same
-// wording, same three branches — but computed purely client-side (no
+// Ported from sales_order.js's update_payment_term_description - same
+// wording, same three branches - but computed purely client-side (no
 // separate API round-trip) on every relevant field change, and carried in
 // with the row like any other field so it's whatever gets sent on the next
 // actual save. Not user-editable any more (it never was on the desk form
@@ -350,18 +350,18 @@ function buildDescription(row) {
   const amountDisplay = `${fmtAmount(row.amount, currency)}${converted}`
 
   if (row.payment_condition === 'Not Applied') {
-    return `Pay ${amountDisplay} — No condition applied (immediate or pre-paid)`
+    return `Pay ${amountDisplay} - No condition applied (immediate or pre-paid)`
   }
   if (row.payment_condition === 'Number of Days') {
     const days = row.counter || '?'
     const start = row.start_date ? formatDate(row.start_date) : '?'
     const due = row.due_date ? formatDate(row.due_date) : 'not computed'
-    return `Pay ${amountDisplay} after ${days} day(s) from ${start} — Due: ${due}`
+    return `Pay ${amountDisplay} after ${days} day(s) from ${start} - Due: ${due}`
   }
   const required = row.counter || '?'
   const current = row.current_interview_count != null ? row.current_interview_count : '…'
   const remaining = row.counter != null && row.current_interview_count != null ? Math.max(0, row.counter - row.current_interview_count) : '?'
-  return `Pay ${amountDisplay} after ${required} interview(s) — Current: ${current}, Remaining: ${remaining}`
+  return `Pay ${amountDisplay} after ${required} interview(s) - Current: ${current}, Remaining: ${remaining}`
 }
 
 // ── Expanded row: every field, Description the only editable one ──────────
@@ -382,14 +382,14 @@ const CURRENCY_FIELDS = new Set(['amount', 'received_amount'])
 const DATE_FIELDS = new Set(['start_date', 'due_date'])
 function displayValue(row, col) {
   const v = row[col.fieldname]
-  if (v === null || v === undefined || v === '') return '—'
+  if (v === null || v === undefined || v === '') return '-'
   if (CURRENCY_FIELDS.has(col.fieldname)) return formatFieldValue(v, { fieldtype: 'Currency' })
-  if (DATE_FIELDS.has(col.fieldname)) return formatDate(v) || '—'
+  if (DATE_FIELDS.has(col.fieldname)) return formatDate(v) || '-'
   return String(v)
 }
 
 // _append_verification_log writes one "[<datetime>] <message>" line per
-// event, newline-joined — split back out for one line per entry instead of
+// event, newline-joined - split back out for one line per entry instead of
 // a single run-on block of text.
 function verificationLogLines(row) {
   return String(row.verification_log || '')
@@ -423,7 +423,7 @@ function openMarkAsPaid(row) {
   markAsPaidRow.value = row
   Object.assign(form, {
     // Sales Order hides `company` (set_only_once from ERP Configuration's
-    // default) — get_doc_meta drops hidden fields from `values`, so the
+    // default) - get_doc_meta drops hidden fields from `values`, so the
     // real value only ever shows up under `hidden`.
     company: row.sales_invoice ? '' : props.detail.values.company || props.detail.hidden.company || '',
     conversion_rate: 1,

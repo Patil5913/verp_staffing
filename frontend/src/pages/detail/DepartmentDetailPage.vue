@@ -24,7 +24,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-// Department's own detail page — currently just the generic Details/Notes/
+// Department's own detail page - currently just the generic Details/Notes/
 // Activity layout with the doctype pinned, kept separate from the generic
 // DocDetailPage.vue on purpose so any Department-specific customization
 // added later (e.g. its Hierarchy headline banner, or the role/service
@@ -89,7 +89,7 @@ const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.k
 const activeTab = ref('details')
 
 // Excludes a role/service already picked for this department, or any other
-// department (role is a global one-department-only assignment) — see
+// department (role is a global one-department-only assignment) - see
 // get_department_role_query / get_department_service_query in
 // department.py, ported from the old desk department.js set_query calls.
 const TABLE_QUERIES = {

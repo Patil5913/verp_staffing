@@ -80,7 +80,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -125,20 +125,20 @@
 
 <script setup>
 // Customer's detail page: the generic Details/Notes/Activity tabs, plus
-// actions ported from customer.js — "Portal & Chat Access" (opens the email
+// actions ported from customer.js - "Portal & Chat Access" (opens the email
 // for review; sending it creates the customer's website user), "Create
 // Sales Order" (desk form's sales_order Button field just does
 // frappe.new_doc("Sales Order", {customer}); Sales Order isn't one of this
 // app's ported doctypes yet, so this opens its own new-record route without
 // the customer prefill the desk form has), "Forward Candidate" (shared with
-// every service record page — see ForwardCandidateButton.vue, which branches
+// every service record page - see ForwardCandidateButton.vue, which branches
 // on doctype === "Customer" the same way add_forward_button did), and a
 // Candidate Profile tab + History tab (get_customer_history, same as the
 // customer portal / public/js/customer_history.js).
 //
 // Deliberately not ported: the owner "Update Detail"/"Accept Updates"
 // field-change-request dialogs' desk-specific HTML widgets (their
-// functionality is ported — see FieldUpdateActions — just not their exact
+// functionality is ported - see FieldUpdateActions - just not their exact
 // markup).
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -166,7 +166,7 @@ const router = useRouter()
 const doctype = computed(() => 'Customer')
 const name = computed(() => route.params.name)
 
-// The linked Lead Detail Form's candidate-facing fields — same "Candidate
+// The linked Lead Detail Form's candidate-facing fields - same "Candidate
 // Profile" tab as Lead/Opportunity, and the same split-save folded into the
 // one navbar Save (see OpportunityDetailPage.vue for the fuller rationale:
 // the desk form embedded these inline via an HTML field with no Vue
@@ -199,12 +199,12 @@ const activeTab = ref('details')
 
 const DETAIL_FIELDS = ['name1', 'customer_from', 'party_name', 'customer_owner', 'overall_status', 'chat_user', 'chat_access']
 
-// customer_from/party_name are set_only_once on the doctype — the desk form
+// customer_from/party_name are set_only_once on the doctype - the desk form
 // never lets you re-pick where a Customer came from after creation.
 const readOnlyFields = computed(() => (detail.isNew.value ? [] : ['customer_from', 'party_name']))
 
 // Customer From only makes sense as a Lead or an Opportunity (Party then
-// resolves to whichever of those was picked — see FieldControl's Dynamic
+// resolves to whichever of those was picked - see FieldControl's Dynamic
 // Link support). Customer Owner: Sales department employees only, same
 // get_employees_by_department join as Lead Owner (see LeadDetailPage.vue).
 const fieldLinkQueries = {
@@ -218,7 +218,7 @@ const fieldLinkQueries = {
 // customer.js's set_customer_owner(frm): skip if already set; a Customer
 // raised from an Opportunity inherits that Opportunity's owner; otherwise
 // (from a Lead, or created standalone) it defaults to the current user's
-// own linked Employee — no department check either way (that's what the
+// own linked Employee - no department check either way (that's what the
 // customer_owner field's own Link filter above enforces on the *value*,
 // separately, not on whether an auto-fill happens at all).
 watch(

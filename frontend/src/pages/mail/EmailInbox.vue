@@ -182,7 +182,7 @@ function forward(m) {
   composing.value = true
 }
 function onSent() {
-  // A sent message lands in Sent (or Outbox until it goes out) — refresh what's showing.
+  // A sent message lands in Sent (or Outbox until it goes out) - refresh what's showing.
   load({ quiet: true })
 }
 

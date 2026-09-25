@@ -26,7 +26,7 @@
 <script setup>
 // Ports ERP Configuration's "Website Settings" tab. App Name/App Logo are
 // Website Settings' own fields, saved immediately per-field here (same as
-// the old render_website_app_settings()) — safe to keep self-contained
+// the old render_website_app_settings()) - safe to keep self-contained
 // since nothing is lost if this component remounts on a tab switch. The
 // System Settings quick-edit grid below it is otherwise-owned state
 // (fieldGroups/values/stage come from the page's useSystemSettingsPanel())

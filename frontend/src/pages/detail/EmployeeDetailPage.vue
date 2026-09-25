@@ -74,7 +74,7 @@
 
 <script setup>
 // Employee's detail page: curated Profile/Assignments/LinkedIn/Target tabs
-// instead of the generic Details/Notes/Activity — Employee's two child
+// instead of the generic Details/Notes/Activity - Employee's two child
 // tables (assignment details, LinkedIn credentials) each get their own tab
 // rather than being stacked under one Details grid. See router.js for how
 // /Employee/:name is routed here ahead of the generic /:doctype/:name.
@@ -116,10 +116,10 @@ const TABS = [
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'target', label: 'Target' },
 ]
-// Linkedin/Target aren't relevant to every employee — Linkedin only for one
+// Linkedin/Target aren't relevant to every employee - Linkedin only for one
 // assigned to the Lead department, Target only for Sales (per its own
 // Employee Assignment Details rows, not the employee's single top-level
-// department) — both tabs were showing for everyone.
+// department) - both tabs were showing for everyone.
 const tabs = computed(() =>
   TABS.filter((t) => {
     if (t.key === 'linkedin') return hasLeadDepartment.value
@@ -132,10 +132,10 @@ const activeTab = ref('profile')
 // User first: the employee's name is filled in from the chosen user.
 const PROFILE_FIELDS = ['user', 'employee_name', 'enabled']
 // Once the Employee exists, the linked User can't be changed out from under
-// it — matches employee.js leaving `user` unset_only_once-style read-only
+// it - matches employee.js leaving `user` unset_only_once-style read-only
 // after creation.
 const userFieldReadOnly = computed(() => (detail.isNew.value ? [] : ['user']))
-// Only offer a User that isn't already the User of some other Employee —
+// Only offer a User that isn't already the User of some other Employee -
 // enforced server-side too (Employee.validate), this is just so a duplicate
 // is never picked in the first place.
 const userFieldLinkQueries = {
@@ -143,7 +143,7 @@ const userFieldLinkQueries = {
 }
 
 // employee.js's user(frm) handler: picking a User fills Employee Full Name
-// from it. Only while still creating — once saved, `user` is read-only
+// from it. Only while still creating - once saved, `user` is read-only
 // above, so this would never fire again anyway.
 watch(
   () => detail.values.user,
@@ -158,7 +158,7 @@ watch(
   },
 )
 // start_date sits right next to target/target_based_on in the doctype's own
-// field order — it's the Target's start date, not a general employee start
+// field order - it's the Target's start date, not a general employee start
 // date, so it belongs on the Target tab, not Profile.
 const TARGET_FIELDS = ['start_date', 'target', 'target_based_on']
 
@@ -175,14 +175,14 @@ const assignmentsTable = computed(() => detail.tables.value.find((t) => t.fieldn
 const linkedinTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'linkedin_credentials'))
 
 // designation options come from the row's own Department's Hierarchy (same
-// API as ERP Configuration's Permission Request Configuration — see
+// API as ERP Configuration's Permission Request Configuration - see
 // hierarchy.py), minus designations already used by sibling rows.
 // assigned_to options come from employees holding the *parent* role of the
 // row's own designation (who that designation reports to) in the same
-// hierarchy — get_assign_to_query resolves both steps server-side.
+// hierarchy - get_assign_to_query resolves both steps server-side.
 function assignmentLinkQueries(draft, rows, editingIndex) {
   return {
-    // One row per Department — a department already used by a sibling row
+    // One row per Department - a department already used by a sibling row
     // can't be picked again (matches Designation's own sibling-exclusion
     // just below).
     department: {
@@ -214,7 +214,7 @@ function assignmentLinkQueries(draft, rows, editingIndex) {
 }
 
 // Department and Designation each narrow what the fields below them can be
-// — changing either invalidates whatever was already picked further down
+// - changing either invalidates whatever was already picked further down
 // the row, the same as the desk form clearing dependent fields on change.
 function onAssignmentFieldChange(fieldname, value, draft) {
   if (fieldname === 'department') return { designation: '', assigned_to: '' }
@@ -222,7 +222,7 @@ function onAssignmentFieldChange(fieldname, value, draft) {
   return null
 }
 
-// Ported from employee.js's validate(frm) — written but its frappe.throw was
+// Ported from employee.js's validate(frm) - written but its frappe.throw was
 // left commented out there, so it never actually ran. Assigned To is
 // required unless the row's designation is a top-level (root) role in its
 // department's hierarchy.

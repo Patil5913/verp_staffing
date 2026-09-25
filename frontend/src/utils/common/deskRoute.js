@@ -1,7 +1,7 @@
 import { call } from 'frappe-ui'
 
 // Translates a classic-desk path ("/app/...") into this SPA's route, so
-// nothing the user clicks — a notification, a link inside a server message —
+// nothing the user clicks - a notification, a link inside a server message -
 // drops them back into the old desk. Returns a router path ("/Employee/HR-1")
 // or null when the path isn't a desk path.
 
@@ -62,7 +62,7 @@ export async function deskToSpaPath(href) {
   const doctype = (await loadSlugs())[first]
   if (!doctype) return '/'
   if (!second || second === 'view' || second === 'new' || second.startsWith('new-')) {
-    // A create form doesn't exist here — the list's "Add New" is the way in.
+    // A create form doesn't exist here - the list's "Add New" is the way in.
     return second === 'view' && third === 'tree' ? `/${enc(doctype)}/view/tree` : `/${enc(doctype)}`
   }
   return `/${enc(doctype)}/${enc(second)}`

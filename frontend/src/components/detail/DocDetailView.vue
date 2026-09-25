@@ -76,28 +76,28 @@ const props = defineProps({
   forceDisabled: { type: Boolean, default: false },
   readOnlyFields: { type: Array, default: () => [] },
   // Restricts the rendered field grid to just these fieldnames (and skips
-  // child tables entirely) — lets a doctype-specific page (e.g. User's
+  // child tables entirely) - lets a doctype-specific page (e.g. User's
   // Profile/Email/Security tabs) reuse this same field grid + FieldControl
   // for a curated subset instead of every field on the doctype.
   fieldnames: { type: Array, default: null },
-  // Heading shown at the top of the field card — detail configs use it to
+  // Heading shown at the top of the field card - detail configs use it to
   // split a long doctype (Payment Entry, invoices) into named groups.
   title: { type: String, default: '' },
-  // { <Table MultiSelect fieldname>: '<whitelisted query method>' } — see
+  // { <Table MultiSelect fieldname>: '<whitelisted query method>' } - see
   // AppLinkField's `query` prop / TableMultiSelectField.
   tableQueries: { type: Object, default: () => ({}) },
-  // { <top-level Link fieldname>: { query?, filters? } } — see FieldControl's
+  // { <top-level Link fieldname>: { query?, filters? } } - see FieldControl's
   // linkQuery prop, for a scalar Link field whose options need filtering
   // (e.g. Lead Owner scoped to a department), same idea as tableQueries but
   // for fields outside a child table.
   fieldLinkQueries: { type: Object, default: () => ({}) },
   // Skips a read-only field with no value instead of rendering it as an
-  // empty, uneditable box — e.g. Customer's Overall Status/Chat User/Chat
+  // empty, uneditable box - e.g. Customer's Overall Status/Chat User/Chat
   // Access are all blank on a fresh Customer. Opt-in (default off) since a
   // blank read-only field is sometimes exactly what a page wants shown as
-  // a placeholder — this is for pages where it isn't.
+  // a placeholder - this is for pages where it isn't.
   hideEmptyReadOnly: { type: Boolean, default: false },
-  // { fieldname: partial field meta } merged onto the server's — e.g.
+  // { fieldname: partial field meta } merged onto the server's - e.g.
   // { upload_pdf_template: { accept: ['.pdf'] } } to restrict an Attach field.
   fieldOverrides: { type: Object, default: () => ({}) },
 })

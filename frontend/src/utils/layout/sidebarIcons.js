@@ -6,7 +6,7 @@
 //
 // Most items in the existing config reuse a generic "icon-setting-gear"
 // placeholder, so we also allow overriding by the item's stable `key` for a
-// more distinct look — this is presentation-only and never affects which
+// more distinct look - this is presentation-only and never affects which
 // items are shown (that's entirely server/permission driven).
 
 const ICON_ID_MAP = {
@@ -41,7 +41,7 @@ const KEY_ICON_OVERRIDES = {
   reports: 'bar-chart-3',
   setup: 'rocket',
 
-  // Staffing Master children
+  // Placement Master children
   'email-domain': 'globe',
   'email-account': 'mail',
   'email-queue': 'mail-check',
@@ -113,7 +113,7 @@ export function resolveIconName(iconId, key) {
 
 // Every name resolveIconName() can return. Icon classes below are built as
 // `'lucide-' + name` at render time (see AppSidebar/CommandPalette), and
-// Tailwind's content scanner only matches literal class strings in source —
+// Tailwind's content scanner only matches literal class strings in source -
 // it can't see through the concatenation. tailwind.config.js imports this to
 // safelist them, so this is the one place to update when adding an icon.
 export const ALL_ICON_NAMES = Array.from(

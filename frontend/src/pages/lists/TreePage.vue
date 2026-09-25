@@ -28,7 +28,7 @@
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 // Generic tree view for any tree doctype (Company, Item Category, ...) via
 // Frappe's stock treeview endpoint. The Account tree has its own page
-// (AccountTreePage.vue) — it needs company scoping and balances.
+// (AccountTreePage.vue) - it needs company scoping and balances.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call, FeatherIcon } from 'frappe-ui'

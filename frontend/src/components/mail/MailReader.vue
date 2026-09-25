@@ -45,7 +45,7 @@
             <span class="lucide-triangle-alert mt-0.5 size-4 shrink-0" /><span class="min-w-0 break-words">{{ message.error }}</span>
           </div>
           <div v-if="folder === 'spam'" class="rounded-lg border border-amber-300 bg-amber-500/10 px-3 py-2 text-p-sm text-amber-800">
-            This sender was reported as spam. Pictures and links are shown as sent — only open things you trust.
+            This sender was reported as spam. Pictures and links are shown as sent - only open things you trust.
           </div>
 
           <!-- Earlier messages in the conversation -->
@@ -58,7 +58,7 @@
               <div v-for="t in message.thread" :key="t.name" class="px-4 py-3">
                 <button type="button" class="flex w-full items-center gap-2 text-left" @click="toggleThread(t.name)">
                   <div class="flex size-7 shrink-0 items-center justify-center rounded-full text-p-xs font-semibold" :class="avatarTone(t.sender)">{{ initials(senderName(t)) }}</div>
-                  <span class="min-w-0 flex-1 truncate text-p-sm"><span class="font-medium text-app-text">{{ senderName(t) }}</span> <span class="text-app-text-muted">— {{ t.snippet }}</span></span>
+                  <span class="min-w-0 flex-1 truncate text-p-sm"><span class="font-medium text-app-text">{{ senderName(t) }}</span> <span class="text-app-text-muted">- {{ t.snippet }}</span></span>
                   <span class="shrink-0 text-p-xs text-app-text-muted">{{ mailDate(t.communication_date) }}</span>
                 </button>
                 <MailBody v-if="openThread.has(t.name)" :html="t.content" class="mt-2" />
@@ -78,7 +78,7 @@
                 to {{ shortRecipients }}<span class="size-3" :class="showRecipients ? 'lucide-chevron-up' : 'lucide-chevron-down'" />
               </button>
               <dl v-if="showRecipients" class="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-p-xs text-app-text-muted">
-                <dt>To</dt><dd class="break-words text-app-text">{{ message.recipients || '—' }}</dd>
+                <dt>To</dt><dd class="break-words text-app-text">{{ message.recipients || '-' }}</dd>
                 <template v-if="message.cc"><dt>Cc</dt><dd class="break-words text-app-text">{{ message.cc }}</dd></template>
                 <template v-if="message.bcc"><dt>Bcc</dt><dd class="break-words text-app-text">{{ message.bcc }}</dd></template>
               </dl>

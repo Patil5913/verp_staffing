@@ -34,15 +34,15 @@
           <tbody>
             <tr v-for="t in so.payment_terms.filter((t) => t.name)" :key="t.name" class="border-t border-app-border">
               <td class="px-3 py-1.5">{{ t.idx }}</td>
-              <td class="px-3 py-1.5">{{ t.payment_condition || '—' }}</td>
-              <td class="px-3 py-1.5">{{ formatDate(t.due_date) || '—' }}</td>
+              <td class="px-3 py-1.5">{{ t.payment_condition || '-' }}</td>
+              <td class="px-3 py-1.5">{{ formatDate(t.due_date) || '-' }}</td>
               <td class="px-3 py-1.5 text-right tabular-nums">{{ formatFieldValue(t.amount, { fieldtype: 'Currency' }) }}</td>
               <td class="px-3 py-1.5"><DocStatusBadge :status="t.payment_status" /></td>
               <td class="px-3 py-1.5">
                 <router-link v-if="t.payment_entry" :to="`/Payment%20Entry/${encodeURIComponent(t.payment_entry)}`" class="text-app-primary hover:underline">
                   {{ t.payment_entry }}
                 </router-link>
-                <span v-else class="text-app-text-muted">—</span>
+                <span v-else class="text-app-text-muted">-</span>
               </td>
             </tr>
           </tbody>
@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-// The customer's Sales Orders and their payment-term schedules — the "Sales
+// The customer's Sales Orders and their payment-term schedules - the "Sales
 // Order" tab on CR / Onboardings / Customer (desk's render_owned_sales_orders),
 // already scoped server-side to the orders the user is allowed to see.
 import { computed, watch } from 'vue'
@@ -82,7 +82,7 @@ const orders = useResource({
 watch(customer, (value) => value && orders.resource.submit({ customer: value }), { immediate: true })
 
 const subtitle = (so) =>
-  [formatDate(so.posting_date), so.grand_total != null ? `${so.currency || ''} ${formatFieldValue(so.grand_total, { fieldtype: 'Currency' })}` : '', `Owner: ${so.owner || '—'}`]
+  [formatDate(so.posting_date), so.grand_total != null ? `${so.currency || ''} ${formatFieldValue(so.grand_total, { fieldtype: 'Currency' })}` : '', `Owner: ${so.owner || '-'}`]
     .filter(Boolean)
     .join(' · ')
 </script>

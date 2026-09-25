@@ -1,13 +1,13 @@
 <template>
-  <SectionCard title="Message" subtitle="What will be — or was — sent.">
+  <SectionCard title="Message" subtitle="What will be - or was - sent.">
     <div v-if="loading" class="flex justify-center py-8"><LoadingIndicator class="h-5 w-5 text-app-text-muted" /></div>
     <p v-else-if="error" class="text-p-sm text-red-600">{{ error }}</p>
     <p v-else-if="data?.redacted" class="text-p-sm text-app-text-muted">This message has gone out, so its content was removed from the queue.</p>
     <div v-else-if="data" class="flex flex-col gap-3">
       <dl class="grid grid-cols-[4rem_1fr] gap-x-3 gap-y-1 text-p-sm">
-        <dt class="text-app-text-muted">Subject</dt><dd class="break-words font-medium text-app-text">{{ data.subject || '—' }}</dd>
-        <dt class="text-app-text-muted">From</dt><dd class="break-words text-app-text">{{ data.from || '—' }}</dd>
-        <dt class="text-app-text-muted">To</dt><dd class="break-words text-app-text">{{ data.to || '—' }}</dd>
+        <dt class="text-app-text-muted">Subject</dt><dd class="break-words font-medium text-app-text">{{ data.subject || '-' }}</dd>
+        <dt class="text-app-text-muted">From</dt><dd class="break-words text-app-text">{{ data.from || '-' }}</dd>
+        <dt class="text-app-text-muted">To</dt><dd class="break-words text-app-text">{{ data.to || '-' }}</dd>
         <template v-if="data.cc"><dt class="text-app-text-muted">Cc</dt><dd class="break-words text-app-text">{{ data.cc }}</dd></template>
         <template v-if="data.attachments?.length"><dt class="text-app-text-muted">Files</dt><dd class="break-words text-app-text">{{ data.attachments.join(', ') }}</dd></template>
       </dl>

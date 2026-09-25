@@ -124,7 +124,7 @@ async function run() {
     if (props.then === 'refresh') props.detail.refresh()
     else if (props.then === 'stay') return
     else if (props.then === 'open-file') {
-      // the method answered { file_url } — open the file in a new tab
+      // the method answered { file_url } - open the file in a new tab
       const url = result?.file_url
       if (url) window.open(url, '_blank', 'noopener')
       else notify.error('No file found.')

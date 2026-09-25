@@ -7,7 +7,7 @@
 
 <script setup>
 // An inline notice inside a record (a locked-record explanation, a warning
-// before a permanent action) — the desk's frm.set_intro / dashboard comment.
+// before a permanent action) - the desk's frm.set_intro / dashboard comment.
 defineOptions({ inheritAttrs: false })
 defineProps({
   message: { type: String, required: true },
@@ -23,11 +23,11 @@ const ICONS = { info: 'info', warning: 'alert-triangle', danger: 'octagon-alert'
 
 <style scoped>
 /* The TONES classes above are fixed light-mode Tailwind colors (this app's
-   dark mode is an attribute toggle — [data-theme='dark'] — not Tailwind's
+   dark mode is an attribute toggle - [data-theme='dark'] - not Tailwind's
    own dark: variant, which isn't configured here), so in dark mode this
    banner kept its near-white light background with dark text instead of
-   following the theme — most visibly the "This Lead is locked" notice. */
-/* Literal hex, not theme('colors.*.950') — frappe-ui's preset ships its own
+   following the theme - most visibly the "This Lead is locked" notice. */
+/* Literal hex, not theme('colors.*.950') - frappe-ui's preset ships its own
    amber/red scales without a 950 shade, unlike the families this app's own
    tailwind.config.js re-adds from the full palette (sky included, but kept
    consistent with the other two here rather than mixing sources). */

@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 
 // A single, app-wide "are you sure" dialog instance (see
 // UnsavedChangesDialog.vue, mounted once in App.vue) instead of the
-// browser's native window.confirm() — same role, this app's own look.
+// browser's native window.confirm() - same role, this app's own look.
 const state = reactive({
   open: false,
   title: '',
@@ -11,7 +11,7 @@ const state = reactive({
   leaveIcon: 'log-out',
   leaveLabel: 'Leave without saving',
   cancelLabel: 'Stay',
-  // Optional async () => boolean — when given, the dialog offers a "Save"
+  // Optional async () => boolean - when given, the dialog offers a "Save"
   // button that runs it and only proceeds with navigation on success,
   // leaving the dialog open (so the user can still choose Leave/Stay) if
   // the save itself fails.
@@ -59,7 +59,7 @@ export function useConfirmDialogState() {
     if (ok) {
       settle(true)
     } else {
-      // Save failed (already toasted by whatever it called) — leave the
+      // Save failed (already toasted by whatever it called) - leave the
       // dialog open so the user can retry Save or fall back to Leave/Stay.
       state.saving = false
     }

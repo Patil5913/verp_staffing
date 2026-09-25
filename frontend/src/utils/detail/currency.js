@@ -1,12 +1,12 @@
 import { reactive } from 'vue'
 import { call } from 'frappe-ui'
 
-// Which currency a Currency-type field is in, and its symbol — the Desk form showed it
+// Which currency a Currency-type field is in, and its symbol - the Desk form showed it
 // beside the amount. A Currency field's `options` says where the currency lives:
 //   - the fieldname of a Link-to-Currency field on the row / document ("currency",
 //     "company_currency", "paid_from_account_currency" ...), looked up in the row first,
 //     then the parent document (and its hidden fields, e.g. Sales Order's company_currency)
-//   - "Company:<link field>:<field>" — that field on the linked Company (this app's
+//   - "Company:<link field>:<field>" - that field on the linked Company (this app's
 //     "Company:company:default_currency")
 //   - a literal currency code
 // The lookup reads reactive values, so an option that follows another field (currency

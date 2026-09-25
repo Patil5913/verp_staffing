@@ -3,7 +3,7 @@ import { call } from 'frappe-ui'
 
 // What Desk's form scripts did whenever a document had a Company, for the
 // finance doctypes (Sales/Purchase Invoice & Order, Journal Entry, Payment
-// Entry, Subscription). Only for a NEW document — a saved one already carries
+// Entry, Subscription). Only for a NEW document - a saved one already carries
 // its values. Driven by the doctype's own fields, so a doctype without one of
 // them (no company_currency, no debit_to...) simply skips that step:
 //   1. Company: the ERP Configuration default (fetch_default_company), as the

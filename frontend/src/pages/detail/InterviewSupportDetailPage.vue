@@ -81,7 +81,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-updates>
@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-// Interview Support's detail page — same "service record" shape as
+// Interview Support's detail page - same "service record" shape as
 // Training/Technical Other Services, plus an Interview Round link (hidden
 // once set, per the desk form) whose Interview Details panel is fetched
 // from get_interview_details. See public/js/reusable.js's refresh() for

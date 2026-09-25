@@ -33,7 +33,7 @@ const props = defineProps({
   rows: { type: Number, default: 3 },
   required: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
-  // No border/background — for a textarea that sits inside a composer card.
+  // No border/background - for a textarea that sits inside a composer card.
   bare: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue'])

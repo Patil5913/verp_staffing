@@ -143,11 +143,11 @@
 <script setup>
 // Ports the old desk pdf_agreement_template.js drag-and-drop field builder
 // onto this app's own components (AppButton/Dialog/FieldControl/
-// StateBanner) instead of hand-built jQuery/HTML — same pdf.js rendering,
+// StateBanner) instead of hand-built jQuery/HTML - same pdf.js rendering,
 // same field shape (field_id/name/type/page/x/y/width/height/font_size/
 // line_height/builder_placeholder), same drag-to-place + drag-to-move +
 // corner-handle resize interactions, just as native Vue state/events
-// instead of jQuery. The "Show Form Tour" walkthrough was left out — it
+// instead of jQuery. The "Show Form Tour" walkthrough was left out - it
 // was UX sugar on top of the same builder, not core behavior.
 import { computed, ref, watch } from 'vue'
 import { Dialog, LoadingIndicator } from 'frappe-ui'
@@ -161,7 +161,7 @@ const props = defineProps({
   pdfUrl: { type: String, default: '' },
   modelValue: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
-  // The page's own isDirty (doc fields + fields_json together) — "Save
+  // The page's own isDirty (doc fields + fields_json together) - "Save
   // Template" used to call save() on every click regardless of whether
   // anything had actually changed.
   dirty: { type: Boolean, default: true },
@@ -259,7 +259,7 @@ const newFieldType = ref('')
 const newFieldDropPos = ref(null)
 const draft = ref({ name: '', placeholder: '', font_size: 12, line_height: 1.2 })
 
-// New fields are always created at this size (see confirmCreateField) —
+// New fields are always created at this size (see confirmCreateField) -
 // centering the drop point on it, rather than treating the drop point as
 // the top-left corner, is what made a dropped field land noticeably off
 // from where it was actually released.
@@ -405,7 +405,7 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
   background: rgba(255, 255, 255, 0.92);
   cursor: move;
   touch-action: none;
-  /* Not overflow:hidden here — .field-close and .resize-handle are its own
+  /* Not overflow:hidden here - .field-close and .resize-handle are its own
      absolutely-positioned children sitting just outside its box (top:-10px
      etc.), and hiding this box's overflow clipped them to invisible.
      .pdf-field-preview below clips the field's text content on its own. */

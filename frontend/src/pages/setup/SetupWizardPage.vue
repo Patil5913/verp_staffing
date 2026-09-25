@@ -99,11 +99,11 @@
 </template>
 
 <script setup>
-// First-run setup for a fresh site — the SPA version of Frappe's setup wizard
+// First-run setup for a fresh site - the SPA version of Frappe's setup wizard
 // with this app's overridden second step (public/js/setup/setup_wizard.js):
 // Welcome (language / country / time zone / currency), then Organization Setup
 // (company, fiscal year, sample data, email account + mail-server presets).
-// The router sends System Managers here while boot.setup_complete is false —
+// The router sends System Managers here while boot.setup_complete is false -
 // the same test Desk uses (frappe.is_setup_complete).
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { call, LoadingIndicator } from 'frappe-ui'
@@ -228,7 +228,7 @@ function next() {
 }
 
 // setup_email first (validates/creates the mail domain + account), then Frappe's
-// own setup_complete — the same two calls as the Desk wizard's action_on_complete.
+// own setup_complete - the same two calls as the Desk wizard's action_on_complete.
 async function complete() {
   const values = { ...form, lang: form.language }
   for (const k of ['add_sample_data', 'use_imap', 'use_ssl', 'use_tls', 'use_starttls', 'use_ssl_for_outgoing', 'append_emails_to_sent_folder']) {
@@ -249,7 +249,7 @@ async function complete() {
   }
 }
 
-// trigger_site_setup_in_background: setup runs as a queued job — poll until done.
+// trigger_site_setup_in_background: setup runs as a queued job - poll until done.
 async function waitForBackgroundSetup() {
   workingMessage.value = 'Starting the setup...'
   for (let i = 0; i < 150; i++) {

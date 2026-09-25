@@ -36,7 +36,7 @@
     </div>
 
     <!-- Same "submit this to confirm" nudge desk shows on any submittable
-    doctype's draft — generic here so every detail page gets it for free
+    doctype's draft - generic here so every detail page gets it for free
     instead of each one adding its own banner. -->
     <p
       v-if="showDraftNotice"
@@ -61,11 +61,11 @@ const props = defineProps({
   title: { type: String, default: '' },
   tabs: { type: Array, required: true }, // [{ key, label }]
   activeTab: { type: String, required: true },
-  // The page's own useDocDetail/useDetailPageController `detail` object —
+  // The page's own useDocDetail/useDetailPageController `detail` object -
   // optional, only needed to drive the draft notice below. Left unset, the
   // notice simply never shows (a page that doesn't pass it opts out).
   detail: { type: Object, default: null },
-  // Suppresses the notice even on a submittable draft — e.g. Payment
+  // Suppresses the notice even on a submittable draft - e.g. Payment
   // Entry doesn't want it once verification_status is "Rejected" (that
   // state has its own, more specific messaging instead).
   hideDraftNotice: { type: Boolean, default: false },

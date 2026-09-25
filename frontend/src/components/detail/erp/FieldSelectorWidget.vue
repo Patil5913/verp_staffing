@@ -118,11 +118,11 @@ import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Ports the old desk render_field_selector_widget() (ERP Configuration's
 // Candidate Form Fields / Department Display Fields / Department Access
-// Fields tabs) onto this app's own components — same CONFIG shape (a JSON
+// Fields tabs) onto this app's own components - same CONFIG shape (a JSON
 // object keyed by item name, either a plain array of fieldnames or, for
 // the candidate form, { fields: [{field_name, is_required}],
 // is_agreement_required, is_candidate_form_required }), same search/
-// select-all/copy-from behavior — just Checkbox/AppButton/Dialog instead
+// select-all/copy-from behavior - just Checkbox/AppButton/Dialog instead
 // of hand-built gradient HTML.
 import { computed, ref, watch } from 'vue'
 import { Dialog } from 'frappe-ui'
@@ -147,11 +147,11 @@ watch(
   () => props.modelValue,
   (val) => {
     localConfig.value = JSON.parse(JSON.stringify(val || {}))
-    // Normalize once, right after loading — not lazily inside a getter that
+    // Normalize once, right after loading - not lazily inside a getter that
     // runs during template render (see normalizeEntry below). A getter
     // called from `:class`/`:model-value` bindings runs on every render, and
     // for old-format entries (a plain array, pre-dating is_required) it used
-    // to *write* localConfig.value[name] to migrate the shape — a reactive
+    // to *write* localConfig.value[name] to migrate the shape - a reactive
     // mutation during render, which re-triggers the render that mutates it
     // again, crashing the Candidate Form Fields tab (the only tab whose
     // entries ever take the old array shape) with a "Maximum recursive
@@ -185,7 +185,7 @@ function normalizeEntry(name) {
 
 function getFieldObjects(name) {
   if (!props.isCandidateForm) return []
-  // Read-only — normalization already happened once when localConfig was
+  // Read-only - normalization already happened once when localConfig was
   // loaded (see the modelValue watcher above), never here: this is called
   // from template bindings evaluated on every render, and a write here
   // instead of a read used to crash the tab (see that watcher's comment).

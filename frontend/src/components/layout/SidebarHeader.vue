@@ -15,12 +15,12 @@
       :class="sidebarOpen && !isMobile ? 'flex-1' : ''"
       @click="onLogoClick"
     >
-      <img :src="logoSrc" alt="Vrugle" class="h-6 w-6 shrink-0" />
+      <img :src="appLogo" :alt="appName" class="h-6 w-6 shrink-0" />
       <span
         v-if="sidebarOpen && !isMobile"
         class="truncate text-base font-semibold text-app-text"
       >
-        Vrugle Staffing
+        {{ appName }}
       </span>
     </a>
 
@@ -39,13 +39,12 @@
 <script setup>
 import { computed } from 'vue'
 import router from '@/router'
+import { useBranding } from '@/composables/layout/useBranding'
 import { useSidebar } from '@/composables/layout/useSidebar'
 
 const { sidebarOpen, toggleSidebar, isMobile, toggleMobileNav, firstAccessibleRoute } = useSidebar()
 const homeRoute = computed(() => firstAccessibleRoute())
-// dynamic binding so Vite's template compiler doesn't try to resolve this
-// as a local build asset — it's served at runtime by the Frappe backend
-const logoSrc = '/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png'
+const { appName, appLogo } = useBranding()
 
 function onLogoClick(e) {
   const target = homeRoute.value
@@ -53,7 +52,7 @@ function onLogoClick(e) {
   e.preventDefault()
   if (target.startsWith('/verp')) {
     // router's path space excludes the '/verp' history base (see
-    // SidebarLink.vue) — pushing the full route would double it up.
+    // SidebarLink.vue) - pushing the full route would double it up.
     router.push(target.replace(/^\/verp/, '') || '/')
   } else {
     window.location.href = target

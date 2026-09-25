@@ -9,7 +9,7 @@
 
 <script setup>
 // Marketing's target block (target / start date / based-on). Only a
-// superior of the assignee may set these — the assignee sees them but can't
+// superior of the assignee may set these - the assignee sees them but can't
 // move their own goalposts (marketing.js's _is_superior_in_department).
 import { computed } from 'vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'

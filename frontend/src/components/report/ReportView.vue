@@ -50,7 +50,7 @@
 
 <script setup>
 // One report on screen: filters (server-defined), then summary tiles, a chart,
-// and the table — each optional, driven by what the report returned plus its
+// and the table - each optional, driven by what the report returned plus its
 // presentation config (reportConfigs.js). Financial statements, ledgers,
 // funnels and target tracking all go through here; only the config differs.
 import { computed } from 'vue'

@@ -51,7 +51,7 @@
 // The analytics home: a tab per area of the business (Overview, Accounts, CRM,
 // Marketing, Operations), each a board of KPI tiles, charts and tables the
 // server assembles for the chosen period (utils/dashboard.py). The page only
-// lays the board out — every widget is generic — so a new metric is a server
+// lays the board out - every widget is generic - so a new metric is a server
 // change, not a frontend one.
 import { LoadingIndicator } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'

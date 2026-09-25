@@ -17,14 +17,14 @@
 
 <script setup>
 // AppLinkField's look for a fixed, already-known list of options (a period
-// preset, a status) — AppLinkField itself searches a doctype on the server.
+// preset, a status) - AppLinkField itself searches a doctype on the server.
 // `compact` is the 28px control used in toolbars.
 import { computed } from 'vue'
 import { Combobox } from 'frappe-ui'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
-  // [{ label, value }] — or plain strings, which are used for both.
+  // [{ label, value }] - or plain strings, which are used for both.
   options: { type: Array, default: () => [] },
   label: { type: String, default: '' },
   required: { type: Boolean, default: false },

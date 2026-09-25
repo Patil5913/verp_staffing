@@ -77,7 +77,7 @@ body {
     color 0.15s ease;
 }
 
-/* Tailwind's default shadow-* utilities use a black-based rgba shadow —
+/* Tailwind's default shadow-* utilities use a black-based rgba shadow -
    nearly invisible against a dark panel on a dark background. Give panels
    a touch of contrast (a top highlight + a slightly stronger drop shadow)
    in dark mode so cards still read as elevated. */
@@ -94,11 +94,11 @@ body {
 }
 
 /* frappe-ui's Dialog (DialogPortal, portalled to <body> like Combobox
-   below) never sets its own z-index — its overlay/content just relies on
+   below) never sets its own z-index - its overlay/content just relies on
    DOM order within whatever stacking context they land in. That put a
    Dialog with z-index:auto behind this app's own fixed/sticky chrome that
    *does* set one (the sidebar is z-40; a detail page's sticky in-page nav,
-   e.g. LeadProfilePanel's completeness bar, is z-10) — most visibly, a
+   e.g. LeadProfilePanel's completeness bar, is z-10) - most visibly, a
    ChildTableField "Add Row" dialog opened from a page with such a sticky
    bar rendered underneath it instead of on top. Global, not scoped: the
    portal target means no component's own <style> can reach it, and every
@@ -110,7 +110,7 @@ body {
 
 /* App-wide Combobox/Link popover theming.
    frappe-ui's Combobox portals its dropdown to <body> (ComboboxPortal),
-   so a component's own `<style scoped> :deep(...)` rules never match it —
+   so a component's own `<style scoped> :deep(...)` rules never match it -
    the portalled content isn't a DOM descendant of the component that
    rendered it, even though it looks nested in the template. These rules
    are intentionally global so every combobox popover in the app (detail
@@ -186,7 +186,7 @@ body {
    <style> can reach it, and it must win regardless of which dialog (if any)
    it was opened inside. */
 /* !important: reka-ui writes an inline z-index on this wrapper (copied from the
-   content's computed value — "auto"), which beats any normal stylesheet rule. */
+   content's computed value - "auto"), which beats any normal stylesheet rule. */
 [data-reka-popper-content-wrapper] {
   z-index: 110 !important;
 }

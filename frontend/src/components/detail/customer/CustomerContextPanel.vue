@@ -26,11 +26,11 @@
             <dt class="text-p-sm font-medium text-app-text-muted">{{ field.label }}</dt>
             <dd class="min-w-0 break-words text-p-sm text-app-text">
               <!-- File fields (Attach, or a Link-to-File like Visa Copy/EAD
-              Card/Driving Licence/Old Resume) — writable ones always show
+              Card/Driving Licence/Old Resume) - writable ones always show
               (even with no file yet) so the upload control is reachable;
               readonly ones with no file just show the empty state.
               reusable.js's file rendering is fieldtype-driven, not just
-              Attach — isFile() below matches that. -->
+              Attach - isFile() below matches that. -->
               <div v-if="isFile(field) && isWritable(field)" class="flex flex-wrap items-center gap-2">
                 <a v-if="field.value" :href="fileHref(field)" target="_blank" rel="noopener" class="min-w-0 truncate text-app-primary hover:underline">
                   📎 {{ fileLabel(field) }}
@@ -44,13 +44,13 @@
                   </template>
                 </FileUploader>
               </div>
-              <template v-else-if="!field.value">—</template>
+              <template v-else-if="!field.value">-</template>
               <a v-else-if="isFile(field)" :href="fileHref(field)" target="_blank" rel="noopener" class="text-app-primary hover:underline">
                 📎 {{ fileLabel(field) }}
               </a>
 
               <!-- email: click to compose, same as reusable.js's
-              open-email-composer handler (a mailto: link here — no
+              open-email-composer handler (a mailto: link here - no
               in-app composer in this SPA). -->
               <a v-else-if="field.fieldname === 'email'" :href="`mailto:${field.value}`" class="font-medium text-app-primary hover:underline">
                 {{ field.value }}
@@ -58,7 +58,7 @@
 
               <!-- LinkedIn-style URL fields: the raw value itself is the
               link text (reusable.js special-cases personal_linkedin/
-              marketing_linkedin the same way — generalized here to any
+              marketing_linkedin the same way - generalized here to any
               *linkedin* fieldname). -->
               <a
                 v-else-if="field.fieldname.toLowerCase().includes('linkedin')"
@@ -71,7 +71,7 @@
               </a>
 
               <!-- Any other Link field: value is another doctype's record
-              name — link to it. -->
+              name - link to it. -->
               <router-link
                 v-else-if="field.fieldtype === 'Link' && field.options"
                 :to="`/${encodeURIComponent(field.options)}/${encodeURIComponent(field.value)}`"
@@ -86,7 +86,7 @@
                   View more
                 </button>
               </template>
-              <template v-else>{{ display(field) || '—' }}</template>
+              <template v-else>{{ display(field) || '-' }}</template>
             </dd>
           </div>
         </dl>
@@ -113,7 +113,7 @@
                         View more
                       </button>
                     </template>
-                    <template v-else>{{ row[col.fieldname] ?? '—' }}</template>
+                    <template v-else>{{ row[col.fieldname] ?? '-' }}</template>
                   </td>
                 </tr>
               </tbody>
@@ -126,7 +126,7 @@
   </SectionCard>
 
   <!-- Ported from customer_history.js's render_truncated_text (80-char
-  inline clamp) — here as a dialog instead of the desk's inline expand,
+  inline clamp) - here as a dialog instead of the desk's inline expand,
   since this panel's fields/tables are dense enough that an inline
   expansion would push everything else around. -->
   <Dialog v-model="viewMoreOpen" :options="{ title: viewMoreLabel, size: 'lg' }">
@@ -138,7 +138,7 @@
 
 <script setup>
 // The customer's Lead Detail Form data, limited to the fields ERP
-// Configuration allows this department to see — the desk form's
+// Configuration allows this department to see - the desk form's
 // "customer details / lead details" HTML block. `displayKey` is the
 // department (doctype) name that config is keyed by.
 import { computed, reactive, ref, watch } from 'vue'
@@ -169,10 +169,10 @@ const displayKey = computed(() => props.displayKey || props.detail?.values[props
 const { fields: configured, writableFields, displayFields, records } = useCustomerContext(customer, displayKey, computed(() => props.fixedFields))
 const fields = computed(() => (props.fixedFields ? [...new Set([...props.fixedFields, ...writableFields.value])] : [...new Set([...configured.value, ...writableFields.value])]))
 
-// reusable.js's file rendering keys off fieldtype, not just Attach — Visa
+// reusable.js's file rendering keys off fieldtype, not just Attach - Visa
 // Copy/EAD Card/Driving Licence/Old Resume are Link-to-File fields (a
 // desk convention for "an upload, referenced by the File doc's name
-// rather than a plain Attach field's raw URL" — see FieldControl.vue's
+// rather than a plain Attach field's raw URL" - see FieldControl.vue's
 // own isLinkToFile), which this panel previously never recognized as a
 // file field at all.
 const FILE_TYPES = ['Attach', 'Attach Image']
@@ -182,7 +182,7 @@ const isWritable = (f) => writableFields.value.includes(f.fieldname)
 const fileName = (url) => decodeURIComponent(String(url).split('/').pop())
 const display = (f) => (f.fieldtype === 'Text Editor' ? String(f.value ?? '').replace(/<[^>]+>/g, ' ') : formatFieldValue(f.value, f))
 
-// Link-to-File stores the File doc's *name*, not a URL — resolve each one's
+// Link-to-File stores the File doc's *name*, not a URL - resolve each one's
 // actual file_url/file_name once and cache by that name, same as
 // FieldControl.vue's linkedFile resource does for a single field.
 const resolvedFiles = reactive({})
@@ -232,7 +232,7 @@ function openViewMore(label, text) {
 }
 
 // Saves straight through save_reference_detail_view (same endpoint the
-// Candidate Profile tab uses) — a self-contained write, independent of
+// Candidate Profile tab uses) - a self-contained write, independent of
 // the host page's own Save button, since this panel otherwise stays a
 // read-only display widget.
 async function onUpload(record, field, fileMeta) {

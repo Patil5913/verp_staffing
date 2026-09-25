@@ -1,12 +1,12 @@
 import EmailQueueStrip from '@/components/list/EmailQueueStrip.vue'
 
 // Per-doctype list-view behaviour that isn't derivable from the doctype's
-// own meta — mirrors the *_list.js listview_settings on the desk side.
+// own meta - mirrors the *_list.js listview_settings on the desk side.
 
 // Records made only by forwarding a candidate from another department, never
 // typed in by hand (cr_list.js / onboardings_list.js hide the New button).
 // These are all forwarded/auto-created off a Customer's own workflow, never
-// started by hand from their own list — no "Add New" button for any of them.
+// started by hand from their own list - no "Add New" button for any of them.
 export const NO_MANUAL_CREATE = new Set([
   'CR',
   'Onboardings',
@@ -24,14 +24,14 @@ export const NO_MANUAL_CREATE = new Set([
 ])
 
 // These three share one "person" concept via the Lead Detail Form (see
-// PersonQuickCreateDialog.vue) — their quick-create is name + phone + email,
+// PersonQuickCreateDialog.vue) - their quick-create is name + phone + email,
 // not the generic meta-driven required-fields dialog every other doctype
 // uses.
 export const PERSON_DOCTYPES = new Set(['Lead', 'Opportunity', 'Customer'])
 
 // The synthetic Status column DocListView adds for a submittable doctype
-// (docstatus, or this doctype's own override — see statusTheme.js's
-// listStatusColumn) already tells the whole status story for these two —
+// (docstatus, or this doctype's own override - see statusTheme.js's
+// listStatusColumn) already tells the whole status story for these two -
 // showing their own status/verification_status field as a second column
 // alongside it was confusing (Sales Order: plain docstatus already covers
 // it; Payment Entry: the override already shows verification_status).

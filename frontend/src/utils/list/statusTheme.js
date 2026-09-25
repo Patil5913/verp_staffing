@@ -1,6 +1,6 @@
 // Best-effort Badge `theme` for a Select field's value, based on common
 // status vocabulary (works across doctypes, not just one specific status
-// field) — falls back to plain gray when nothing matches.
+// field) - falls back to plain gray when nothing matches.
 const KEYWORD_THEMES = [
   // mail delivery (Email Queue)
   [/^sent$|delivered/, 'green'],
@@ -14,11 +14,11 @@ const KEYWORD_THEMES = [
 
 // A handful of status-like fields don't follow the generic vocabulary above
 // closely enough, or aren't even a Select fieldtype (Customer.overall_status
-// is Data) so wouldn't otherwise get badge treatment at all — see
+// is Data) so wouldn't otherwise get badge treatment at all - see
 // hasStatusOverride, used by DocListView's isSelectColumn to widen badge
 // eligibility past "is this a Select field". Keyed by `Doctype.fieldname`.
 // Sales Order's per-row Payment Terms status and Payment Entry's
-// verification_status share the same three-value vocabulary — neither fits
+// verification_status share the same three-value vocabulary - neither fits
 // the generic KEYWORD_THEMES below well: "Verified" matches none of those
 // patterns and fell through to plain gray, and "Pending Verification" only
 // got the same orange every other "pending" status does instead of a
@@ -63,7 +63,7 @@ export function hasStatusOverride(doctype, fieldname) {
 }
 
 // docstatus (0/1/2) isn't a Select field's string value, so it doesn't run
-// through statusBadgeTheme above — used for the synthetic status column
+// through statusBadgeTheme above - used for the synthetic status column
 // DocListView adds to submittable doctypes' lists.
 const DOCSTATUS = {
   0: { label: 'Draft', theme: 'gray' },
@@ -76,7 +76,7 @@ export function docstatusBadge(docstatus) {
 }
 
 // Some submittable doctypes' Status column shouldn't always be plain
-// docstatus — Payment Entry shows verification_status once it's tied to a
+// docstatus - Payment Entry shows verification_status once it's tied to a
 // payment term (see ConfigDetailPage's matching statusField override for
 // the detail page's own badge). Row-based rather than a single toggle since
 // it varies per record, not per doctype. Returns null to fall back to
@@ -95,7 +95,7 @@ export function statusBadgeTheme(value, { doctype, fieldname } = {}) {
   return genericStatusTheme(value)
 }
 
-// Sales Invoice has no real "payment status" field — Paid/Unpaid/Partly
+// Sales Invoice has no real "payment status" field - Paid/Unpaid/Partly
 // Paid is purely derived from outstanding_amount vs the invoice's rounded
 // total. Shared by the list column below and ConfigDetailPage's own
 // statusText for the Sales Invoice detail page badge (see accounts.js's
@@ -109,7 +109,7 @@ export function computeInvoiceStatus(values) {
 }
 
 // statusBadgeTheme's generic KEYWORD_THEMES matches "paid" as a plain
-// substring — "Unpaid" and "Partly Paid" both contain it, so every one of
+// substring - "Unpaid" and "Partly Paid" both contain it, so every one of
 // these three ended up the same green as "Paid" itself. Dedicated mapping
 // instead of trying to make the generic matcher word-boundary-aware (that
 // would ripple into every other status in the app that happens to contain

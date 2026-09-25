@@ -34,7 +34,7 @@ import { notify } from '@/utils/common/notify'
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
   detail: { type: Object, required: true },
-  // The page's Save — saves and, for a new record, moves to its own URL.
+  // The page's Save - saves and, for a new record, moves to its own URL.
   save: { type: Function, required: true },
 })
 
@@ -48,7 +48,7 @@ const seriesOptions = computed(() => {
 })
 
 // Leaf accounts of the entry's company (the desk's account_query; the
-// company-currency restriction is dropped here — the server validates the
+// company-currency restriction is dropped here - the server validates the
 // currency rules on save).
 const accountFilters = computed(() => ({ is_group: 0, ...(props.detail.values.company ? { company: props.detail.values.company } : {}) }))
 

@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-// A themed, thin scrollbar wrapper — native scrolling (wheel/touch/momentum/
+// A themed, thin scrollbar wrapper - native scrolling (wheel/touch/momentum/
 // keyboard/a11y) is kept as-is, only the scrollbar's look is replaced, since
 // the default OS scrollbar is what looked out of place, not scrolling itself.
 </script>

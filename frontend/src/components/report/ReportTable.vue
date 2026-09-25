@@ -138,6 +138,6 @@ const emphasised = (row) => Boolean(row.bold) || ['strong', 'total'].includes(to
 const linkFor = (row) => props.config.linkRow?.(row) || null
 const targetFor = (col, row) => linkTarget(col, row[col.fieldname])
 const display = (col, row) => formatReportValue(row[col.fieldname], col, row, props.defaultCurrency)
-// Negative amounts read red — a credit balance, a loss, a shortfall.
+// Negative amounts read red - a credit balance, a loss, a shortfall.
 const numberTone = (col, row) => (isNumeric(col) && Number(row[col.fieldname]) < 0 ? 'text-red-600' : '')
 </script>

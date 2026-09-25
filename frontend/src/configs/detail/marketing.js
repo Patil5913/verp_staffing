@@ -23,7 +23,7 @@ const notNew = (detail) => !detail.isNew.value
 export const marketingConfig = {
   doctype: 'Marketing',
   timeline: 'service',
-  // Forwarded/auto-created off a Customer's own workflow — no manual delete.
+  // Forwarded/auto-created off a Customer's own workflow - no manual delete.
   noDelete: true,
   // status locks once Completed; the customer can't be re-picked after the
   // record exists (marketing.js sets it read_only when !is_new()).
@@ -94,7 +94,7 @@ export const interviewConfig = {
   setup: interviewSetup,
   // Once created, everything but the rounds is fixed (interview.js sets
   // role/company/status read_only on existing records). `customer` isn't
-  // shown at all — it's purely derived from marketing_link, redundant next
+  // shown at all - it's purely derived from marketing_link, redundant next
   // to Company/Role, and used to show up (unhidden, unlike the doctype's
   // own display) on the create form specifically since this generic
   // renderer doesn't otherwise know to drop it.
@@ -119,7 +119,7 @@ export function otherServicesConfig({ doctype, department }) {
   return {
     doctype,
     timeline: 'service',
-    // Forwarded/auto-created off a Customer's own workflow — no manual delete.
+    // Forwarded/auto-created off a Customer's own workflow - no manual delete.
     noDelete: true,
     locked: isCompleted,
     readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer', 'service', 'department']),

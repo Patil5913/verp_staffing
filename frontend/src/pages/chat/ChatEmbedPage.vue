@@ -5,7 +5,7 @@
     <iframe
       v-if="available"
       :src="src"
-      title="Vrugle Chat"
+      title="Verp Chat"
       class="block h-full w-full border-0"
       allow="clipboard-write"
     />
@@ -13,7 +13,7 @@
       <StateBanner
         icon="message-square"
         title="Chat isn't available"
-        description="The Vrugle Chat app isn't installed on this site, or your roles don't include it. Ask an administrator if you need it."
+        description="The Verp Chat app isn't installed on this site, or your roles don't include it. Ask an administrator if you need it."
       >
         <AppButton variant="solid" theme="blue" @click="router.push('/')">Go to Dashboard</AppButton>
       </StateBanner>

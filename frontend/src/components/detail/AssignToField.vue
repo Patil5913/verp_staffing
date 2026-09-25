@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-// The "Assign To" Employee picker every service record has — restricted
+// The "Assign To" Employee picker every service record has - restricted
 // server-side by a whitelisted standard query (desk's frm.set_query on
 // assign_to): `get_assign_to_by_service` for a service + customer, or
 // `get_subordinate_employees` for a department's subordinates.

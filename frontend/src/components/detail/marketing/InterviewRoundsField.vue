@@ -46,13 +46,13 @@
       No rounds scheduled yet.
     </p>
     <p v-if="editable && !isSuperior && rows.length > 1" class="text-p-xs text-app-text-muted">
-      Only the latest round is editable — a manager can change earlier rounds.
+      Only the latest round is editable - a manager can change earlier rounds.
     </p>
   </SectionCard>
 
   <!-- interview_list.js's prompt_cancellation_details, ported: collects
   who it's attributed to + a reason before a round can actually move into
-  Cancelled/Rescheduled/Rejected — extended here to also cover Rejected,
+  Cancelled/Rescheduled/Rejected - extended here to also cover Rejected,
   which the desk dialog never did. -->
   <Dialog v-model="statusDialogOpen" :options="{ title: `Confirm ${pendingStatus}`, size: 'sm' }">
     <template #body-content>
@@ -72,13 +72,13 @@
 <script setup>
 // The Interview's rounds table, with the desk form's rules from
 // interview.js/interview_list.js kept intact:
-//  * rounds are append-only, numbered by position — a superior can take back a
+//  * rounds are append-only, numbered by position - a superior can take back a
 //    round they just added, and only Administrator can remove a saved one
 //    (interview.js's cannot_delete_rows);
 //  * unless you're a superior of the Marketing assignee, only the latest
 //    round is editable;
 //  * a round whose status is Cancelled / Rescheduled / Rejected / Completed
-//    (case-insensitive) is fully locked, every field, the moment it's set —
+//    (case-insensitive) is fully locked, every field, the moment it's set -
 //    not just once saved;
 //  * Cancelled / Rescheduled / Rejected all go through the same
 //    confirmation dialog first, collecting who it's attributed to and a
@@ -98,7 +98,7 @@ import { confirmLeave } from '@/utils/common/confirmDialog'
 import { notify } from '@/utils/common/notify'
 import { isAdministrator } from '@/utils/common/roles'
 
-// Rejected joins the desk's own Cancelled/Rescheduled grouping here — same
+// Rejected joins the desk's own Cancelled/Rescheduled grouping here - same
 // "ask who it's attributed to + why" dialog, same terminal lock. Matched
 // case-insensitively against the row's live status (not just what was last
 // saved), so a round is disabled the moment it's actually set to one of
@@ -119,7 +119,7 @@ const rows = computed(() => props.detail.values.interview_rounds_table || [])
 const editable = computed(() => !props.locked && props.detail.canWrite.value)
 
 // A round whose *current* status (live, not just what was last saved) is
-// Rescheduled/Rejected/Completed/Cancelled is fully locked — every field,
+// Rescheduled/Rejected/Completed/Cancelled is fully locked - every field,
 // not only Status.
 const finalized = (row) => FINAL.includes(statusOf(row))
 
@@ -140,7 +140,7 @@ const defaultStatus = useResource({
 })
 
 // A new Interview starts in ERP Configuration's default status (its status
-// field is read-only, so the user can't pick one) — interview.js's
+// field is read-only, so the user can't pick one) - interview.js's
 // initialize_default_interview_status.
 watch(
   () => defaultStatus.resource.data,
@@ -174,7 +174,7 @@ function addRound() {
 }
 const removeRound = (idx) => commit(rows.value.filter((_, i) => i !== idx))
 
-// interview_list.js's prompt_cancellation_details — asks who it's
+// interview_list.js's prompt_cancellation_details - asks who it's
 // attributed to (cancelled_by, doubling as "rejected by" here) and a
 // reason before a Cancelled/Rescheduled/Rejected status actually commits.
 const statusDialogOpen = ref(false)

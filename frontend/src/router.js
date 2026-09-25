@@ -9,7 +9,7 @@ import { hasRole } from '@/utils/common/roles'
 import { accessTarget, canAccess } from '@/utils/common/routeAccess'
 
 // Doctypes whose detail page is just config on top of ConfigDetailPage (see
-// that file's header) — one route each, generated so adding a doctype is a
+// that file's header) - one route each, generated so adding a doctype is a
 // config file plus one line here.
 const configPage = (path, name, config) => ({
   path,
@@ -48,7 +48,7 @@ const CONFIG_ROUTES = [
 
 // The customer portal: the same shell as the staff app with its own pages. Only
 // portal users (window.is_portal_user, set by www/verp.py) can open these, and
-// they can open nothing else — the guard below enforces both ways; the server
+// they can open nothing else - the guard below enforces both ways; the server
 // still derives the customer from the session on every call.
 const PORTAL_ROUTES = [
   { path: '/portal', redirect: '/portal/dashboard' },
@@ -88,7 +88,7 @@ const routes = [
   },
   {
     // ERP Configuration is the one Single doctype with real customization
-    // (see ERPConfigurationDetailPage.vue) — a literal path ranks above
+    // (see ERPConfigurationDetailPage.vue) - a literal path ranks above
     // /settings/:doctype's dynamic one, same trick as /Lead/:name above
     // the generic /:doctype/:name.
     path: '/settings/ERP%20Configuration',
@@ -96,7 +96,7 @@ const routes = [
     component: () => import('@/pages/detail/ERPConfigurationDetailPage.vue'),
   },
   {
-    // Single doctypes (ERP Configuration, Accounts Settings) — old desk UI
+    // Single doctypes (ERP Configuration, Accounts Settings) - old desk UI
     // jumps straight to the one record's edit form, never a list. This is
     // the fallback for every single doctype without its own page above.
     path: '/settings/:doctype',
@@ -159,7 +159,7 @@ const routes = [
     component: () => import('@/pages/mail/EmailInbox.vue'),
   },
   {
-    // A bare doctype route is the list view — its default view. Kept last
+    // A bare doctype route is the list view - its default view. Kept last
     // among top-level paths: vue-router 4 always ranks a static segment
     // (e.g. "/setup") above a dynamic one, so order here doesn't actually
     // affect matching, but this keeps the catch-all-shaped route visually
@@ -170,7 +170,7 @@ const routes = [
   },
   {
     // The Chart of Accounts is the Account tree, company-scoped with
-    // balances — a literal path ranks above the generic /:doctype/view/tree.
+    // balances - a literal path ranks above the generic /:doctype/view/tree.
     path: '/Account/view/tree',
     name: 'AccountTree',
     component: () => import('@/pages/lists/AccountTreePage.vue'),
@@ -198,7 +198,7 @@ const routes = [
     // Doctypes whose detail page needs customization (extra tabs, extra
     // input while creating, connections to other doctypes, ...) get their
     // own page here instead of teaching the generic DocDetailPage about
-    // them — see DocDetailPage.vue's header comment. A literal first
+    // them - see DocDetailPage.vue's header comment. A literal first
     // segment ("Lead") ranks above /:doctype/:name's dynamic one, the same
     // way /:doctype/view/tree ranks above it below.
     path: '/Lead/:name',
@@ -273,7 +273,7 @@ const routes = [
   {
     // %20 rather than a literal space: this string is matched against the
     // URL's raw (still percent-encoded) path, same as the actual link this
-    // needs to match — router.push(`/${encodeURIComponent(doctype)}/...`)
+    // needs to match - router.push(`/${encodeURIComponent(doctype)}/...`)
     // (DocListView.vue, QuickCreateDialog.vue) and the sidebar's own
     // urllib.parse.quote(doctype) both produce "Email%20Domain" here, never
     // a literal space.
@@ -327,7 +327,7 @@ const router = createRouter({
 })
 
 // A route's lazy-loaded chunk (import('...DetailPage.vue')) 404s once a
-// new deploy has replaced it with a different content-hashed filename —
+// new deploy has replaced it with a different content-hashed filename -
 // the tab still has the *old* index.html's chunk map in memory. Rather
 // than a dead "Failed to fetch dynamically imported module" error, reload
 // once to pick up the new build; the sessionStorage flag stops a genuine,
@@ -344,7 +344,7 @@ router.onError((error, to) => {
 // window.user is set server-side on every full page load, straight from
 // frappe.session.user (see verp_staffing/www/verp.py get_context, no_cache
 // = 1), and Guests are already redirected to /verp/login there before the
-// SPA ever mounts. This guard is just a client-side mirror of that — a
+// SPA ever mounts. This guard is just a client-side mirror of that - a
 // safety net for in-app navigation, not the source of truth.
 function isLoggedIn() {
   return Boolean(window.user) && window.user !== 'Guest'

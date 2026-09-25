@@ -317,7 +317,7 @@ const props = defineProps({
 
 const router = useRouter()
 
-// Interview's "Select Customer" scoping — same shared selection Kanban/
+// Interview's "Select Customer" scoping - same shared selection Kanban/
 // Calendar read/write, applied here as an extra get_list filter.
 const showCustomerDialog = ref(false)
 const { selectedCustomers, ensureDefaultCustomers } = useMarketingCustomerFilter()
@@ -328,8 +328,8 @@ if (props.doctype === 'Interview') ensureDefaultCustomers()
 
 function openRow(row) {
   // A plain path, not a named route: some doctypes (Lead, User) have their
-  // own detail page routed ahead of the generic DocDetail one — see
-  // router.js — and this lets vue-router pick whichever one matches instead
+  // own detail page routed ahead of the generic DocDetail one - see
+  // router.js - and this lets vue-router pick whichever one matches instead
   // of this list view having to know which doctypes are customized.
   router.push(`/${encodeURIComponent(props.doctype)}/${encodeURIComponent(row.name)}`)
 }
@@ -337,7 +337,7 @@ function openRow(row) {
 const showQuickCreate = ref(false)
 const isPersonDoctype = computed(() => PERSON_DOCTYPES.has(props.doctype))
 
-// Decide quick-dialog-vs-full-form *before* opening anything — meta.resource
+// Decide quick-dialog-vs-full-form *before* opening anything - meta.resource
 // is already loaded by the time this button is clickable, so this is
 // synchronous, unlike the generic QuickCreateDialog's own after-the-fact
 // check (which used to flash the dialog open for a moment before redirecting
@@ -381,7 +381,7 @@ const searchSyntaxHelp = [
   {
     title: 'Combine conditions',
     rows: [
-      { example: 'status=open name=parth', description: 'Multiple fields — all must match (AND).' },
+      { example: 'status=open name=parth', description: 'Multiple fields - all must match (AND).' },
       { example: 'status=open or name=parth', description: 'Either one can match (OR) instead.' },
     ],
   },
@@ -397,7 +397,7 @@ const searchSyntaxHelp = [
     rows: [
       {
         example: 'modified between 17 sept to 25 sept',
-        description: 'A range on one field — values here don’t need quotes.',
+        description: 'A range on one field - values here don’t need quotes.',
       },
     ],
   },
@@ -420,7 +420,7 @@ const columnsCustomized = computed(() => Boolean(meta.resource.data?.columns_cus
 const showCustomizeColumns = ref(false)
 
 // set_list_view_columns already returns a fresh get_list_view_meta payload,
-// so apply it directly instead of round-tripping another meta fetch —
+// so apply it directly instead of round-tripping another meta fetch -
 // avoids a race where docs.resource.reload() below would otherwise read
 // list_fields before an async meta reload had resolved.
 function onColumnsSaved(data) {
@@ -430,7 +430,7 @@ function onColumnsSaved(data) {
 
 const isSubmittable = computed(() => Boolean(meta.resource.data?.is_submittable))
 
-// A fixed, non-customizable leading column — not part of list_fields/the
+// A fixed, non-customizable leading column - not part of list_fields/the
 // Customize Columns picker, since it's derived from docstatus rather than a
 // real doctype field.
 const columns = computed(() => {
@@ -441,11 +441,11 @@ const columns = computed(() => {
 
 function isSelectColumn(key) {
   // Customer.overall_status is a Data field carrying status-like text
-  // (Pending Verification, Ready, ...), not a Select — it still needs the
+  // (Pending Verification, Ready, ...), not a Select - it still needs the
   // same badge/color treatment (statusBadgeTheme's DOCTYPE_FIELD_OVERRIDES
   // already has its exact mapping), so badge eligibility can't be gated on
   // fieldtype alone, only on "does the theme resolver have anything to say
-  // about it" — a plain Select column trivially always does (falls through
+  // about it" - a plain Select column trivially always does (falls through
   // its generic keyword vocabulary), one of these fieldtype-agnostic
   // overrides only fires for the specific doctype.fieldname it targets.
   return fieldMap.value[key]?.fieldtype === 'Select' || hasStatusOverride(props.doctype, key)
@@ -474,18 +474,18 @@ const rows = computed(() =>
   }),
 )
 
-// The raw (unformatted) row a display row came from — needed by
+// The raw (unformatted) row a display row came from - needed by
 // listStatusColumn (payment_term_row/verification_status aren't
 // list_fields, so they never make it into displayRow above).
 const rawRowByName = computed(() => Object.fromEntries((docs.resource.data || []).map((r) => [r.name, r])))
 
 // Row selection + delete (single-row via the action menu, or bulk via the
-// header checkbox) — both funnel through the same confirm dialog and the
+// header checkbox) - both funnel through the same confirm dialog and the
 // same delete_docs call, list_view.py returns per-name success/failure so a
 // permission-restricted row in a bulk selection doesn't silently vanish.
 const canDelete = computed(() => Boolean(meta.resource.data?.perms?.delete))
 // CR / Onboardings are only ever created by forwarding a candidate (their desk
-// list views hide the New button too) — see listOptions.js.
+// list views hide the New button too) - see listOptions.js.
 const canCreate = computed(() => Boolean(meta.resource.data?.perms?.create) && !NO_MANUAL_CREATE.has(props.doctype))
 
 const selected = ref(new Set())
@@ -518,7 +518,7 @@ const runBulkAction = (action) => runAction(action, [...selected.value])
 const rowActionDefs = computed(() => ROW_ACTIONS[props.doctype] || [])
 const primaryRowAction = computed(() => rowActionDefs.value[0] || null)
 
-// Selection is scoped to the current page's rows — reset whenever the
+// Selection is scoped to the current page's rows - reset whenever the
 // visible page changes so stale names from a previous page can't linger.
 watch(rows, () => (selected.value = new Set()))
 

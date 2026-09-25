@@ -3,7 +3,7 @@ import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 
 // Same 15 fields erp_configuration.py's MANAGED_SYSTEM_SETTINGS_FIELDS
-// allows writing to — hardcoded here (rather than fetched) since these are
+// allows writing to - hardcoded here (rather than fetched) since these are
 // standard, stable Frappe core fields; only their current values (and the
 // timezone list for time_zone's options) come from the server.
 const FIELD_DEFS = {
@@ -51,10 +51,10 @@ const FIELD_GROUPS = [
 
 // Backs ERP Configuration's Website Settings tab: a curated System
 // Settings quick-edit panel, staged locally and flushed as one batch on
-// the outer form's save — mirrors the old desk erp_configuration.js's
+// the outer form's save - mirrors the old desk erp_configuration.js's
 // stage_system_settings_change()/flush_system_settings_changes(). Owned by
 // the PAGE (not the tab's presentational component), since
-// DetailPageLayout only keeps the active tab's content mounted — a
+// DetailPageLayout only keeps the active tab's content mounted - a
 // component-local pending-changes ref would be lost switching tabs before
 // Save is clicked.
 export function useSystemSettingsPanel() {

@@ -4,7 +4,7 @@
       class="flex flex-col gap-4 rounded-lg border border-app-border bg-app-panel p-6"
     >
       <h1 class="text-2xl font-semibold text-app-text">
-        Vrugle Staffing ERP
+        Verp Placements ERP
       </h1>
       <p class="text-p-base text-app-text-muted">
         Navbar and sidebar are wired up to the same permission-filtered

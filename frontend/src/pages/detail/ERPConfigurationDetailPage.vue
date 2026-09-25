@@ -58,7 +58,7 @@
     <template #tab-candidate-form>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
         <FieldSelectorWidget
-          title="Candidate Form Fields — per Service"
+          title="Candidate Form Fields - per Service"
           description="Controls <strong>which fields appear</strong> on the candidate's application form for a specific service. Each service shows only its relevant fields."
           impact="Affects: Candidate application form"
           selector-label="service"
@@ -90,7 +90,7 @@
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
         <FieldSelectorWidget
           title="Department Access Fields"
-          description="Controls <strong>which fields can be edited</strong> on a candidate's profile in a specific context — all other fields become read-only."
+          description="Controls <strong>which fields can be edited</strong> on a candidate's profile in a specific context - all other fields become read-only."
           impact="Affects: Edit authority on candidate details form"
           selector-label="context"
           :items-list="servicesPlus"
@@ -115,7 +115,7 @@
 </template>
 
 <script setup>
-// ERP Configuration's own page — a Single doctype, so it's built on
+// ERP Configuration's own page - a Single doctype, so it's built on
 // get_settings_meta/frappe.client.set_value (the same generic single-
 // doctype primitives SettingsFormPage.vue already uses) rather than
 // useDocDetail, which only works for non-Single doctypes. Its 4 hidden
@@ -123,8 +123,8 @@
 // department_display_form_fields, department_access_form_fields,
 // email_configuration_detail) follow the same fetch-via-frappe.client.get /
 // bulk-save-via-frappe.client.set_value pattern used for Hierarchy's and
-// Pdf Agreement Template's hidden fields. No delete/create flow — a
-// Single always exists — so this page skips the usual
+// Pdf Agreement Template's hidden fields. No delete/create flow - a
+// Single always exists - so this page skips the usual
 // isNew/delete/unsaved-changes-guard machinery entirely.
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -189,7 +189,7 @@ const permissionTable = {
 }
 const tableRows = ref([])
 // Role options come from the row's own Department's Hierarchy, not every
-// Role in the system — same get_department_hierarchy_roles_query used by
+// Role in the system - same get_department_hierarchy_roles_query used by
 // Employee's Assignment Details table (see EmployeeDetailPage.vue).
 function permissionRoleLinkQueries(draft, rows, editingIndex) {
   return {
@@ -290,7 +290,7 @@ async function onSave() {
     if (!result) return
 
     // frappe.client.set_value's response is the doc as it now stands on the
-    // server — re-seed metaResource's cache from it directly instead of
+    // server - re-seed metaResource's cache from it directly instead of
     // calling seedValues() against the pre-save cached meta (which was
     // stale until the next full page load/refresh, making a just-saved
     // page look like it had reverted to its old values).
@@ -303,7 +303,7 @@ async function onSave() {
 }
 
 // This page's Save button has no dirty-tracking of its own (`save-dirty` is
-// a bare always-on attribute above) — Ctrl+S matches that same always-save
+// a bare always-on attribute above) - Ctrl+S matches that same always-save
 // behavior rather than inventing dirty-tracking across the half-dozen
 // independent reactive pieces (values/tableRows/emailConfigRows/
 // candidateFormConfig/deptDisplayConfig/deptAccessConfig/systemSettings)

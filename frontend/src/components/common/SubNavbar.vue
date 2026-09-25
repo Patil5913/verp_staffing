@@ -1,6 +1,6 @@
 <template>
   <!-- The thin bar under the app navbar every list-like page uses: title on
-  the left, search / filters in the middle, actions on the right — same
+  the left, search / filters in the middle, actions on the right - same
   3-column grid as DocListView so pages line up when you switch between
   them. -->
   <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-app-border bg-app-panel py-2 md:grid md:h-11 md:grid-cols-3 md:py-0 px-3 md:px-6">

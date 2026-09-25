@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-// A row of key figures at the top of a record — invoice grand total and
+// A row of key figures at the top of a record - invoice grand total and
 // outstanding, a journal entry's debit / credit / difference, ... Each item is
 // `{ label, value(detail) | field, currency?, tone?(value) }`; values come from
 // the record's live values, so figures the user is typing (a journal
@@ -29,7 +29,7 @@ const resolved = computed(() =>
     const asCurrency = item.type !== 'text'
     return {
       label: item.label,
-      text: raw === null || raw === undefined || raw === '' ? '—' : asCurrency ? formatFieldValue(raw, { fieldtype: 'Currency' }) : String(raw),
+      text: raw === null || raw === undefined || raw === '' ? '-' : asCurrency ? formatFieldValue(raw, { fieldtype: 'Currency' }) : String(raw),
       tone: item.tone?.(raw, props.detail) || 'text-app-text',
     }
   }),

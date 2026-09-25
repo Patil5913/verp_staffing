@@ -17,10 +17,10 @@
 </template>
 
 <script setup>
-// A Time fieldtype had no control at all — FieldControl's TYPE_MAP simply
+// A Time fieldtype had no control at all - FieldControl's TYPE_MAP simply
 // had nothing for it, so it fell through to a plain text box with no picker.
 // Not folded into AppDatePicker: that component is built entirely around a
-// calendar grid, and a bare hour/minute value needs none of that — the
+// calendar grid, and a bare hour/minute value needs none of that - the
 // browser's own <input type=time> is exactly this, styled to match.
 import { computed } from 'vue'
 

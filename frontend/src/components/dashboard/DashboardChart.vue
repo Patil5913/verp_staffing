@@ -27,7 +27,7 @@
 
 <script setup>
 // One chart card. The server names a chart's type and hands over ready rows
-// (utils/dashboard.py); this maps that onto frappe-ui's charts — or, for the
+// (utils/dashboard.py); this maps that onto frappe-ui's charts - or, for the
 // ranked horizontal bars, draws them itself so long names show in full and
 // each bar can carry a tone.
 import { computed } from 'vue'
@@ -62,13 +62,13 @@ const bars = computed(() => {
   }))
 })
 
-// frappe-ui's donut and funnel sort their data in place — hand them copies.
+// frappe-ui's donut and funnel sort their data in place - hand them copies.
 const rowsCopy = computed(() => (props.chart.data || []).map((r) => ({ ...r })))
 const donutConfig = computed(() => ({ data: rowsCopy.value, title: '', categoryColumn: 'label', valueColumn: 'value', colors: PALETTE, maxSliceCount: 8 }))
 const funnelConfig = computed(() => ({ data: rowsCopy.value, title: '', categoryColumn: 'label', valueColumn: 'value', colors: PALETTE, showPercentages: true }))
 
 // frappe-ui's axis chart always renders the y-axis name as `↑ ${yAxis.title}`
-// (axisChartOptions.ts/getYAxisOptions) — leaving `title` unset doesn't hide
+// (axisChartOptions.ts/getYAxisOptions) - leaving `title` unset doesn't hide
 // it, it renders the literal text "↑ undefined". Every axis chart here needs
 // a real title, not just an empty string, to fix that at the source instead
 // of blanking it: derive one from the same `format` tag formatMetric already

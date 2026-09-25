@@ -140,7 +140,7 @@ def get_services():
     )
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_website_app_settings():
     """Read app_name/app_logo via Frappe's built-in single-doc cache."""
     doc = frappe.get_cached_doc("Website Settings")

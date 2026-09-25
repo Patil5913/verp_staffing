@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-6">
     <SectionCard title="Signers" :subtitle="`${signers.length} ${signers.length === 1 ? 'recipient' : 'recipients'}`">
-      <p v-if="!signers.length" class="py-4 text-center text-p-sm text-app-text-muted">No recipients yet — place fields on the Document tab.</p>
+      <p v-if="!signers.length" class="py-4 text-center text-p-sm text-app-text-muted">No recipients yet - place fields on the Document tab.</p>
       <div v-else class="overflow-x-auto rounded-lg border border-app-border">
         <table class="w-full text-left text-p-sm">
           <thead class="bg-app-panel-2 text-p-xs text-app-text-muted">
@@ -18,7 +18,7 @@
               <td class="px-3 py-2 text-app-text">{{ s.email }}</td>
               <td class="px-3 py-2">{{ s.total }}</td>
               <td class="px-3 py-2">{{ s.signed }} / {{ s.total }}</td>
-              <td class="px-3 py-2 text-app-text-muted">{{ s.emailed || '—' }}</td>
+              <td class="px-3 py-2 text-app-text-muted">{{ s.emailed || '-' }}</td>
               <td class="px-3 py-2"><DocStatusBadge :status="s.signed === s.total ? 'Signed' : s.emailed ? 'Sent' : 'Pending'" /></td>
             </tr>
           </tbody>

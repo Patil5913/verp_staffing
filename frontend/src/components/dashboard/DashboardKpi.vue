@@ -23,7 +23,7 @@
 
 <script setup>
 // One headline number: value, change against the previous period (green when
-// better, red when worse — `invert` flips that for costs), and a hint.
+// better, red when worse - `invert` flips that for costs), and a hint.
 import { computed } from 'vue'
 import { formatMetric } from '@/utils/dashboard/format'
 

@@ -24,7 +24,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
   </DetailPageLayout>
@@ -45,7 +45,7 @@
 
 <script setup>
 // Outsource's detail page: a small curated field grid (name/email/phone/
-// remarks) plus Notes — no Activity tab, this doctype isn't linked to
+// remarks) plus Notes - no Activity tab, this doctype isn't linked to
 // tasks/events. See router.js for how /Outsource/:name is routed here ahead
 // of the generic /:doctype/:name.
 import { computed, ref } from 'vue'

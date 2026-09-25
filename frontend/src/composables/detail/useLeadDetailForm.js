@@ -5,7 +5,7 @@ import { notify } from '@/utils/common/notify'
 // A Lead / Opportunity / Customer's linked "Lead Detail Form" record
 // (candidate-facing fields: education, experience, visa status, etc.),
 // scoped to whatever fields the Administrator has exposed for that
-// reference doctype — see verp_staffing.utils.detail_view. Mirrors
+// reference doctype - see verp_staffing.utils.detail_view. Mirrors
 // useDocDetail's shape so LeadProfilePanel.vue can reuse FieldControl/
 // ChildTableField the same way DocDetailView.vue does. Shared by Lead's own
 // Candidate Profile tab and the equivalent tab on Opportunity/Customer
@@ -28,7 +28,7 @@ export function useLeadDetailForm(referenceDoctype, referenceName) {
   // Matches values' initial empty-object shape, not ''. Left as '' before,
   // any customer/lead/opportunity with no linked Lead Detail Form at all
   // (exists: false, so applyData's early return below never touches this)
-  // permanently read as dirty — JSON.stringify({}) ('{}') is never ''. The
+  // permanently read as dirty - JSON.stringify({}) ('{}') is never ''. The
   // panel then renders nothing to edit, but the main page's Save button
   // still folds this "dirty" form into its save and unconditionally called
   // submit(), which the server rejects with "No Lead Detail Form is linked
@@ -36,7 +36,7 @@ export function useLeadDetailForm(referenceDoctype, referenceName) {
   // the user touched the Candidate Profile tab at all.
   const snapshot = ref(JSON.stringify(values))
 
-  // Shared by the initial load and by a successful save — save_lead_detail_view
+  // Shared by the initial load and by a successful save - save_lead_detail_view
   // returns the same {values, tables, ...} shape get_lead_detail_view does,
   // so re-snapshotting off of either keeps isDirty accurate without a
   // separate reload() round-trip after every save.
@@ -83,7 +83,7 @@ export function useLeadDetailForm(referenceDoctype, referenceName) {
 
   async function submit() {
     // Nothing to save when there's no linked Lead Detail Form to begin with
-    // (the panel renders no fields either way) — belt-and-suspenders
+    // (the panel renders no fields either way) - belt-and-suspenders
     // alongside the isDirty fix above, so a caller that submits regardless
     // of isDirty still can't hit the server's "No Lead Detail Form is
     // linked" throw.
@@ -97,7 +97,7 @@ export function useLeadDetailForm(referenceDoctype, referenceName) {
   }
 
   // Share of the fields this user can fill that already have a value (a
-  // table counts once it has a row) — a nudge for the profile, not a
+  // table counts once it has a row) - a nudge for the profile, not a
   // validation.
   const completeness = computed(() => {
     const inputs = fields.value.filter((f) => !f.read_only && f.fieldtype !== 'Check')

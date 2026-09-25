@@ -1,8 +1,8 @@
-// Client-side port of accounts/engine/calculator.py's run_calculation —
+// Client-side port of accounts/engine/calculator.py's run_calculation -
 // Sales Order/Sales Invoice/Purchase Order/Purchase Invoice all share that
 // one server-side engine, but nothing mirrored it in the browser, so Total
 // Qty/Total/Net Total/Grand Total/Rounded Total etc. only ever reflected
-// what the last *save* returned — editing Items (or Taxes, or the discount
+// what the last *save* returned - editing Items (or Taxes, or the discount
 // %) visibly changed nothing until the next round trip. Same field names,
 // same calculation order (items -> totals -> discount -> taxes -> rounding
 // -> base currency) as the Python engine, so the two can never drift into

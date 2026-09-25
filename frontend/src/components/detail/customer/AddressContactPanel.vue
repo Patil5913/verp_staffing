@@ -64,7 +64,7 @@
 import AppInput from '@/components/ui/AppInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Addresses and Contacts linked to this record (desk's address_html /
-// contact_html blocks). Lists what's linked, and — new — creates either one
+// contact_html blocks). Lists what's linked, and - new - creates either one
 // linked back to this record (the Dynamic Link row Frappe's own "New Address"
 // / "New Contact" buttons add), so a Company, Bank, Bank Account or Supplier
 // can get its address and contacts without leaving the page. Each entry opens

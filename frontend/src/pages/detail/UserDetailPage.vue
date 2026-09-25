@@ -106,7 +106,7 @@
 		v-model="showCreateEmployeePrompt"
 		:options="{
 			title: 'Create an Employee for this user?',
-			message: `${createdUserName} isn't linked to an Employee record yet — Please create a employee and assign roles and department for proper erp access.`,
+			message: `${createdUserName} isn't linked to an Employee record yet - Please create a employee and assign roles and department for proper erp access.`,
 			icon: { name: 'user-plus' },
 		}"
 	>
@@ -125,7 +125,7 @@
 
 <script setup>
 // User's detail page: curated Profile/Roles/Email/General/Security tabs
-// instead of the generic Details/Notes/Activity — User doesn't need an
+// instead of the generic Details/Notes/Activity - User doesn't need an
 // activity timeline, and its fields split naturally into desk's own User
 // form sections. See router.js for how /User/:name is routed here ahead of
 // the generic /:doctype/:name.
@@ -162,12 +162,12 @@ const {
 } = useDetailPageController(doctype, name);
 
 // warn_if_employee_missing (overrides/user.py) flags a just-created User
-// that has no linked Employee yet — check once, right after a create,
+// that has no linked Employee yet - check once, right after a create,
 // rather than on every save.
 const showCreateEmployeePrompt = ref(false);
 const createdUserName = ref("");
 
-// Whether a just-created staff User has no Employee yet — checked here in the frontend
+// Whether a just-created staff User has no Employee yet - checked here in the frontend
 // (not via a backend flag, which never fired): an Employee's `user` link is the truth.
 // Customers (website users) sign in to the portal and are never employees.
 // Shown at most once per user per browser session.
@@ -244,7 +244,7 @@ const EMAIL_FIELDS = ["thread_notify", "send_me_a_copy", "allowed_in_mentions"];
 const GENERAL_FIELDS = ["language", "time_zone", "desk_theme"];
 const SECURITY_FIELDS = ["simultaneous_sessions", "restrict_ip", "login_after", "login_before"];
 
-// User's linked email accounts (the "user_emails" child table) — shown as
+// User's linked email accounts (the "user_emails" child table) - shown as
 // its own reusable table on the Email tab instead of the read-only
 // email_signature field.
 const userEmailsTable = computed(() =>
@@ -253,7 +253,7 @@ const userEmailsTable = computed(() =>
 
 const toggleEnabled = useResource({
 	url: "verp_staffing.utils.user_view.set_user_enabled",
-	// Reload rather than patch `detail.values.enabled` directly — a direct
+	// Reload rather than patch `detail.values.enabled` directly - a direct
 	// patch would drift from the load-time snapshot isDirty diffs against,
 	// falsely flagging the page as having unsaved changes.
 	onSuccess: () => detail.refresh(),

@@ -159,8 +159,8 @@
 		</label>
 
 		<!-- reusable.js's field-name-driven rendering: a read-only email opens
-		a mail composer (mailto: here — no in-app composer in this SPA), a
-		read-only LinkedIn-style URL field is just a link. Only once disabled —
+		a mail composer (mailto: here - no in-app composer in this SPA), a
+		read-only LinkedIn-style URL field is just a link. Only once disabled -
 		still a plain editable input otherwise. -->
 		<a
 			v-if="disabled && isEmailField(field.fieldname) && displayValue"
@@ -241,7 +241,7 @@ import {
 	validateFieldValue,
 } from "@/utils/detail/fieldFormats";
 
-// A Currency field shows its currency symbol — resolved from the field's `options`
+// A Currency field shows its currency symbol - resolved from the field's `options`
 // against the row / document it sits in (see utils/detail/currency.js). A parent
 // provides the documents to look in; a grid cell passes its own row via `currencyDocs`.
 const parentCurrencyDocs = inject("fieldCurrencyDocs", null);
@@ -249,13 +249,13 @@ const parentCurrencyDocs = inject("fieldCurrencyDocs", null);
 const props = defineProps({
 	currencyDocs: { type: Array, default: null },
 	// { file_url, file_name } for a Link-to-File value the caller already has (the customer
-	// portal can't look a File up itself) — skips the lookup below.
+	// portal can't look a File up itself) - skips the lookup below.
 	fileInfo: { type: Object, default: null },
 	field: { type: Object, required: true },
 	modelValue: { default: null },
 	disabled: { type: Boolean, default: false },
 	showErrors: { type: Boolean, default: false },
-	// { query?, filters? } for a Link field — a whitelisted standard query and/or
+	// { query?, filters? } for a Link field - a whitelisted standard query and/or
 	// filters, like the desk's frm.set_query(fieldname, ...).
 	linkQuery: { type: Object, default: null },
 	// Optional async (fieldname) => boolean for a file the server should delete
@@ -268,7 +268,7 @@ const props = defineProps({
 	// of the doc. The caller (DocDetailView) resolves it.
 	dynamicDoctype: { type: String, default: "" },
 	// Read-only long-text fields (Small Text/Long Text/Text Editor) clamp to
-	// this height and offer "View more" instead of showing the full text —
+	// this height and offer "View more" instead of showing the full text -
 	// configurable per caller rather than a fixed line count baked in here,
 	// since how much room is available varies by where the field is shown.
 	maxDisplayHeight: { type: String, default: "4.5em" },
@@ -307,7 +307,7 @@ async function clearFile() {
 // from Lead Detail Form's own Data-typed fields, which store a phone/MM-YYYY
 // string rather than a real Frappe Date. Scoping them to fieldtype Data
 // keeps them from also catching an unrelated same-named field elsewhere
-// that's genuinely typed — e.g. Employee.start_date is a real Date field,
+// that's genuinely typed - e.g. Employee.start_date is a real Date field,
 // and was being forced into a "MM-YYYY" text box (wrong placeholder, wrong
 // display formatting, date picker never opening) instead of its date picker.
 const isDataField = computed(() => props.field.fieldtype === "Data");
@@ -350,7 +350,7 @@ const attachFileName = computed(() => (props.modelValue || "").split("/").pop())
 
 // A Link-to-File field (Lead Detail Form's Visa Copy/Driving Licence/EAD
 // Card/Old Resume, ...) is Desk's convention for "an upload, referenced by
-// the File doc's name rather than a plain Attach field's raw URL" — the
+// the File doc's name rather than a plain Attach field's raw URL" - the
 // generic Link branch above would otherwise render it as a doctype
 // search/picker, which is meaningless for a File record nobody browses by
 // name. Renders the same upload/replace/clear UI as Attach, just storing
@@ -360,13 +360,13 @@ const isLinkToFile = computed(
 );
 
 // Forces AppLinkField to fully remount whenever the filter/query it should
-// search under changes — e.g. Employee Assignment Details' Designation
+// search under changes - e.g. Employee Assignment Details' Designation
 // column depends on the row's own Department (get_department_hierarchy_
 // roles_query), and Assigned To depends on Designation in turn (see
 // EmployeeDetailPage.vue's assignmentLinkQueries). A prop update alone
 // re-fetches AppLinkField's *option list*, but a Combobox that's already
 // open (or was interacted with under the old filter) can otherwise keep
-// showing stale results/selection state from before the filter changed —
+// showing stale results/selection state from before the filter changed -
 // a full remount is the reliable way to guarantee none of that survives.
 const linkFiltersKey = computed(
 	() => JSON.stringify(props.linkQuery?.filters || {}) + (props.linkQuery?.query || ""),
@@ -413,9 +413,9 @@ const selectOptions = computed(() => {
 	if (props.field.fieldtype !== "Select") return [];
 	const raw = (props.field.options || "").split("\n");
 	const options = raw.filter(Boolean).map((v) => ({ label: v, value: v }));
-	// A leading blank line is Frappe's "may be left empty" — offer that choice,
+	// A leading blank line is Frappe's "may be left empty" - offer that choice,
 	// so a filter or optional Select can be cleared again once picked.
-	return raw[0] === "" && raw.length > 1 ? [{ label: "—", value: "" }, ...options] : options;
+	return raw[0] === "" && raw.length > 1 ? [{ label: "-", value: "" }, ...options] : options;
 });
 
 const error = computed(() => {

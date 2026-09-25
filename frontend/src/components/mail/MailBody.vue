@@ -38,7 +38,7 @@ const css = () => {
 }
 
 // The frame's document is about:srcdoc, so a logo or footer image stored as a
-// site-relative path ("/files/logo.png") has nothing to resolve against —
+// site-relative path ("/files/logo.png") has nothing to resolve against -
 // <base href> points those at this site.
 const origin = window.location.origin
 
@@ -48,7 +48,7 @@ const doc = computed(() => {
 })
 
 // A logo/footer image that has no source or fails to load would show the
-// browser's broken-image icon — take it out instead. The sandbox blocks the
+// browser's broken-image icon - take it out instead. The sandbox blocks the
 // message's own scripts, so listen from out here.
 function dropBrokenImages(body) {
   for (const img of body.querySelectorAll('img')) {

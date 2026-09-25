@@ -148,7 +148,7 @@
           </template>
         </Dropdown>
         <Avatar label="Parth Rugle" size="lg" />
-        <Avatar label="Verp Staffing" size="md" />
+        <Avatar label="Verp Placements" size="md" />
       </div>
       <Dialog v-model="dialogOpen" :options="{ title: 'Example dialog', size: 'md' }">
         <template #body-content>

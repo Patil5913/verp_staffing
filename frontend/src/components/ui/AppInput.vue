@@ -85,7 +85,7 @@ import AppDatePicker from './AppDatePicker.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 
 // The app's single control for text-like fields: text, number, date,
-// datetime-local, email, password — plus `textarea`, `select` and `date` /
+// datetime-local, email, password - plus `textarea`, `select` and `date` /
 // `datetime-local`, which delegate to AppTextarea / AppCombobox / AppDatePicker so a form can drive every field
 // through one component. Emits the raw string, like the input itself.
 defineOptions({ inheritAttrs: false })
@@ -99,7 +99,7 @@ const props = defineProps({
   error: { type: String, default: '' },
   required: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
-  // No border/background — for an input inside a chip box or overlay row.
+  // No border/background - for an input inside a chip box or overlay row.
   bare: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   // select only: [{ label, value }] or plain strings.

@@ -107,7 +107,7 @@ function fromNow(dateString) {
 
 // notification subjects can embed simple formatting (e.g. "<b>X</b>
 // commented..."), but are still attacker-influenced content (mentions,
-// comments, etc.) — sanitize before v-html, same allowlist frappe-ui's own
+// comments, etc.) - sanitize before v-html, same allowlist frappe-ui's own
 // toast uses.
 function sanitize(html) {
   return DOMPurify.sanitize(html || '', {

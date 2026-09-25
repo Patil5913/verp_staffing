@@ -28,7 +28,7 @@ export const eSignConfig = {
         {
           type: 'component',
           component: NoticeBanner,
-          props: { tone: 'info', message: 'This document has been sent — its fields are locked.' },
+          props: { tone: 'info', message: 'This document has been sent - its fields are locked.' },
           show: sentOrDone,
         },
         { type: 'component', component: ESignBuilder },

@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-// Ported from interview_list.js's open_marketing_customer_dialog — a
+// Ported from interview_list.js's open_marketing_customer_dialog - a
 // searchable, paginated (scroll-to-load-more), multi-select checkbox list
 // of every Marketing/Customer pair the user is assigned to, backed by the
 // same get_assigned_marketing_customers used for the default "select all".

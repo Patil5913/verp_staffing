@@ -19,7 +19,7 @@ import UnsavedChangesDialog from '@/components/common/UnsavedChangesDialog.vue'
 const route = useRoute()
 
 // Public routes (currently just Login) get no navbar/sidebar chrome, and
-// crucially never mount AppShell — which is what was firing the
+// crucially never mount AppShell - which is what was firing the
 // permission-filtered sidebar fetch (and its "failed to load" toast) for a
 // Guest on the login page.
 const layout = computed(() => (route.meta.public || route.meta.standalone ? BlankLayout : route.meta.portal ? PortalShell : AppShell))

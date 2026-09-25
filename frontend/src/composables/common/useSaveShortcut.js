@@ -1,7 +1,7 @@
 import { onMounted, onUnmounted } from 'vue'
 
 // Ctrl/Cmd+S saves instead of triggering the browser's own "Save page"
-// dialog — every page that can be saved (the generic detail controller,
+// dialog - every page that can be saved (the generic detail controller,
 // ERP Configuration, Hierarchy, ...) wires this the same way instead of
 // each rolling its own keydown listener, so there's exactly one save
 // shortcut active at a time, not several stacking on top of each other.
@@ -13,7 +13,7 @@ export function useSaveShortcut(isDirty, onSave) {
     const key = e.key?.toLowerCase()
     if (key !== 's') return
     if (!(e.ctrlKey || e.metaKey)) return
-    // Exact Ctrl+S only — Ctrl+Shift+S (browsers' own "Save As") and any
+    // Exact Ctrl+S only - Ctrl+Shift+S (browsers' own "Save As") and any
     // other modifier combination must pass through untouched.
     if (e.shiftKey || e.altKey) return
 

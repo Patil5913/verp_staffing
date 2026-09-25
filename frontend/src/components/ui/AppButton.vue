@@ -17,7 +17,7 @@
 import { computed, useSlots } from 'vue'
 import { FeatherIcon, LoadingIndicator } from 'frappe-ui'
 
-// This app's own button, in place of frappe-ui's stock <Button> — a pill
+// This app's own button, in place of frappe-ui's stock <Button> - a pill
 // shape with a lifted, colored primary state instead of the flat desk-gray
 // look, so primary actions (Save, Create Opportunity, etc.) read as this
 // product's UI rather than an embedded Frappe form.

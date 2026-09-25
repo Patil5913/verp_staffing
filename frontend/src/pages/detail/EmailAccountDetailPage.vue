@@ -24,7 +24,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-// Email Account's own detail page — currently just the generic Details/
+// Email Account's own detail page - currently just the generic Details/
 // Notes/Activity layout with the doctype pinned, kept separate from the
 // generic DocDetailPage.vue on purpose so any Email-Account-specific
 // customization added later has a dedicated place to live instead of

@@ -47,7 +47,7 @@
           </div>
           <!-- Pre-filled from the customer's existing Lead Detail Form
           credentials (get_onboarding_credentials) and read-only, same as
-          reusable.js's dialog — there's no separate "type it fresh" path,
+          reusable.js's dialog - there's no separate "type it fresh" path,
           only verify what's already on file. -->
           <AppInput label="Candidate Email (Used For Marketing)" :model-value="email" disabled />
           <AppInput label="Email Password" :model-value="password" disabled />
@@ -68,7 +68,7 @@
 
 <script setup>
 import AppTextarea from '@/components/ui/AppTextarea.vue'
-// Shared "Forward Candidate" flow — every service record page (Training,
+// Shared "Forward Candidate" flow - every service record page (Training,
 // Interview Support, Technical Other Services, Resume, RUC, JDC, Cover
 // Letter, ...) exposes the same action (see add_forward_button in
 // public/js/reusable.js). Covers the common branches (plain forward, RUC's
@@ -90,7 +90,7 @@ const props = defineProps({
   name: { type: String, required: true },
   customer: { type: String, required: true },
   // What `forward_candidate` should record as the record this forward came
-  // from — the service name shown on this page, not always == doctype
+  // from - the service name shown on this page, not always == doctype
   // (Technical Other Services forwards under its `service` item's name).
   fromServiceName: { type: String, required: true },
 })
@@ -124,9 +124,9 @@ const canSubmit = computed(() => {
   return true
 })
 
-// Customer itself uses a different, simpler endpoint (no doctype/docname —
+// Customer itself uses a different, simpler endpoint (no doctype/docname -
 // it already knows it's forwarding *from* the Customer) with a plain-list
-// return instead of the service version's {options: [...]} shape — desk's
+// return instead of the service version's {options: [...]} shape - desk's
 // add_forward_button branches the same way on frm.doctype === "Customer".
 const isCustomerDoctype = computed(() => props.doctype === 'Customer')
 const departments = useResource({
@@ -181,7 +181,7 @@ async function loadInterviewRounds() {
 // Onboarding's own interview list (get_customer_interviews with
 // service='onboarding' returns {label, value} per Interview, not per
 // round) plus a pre-fill of whatever candidate email/password already sit
-// on this customer's Lead Detail Form — reusable.js's toggle_fields
+// on this customer's Lead Detail Form - reusable.js's toggle_fields
 // onboarding branch, verified/edited here rather than typed from scratch.
 const onboardingInterviews = useResource({
   url: 'verp_staffing.crm.api.auto_assign.get_customer_interviews',

@@ -1,10 +1,10 @@
-# VERP Staffing — Frontend
+# Verp Placements - Frontend
 
 A Vue 3 single-page app (SPA) built with [frappe-ui](https://github.com/frappe/frappe-ui), Tailwind CSS and Vite. It is served by the Frappe backend at **`/verp`** and talks to it through whitelisted API methods and the standard `frappe.client` / resource endpoints.
 
-- `npm run dev` — Vite dev server
-- `npm run build` (`vite build`) — production build, written to `../verp_staffing/public/frontend`
-- `npm run preview` — preview the production build
+- `npm run dev` - Vite dev server
+- `npm run build` (`vite build`) - production build, written to `../verp_staffing/public/frontend`
+- `npm run preview` - preview the production build
 
 Run `vite build` after any frontend change.
 
@@ -75,7 +75,7 @@ frontend/
 | `index.html` | HTML entry. Inline script reads `localStorage['verp-theme']` and sets `data-theme` on `<html>` before first paint (avoids a theme flash). Loads `/src/main.js`. | `composables/common/useTheme.js` (keeps the same key in sync) |
 | `vite.config.js` | Vite config: `frappe-ui/vite` plugin (route `/verp`, lucide icons, component auto-import), Vue plugin, `@` → `src`, defines `__DEV_SITE_NAME__` from the bench's `common_site_config.json` (Socket.IO namespace in dev), works around frappe-ui prebundling issues. | `frappe-ui`, `@vitejs/plugin-vue` |
 | `tailwind.config.js` | Uses the frappe-ui preset, defines `app-*` colour/typography tokens, and **safelists** icon classes built dynamically at runtime. | `utils/layout/sidebarIcons.js`, `utils/dashboard/icons.js` |
-| `postcss.config.js` | Tailwind + autoprefixer. | — |
+| `postcss.config.js` | Tailwind + autoprefixer. | - |
 | `src/main.js` | Creates the Vue app, installs router and `FrappeUI`, sets frappe-ui's `resourceFetcher`, intercepts clicks on classic-desk links (`/app/...`) found in server messages and routes them to the SPA equivalent, mounts **after** `router.isReady()`. | `App.vue`, `router.js`, `utils/common/deskRoute.js` |
 | `src/App.vue` | Renders `<BlankLayout>` for public routes (Login) and `<AppShell>` for everything else; mounts the global `UnsavedChangesDialog`. | `layouts/*`, `components/common/UnsavedChangesDialog.vue` |
 | `src/router.js` | All routes (lazy-loaded pages), `/verp` history base, config-driven doctype routes, `beforeEach` guard: login check → server-side route access check → `Forbidden`. Last route is `NotFound`. | every page in `pages/`, `configs/detail/{marketing,customerCare,accounts,items,esign,emailQueue}`, `utils/common/routeAccess.js` |
@@ -88,11 +88,11 @@ frontend/
 | File | What it does | Depends on |
 |---|---|---|
 | `AppShell.vue` | Logged-in chrome: sidebar header + sidebar on the left, navbar on top, page content in the middle. Loads the sidebar tree. | `layout/SidebarHeader`, `layout/AppNavbar`, `layout/AppSidebar`, `useSidebar` |
-| `BlankLayout.vue` | Bare `<slot>` for public pages (Login). | — |
+| `BlankLayout.vue` | Bare `<slot>` for public pages (Login). | - |
 
 ---
 
-## 5. `src/pages/` — route-level screens
+## 5. `src/pages/` - route-level screens
 
 Each page is lazy-loaded from `router.js`. Pages should be thin: they compose components and composables.
 
@@ -109,7 +109,7 @@ Each page is lazy-loaded from `router.js`. Pages should be thin: they compose co
 |---|---|---|
 | `DashboardPage.vue` | Analytics home; a tab per business area, each with KPIs, alerts, charts and tables. | `components/dashboard/*`, `useDashboard`, `utils/dashboard/format`, `StateBanner` |
 
-### `pages/lists/` — collection views of a doctype
+### `pages/lists/` - collection views of a doctype
 | File | What it does | Depends on |
 |---|---|---|
 | `DocListPage.vue` | Route wrapper: passes the `:doctype` param to `DocListView`. | `list/DocListView` |
@@ -118,12 +118,12 @@ Each page is lazy-loaded from `router.js`. Pages should be thin: they compose co
 | `AccountTreePage.vue` | Company-scoped Chart of Accounts with add/edit. | `tree/DocTreeView`, `SubNavbar`, `AppLinkField`, `useResource` |
 | `InterviewCalendarPage.vue` | Month/week calendar of interview rounds. | `SubNavbar`, `ViewSwitcher`, `useResource` |
 
-### `pages/detail/` — single-record screens
+### `pages/detail/` - single-record screens
 Most use `DetailPageLayout` + `DocDetailView` + `RecordActionBar` + `ActivityTimeline`, driven by `useDetailPageController`.
 
 | File | What it does | Notable extra dependencies |
 |---|---|---|
-| `DocDetailPage.vue` | **Default** detail view for any doctype without its own page (route `/:doctype/:name`). | — |
+| `DocDetailPage.vue` | **Default** detail view for any doctype without its own page (route `/:doctype/:name`). | - |
 | `ConfigDetailPage.vue` | **Config-driven** detail page. Reads a config from `configs/detail/*` (panels, actions, tabs, hidden fields) passed in through route meta. Used by many doctypes. | `ChildTableField`, `DocStatusBadge` |
 | `LeadDetailPage.vue` | Lead: profile completeness, Lead Detail Form, create-opportunity dialog. | `lead/*`, `useLeadDetailForm`, `fieldFormats` |
 | `CustomerDetailPage.vue` | Customer with history and field-update actions. | `FieldUpdateActions`, `useResource` |
@@ -132,11 +132,11 @@ Most use `DetailPageLayout` + `DocDetailView` + `RecordActionBar` + `ActivityTim
 | `RucDetailPage.vue` | Resume Update Call sessions. | `FieldUpdateActions` |
 | `JdcDetailPage.vue` | JDC interview session. | `FieldUpdateActions` |
 | `CoverLetterDetailPage.vue` | Cover letter with proof of work. | `FieldUpdateActions` |
-| `TrainingDetailPage.vue`, `InterviewSupportDetailPage.vue`, `TechnicalOtherServicesDetailPage.vue` | "Service record" pages — same shape: resume panel + forward candidate flow. | `ServiceResumePanel`, `ForwardCandidateButton`, `AppLinkField` |
-| `OutsourceDetailPage.vue` | Outsource record; small curated field grid. | — |
+| `TrainingDetailPage.vue`, `InterviewSupportDetailPage.vue`, `TechnicalOtherServicesDetailPage.vue` | "Service record" pages - same shape: resume panel + forward candidate flow. | `ServiceResumePanel`, `ForwardCandidateButton`, `AppLinkField` |
+| `OutsourceDetailPage.vue` | Outsource record; small curated field grid. | - |
 | `EmployeeDetailPage.vue` | Employee: profile / assignments / LinkedIn / target tabs. | `ChildTableField`, `roles` |
-| `DepartmentDetailPage.vue` | Department (generic tabs). | — |
-| `RoleDetailPage.vue` | Role; single curated grid. | — |
+| `DepartmentDetailPage.vue` | Department (generic tabs). | - |
+| `RoleDetailPage.vue` | Role; single curated grid. | - |
 | `UserDetailPage.vue` | User: profile / roles / email / general / security. | `user/UserRolesTab`, `user/UserChangePassword` |
 | `EmailAccountDetailPage.vue`, `EmailDomainDetailPage.vue` | Email account / domain (generic tabs, role-aware). | `roles` |
 | `HierarchyDetailPage.vue` | Role hierarchy editor with live diagram. | `hierarchy/HierarchyDiagram`, `useDocDetail`, `useUnsavedChangesGuard` |
@@ -174,43 +174,43 @@ Most use `DetailPageLayout` + `DocDetailView` + `RecordActionBar` + `ActivityTim
 
 Grouped by **role**: `ui` = primitives, `common` = small app-wide building blocks, everything else = feature areas.
 
-### `components/ui/` — design-system primitives (no business logic)
+### `components/ui/` - design-system primitives (no business logic)
 | File | What it does | Depends on |
 |---|---|---|
 | `AppButton.vue` | The app's button (pill; variants, sizes, loading, icons). | frappe-ui |
 | `AppInput.vue` | Single control for text/number/date/select/etc. | `AppCombobox` |
-| `AppTextarea.vue` | Multi-line input. | — |
-| `AppCheckbox.vue` | Checkbox with check/dash states. | — |
+| `AppTextarea.vue` | Multi-line input. | - |
+| `AppCheckbox.vue` | Checkbox with check/dash states. | - |
 | `AppCombobox.vue` | Themed select/combobox. | frappe-ui |
 | `AppDatePicker.vue` | Date picker with month/year switcher. | frappe-ui |
-| `AppSearchInput.vue` | Toolbar search box. | — |
-| `AppBadge.vue` | Coloured status/tag pill. | — |
-| `AppTabs.vue` | Tab strip (`{label,value}` or strings). | — |
-| `AppTable.vue` | Read-only table with `cell-<key>` slots. | — |
+| `AppSearchInput.vue` | Toolbar search box. | - |
+| `AppBadge.vue` | Coloured status/tag pill. | - |
+| `AppTabs.vue` | Tab strip (`{label,value}` or strings). | - |
+| `AppTable.vue` | Read-only table with `cell-<key>` slots. | - |
 | `AppChildTable.vue` | Inline-editable child table. | `AppButton` |
-| `AppSkeleton.vue` | Loading placeholders. | — |
-| `ScrollArea.vue` | Thin themed scrollbar wrapper. | — |
-| `ComponentSection.vue` | One entry in the `/components` gallery. | — |
+| `AppSkeleton.vue` | Loading placeholders. | - |
+| `ScrollArea.vue` | Thin themed scrollbar wrapper. | - |
+| `ComponentSection.vue` | One entry in the `/components` gallery. | - |
 
-### `components/common/` — shared, slightly higher-level blocks
+### `components/common/` - shared, slightly higher-level blocks
 | File | What it does | Depends on |
 |---|---|---|
 | `AppLinkField.vue` | Link-field picker (search a doctype, quick-create). | `useResource`, `list/QuickCreateDialog` |
 | `DocStatusBadge.vue` | Status pill beside a record title / in panels. | `AppBadge`, `utils/list/statusTheme` |
 | `RecordActionBar.vue` | Action row of a detail page (record actions before Save/Delete). | `AppButton` |
-| `SectionCard.vue` | Rounded panel wrapping every detail-page block. | — |
-| `NoticeBanner.vue` | Inline notice inside a record (locked, warning…). | — |
-| `StateBanner.vue` | Empty / error / forbidden placeholder (icon, title, description). | — |
-| `SubNavbar.vue` | Thin bar under the navbar: title, search/filters, actions. | — |
+| `SectionCard.vue` | Rounded panel wrapping every detail-page block. | - |
+| `NoticeBanner.vue` | Inline notice inside a record (locked, warning…). | - |
+| `StateBanner.vue` | Empty / error / forbidden placeholder (icon, title, description). | - |
+| `SubNavbar.vue` | Thin bar under the navbar: title, search/filters, actions. | - |
 | `ViewSwitcher.vue` | List / Tree / Kanban / Calendar toggle. | `configs/detail/listOptions`, vue-router |
 | `ThemeToggle.vue` | System/light/dark switch. | `useTheme` |
 | `UnsavedChangesDialog.vue` | Global "discard changes?" dialog. | `AppButton`, `utils/common/confirmDialog` |
 
-### `components/layout/` — app chrome
+### `components/layout/` - app chrome
 | File | What it does | Depends on |
 |---|---|---|
 | `AppSidebar.vue` | Server-driven sidebar tree (flat links, groups, children). | `useSidebar`, `sidebarIcons`, `ScrollArea`, `SidebarLink` |
-| `SidebarLink.vue` | One link; SPA routes use vue-router, others go to desk. | — |
+| `SidebarLink.vue` | One link; SPA routes use vue-router, others go to desk. | - |
 | `SidebarHeader.vue` | Logo / app switcher at the top of the sidebar. | `useSidebar`, `router` |
 | `AppNavbar.vue` | Top bar with notifications and the command palette. | `overlays/NotificationBell`, `overlays/CommandPalette` |
 | `ProfileMenu.vue` | User menu: profile, theme, shortcuts, logout. | `useTheme`, `overlays/KeyboardShortcutsDialog`, `notify` |
@@ -222,17 +222,17 @@ Grouped by **role**: `ui` = primitives, `common` = small app-wide building block
 | `NotificationBell.vue` | Bell dropdown with unread notifications. | `useNotifications`, `ScrollArea`, dompurify |
 | `KeyboardShortcutsDialog.vue` | Lists shortcuts. | `useSidebar` |
 
-### `components/list/` — list view
+### `components/list/` - list view
 | File | What it does | Depends on |
 |---|---|---|
 | `DocListView.vue` | The generic doctype list: filters, sort, bulk select, pagination, column customisation, quick create. | `useDocList`, `useResource`, `ViewSwitcher`, `Pagination`, `formatValue`, `statusTheme`, `listOptions` |
 | `Pagination.vue` | Prev/next + page info. | `AppButton` |
 | `QuickCreateDialog.vue` | Modal to create a record from a list / link field. | `DocDetailView`, `useDocDetail` |
 | `CustomizeColumnsDialog.vue` | Drag-and-drop column chooser. | `vuedraggable`, `useResource` |
-| `KanbanBoard.vue` | Doctype-agnostic kanban columns/cards. | — |
+| `KanbanBoard.vue` | Doctype-agnostic kanban columns/cards. | - |
 | `EmailQueueStrip.vue` | Email Queue state counters shown above its list. | `AppButton`, `notify` |
 
-### `components/detail/` — record view
+### `components/detail/` - record view
 **Core** (top level):
 | File | What it does | Depends on |
 |---|---|---|
@@ -244,14 +244,14 @@ Grouped by **role**: `ui` = primitives, `common` = small app-wide building block
 | `SummaryStrip.vue` | Row of key figures at the top of a record. | `formatValue` |
 | `ActivityTimeline.vue` | Notes, field changes, tasks and events feed. | `useTimeline`, `App*` inputs, `roles`, dompurify |
 
-**`actions/`** — buttons for a record's action bar
+**`actions/`** - buttons for a record's action bar
 | File | What it does | Depends on |
 |---|---|---|
 | `DocAction.vue` | Generic server-action button (optional prompt). | `AppInput`, `notify`, `errors` |
 | `LinkAction.vue` | Navigation button (e.g. "View Chart of Accounts"). | `AppButton` |
 | `CreateSalesOrderAction.vue` | Opens a new Sales Order for the customer. | `AppButton` |
 | `ResolutionActions.vue` | Resolve / Refund with a reason (Customer Care). | `useResource` |
-| `ForwardAction.vue` | Adapter placing the Forward Candidate flow into config actions. | — |
+| `ForwardAction.vue` | Adapter placing the Forward Candidate flow into config actions. | - |
 | `ForwardCandidateButton.vue` | The shared "Forward Candidate" dialog flow for service records. | `useResource`, `AppCombobox` |
 
 **`customer/`**
@@ -283,9 +283,9 @@ Grouped by **role**: `ui` = primitives, `common` = small app-wide building block
 | `ESignSendAction.vue` | Validates and sends for signature. | `notify`, `errors` |
 | `ESignTracking.vue` | Read-only signing progress. | `DocStatusBadge` |
 
-**`hierarchy/`** — `HierarchyDiagram.vue`: renders the role hierarchy diagram (uses `utils/detail/hierarchyDiagram.js`).
+**`hierarchy/`** - `HierarchyDiagram.vue`: renders the role hierarchy diagram (uses `utils/detail/hierarchyDiagram.js`).
 
-**`accounts/`** — Sales Order / Journal / Payment panels ported from desk scripts
+**`accounts/`** - Sales Order / Journal / Payment panels ported from desk scripts
 | File | What it does |
 |---|---|
 | `AgreementPanel.vue` | Sales Order agreements module. |
@@ -329,17 +329,17 @@ All depend on `SectionCard`, `AppButton`, `DocStatusBadge` / inputs as needed, `
 | `ReportView.vue` | One report: filters, summary, chart, table. | `useReport`, `configs/reports.js`, the other report components |
 | `ReportFilterBar.vue` | Server-defined filter panel. | `FieldControl` |
 | `ReportTable.vue` | Sortable/searchable/grouped result grid. | `formatReport` |
-| `ReportBarChart.vue` | Horizontal bar chart. | — |
+| `ReportBarChart.vue` | Horizontal bar chart. | - |
 
 ### `components/dashboard/`
 `DashboardSubNav.vue` (tabs + period/company filters), `DashboardKpi.vue` (headline number + change), `DashboardChart.vue` (server-typed chart card), `DashboardTable.vue`, `DashboardAlerts.vue`. They depend on `utils/dashboard/format.js` and `icons.js`.
 
 ### `components/tree/`
-`DocTreeView.vue` — doctype-agnostic tree rendered as an indented table (used by `TreePage`, `AccountTreePage`).
+`DocTreeView.vue` - doctype-agnostic tree rendered as an indented table (used by `TreePage`, `AccountTreePage`).
 
 ---
 
-## 7. `src/composables/` — stateful logic
+## 7. `src/composables/` - stateful logic
 
 | Folder | File | What it does | Depends on |
 |---|---|---|---|
@@ -358,7 +358,7 @@ All depend on `SectionCard`, `AppButton`, `DocStatusBadge` / inputs as needed, `
 | | `useIsSuperior.js` | Whether the user is above an assignee in a department. | `useResource` |
 | | `useUserRoles.js` | Role list/toggle for a User. | `useResource` |
 | | `useSystemSettingsPanel.js` | The 15 managed System Settings fields. | `useResource` |
-| | `usePdfPages.js` | Renders PDF pages to images (pdf.js). | — |
+| | `usePdfPages.js` | Renders PDF pages to images (pdf.js). | - |
 | `report/` | `useReport.js` | A report's lifecycle: filters, defaults, run, format. | `useResource`, `formatReport` |
 | `dashboard/` | `useDashboard.js` | A dashboard tab: allowed tabs, period, data, refresh. | `useResource`, `utils/dashboard/format` |
 | `mail/` | `useMailbox.js` | Inbox state and calls (folders, messages, flags, delete). | `errors`, `notify` |
@@ -366,24 +366,24 @@ All depend on `SectionCard`, `AppButton`, `DocStatusBadge` / inputs as needed, `
 
 ---
 
-## 8. `src/configs/` — per-doctype configuration
+## 8. `src/configs/` - per-doctype configuration
 
 | File | What it does | Depends on |
 |---|---|---|
 | `detail/marketing.js` | Detail configs for Marketing / Interview / Other Services (panels, actions, target block). | `components/detail/marketing/*`, `customer/*`, `actions/*` |
 | `detail/customerCare.js` | CR and Onboardings: derived status, resolution actions. | `customer/*`, `actions/*`, `AssignToField` |
 | `detail/accounts.js` | Accounts master (Sales Order, Journal, Payment Entry, …). | `components/detail/accounts/*`, `customer/AddressContactPanel`, `actions/*` |
-| `detail/items.js` | Item / Item Category / UOM configs. | — |
+| `detail/items.js` | Item / Item Category / UOM configs. | - |
 | `detail/esign.js` | E-Sign configs (frozen once sent). | `esign/*`, `NoticeBanner` |
 | `detail/emailQueue.js` | Email Queue config. | `emailQueue/*` |
 | `detail/listOptions.js` | Per-doctype **list-view** behaviour (available views, kanban field, header strip). | `list/EmailQueueStrip` |
-| `reports.js` | How each report is presented (its filters and data come from the server). | — |
+| `reports.js` | How each report is presented (its filters and data come from the server). | - |
 
 To add a doctype with extra panels or actions: create a config here, register it in `router.js`, and `ConfigDetailPage` renders it. Only add a dedicated page in `pages/detail/` when the layout genuinely differs.
 
 ---
 
-## 9. `src/utils/` — pure helpers
+## 9. `src/utils/` - pure helpers
 
 | Folder | File | What it does |
 |---|---|---|

@@ -15,7 +15,7 @@ export function useCustomerContext(customerRef, displayKey, fixedFields) {
     auto: !fixedFields?.value,
   })
 
-  // Same allowlist shape, but the editable side — a field configured here
+  // Same allowlist shape, but the editable side - a field configured here
   // renders as an upload/edit control instead of a readonly value (see
   // detail_view.py's department_access_form_fields, used the same way by
   // Lead/Opportunity/Customer's Candidate Profile tab).
@@ -47,7 +47,7 @@ export function useCustomerContext(customerRef, displayKey, fixedFields) {
   })
 
   // A field configured as access (editable) should show even if it isn't
-  // also in the display allowlist — merge both lists for the actual fetch.
+  // also in the display allowlist - merge both lists for the actual fetch.
   const fetchFields = computed(() => [...new Set([...fields.value, ...writableFields.value])])
 
   watch(

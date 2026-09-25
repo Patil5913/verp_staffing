@@ -77,7 +77,7 @@ async function loadPage() {
 }
 
 // Re-fetches on `name` changing (a fresh record) *and* whenever the Sales
-// Order itself is reloaded — not just `name`, which never changes for an
+// Order itself is reloaded - not just `name`, which never changes for an
 // existing order. Creating a Sales Invoice from a payment term (Mark as
 // Paid) calls detail.refresh() afterwards; that replaces
 // detail.meta.resource.data with a new object every time (get_doc_meta's

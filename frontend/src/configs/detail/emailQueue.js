@@ -4,8 +4,8 @@ import EmailQueueMessage from '@/components/detail/emailQueue/EmailQueueMessage.
 
 const notNew = (detail) => !detail.isNew.value
 
-// Email Queue (Staffing Master): mail waiting to go out, or that failed. The
-// system creates these — the page is a read-only view with Send now / Retry
+// Email Queue (Placement Master): mail waiting to go out, or that failed. The
+// system creates these - the page is a read-only view with Send now / Retry
 // sending, like the desk form, and Delete for clearing one out.
 export const emailQueueConfig = {
   doctype: 'Email Queue',

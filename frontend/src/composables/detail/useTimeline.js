@@ -40,7 +40,7 @@ export function useTimeline(doctype, name) {
   }
 
   // Edit / complete / delete an existing note, task or event. The server
-  // (crm/api/notes.py, activities.py) decides who may — these just call it.
+  // (crm/api/notes.py, activities.py) decides who may - these just call it.
   const change = (url) => useResource({ url, onSuccess: () => timeline.resource.reload() })
   const noteUpdate = change('verp_staffing.crm.api.notes.update_note')
   const noteDelete = change('verp_staffing.crm.api.notes.delete_note')

@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-// The latest resume document on file for a customer — shared across every
+// The latest resume document on file for a customer - shared across every
 // service record page (Training, Interview Support, Technical Other
 // Services, ...) since they all surface the same "resume" panel in the
 // desk form (see fetch_and_render_resume in public/js/reusable.js).
@@ -33,7 +33,7 @@ const props = defineProps({
   detail: { type: Object, default: null },
 })
 // An Interview has no Customer link of its own (its `customer` is only a display-name copy):
-// its customer is the one on the Marketing record it belongs to — the same customer the
+// its customer is the one on the Marketing record it belongs to - the same customer the
 // Marketing page's Customer tab shows the resume for.
 const marketingLink = computed(() => props.detail?.values.marketing_link || '')
 const marketingCustomer = ref('')

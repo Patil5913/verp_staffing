@@ -43,7 +43,7 @@
 <script setup>
 // A doctype-agnostic kanban board: cards grouped by `statusField` into fixed
 // columns, native drag-and-drop between them. Dropping only *requests* a move
-// (emit 'move') — the page decides whether it's allowed and updates the card,
+// (emit 'move') - the page decides whether it's allowed and updates the card,
 // so a rejected drop simply leaves the card where it was.
 import { computed, ref } from 'vue'
 
@@ -65,7 +65,7 @@ const grouped = computed(() => {
   return out
 })
 
-// One soft tint per stage — the same hue as its dot, at low opacity so it
+// One soft tint per stage - the same hue as its dot, at low opacity so it
 // reads on both the light and dark backgrounds. Full class names (no string
 // building) so Tailwind can see them.
 const STAGES = [

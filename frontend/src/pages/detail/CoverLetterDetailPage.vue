@@ -48,7 +48,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-updates>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-// Cover Letter's detail page: Details/Proof of Work/Notes/Activity — same
+// Cover Letter's detail page: Details/Proof of Work/Notes/Activity - same
 // shape as Resume/RUC/JDC, this app's other Customer-attached "service"
 // doctypes. `customer` is hidden + set_only_once server-side and never
 // reaches DETAIL_FIELDS. See router.js for how /Cover%20Letter/:name is
@@ -116,7 +116,7 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
   useDetailPageController(doctype, name)
 
 // Same as Training/Interview Support/Technical Other Services: a Completed
-// service record is frozen — status/proof of work can no longer change.
+// service record is frozen - status/proof of work can no longer change.
 const locked = computed(() => detail.values.status === 'Completed')
 
 const DEFAULT_TABS = [

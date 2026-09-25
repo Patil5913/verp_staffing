@@ -141,7 +141,7 @@ const EMPTY = {
   inbox: { icon: 'inbox', title: 'Your inbox is empty', text: 'New mail shows up here.' },
   starred: { icon: 'star', title: 'No starred messages', text: 'Star a message to find it again quickly.' },
   sent: { icon: 'send', title: 'Nothing sent yet', text: 'Messages you send appear here.' },
-  outbox: { icon: 'clock-arrow-up', title: 'Outbox is empty', text: 'Messages waiting to go out — or that failed — appear here.' },
+  outbox: { icon: 'clock-arrow-up', title: 'Outbox is empty', text: 'Messages waiting to go out - or that failed - appear here.' },
   spam: { icon: 'shield-check', title: 'No spam', text: 'Messages from senders you reported land here.' },
   trash: { icon: 'trash-2', title: 'Trash is empty', text: 'Deleted messages stay here until you empty it.' },
   all: { icon: 'archive', title: 'No mail yet', text: 'Everything except Spam and Trash appears here.' },

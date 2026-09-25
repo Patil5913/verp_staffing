@@ -63,7 +63,7 @@ import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 // Kanban view of a doctype (today: Interview, ported from interview_list.js).
 // Loads every card, groups them by status column, and turns a drag into the
-// doctype's own move method — optimistic, rolled back if the server refuses
+// doctype's own move method - optimistic, rolled back if the server refuses
 // (e.g. a round that's already Completed can't be moved again).
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -90,7 +90,7 @@ const search = ref('')
 const showCustomerDialog = ref(false)
 
 // interview_list.js's apply_marketing_auto_filter: the board only ever
-// shows cards for whichever customers are currently selected — every
+// shows cards for whichever customers are currently selected - every
 // customer assigned to the user the first time, whatever "Select Customer"
 // was last set to after that.
 const { selectedCustomers, ensureDefaultCustomers } = useMarketingCustomerFilter()
@@ -158,7 +158,7 @@ async function moveCard(card, to, extra = {}) {
 }
 
 function onMove({ card, to }) {
-  // Interview's Today column is derived from the round's date — nothing to set.
+  // Interview's Today column is derived from the round's date - nothing to set.
   if (doctype.value === 'Interview' && to === 'Today') {
     notify.info("'Today' is worked out automatically from the round's date.")
     return

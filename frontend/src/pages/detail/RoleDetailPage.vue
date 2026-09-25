@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-// Role's detail page: a single curated field grid (no Notes/Activity —
+// Role's detail page: a single curated field grid (no Notes/Activity -
 // roles don't carry that kind of history) plus a shortcut into the Role
 // Permissions Manager pre-selected for this role. See router.js for how
 // /Role/:name is routed here ahead of the generic /:doctype/:name.

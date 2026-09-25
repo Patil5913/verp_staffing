@@ -3,7 +3,7 @@ import { call } from 'frappe-ui'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
 
-// Sending is one call for compose, reply, reply-all and forward — the server
+// Sending is one call for compose, reply, reply-all and forward - the server
 // picks the sender from the user's own accounts (utils/mailbox.send_mail).
 export function useSendMail() {
   const sending = ref(false)

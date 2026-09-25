@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { call } from 'frappe-ui'
 
-// How many Payment Entries wait for verification — the same set the Pending Payment
+// How many Payment Entries wait for verification - the same set the Pending Payment
 // Requests page lists as "Pending Verification". Shared by every caller, fetched on first
 // use and refreshed every minute; a user without access just gets 0 (the count call is
 // refused), so no dot.

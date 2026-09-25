@@ -63,7 +63,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-updates>
@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-// Technical Other Services' detail page — same "service record" shape as
+// Technical Other Services' detail page - same "service record" shape as
 // Training/Interview Support, but for an arbitrary Item (service="..."):
 // Customer + Service are picked once at creation (desk form's
 // set_only_once) and assign_to is filtered to the Technical department's

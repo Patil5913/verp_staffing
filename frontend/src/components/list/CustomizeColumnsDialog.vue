@@ -1,9 +1,9 @@
 <template>
-  <Dialog v-model="isOpen" :options="{ title: `Customize columns — ${doctype}`, size: 'xl' }">
+  <Dialog v-model="isOpen" :options="{ title: `Customize columns - ${doctype}`, size: 'xl' }">
     <template #body-content>
       <p class="mb-4 text-p-sm text-app-text-muted">
         Pick which columns show in {{ doctype }}'s list view and drag to set their order. This
-        is a shared setting — it applies to every user and role, not just yours.
+        is a shared setting - it applies to every user and role, not just yours.
       </p>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -136,7 +136,7 @@ watch(
 )
 
 // Dims Save until the column set/order actually differs from what's saved
-// — dragging columns around back to their original order shouldn't leave
+// - dragging columns around back to their original order shouldn't leave
 // Save looking actionable.
 const isDirty = computed(() => {
   const current = selected.value.map((f) => f.fieldname)

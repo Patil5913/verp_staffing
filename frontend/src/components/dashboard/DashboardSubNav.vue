@@ -1,7 +1,7 @@
 <template>
   <!-- The dashboard's own sub navbar: same bar as SubNavbar, but the middle is
   the section tabs (Overview / Accounts / CRM / Marketing / Operations) with
-  the period, company and refresh on the right — SubNavbar's fixed three-column
+  the period, company and refresh on the right - SubNavbar's fixed three-column
   grid has no room for a row of tabs. -->
   <div class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-app-border bg-app-panel px-3 py-2 md:h-11 md:flex-nowrap md:px-6 md:py-0">
     <h1 class="shrink-0 text-p-lg font-medium text-app-text">Dashboard</h1>

@@ -23,7 +23,7 @@ const submitted = (d) => d.docstatus.value === 1
 const num = (v) => Number(v) || 0
 const sum = (rows, key) => (rows || []).reduce((s, r) => s + num(r[key]), 0)
 // Sales Order hides `company` (auto-set from ERP Configuration's default,
-// set_only_once) — get_doc_meta drops hidden fields from `values` entirely,
+// set_only_once) - get_doc_meta drops hidden fields from `values` entirely,
 // so it only ever shows up in `hidden`. Every other doctype here shows it
 // plainly in `values`. Checking both keeps one accessor working across all
 // of them instead of every company-scoped filter/lookup silently getting
@@ -34,7 +34,7 @@ const strip = (items) => ({ type: 'component', component: SummaryStrip, props: {
 const fields = (fieldnames, title, extra = {}) => ({ type: 'fields', fieldnames, title, ...extra })
 const table = (fieldname, extra = {}) => ({ type: 'table', fieldname, ...extra })
 // A grid section is always column-curated (a grid has no room for every
-// field a row-dialog would show) — `columns` is required, `readOnlyColumns`
+// field a row-dialog would show) - `columns` is required, `readOnlyColumns`
 // optional. See GridTableField.vue.
 // Editable-grid or row dialog, per the child doctype's own flag; columns from in_list_view.
 const auto = (fieldname, extra = {}) => ({ type: 'auto', fieldname, ...extra })
@@ -47,9 +47,9 @@ const grid = (fieldname, columns, extra = {}) => ({ type: 'grid', fieldname, col
 // "Purchase" (Purchase Order/Purchase Invoice) and fetches its stock UOM
 // plus the document's company's default Income Account or Expense Account
 // respectively (kept off the dialog entirely via the items table() config's
-// hiddenColumns — meant to be set automatically, never picked by hand);
+// hiddenColumns - meant to be set automatically, never picked by hand);
 // Qty/Rate recompute Amount, which the doctype itself marks read_only (see
-// ChildTableField's Amount column) — none of that was happening
+// ChildTableField's Amount column) - none of that was happening
 // client-side, so every row's Amount stayed at 0 until the next full
 // save/reload.
 function makeItemsTableFieldChange({ type, accountField }) {
@@ -87,7 +87,7 @@ function makeItemsTableFieldChange({ type, accountField }) {
     return null
   }
 }
-// Same rule the list view badge (statusTheme.js's listStatusColumn) uses —
+// Same rule the list view badge (statusTheme.js's listStatusColumn) uses -
 // see computeInvoiceStatus there for the actual formula.
 const invoiceStatusText = (d) => computeInvoiceStatus(d.values)
 
@@ -102,7 +102,7 @@ const purchaseItemsFieldChange = makeItemsTableFieldChange({ type: 'Purchase', a
 // Payment Terms' own condition-based clearing/interview-count/due-date
 // logic now lives in PaymentTermsField.vue (the grid+row-expand component
 // that replaced both the old plain grid section and the separate
-// PaymentTermsPanel display table) — nothing config-level needs it anymore.
+// PaymentTermsPanel display table) - nothing config-level needs it anymore.
 
 const ledgerAction = (queryExtra = {}) => ({
   component: LinkAction,
@@ -122,15 +122,15 @@ const ledgerAction = (queryExtra = {}) => ({
 // Charges", {...})` handlers (charge_type / rate / tax_amount / row_id /
 // taxes_add / taxes_remove, all funneling into validate_taxes_and_charges).
 // Kept as ONE shared pair of functions, not a per-doctype factory like
-// items — unlike items (different `type` and account field per Sales/
+// items - unlike items (different `type` and account field per Sales/
 // Purchase), nothing about this validation differs by doctype; it was a
 // single doctype-level script in Desk, and stays a single function here.
 //
-// This is wired to `grid()`, not `table()` — see the taxes sections below
+// This is wired to `grid()`, not `table()` - see the taxes sections below
 // for why (GridTableField's readOnlyColumns is the only place this
 // per-row-conditional editability can live; ChildTableField's dialog has
 // no equivalent). Column set is a best guess at Taxes and Charges' own
-// fields (charge_type, account_head, rate, tax_amount, total) — confirm
+// fields (charge_type, account_head, rate, tax_amount, total) - confirm
 // against the actual doctype before shipping and add/remove columns as
 // needed; description or included_in_print_rate may belong here too.
 // Totals block shared by the four doc types. base_* (company currency) fields
@@ -155,13 +155,13 @@ function taxesReadOnlyColumns(col, row) {
 // GridTableField calls onFieldChange(fieldname, value, row, rowIndex);
 // ConfigDetailPage's onFieldChangeFor forwards rowIndex as `idx` on the
 // context object (see that file's onFieldChangeFor) since only grid
-// sections have a stable row position — a table() dialog edits one row in
+// sections have a stable row position - a table() dialog edits one row in
 // isolation with no equivalent notion of "which row is this."
 //
 // GridTableField has no per-row error banner the way ChildTableField's
 // dialog does (no `validateRow`/inline message slot), so where the desk
-// script did `frappe.throw(msg)` — which both showed a message AND
-// aborted the change — this can only do the second half via a returned
+// script did `frappe.throw(msg)` - which both showed a message AND
+// aborted the change - this can only do the second half via a returned
 // patch, and surfaces the message as a toast (notify.error, the same
 // utility fieldGuards already uses in ConfigDetailPage) as the closest
 // equivalent.
@@ -178,13 +178,13 @@ function taxesFieldChange(fieldname, value, draft, { idx }) {
   const patch = {}
 
   if (fieldname === 'charge_type') {
-    // charge_type cleared while row_id/rate/tax_amount were already set —
+    // charge_type cleared while row_id/rate/tax_amount were already set -
     // desk reset all three ("Please select Charge Type first").
     if (!value && (row.row_id || row.rate || row.tax_amount)) {
       notify.error('Please select Charge Type first')
       return { row_id: '', rate: 0, tax_amount: 0 }
     }
-    // Actual: rate isn't used at all — desk zeroed it; which of rate/
+    // Actual: rate isn't used at all - desk zeroed it; which of rate/
     // tax_amount is editable is handled separately by taxesReadOnlyColumns.
     if (value === 'Actual') patch.rate = 0
     // Only "On Previous Row Amount/Total" may reference another row.
@@ -194,19 +194,19 @@ function taxesFieldChange(fieldname, value, draft, { idx }) {
     }
     if (['On Previous Row Amount', 'On Previous Row Total'].includes(value)) {
       // idx is 0-based; desk's tax.idx is 1-based, so idx === 0 is desk's
-      // tax.idx === 1 (the first row — nothing to reference).
+      // tax.idx === 1 (the first row - nothing to reference).
       if (idx === 0) {
         notify.error("Cannot select 'On Previous Row' charge type for the first row")
         return { charge_type: '' }
       }
-      // Default row_id to the previous row — desk's `tax.idx - 1`, which
+      // Default row_id to the previous row - desk's `tax.idx - 1`, which
       // in 0-based terms is just this row's own idx.
       if (!row.row_id) patch.row_id = idx
     }
   }
 
   if (fieldname === 'row_id' && ['On Previous Row Amount', 'On Previous Row Total'].includes(row.charge_type)) {
-    // row_id must reference an earlier row — desk's `row_id >= idx` (1-based)
+    // row_id must reference an earlier row - desk's `row_id >= idx` (1-based)
     // is `row_id >= idx + 1` here (0-based).
     if (row.row_id !== '' && Number(row.row_id) >= idx + 1) {
       notify.error('Row ID must be less than the current row number')
@@ -333,7 +333,7 @@ export const fiscalYearConfig = {
   doctype: 'Fiscal Year',
   timeline: 'full',
   // A disabled Fiscal Year is permanently locked (fiscal_year.js's
-  // _enforce_disabled_state) — judged by the *saved* value, so ticking the
+  // _enforce_disabled_state) - judged by the *saved* value, so ticking the
   // box mid-edit doesn't lock the form before it's been saved.
   locked: (d) => notNew(d) && Boolean(d.meta.resource.data?.values?.disabled),
   // Ticking "disabled" is irreversible, so it asks first (fiscal_year.js's
@@ -506,7 +506,7 @@ export const journalEntryConfig = {
       key: 'details',
       label: 'Details',
       sections: [
-        // Live figures — recomputed from the rows as they're typed, so an
+        // Live figures - recomputed from the rows as they're typed, so an
         // unbalanced entry is obvious before the server refuses it.
         strip([
           { label: 'Total Debit', value: (d) => sum(d.values.accounts, 'debit') || sum(d.values.accounts, 'debit_in_account_currency') },
@@ -540,7 +540,7 @@ function paidAccountFilters(bankCashPaymentTypes) {
 // account_head (the taxes/charges child table shared by Sales Order/Sales
 // Invoice/Purchase Order/Purchase Invoice/Payment Entry, one Item Tax-style
 // row per line) and additional_discount_account (Discount & Rounding on
-// every one of those five) both had no filter at all before this — every
+// every one of those five) both had no filter at all before this - every
 // account in the company showed up, groups and disabled ones included, and
 // nothing scoped to the transaction's own company.
 export const TAX_ACCOUNT_TYPES = ['Tax', 'Chargeable', 'Indirect Expense', 'Direct Expense', 'Expense Account', 'Income Account']
@@ -560,7 +560,7 @@ function discountAccountLinkQueries({ detail }) {
 const fmtAmount = (d) => `${formatFieldValue(d.values.paid_amount, { fieldtype: 'Currency' })} ${d.values.currency || ''}`.trim()
 
 // Ported verbatim (content-wise) from the old desk payment_entry.js's
-// Submit/Cancel confirmation dialogs — Submit had no confirmation at all
+// Submit/Cancel confirmation dialogs - Submit had no confirmation at all
 // before ConfigDetailPage's submitConfirm/cancelConfirm hooks, and Cancel
 // only ever showed one generic sentence.
 export const paymentEntrySubmitConfirm = (d) => `
@@ -608,13 +608,13 @@ export const paymentEntryConfig = {
   locked: (d) => d.hidden.verification_status === 'Rejected',
   // Once a Payment Entry is tied to a Sales Order's payment term,
   // verification_status (Pending Verification / Verified / Rejected) is
-  // the status that actually matters — plain docstatus stays "Submitted"
+  // the status that actually matters - plain docstatus stays "Submitted"
   // throughout that whole review, telling the viewer nothing. A Payment
   // Entry with no payment_term isn't part of that flow, so it keeps the
   // ordinary Draft/Submitted/Cancelled badge.
   statusField: (d) => (d.hidden.payment_term_row ? 'verification_status' : null),
   // The generic "submit this to confirm" draft banner is redundant once
-  // Rejected already has its own (locked, verification_status badge) —
+  // Rejected already has its own (locked, verification_status badge) -
   // only suppress it for that specific state, not for every draft.
   hideDraftNotice: (d) => d.hidden.verification_status === 'Rejected',
   actions: [ledgerAction()],
@@ -642,11 +642,11 @@ export const paymentEntryConfig = {
           },
         ),
         table('references'),
-        // NOTE: not converted to grid() — Payment Entry's taxes table was
+        // NOTE: not converted to grid() - Payment Entry's taxes table was
         // out of scope for this pass (only Sales Invoice / Purchase
         // Invoice / Sales Order / Purchase Order were asked for). It's the
         // same shared child doctype and would benefit from the same
-        // treatment (taxesReadOnlyColumns / taxesFieldChange) — flagging
+        // treatment (taxesReadOnlyColumns / taxesFieldChange) - flagging
         // for a follow-up rather than changing it here.
         {
           // Same behaviour as Sales Invoice's Taxes and Charges (same doctype shape): the child
@@ -724,7 +724,7 @@ export const salesInvoiceConfig = {
         fields(['debit_to', 'cash_bank_account', 'is_paid'], 'Accounting'),
         // depends_on for the currency-mismatch-only base_* fields (see
         // handle_currency_ui/toggle_base_fields in the old desk script)
-        // belongs on the DocType field itself, not here — DocDetailView
+        // belongs on the DocType field itself, not here - DocDetailView
         // already runs every field through dependsOnPasses before this
         // fieldnames list is applied, so setting
         // depends_on: "eval:doc.currency && doc.company_currency &&
@@ -732,7 +732,7 @@ export const salesInvoiceConfig = {
         // base_net_total, base_grand_total (and base_rounded_total /
         // base_discount_amount / base_total_taxes_and_charges /
         // base_rounding_adjustment / base_in_words if you want full parity
-        // with desk — they're not all listed below yet) is sufficient with
+        // with desk - they're not all listed below yet) is sufficient with
         // no frontend change. Add the missing base_* fieldnames to this
         // list once that's done, or they'll stay hidden regardless of
         // depends_on.
@@ -786,7 +786,7 @@ export const salesOrderConfig = {
   allowOnSubmitEdit: true,
   actions: [{ component: SendDetailsFormAction, show: notNew }],
   // Sales Order's own `status` (Open/Closed, server-computed) only ever
-  // matters once it reads "Closed" — otherwise the ordinary Draft/
+  // matters once it reads "Closed" - otherwise the ordinary Draft/
   // Submitted/Cancelled docstatus badge tells the fuller story.
   statusField: (d) => (d.values.status === 'Closed' ? 'status' : null),
   tabs: [
@@ -955,7 +955,7 @@ export const subscriptionPlanConfig = {
   ],
 }
 
-// Agreement (an order's filled-in PDF): mostly read-only — it's produced from
+// Agreement (an order's filled-in PDF): mostly read-only - it's produced from
 // the Sales Order's Agreements tab. agreement.js's only button is Download.
 export const agreementConfig = {
   doctype: 'Agreement',

@@ -108,7 +108,7 @@ async function fillAccountCurrency(account, field) {
 watch(() => values.paid_from, (a) => fillAccountCurrency(a, 'paid_from_account_currency'))
 watch(() => values.paid_to, (a) => fillAccountCurrency(a, 'paid_to_account_currency'))
 
-const balanceText = (n) => (n === undefined || n === null ? '—' : formatFieldValue(n, { fieldtype: 'Currency' }))
+const balanceText = (n) => (n === undefined || n === null ? '-' : formatFieldValue(n, { fieldtype: 'Currency' }))
 
 const ready = computed(() => values.company && values.party_type && values.party && values.payment_type)
 

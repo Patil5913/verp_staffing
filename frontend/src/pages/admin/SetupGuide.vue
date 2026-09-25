@@ -34,7 +34,7 @@
         <div class="rounded-2xl border border-app-border bg-app-panel px-8 py-8">
           <div class="mb-5 flex items-start justify-between gap-4">
             <div>
-              <div class="text-p-sm font-semibold text-app-primary">Staffing ERP Setup</div>
+              <div class="text-p-sm font-semibold text-app-primary">Placements ERP Setup</div>
               <h1 class="text-2xl font-semibold text-app-text">Setup Progress</h1>
               <p class="mt-1 text-p-sm text-app-text-muted">
                 {{ data.completed_steps }} of {{ data.total_steps }} steps completed

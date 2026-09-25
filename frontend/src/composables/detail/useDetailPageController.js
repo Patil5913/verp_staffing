@@ -7,7 +7,7 @@ import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
 import { notify } from '@/utils/common/notify'
 import { isEmailMissingError, normalizeError } from '@/utils/common/errors'
 
-// Shared shell behind every doctype's detail page — the generic
+// Shared shell behind every doctype's detail page - the generic
 // DocDetailPage and any doctype-specific one (LeadDetailPage,
 // UserDetailPage, ...): loads the record, tracks dirty/save/delete, and
 // wires the unsaved-changes guard. A doctype-specific page only adds its own
@@ -39,7 +39,7 @@ export function useDetailPageController(doctype, name, options = {}) {
     return ok
   }
 
-  // Only bypassNext() is used directly here — the router-level leave/unload
+  // Only bypassNext() is used directly here - the router-level leave/unload
   // prompts from this guard already cover the back button (it navigates via
   // router.push below), so a second manual confirmDiscard() check there
   // would just double the prompt.
@@ -47,12 +47,12 @@ export function useDetailPageController(doctype, name, options = {}) {
 
   async function onSave() {
     // save's onSuccess already re-snapshots `values` from the response, so
-    // isDirty clears synchronously — no separate detail.refresh() round-trip
+    // isDirty clears synchronously - no separate detail.refresh() round-trip
     // needed (that gap was letting a just-saved page still look "dirty" for
     // a moment, triggering the leave-guard even right after a save).
     //
     // Goes through saveAll() (main doc + the extra form, e.g. a Lead's
-    // Candidate Profile), not detail.submit() alone — this is the button/
+    // Candidate Profile), not detail.submit() alone - this is the button/
     // Ctrl+S save path, and previously only saveAll() (used solely by the
     // unsaved-changes-guard's own "Save and leave" option) saved the extra
     // form at all, so a normal Save silently only saved the main doc.
@@ -60,7 +60,7 @@ export function useDetailPageController(doctype, name, options = {}) {
     const ok = await saveAll()
     if (ok && wasNew) {
       // The doc now has a real name (save's onSuccess already re-snapshotted
-      // detail.meta off the insert response) — swap the URL in place so a
+      // detail.meta off the insert response) - swap the URL in place so a
       // refresh, or the delete/back flow, lands on its real docname instead
       // of re-triggering another insert. A plain path (not a named route)
       // so this lands correctly whether the doctype has its own detail page
@@ -74,11 +74,11 @@ export function useDetailPageController(doctype, name, options = {}) {
 
   // Submit/Cancel (submittable doctypes only): submit first saves any
   // pending edits, since Frappe submits what's on the server, not what's in
-  // the form. Cancel asks first — it's the one irreversible transition.
+  // the form. Cancel asks first - it's the one irreversible transition.
   const showCancelDialog = ref(false)
 
   // Returns { emailMissing: boolean } so the caller (ConfigDetailPage) can
-  // offer to collect an email and retry — see useDocDetail.js's submitDoc
+  // offer to collect an email and retry - see useDocDetail.js's submitDoc
   // for why submit's own errors aren't auto-toasted like everything else.
   async function onSubmit() {
     if (detail.isDirty.value && !(await detail.submit())) return { emailMissing: false }
@@ -115,7 +115,7 @@ export function useDetailPageController(doctype, name, options = {}) {
 
     showDeleteDialog.value = false
     notify.success('Deleted.')
-    // Not goBack() — the record is already gone, so there's nothing left to
+    // Not goBack() - the record is already gone, so there's nothing left to
     // discard and no reason to ask.
     bypassNext()
     router.push({ name: 'DocList', params: { doctype: doctype.value } })

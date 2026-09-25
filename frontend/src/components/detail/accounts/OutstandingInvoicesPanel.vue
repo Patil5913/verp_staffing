@@ -51,9 +51,9 @@
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // journal_entry.js's "Get Outstanding Invoices": for a write-off, list the
 // company's open Sales (receivable) or Purchase (payable) invoices, and turn
-// the ticked ones into entry rows — one per invoice, each referencing it and
+// the ticked ones into entry rows - one per invoice, each referencing it and
 // carrying its party, currency, exchange rate and due date (from the same
-// get_outstanding the desk row uses) — plus a balancing row with the total,
+// get_outstanding the desk row uses) - plus a balancing row with the total,
 // left for you to give its account (typically the bank / write-off account).
 import { computed, ref } from 'vue'
 import { call, Dialog, LoadingIndicator } from 'frappe-ui'
@@ -165,7 +165,7 @@ async function apply() {
     values.accounts = rows
     if (multi) values.multi_currency = 1
     open.value = false
-    notify.info('Invoices added — choose the account for the balancing row, then save.')
+    notify.info('Invoices added - choose the account for the balancing row, then save.')
   } catch (error) {
     notify.error(normalizeError(error).message)
   } finally {

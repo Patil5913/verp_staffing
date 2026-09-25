@@ -6,7 +6,7 @@ const config = createResource({
   url: 'frappe.client.get_single_value',
   params: { doctype: 'ERP Configuration', field: 'candidate_details_form_fields' },
   // Not auto: this module loads with the app config bundle, possibly before the
-  // session is usable — a fetch then would fail once and never retry.
+  // session is usable - a fetch then would fail once and never retry.
   auto: false,
 })
 let requested = false
@@ -27,7 +27,7 @@ function serviceFlags() {
 
 // sales_order.js's get_requirements_from_config().agreement_required, but read
 // from the order as last SAVED (the meta snapshot the save response refreshes),
-// not the live form — editing items doesn't change it until Save.
+// not the live form - editing items doesn't change it until Save.
 export function agreementRequired(detail) {
   ensureLoaded()
   const rows = detail.meta.resource.data?.tables?.find((t) => t.fieldname === 'items')?.rows || []

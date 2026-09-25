@@ -3,7 +3,7 @@ import { formatDate, formatDatetime } from '@/utils/list/formatValue'
 // Everything about turning a Script Report's raw result into display: columns
 // arrive either as dicts or as the legacy "Label:Type/Options:width" strings,
 // and a value's meaning comes from its column's fieldtype (and, for currency,
-// from the row's own `currency` — statements can present several).
+// from the row's own `currency` - statements can present several).
 
 export function normalizeColumns(columns) {
   return (columns || []).map((c, i) => {

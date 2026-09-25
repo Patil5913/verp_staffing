@@ -127,7 +127,7 @@
 import { computed, reactive, ref } from 'vue'
 import { Popover } from 'frappe-ui'
 
-// The app's date control — a calendar popover instead of the browser's native
+// The app's date control - a calendar popover instead of the browser's native
 // picker. Values stay plain strings, so it drops in where <input type=date>
 // was: 'YYYY-MM-DD' (date), 'YYYY-MM-DDTHH:mm' (datetime, same as
 // datetime-local) and 'from,to' (range).
@@ -297,7 +297,7 @@ function startTyping() {
   typing.value = true
   typed.value = display.value
 }
-// Digits go straight in — "-" is added for you: 26 02 2026 -> 26-02-2026 (a
+// Digits go straight in - "-" is added for you: 26 02 2026 -> 26-02-2026 (a
 // 2-digit year works too: 26-02-26). Anything that looks like a full typed
 // date (letters, other separators, ISO) is left alone for parseTyped.
 function autoFormat(raw) {

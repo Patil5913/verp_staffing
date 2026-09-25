@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-// desk's `frappe.new_doc("Sales Order", { customer })` — opens a new Sales
+// desk's `frappe.new_doc("Sales Order", { customer })` - opens a new Sales
 // Order with the customer prefilled (useDocDetail applies the query string).
 import { useRouter } from 'vue-router'
 import AppButton from '@/components/ui/AppButton.vue'

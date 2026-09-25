@@ -26,7 +26,7 @@
           <NoticeBanner
             v-if="leadLocked"
             tone="info"
-            message="This Lead is locked — an Opportunity already exists for it, so it can no longer be edited."
+            message="This Lead is locked - an Opportunity already exists for it, so it can no longer be edited."
           />
 
           <!-- What the profile still needs, one click from the Details tab -->
@@ -82,7 +82,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -158,7 +158,7 @@ const leadLocked = computed(() => !!opportunity.resource.data)
 const showOpportunityDialog = ref(false)
 
 // lead_detail_form.js: once a Sales Order needs the candidate form, its owner
-// can't edit the profile directly — they ask via Update Detail on the Customer.
+// can't edit the profile directly - they ask via Update Detail on the Customer.
 const formLock = useResource({
   url: 'verp_staffing.crm.api.permission_request.get_lead_detail_form_lock_status',
   notifyOnError: false,
@@ -186,7 +186,7 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
   { extraIsDirty: computed(() => profile.isDirty.value), extraSave: saveProfile },
 )
 
-// The lead person can change the status while the Lead is still being worked —
+// The lead person can change the status while the Lead is still being worked -
 // Open, Lead or Interested (judged on the SAVED status, so picking Won doesn't lock
 // the field mid-edit). Once it is Won / Lost / Opportunity the status is read-only,
 // as in the old desk form. lead_owner stays Administrator-only.
@@ -206,7 +206,7 @@ const fieldOverrides = computed(() => ({
 }))
 
 // Lead Owner: Sales or Lead department employees only (Employee has no
-// plain department field — see get_employees_by_department), matching the
+// plain department field - see get_employees_by_department), matching the
 // old desk lead.js set_query("lead_owner", { department: ["in", [...]] }).
 const fieldLinkQueries = {
   lead_owner: {

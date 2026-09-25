@@ -1,7 +1,7 @@
 // Pure port of the old desk hierarchy.js's render_hierarchy_diagram() +
 // drawTreeWithArrowsUnique(): same validations (in the same order, so the
 // same input always reports the same first error), same BFS-level layout
-// and collision resolution, same virtual "[Start]" root node — just
+// and collision resolution, same virtual "[Start]" root node - just
 // returning data for HierarchyDiagram.vue to render as SVG instead of
 // building the <svg> via direct DOM calls.
 
@@ -234,7 +234,7 @@ function layout(nodes, edges) {
 
 // The single entry point HierarchyDiagram.vue calls. `data` is the parsed
 // role_hierarchy_json array: [{ parent_role, child_roles: [] }, ...].
-// Returns either { error, title } (nothing renders — show that message
+// Returns either { error, title } (nothing renders - show that message
 // instead) or { nodes, edges, width, height } (a valid tree to draw).
 export function computeHierarchyDiagram(data) {
   if (!data || !data.length) {

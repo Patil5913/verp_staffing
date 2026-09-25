@@ -66,10 +66,10 @@
 </template>
 
 <script setup>
-// A spreadsheet-style inline-editable child table — every cell is directly
+// A spreadsheet-style inline-editable child table - every cell is directly
 // editable in place, no "open a dialog to edit this row" step. Used where
 // Desk's own grid view (not its row-dialog) is the expected editing
-// surface — Sales Order's Items and Payment Terms tables, both explicitly
+// surface - Sales Order's Items and Payment Terms tables, both explicitly
 // meant to be edited from the grid only. Deliberately separate from
 // ChildTableField.vue (dialog-per-row): the two editing models don't share
 // enough template to merge without one becoming a worse version of the
@@ -90,25 +90,25 @@ const props = defineProps({
   table: { type: Object, required: true },
   rows: { type: Array, required: true },
   // Ordered subset of table.columns' fieldnames to actually show as grid
-  // columns — a grid has no room for every field a dialog would show.
+  // columns - a grid has no room for every field a dialog would show.
   // Omitted => the doctype's own in_list_view columns (the Desk grid's columns).
   columns: { type: Array, default: null },
   // Columns left out of the row dialog (e.g. an account picked by default).
   hiddenColumns: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
-  // fieldname[] always read-only (e.g. Amount, computed) — or a function
+  // fieldname[] always read-only (e.g. Amount, computed) - or a function
   // (col, row) => boolean for a condition that depends on the row itself
   // (e.g. Current Interview Count only editable for one payment_condition;
   // Taxes and Charges' rate/tax_amount depending on that row's charge_type).
   readOnlyColumns: { type: [Array, Function], default: () => [] },
   // (fieldname, value, row, rowIndex) => patch object | Promise<patch>,
-  // merged into the row — same contract as ChildTableField's onFieldChange.
+  // merged into the row - same contract as ChildTableField's onFieldChange.
   onFieldChange: { type: Function, default: null },
-  // { <link column>: { query?, filters? } } — or a function of the row
+  // { <link column>: { query?, filters? } } - or a function of the row
   // being edited, (row, rows, rowIndex) => { <col>: {query?, filters?} },
   // for a column whose valid options depend on another field in the same
   // row (Taxes and Charges' account_head scoped to the document's company)
-  // or on sibling rows. Mirrors ChildTableField's linkQueries prop — this
+  // or on sibling rows. Mirrors ChildTableField's linkQueries prop - this
   // was previously missing here entirely, which is fine as long as no
   // grid-rendered table has a filtered Link column; Taxes and Charges does,
   // so this had to be added rather than left out.
@@ -156,7 +156,7 @@ function isColumnReadOnly(col, row) {
 }
 
 // Resolved per-row (not as a single computed) since a grid renders every
-// row at once — there's no single "current row" the way ChildTableField's
+// row at once - there's no single "current row" the way ChildTableField's
 // dialog has one draft.
 function linkQueryFor(row, idx) {
   return typeof props.linkQueries === 'function' ? props.linkQueries(row, props.rows, idx) : props.linkQueries

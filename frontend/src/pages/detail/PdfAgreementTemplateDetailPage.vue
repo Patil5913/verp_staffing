@@ -39,7 +39,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -71,9 +71,9 @@
 <script setup>
 // Pdf Agreement Template's own detail page. title/upload_pdf_template/
 // is_active are plain fields, so they're rendered by the same
-// DocDetailView every other doctype uses — no customization needed there.
+// DocDetailView every other doctype uses - no customization needed there.
 // fields_json (the drag-and-drop field layout) is a hidden JSON field, so
-// — same as Hierarchy's role_hierarchy_json — it's excluded from the
+// - same as Hierarchy's role_hierarchy_json - it's excluded from the
 // generic get_doc_meta payload, fetched once via the generic
 // frappe.client.get, edited locally through PdfFieldBuilder.vue, and
 // merged into the generic save_doc_fields payload on save. No new backend
@@ -114,7 +114,7 @@ const DEFAULT_TABS = [
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
 const activeTab = ref('details')
 
-// ── fields_json (hidden — not part of get_doc_meta) ────────────────────────
+// ── fields_json (hidden - not part of get_doc_meta) ────────────────────────
 const builderFields = ref([])
 const fieldsSnapshot = ref('[]')
 const fieldsJson = computed(() => JSON.stringify(builderFields.value))

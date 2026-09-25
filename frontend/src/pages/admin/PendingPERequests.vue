@@ -76,13 +76,13 @@
                   <p class="truncate font-medium text-app-primary">{{ row.name }}</p>
                   <p v-if="row.reference_no" class="truncate text-p-xs text-app-text-muted">Ref {{ row.reference_no }}</p>
                 </td>
-                <td class="truncate px-3 py-3 text-app-text">{{ row.party_name || row.party || '—' }}</td>
+                <td class="truncate px-3 py-3 text-app-text">{{ row.party_name || row.party || '-' }}</td>
                 <td class="px-3 py-3 text-app-text-muted">{{ formatDate(row.posting_date) }}</td>
                 <td class="px-3 py-3 text-right font-medium tabular-nums text-app-text">
                   {{ formatFieldValue(row.paid_amount, { fieldtype: 'Currency' }) }}
                   <span class="text-p-xs font-normal text-app-text-muted">{{ row.currency }}</span>
                 </td>
-                <td class="truncate px-3 py-3 text-app-text-muted">{{ row.mode_of_payment || '—' }}</td>
+                <td class="truncate px-3 py-3 text-app-text-muted">{{ row.mode_of_payment || '-' }}</td>
                 <td class="px-3 py-3" @click.stop>
                   <div v-if="row.verification_status !== 'Verified'" class="flex justify-end gap-2">
                     <AppButton size="sm" icon="check" @click="openVerify(row)">
@@ -142,7 +142,7 @@
           label="Remarks"
           v-model="rejectDialog.remarks"
           required
-          description="Required — explains why this payment entry was rejected. It's added to the payment term's verification log."
+          description="Required - explains why this payment entry was rejected. It's added to the payment term's verification log."
         />
       </template>
       <template #actions>
@@ -159,7 +159,7 @@ import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 // Payment Verification queue (the old "Pending PE Requests" page): payment
 // entries raised against a Sales Order's payment terms wait here to be
-// verified — Verify submits the entry and marks the term verified, Reject
+// verified - Verify submits the entry and marks the term verified, Reject
 // needs a reason and sends it back. Same filters as the desk block (see
 // fixtures/custom_html_block.json); the tabs add the Verified / Rejected
 // history the desk page didn't have.
@@ -199,7 +199,7 @@ const rows = useResource({
     fields: [
       'name', 'party', 'party_name', 'posting_date', 'paid_amount', 'currency', 'mode_of_payment',
       'reference_no', 'verification_status', 'modified',
-      // Needed for the Verify dialog's Paid From/Paid To pickers — same
+      // Needed for the Verify dialog's Paid From/Paid To pickers - same
       // filter inputs Payment Entry's own detail page uses.
       'party_type', 'payment_type', 'company', 'paid_from', 'paid_to',
     ],
@@ -236,7 +236,7 @@ const pendingTotal = computed(() =>
 )
 const oldestPending = computed(() => {
   const dates = all.value.filter((r) => r.verification_status === 'Pending Verification').map((r) => r.posting_date).sort()
-  return dates[0] ? formatDate(dates[0]) : '—'
+  return dates[0] ? formatDate(dates[0]) : '-'
 })
 const summaryCards = computed(() => [
   { label: 'Awaiting verification', value: counts.value['Pending Verification'] ?? 0, hint: 'payment entries in the queue' },
@@ -257,8 +257,8 @@ const actingOn = ref(null)
 
 // Same submit-confirmation content as Payment Entry's own detail page
 // (verify_payment_entry submits the entry, same as that page's Submit
-// button), plus its Paid From/Paid To — filtered exactly the same way as
-// there — so the verifier can confirm or correct them without leaving this
+// button), plus its Paid From/Paid To - filtered exactly the same way as
+// there - so the verifier can confirm or correct them without leaving this
 // queue.
 const verifyDialog = ref({ show: false, paidFrom: '', paidTo: '', charges: '', chargesAccount: '' })
 const chargesAmount = computed(() => Number(verifyDialog.value.charges) || 0)

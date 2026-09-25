@@ -63,17 +63,17 @@ const props = defineProps({
   // The 28px toolbar-height control instead of the 36px form field.
   compact: { type: Boolean, default: false },
   filters: { type: Object, default: () => ({}) },
-  // How many matches search_link returns — its own default is 10, too few
+  // How many matches search_link returns - its own default is 10, too few
   // once a doctype has more matches than fit on one screen (e.g. picking a
   // DocType out of the few hundred this app defines).
   pageLength: { type: Number, default: 20 },
-  // Hides the "Add New <doctype>" footer/quick-create flow — for fields
+  // Hides the "Add New <doctype>" footer/quick-create flow - for fields
   // that link to something this page has no business creating on the fly
   // (e.g. picking an existing DocType in the Permission Manager).
   hideAddNew: { type: Boolean, default: false },
   // A whitelisted "standard query" method (e.g.
   // verp_staffing.crm.api.helpers.get_assign_to_by_service) that filters/
-  // sorts results server-side beyond a plain `filters` dict — same `query`
+  // sorts results server-side beyond a plain `filters` dict - same `query`
   // param the classic desk Link field's set_query() passes through to
   // search_link.
   query: { type: String, default: '' },
@@ -94,13 +94,13 @@ const isPersonDoctype = computed(() => PERSON_DOCTYPES.has(props.doctype))
 
 // frappe-ui's resource.fetch(params) falls back to its *previous* params
 // object whenever the new params are falsy ("params = params || out.params"
-// in resources.js) — an empty search string is falsy, so re-searching with
+// in resources.js) - an empty search string is falsy, so re-searching with
 // txt="" (clearing the box, refocusing, or a filters/query change
 // retriggering the watch below) would otherwise hand that whole leftover
 // params object back into makeParams as if it were the new `txt`, sending
 // the server e.g. `{doctype: "Employee", filters: {...}, ...}` as the txt
 // argument itself. Reading the current search text from a ref instead of
-// makeParams' own argument sidesteps that fallback entirely — the fetch
+// makeParams' own argument sidesteps that fallback entirely - the fetch
 // call's argument is never used for anything but a truthy "go" signal.
 const searchText = ref('')
 const search = useResource({
@@ -119,7 +119,7 @@ const search = useResource({
 
 // Guards against an out-of-order response: two overlapping searches (e.g.
 // typing a term, then clearing it right after) can resolve in either
-// order — without this, a slower earlier request finishing after a faster
+// order - without this, a slower earlier request finishing after a faster
 // later one silently overwrites the fresher results, leaving the dropdown
 // stuck showing the stale filtered list even once the search box is empty.
 // `results` only accepts a response whose request is still the latest one
@@ -155,7 +155,7 @@ async function openQuickCreate() {
     showQuickCreate.value = true
     return
   }
-  // Checked up front, same reason as DocListView's onAddNew — no meta for
+  // Checked up front, same reason as DocListView's onAddNew - no meta for
   // this doctype is preloaded here (unlike a list page), so this one extra
   // round trip replaces the generic QuickCreateDialog's own after-the-fact
   // check, which used to flash the dialog open before redirecting.

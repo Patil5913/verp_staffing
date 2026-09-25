@@ -6,12 +6,12 @@ import { notify } from '@/utils/common/notify'
 // Same server contract the desk-side custom sidebar (public/js/override/
 // desk_override.js) already uses: a single whitelisted call returns a tree
 // that's already filtered to what the current user can see. There is no
-// client-side permission logic here — if an item is in `config`, the user
+// client-side permission logic here - if an item is in `config`, the user
 // can access it.
 const SIDEBAR_METHOD = 'verp_staffing.utils.sidebar.get_sidebar_permissions'
 
 // UI-only perf cache (mirrors the desk override's 1h localStorage cache).
-// Never the source of truth — clearing/expiring it just means one extra
+// Never the source of truth - clearing/expiring it just means one extra
 // round trip, never a permission change.
 const CACHE_TTL_MS = 60 * 60 * 1000
 const EXPANDED_STORAGE_KEY = 'verp-sidebar-expanded'
@@ -59,6 +59,11 @@ function clearCache(user) {
 
 // module-level (shared) state
 const config = ref([])
+
+// Display-only rename: the server still stores this group as "Staffing Master".
+const LABEL_OVERRIDES = { 'Staffing Master': 'Placement Master' }
+const relabel = (list) =>
+  (list || []).map((cfg) => ({ ...cfg, label: LABEL_OVERRIDES[cfg.label] || cfg.label }))
 const loading = ref(false)
 const loaded = ref(false)
 
@@ -74,7 +79,7 @@ function stripTrailingSlash(path) {
 const ROUTER_BASE = stripTrailingSlash(router.options.history.base)
 
 // Routes come in as full paths including the router's history base (e.g.
-// "/verp"), same as window.location.pathname — strip that base off both
+// "/verp"), same as window.location.pathname - strip that base off both
 // sides so "/verp" (the dashboard, i.e. router path "/") isn't treated as a
 // prefix of every other route under "/verp/...".
 function stripBase(path) {
@@ -86,7 +91,7 @@ function stripBase(path) {
 }
 
 // The dashboard is one page with tabs: "/" is its Overview and the other tabs
-// live under /dashboard/:section — so its sidebar item (route "/verp", or
+// live under /dashboard/:section - so its sidebar item (route "/verp", or
 // "/verp/dashboard" on a customized sidebar) stays highlighted on all of them.
 const isDashboardPath = (path) => path === '' || path === '/dashboard' || path.startsWith('/dashboard/')
 
@@ -199,13 +204,13 @@ function closeMobileNav() {
 
 // Stale-while-revalidate: a saved copy paints the sidebar at once, then the
 // server's answer (itself cached server-side) replaces it. Without the second
-// step a change — a new Staffing Master item, a changed role — stayed
+// step a change - a new Staffing Master item, a changed role - stayed
 // invisible for up to an hour.
 let revalidated = false
 async function revalidate(user) {
   try {
     const payload = await call(SIDEBAR_METHOD)
-    config.value = (payload && payload.config) || []
+    config.value = relabel(payload && payload.config)
     writeCache(user, payload)
   } catch {
     // keep what's showing; the next load tries again
@@ -216,7 +221,7 @@ async function load(user, { force = false } = {}) {
   if (!force) {
     const cached = readCache(user)
     if (cached) {
-      config.value = cached.config || []
+      config.value = relabel(cached.config)
       loaded.value = true
       if (!revalidated) {
         revalidated = true
@@ -228,7 +233,7 @@ async function load(user, { force = false } = {}) {
   loading.value = true
   try {
     const payload = await call(SIDEBAR_METHOD)
-    config.value = (payload && payload.config) || []
+    config.value = relabel(payload && payload.config)
     writeCache(user, payload)
   } catch (error) {
     notify.error('Failed to load navigation. Please refresh the page.')

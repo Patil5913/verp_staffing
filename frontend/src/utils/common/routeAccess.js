@@ -3,8 +3,8 @@ import { call } from 'frappe-ui'
 // Asks the server (utils/access.py) whether the user may open a route, so a
 // page hidden from the sidebar can't be reached by typing its URL either.
 // The server stays the real gate for every API call; this only stops the page
-// itself from opening. Answers are kept briefly — permissions rarely change
-// mid-session — and a failed check lets the navigation through, because the
+// itself from opening. Answers are kept briefly - permissions rarely change
+// mid-session - and a failed check lets the navigation through, because the
 // server will still refuse whatever the page then asks for.
 
 const TTL_MS = 60_000

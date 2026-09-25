@@ -96,14 +96,14 @@
             v-if="!perms.resource.data.length"
             class="rounded-lg border border-dashed border-app-border py-10 text-center text-p-sm text-app-text-muted"
           >
-            No matching permissions yet — use "Add Role Permission" above.
+            No matching permissions yet - use "Add Role Permission" above.
           </div>
         </div>
       </div>
     </div>
 
     <!-- Edit dialog: every checkbox stages into `draft` and only reaches the
-    server on "Save" — no more silently saving on every click. -->
+    server on "Save" - no more silently saving on every click. -->
     <Dialog
       v-model="editOpen"
       :options="{ title: editingRow ? `${editingRow.parent} · ${editingRow.role} · Level ${editingRow.permlevel}` : '', size: 'lg' }"
@@ -128,7 +128,7 @@
     </Dialog>
 
     <!-- Add dialog: pick the role + level to grant this DocType to. -->
-    <Dialog v-model="addOpen" :options="{ title: `Add Role Permission — ${doctype}`, size: 'sm' }">
+    <Dialog v-model="addOpen" :options="{ title: `Add Role Permission - ${doctype}`, size: 'sm' }">
       <template #body-content>
         <div class="flex flex-col gap-4">
           <AppLinkField doctype="Role" label="Role" v-model="newRole" placeholder="Search for a role…" />
@@ -146,7 +146,7 @@
 import AppInput from '@/components/ui/AppInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Permission Manager: DocType and Role filters both work standalone (pick
-// just one) or together — the backend already supports every combination
+// just one) or together - the backend already supports every combination
 // (get_permissions falls back to "every role" when role is blank, and to
 // "every doctype that role touches" when doctype is blank), so the frontend
 // just needs to fetch whenever at least one is set instead of demanding
@@ -217,8 +217,8 @@ async function onSaveEdit() {
     for (const ptype of changed) {
       const value = draft.value[ptype] ? 1 : 0
       const ok = await updating.resource.submit({
-        // row.parent/row.role — the doctype/role this specific row belongs
-        // to — not the page-level filters, which may be blank (viewing
+        // row.parent/row.role - the doctype/role this specific row belongs
+        // to - not the page-level filters, which may be blank (viewing
         // "every doctype for this role" or "every role for this doctype").
         doctype: row.parent,
         role: row.role,
@@ -226,7 +226,7 @@ async function onSaveEdit() {
         ptype,
         value,
         // if_owner itself is toggled via the same `update` call as any
-        // other ptype — pass the row's *current* if_owner unless that's the
+        // other ptype - pass the row's *current* if_owner unless that's the
         // field being changed right now.
         if_owner: ptype === 'if_owner' ? value : row.if_owner ? 1 : 0,
       })
@@ -236,7 +236,7 @@ async function onSaveEdit() {
     editOpen.value = false
     notify.success('Permissions saved.')
   } catch {
-    notify.error("Couldn't save permissions — please try again.")
+    notify.error("Couldn't save permissions - please try again.")
   } finally {
     saving.value = false
   }

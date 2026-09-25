@@ -55,8 +55,8 @@
 
 <script setup>
 // The Lead's candidate profile (its linked "Lead Detail Form"), grouped into
-// the same sections the doctype lays out — Personal Information, Educational
-// Details, Address History, Consent, ... — instead of one long flat grid.
+// the same sections the doctype lays out - Personal Information, Educational
+// Details, Address History, Consent, ... - instead of one long flat grid.
 // State lives in the page's useLeadDetailForm (passed in as `form`), so an
 // unsaved edit survives switching tabs; this component only renders it.
 import { computed } from 'vue'

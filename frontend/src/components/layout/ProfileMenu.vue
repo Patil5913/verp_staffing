@@ -85,7 +85,7 @@ async function logout() {
 }
 
 // Same as desk's own navbar "Reload": clears this session's server-side
-// cache (cached user/roles/bootinfo in Redis — not a whole-site flush; see
+// cache (cached user/roles/bootinfo in Redis - not a whole-site flush; see
 // frappe.sessions.clear in apps/frappe/frappe/sessions.py), then does a
 // hard reload. Throttled like core so it can't be spammed.
 let lastReloadAt = 0

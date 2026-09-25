@@ -91,40 +91,40 @@ const props = defineProps({
   table: { type: Object, required: true },
   rows: { type: Array, required: true },
   disabled: { type: Boolean, default: false },
-  // { <link column>: { query?, filters? } } — see FieldControl's linkQuery.
+  // { <link column>: { query?, filters? } } - see FieldControl's linkQuery.
   // Either a static object, or a function of the row currently being
-  // edited — (draft, rows, editingIndex) => { <col>: {query?, filters?} } —
+  // edited - (draft, rows, editingIndex) => { <col>: {query?, filters?} } -
   // for a column whose valid options depend on another field in the same
   // row (e.g. Role depends on that row's own Department) or on sibling
   // rows (e.g. "don't offer a role already used in another row").
   linkQueries: { type: [Object, Function], default: null },
   // Optional cross-field validation beyond a single column's own reqd/
-  // fieldtype rules — (draft, rows, editingIndex) => error string | null.
+  // fieldtype rules - (draft, rows, editingIndex) => error string | null.
   // Blocks "Done" and shows the message inline when it returns one.
   validateRow: { type: Function, default: null },
-  // Column fieldnames to always keep out of the dialog — e.g. Sales
+  // Column fieldnames to always keep out of the dialog - e.g. Sales
   // Order's Income Account, meant to be fetched and set automatically
   // (onFieldChange below), never picked by hand.
   hiddenColumns: { type: Array, default: () => [] },
-  // Cross-field row logic beyond a plain value assignment — mirrors the old
+  // Cross-field row logic beyond a plain value assignment - mirrors the old
   // desk child-table row event handlers (Sales Order's Items Table: picking
   // an Item sets Type to "Sales", fetches its UOM and the company's default
   // Income Account). (fieldname, value, draft) => a patch object merged
   // into draft, or a Promise resolving to one for an async lookup.
   onFieldChange: { type: Function, default: null },
   // Per-column field patches (e.g. { document: { accept: '.pdf,.jpg,.png' } })
-  // merged onto the backend-provided column meta — for restrictions/config
+  // merged onto the backend-provided column meta - for restrictions/config
   // that only apply to this particular table's use of a shared child
   // doctype (e.g. Resume/Proof Of Work's "Document References" table).
   fieldOverrides: { type: Object, default: () => ({}) },
-  // { fieldname: 'text' } — shown in the row dialog in place of an empty read-only field.
+  // { fieldname: 'text' } - shown in the row dialog in place of an empty read-only field.
   emptyReadOnlyTexts: { type: Object, default: () => ({}) },
   // Called with (fieldname, fileMeta, draft) after an Attach/Attach Image
-  // upload succeeds — fileMeta is the uploaded File doc (file_name,
+  // upload succeeds - fileMeta is the uploaded File doc (file_name,
   // file_url, ...). Returns a patch object merged into draft, e.g. to
   // auto-fill Document Title from the uploaded filename.
   onFileMeta: { type: Function, default: null },
-  // Caps the table at this many rows — hides "Add Row" once reached (e.g.
+  // Caps the table at this many rows - hides "Add Row" once reached (e.g.
   // Resume's resume_table only ever holds one row; validate_resume_
   // submission enforces the same limit server-side, this is just the UI
   // half so the button doesn't invite an add that would fail on save).
@@ -146,7 +146,7 @@ const resolvedLinkQueries = computed(() =>
 
 // e.g. Lead Past Experience's End Month: depends_on "eval:
 // !doc.is_currently_working" in its own doctype JSON, ignored here until now
-// — every column rendered unconditionally regardless of what the doctype
+// - every column rendered unconditionally regardless of what the doctype
 // itself declares.
 const visibleColumns = computed(() =>
   props.table.columns
@@ -174,7 +174,7 @@ function isWide(col) {
 }
 
 function formatCell(col, value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return '-'
   if (col.fieldtype === 'Check') return value ? 'Yes' : 'No'
   return String(value)
 }
@@ -187,7 +187,7 @@ const dialogTitle = computed(() =>
   editingIndex.value === null ? `Add ${props.table.label}` : `Edit ${props.table.label}`,
 )
 
-// Frappe's two dynamic default tokens — everything else is a literal
+// Frappe's two dynamic default tokens - everything else is a literal
 // default value, applied as-is.
 function resolveDefault(raw) {
   if (raw === 'Now') return new Date().toISOString().slice(0, 19).replace('T', ' ')
@@ -198,7 +198,7 @@ function resolveDefault(raw) {
 function openRow(idx) {
   editingIndex.value = idx
   if (idx === null) {
-    // A new row starts blank in the browser — Desk applies each column's
+    // A new row starts blank in the browser - Desk applies each column's
     // own `default` when a row is added; this didn't, so a column like
     // Document References' `date` (default "Now", read_only) showed empty
     // instead of the current time.

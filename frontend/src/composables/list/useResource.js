@@ -35,7 +35,7 @@ export function useResource(options, vm) {
   })
 
   // `state`'s properties are computed refs (e.g. isPermissionError). Spread
-  // into a *plain* object here, they'd stay unwrapped refs — always truthy
+  // into a *plain* object here, they'd stay unwrapped refs - always truthy
   // in a template `v-if`, regardless of their real value. reactive() makes
   // property access on this returned object unwrap them correctly, in both
   // templates and plain JS.

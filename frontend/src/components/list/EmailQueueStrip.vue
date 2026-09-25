@@ -3,7 +3,7 @@
     <div v-if="data?.suspended || data?.muted" class="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-500/10 px-3 py-2 text-p-sm text-amber-800">
       <span class="lucide-triangle-alert mt-0.5 size-4 shrink-0" />
       <span v-if="data.muted">Automatic sending is switched off in the site configuration, so queued mail only goes out with <strong>Send now</strong>.</span>
-      <span v-else>Sending is suspended. Queued mail waits until you resume it — or use <strong>Send now</strong> on a message.</span>
+      <span v-else>Sending is suspended. Queued mail waits until you resume it - or use <strong>Send now</strong> on a message.</span>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">

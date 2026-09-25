@@ -127,7 +127,7 @@ export function useReport(reportName) {
     const payload = {}
     for (const f of visibleFilters.value) {
       const v = values[f.fieldname]
-      // An unticked check is simply absent — the reports read a missing key as false.
+      // An unticked check is simply absent - the reports read a missing key as false.
       if (v !== '' && v !== null && v !== undefined && v !== false && v !== 0) payload[f.fieldname] = v
     }
     hasRun.value = true

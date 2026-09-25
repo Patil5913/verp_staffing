@@ -32,7 +32,7 @@
 <script setup>
 // Desk renders a Table MultiSelect field (Department.role, Department.services,
 // Fiscal Year's) as chips over the child doctype's single Link column, not
-// as a row-editing dialog — ChildTableField.vue is right for a real child
+// as a row-editing dialog - ChildTableField.vue is right for a real child
 // table, but was rendering this the same way, losing the multiselect feel.
 import { computed } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
@@ -42,7 +42,7 @@ const props = defineProps({
   table: { type: Object, required: true },
   rows: { type: Array, required: true },
   disabled: { type: Boolean, default: false },
-  // A whitelisted "standard query" method — see AppLinkField's `query` prop.
+  // A whitelisted "standard query" method - see AppLinkField's `query` prop.
   query: { type: String, default: '' },
   allowCreate: { type: Boolean, default: false },
 })

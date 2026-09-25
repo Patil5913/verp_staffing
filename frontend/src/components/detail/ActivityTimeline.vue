@@ -215,7 +215,7 @@
       </template>
     </Dialog>
 
-    <!-- New Task: same fields/order as this app's desk "Add Task" — description,
+    <!-- New Task: same fields/order as this app's desk "Add Task" - description,
     then date & time (defaulted to now), then assigned to -->
     <Dialog v-model="showTaskDialog" :options="{ title: 'New Task', size: 'md' }">
       <template #body-content>
@@ -230,7 +230,7 @@
       </template>
     </Dialog>
 
-    <!-- New Event: same fields/order as this app's desk "Add Event" — category,
+    <!-- New Event: same fields/order as this app's desk "Add Event" - category,
     then date & time (defaulted to now), then summary, description, assigned to.
     Required fields (category, date, summary) carry the same red asterisk. -->
     <Dialog v-model="showEventDialog" :options="{ title: 'New Event', size: 'md' }">
@@ -276,7 +276,7 @@ import { isSystemManager } from '@/utils/common/roles'
 const props = defineProps({
   doctype: { type: String, required: true },
   name: { type: String, required: true },
-  // Which entry types this instance renders — lets Notes (notes + edit
+  // Which entry types this instance renders - lets Notes (notes + edit
   // history, with the composer) and Activity (tasks + events, read-only,
   // but with "New Task"/"New Event" creation) reuse the same feed/timeline
   // UI instead of duplicating it.
@@ -319,7 +319,7 @@ const ICON_STYLES = {
 
 const EVENT_CATEGORIES = ['Event', 'Meeting', 'Call', 'Follow Up', 'Other']
 
-// datetime-local needs "YYYY-MM-DDTHH:mm" in local time — this is how the
+// datetime-local needs "YYYY-MM-DDTHH:mm" in local time - this is how the
 // dialogs default Date & Time to "now", the way CRM Task/CRM Event's own
 // before_insert() does server-side when the field is left blank.
 function nowForInput() {
@@ -347,7 +347,7 @@ function autoGrow(e) {
 }
 
 function display(value) {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return '-'
   return String(value)
 }
 

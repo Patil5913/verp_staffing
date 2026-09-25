@@ -61,7 +61,7 @@ const props = defineProps({
   active: { type: Boolean, default: false },
   nested: { type: Boolean, default: false },
   collapsed: { type: Boolean, default: false },
-  // The Doctype this link points at, if any — drives the "+" quick-create
+  // The Doctype this link points at, if any - drives the "+" quick-create
   // action. Left unset for non-Doctype links (Dashboard, Reports, ...) and
   // never set at all for type_2 dropdown parent buttons, which aren't
   // SidebarLink instances in the first place.
@@ -86,7 +86,7 @@ function onQuickCreate() {
 const isInternal = computed(() => props.route?.startsWith('/verp'))
 
 // vue-router's `to` is resolved against the router's own path space, which
-// already excludes the `history` base ('/verp' — see router.js); router-link
+// already excludes the `history` base ('/verp' - see router.js); router-link
 // re-adds it when building the actual href. Passing the full `/verp/...`
 // route straight through would resolve to no route at all and link to a
 // doubled "/verp/verp/..." href.

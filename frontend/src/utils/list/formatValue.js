@@ -1,6 +1,6 @@
 // Generic per-fieldtype display formatting for the doctype list view. Kept
 // deliberately simple (no locale/currency-symbol lookups from Frappe's own
-// System Settings) — good enough for a scannable list column, not a final
+// System Settings) - good enough for a scannable list column, not a final
 // print/export representation.
 const DATE_FIELDTYPES = new Set(['Date', 'Datetime'])
 
@@ -63,7 +63,7 @@ const RELATIVE_UNITS = [
 ]
 
 // Server timestamps come back as "YYYY-MM-DD HH:MM:SS" (no timezone) in the
-// site's local time, not UTC — replacing the space with "T" alone would let
+// site's local time, not UTC - replacing the space with "T" alone would let
 // the JS Date constructor treat it as UTC and skew the diff by the site's
 // UTC offset.
 export function formatRelativeTime(value) {

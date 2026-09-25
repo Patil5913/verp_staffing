@@ -6,7 +6,7 @@ import { fieldProblem } from './fieldProblems'
 
 const EMAIL_FIELDS = new Set(['email', 'email_id', 'email_address'])
 const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date'])
-// Lead Detail Form has two phone fields (personal + marketing) — both need
+// Lead Detail Form has two phone fields (personal + marketing) - both need
 // the same sanitize-then-regex validation.
 const PHONE_FIELDS = new Set([
   'phone_number',
@@ -41,11 +41,11 @@ export function isSsnField(fieldname) {
   return (fieldname || '').toLowerCase().includes('ssn')
 }
 
-// These fields are already stored as the literal string "MM-YYYY" — the old
+// These fields are already stored as the literal string "MM-YYYY" - the old
 // desk lead_details_form.js's is_valid_mm_yyyy validates and saves it
 // exactly as typed, no reformatting. toMonthYear/fromMonthYear used to
 // treat the stored value as "YYYY-MM" and swap the two halves for display
-// (then swap back — with a spurious trailing "-01" — on save), which
+// (then swap back - with a spurious trailing "-01" - on save), which
 // silently transposed month and year on every value that came straight
 // from the database instead of round-tripping through a save here first
 // (e.g. typing "01-2025" would then display as "2025-01"). The value is
@@ -90,11 +90,11 @@ export function validateFieldValue(field, value) {
   }
   if (!strValue) return ''
 
-  // These fieldname heuristics only apply to a Data field — a same-named
+  // These fieldname heuristics only apply to a Data field - a same-named
   // field elsewhere with a real fieldtype (e.g. Employee.start_date, a real
   // Date) isn't the Lead Detail Form-style string these heuristics target.
   if (field.fieldtype === 'Data') {
-    // Says exactly what is wrong (missing @, bad domain, not a linkedin.com URL, ...) — also
+    // Says exactly what is wrong (missing @, bad domain, not a linkedin.com URL, ...) - also
     // for fields the name lists below miss (marketing_email_id, *_linkedin).
     const problem = fieldProblem(field, strValue)
     if (problem) return problem

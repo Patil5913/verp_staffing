@@ -3,7 +3,7 @@ import { call } from 'frappe-ui'
 
 // Company-driven behavior of Sales/Purchase Invoice and Order forms, ported
 // from sales_invoice.js (company / currency / discount_amount handlers,
-// handle_currency_ui, handle_discount_account) — the parts that aren't
+// handle_currency_ui, handle_discount_account) - the parts that aren't
 // arithmetic (that's docCalculator.js):
 //   - company_currency (fetch_from company.default_currency) so the
 //     currency-mismatch depends_on rules on the base_* fields, and Exchange

@@ -48,7 +48,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet — add the first note below." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-updates>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-// RUC's (Resume Update Call) detail page: Details/Sessions/Notes/Activity —
+// RUC's (Resume Update Call) detail page: Details/Sessions/Notes/Activity -
 // `outsource` only matters "when outsourcing the sessions" (ruc.json's own
 // field description), so it lives on Details next to assign_to rather than
 // getting a tab of its own. `customer` is hidden + set_only_once server-side

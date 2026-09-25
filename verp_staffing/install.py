@@ -1992,8 +1992,8 @@ def seed_website_setting():
     updated = False
 
     # ---------- LOGIN PAGE ----------
-    if website.app_name != "Vrugle":
-        website.app_name = "Vrugle"
+    if website.app_name != "Verp Placements":
+        website.app_name = "Verp Placements"
         updated = True
 
     if website.disable_signup != 1:

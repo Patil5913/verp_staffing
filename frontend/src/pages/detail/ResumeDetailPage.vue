@@ -68,7 +68,7 @@
 				:name="name"
 				:types="['note']"
 				show-composer
-				empty-text="Nothing here yet — add the first note below."
+				empty-text="Nothing here yet - add the first note below."
 			/>
 		</template>
 
@@ -116,12 +116,12 @@
 
 <script setup>
 // Resume's detail page: Details/Attachments/Notes/Activity instead of the
-// generic Details/Notes/Activity — the resume attachment(s) get their own
+// generic Details/Notes/Activity - the resume attachment(s) get their own
 // tab (child table "resume_table") instead of being stacked under the
 // field grid. `customer` and `owner` aren't editable here: `customer` is
 // hidden + set_only_once on the doctype (the server already drops hidden
 // fields from its meta, so it never reaches DETAIL_FIELDS), and `status`
-// flips to "Completed" automatically once a resume attachment lands — see
+// flips to "Completed" automatically once a resume attachment lands - see
 // resume.py's handle_resume_status. See router.js for how /Resume/:name is
 // routed here ahead of the generic /:doctype/:name.
 import { computed, ref } from "vue";

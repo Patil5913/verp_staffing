@@ -55,7 +55,7 @@
         :name="name"
         :types="['note', 'update']"
         show-composer
-        empty-text="Nothing here yet — add the first note below."
+        empty-text="Nothing here yet - add the first note below."
       />
     </template>
 
@@ -87,7 +87,7 @@
 <script setup>
 // Opportunity's detail page: the generic Details/Notes/Activity tabs, plus
 // the "Create Customer" action ported from opportunity.js's
-// handle_create_customer — it calls the doctype's own whitelisted
+// handle_create_customer - it calls the doctype's own whitelisted
 // create_customer() instance method (see opportunity.py), which converts
 // this Opportunity to a Customer and marks it Converted. Status is
 // read-only once Converted, same as the desk form. See router.js for how
@@ -116,7 +116,7 @@ const doctype = computed(() => 'Opportunity')
 const name = computed(() => route.params.name)
 
 // The linked Lead Detail Form's candidate-facing fields (education,
-// experience, visa status...) — same "Candidate Profile" tab Lead's own
+// experience, visa status...) - same "Candidate Profile" tab Lead's own
 // detail page has, and the same split-save (this form has its own save
 // endpoint, folded into the one navbar Save via extraIsDirty/extraSave
 // below) so editing it here doesn't silently only update the in-memory
@@ -163,14 +163,14 @@ const DETAIL_FIELDS = [
 ]
 
 // Converted is a one-way transition on the desk form (opportunity.js sets
-// status read-only once Converted) — mirrored here the same way.
+// status read-only once Converted) - mirrored here the same way.
 // opportunity_owner is read-only for everyone but Administrator (opportunity.js onload).
 const readOnlyFields = computed(() => [
   ...(detail.values.status === 'Converted' ? ['status'] : []),
   ...(isAdministrator() ? [] : ['opportunity_owner']),
 ])
 
-// Opportunity Owner: Sales department employees only — the same query Customer Owner
+// Opportunity Owner: Sales department employees only - the same query Customer Owner
 // uses (opportunity.js filtered on an Employee Assignment Detail in "Sales").
 const fieldLinkQueries = {
   opportunity_owner: {

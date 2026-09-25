@@ -6,7 +6,7 @@ import { toast } from 'frappe-ui'
 // directly everywhere.
 const DEFAULT_DURATION = 4 // seconds
 
-// Server messages often carry HTML (<br>, links) — a toast shows plain text, so
+// Server messages often carry HTML (<br>, links) - a toast shows plain text, so
 // flatten it instead of printing raw tags.
 function plain(message) {
   if (typeof message !== 'string' || !/<[a-z][\s\S]*>/i.test(message)) return message

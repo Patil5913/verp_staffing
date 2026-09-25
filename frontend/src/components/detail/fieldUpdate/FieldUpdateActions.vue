@@ -26,11 +26,11 @@
 import AppBadge from '@/components/ui/AppBadge.vue'
 // The field-change request flow from permission_feature.js / customer.js, as
 // two buttons on a record's action bar:
-//  * Update Detail — for the record's assignee or the customer's owner: ask to
+//  * Update Detail - for the record's assignee or the customer's owner: ask to
 //    change details held on the customer's Lead Detail Form (the server routes
 //    it to an approver, or applies it directly for the head of the department);
-//  * Accept Updates — for an approver with requests waiting.
-// `mode` "service" is a department form (Resume, RUC, ... — the customer is
+//  * Accept Updates - for an approver with requests waiting.
+// `mode` "service" is a department form (Resume, RUC, ... - the customer is
 // the record's `customer`); "owner" is the Customer form itself.
 import { computed, reactive, ref, watch } from 'vue'
 import { call } from 'frappe-ui'
