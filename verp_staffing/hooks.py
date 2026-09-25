@@ -182,15 +182,17 @@ after_install = [
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     # "verp_staffing.install.after_install",
-    "verp_staffing.overrides.email_template.patch",
-    "verp_staffing.crm.api.customer_chat.set_portal_home_page",
+    # "verp_staffing.overrides.email_template.patch",
+    # "verp_staffing.crm.api.customer_chat.set_portal_home_page",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
     # Demo data for a production site, once — guarded; see the file's docstring.
-    "verp_staffing.utils.seed_production.after_migrate",
+    # "verp_staffing.utils.seed_production.after_migrate",
     # ...and then its customers get their portal logins (own marker, so already-seeded sites get it too)
-    "verp_staffing.utils.seed_production.portal_access_after_migrate",
+    # "verp_staffing.utils.seed_production.portal_access_after_migrate",
     # ...and they get services, interviews, orders/payments, agreements and chats to test with
-    "verp_staffing.utils.seed_demo_journeys.demo_journeys_after_migrate",
+    # "verp_staffing.utils.seed_demo_journeys.demo_journeys_after_migrate",
+    # Realistic data for documentation screenshots — does nothing unless site_config has "seed_documentation_data": 1
+    "verp_staffing.utils.seed_documentation_data.after_migrate",
 ]
 
 # Uninstallation
