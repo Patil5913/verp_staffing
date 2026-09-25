@@ -8,7 +8,7 @@ x-app: &app
   # privileges. Only the sites/logs volumes and tmpfs are writable.
   # (The `db` service deliberately does not use this block.)
   read_only: true
-  tmpfs: [/tmp, /home/frappe/.cache, /home/frappe/frappe-bench/config]
+  tmpfs: [/tmp, /home/frappe/.cache]
   security_opt: ["no-new-privileges:true"]
   cap_drop: [ALL]
   environment: &app-env
@@ -17,6 +17,8 @@ x-app: &app
   volumes:
     - sites:/home/frappe/frappe-bench/sites
     - logs:/home/frappe/frappe-bench/logs
+    # bench needs config/ (incl. config/pids) and writes a lock file there.
+    - config:/home/frappe/frappe-bench/config
 
 services:
   configurator:
@@ -117,6 +119,7 @@ volumes:
   db-data:        { name: verp_db-data }
   sites:          { name: verp_sites }
   logs:           { name: verp_logs }
+  config:         { name: verp_config }
   redis-queue-data: { name: verp_redis-queue-data }
 
 networks:
