@@ -43,7 +43,15 @@ class Marketing(Document):
 def get_interviews_by_marketing(marketing):
     if not marketing:
         return []
-
-    return frappe.get_all(
-        "Interview", filters={"marketing_link": marketing}, fields=["company"]
+    interviews = frappe.get_all(
+        "Interview",
+        filters={"marketing_link": marketing},
+        fields=["company", "name", "owner", "role", "status"],
+        order_by="creation desc",
     )
+
+    # `owner` = whether the current user created it (only they may open it)
+    return [
+        {"name": i.name, "company": i.company, "role": i.role, "status": i.status, "owner": i.owner == frappe.session.user}
+        for i in interviews
+    ]
