@@ -1,3 +1,6 @@
+import { watch } from 'vue'
+import { call } from 'frappe-ui'
+import { notify } from '@/utils/common/notify'
 import AssignToField from '@/components/detail/AssignToField.vue'
 import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
 import CustomerHistoryPanel from '@/components/detail/customer/CustomerHistoryPanel.vue'
@@ -67,9 +70,28 @@ export const marketingConfig = {
   ],
 }
 
+// interview.js's initialize_default_interview_status: a NEW Interview starts with the status
+// set in ERP Configuration (Default Interview Status), unless it already has one.
+function interviewSetup(detail) {
+  watch(
+    () => [detail.meta.resource.data, detail.isNew.value],
+    async ([data, isNew]) => {
+      if (!data || !isNew || detail.values.status) return
+      const status = await call('frappe.client.get_single_value', { doctype: 'ERP Configuration', field: 'default_interview_status' }).catch(() => null)
+      if (!status) {
+        notify.error("Default Interview Status is not set in 'ERP Configuration', please contact admin.")
+        return
+      }
+      if (!detail.values.status) detail.values.status = status
+    },
+    { immediate: true },
+  )
+}
+
 export const interviewConfig = {
   doctype: 'Interview',
   timeline: false,
+  setup: interviewSetup,
   // Once created, everything but the rounds is fixed (interview.js sets
   // role/company/status read_only on existing records). `customer` isn't
   // shown at all — it's purely derived from marketing_link, redundant next

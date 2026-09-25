@@ -70,6 +70,10 @@ MAX_SEARCH_MATCHES = 5000
 # sees the same columns. See set_list_view_columns.
 LIST_VIEW_COLUMN_SETTING_DOCTYPE = "List View Column Setting"
 
+# Lists that show the record's Owner column by default (it is not a doctype field, so
+# in_list_view can't say so).
+DEFAULT_OWNER_COLUMN_DOCTYPES = {"Interview"}
+
 
 def _check_read(doctype):
     if not frappe.has_permission(doctype, "read"):
@@ -105,7 +109,7 @@ def _displayable_fieldnames(meta):
         df.fieldname
         for df in meta.fields
         if df.fieldtype in DISPLAYABLE_FIELDTYPES and not df.hidden
-    } | {LAST_UPDATED_FIELD["fieldname"], "name"}
+    } | {LAST_UPDATED_FIELD["fieldname"], "name", "owner"}
 
 
 @frappe.whitelist()
@@ -158,7 +162,18 @@ def get_list_view_meta(doctype):
         "in_standard_filter": False,
         "reqd": False,
     }
-    fields = [name_field] + fields
+    # `owner` (who created the record) is a standard column too, not a docfield: offered in
+    # every list's column picker, and shown by default where the list always had it.
+    owner_field = {
+        "fieldname": "owner",
+        "label": "Owner",
+        "fieldtype": "Link",
+        "options": "User",
+        "in_list_view": False,
+        "in_standard_filter": False,
+        "reqd": False,
+    }
+    fields = [name_field, owner_field] + fields
 
     default_list_fields = [f for f in fields if f["in_list_view"]]
     if not meta.title_field:
@@ -171,6 +186,8 @@ def get_list_view_meta(doctype):
         # rely on the title field) — fall back to the first few visible
         # fields so the table is never empty.
         default_list_fields = fields[:4]
+    if doctype in DEFAULT_OWNER_COLUMN_DOCTYPES:
+        default_list_fields = default_list_fields + [owner_field]
     default_list_fields = default_list_fields + [LAST_UPDATED_FIELD]
 
     fields = fields + [LAST_UPDATED_FIELD]

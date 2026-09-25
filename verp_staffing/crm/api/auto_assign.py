@@ -480,7 +480,9 @@ def _resolve_forwarded_from_department(from_service_name):
     if not from_service_name:
         frappe.throw("Source service is required to forward to CR")
 
-    if from_service_name.strip().lower() == "sales":
+    # Forwarding straight from a Customer record (its own Forward button) comes from the Sales
+    # department, same as forwarding from "Sales" itself.
+    if from_service_name.strip().lower() in ("sales", "customer"):
         return "Sales"
 
     department = _get_department_map().get(from_service_name)

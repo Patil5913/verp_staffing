@@ -22,7 +22,8 @@
 // service record page (Training, Interview Support, Technical Other
 // Services, ...) since they all surface the same "resume" panel in the
 // desk form (see fetch_and_render_resume in public/js/reusable.js).
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { call } from 'frappe-ui'
 import { useResource } from '@/composables/list/useResource'
 
 defineOptions({ inheritAttrs: false })
@@ -31,7 +32,22 @@ const props = defineProps({
   // ConfigDetailPage hands section components the whole `detail` instead.
   detail: { type: Object, default: null },
 })
-const customer = computed(() => props.customer || props.detail?.values.customer || '')
+// An Interview has no Customer link of its own (its `customer` is only a display-name copy):
+// its customer is the one on the Marketing record it belongs to — the same customer the
+// Marketing page's Customer tab shows the resume for.
+const marketingLink = computed(() => props.detail?.values.marketing_link || '')
+const marketingCustomer = ref('')
+watch(
+  marketingLink,
+  async (link) => {
+    marketingCustomer.value = ''
+    if (!link) return
+    const row = await call('frappe.client.get_value', { doctype: 'Marketing', filters: link, fieldname: 'customer' }).catch(() => null)
+    marketingCustomer.value = row?.customer || ''
+  },
+  { immediate: true },
+)
+const customer = computed(() => props.customer || (marketingLink.value ? marketingCustomer.value : props.detail?.values.customer) || '')
 
 const resume = useResource({
   url: 'verp_staffing.technical.doctype.resume.resume.get_latest_resume_document',

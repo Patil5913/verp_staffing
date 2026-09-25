@@ -42,11 +42,18 @@ class Interview(Document):
         self.name = generate_name_series("Interview", customer_name)
 
     def validate(self):
+        self._set_default_status()
         self.set_customer_from_marketing()
         self._validate_marketing_link()
         self._validate_required_fields()
         self._validate_interview_rounds()
         self._sync_status_from_last_round()
+
+    def _set_default_status(self):
+        """A new Interview with no status gets ERP Configuration's Default Interview Status
+        (the form fills it in too; this covers every other way of creating one)."""
+        if self.is_new() and not self.status:
+            self.status = frappe.db.get_single_value("ERP Configuration", "default_interview_status") or None
 
     def set_customer_from_marketing(self):
         """Interview.customer is a cached, denormalized copy of

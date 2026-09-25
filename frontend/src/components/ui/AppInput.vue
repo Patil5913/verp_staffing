@@ -45,7 +45,7 @@
         ref="el"
         v-bind="inputAttrs"
         :value="modelValue ?? ''"
-        :type="type"
+        :type="isPassword && revealed ? 'text' : type"
         :placeholder="placeholder"
         :disabled="disabled"
         class="w-full min-w-0 text-p-sm text-app-text placeholder:text-app-text-muted outline-none disabled:cursor-not-allowed disabled:opacity-60"
@@ -54,9 +54,24 @@
           error ? 'border-red-500' : 'border-app-border',
           compact ? 'h-8' : 'h-9',
           prefix ? (prefix.length > 2 ? 'pl-10 pr-3' : 'pl-7 pr-3') : (compact ? 'px-2' : 'px-3'),
+          isPassword ? '!pr-9' : '',
         ]"
         @input="emit('update:modelValue', $event.target.value)"
       />
+      <!-- Password fields: an eye to show / hide what was typed. -->
+      <button
+        v-if="isPassword"
+        type="button"
+        tabindex="-1"
+        class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-app-text-muted transition-colors hover:text-app-text disabled:cursor-not-allowed"
+        :disabled="disabled"
+        :title="revealed ? 'Hide password' : 'Show password'"
+        :aria-label="revealed ? 'Hide password' : 'Show password'"
+        @click="revealed = !revealed"
+      >
+        <span v-if="revealed" class="lucide-eye-off size-4" />
+        <span v-else class="lucide-eye size-4" />
+      </button>
     </div>
     <p v-if="error" class="text-p-xs text-red-600">{{ error }}</p>
     <p v-else-if="hint || description" class="text-p-xs text-app-text-muted">{{ hint || description }}</p>
@@ -74,7 +89,7 @@ import AppCombobox from '@/components/ui/AppCombobox.vue'
 // `datetime-local`, which delegate to AppTextarea / AppCombobox / AppDatePicker so a form can drive every field
 // through one component. Emits the raw string, like the input itself.
 defineOptions({ inheritAttrs: false })
-defineProps({
+const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
   type: { type: String, default: 'text' },
   label: { type: String, default: '' },
@@ -95,6 +110,8 @@ defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const el = ref(null)
+const isPassword = computed(() => props.type === 'password')
+const revealed = ref(false)
 defineExpose({ focus: () => el.value?.focus() })
 
 // class/style belong to the wrapper; everything else (autocomplete, name,

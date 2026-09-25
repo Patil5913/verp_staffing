@@ -53,6 +53,8 @@
 			>
 				{{ linkedFile.name || modelValue }}
 			</a>
+			<!-- A value with no readable file record (e.g. the portal can't look one up) is still a file. -->
+			<span v-else-if="modelValue" class="text-p-sm text-app-text">{{ linkedFile.name || "File uploaded" }}</span>
 			<span v-else class="text-p-sm text-app-text-muted">No file attached</span>
 
 			<FileUploader v-if="!disabled" @success="onLinkToFileUploaded">
@@ -370,10 +372,13 @@ const linkFiltersKey = computed(
 	() => JSON.stringify(props.linkQuery?.filters || {}) + (props.linkQuery?.query || ""),
 );
 
+let justUploaded = null; // declared before the immediate watch below reads it
 const linkedFile = reactive({ url: "", name: "", loading: false });
 watch(
 	() => (isLinkToFile.value ? props.modelValue : null),
 	async (fileName) => {
+		// The file just uploaded here: its details are already in hand, no lookup needed.
+		if (fileName && justUploaded?.name === fileName) return;
 		linkedFile.url = "";
 		linkedFile.name = "";
 		if (!fileName) return;
@@ -398,6 +403,7 @@ watch(
 	{ immediate: true },
 );
 function onLinkToFileUploaded(f) {
+	justUploaded = f;
 	linkedFile.url = f.file_url;
 	linkedFile.name = f.file_name || f.file_url?.split("/").pop() || "";
 	emit("update:modelValue", f.name);

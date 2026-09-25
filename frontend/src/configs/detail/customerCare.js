@@ -71,6 +71,8 @@ export const crConfig = {
       props: { fromServiceName: 'CR' },
       show: (d) => notNew(d) && !!latestStatus(d, 'cr_history') && latestStatus(d, 'cr_history') !== 'Dispute Pending',
     },
+    // A new Sales Order for the dispute's customer, prefilled.
+    { component: CreateSalesOrderAction, show: notNew },
   ],
   tabs: [
     {
