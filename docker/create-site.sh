@@ -13,7 +13,9 @@ docker compose exec -T backend bench new-site "$SITE" \
   --mariadb-user-host-login-scope='%' \
   --admin-password "$ADMIN_PASSWORD" \
   --db-root-username root --db-root-password "$DB_PASSWORD" \
-  --install-app verp_staffing --no-mariadb-socket
+  --install-app verp_staffing
+
+docker compose exec -T backend bench --site "$SITE" enable-scheduler
 
 echo "Site: $SITE   Administrator password: $ADMIN_PASSWORD"
 echo "Point DNS / your reverse proxy for $SITE at this server, port ${HTTP_PORT:-8080}."
