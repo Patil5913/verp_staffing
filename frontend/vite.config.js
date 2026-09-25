@@ -27,6 +27,8 @@ export default defineConfig({
 	plugins: [
 		frappeui({
 			frontendRoute: "/verp",
+			// frappe-ui defaults this to true and overrides build.sourcemap below.
+			buildConfig: { sourcemap: false },
 		}),
 		vue(),
 	],
@@ -36,17 +38,10 @@ export default defineConfig({
 		},
 	},
 	build: {
-    minify: 'esbuild',
-    reportCompressedSize: false,
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) return 'vendor'
-        },
-      },
-    },
-  },
+		minify: "esbuild",
+		reportCompressedSize: false,
+		chunkSizeWarningLimit: 3000,
+	},
 	optimizeDeps: {
 		// frappe-ui's TextEditor imports icons via unplugin-icons' `~icons/lucide/*`
 		// virtual modules, resolved by the lucideIcons() Vite plugin (registered

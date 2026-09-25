@@ -1,7 +1,7 @@
 {
-  "name": "Vrugle Staffing",
-  "short_name": "Vrugle",
-  "description": "Vrugle Staffing ERP",
+  "name": "Verp Placements",
+  "short_name": "Placements",
+  "description": "Verp Placements ERP",
   "id": "/verp",
   "start_url": "/verp",
   "scope": "/verp",

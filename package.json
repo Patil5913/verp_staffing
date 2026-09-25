@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "cd frontend && yarn install && yarn build"
+    "build": "cd frontend && yarn install && NODE_OPTIONS=--max-old-space-size=3072 yarn build"
   },
   "dependencies": {
     "frappe-charts": "^1.6.2",

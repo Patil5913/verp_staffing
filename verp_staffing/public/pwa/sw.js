@@ -5,7 +5,7 @@
 // (user, CSRF token) and every API call is per-user, so neither is ever
 // cached. Only static build assets are, which makes repeat loads fast and
 // gives the app a branded offline page instead of the browser's error.
-const VERSION = 'v1'
+const VERSION = 'v2'
 const STATIC_CACHE = `verp-static-${VERSION}`
 const OFFLINE_URL = '/assets/verp_staffing/pwa/offline.html'
 const PRECACHE = [OFFLINE_URL, '/assets/verp_staffing/pwa/icon-192.png']
