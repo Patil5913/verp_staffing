@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "cd frontend && yarn install && yarn build"
+  },
   "dependencies": {
     "frappe-charts": "^1.6.2",
     "pdfjs-dist": "^3.11.174"
