@@ -1,0 +1,110 @@
+# All services run the same image. Multitenancy = one Frappe *site per tenant*,
+# routed by the Host header (site dir name == domain). Data lives in named
+# volumes with fixed names, so `docker compose down` keeps it (never use -v).
+x-app: &app
+  image: ${IMAGE:?set IMAGE in .env}
+  restart: unless-stopped
+  networks: [frappe_network]
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+
+services:
+  configurator:
+    <<: *app
+    restart: "no"
+    entrypoint: ["bash", "-c"]
+    command: ["configure.sh"]
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      SOCKETIO_PORT: "9000"
+
+  backend:
+    <<: *app
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  frontend:
+    <<: *app
+    command: ["nginx-entrypoint.sh"]
+    depends_on: [backend, websocket]
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: $$host   # route tenants by Host header
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: 120
+      CLIENT_MAX_BODY_SIZE: 50m
+
+  websocket:
+    <<: *app
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  scheduler:
+    <<: *app
+    command: ["bench", "schedule"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  queue-short:
+    <<: *app
+    command: ["bench", "worker", "--queue", "short,default"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  queue-long:
+    <<: *app
+    command: ["bench", "worker", "--queue", "long,default,short"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  db:
+    image: mariadb:10.6
+    restart: unless-stopped
+    networks: [frappe_network]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --password=$$MARIADB_ROOT_PASSWORD"]
+      interval: 5s
+      retries: 30
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+      - --max-connections=500
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/mysql
+
+  redis-cache:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    networks: [frappe_network]
+
+  redis-queue:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    networks: [frappe_network]
+    volumes:
+      - redis-queue-data:/data
+
+volumes:
+  db-data:        { name: verp_db-data }
+  sites:          { name: verp_sites }
+  logs:           { name: verp_logs }
+  redis-queue-data: { name: verp_redis-queue-data }
+
+networks:
+  frappe_network:
