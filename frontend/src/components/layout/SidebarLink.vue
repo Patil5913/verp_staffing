@@ -27,6 +27,13 @@
       ]"
     />
     <span v-if="!collapsed" class="min-w-0 flex-1 truncate">{{ label }}</span>
+    <!-- Pending Payment Requests: a small red dot while any payment waits for verification. -->
+    <span
+      v-if="showPendingDot"
+      class="size-2 shrink-0 rounded-full bg-red-500"
+      :class="collapsed ? 'absolute right-1.5 top-1.5' : ''"
+      title="Payments waiting for verification"
+    />
     <button
       v-if="showQuickCreate && !collapsed"
       type="button"
@@ -44,6 +51,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { canQuickCreateFromSidebar } from '@/utils/layout/sidebarPlus'
+import { usePendingPaymentRequests } from '@/composables/layout/usePendingPaymentRequests'
 
 const props = defineProps({
   route: { type: String, default: '' },
@@ -61,6 +69,11 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const isPendingPaymentLink = computed(() => /pending-pe-requests/.test(props.route || ''))
+// Only this one link ever asks for the count.
+const pendingCount = computed(() => (isPendingPaymentLink.value ? usePendingPaymentRequests().count.value : 0))
+const showPendingDot = computed(() => isPendingPaymentLink.value && pendingCount.value > 0)
+
 const showQuickCreate = computed(() => canQuickCreateFromSidebar(props.doctype))
 
 function onQuickCreate() {

@@ -804,9 +804,12 @@ def send_notification(**kwargs):
 
 
 # permission query
-def generic_assign_query(user):
+def generic_assign_query(user, doctype=None):
 
-    doctype = frappe.local.form_dict.get("doctype")
+    # Frappe passes the doctype being queried; the request's own `doctype` parameter is only a
+    # fallback (it is missing when the query runs inside another API, e.g. the dashboard, and
+    # the condition then read `tabNone`.assign_to).
+    doctype = doctype or frappe.local.form_dict.get("doctype")
 
     if user == "Administrator":
         return ""

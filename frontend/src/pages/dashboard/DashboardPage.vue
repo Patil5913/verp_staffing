@@ -19,7 +19,7 @@
       <div v-else class="mx-auto flex max-w-[1600px] flex-col gap-4" :class="board.isLoading ? 'opacity-70 transition-opacity' : ''">
         <p class="text-p-xs text-app-text-muted">
           {{ formatDay(data.period.from) }} – {{ formatDay(data.period.to) }} · compared with the previous {{ data.period.days }} day{{ data.period.days === 1 ? '' : 's' }}
-          <template v-if="data.company && ['overview', 'accounts', 'crm'].includes(section)"> · {{ data.company }}</template>
+          <template v-if="data.company && ['overview', 'accounts', 'crm', 'dept-accounting', 'dept-sales'].includes(section)"> · {{ data.company }}</template>
         </p>
 
         <DashboardAlerts v-if="data.alerts.length" :alerts="data.alerts" />

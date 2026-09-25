@@ -172,6 +172,7 @@ import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import { useResource } from '@/composables/list/useResource'
+import { usePendingPaymentRequests } from '@/composables/layout/usePendingPaymentRequests'
 import { formatDate, formatFieldValue } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
 import { paidAccountFilterFor } from '@/utils/detail/paymentAccounts'
@@ -207,7 +208,12 @@ const rows = useResource({
   },
   auto: true,
 })
-const reload = () => rows.resource.reload()
+const { refresh: refreshSidebarDot } = usePendingPaymentRequests()
+// Reloading the queue also updates the sidebar's red dot right away.
+const reload = () => {
+  rows.resource.reload()
+  refreshSidebarDot()
+}
 
 const all = computed(() => rows.resource.data || [])
 const counts = computed(() => {

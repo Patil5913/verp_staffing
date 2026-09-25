@@ -36,6 +36,25 @@ SECTIONS = [
     {"key": "operations", "label": "Operations", "icon": "clipboard-list", "doctypes": ["Resume", "Training", "RUC", "JDC", "Cover Letter", "Technical Other Services", "Interview Support", "Other Services", "CR", "Onboardings"]},
 ]
 
+# Department tabs — what a non-admin employee gets in place of the company-wide tabs above:
+# Overview plus one tab per department they are assigned to (Employee Assignment Detail).
+# Only the system's own departments are covered; an assignment to any other department
+# adds no tab (that user just has the Overview). Each tab reuses the widgets above, so it
+# is limited the same two ways as everywhere in the app: get_list applies the reporting
+# hierarchy (a manager sees their team, a person their own), and a doctype the role can't
+# read drops its widgets.
+DEPARTMENT_SECTIONS = {
+    "Lead": {"key": "dept-lead", "icon": "target", "doctypes": ["Lead"]},
+    "Sales": {"key": "dept-sales", "icon": "briefcase", "doctypes": ["Opportunity", "Customer", "Sales Order"]},
+    "Marketing": {"key": "dept-marketing", "icon": "megaphone", "doctypes": ["Marketing", "Interview"]},
+    "Resume": {"key": "dept-resume", "icon": "file-text", "doctypes": ["Resume", "Cover Letter"]},
+    "Technical": {"key": "dept-technical", "icon": "clipboard-list", "doctypes": ["Training", "RUC", "JDC", "Technical Other Services", "Interview Support"]},
+    "HR": {"key": "dept-hr", "icon": "users", "doctypes": ["Employee"]},
+    "CR": {"key": "dept-cr", "icon": "scale", "doctypes": ["CR"]},
+    "Onboarding": {"key": "dept-onboarding", "icon": "user-check", "doctypes": ["Onboardings"]},
+    "Accounting": {"key": "dept-accounting", "icon": "landmark", "doctypes": ["Sales Invoice", "Purchase Invoice", "Payment Entry", "GL Entry"]},
+}
+
 SERVICE_DOCTYPES = ["Resume", "Training", "RUC", "JDC", "Cover Letter", "Technical Other Services", "Interview Support", "Other Services", "Marketing Other Services"]
 OPEN_SERVICE_STATUSES = ("Pending", "Request for Update")
 ATTENDED = ("Completed", "Get The Offer", "Rejected")
@@ -49,10 +68,40 @@ def _section_allowed(section):
     return not section["doctypes"] or any(frappe.has_permission(dt, "read") for dt in section["doctypes"])
 
 
+def _full_access():
+    return frappe.session.user == "Administrator" or "System Manager" in frappe.get_roles()
+
+
+def _department_sections():
+    """This user's department tabs: [{key, label, icon, doctypes, department}] for the known
+    departments in their Employee Assignment rows, that they can read something of."""
+    from verp_staffing.employee.doctype.employee.employee import get_user_departments
+
+    known = {name.lower(): name for name in DEPARTMENT_SECTIONS}
+    out, seen = [], set()
+    for department in get_user_departments() or []:
+        name = known.get((department or "").strip().lower())
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        section = DEPARTMENT_SECTIONS[name]
+        if any(frappe.has_permission(dt, "read") for dt in section["doctypes"]):
+            out.append({**section, "label": name, "department": name})
+    return out
+
+
+def _available_sections():
+    """Administrators / System Managers: the company-wide tabs. Everyone else: Overview plus
+    the tab of each department they belong to."""
+    if _full_access():
+        return [s for s in SECTIONS if _section_allowed(s)]
+    return [SECTIONS[0], *_department_sections()]
+
+
 @frappe.whitelist()
 def get_dashboard_meta():
     """The tabs this user may open, plus the company the money tabs default to."""
-    sections = [{k: s[k] for k in ("key", "label", "icon")} for s in SECTIONS if _section_allowed(s)]
+    sections = [{k: s[k] for k in ("key", "label", "icon")} for s in _available_sections()]
 
     company = _default_company()
     return {
@@ -65,11 +114,9 @@ def get_dashboard_meta():
 
 @frappe.whitelist()
 def get_dashboard(section="overview", from_date=None, to_date=None, company=None, refresh=0):
-    chosen = next((s for s in SECTIONS if s["key"] == section), None)
+    chosen = next((s for s in _available_sections() if s["key"] == section), None)
     if not chosen:
-        frappe.throw(_("Unknown dashboard section: {0}").format(section), frappe.DoesNotExistError)
-    if not _section_allowed(chosen):
-        frappe.throw(_("You don't have access to the {0} dashboard").format(chosen["label"]), frappe.PermissionError)
+        frappe.throw(_("You don't have access to the {0} dashboard").format(section), frappe.PermissionError)
 
     period = Period(from_date, to_date)
     company = company or _default_company()
@@ -82,7 +129,10 @@ def get_dashboard(section="overview", from_date=None, to_date=None, company=None
 
     board = Board()
     builders = {"overview": _overview, "accounts": _accounts, "crm": _crm, "marketing": _marketing, "operations": _operations}
-    builders[section](board, period, company)
+    if chosen.get("department"):
+        _department_board(chosen["department"], board, period, company)
+    else:
+        builders[section](board, period, company)
 
     result = {
         "section": section,
@@ -828,10 +878,10 @@ def _operations(b, p, company):
     _run(b, _ops_turnaround, p, company)
 
 
-def _ops_services(b, p, company):
+def _ops_services(b, p, company, doctypes=None):
     names = _employee_names()
     everything = []
-    for dt in SERVICE_DOCTYPES:
+    for dt in doctypes or SERVICE_DOCTYPES:
         try:
             for r in _get(dt, ["name", "customer", "assign_to", "status", "creation"]):
                 r["service"] = dt
@@ -881,9 +931,11 @@ def _ops_services(b, p, company):
     )
 
 
-def _ops_care(b, p, company):
+def _ops_care(b, p, company, only=None):
     names = _employee_names()
     try:
+        if only == "Onboardings":
+            raise frappe.PermissionError
         disputes = _get("CR", ["name", "customer", "assign_to", "status", "creation"])
     except frappe.PermissionError:
         disputes = []
@@ -895,6 +947,8 @@ def _ops_care(b, p, company):
         b.chart("dispute_owner", "Disputes per handler", "hbar", _counts([names.get(r.assign_to, r.assign_to) for r in pending], n=10), subtitle="Pending disputes")
 
     try:
+        if only == "CR":
+            raise frappe.PermissionError
         onboardings = _get("Onboardings", ["name", "customer", "assign_to", "status", "creation"])
     except frappe.PermissionError:
         onboardings = []
@@ -913,6 +967,49 @@ def _ops_turnaround(b, p, company):
     if not cur:
         return
     b.kpi("turnaround", "Avg turnaround", round(sum(cur) / len(cur), 1), "hours", round(sum(prev) / len(prev), 1) if prev else None, invert=True, icon="timer", hint="Other Services: forwarded to completed")
+
+
+# ── Department tabs ───────────────────────────────────────────────────────
+
+
+def _hr(b, p, company):
+    """Headcount for the HR tab (Employee read permission gates it)."""
+    employees = _get("Employee", ["name", "enabled", "creation"])
+    if not employees:
+        return
+    active = [e for e in employees if e.enabled]
+    joined, joined_prev = _sum_split(p, employees, "creation")
+    b.kpi("headcount", "Active employees", len(active), "number", icon="users", href=_href("Employee"))
+    b.kpi("inactive_employees", "Inactive employees", len(employees) - len(active), "number", icon="circle-x")
+    b.kpi("new_employees", "New employees", joined, "number", joined_prev, icon="user-round-plus")
+    try:
+        rows = frappe.get_list("Employee Assignment Detail", fields=["department", "parent"], parent_doctype="Employee", limit_page_length=0)
+    except frappe.PermissionError:
+        rows = []
+    b.chart("employees_department", "Employees per department", "hbar", _counts([r.department for r in rows], n=12))
+    b.chart("employees_trend", "Employees added over time", "area", _trend(p, {"Added": [(_d(e.creation), 1) for e in employees]}), _series(("Added", "area", BLUE)), span=2)
+
+
+def _department_board(department, b, p, company):
+    """One department's tab, built from the matching widget groups above."""
+    services = {"Resume": ["Resume", "Cover Letter"], "Technical": ["Training", "RUC", "JDC", "Technical Other Services", "Interview Support"]}
+    if department == "Lead":
+        _run(b, _crm_leads, p, company)
+    elif department == "Sales":
+        for fn in (_crm_opportunities, _crm_sales, _crm_customers, _crm_calls):
+            _run(b, fn, p, company)
+    elif department == "Marketing":
+        _run(b, _marketing, p, company)
+    elif department in services:
+        _run(b, _ops_services, p, company, services[department])
+    elif department == "CR":
+        _run(b, _ops_care, p, company, "CR")
+    elif department == "Onboarding":
+        _run(b, _ops_care, p, company, "Onboardings")
+    elif department == "HR":
+        _run(b, _hr, p, company)
+    elif department == "Accounting":
+        _run(b, _accounts, p, company)
 
 
 # ── Overview ──────────────────────────────────────────────────────────────

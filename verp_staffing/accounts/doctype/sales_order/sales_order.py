@@ -60,12 +60,14 @@ class SalesOrder(Document):
     def before_update_after_submit(self):
         # Same validations must run post-submit too
         self.validate_payment_terms_deletion()
+        self.validate_invoiced_terms_unchanged()
         self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
 
     def validate(self):
         self.validate_payment_terms_deletion()
+        self.validate_invoiced_terms_unchanged()
         self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
@@ -88,7 +90,7 @@ class SalesOrder(Document):
         old_term_names = frappe.get_all(
             "Customer Payment Terms",
             filters={"parent": self.name, "parenttype": "Sales Order"},
-            fields=["name", "payment_status", "payment_entry"],
+            fields=["name", "payment_status", "payment_entry", "sales_invoice"],
         )
         old_map = {t["name"]: t for t in old_term_names}
 
@@ -98,6 +100,15 @@ class SalesOrder(Document):
         # Find deleted rows
         for term_name, term_data in old_map.items():
             if term_name not in current_names:
+                # A Sales Invoice was already raised for this term: removing it would leave
+                # the invoice without its schedule.
+                if term_data["sales_invoice"]:
+                    frappe.throw(
+                        f"Cannot delete payment term <b>{term_name}</b> — "
+                        f"Sales Invoice <b>{term_data['sales_invoice']}</b> was already created for it.",
+                        title="Deletion Blocked",
+                    )
+
                 # Block deletion of Verified terms
                 if term_data["payment_status"] == "Verified":
                     frappe.throw(
@@ -120,6 +131,36 @@ class SalesOrder(Document):
                         )
                     # Delete draft PE
                     frappe.delete_doc("Payment Entry", pe_name, force=True)
+
+    INVOICED_TERM_LOCKED_FIELDS = ("payment_condition", "counter", "amount", "start_date", "due_date")
+
+    def validate_invoiced_terms_unchanged(self):
+        """A term with a Sales Invoice is settled business: its condition, count, dates and
+        amount can't change (the invoice was raised for exactly that), only its payment status
+        moves (Mark as Paid / Re-request)."""
+        if self.is_new():
+            return
+        old_rows = {
+            r.name: r
+            for r in frappe.get_all(
+                "Customer Payment Terms",
+                filters={"parent": self.name, "parenttype": "Sales Order", "sales_invoice": ["is", "set"]},
+                fields=["name", *self.INVOICED_TERM_LOCKED_FIELDS],
+            )
+        }
+        for row in self.payment_terms or []:
+            old = old_rows.get(row.name)
+            if not old:
+                continue
+            for field in self.INVOICED_TERM_LOCKED_FIELDS:
+                before, after = old.get(field), row.get(field)
+                changed = flt(before) != flt(after) if field in ("amount", "counter") else str(before or "") != str(after or "")
+                if changed:
+                    frappe.throw(
+                        f"Payment term <b>{row.idx}</b> already has Sales Invoice <b>{row.sales_invoice}</b>, "
+                        f"so its {frappe.unscrub(field)} can't be changed.",
+                        title="Payment Term Locked",
+                    )
 
     def validate_payment_terms_total(self):
         if not self.payment_terms:

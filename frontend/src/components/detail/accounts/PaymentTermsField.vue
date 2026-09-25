@@ -266,6 +266,7 @@ function addRow() {
   activeIdx.value = rows.value.length - 1
 }
 function removeRow(idx) {
+  if (isTermLocked(rows.value[idx])) return
   const next = [...rows.value]
   next.splice(idx, 1)
   setRows(next)
@@ -296,6 +297,7 @@ function amountWithinBudget(idx, value) {
 }
 
 async function onChange(idx, fieldname, value) {
+  if (isTermLocked(rows.value[idx])) return // an invoiced / verified term is never edited
   const next = rows.value.map((r) => ({ ...r }))
   const row = next[idx]
   row[fieldname] = value
