@@ -1,0 +1,6 @@
+# Override: run the app stack WITHOUT the local MariaDB (databases live on
+# client servers, see client-db/). Use:
+#   docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up -d
+services:
+  db:
+    profiles: ["local-db-disabled"]   # never started unless that profile is enabled

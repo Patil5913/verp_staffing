@@ -28,8 +28,7 @@ services:
     restart: "no"
     entrypoint: ["bash", "-c"]
     command: ["bash /usr/local/bin/configure.sh"]
-    depends_on:
-      db: { condition: service_healthy }
+    # (no depends_on db: it only writes config, and the db may live on a client server)
     environment:
       <<: *app-env
       DB_HOST: db

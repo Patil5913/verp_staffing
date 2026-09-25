@@ -1,0 +1,96 @@
+VERP STAFFING - DEPLOYMENT GUIDE
+================================
+Image: parthpatil5/verp_staffing (Docker Hub, private)
+Contains: frappe v15 + verp_staffing + vruglechat (chat is baked in but NOT
+installed on any site until you run add-app.sh).
+One image, many tenants: each tenant = one Frappe site named after its domain.
+
+NEVER: run "docker compose down -v" (deletes all data), or paste tokens /
+passwords into chat or tickets.
+
+
+-----------------------------------------------------------------------
+FOLDER 1: docker/build/     (build + publish the image; needs Docker)
+-----------------------------------------------------------------------
+Needs: a Gitea access token with read access to verp_staffing and vruglechat,
+       and a Docker Hub login (access token).
+
+  docker login -u parthpatil5
+  cd docker/build
+  GIT_TOKEN=<gitea token> ./build.sh v0.1.2      # builds + pushes :v0.1.2 and :latest
+
+Branches baked in are listed in build/apps.json (edit there to change).
+The build is slow (frontend build); allow ~3 GB RAM. Push code to git first:
+the image is built from git, not from local files.
+
+
+-----------------------------------------------------------------------
+FOLDER 2: docker/deploy/     (run the stack + create sites on a server)
+-----------------------------------------------------------------------
+First time:
+  docker login -u parthpatil5
+  cd docker/deploy
+  cp .env.example .env         # set IMAGE=parthpatil5/verp_staffing:<tag>,
+                               #     DB_PASSWORD=<strong password>, HTTP_PORT=<port>
+  docker compose up -d
+  docker compose ps            # all Up; "configurator" Exited (0) is normal
+
+Create a tenant (site) with the local DB:
+  ./create-site.sh tenant1.example.com         # prints the Administrator password - save it
+
+Install chat on ONE tenant (optional):
+  ./add-app.sh tenant1.example.com vruglechat
+
+Publish a tenant on the internet (host nginx + certbot, run as root on the host;
+the domain's DNS must already point at this server):
+  sudo ./host-nginx-site.sh tenant1.example.com <HTTP_PORT>
+  Then open https://tenant1.example.com/verp
+
+Health check for a tenant:
+  curl -s -H "Host: tenant1.example.com" http://localhost:<HTTP_PORT>/api/method/ping
+  -> {"message":"pong"}
+
+Upgrade to a new image:
+  # set the new tag in .env, then:
+  docker compose pull && docker compose up -d
+  ./migrate-all.sh             # migrates every tenant
+
+Backups (DB + files, all tenants; stored in the sites volume):
+  ./backup.sh
+
+Useful:
+  docker compose logs -f backend          # or frontend, configurator, scheduler ...
+  docker compose exec backend bench --site all enable-scheduler
+  docker compose exec backend bench --site <site> set-admin-password <new>
+  docker compose restart backend
+
+
+-----------------------------------------------------------------------
+FOLDER 3: docker/deploy/client-db/    (database on the CLIENT's server)
+-----------------------------------------------------------------------
+Use when a client wants their MariaDB on their own server. The app stack stays
+on our server. Files/attachments and backups still stay on OUR server.
+
+On the CLIENT server:
+  cd docker/deploy/client-db
+  cp .env.example .env         # set DB_ROOT_PASSWORD and BIND_ADDRESS (VPN/private IP)
+  docker compose up -d
+  ufw allow from <OUR_SERVER_IP> to any port 3306 proto tcp    # only our server
+
+On OUR server (from docker/deploy):
+  docker compose -f docker-compose.yml -f docker-compose.remote-db.yml up -d
+  ./create-site.sh client.example.com --db-host <client-vpn-ip> --db-port 3306
+  # asks for that client's MariaDB root password
+
+Do NOT expose MariaDB to the public internet: use a VPN/private link (and TLS).
+
+
+-----------------------------------------------------------------------
+SECURITY NOTES
+-----------------------------------------------------------------------
+- Containers have no passwords; whoever can run "docker" on the host can enter
+  any container. Restrict SSH and the "docker" group.
+- App containers run read-only with dropped privileges (frontend/nginx and db
+  are the exceptions).
+- MariaDB root password = DB_PASSWORD in docker/deploy/.env (not in git).
+- Each tenant has its own Administrator password (printed once by create-site.sh).
