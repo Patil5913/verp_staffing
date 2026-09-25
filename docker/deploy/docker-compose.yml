@@ -1,3 +1,5 @@
+name: docker   # keep the project name stable regardless of folder name
+
 # All services run the same image. Multitenancy = one Frappe *site per tenant*,
 # routed by the Host header (site dir name == domain). Data lives in named
 # volumes with fixed names, so `docker compose down` keeps it (never use -v).

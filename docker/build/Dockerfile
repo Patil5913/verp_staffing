@@ -3,7 +3,7 @@
 # Production image: frappe + verp_staffing + vruglechat (vruglechat is baked in
 # but NOT installed on any site by default; install it per site with add-app.sh).
 #
-# Build (see build.sh):  needs BuildKit + a git token secret for the private repos.
+# Build with ./build.sh (run from docker/build):  needs BuildKit + a git token secret for the private repos.
 
 ARG FRAPPE_VERSION=v15.121.1
 
