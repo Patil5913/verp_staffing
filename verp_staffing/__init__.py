@@ -61,5 +61,24 @@ def _guard_std_streams():
             setattr(sys, name, _PipeSafe(stream))
 
 
+def _honour_system_max_file_size():
+    """frappe.utils.file_manager.save_file (what E Sign, agreements and company logos use) only
+    reads `max_file_size` from site_config — a value changed in System Settings / ERP
+    Configuration was ignored, so a 12 MB signed PDF still failed at the old 10 MB. Use the same
+    limit the File doctype itself applies (System Settings, then site_config)."""
+    try:
+        from frappe.utils import file_manager
+
+        def get_max_file_size():
+            from frappe.core.api.file import get_max_file_size as configured
+
+            return configured()
+
+        file_manager.get_max_file_size = get_max_file_size
+    except Exception:
+        pass
+
+
 _guard_errprint()
 _guard_std_streams()
+_honour_system_max_file_size()

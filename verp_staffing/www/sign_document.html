@@ -60,6 +60,7 @@
 <div class="completed-banner">
 	<h2>Document Already Signed</h2>
 </div>
+<div id="doc-loading" class="doc-loading">Loading your document, please wait…</div>
 <div id="pdf-container"></div>
 
 {% else %}
@@ -98,6 +99,8 @@
 	id="modal-overlay" onclick="closeModal()"
 	style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; z-index: 999"
 ></div>
+
+<div id="doc-loading" class="doc-loading">Loading your document, please wait…</div>
 
 <div
 	id="pdf-container"
@@ -409,7 +412,52 @@
 		padding: 0 8px;
 	}
 
-	.field-box input::placeholder {
+	.doc-loading {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		padding: 40px 16px;
+		color: #475569;
+		font-size: 15px;
+	}
+	.doc-loading::before {
+		content: "";
+		width: 18px;
+		height: 18px;
+		border: 2px solid #cbd5e1;
+		border-top-color: #2563eb;
+		border-radius: 50%;
+		animation: doc-spin 0.8s linear infinite;
+	}
+	@keyframes doc-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	/* Text fields are paragraph boxes: wrap inside the box, line spacing 1, no padding, never
+	   scroll or resize — the same layout the signed PDF is drawn with. */
+	.field-box textarea {
+		display: block;
+		width: 100%;
+		height: 100%;
+		border: none;
+		outline: none;
+		resize: none;
+		overflow: hidden;
+		background: transparent;
+		color: #111827;
+		padding: 0;
+		margin: 0;
+		box-sizing: border-box;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		font-family: Helvetica, Arial, sans-serif;
+	}
+
+	.field-box input::placeholder,
+	.field-box textarea::placeholder {
 		color: #9ca3af;
 		font-size: 12px;
 	}
@@ -1246,6 +1294,21 @@
 		return window._dsc_pdfjs_promise;
 	}
 
+	// The PDF pages are drawn at 1.5 CSS px per point; text sizes use the same factor.
+	const PDF_SCALE = 1.5;
+
+	function hideDocLoading(errorMessage) {
+		const el = document.getElementById("doc-loading");
+		if (!el) return;
+		if (errorMessage) {
+			el.classList.remove("doc-loading");
+			el.style.cssText = "padding:24px 16px;text-align:center;color:#b91c1c;font-size:15px";
+			el.textContent = errorMessage;
+		} else {
+			el.style.display = "none";
+		}
+	}
+
 	// render read-only pdf for person who already signed
 	async function renderReadonlyPdf() {
 		const pdfjsLib = await load_pdfjs();
@@ -1260,7 +1323,7 @@
 			const page = await pdf.getPage(pageNum);
 
 			const viewport = page.getViewport({
-				scale: 1.5,
+				scale: PDF_SCALE,
 			});
 
 			const pageWrapper = document.createElement("div");
@@ -1302,7 +1365,7 @@
 			const page = await pdf.getPage(pageNum);
 
 			const viewport = page.getViewport({
-				scale: 1.5,
+				scale: PDF_SCALE,
 			});
 
 			const pageWrapper = document.createElement("div");
@@ -1390,8 +1453,11 @@
 		box.style.width = field.width_percent + "%";
 		box.style.height = field.height_percent + "%";
 
-		const fontSize = parseInt(field.font_size || 12);
-		const lineHeight = parseFloat(field.line_height || 1);
+		// font_size is in PDF points and the page is drawn at PDF_SCALE px per point, so
+		// the on-screen size is font_size x PDF_SCALE — the same size the signed PDF gets.
+		// Line spacing is 1 (the PDF drawer's), whatever the template says.
+		const fontSize = parseFloat(field.font_size || 12) * PDF_SCALE;
+		const lineHeight = 1;
 
 		// Signature
 		if (field.field_type === "signature") {
@@ -1424,12 +1490,14 @@
 		}
 
 		let input;
-		input = document.createElement("input");
+		input = document.createElement(
+			field.field_type === "text" || field.field_type === "name" ? "textarea" : "input",
+		);
 		input.style.width = "100%";
 		input.style.height = "100%";
 
 		if (field.field_type === "text" || field.field_type === "name") {
-			input.type = "text";
+			input.rows = 1;
 			box.classList.add("text-field");
 		} else if (field.field_type === "number") {
 			input.type = "number";
@@ -1457,7 +1525,8 @@
 		input.style.border = "none";
 		input.style.background = "transparent";
 		input.style.outline = "none";
-		input.style.padding = "4px";
+		input.style.padding = field.field_type === "text" || field.field_type === "name" ? "0" : "4px";
+		input.style.fontFamily = "Helvetica, Arial, sans-serif";
 		input.style.fontSize = fontSize + "px";
 		input.style.lineHeight = lineHeight;
 
@@ -1714,11 +1783,22 @@
 		}
 		if (document.getElementById("field-progress-bar")) {
 			if (window.signer_completed == "False") {
-				await renderSignerPdf();
+				try {
+					await renderSignerPdf();
+					hideDocLoading();
+				} catch (e) {
+					console.error(e);
+					hideDocLoading("The document could not be loaded. Please refresh the page.");
+				}
 				await fpInit();
 			}
 		} else if (window.signer_completed == "True") {
-			renderReadonlyPdf();
+			renderReadonlyPdf()
+				.then(() => hideDocLoading())
+				.catch((e) => {
+					console.error(e);
+					hideDocLoading("The document could not be loaded. Please refresh the page.");
+				});
 		}
 
 		// initFonts();
@@ -1949,7 +2029,7 @@
 
 		document.querySelectorAll(".field-box").forEach((box) => {
 			if (box.dataset.type === "date") {
-				const input = box.querySelector("input");
+				const input = box.querySelector("input, textarea");
 				if (input && input.value) fpMarkField(box.dataset.field, true);
 			}
 		});
@@ -2031,7 +2111,7 @@
 
 			if (type === "signature") return;
 
-			const input = box.querySelector("input");
+			const input = box.querySelector("input, textarea");
 			if (!input) return;
 
 			if (input.type === "checkbox") {
@@ -2241,7 +2321,7 @@
 
 			if (type === "signature") return;
 
-			const input = box.querySelector("input");
+			const input = box.querySelector("input, textarea");
 
 			if (!input) return;
 
@@ -2508,7 +2588,7 @@
 				payloadFields[field] = fieldImages[field];
 			}
 
-			const input = box.querySelector("input");
+			const input = box.querySelector("input, textarea");
 			if (!input) return;
 
 			if (input.type === "checkbox") {
@@ -2562,10 +2642,12 @@
 				fields: payloadFields,
 			}),
 		})
-			.then((r) => r.json())
+			.then((r) => r.json().catch(() => ({})))
 			.then((res) => {
 				if (!res.message || res.message.status !== "success") {
-					throw new Error("Signing failed please try again");
+					// Frappe's own error (e.g. "File size exceeded the maximum allowed size"): show
+					// what it said instead of a generic failure.
+					throw new Error(serverErrorText(res) || "Signing failed please try again");
 				}
 
 				btn.disabled = false;
@@ -2577,8 +2659,18 @@
 				console.error(err);
 				btn.disabled = false;
 				btn.innerHTML = originalText;
-				alert("Error completing document. Please try again.");
+				alert(err && err.message ? err.message : "Error completing document. Please try again.");
 			});
+	}
+
+	// The readable message out of a Frappe error response ({_server_messages, exception}).
+	function serverErrorText(res) {
+		try {
+			const messages = JSON.parse(res._server_messages || "[]").map((m) => JSON.parse(m).message);
+			if (messages.length) return messages.join("\n").replace(/<[^>]+>/g, "");
+		} catch (e) {}
+		if (res.exception) return String(res.exception).split(":").slice(1).join(":").trim();
+		return "";
 	}
 
 	function showSuccessModal() {
