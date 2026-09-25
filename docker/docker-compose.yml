@@ -4,6 +4,15 @@
 x-app: &app
   image: ${IMAGE:?set IMAGE in .env}
   restart: unless-stopped
+  # Locked down: code in the image can't be modified at runtime, no extra
+  # privileges. Only the sites/logs volumes and tmpfs are writable.
+  # (The `db` service deliberately does not use this block.)
+  read_only: true
+  tmpfs: [/tmp, /home/frappe/.cache]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  environment: &app-env
+    PYTHONDONTWRITEBYTECODE: "1"
   networks: [frappe_network]
   volumes:
     - sites:/home/frappe/frappe-bench/sites
@@ -14,10 +23,11 @@ services:
     <<: *app
     restart: "no"
     entrypoint: ["bash", "-c"]
-    command: ["configure.sh"]
+    command: ["bash /usr/local/bin/configure.sh"]
     depends_on:
       db: { condition: service_healthy }
     environment:
+      <<: *app-env
       DB_HOST: db
       DB_PORT: "3306"
       REDIS_CACHE: redis-cache:6379
@@ -35,7 +45,10 @@ services:
     depends_on: [backend, websocket]
     ports:
       - "${HTTP_PORT:-8080}:8080"
+    # nginx renders its config into /etc/nginx at start, so it can't be read-only.
+    read_only: false
     environment:
+      <<: *app-env
       BACKEND: backend:8000
       SOCKETIO: websocket:9000
       FRAPPE_SITE_NAME_HEADER: $$host   # route tenants by Host header

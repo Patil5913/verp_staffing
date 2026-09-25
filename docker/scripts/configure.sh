@@ -5,7 +5,8 @@ cd /home/frappe/frappe-bench
 
 # Refresh assets from the image (the sites volume hides the baked ones).
 mkdir -p sites/assets
-rsync -a --delete /home/frappe/assets-baked/ sites/assets/
+find sites/assets -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+cp -a /home/frappe/assets-baked/. sites/assets/
 ls -1 apps > sites/apps.txt
 
 bench set-config -g db_host "$DB_HOST"
