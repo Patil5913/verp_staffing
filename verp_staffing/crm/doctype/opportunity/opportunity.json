@@ -1,274 +1,275 @@
 {
- "actions": [],
- "allow_import": 1,
- "creation": "2025-11-14 20:51:03.722071",
- "default_view": "List",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "name1",
-  "lead_details",
-  "opportunity_from_lead",
-  "referral_customer",
-  "column_break_nesv",
-  "status",
-  "opportunity_owner",
-  "column_break_lbgc",
-  "source",
-  "sales_stage",
-  "expected_closing_date",
-  "probability_",
-  "opportunity_value_section",
-  "currency",
-  "column_break_yvzt",
-  "opportunity_amount",
-  "section_break_yqzw",
-  "call_details",
-  "lead_details_section",
-  "lead_details_html",
-  "note_tab",
-  "notes_html",
-  "updates_html",
-  "activities_tab",
-  "open_activities_html",
-  "title"
- ],
- "fields": [
-  {
-   "bold": 1,
-   "default": "Open",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Status",
-   "options": "Open\nQuotation\nReplied\nConverted\nLost",
-   "search_index": 1
-  },
-  {
-   "fieldname": "column_break_nesv",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "source",
-   "fieldtype": "Link",
-   "label": "Source",
-   "options": "Lead Source"
-  },
-  {
-   "fieldname": "opportunity_owner",
-   "fieldtype": "Link",
-   "label": "Opportunity Owner",
-   "options": "Employee",
-   "search_index": 1
-  },
-  {
-   "fieldname": "column_break_lbgc",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "Prospecting",
-   "fieldname": "sales_stage",
-   "fieldtype": "Link",
-   "label": "Sales Stage",
-   "options": "Sales Stage"
-  },
-  {
-   "fieldname": "expected_closing_date",
-   "fieldtype": "Date",
-   "label": "Expected Closing Date"
-  },
-  {
-   "fieldname": "probability_",
-   "fieldtype": "Percent",
-   "label": "Probability (%)",
-   "precision": "2"
-  },
-  {
-   "fieldname": "opportunity_value_section",
-   "fieldtype": "Section Break",
-   "label": "Opportunity Value"
-  },
-  {
-   "default": "USD",
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "non_negative": 1,
-   "options": "Currency"
-  },
-  {
-   "fieldname": "column_break_yvzt",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "opportunity_amount",
-   "fieldtype": "Currency",
-   "label": "Opportunity Amount",
-   "non_negative": 1
-  },
-  {
-   "fieldname": "note_tab",
-   "fieldtype": "Tab Break",
-   "label": "Note"
-  },
-  {
-   "fieldname": "activities_tab",
-   "fieldtype": "Tab Break",
-   "label": "Activities"
-  },
-  {
-   "fieldname": "notes_html",
-   "fieldtype": "HTML",
-   "label": "Notes Html"
-  },
-  {
-   "fieldname": "open_activities_html",
-   "fieldtype": "HTML",
-   "label": "Open Activities HTML"
-  },
-  {
-   "fieldname": "title",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Title",
-   "read_only": 1
-  },
-  {
-   "fieldname": "name1",
-   "fieldtype": "Data",
-   "label": "Opportunity Name",
-   "reqd": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "section_break_yqzw",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "call_details",
-   "fieldtype": "Table",
-   "label": "Call Details",
-   "options": "Call Details"
-  },
-  {
-   "fieldname": "lead_details",
-   "fieldtype": "Link",
-   "label": "Lead Details",
-   "options": "Lead Detail Form",
-   "read_only": 1
-  },
-  {
-   "fieldname": "opportunity_from_lead",
-   "fieldtype": "Link",
-   "label": "Opportunity From Lead",
-   "options": "Lead"
-  },
-  {
-   "fieldname": "updates_html",
-   "fieldtype": "HTML",
-   "label": "Update"
-  },
-  {
-   "fieldname": "referral_customer",
-   "fieldtype": "Link",
-   "label": "Referral From Customer",
-   "options": "Customer"
-  },
-  {
-   "fieldname": "lead_details_section",
-   "fieldtype": "Section Break",
-   "label": "Lead Details"
-  },
-  {
-   "fieldname": "lead_details_html",
-   "fieldtype": "HTML"
-  }
- ],
- "force_re_route_to_default_view": 1,
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2026-08-27 10:02:33.790572",
- "modified_by": "Administrator",
- "module": "CRM",
- "name": "Opportunity",
- "naming_rule": "By script",
- "owner": "Administrator",
- "permissions": [
-  {
-   "read": 1,
-   "role": "Lead Master Manager"
-  },
-  {
-   "if_owner": 1,
-   "read": 1,
-   "role": "Lead Manager"
-  },
-  {
-   "if_owner": 1,
-   "read": 1,
-   "role": "Lead Team Lead"
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "if_owner": 1,
-   "read": 1,
-   "role": "Lead Person"
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales Manager",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales Team Lead",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Sales Person",
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "import": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
- "search_fields": "name1",
- "show_title_field_in_link": 1,
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": [],
- "title_field": "name1",
- "track_changes": 1,
- "translated_doctype": 1
+  "actions": [],
+  "allow_import": 1,
+  "creation": "2025-11-14 20:51:03.722071",
+  "default_view": "List",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "name1",
+    "lead_details",
+    "opportunity_from_lead",
+    "referral_customer",
+    "column_break_nesv",
+    "status",
+    "opportunity_owner",
+    "column_break_lbgc",
+    "source",
+    "sales_stage",
+    "expected_closing_date",
+    "probability_",
+    "opportunity_value_section",
+    "currency",
+    "column_break_yvzt",
+    "opportunity_amount",
+    "section_break_yqzw",
+    "call_details",
+    "lead_details_section",
+    "lead_details_html",
+    "note_tab",
+    "notes_html",
+    "updates_html",
+    "activities_tab",
+    "open_activities_html",
+    "title"
+  ],
+  "fields": [
+    {
+      "bold": 1,
+      "default": "Open",
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Status",
+      "options": "Open\nQuotation\nReplied\nConverted\nLost",
+      "search_index": 1
+    },
+    {
+      "fieldname": "column_break_nesv",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "source",
+      "fieldtype": "Link",
+      "label": "Source",
+      "options": "Lead Source"
+    },
+    {
+      "fieldname": "opportunity_owner",
+      "fieldtype": "Link",
+      "label": "Opportunity Owner",
+      "options": "Employee",
+      "search_index": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "column_break_lbgc",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "Prospecting",
+      "fieldname": "sales_stage",
+      "fieldtype": "Link",
+      "label": "Sales Stage",
+      "options": "Sales Stage"
+    },
+    {
+      "fieldname": "expected_closing_date",
+      "fieldtype": "Date",
+      "label": "Expected Closing Date"
+    },
+    {
+      "fieldname": "probability_",
+      "fieldtype": "Percent",
+      "label": "Probability (%)",
+      "precision": "2"
+    },
+    {
+      "fieldname": "opportunity_value_section",
+      "fieldtype": "Section Break",
+      "label": "Opportunity Value"
+    },
+    {
+      "default": "USD",
+      "fieldname": "currency",
+      "fieldtype": "Link",
+      "label": "Currency",
+      "non_negative": 1,
+      "options": "Currency"
+    },
+    {
+      "fieldname": "column_break_yvzt",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "opportunity_amount",
+      "fieldtype": "Currency",
+      "label": "Opportunity Amount",
+      "non_negative": 1
+    },
+    {
+      "fieldname": "note_tab",
+      "fieldtype": "Tab Break",
+      "label": "Note"
+    },
+    {
+      "fieldname": "activities_tab",
+      "fieldtype": "Tab Break",
+      "label": "Activities"
+    },
+    {
+      "fieldname": "notes_html",
+      "fieldtype": "HTML",
+      "label": "Notes Html"
+    },
+    {
+      "fieldname": "open_activities_html",
+      "fieldtype": "HTML",
+      "label": "Open Activities HTML"
+    },
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "hidden": 1,
+      "label": "Title",
+      "read_only": 1
+    },
+    {
+      "fieldname": "name1",
+      "fieldtype": "Data",
+      "label": "Opportunity Name",
+      "reqd": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "section_break_yqzw",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "call_details",
+      "fieldtype": "Table",
+      "label": "Call Details",
+      "options": "Call Details"
+    },
+    {
+      "fieldname": "lead_details",
+      "fieldtype": "Link",
+      "label": "Lead Details",
+      "options": "Lead Detail Form",
+      "read_only": 1
+    },
+    {
+      "fieldname": "opportunity_from_lead",
+      "fieldtype": "Link",
+      "label": "Opportunity From Lead",
+      "options": "Lead"
+    },
+    {
+      "fieldname": "updates_html",
+      "fieldtype": "HTML",
+      "label": "Update"
+    },
+    {
+      "fieldname": "referral_customer",
+      "fieldtype": "Link",
+      "label": "Referral From Customer",
+      "options": "Customer"
+    },
+    {
+      "fieldname": "lead_details_section",
+      "fieldtype": "Section Break",
+      "label": "Lead Details"
+    },
+    {
+      "fieldname": "lead_details_html",
+      "fieldtype": "HTML"
+    }
+  ],
+  "force_re_route_to_default_view": 1,
+  "grid_page_length": 50,
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-08-27 10:02:33.790572",
+  "modified_by": "Administrator",
+  "module": "CRM",
+  "name": "Opportunity",
+  "naming_rule": "By script",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "read": 1,
+      "role": "Lead Master Manager"
+    },
+    {
+      "if_owner": 1,
+      "read": 1,
+      "role": "Lead Manager"
+    },
+    {
+      "if_owner": 1,
+      "read": 1,
+      "role": "Lead Team Lead"
+    },
+    {
+      "create": 1,
+      "email": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Master Manager",
+      "select": 1,
+      "share": 1,
+      "write": 1
+    },
+    {
+      "if_owner": 1,
+      "read": 1,
+      "role": "Lead Person"
+    },
+    {
+      "create": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager",
+      "write": 1
+    },
+    {
+      "create": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Team Lead",
+      "write": 1
+    },
+    {
+      "create": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Person",
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "import": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "select": 1,
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "row_format": "Dynamic",
+  "rows_threshold_for_grid_search": 20,
+  "search_fields": "name1",
+  "show_title_field_in_link": 1,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "name1",
+  "track_changes": 1,
+  "translated_doctype": 1
 }

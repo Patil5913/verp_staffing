@@ -116,7 +116,8 @@ async function onSave() {
   isOpen.value = false
   emit('created', newName)
   if (newName && props.navigateOnCreate) {
-    router.push(`/${encodeURIComponent(props.doctype)}/${encodeURIComponent(newName)}`)
+    // A new User: the detail page then offers to create their Employee (?created=1).
+    router.push({ path: `/${encodeURIComponent(props.doctype)}/${encodeURIComponent(newName)}`, query: props.doctype === 'User' ? { created: 1 } : undefined })
   }
 }
 </script>

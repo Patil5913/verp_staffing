@@ -68,6 +68,7 @@
               :force-disabled="locked || section.readOnly === true"
               :read-only-fields="readOnlyFields"
               :field-link-queries="linkQueriesFor(section)"
+              :field-overrides="typeof section.fieldOverrides === 'function' ? section.fieldOverrides(detail) : section.fieldOverrides"
             />
             <ChildTableField
               v-else-if="sectionKind(section) === 'table' && tableFor(section.fieldname)"
@@ -218,6 +219,7 @@ import { notify } from '@/utils/common/notify'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { recalcDocTotals } from '@/utils/detail/docCalculator'
 import { useInvoiceDynamics } from '@/composables/detail/useInvoiceDynamics'
+import { useCompanyDefaults } from '@/composables/detail/useCompanyDefaults'
 
 const props = defineProps({
   config: { type: Object, required: true },
@@ -295,6 +297,12 @@ watch(
   },
   { deep: true },
 )
+
+// Company-driven defaults (default company, company currency, default accounts,
+// account currencies) — opt in per doctype via config.companyDefaults.
+if (props.config.companyDefaults) useCompanyDefaults(detail, props.config.companyDefaults)
+// A config may register its own reactive form logic (Company: abbr, chart options).
+props.config.setup?.(detail)
 
 if (props.config.autoCalculate) useInvoiceDynamics(detail, { expenseSide: /^Purchase/.test(props.config.doctype) })
 

@@ -92,7 +92,11 @@ const detail = useDocDetail(doctypeRef, nameRef)
 const nameLabel = computed(() => detail.fields.value.find((f) => f.fieldname === 'name1')?.label || 'Name')
 
 const name = ref(props.initialValue)
-const phone = ref('')
+// A new Lead starts with the +1 country code already typed in.
+const DEFAULT_PHONE = props.doctype === 'Lead' ? '+1' : ''
+const phone = ref(DEFAULT_PHONE)
+// Just the untouched prefix is "no phone", not an invalid one.
+const phoneEntered = computed(() => phone.value.trim() && phone.value.trim() !== DEFAULT_PHONE)
 const email = ref('')
 const triedSave = ref(false)
 
@@ -104,7 +108,7 @@ const isCustomer = computed(() => props.doctype === 'Customer')
 const customerFrom = ref('')
 const partyName = ref('')
 
-const phoneError = computed(() => (triedSave.value && phone.value && !isValidPhone(phone.value) ? 'Must include country code' : ''))
+const phoneError = computed(() => (triedSave.value && phoneEntered.value && !isValidPhone(phone.value) ? 'Must include country code' : ''))
 const emailError = computed(() => (triedSave.value && email.value && !isValidEmail(email.value) ? 'Must be a valid email address' : ''))
 
 function openFullForm() {
@@ -117,7 +121,7 @@ async function onSave() {
   if (!name.value || phoneError.value || emailError.value) return
 
   const values = { name1: name.value }
-  if (phone.value) values._personal_phone_number = sanitizePhone(phone.value)
+  if (phoneEntered.value) values._personal_phone_number = sanitizePhone(phone.value)
   if (email.value) values._email = email.value
   if (isCustomer.value && customerFrom.value) values.customer_from = customerFrom.value
   if (isCustomer.value && partyName.value) values.party_name = partyName.value

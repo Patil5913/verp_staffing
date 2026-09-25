@@ -104,7 +104,7 @@
 // activity timeline, and its fields split naturally into desk's own User
 // form sections. See router.js for how /User/:name is routed here ahead of
 // the generic /:doctype/:name.
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Dialog, call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -133,18 +133,38 @@ const { detail, recordTitle, isDirty, onSave: baseSave, goBack, showDeleteDialog
 const showCreateEmployeePrompt = ref(false)
 const createdUserName = ref('')
 
+// Whether a just-created staff User has no Employee yet — checked here in the frontend
+// (not via a backend flag, which never fired): an Employee's `user` link is the truth.
+// Customers (website users) sign in to the portal and are never employees.
+async function offerEmployeeIfMissing(userName) {
+  if (!userName) return
+  try {
+    const user = await call('frappe.client.get_value', { doctype: 'User', filters: userName, fieldname: ['user_type', 'name'] })
+    if (user?.user_type === 'Website User' || userName === 'Administrator') return
+    const count = await call('frappe.client.get_count', { doctype: 'Employee', filters: { user: userName } })
+    if (!count) {
+      createdUserName.value = userName
+      showCreateEmployeePrompt.value = true
+    }
+  } catch {
+    // a failed lookup must never get in the way of the save that just succeeded
+  }
+}
+
 async function onSave() {
   const wasNew = detail.isNew.value
   const ok = await baseSave()
-  if (ok && wasNew) {
-    createdUserName.value = detail.meta.resource.data?.name || name.value
-    const missing = await call('verp_staffing.overrides.user.check_employee_missing', {
-      user: createdUserName.value,
-    })
-    if (missing) showCreateEmployeePrompt.value = true
-  }
+  if (ok && wasNew) await offerEmployeeIfMissing(detail.meta.resource.data?.name || name.value)
   return ok
 }
+
+// Created from the quick-create dialog: it lands here with ?created=1.
+onMounted(async () => {
+  if (route.query.created) {
+    router.replace({ query: { ...route.query, created: undefined } })
+    await offerEmployeeIfMissing(name.value)
+  }
+})
 
 function goToEmployeeList() {
   showCreateEmployeePrompt.value = false

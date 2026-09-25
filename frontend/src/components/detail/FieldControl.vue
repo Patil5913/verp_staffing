@@ -205,6 +205,8 @@
 			:model-value="displayValue ?? ''"
 			:disabled="disabled"
 			:placeholder="placeholder"
+			:prefix="currencyInfo.symbol"
+			:prefix-title="currencyInfo.code"
 			@update:model-value="onInput"
 		/>
 		<p v-if="field.description" class="-mt-1 text-p-xs text-app-text-muted">
@@ -217,12 +219,13 @@
 
 <script setup>
 import AppCheckbox from "@/components/ui/AppCheckbox.vue";
-import { computed, reactive, watch } from "vue";
+import { computed, inject, reactive, watch } from "vue";
 import { FileUploader, LoadingIndicator, call } from "frappe-ui";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppCombobox from "@/components/ui/AppCombobox.vue";
 import AppLinkField from "@/components/common/AppLinkField.vue";
 import AppInput from "@/components/ui/AppInput.vue";
+import { currencyCodeFor, currencySymbol } from "@/utils/detail/currency";
 import AppTimeInput from "@/components/ui/AppTimeInput.vue";
 import TruncatedText from "@/components/ui/TruncatedText.vue";
 import AppTextarea from "@/components/ui/AppTextarea.vue";
@@ -236,7 +239,16 @@ import {
 	validateFieldValue,
 } from "@/utils/detail/fieldFormats";
 
+// A Currency field shows its currency symbol — resolved from the field's `options`
+// against the row / document it sits in (see utils/detail/currency.js). A parent
+// provides the documents to look in; a grid cell passes its own row via `currencyDocs`.
+const parentCurrencyDocs = inject("fieldCurrencyDocs", null);
+
 const props = defineProps({
+	currencyDocs: { type: Array, default: null },
+	// { file_url, file_name } for a Link-to-File value the caller already has (the customer
+	// portal can't look a File up itself) — skips the lookup below.
+	fileInfo: { type: Object, default: null },
 	field: { type: Object, required: true },
 	modelValue: { default: null },
 	disabled: { type: Boolean, default: false },
@@ -300,6 +312,13 @@ const isDataField = computed(() => props.field.fieldtype === "Data");
 const isMonthYear = computed(() => isDataField.value && isMonthYearField(props.field.fieldname));
 const isPhone = computed(() => isDataField.value && isPhoneField(props.field.fieldname));
 
+const currencyInfo = computed(() => {
+	if (props.field.fieldtype !== "Currency") return { symbol: "", code: "" };
+	const docs = props.currencyDocs ?? parentCurrencyDocs?.() ?? [];
+	const code = currencyCodeFor(props.field, docs);
+	return { symbol: currencySymbol(code), code };
+});
+
 const controlType = computed(() => {
 	if (isDataField.value && isEmailField(props.field.fieldname)) return "email";
 	if (isPhone.value || isMonthYear.value) return "text";
@@ -358,6 +377,11 @@ watch(
 		linkedFile.url = "";
 		linkedFile.name = "";
 		if (!fileName) return;
+		if (props.fileInfo?.file_url && props.fileInfo.name === fileName) {
+			linkedFile.url = props.fileInfo.file_url;
+			linkedFile.name = props.fileInfo.file_name || "";
+			return;
+		}
 		linkedFile.loading = true;
 		try {
 			const file = await call("frappe.client.get_value", {

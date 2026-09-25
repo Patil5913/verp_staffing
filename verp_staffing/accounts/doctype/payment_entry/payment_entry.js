@@ -268,10 +268,6 @@ frappe.ui.form.on("Payment Entry", {
 			return { filters: { is_company_account: 1, company: frm.doc.company } };
 		});
 
-		frm.set_query("account", "deductions", function () {
-			return { filters: { is_group: 0, company: frm.doc.company } };
-		});
-
 		frm.set_query("reference_doctype", "references", function () {
 			let doctypes = [];
 			if (frm.party_account_type === "Receivable" || frm.doc.party_type === "Customer") {
@@ -439,10 +435,6 @@ frappe.ui.form.on("Payment Entry", {
 	paid_amount: function (frm) {
 		on_paid_amount_change(frm);
 	},
-
-	write_off_difference_amount: function (frm) {
-		set_write_off_deduction(frm);
-	},
 });
 
 frappe.ui.form.on("Payment Entry Reference", {
@@ -546,11 +538,6 @@ frappe.ui.form.on("Payment Entry Reference", {
 		if (!(frm.doc.references || []).length) {
 			const paid_amount = flt(frm.doc.paid_amount);
 
-			// Clear deductions table
-			frm.clear_table("deductions");
-
-			frm.refresh_field("deductions");
-
 			// Set all amount as unallocated
 			frm.set_value("unallocated_amount", paid_amount);
 
@@ -564,15 +551,6 @@ frappe.ui.form.on("Payment Entry Reference", {
 
 			frm.set_value("base_difference_amount", 0);
 		}
-	},
-});
-
-frappe.ui.form.on("Payment Entry Deduction", {
-	amount: function (frm) {
-		set_unallocated_amount(frm);
-	},
-	deductions_remove: function (frm) {
-		set_unallocated_amount(frm);
 	},
 });
 
@@ -717,44 +695,6 @@ function on_party_change(frm) {
 				]);
 			},
 		});
-	});
-}
-
-function set_write_off_deduction(frm) {
-	const difference_amount = flt(frm.doc.difference_amount);
-
-	if (!difference_amount) return;
-
-	frappe.call({
-		method: "verp_staffing.accounts.doctype.payment_entry.payment_entry.get_company_defaults",
-
-		args: {
-			company: frm.doc.company,
-		},
-
-		callback: function (response) {
-			const write_off_account = response.message?.write_off_account;
-
-			if (!write_off_account) {
-				frappe.msgprint(__("Please set Write Off Account in Company master."));
-
-				return;
-			}
-
-			let row = (frm.doc.deductions || []).find((t) => t.account === write_off_account);
-
-			if (!row) {
-				row = frm.add_child("deductions");
-
-				row.account = write_off_account;
-			}
-
-			row.amount = flt(row.amount) + difference_amount;
-
-			frm.refresh_field("deductions");
-
-			set_unallocated_amount(frm);
-		},
 	});
 }
 
@@ -1072,12 +1012,10 @@ function set_unallocated_amount(frm) {
 	if (frm.doc.party) {
 		const paid = flt(frm.doc.paid_amount);
 		const total_allocated = flt(frm.doc.total_allocated_amount);
-		const deductions = frappe.utils.sum($.map(frm.doc.deductions || [], (d) => flt(d.amount)));
-
 		if (frm.doc.payment_type === "Receive") {
-			unallocated = Math.max(0, paid - total_allocated - deductions);
+			unallocated = Math.max(0, paid - total_allocated);
 		} else if (frm.doc.payment_type === "Pay") {
-			unallocated = Math.max(0, total_allocated - deductions);
+			unallocated = Math.max(0, total_allocated);
 		}
 	}
 
@@ -1090,7 +1028,6 @@ function set_difference_amount(frm) {
 	const rate = flt(frm.doc.conversion_rate) || 1;
 	const total_allocated = flt(frm.doc.total_allocated_amount);
 	const paid = flt(frm.doc.paid_amount);
-	const deductions = frappe.utils.sum($.map(frm.doc.deductions || [], (d) => flt(d.amount)));
 	const included_taxes = get_included_taxes(frm);
 
 	let difference = 0;
@@ -1102,7 +1039,7 @@ function set_difference_amount(frm) {
 		difference = 0;
 	}
 
-	const net_diff = difference - deductions + included_taxes;
+	const net_diff = difference + included_taxes;
 	frm.set_value("difference_amount", flt(net_diff));
 	frm.set_value("base_difference_amount", flt(net_diff) * rate);
 

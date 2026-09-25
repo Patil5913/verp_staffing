@@ -32,12 +32,14 @@ export function phoneProblem(v, label = 'Phone number') {
   return null
 }
 
+const EMAIL_NAMES = new Set(['email', 'email_id', 'email_address', 'marketing_email_id'])
+
 export function fieldProblem(field, value) {
   const v = String(value ?? '').trim()
   if (!v) return null
-  const n = field.fieldname
-  if (n === 'email') return emailProblem(v)
-  if (n === 'personal_linkedin' || n === 'marketing_linkedin') return linkedinProblem(v)
+  const n = (field.fieldname || '').toLowerCase()
+  if (EMAIL_NAMES.has(n) || field.options === 'Email') return emailProblem(v)
+  if (n.includes('linkedin')) return linkedinProblem(v)
   if (n === 'personal_phone_number' || n === 'number_for_marketing') return phoneProblem(v, field.label)
   return null
 }

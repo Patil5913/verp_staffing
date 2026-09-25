@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
     <div class="flex items-center justify-between">
       <div>
-        <h3 class="text-p-base font-medium text-app-text">{{ table.label }}</h3>
+        <h3 class="text-p-base font-medium text-app-text">{{ table.label }}<span v-if="table.reqd" class="text-red-600"> *</span></h3>
         <p class="text-p-sm text-app-text-muted">
           {{ rows.length }} {{ rows.length === 1 ? 'row' : 'rows' }}
         </p>
@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, inject, provide, ref } from 'vue'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import TruncatedText from '@/components/ui/TruncatedText.vue'
@@ -131,6 +131,10 @@ const props = defineProps({
   maxRows: { type: Number, default: null },
 })
 const emit = defineEmits(['update:rows'])
+
+// The row being edited first, then whatever the parent document offers.
+const parentCurrencyDocs = inject('fieldCurrencyDocs', null)
+provide('fieldCurrencyDocs', () => [draft.value, ...(parentCurrencyDocs?.() || [])])
 
 const atMaxRows = computed(() => props.maxRows != null && props.rows.length >= props.maxRows)
 

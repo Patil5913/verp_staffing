@@ -23,14 +23,12 @@
           :read-only-fields="userFieldReadOnly"
           :field-link-queries="userFieldLinkQueries"
         />
-      </div>
-    </template>
-
-    <template #tab-assignments>
-      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <!-- Right under the user selection: the role assignments are part of setting up the
+             employee, not a separate tab. -->
         <ChildTableField
           v-if="assignmentsTable"
-          :table="assignmentsTable"
+          class="mt-4"
+          :table="{ ...assignmentsTable, label: 'Employee Role Assignment' }"
           :rows="detail.values.employee_assignment_details_table || []"
           :disabled="!detail.canWrite.value"
           :link-queries="assignmentLinkQueries"
@@ -115,7 +113,6 @@ if (!isAdministrator() && !isSystemManager()) {
 
 const TABS = [
   { key: 'profile', label: 'Profile' },
-  { key: 'assignments', label: 'Assignments' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'target', label: 'Target' },
 ]
@@ -132,7 +129,8 @@ const tabs = computed(() =>
 )
 const activeTab = ref('profile')
 
-const PROFILE_FIELDS = ['employee_name', 'user', 'enabled']
+// User first: the employee's name is filled in from the chosen user.
+const PROFILE_FIELDS = ['user', 'employee_name', 'enabled']
 // Once the Employee exists, the linked User can't be changed out from under
 // it — matches employee.js leaving `user` unset_only_once-style read-only
 // after creation.

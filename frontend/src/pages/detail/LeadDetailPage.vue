@@ -51,6 +51,7 @@
             :force-disabled="leadLocked"
             :read-only-fields="readOnlyFields"
             :field-link-queries="fieldLinkQueries"
+            :field-overrides="fieldOverrides"
             title="Lead"
           />
         </div>
@@ -178,13 +179,24 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
   { extraIsDirty: computed(() => profile.isDirty.value), extraSave: saveProfile },
 )
 
-// Matches the old desk Lead form's onload(): status is always read-only,
-// lead_owner only for non-Administrators.
+// The lead person can change the status while the Lead is still being worked —
+// Open, Lead or Interested (judged on the SAVED status, so picking Won doesn't lock
+// the field mid-edit). Once it is Won / Lost / Opportunity the status is read-only,
+// as in the old desk form. lead_owner stays Administrator-only.
+const EDITABLE_STATUSES = ['Open', 'Lead', 'Interested']
+const savedStatus = computed(() => detail.meta.resource.data?.values?.status || 'Open')
+const statusEditable = computed(() => detail.isNew.value || EDITABLE_STATUSES.includes(savedStatus.value))
 const readOnlyFields = computed(() => {
-  const fields = ['status']
+  const fields = statusEditable.value ? [] : ['status']
   if (window.user !== 'Administrator') fields.push('lead_owner')
   return fields
 })
+// "Opportunity" is set by the system when an Opportunity is created from the Lead,
+// never picked by hand.
+// (Shown as-is once it is the saved value, so a read-only Opportunity still displays.)
+const fieldOverrides = computed(() => ({
+  status: { options: ['Open', 'Lead', 'Interested', 'Won', 'Lost', ...(statusEditable.value ? [] : [savedStatus.value])].filter((v, i, a) => a.indexOf(v) === i).join('\n') },
+}))
 
 // Lead Owner: Sales or Lead department employees only (Employee has no
 // plain department field — see get_employees_by_department), matching the

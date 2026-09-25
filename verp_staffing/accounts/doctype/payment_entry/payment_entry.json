@@ -51,15 +51,12 @@
   "total_allocated_amount",
   "unallocated_amount",
   "difference_amount",
-  "write_off_difference_amount",
   "section_break_56",
   "taxes",
   "section_break_60",
   "base_total_taxes_and_charges",
   "column_break_61",
   "total_taxes_and_charges",
-  "deductions_or_loss_section",
-  "deductions",
   "transaction_references",
   "reference_no",
   "remarks",
@@ -401,25 +398,6 @@
    "options": "Company:company:default_currency",
    "print_hide": 1,
    "read_only": 1
-  },
-  {
-   "depends_on": "difference_amount",
-   "fieldname": "write_off_difference_amount",
-   "fieldtype": "Button",
-   "label": "Write Off Difference Amount"
-  },
-  {
-   "collapsible": 1,
-   "collapsible_depends_on": "deductions",
-   "fieldname": "deductions_or_loss_section",
-   "fieldtype": "Section Break",
-   "label": "Deductions or Loss"
-  },
-  {
-   "fieldname": "deductions",
-   "fieldtype": "Table",
-   "label": "Payment Deductions or Loss",
-   "options": "Payment Entry Deduction"
   },
   {
    "fieldname": "section_break_56",

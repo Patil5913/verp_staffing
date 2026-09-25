@@ -30,6 +30,7 @@
             :detail="detail"
             :fieldnames="DETAIL_FIELDS"
             :read-only-fields="readOnlyFields"
+            :field-link-queries="fieldLinkQueries"
           />
           <ChildTableField
             v-if="callDetailsTable"
@@ -168,6 +169,15 @@ const readOnlyFields = computed(() => [
   ...(detail.values.status === 'Converted' ? ['status'] : []),
   ...(isAdministrator() ? [] : ['opportunity_owner']),
 ])
+
+// Opportunity Owner: Sales department employees only — the same query Customer Owner
+// uses (opportunity.js filtered on an Employee Assignment Detail in "Sales").
+const fieldLinkQueries = {
+  opportunity_owner: {
+    query: 'verp_staffing.crm.api.helpers.get_subordinate_employees',
+    filters: { department: 'Sales' },
+  },
+}
 
 const callDetailsTable = computed(() => detail.tables.value.find((t) => t.fieldname === 'call_details'))
 

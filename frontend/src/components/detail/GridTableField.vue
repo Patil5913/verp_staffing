@@ -19,6 +19,7 @@
                 :model-value="row[col.fieldname]"
                 :disabled="disabled || isColumnReadOnly(col, row)"
                 :link-query="linkQueryFor(row, idx)?.[col.fieldname]"
+                :currency-docs="[row, ...(parentCurrencyDocs?.() || [])]"
                 @update:model-value="(v) => onFieldInput(idx, col.fieldname, v)"
               />
             </td>
@@ -51,6 +52,7 @@
             :model-value="dialog.draft[col.fieldname]"
             :disabled="isColumnReadOnly(col, dialog.draft)"
             :link-query="linkQueryFor(dialog.draft, dialog.idx)?.[col.fieldname]"
+            :currency-docs="[dialog.draft, ...(parentCurrencyDocs?.() || [])]"
             :class="['Small Text', 'Long Text', 'Text Editor'].includes(col.fieldtype) ? 'sm:col-span-2' : ''"
             @update:model-value="(v) => onDraftInput(col.fieldname, v)"
           />
@@ -78,7 +80,7 @@
 // desk form's charge_type handler toggles rate/tax_amount editability per
 // row (grid_rows_by_docname[...].toggle_editable), which only this
 // component's readOnlyColumns-as-function can express.
-import { computed, reactive } from 'vue'
+import { computed, inject, reactive } from 'vue'
 import { Dialog } from 'frappe-ui'
 import { dependsOnPasses } from '@/utils/detail/dependsOn'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -121,6 +123,8 @@ const visibleColumns = computed(() => {
   const listed = props.table.columns.filter((c) => c.in_list_view)
   return listed.length ? listed : props.table.columns.slice(0, 4)
 })
+
+const parentCurrencyDocs = inject('fieldCurrencyDocs', null)
 
 const dialog = reactive({ show: false, idx: -1, draft: {} })
 const dialogColumns = computed(() =>

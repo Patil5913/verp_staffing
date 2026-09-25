@@ -53,13 +53,14 @@
       <div v-if="loadingTemplate" class="flex justify-center py-6"><LoadingIndicator class="h-5 w-5 text-app-text-muted" /></div>
       <div v-else-if="blocks.length" class="flex flex-col gap-4 border-t border-app-border pt-4">
         <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Template fields</p>
-        <div v-for="b in blocks" :key="keyOf(b)" :class="b.type === 'Rich_Text' || b.type === 'Text' ? 'max-w-3xl' : 'max-w-md'">
+        <div v-for="b in blocks" :key="keyOf(b)" :class="b.type === 'Rich_Text' ? 'w-full' : b.type === 'Text' ? 'max-w-3xl' : 'max-w-md'">
           <label class="mb-1.5 block text-p-sm font-medium text-app-text-muted">{{ b.label || b.name }}</label>
           <TextEditor
             v-if="b.type === 'Rich_Text'"
+            class="agreement-editor"
             :content="values[keyOf(b)] || ''"
-            fixed-menu
-            editor-class="min-h-[120px] rounded-b-lg border border-t-0 border-app-border px-3 py-2 text-p-sm"
+            :fixed-menu="EDITOR_BUTTONS"
+            editor-class="min-h-[120px] max-h-[600px] resize-y overflow-auto rounded-b-lg border border-t-0 border-app-border px-3 py-2 text-p-sm"
             @change="(html) => (values[keyOf(b)] = html)"
           />
           <AppInput v-else :type="b.type === 'Number' ? 'number' : b.type === 'Date' ? 'date' : 'text'" :placeholder="`Enter ${b.label || b.name}…`" :model-value="values[keyOf(b)] || ''" @update:model-value="(v) => (values[keyOf(b)] = v)" />
@@ -90,7 +91,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // Not ported: the desk's "auto mode" (draft an agreement while the Sales Order
 // is still unsaved) stashed the draft in localStorage and nothing ever read it
 // back, so here an agreement is created once the order exists.
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, h, reactive, ref, watch } from 'vue'
 import { call, LoadingIndicator, TextEditor } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
@@ -102,6 +103,26 @@ import { formatDatetime } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
 import { isEmailMissingError } from '@/utils/common/errors'
 import { normalizeError } from '@/utils/common/errors'
+
+// The only formatting an agreement's rich-text field offers: bold, italic, underline,
+// strike-through, font colour, ordered / unordered lists, table controls, left / right /
+// justify alignment. (frappe-ui has no Justify button, so it is defined here.)
+const AlignJustify = { render: () => h('span', { class: 'lucide-align-justify size-4' }) }
+const JUSTIFY_BUTTON = {
+  label: 'Align Justify',
+  icon: AlignJustify,
+  action: (editor) => editor.chain().focus().setTextAlign('justify').run(),
+  isActive: (editor) => editor.isActive({ textAlign: 'justify' }),
+}
+const EDITOR_BUTTONS = [
+  'Bold', 'Italic', 'Underline', 'Strikethrough', 'FontColor',
+  'Separator',
+  'Bullet List', 'Numbered List',
+  'Separator',
+  ['InsertTable', 'AddColumnBefore', 'AddColumnAfter', 'DeleteColumn', 'AddRowBefore', 'AddRowAfter', 'DeleteRow', 'MergeCells', 'SplitCell', 'ToggleHeaderRow', 'DeleteTable'],
+  'Separator',
+  'Align Left', 'Align Right', JUSTIFY_BUTTON,
+]
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -261,3 +282,14 @@ async function create(send) {
   }
 }
 </script>
+
+<style>
+/* Keep the whole toolbar inside the card: wrap onto a second row instead of running past it. */
+.agreement-editor > .overflow-x-auto {
+  display: flex;
+  overflow-x: visible;
+}
+.agreement-editor > .overflow-x-auto > div {
+  flex-wrap: wrap;
+}
+</style>

@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, provide } from 'vue'
 import { LoadingIndicator } from 'frappe-ui'
 import StateBanner from '@/components/common/StateBanner.vue'
 import FieldControl from './FieldControl.vue'
@@ -101,6 +101,9 @@ const props = defineProps({
   // { upload_pdf_template: { accept: ['.pdf'] } } to restrict an Attach field.
   fieldOverrides: { type: Object, default: () => ({}) },
 })
+
+// Currency fields look their currency up in the document (and its hidden fields).
+provide('fieldCurrencyDocs', () => [props.detail.values, props.detail.hidden])
 
 const fields = computed(() => {
   const doc = { ...props.detail.hidden, ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }

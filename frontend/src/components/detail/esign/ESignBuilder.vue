@@ -71,15 +71,18 @@
             />
             <div
               v-else
-              class="absolute flex cursor-move touch-none items-start overflow-hidden rounded border-2 text-p-xs font-semibold"
+              class="absolute cursor-move touch-none overflow-hidden rounded font-semibold"
               :class="keyOf(row) === selectedKey ? 'ring-2 ring-offset-1' : ''"
-              :style="{ ...boxStyle(row), borderColor: colorFor(row.signer_email), background: colorFor(row.signer_email) + '22', color: colorFor(row.signer_email), '--tw-ring-color': colorFor(row.signer_email) }"
+              :style="{ ...boxStyle(row), boxShadow: `inset 0 0 0 2px ${colorFor(row.signer_email)}`, background: colorFor(row.signer_email) + '22', color: colorFor(row.signer_email), '--tw-ring-color': colorFor(row.signer_email) }"
               @pointerdown="startMove(row, page, $event)"
               @click.stop="selectedKey = keyOf(row)"
             >
               <span v-if="row.field_type === 'checkbox'" class="lucide-check-square mx-auto mt-0.5 size-4" />
-              <!-- Builder-only text: the placeholder (the label is for the signer, shown in the sidebar). -->
-              <span v-else class="truncate px-1.5 pt-0.5">{{ row.placeholder_text || labelFor(row.field_type) }}</span>
+              <!-- Builder-only text: the placeholder (the label is for the signer, shown in the sidebar).
+                   Wraps inside the box, line spacing 1, and is cut off where the box ends — the
+                   same way the PDF drawer (e_sign.py render_text) lays it out. -->
+              <span v-if="row.field_type === 'checkbox'" class="lucide-check-square absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2" />
+              <div v-else class="pointer-events-none absolute inset-0 overflow-hidden" :style="textStyle">{{ row.placeholder_text || labelFor(row.field_type) }}</div>
               <button
                 v-if="!disabled"
                 type="button"
@@ -147,7 +150,7 @@ import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
-import { usePdfPages } from '@/composables/detail/usePdfPages'
+import { usePdfPages, PDF_PAGE_SCALE } from '@/composables/detail/usePdfPages'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -204,8 +207,12 @@ const boxStyle = (row) => ({
   top: `${row.y_percent}%`,
   width: `${row.width_percent}%`,
   height: `${row.height_percent}%`,
-  fontSize: `${(Number(row.font_size) || 12) * 1.2}px`,
+  // pt -> on-screen px (see PDF_PAGE_SCALE), so the builder shows the size the PDF will draw.
+  fontSize: `${(Number(row.font_size) || 12) * PDF_PAGE_SCALE}px`,
 })
+
+// Same metrics the PDF is drawn with: Helvetica, line spacing 1, no padding, wrapped and clipped.
+const textStyle = { fontFamily: 'Helvetica, Arial, sans-serif', lineHeight: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }
 
 const dragging = ref(null)
 function onDrop(page, event) {

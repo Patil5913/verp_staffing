@@ -33,7 +33,7 @@
                 </ul>
               </div>
               <div v-else :data-field="name" @focusout="checkField(fieldOf(name))">
-                <FieldControl :field="fieldOf(name)" v-model="values[name]" :disabled="readOnly || fieldOf(name).read_only" />
+                <FieldControl :field="fieldOf(name)" v-model="values[name]" :file-info="files[name]" :disabled="readOnly || fieldOf(name).read_only" />
                 <p v-if="errors[name]" class="mt-1 text-p-xs text-red-600">{{ errors[name] }}</p>
               </div>
             </template>
@@ -72,6 +72,7 @@ const values = reactive({})
 const errors = ref({})
 
 const layout = ref([])
+const files = ref({}) // { fieldname: { file_name, file_url } } for the uploaded documents
 const fieldOf = (name) => fields.value.find((f) => f.fieldname === name)
 const tableOf = (name) => tables.value.find((t) => t.fieldname === name)
 const colClass = (n) => (n >= 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : n === 2 ? 'sm:grid-cols-2' : '')
@@ -102,6 +103,7 @@ async function load() {
     fields.value = res.fields
     tables.value = res.tables
     layout.value = res.layout || []
+    files.value = res.files || {}
     Object.assign(values, res.values || {})
     readOnly.value = !!res.lock_form
   } catch (e) {

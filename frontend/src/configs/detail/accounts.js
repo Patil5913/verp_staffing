@@ -1,3 +1,4 @@
+import { ref, watch } from 'vue'
 import { call } from 'frappe-ui'
 import { computeInvoiceStatus } from '@/utils/list/statusTheme'
 import { formatFieldValue } from '@/utils/list/formatValue'
@@ -218,12 +219,78 @@ function taxesFieldChange(fieldname, value, draft, { idx }) {
 
 // ─── Accounts Master ──────────────────────────────────────────────────
 
+// Options for the Chart of Accounts select, per the chosen country
+// (company.js's set_chart_of_accounts_options).
+const companyChartOptions = ref([])
+const COA_FIELDS = ['create_chart_of_accounts_based_on', 'chart_of_accounts', 'existing_company']
+
+// company.js's reactive behaviour, on the config's `setup` hook.
+function companySetup(detail) {
+  // abbr = the initials of the company name, while the company is new.
+  watch(
+    () => detail.values.company_name,
+    (companyName) => {
+      if (!detail.isNew.value) return
+      detail.values.abbr = String(companyName || '')
+        .split(' ')
+        .map((p) => (p ? p.slice(0, 1) : ''))
+        .join('')
+    },
+  )
+
+  // Available charts depend on the country.
+  watch(
+    () => detail.values.country,
+    async (country) => {
+      if (!country) return (companyChartOptions.value = [])
+      const charts = await call('verp_staffing.accounts.doctype.account.charts_of_accounts.charts_of_accounts.get_charts_for_country', {
+        country,
+        with_standard: true,
+      }).catch(() => [])
+      companyChartOptions.value = charts || []
+    },
+    { immediate: true },
+  )
+
+  // A parent company means: copy its chart (Existing Company), which then can't be edited.
+  watch(
+    () => detail.values.parent_company,
+    (parent) => {
+      if (!detail.isNew.value) return
+      detail.values.create_chart_of_accounts_based_on = parent ? 'Existing Company' : ''
+      detail.values.existing_company = parent || ''
+    },
+  )
+}
+
+// company.js's setup_queries: each default account is picked from this company's
+// own ledger accounts of the right kind.
+const companyAccountQueries = ({ detail }) => {
+  const company = detail.meta.resource.data?.name
+  const q = (extra) => ({ filters: { company, is_group: 0, ...extra } })
+  return {
+    parent_company: { filters: { is_group: 1 } },
+    default_bank_account: q({ account_type: 'Bank' }),
+    default_cash_account: q({ account_type: 'Cash' }),
+    default_receivable_account: q({ root_type: 'Asset', account_type: 'Receivable' }),
+    default_payable_account: q({ root_type: 'Liability', account_type: 'Payable' }),
+    default_expense_account: q({ root_type: 'Expense', account_type: 'Expense Account' }),
+    default_income_account: q({ root_type: 'Income', account_type: 'Income Account' }),
+    round_off_account: q({ root_type: 'Expense' }),
+    write_off_account: q({ root_type: 'Expense' }),
+    default_discount_account: q({}),
+  }
+}
+
 export const companyConfig = {
   doctype: 'Company',
   timeline: 'full',
+  setup: companySetup,
   // The abbreviation and chart-of-accounts choice are fixed at creation
-  // (company.js locks them once the record exists).
-  readOnlyFields: (d) => (d.isNew.value ? [] : ['abbr', 'create_chart_of_accounts_based_on', 'chart_of_accounts', 'existing_company']),
+  // (company.js locks them once the record exists); a parent company also
+  // fixes the chart (copied from it).
+  readOnlyFields: (d) =>
+    d.isNew.value ? (d.values.parent_company ? COA_FIELDS : []) : ['abbr', ...COA_FIELDS],
   actions: [
     {
       component: LinkAction,
@@ -236,9 +303,11 @@ export const companyConfig = {
       key: 'details',
       label: 'Details',
       sections: [
-        fields(['company_name', 'abbr', 'default_currency', 'country', 'parent_company', 'is_group', 'date_of_establishment'], 'Company'),
+        fields(['company_name', 'abbr', 'default_currency', 'country', 'parent_company', 'is_group', 'date_of_establishment'], 'Company', { linkQueries: companyAccountQueries }),
         fields(['company_logo', 'date_of_commencement', 'date_of_incorporation', 'phone_no', 'email'], 'Contact'),
-        fields(['create_chart_of_accounts_based_on', 'existing_company', 'chart_of_accounts'], 'Chart of Accounts'),
+        fields(['create_chart_of_accounts_based_on', 'existing_company', 'chart_of_accounts'], 'Chart of Accounts', {
+          fieldOverrides: () => ({ chart_of_accounts: { options: ['', ...companyChartOptions.value].join('\n') } }),
+        }),
       ],
     },
     {
@@ -252,6 +321,7 @@ export const companyConfig = {
             'round_off_account', 'allow_account_creation_against_child_company',
           ],
           'Default Accounts',
+          { linkQueries: companyAccountQueries },
         ),
       ],
     },
@@ -381,9 +451,40 @@ export const bankAccountConfig = {
 
 // ─── Accounting ───────────────────────────────────────────────────────
 
+// journal_entry.js's row handlers: picking an Account sets its type / currency / party
+// type (and the exchange rate when it is the company currency); amounts convert to the
+// company currency at the row's exchange rate.
+async function journalRowFieldChange(fieldname, value, draft, { detail }) {
+  const companyCurrency = detail.values.company_currency || detail.hidden.company_currency
+  if (fieldname === 'account') {
+    const company = companyOf(detail)
+    if (value && !company) {
+      notify.error('Please select the Company first')
+      return { account: '' }
+    }
+    const patch = { party_type: '', party: '' }
+    if (value) {
+      const r = await call('verp_staffing.accounts.doctype.journal_entry.journal_entry.get_account_details_and_party_type', { account: value, company }).catch(() => null)
+      if (r) {
+        Object.assign(patch, { account_type: r.account_type, account_currency: r.account_currency, party_type: r.party_type || '' })
+        if (r.exchange_rate != null) patch.exchange_rate = r.exchange_rate
+      }
+    }
+    return patch
+  }
+  if (['debit_in_account_currency', 'credit_in_account_currency', 'exchange_rate'].includes(fieldname)) {
+    const row = { ...draft, [fieldname]: value }
+    let rate = num(row.exchange_rate)
+    if (!rate || rate <= 0 || (row.account_currency && row.account_currency === companyCurrency)) rate = 1
+    return { exchange_rate: rate, debit: num(row.debit_in_account_currency) * rate, credit: num(row.credit_in_account_currency) * rate }
+  }
+  return null
+}
+
 export const journalEntryConfig = {
   doctype: 'Journal Entry',
   timeline: 'full',
+  companyDefaults: {},
   actions: [
     { component: JournalQuickEntryAction },
     ledgerAction(),
@@ -417,7 +518,7 @@ export const journalEntryConfig = {
           },
         ]),
         fields(['voucher_type', 'naming_series', 'company', 'posting_date', 'finance_book', 'multi_currency', 'from_template', 'reversal_of'], 'Journal Entry'),
-        table('accounts'),
+        table('accounts', { onFieldChange: journalRowFieldChange }),
         fields(['cheque_no', 'cheque_date', 'user_remark'], 'Notes'),
         fields(['clearance_date', 'bill_no', 'bill_date', 'due_date', 'is_opening', 'mode_of_payment'], 'More Information'),
         { type: 'component', component: OutstandingInvoicesPanel, show: (d) => d.docstatus.value === 0 },
@@ -500,6 +601,7 @@ const paymentEntryCancelConfirm = (d) => `
 export const paymentEntryConfig = {
   doctype: 'Payment Entry',
   timeline: 'full',
+  companyDefaults: { accountCurrencies: { paid_from: 'paid_from_account_currency', paid_to: 'paid_to_account_currency' } },
   submitConfirm: paymentEntrySubmitConfirm,
   cancelConfirm: paymentEntryCancelConfirm,
   // Rejected entries are frozen (payment_entry.py's validate).
@@ -540,7 +642,6 @@ export const paymentEntryConfig = {
           },
         ),
         table('references'),
-        table('deductions'),
         // NOTE: not converted to grid() — Payment Entry's taxes table was
         // out of scope for this pass (only Sales Invoice / Purchase
         // Invoice / Sales Order / Purchase Order were asked for). It's the
@@ -548,7 +649,10 @@ export const paymentEntryConfig = {
         // treatment (taxesReadOnlyColumns / taxesFieldChange) — flagging
         // for a follow-up rather than changing it here.
         {
-          ...table('taxes', { linkQueries: taxAccountLinkQueries }),
+          // Same behaviour as Sales Invoice's Taxes and Charges (same doctype shape): the child
+          // doctype's own editable-grid flag and in_list_view columns, rate / tax amount editable by
+          // Charge Type, the row rules, and the account filter.
+          ...auto('taxes', { readOnlyColumns: taxesReadOnlyColumns, onFieldChange: taxesFieldChange, linkQueries: taxAccountLinkQueries }),
           show: (d) => ['Supplier', 'Customer'].includes(d.values.party_type),
         },
         fields(['reference_no', 'reference_date', 'clearance_date', 'remarks', 'is_opening'], 'Reference'),
@@ -576,6 +680,7 @@ const invoiceActions = (payTo) => [
 export const salesInvoiceConfig = {
   doctype: 'Sales Invoice',
   timeline: 'full',
+  companyDefaults: { companyAccounts: { debit_to: 'default_receivable_account' } },
   autoCalculate: true,
   statusText: invoiceStatusText,
   actions: [
@@ -640,6 +745,7 @@ export const salesInvoiceConfig = {
 export const purchaseInvoiceConfig = {
   doctype: 'Purchase Invoice',
   timeline: 'full',
+  companyDefaults: { companyAccounts: { credit_to: 'default_payable_account' } },
   autoCalculate: true,
   actions: invoiceActions('purchase'),
   tabs: [
@@ -675,6 +781,7 @@ export const purchaseInvoiceConfig = {
 export const salesOrderConfig = {
   doctype: 'Sales Order',
   timeline: 'full',
+  companyDefaults: {},
   autoCalculate: true,
   allowOnSubmitEdit: true,
   actions: [{ component: SendDetailsFormAction, show: notNew }],
@@ -716,6 +823,7 @@ export const salesOrderConfig = {
 export const purchaseOrderConfig = {
   doctype: 'Purchase Order',
   timeline: 'full',
+  companyDefaults: {},
   autoCalculate: true,
   tabs: [
     {
@@ -765,6 +873,7 @@ export const supplierConfig = {
 export const subscriptionConfig = {
   doctype: 'Subscription',
   timeline: 'full',
+  companyDefaults: {},
   actions: [
     {
       component: DocAction,

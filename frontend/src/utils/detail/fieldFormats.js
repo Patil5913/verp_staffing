@@ -2,6 +2,8 @@
 // detail form (lead.js) so the new SPA's generic field renderer keeps the
 // same "phone/email/SSN/month-year" special-casing without a doctype needing
 // to declare it explicitly.
+import { fieldProblem } from './fieldProblems'
+
 const EMAIL_FIELDS = new Set(['email', 'email_id', 'email_address'])
 const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date'])
 // Lead Detail Form has two phone fields (personal + marketing) — both need
@@ -92,6 +94,10 @@ export function validateFieldValue(field, value) {
   // field elsewhere with a real fieldtype (e.g. Employee.start_date, a real
   // Date) isn't the Lead Detail Form-style string these heuristics target.
   if (field.fieldtype === 'Data') {
+    // Says exactly what is wrong (missing @, bad domain, not a linkedin.com URL, ...) — also
+    // for fields the name lists below miss (marketing_email_id, *_linkedin).
+    const problem = fieldProblem(field, strValue)
+    if (problem) return problem
     if (isEmailField(field.fieldname) && !isValidEmail(strValue)) {
       return `${label} must be a valid email address`
     }

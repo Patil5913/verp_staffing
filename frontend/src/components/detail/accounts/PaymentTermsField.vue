@@ -88,14 +88,14 @@
                 </AppButton>
                 <span v-else-if="row.payment_status === 'Pending Verification'" class="text-p-xs text-app-text-muted">Awaiting verification</span>
                 <AppButton
-                  v-if="!disabled && !isRowReadOnly(row) && !isRowActive(idx)"
+                  v-if="!disabled && !isTermLocked(row) && !isRowActive(idx)"
                   variant="ghost"
                   size="icon"
                   icon="edit-2"
                   title="Edit row"
                   @click.stop="activate(idx)"
                 />
-                <AppButton v-if="!disabled && !isRowReadOnly(row)" variant="ghost" size="icon" icon="trash-2" title="Delete row" @click.stop="removeRow(idx)" />
+                <AppButton v-if="!disabled && !isTermLocked(row)" variant="ghost" size="icon" icon="trash-2" title="Delete row" @click.stop="removeRow(idx)" />
               </td>
             </tr>
 
@@ -228,12 +228,17 @@ const isRowActive = (idx) => activeIdx.value === idx
 function isRowReadOnly(row) {
   return !!row.payment_entry && ['Pending Verification', 'Verified'].includes(row.payment_status)
 }
+// A term that already has a Sales Invoice raised against it can't be edited or removed at
+// all — only Mark as Paid / Re-request remain (canMarkAsPaid below looks at isRowReadOnly).
+function isTermLocked(row) {
+  return isRowReadOnly(row) || !!row.sales_invoice
+}
 function isConditionLocked(row) {
-  return isRowReadOnly(row)
+  return isTermLocked(row)
 }
 
 function activate(idx) {
-  if (disabled.value || isRowReadOnly(rows.value[idx])) return
+  if (disabled.value || isTermLocked(rows.value[idx])) return
   activeIdx.value = activeIdx.value === idx ? null : idx
 }
 function toggleExpand(idx) {

@@ -24,6 +24,13 @@ add_to_apps_screen = [
 # frappe-ui frontend (Vue3 + Tailwind), served at /verp.
 # Client-side (vue-router) routes under /verp/* need to resolve to the same
 # SPA shell so deep links and page refreshes don't 404.
+# verp_staffing is the site's front door: "/" always opens /verp, whatever a role's own home page
+# says (vruglechat sets Chat External's to /chat, and Administrator has every role, so it was
+# winning). A customer who lands there is sent on to the portal by the app's own router.
+website_redirects = [
+	{"source": "/", "target": "/verp"},
+]
+
 website_route_rules = [
 	{"from_route": "/verp/<path:app_path>", "to_route": "verp"},
 	# old /customer links go on to the portal in the app (/verp/portal/...)
@@ -326,6 +333,9 @@ doc_events = {
     # --- Payment Terms ---
     "Sales Order": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_sales_order_update_hook"
+    },
+    "Email Account": {
+        "before_validate": "verp_staffing.overrides.email_account.before_validate",
     },
     "User": {
         "before_insert": "verp_staffing.quota.utils.quota.user_limit",

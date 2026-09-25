@@ -290,6 +290,43 @@ def calculate_file_hash(file_path):
     return sha256.hexdigest()
 
 
+FONT_NAME = "Helvetica"
+LINE_SPACING = 1  # line height = font size x 1
+# Where the first baseline sits below the top of the box (Helvetica/Arial ascent with
+# line-height 1) — matches how the builder's text lands, so both look alike.
+BASELINE_FROM_TOP = 0.85
+
+
+def _wrap_lines(text, width, font_size):
+    """Greedy word wrap to `width` points; explicit newlines kept; a word longer
+    than the box is broken by characters."""
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    def w(s):
+        return stringWidth(s, FONT_NAME, font_size)
+
+    lines = []
+    for paragraph in str(text).replace("\r\n", "\n").split("\n"):
+        current = ""
+        for word in paragraph.split(" "):
+            candidate = word if not current else f"{current} {word}"
+            if w(candidate) <= width:
+                current = candidate
+                continue
+            if current:
+                lines.append(current)
+            current = ""
+            while w(word) > width and len(word) > 1:  # break an over-long word
+                cut = len(word) - 1
+                while cut > 1 and w(word[:cut]) > width:
+                    cut -= 1
+                lines.append(word[:cut])
+                word = word[cut:]
+            current = word
+        lines.append(current)
+    return lines
+
+
 def render_text(
     canvas_obj,
     value,
@@ -297,17 +334,30 @@ def render_text(
     y,
     height,
     font_size=12,
+    width=None,
 ):
     """
-    Draw text value.
+    Draw a text value inside its box: wrapped to the box width, line spacing 1,
+    starting at the top; a line that doesn't fit in the remaining height is not
+    drawn (nothing spills outside the box).
     """
 
     if not value:
         return
 
-    canvas_obj.setFont("Helvetica", float(font_size or 12))
+    size = float(font_size or 12)
+    canvas_obj.setFont(FONT_NAME, size)
 
-    canvas_obj.drawString(x, y + (height - float(font_size or 12)), str(value))
+    lines = _wrap_lines(value, width, size) if width else [str(value)]
+    step = size * LINE_SPACING
+    top = y + height
+
+    for index, line in enumerate(lines):
+        line_bottom = top - (index + 1) * step
+        if line_bottom < y - 0.01:
+            break
+        if line:
+            canvas_obj.drawString(x, top - index * step - size * BASELINE_FROM_TOP, line)
 
 
 def render_checkbox(canvas_obj, value, x, y, height, width):
@@ -494,6 +544,7 @@ def rebuild_signed_pdf(
                     y,
                     height,
                     field.font_size,
+                    width,
                 )
         c.showPage()
         c.save()

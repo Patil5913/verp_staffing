@@ -173,8 +173,25 @@ def get_candidate_form():
                 order_by="idx asc",
             )
 
+    # Files (visa copy, EAD card...) are stored as the File record's name. The portal can't
+    # look a File up itself (the generic get_value API is closed to it), so the details ride
+    # along here — one query for all of them.
+    files = {}
+    file_fields = [f["fieldname"] for f in fields if f.get("options") == "File" and values.get(f["fieldname"])]
+    if file_fields:
+        by_name = {
+            r.name: r
+            for r in frappe.get_all(
+                "File",
+                filters={"name": ["in", [values[f] for f in file_fields]]},
+                fields=["name", "file_name", "file_url"],
+            )
+        }
+        files = {f: by_name[values[f]] for f in file_fields if values[f] in by_name}
+
     return {
         "lock_form": lock_form,
+        "files": files,
         "fields": fields,
         "tables": tables,
         "values": values,

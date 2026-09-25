@@ -38,21 +38,26 @@
     <label v-if="label" class="text-p-sm font-medium text-app-text-muted">
       {{ label }}<span v-if="required" class="text-red-600"> *</span>
     </label>
-    <input
-      ref="el"
-      v-bind="inputAttrs"
-      :value="modelValue ?? ''"
-      :type="type"
-      :placeholder="placeholder"
-      :disabled="disabled"
-      class="w-full min-w-0 text-p-sm text-app-text placeholder:text-app-text-muted outline-none disabled:cursor-not-allowed disabled:opacity-60"
-      :class="bare ? 'bg-transparent' : [
-        'rounded-lg border bg-app-panel transition-colors focus:border-app-primary focus:ring-2 focus:ring-app-primary/20',
-        error ? 'border-red-500' : 'border-app-border',
-        compact ? 'h-8 px-2' : 'h-9 px-3',
-      ]"
-      @input="emit('update:modelValue', $event.target.value)"
-    />
+    <div class="relative">
+      <!-- e.g. the currency symbol of an amount field -->
+      <span v-if="prefix" class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-p-sm font-medium text-app-text-muted" :title="prefixTitle">{{ prefix }}</span>
+      <input
+        ref="el"
+        v-bind="inputAttrs"
+        :value="modelValue ?? ''"
+        :type="type"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        class="w-full min-w-0 text-p-sm text-app-text placeholder:text-app-text-muted outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        :class="bare ? 'bg-transparent' : [
+          'rounded-lg border bg-app-panel transition-colors focus:border-app-primary focus:ring-2 focus:ring-app-primary/20',
+          error ? 'border-red-500' : 'border-app-border',
+          compact ? 'h-8' : 'h-9',
+          prefix ? (prefix.length > 2 ? 'pl-10 pr-3' : 'pl-7 pr-3') : (compact ? 'px-2' : 'px-3'),
+        ]"
+        @input="emit('update:modelValue', $event.target.value)"
+      />
+    </div>
     <p v-if="error" class="text-p-xs text-red-600">{{ error }}</p>
     <p v-else-if="hint || description" class="text-p-xs text-app-text-muted">{{ hint || description }}</p>
   </div>
@@ -84,6 +89,8 @@ defineProps({
   disabled: { type: Boolean, default: false },
   // select only: [{ label, value }] or plain strings.
   options: { type: Array, default: () => [] },
+  prefix: { type: String, default: '' },
+  prefixTitle: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
 

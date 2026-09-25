@@ -28,7 +28,11 @@ function loadPdfjs() {
   return pdfjsPromise
 }
 
-export function usePdfPages(pdfUrl, { scale = 1.5 } = {}) {
+// The pdf.js render scale: 1 PDF point = 1.5 CSS px on screen. A builder that shows text
+// at `font_size * PDF_PAGE_SCALE` px matches what the PDF drawer draws at `font_size` pt.
+export const PDF_PAGE_SCALE = 1.5
+
+export function usePdfPages(pdfUrl, { scale = PDF_PAGE_SCALE } = {}) {
   const pages = ref([]) // [{ number, dataUrl, width, height }]
   const loading = ref(false)
   const error = ref('')
