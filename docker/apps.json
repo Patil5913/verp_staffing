@@ -1,10 +1,10 @@
 [
   {
     "url": "https://git.vrugle.com/Vrugle/verp_staffing.git",
-    "branch": "main"
+    "branch": "feat/frontend-setup"
   },
   {
     "url": "https://git.vrugle.com/Vrugle/vruglechat.git",
-    "branch": "main"
+    "branch": "develop"
   }
 ]
