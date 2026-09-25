@@ -5,12 +5,13 @@
 #
 # Build (see build.sh):  needs BuildKit + a git token secret for the private repos.
 
-ARG FRAPPE_VERSION=v15.119.1
+ARG FRAPPE_VERSION=v15.121.1
 
 # ---------- builder ----------
 FROM frappe/build:${FRAPPE_VERSION} AS builder
 
-ARG FRAPPE_BRANCH=version-15
+ARG FRAPPE_VERSION
+ARG FRAPPE_BRANCH=${FRAPPE_VERSION}
 ARG FRAPPE_PATH=https://github.com/frappe/frappe
 ARG GIT_HOST=git.vrugle.com
 

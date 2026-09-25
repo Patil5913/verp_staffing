@@ -11,8 +11,8 @@ if [ $# -eq 1 ]; then IMAGE=parthpatil5/verp_staffing; TAG=$1; else IMAGE=${1:?u
 
 DOCKER_BUILDKIT=1 docker build \
   --secret id=git_token,env=GIT_TOKEN \
-  --build-arg FRAPPE_VERSION="${FRAPPE_VERSION:-v15.119.1}" \
-  --build-arg FRAPPE_BRANCH="${FRAPPE_BRANCH:-version-15}" \
+  --build-arg FRAPPE_VERSION="${FRAPPE_VERSION:-v15.121.1}" \
+  --build-arg FRAPPE_BRANCH="${FRAPPE_BRANCH:-${FRAPPE_VERSION:-v15.121.1}}" \
   -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
 
 docker push "$IMAGE:$TAG"
