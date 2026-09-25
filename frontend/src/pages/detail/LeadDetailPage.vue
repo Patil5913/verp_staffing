@@ -66,6 +66,11 @@
             tone="info"
             message="This form is locked. Go to the Customer form and click 'Update Detail' to request changes."
           />
+          <NoticeBanner
+            v-else-if="leadClosed"
+            tone="info"
+            message="This Lead is Lost or Won, so its candidate form can no longer be edited."
+          />
           <LeadProfilePanel :form="profile" :locked="profileLocked" :tried-save="triedSaveProfile" />
         </div>
       </div>
@@ -164,7 +169,9 @@ watch(
   { immediate: true },
 )
 const profileLockedByApproval = computed(() => !!formLock.resource.data?.candidate_form_required && !!formLock.resource.data?.is_owner)
-const profileLocked = computed(() => leadLocked.value || profileLockedByApproval.value)
+// A Lost or Won lead's candidate form is frozen (like its status).
+const leadClosed = computed(() => ['Lost', 'Won', 'Opportunity'].includes(detail.meta.resource.data?.values?.status))
+const profileLocked = computed(() => leadLocked.value || profileLockedByApproval.value || leadClosed.value)
 
 async function saveProfile() {
   triedSaveProfile.value = true
@@ -191,11 +198,11 @@ const readOnlyFields = computed(() => {
   if (window.user !== 'Administrator') fields.push('lead_owner')
   return fields
 })
-// "Opportunity" is set by the system when an Opportunity is created from the Lead,
-// never picked by hand.
+// Only these four can be picked; "Won" / "Opportunity" are set by the system (converting to an
+// Opportunity) and never by hand.
 // (Shown as-is once it is the saved value, so a read-only Opportunity still displays.)
 const fieldOverrides = computed(() => ({
-  status: { options: ['Open', 'Lead', 'Interested', 'Won', 'Lost', ...(statusEditable.value ? [] : [savedStatus.value])].filter((v, i, a) => a.indexOf(v) === i).join('\n') },
+  status: { options: ['Lead', 'Lost', 'Interested', 'Open', ...(statusEditable.value ? [] : [savedStatus.value])].filter((v, i, a) => a.indexOf(v) === i).join('\n') },
 }))
 
 // Lead Owner: Sales or Lead department employees only (Employee has no

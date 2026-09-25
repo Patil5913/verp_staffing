@@ -19,3 +19,16 @@ export function siteTodayDate() {
   const [y, m, d] = siteTodayIso().split('-').map(Number)
   return new Date(y, m - 1, d)
 }
+
+// Milliseconds since a site-local timestamp ("YYYY-MM-DD HH:MM:SS", as the server stores it,
+// in the site's zone): both sides are read as wall-clock time in the site's zone, so the
+// browser's own zone never skews the answer.
+export function msSinceSiteTime(serverTimestamp) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: siteTimeZone(), hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date()).map((p) => [p.type, p.value]),
+  )
+  const nowWall = Date.parse(`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}Z`)
+  return nowWall - Date.parse(`${String(serverTimestamp).replace(' ', 'T').slice(0, 19)}Z`)
+}
