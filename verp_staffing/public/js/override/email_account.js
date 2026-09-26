@@ -8,9 +8,6 @@ function configure_email_account(frm) {
     const is_admin = frappe.user.has_role("System Manager");
     const allowed = [
         "brand_logo",
-        "footer",
-        "auto_reply_message",
-        "enable_auto_reply",
         "signature",
         "add_signature",
         "attachment_limit",
