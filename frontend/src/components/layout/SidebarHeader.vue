@@ -15,7 +15,13 @@
       :class="sidebarOpen && !isMobile ? 'flex-1' : ''"
       @click="onLogoClick"
     >
-      <img :src="appLogo" :alt="appName" class="h-6 w-6 shrink-0" />
+      <!-- Height fixed, width follows the image and is capped: any logo (square, wide, tall) keeps its own ratio. -->
+      <img
+        :src="appLogo"
+        :alt="appName"
+        class="h-7 w-auto shrink-0 object-contain object-left"
+        :class="sidebarOpen && !isMobile ? 'max-w-[7.5rem]' : isMobile ? 'max-w-[6rem]' : 'max-w-[2.25rem]'"
+      />
       <span
         v-if="sidebarOpen && !isMobile"
         class="truncate text-base font-semibold text-app-text"

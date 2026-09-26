@@ -5,7 +5,7 @@ import { call } from 'frappe-ui'
 // Module-level state so the sidebar and login page share one request.
 const DEFAULT_NAME = 'Verp Placements'
 // dynamic binding so Vite doesn't try to resolve this as a local build asset
-const DEFAULT_LOGO = '/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png'
+const DEFAULT_LOGO = '/assets/verp_staffing/images/Vrugle-icon-Logo-trimmed.png'
 
 const appName = ref(DEFAULT_NAME)
 const appLogo = ref(DEFAULT_LOGO)

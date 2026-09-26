@@ -14,7 +14,7 @@ app_license = "mit"
 add_to_apps_screen = [
 	{
 		"name": "verp_staffing",
-		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png",
+		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-trimmed.png",
 		"title": "Vrugle Staffing ERP",
 		"route": "/verp",
 		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"

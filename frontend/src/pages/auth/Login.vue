@@ -2,7 +2,7 @@
   <div class="flex min-h-screen items-center justify-center bg-app-bg px-4">
     <div class="w-full max-w-sm">
       <div class="mb-8 flex flex-col items-center gap-3">
-        <img :src="appLogo" :alt="appName" class="h-10 w-10" />
+        <img :src="appLogo" :alt="appName" class="h-10 w-auto max-w-[10rem] object-contain" />
         <h1 class="text-xl font-semibold text-app-text">{{ appName }}</h1>
       </div>
 
