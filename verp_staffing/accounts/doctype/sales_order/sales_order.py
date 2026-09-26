@@ -569,6 +569,43 @@ def get_requirements_from_config(doc, config):
 
 
 @frappe.whitelist()
+def get_forward_gate(customer):
+    """Whether Forward Candidate is available for this customer.
+
+    If any of their (non-cancelled) Sales Orders has a service that ERP Configuration marks as needing the
+    candidate details form and/or an agreement, forwarding waits until those are done: the form submitted
+    (the customer's form is locked once they submit it) and each such order has a signed agreement.
+    Services that need neither never block it.
+    """
+    frappe.has_permission("Customer", "read", customer, throw=True)
+    config = get_erp_config()
+    form_needed = agreement_needed = False
+    unsigned = []
+    for so in frappe.get_all("Sales Order", filters={"customer": customer, "docstatus": ["<", 2]}, pluck="name"):
+        req = get_requirements_from_config(frappe.get_doc("Sales Order", so), config)
+        form_needed = form_needed or req["candidate_required"]
+        if req["agreement_required"]:
+            agreement_needed = True
+            signed = frappe.db.exists("E Sign", {"sales_order": so, "status": "Fully Signed"}) or frappe.db.exists(
+                "Agreement", {"sales_order": so, "status": "Agreement signed"}
+            )
+            if not signed:
+                unsigned.append(so)
+
+    reasons = []
+    if form_needed and not int(frappe.db.get_value("Customer", customer, "lock_form") or 0):
+        reasons.append("The candidate details form hasn't been submitted yet.")
+    if unsigned:
+        reasons.append("Agreement not signed yet for " + ", ".join(unsigned) + ".")
+    return {
+        "blocked": bool(reasons),
+        "reasons": reasons,
+        "form_required": form_needed,
+        "agreement_required": agreement_needed,
+    }
+
+
+@frappe.whitelist()
 def get_candidate_form_order(customer):
     """The customer's latest Sales Order (not cancelled) with a service that needs the candidate
     details form, or None - the Customer page offers "Send Details Form" only when there is one."""

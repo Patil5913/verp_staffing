@@ -17,7 +17,7 @@
         </Dropdown>
         <!-- Their buttons live in the Actions menu; these keep their dialogs and state. -->
         <ForwardCandidateButton
-          v-if="!detail.isNew.value && hasSalesOrder"
+          v-if="!detail.isNew.value && hasSalesOrder && !forwardBlocked"
           ref="forwardRef"
           hide-button
           doctype="Customer"
@@ -181,6 +181,15 @@ async function checkDetailsFormOrder() {
 }
 watch(name, checkDetailsFormOrder, { immediate: true })
 
+// Forward Candidate waits for the details form / agreement when ERP Configuration makes them compulsory.
+const forwardBlocked = ref(false)
+async function checkForwardGate() {
+  if (!name.value || name.value === 'new') return (forwardBlocked.value = false)
+  const gate = await call('verp_staffing.accounts.doctype.sales_order.sales_order.get_forward_gate', { customer: name.value }).catch(() => null)
+  forwardBlocked.value = !!gate?.blocked
+}
+watch(name, checkForwardGate, { immediate: true })
+
 // The linked Lead Detail Form's candidate-facing fields - same "Candidate
 // Profile" tab as Lead/Opportunity, and the same split-save folded into the
 // one navbar Save (see OpportunityDetailPage.vue for the fuller rationale:
@@ -275,7 +284,7 @@ const actionMenu = computed(() => {
   items.push({ label: 'Create Sales Order', icon: 'shopping-cart', onClick: onCreateSalesOrder })
   if (hasSalesOrder.value) {
     items.push({ label: 'Agreement', icon: 'file-signature', onClick: () => (activeTab.value = 'agreements') })
-    items.push({ label: 'Forward Candidate', icon: 'arrow-right', onClick: () => forwardRef.value?.openDialog() })
+    if (!forwardBlocked.value) items.push({ label: 'Forward Candidate', icon: 'arrow-right', onClick: () => forwardRef.value?.openDialog() })
   }
   const fu = fieldUpdateRef.value
   if (fu?.state.canUpdate) items.push({ label: 'Update Detail', icon: 'pencil', onClick: () => fu.openUpdate() })

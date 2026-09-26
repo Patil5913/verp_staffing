@@ -119,7 +119,14 @@ frappe.ui.form.on("Customer", {
 		frappe.db.count("Sales Order", { filters: { customer: frm.doc.name, docstatus: ["<", 2] } }).then((count) => {
 			frm.toggle_display("history_tab", !!count);
 			if (!count) return;
-			window.add_forward_button(frm, "Sales");
+			// Forwarding waits for the details form / agreement when ERP Configuration makes them compulsory.
+			frappe.call({
+				method: "verp_staffing.accounts.doctype.sales_order.sales_order.get_forward_gate",
+				args: { customer: frm.doc.name },
+				callback(r) {
+					if (!r.message || !r.message.blocked) window.add_forward_button(frm, "Sales");
+				},
+			});
 			if (frm.doc.chat_access !== "Active") {
 				frm.add_custom_button("Portal & Chat Access", () => open_portal_access_dialog(frm));
 			}
