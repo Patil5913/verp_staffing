@@ -14,7 +14,22 @@
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :table-queries="TABLE_QUERIES" />
+        <div class="flex flex-col gap-6">
+          <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="['department_name', 'head_of_department']" />
+          <div v-if="!detail.meta.isLoading || detail.meta.resource.data" class="flex flex-col gap-6">
+            <template v-for="table in detail.tables.value" :key="table.fieldname">
+              <TableMultiSelectField
+                v-if="TABLE_META[table.fieldname]"
+                :table="table"
+                :rows="detail.values[table.fieldname] || []"
+                :disabled="!detail.canWrite.value"
+                :query="TABLE_QUERIES[table.fieldname]"
+                :description="TABLE_META[table.fieldname].description"
+                @update:rows="(rows) => (detail.values[table.fieldname] = rows)"
+              />
+            </template>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -25,16 +40,6 @@
         :types="['note', 'update']"
         show-composer
         empty-text="Nothing here yet - add the first note below."
-      />
-    </template>
-
-    <template #tab-activity>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['task', 'event']"
-        allow-create
-        empty-text="No tasks or events linked to this record yet."
       />
     </template>
   </DetailPageLayout>
@@ -69,6 +74,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
+import TableMultiSelectField from '@/components/detail/TableMultiSelectField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
@@ -83,7 +89,6 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
   { key: 'notes', label: 'Notes' },
-  { key: 'activity', label: 'Activity' },
 ]
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
 const activeTab = ref('details')
@@ -92,6 +97,10 @@ const activeTab = ref('details')
 // department (role is a global one-department-only assignment) - see
 // get_department_role_query / get_department_service_query in
 // department.py, ported from the old desk department.js set_query calls.
+const TABLE_META = {
+  role: { description: 'Roles that belong to this department. A role can only be in one department.' },
+  services: { description: 'Services this department offers.' },
+}
 const TABLE_QUERIES = {
   role: 'verp_staffing.settings.doctype.department.department.get_department_role_query',
   services: 'verp_staffing.settings.doctype.department.department.get_department_service_query',
