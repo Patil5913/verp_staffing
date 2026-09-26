@@ -1201,8 +1201,8 @@ def generate_certificate_page(agreement_name):
                 cursor_y = draw_section_title(c, cursor_y, "Audit Trail (continued)")
             cursor_y = draw_audit_row(c, cursor_y, act)
 
-    # Completion summary – may need a new page
-    if cursor_y - 60 - 20 < FOOTER_H + 24:
+    # Completion summary – the title (20) + card (105) + gap must fit above the footer, else it moves to the next page
+    if cursor_y - (8 + 20 + 105 + 14) < FOOTER_H + 24:
         c.showPage()
         page_num += 1
         cursor_y = start_page(c, page_num)
