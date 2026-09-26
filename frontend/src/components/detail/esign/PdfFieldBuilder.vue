@@ -54,8 +54,8 @@
         <AppButton variant="outline" size="icon" icon="plus" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(ZOOM_STEP)" />
       </div>
       <div class="flex items-center gap-2 text-p-xs">
-        <button type="button" class="kind-badge kind-company" :disabled="!standardCount" title="Click to jump to the next company field" @click="jumpTo('company')">Company <strong class="tabular-nums">{{ standardCount }}</strong></button>
-        <button type="button" class="kind-badge kind-customer" :disabled="!customerCount" title="Click to jump to the next customer field" @click="jumpTo('customer')">Customer <strong class="tabular-nums">{{ customerCount }}</strong></button>
+        <button type="button" class="kind-badge kind-company" :disabled="!standardCount" title="Click to jump to the next company field" @click="jumpTo('company')">Company <strong class="tabular-nums">{{ badgeLabel('company', standardCount) }}</strong></button>
+        <button type="button" class="kind-badge kind-customer" :disabled="!customerCount" title="Click to jump to the next customer field" @click="jumpTo('customer')">Customer <strong class="tabular-nums">{{ badgeLabel('customer', customerCount) }}</strong></button>
       </div>
     </div>
     <div class="flex-1 overflow-auto bg-app-panel-2 p-6">
@@ -261,12 +261,13 @@ const customerCount = computed(() => localFields.value.filter(isCustomer).length
 const standardCount = computed(() => localFields.value.length - customerCount.value)
 
 // Click a badge to step through that kind of field, scrolling each into view.
-const jumpIndex = { company: -1, customer: -1 }
+const jumpIndex = ref({ company: -1, customer: -1 })
+const badgeLabel = (kind, count) => (jumpIndex.value[kind] >= 0 && jumpIndex.value[kind] < count ? `${jumpIndex.value[kind] + 1}/${count}` : count)
 function jumpTo(kind) {
   const list = localFields.value.filter((f) => (kind === 'customer') === isCustomer(f))
   if (!list.length) return
-  jumpIndex[kind] = (jumpIndex[kind] + 1) % list.length
-  const f = list[jumpIndex[kind]]
+  jumpIndex.value[kind] = (jumpIndex.value[kind] + 1) % list.length
+  const f = list[jumpIndex.value[kind]]
   selectedFieldId.value = f.field_id
   nextTick(() => {
     const el = document.querySelector(`[data-field-id="${f.field_id}"]`)
