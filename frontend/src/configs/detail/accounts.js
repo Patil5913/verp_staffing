@@ -9,9 +9,6 @@ import DocAction from '@/components/detail/actions/DocAction.vue'
 import NoticeBanner from '@/components/common/NoticeBanner.vue'
 import LinkAction from '@/components/detail/actions/LinkAction.vue'
 import SummaryStrip from '@/components/detail/SummaryStrip.vue'
-import { agreementRequired } from '@/utils/detail/agreementRequired'
-import AgreementPanel from '@/components/detail/accounts/AgreementPanel.vue'
-import SendDetailsFormAction from '@/components/detail/accounts/SendDetailsFormAction.vue'
 import JournalQuickEntryAction from '@/components/detail/accounts/JournalQuickEntryAction.vue'
 import OutstandingInvoicesPanel from '@/components/detail/accounts/OutstandingInvoicesPanel.vue'
 import LinkedInvoicesPanel from '@/components/detail/accounts/LinkedInvoicesPanel.vue'
@@ -617,6 +614,9 @@ export const paymentEntryConfig = {
   // Rejected already has its own (locked, verification_status badge) -
   // only suppress it for that specific state, not for every draft.
   hideDraftNotice: (d) => d.hidden.verification_status === 'Rejected',
+  // The server refuses to submit without these (payment_entry.py on_submit); marked here so the
+  // form shows what's still missing instead of failing after Submit.
+  requiredOnSubmit: ['paid_from', 'paid_to'],
   actions: [ledgerAction()],
   tabs: [
     {
@@ -635,6 +635,7 @@ export const paymentEntryConfig = {
           ['paid_from', 'paid_from_account_currency', 'paid_to', 'paid_to_account_currency', 'currency', 'conversion_rate', 'paid_amount', 'base_paid_amount'],
           'Accounts & Amount',
           {
+            fieldOverrides: () => ({ paid_from: { reqd: 1 }, paid_to: { reqd: 1 } }),
             linkQueries: (ctx) => ({
               paid_from: paidAccountFilters(['Pay', 'Internal Transfer'])(ctx),
               paid_to: paidAccountFilters(['Receive', 'Internal Transfer'])(ctx),
@@ -784,7 +785,6 @@ export const salesOrderConfig = {
   companyDefaults: {},
   autoCalculate: true,
   allowOnSubmitEdit: true,
-  actions: [{ component: SendDetailsFormAction, show: notNew }],
   // Sales Order's own `status` (Open/Closed, server-computed) only ever
   // matters once it reads "Closed" - otherwise the ordinary Draft/
   // Submitted/Cancelled docstatus badge tells the fuller story.
@@ -816,7 +816,6 @@ export const salesOrderConfig = {
         { type: 'component', component: LinkedInvoicesPanel },
       ],
     },
-    { key: 'agreements', label: 'Agreements', show: (d) => notNew(d) && agreementRequired(d), sections: [{ type: 'component', component: AgreementPanel }] },
   ],
 }
 

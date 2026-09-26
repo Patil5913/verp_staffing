@@ -485,6 +485,7 @@ override_whitelisted_methods = {
 before_request = [
     "verp_staffing.utils.portal_guard.restrict_portal_api",
     "verp_staffing.utils.desk_routes.redirect_desk_to_spa",
+    "verp_staffing.utils.desk_routes.redirect_bare_spa_paths",
     "verp_staffing.quota.utils.quota.site_expiry_check",
     "verp_staffing.quota.utils.quota.block_non_admin",
     "verp_staffing.overrides.email_template.patch",

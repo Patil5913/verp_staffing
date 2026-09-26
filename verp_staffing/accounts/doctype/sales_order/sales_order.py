@@ -16,6 +16,7 @@ from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
 from verp_staffing.crm.api.agreement import send_existing_agreement, generate_form_url
+from verp_staffing.esign.doctype.e_sign.e_sign import send_all_signers
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
@@ -403,15 +404,9 @@ class SalesOrder(Document):
             )
 
     def validate_agreement_requirements(self):
-
-        has_agreement = frappe.db.exists(
-            "Agreement",
-            {"sales_order": self.name},
-        )
-
-        if not has_agreement:
-            frappe.throw(_("No agreement found for this Sales Order.\n Please create a agreement and save it as you have selected a service in which agreement is required"))
-
+        # Agreements are raised from the Customer (Agreements tab) once the Sales Order exists,
+        # so an order can no longer be required to have one at submit. Only legacy Agreements
+        # that were created without a PDF still block.
         missing_pdf = frappe.db.exists(
             "Agreement",
             {
@@ -469,6 +464,11 @@ def send_agreement_job(sales_order):
 
         for agreement in agreements:
             send_existing_agreement(agreement.name)
+
+        for esign in frappe.get_all(
+            "E Sign", filters={"sales_order": sales_order, "status": "Draft"}, pluck="name"
+        ):
+            send_all_signers(esign)
 
     except Exception:
         handle_background_failure(
@@ -566,6 +566,20 @@ def get_requirements_from_config(doc, config):
         "agreement_required": agreement_required,
         "candidate_required": candidate_required,
     }
+
+
+@frappe.whitelist()
+def get_candidate_form_order(customer):
+    """The customer's latest Sales Order (not cancelled) with a service that needs the candidate
+    details form, or None - the Customer page offers "Send Details Form" only when there is one."""
+    frappe.has_permission("Customer", "read", customer, throw=True)
+    config = get_erp_config()
+    for so in frappe.get_all(
+        "Sales Order", filters={"customer": customer, "docstatus": ["<", 2]}, pluck="name", order_by="creation desc"
+    ):
+        if get_requirements_from_config(frappe.get_doc("Sales Order", so), config)["candidate_required"]:
+            return so
+    return None
 
 
 @frappe.whitelist()

@@ -115,3 +115,28 @@ def redirect_desk_to_spa():
     exc = RequestRedirect(target)
     exc.code = 302  # not 308: the mapping can change, browsers must not cache it
     raise exc
+
+
+# The app's own pages live under /verp. A bare /pending-pe-requests (a hand-typed or old link, a link
+# built without the prefix) is sent to /verp/pending-pe-requests instead of a dead page.
+BARE_SPA_PAGES = ("pending-pe-requests", "email-inbox", "permission-manager", "setup")
+
+
+def redirect_bare_spa_paths():
+    """before_request."""
+    from werkzeug.routing import RequestRedirect
+
+    request = frappe.local.request
+    if request.method != "GET":
+        return
+    path = request.path or ""
+    first = path.strip("/").split("/", 1)[0]
+    if first not in BARE_SPA_PAGES:
+        return
+    target = "/verp" + path
+    if request.query_string:
+        target += "?" + request.query_string.decode("utf-8", "ignore")
+    exc = RequestRedirect(target)
+    exc.code = 302
+    raise exc
+

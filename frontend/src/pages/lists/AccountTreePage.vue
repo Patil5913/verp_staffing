@@ -89,6 +89,7 @@
 </template>
 
 <script setup>
+import { moneyOptions } from '@/utils/common/defaultCurrency'
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
@@ -188,7 +189,7 @@ function loadChildren(parent) {
 }
 
 const fmt = (n, currency) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD', currencyDisplay: 'narrowSymbol' }).format(Math.abs(n))
+  new Intl.NumberFormat(undefined, moneyOptions(currency)).format(Math.abs(n))
 
 async function attachBalances(nodes) {
   if (!showBalances.value || !nodes.length) return

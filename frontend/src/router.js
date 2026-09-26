@@ -62,6 +62,8 @@ const PORTAL_ROUTES = [
   // the site's setup isn't complete). Blank layout, like the agreement page.
   { path: '/setup-wizard', name: 'SetupWizard', component: () => import('@/pages/setup/SetupWizardPage.vue'), meta: { standalone: true, title: 'Set up' } },
   { path: '/sign-agreement', name: 'SignAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, standalone: true, title: 'Sign Agreement' } },
+  { path: '/portal/agreements', name: 'PortalAgreements', component: () => import('@/pages/portal/PortalAgreementsPage.vue'), meta: { portal: true, title: 'Agreements' } },
+  { path: '/portal/agreements/:name', name: 'PortalAgreementSign', component: () => import('@/pages/portal/PortalAgreementSignPage.vue'), meta: { portal: true, title: 'Sign Agreement' } },
   { path: '/portal/candidate-details', name: 'PortalCandidateDetails', component: () => import('@/pages/portal/PortalCandidateDetailsPage.vue'), meta: { portal: true, title: 'Candidate Details' } },
   { path: '/portal/messages', name: 'PortalMessages', component: () => import('@/pages/portal/PortalMessagesPage.vue'), meta: { portal: true, title: 'Messages' } },
 ]
@@ -338,7 +340,8 @@ router.onError((error, to) => {
   const key = 'verp:chunk-reload'
   if (sessionStorage.getItem(key) === to.fullPath) return
   sessionStorage.setItem(key, to.fullPath)
-  window.location.href = to.fullPath
+  // router.resolve(...).href includes the /verp base; to.fullPath alone doesn't and would land outside the app.
+  window.location.href = router.resolve(to.fullPath).href
 })
 
 // window.user is set server-side on every full page load, straight from

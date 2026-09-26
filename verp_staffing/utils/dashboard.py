@@ -697,7 +697,7 @@ def _crm_sales(b, p, company):
     users = _user_names()
 
     b.kpi("orders", "Sales orders", count, "number", count_prev, icon="shopping-bag", href=_href("Sales Order"))
-    b.kpi("order_value", "Order value", value, "currency", prev, icon="badge-indian-rupee")
+    b.kpi("order_value", "Order value", value, "currency", prev, icon="banknote")
     b.kpi("avg_deal", "Average deal size", value / count if count else 0, "currency", (prev / count_prev) if count_prev else None, icon="calculator")
     b.chart("orders_trend", "Sales orders over time", "bar", _trend(p, {"Order value": [(_d(r.posting_date), r.base_grand_total) for r in rows]}), _series(("Order value", "bar", VIOLET)), "currency", span=2)
     b.chart("orders_customers", "Top customers by order value", "hbar", _top([(r.customer, r.base_grand_total) for r in cur], 10), fmt="currency")

@@ -779,7 +779,7 @@ function load_existing_fields(frm) {
 // Place holders for each field type
 const PREVIEW_VALUES = {
 	Text: "Acme Corporation Private Limited",
-	Number: "₹ 12,45,000",
+	Number: "1,245,000",
 	Rich_Text: "Net 30 days from invoice date",
 	Date: "31 March 2026",
 	Checkbox: "☑",

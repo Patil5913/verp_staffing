@@ -4,6 +4,7 @@ import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
 import { confirmSampleDataLinks } from '@/utils/detail/sampleDataGuard'
 import { validateFieldValue } from '@/utils/detail/fieldFormats'
+import { normalizeError } from '@/utils/common/errors'
 
 // Generic single-record detail/form view on top of useResource: field +
 // child-table metadata (backed by verp_staffing.utils.detail_view), current
@@ -142,6 +143,24 @@ export function useDocDetail(doctype, name) {
   }
   const cancelDoc = () => runTransition(cancelResource, 'Cancelled.')
 
+  // Fields a failed submit said were missing. Doctype controllers enforce many
+  // "required before submitting" rules in on_submit (not `reqd`), so the server
+  // only says so in the error text. Match those field labels against the still-empty
+  // editable fields, so the form can mark them and say what to fill, on every doctype.
+  const serverMissing = ref([])
+  function flagMissingFromError(error) {
+    const message = String(normalizeError(error).message || '').replace(/<[^>]+>/g, ' ').toLowerCase()
+    serverMissing.value = []
+    if (!/required|mandatory|missing|must be (set|filled)|fill/.test(message)) return []
+    const found = fields.value.filter(
+      (f) => f.label && !f.read_only && f.label.length > 3 && message.includes(f.label.toLowerCase()) && !hasValue(values[f.fieldname]),
+    )
+    serverMissing.value = found.map((f) => f.fieldname)
+    if (found.length) triedSave.value = true
+    return found
+  }
+  const hasValue = (v) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length)
+
   async function submitDoc() {
     // resource.submit() rethrows after onError, so a failed submit lands here as
     // an exception (not a falsy result) - catch it, or the error is swallowed
@@ -154,7 +173,7 @@ export function useDocDetail(doctype, name) {
       }
       return { ok: false, error: submitResource.resource.error }
     } catch (error) {
-      return { ok: false, error }
+      return { ok: false, error, missing: flagMissingFromError(error) }
     }
   }
 
@@ -217,6 +236,7 @@ export function useDocDetail(doctype, name) {
     save,
     submit,
     triedSave,
+    serverMissing,
     refresh: () => meta.resource.reload(),
   }
 }

@@ -10,36 +10,23 @@
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
-        <AppButton v-if="!detail.isNew.value && Number(detail.hidden?.lock_form)" variant="outline" icon="lock-open" @click="showUnlock = true">Unlock Form</AppButton>
-        <AppButton
-          v-if="!detail.isNew.value && detail.values.chat_access !== 'Active'"
-          variant="outline"
-          icon="send"
-          @click="showPortalAccess = true"
-        >
-          Portal &amp; Chat Access
-        </AppButton>
-        <AppButton
-          v-if="!detail.isNew.value && detail.values.chat_access === 'Active'"
-          variant="outline"
-          theme="red"
-          icon="user-x"
-          @click="showRevoke = true"
-        >
-          Revoke Portal Access
-        </AppButton>
-        <AppButton v-if="!detail.isNew.value" variant="outline" icon="shopping-cart" @click="onCreateSalesOrder">
-          Create Sales Order
-        </AppButton>
+        <Dropdown v-if="!detail.isNew.value && actionMenu.length" :options="actionMenu" placement="right">
+          <template #default="{ open }">
+            <AppButton variant="outline" icon="zap" :class="open ? 'bg-app-panel-2' : ''">Actions</AppButton>
+          </template>
+        </Dropdown>
+        <!-- Their buttons live in the Actions menu; these keep their dialogs and state. -->
         <ForwardCandidateButton
-          v-if="!detail.isNew.value"
+          v-if="!detail.isNew.value && hasSalesOrder"
+          ref="forwardRef"
+          hide-button
           doctype="Customer"
           :name="name"
           :customer="name"
           from-service-name="Customer"
           @forwarded="detail.refresh"
         />
-        <FieldUpdateActions :detail="detail" :doctype="doctype" :name="name" mode="owner" />
+        <FieldUpdateActions ref="fieldUpdateRef" hide-buttons :detail="detail" :doctype="doctype" :name="name" mode="owner" />
       </RecordActionBar>
     </template>
 
@@ -64,7 +51,13 @@
 
     <template #tab-history>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <CustomerHistoryPanel :customer="name" :detail="detail" />
+        <CustomerTimeline :customer="name" />
+      </div>
+    </template>
+
+    <template #tab-agreements>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <CustomerAgreementsPanel :customer="name" />
       </div>
     </template>
 
@@ -95,7 +88,7 @@
     </template>
   </DetailPageLayout>
 
-  <UnlockFormDialog v-if="!detail.isNew.value" v-model="showUnlock" :customer="name" />
+  <UnlockFormDialog v-if="!detail.isNew.value" v-model="showUnlock" :customer="name" :sales-order="detailsFormOrder" />
   <PortalAccessDialog v-if="!detail.isNew.value" v-model="showPortalAccess" :customer="name" @sent="detail.refresh()" />
   <Dialog
     v-model="showRevoke"
@@ -133,8 +126,7 @@
 // the customer prefill the desk form has), "Forward Candidate" (shared with
 // every service record page - see ForwardCandidateButton.vue, which branches
 // on doctype === "Customer" the same way add_forward_button did), and a
-// Candidate Profile tab + History tab (get_customer_history, same as the
-// customer portal / public/js/customer_history.js).
+// Candidate Profile tab + History tab (one timeline: crm/api/customer_timeline.py).
 //
 // Deliberately not ported: the owner "Update Detail"/"Accept Updates"
 // field-change-request dialogs' desk-specific HTML widgets (their
@@ -142,7 +134,7 @@
 // markup).
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Dialog, call } from 'frappe-ui'
+import { Dialog, Dropdown, call } from 'frappe-ui'
 import { notify } from '@/utils/common/notify'
 import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
@@ -150,7 +142,8 @@ import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActio
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
 import UnlockFormDialog from '@/components/detail/customer/UnlockFormDialog.vue'
 import PortalAccessDialog from '@/components/detail/customer/PortalAccessDialog.vue'
-import CustomerHistoryPanel from '@/components/detail/customer/CustomerHistoryPanel.vue'
+import CustomerTimeline from '@/components/detail/customer/CustomerTimeline.vue'
+import CustomerAgreementsPanel from '@/components/detail/customer/CustomerAgreementsPanel.vue'
 import CustomerSalesOrdersPanel from '@/components/detail/customer/CustomerSalesOrdersPanel.vue'
 import LeadProfilePanel from '@/components/detail/lead/LeadProfilePanel.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
@@ -165,6 +158,28 @@ const router = useRouter()
 
 const doctype = computed(() => 'Customer')
 const name = computed(() => route.params.name)
+
+// Portal & Chat Access, Forward Candidate and the History tab only make sense once the
+// customer has a Sales Order (any that isn't cancelled), so they stay hidden until then.
+const hasSalesOrder = ref(false)
+async function checkSalesOrders() {
+  if (!name.value || name.value === 'new') return (hasSalesOrder.value = false)
+  try {
+    const count = await call('frappe.client.get_count', { doctype: 'Sales Order', filters: { customer: name.value, docstatus: ['<', 2] } })
+    hasSalesOrder.value = count > 0
+  } catch {
+    hasSalesOrder.value = false
+  }
+}
+watch(name, checkSalesOrders, { immediate: true })
+
+// The Sales Order (if any) whose services need the candidate details form - "Send Details Form".
+const detailsFormOrder = ref('')
+async function checkDetailsFormOrder() {
+  if (!name.value || name.value === 'new') return (detailsFormOrder.value = '')
+  detailsFormOrder.value = (await call('verp_staffing.accounts.doctype.sales_order.sales_order.get_candidate_form_order', { customer: name.value }).catch(() => null)) || ''
+}
+watch(name, checkDetailsFormOrder, { immediate: true })
 
 // The linked Lead Detail Form's candidate-facing fields - same "Candidate
 // Profile" tab as Lead/Opportunity, and the same split-save folded into the
@@ -189,8 +204,9 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
 const DEFAULT_TABS = computed(() => [
   { key: 'details', label: 'Details' },
   ...(profile.exists.value ? [{ key: 'profile', label: 'Candidate Profile' }] : []),
-  { key: 'history', label: 'History' },
+  ...(hasSalesOrder.value ? [{ key: 'history', label: 'History' }] : []),
   { key: 'sales-orders', label: 'Sales Orders' },
+  ...(hasSalesOrder.value ? [{ key: 'agreements', label: 'Agreements' }] : []),
   { key: 'notes', label: 'Notes' },
   { key: 'activity', label: 'Activity' },
 ])
@@ -246,6 +262,26 @@ watch(
 
 const showPortalAccess = ref(false)
 const showUnlock = ref(false)
+const forwardRef = ref(null)
+const fieldUpdateRef = ref(null)
+
+// Everything the customer page can do, as one Actions menu (only what applies right now).
+const actionMenu = computed(() => {
+  const items = []
+  if (detailsFormOrder.value) items.push({ label: 'Send Details Form', icon: 'mail', onClick: () => (showUnlock.value = true) })
+  else if (Number(detail.hidden?.lock_form)) items.push({ label: 'Unlock Form', icon: 'lock-open', onClick: () => (showUnlock.value = true) })
+  if (hasSalesOrder.value && detail.values.chat_access !== 'Active') items.push({ label: 'Portal & Chat Access', icon: 'send', onClick: () => (showPortalAccess.value = true) })
+  if (detail.values.chat_access === 'Active') items.push({ label: 'Revoke Portal Access', icon: 'user-x', theme: 'red', onClick: () => (showRevoke.value = true) })
+  items.push({ label: 'Create Sales Order', icon: 'shopping-cart', onClick: onCreateSalesOrder })
+  if (hasSalesOrder.value) {
+    items.push({ label: 'Agreement', icon: 'file-signature', onClick: () => (activeTab.value = 'agreements') })
+    items.push({ label: 'Forward Candidate', icon: 'arrow-right', onClick: () => forwardRef.value?.openDialog() })
+  }
+  const fu = fieldUpdateRef.value
+  if (fu?.state.canUpdate) items.push({ label: 'Update Detail', icon: 'pencil', onClick: () => fu.openUpdate() })
+  if (fu?.state.requests.length) items.push({ label: `Accept Updates (${fu.state.requests.length})`, icon: 'check-check', onClick: () => fu.openReview() })
+  return items
+})
 
 const showRevoke = ref(false)
 const revoking = ref(false)

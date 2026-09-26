@@ -1,7 +1,7 @@
 <template>
   <component
     :is="isInternal ? 'router-link' : 'a'"
-    v-bind="isInternal ? { to: internalTo } : { href: route }"
+    v-bind="isInternal ? { to: internalTo } : { href: fullRoute }"
     class="group relative flex h-[34px] items-center gap-2.5 rounded-md text-p-sm transition-colors"
     :class="[
       collapsed ? 'justify-center px-0' : 'px-2.5',
@@ -83,12 +83,15 @@ function onQuickCreate() {
 // Pages already ported into this SPA live under /verp and use vue-router;
 // everything else still points at the classic desk (/app/...) and needs a
 // full browser navigation.
-const isInternal = computed(() => props.route?.startsWith('/verp'))
+// The app's own pages always live under /verp, even if a stored route forgot the prefix.
+const BARE_PAGE = /^\/(pending-pe-requests|email-inbox|permission-manager|setup)(\/|$)/
+const fullRoute = computed(() => (BARE_PAGE.test(props.route || '') ? `/verp${props.route}` : props.route))
+const isInternal = computed(() => fullRoute.value?.startsWith('/verp'))
 
 // vue-router's `to` is resolved against the router's own path space, which
 // already excludes the `history` base ('/verp' - see router.js); router-link
 // re-adds it when building the actual href. Passing the full `/verp/...`
 // route straight through would resolve to no route at all and link to a
 // doubled "/verp/verp/..." href.
-const internalTo = computed(() => props.route.replace(/^\/verp/, '') || '/')
+const internalTo = computed(() => fullRoute.value.replace(/^\/verp/, '') || '/')
 </script>

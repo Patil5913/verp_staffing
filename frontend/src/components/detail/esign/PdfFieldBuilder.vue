@@ -64,7 +64,10 @@
             :class="{ selected: field.field_id === selectedFieldId }"
             :style="fieldStyle(field)"
             @pointerdown="onFieldMouseDown(field, $event)"
+            tabindex="0"
             @click.stop="selectedFieldId = field.field_id"
+            @focus="selectedFieldId = field.field_id"
+            @keydown="onFieldKey(field, $event)"
           >
             <div class="pdf-field-preview" :style="previewStyle(field)">
               {{ field.builder_placeholder || PREVIEW_VALUES[field.type] || field.name }}
@@ -118,7 +121,7 @@
         💡 <strong>Quick tips</strong><br />
         • Reuse the same Name on multiple fields to auto-fill the same value in all of them.<br />
         • Preview Text is only shown here in the builder, not in the final document.<br />
-        • Drag a field to move it, or its corner handle to resize it.
+        • Drag a field to move it, or its corner handle to resize it. Arrow keys nudge a selected field (Shift = 10px); Delete removes it.
       </div>
     </div>
   </div>
@@ -171,7 +174,7 @@ const emit = defineEmits(['update:modelValue', 'save'])
 const PREVIEW_FONT_SCALE = 1.5
 const PREVIEW_VALUES = {
   Text: 'Acme Corporation Private Limited',
-  Number: '₹ 12,45,000',
+  Number: '1,245,000',
   Rich_Text: 'Net 30 days from invoice date',
   Date: '31 March 2026',
   Signature: 'Johnathan Smith',
@@ -272,8 +275,8 @@ function onDrop(pageNumber, event) {
   newFieldType.value = draggingTool.value
   newFieldDropPos.value = {
     page: pageNumber,
-    x: event.clientX - rect.left - NEW_FIELD_WIDTH / 2,
-    y: event.clientY - rect.top - NEW_FIELD_HEIGHT / 2,
+    x: Math.min(rect.width - NEW_FIELD_WIDTH, event.clientX - rect.left - NEW_FIELD_WIDTH / 2),
+    y: Math.min(rect.height - NEW_FIELD_HEIGHT, event.clientY - rect.top - NEW_FIELD_HEIGHT / 2),
   }
   draft.value = { name: '', placeholder: '', font_size: 12, line_height: 1.2 }
   showCreateDialog.value = true
@@ -309,11 +312,28 @@ function confirmCreateField() {
   selectedFieldId.value = field.field_id
 }
 
+// Arrow keys nudge a selected field (Shift = 10px), Delete removes it.
+function onFieldKey(field, event) {
+  if (props.disabled || event.target !== event.currentTarget) return
+  const step = event.shiftKey ? 10 : 1
+  const page = pages.value.find((p) => p.number === field.page)
+  const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[event.key]
+  if (move) {
+    field.x = Math.round(Math.max(0, Math.min(field.x + move[0], (page?.width || 0) - (field.width || 150))))
+    field.y = Math.round(Math.max(0, Math.min(field.y + move[1], (page?.height || 0) - (field.height || 30))))
+    emitUpdate()
+    event.preventDefault()
+  } else if (event.key === 'Delete' || event.key === 'Backspace') {
+    removeField(field.field_id)
+    event.preventDefault()
+  }
+}
+
 // ── Move an existing field by dragging its body ─────────────────────────────
 let dragSession = null
 function onFieldMouseDown(field, event) {
   if (props.disabled || event.button !== 0) return
-  dragSession = { field, startX: event.pageX, startY: event.pageY, origX: field.x, origY: field.y }
+  dragSession = { field, startX: event.clientX, startY: event.clientY, origX: field.x, origY: field.y }
   window.addEventListener('pointermove', onFieldMouseMove)
   window.addEventListener('pointerup', onFieldMouseUp)
   event.preventDefault()
@@ -324,8 +344,8 @@ function onFieldMouseMove(event) {
   const page = pages.value.find((p) => p.number === field.page)
   const maxLeft = (page?.width || 0) - (field.width || 150)
   const maxTop = (page?.height || 0) - (field.height || 30)
-  field.x = Math.max(0, Math.min(origX + (event.pageX - startX), maxLeft))
-  field.y = Math.max(0, Math.min(origY + (event.pageY - startY), maxTop))
+  field.x = Math.round(Math.max(0, Math.min(origX + (event.clientX - startX), maxLeft)))
+  field.y = Math.round(Math.max(0, Math.min(origY + (event.clientY - startY), maxTop)))
 }
 function onFieldMouseUp() {
   if (!dragSession) return
@@ -339,7 +359,7 @@ function onFieldMouseUp() {
 let resizeSession = null
 function onResizeMouseDown(field, event) {
   if (props.disabled) return
-  resizeSession = { field, startX: event.pageX, startY: event.pageY, startWidth: field.width || 150, startHeight: field.height || 30 }
+  resizeSession = { field, startX: event.clientX, startY: event.clientY, startWidth: field.width || 150, startHeight: field.height || 30 }
   window.addEventListener('pointermove', onResizeMouseMove)
   window.addEventListener('pointerup', onResizeMouseUp)
   event.preventDefault()
@@ -347,8 +367,12 @@ function onResizeMouseDown(field, event) {
 function onResizeMouseMove(event) {
   if (!resizeSession) return
   const { field, startX, startY, startWidth, startHeight } = resizeSession
-  field.width = Math.max(40, startWidth + (event.pageX - startX))
-  field.height = Math.max(20, startHeight + (event.pageY - startY))
+  // Stay inside the page, like a moved field does.
+  const page = pages.value.find((p) => p.number === field.page)
+  const maxW = (page?.width || Infinity) - field.x
+  const maxH = (page?.height || Infinity) - field.y
+  field.width = Math.round(Math.min(maxW, Math.max(40, startWidth + (event.clientX - startX))))
+  field.height = Math.round(Math.min(maxH, Math.max(20, startHeight + (event.clientY - startY))))
 }
 function onResizeMouseUp() {
   if (!resizeSession) return
@@ -398,9 +422,8 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
 
 .pdf-field {
   position: absolute;
-  display: flex;
-  align-items: center;
-  border: 2px dashed var(--app-text-muted);
+  border: 1px dashed var(--app-text-muted);
+  outline: none;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
   cursor: move;
@@ -416,11 +439,13 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
   box-shadow: 0 0 0 3px var(--app-primary-tint);
 }
 .pdf-field-preview {
-  padding: 2px;
+  /* Matches the exported PDF: Helvetica, no padding, text from the top-left. */
+  font-family: Helvetica, Arial, sans-serif;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  white-space: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   color: #111;
 }
 .field-close {

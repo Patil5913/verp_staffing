@@ -115,11 +115,17 @@ frappe.ui.form.on("Customer", {
 			frm.tour.init({ tour_name }).then(() => frm.tour.start());
 		});
 
-		window.add_forward_button(frm,service_name="Sales");
+		// Portal & Chat Access, Forward Candidate and the History tab need at least one (non-cancelled) Sales Order.
+		frappe.db.count("Sales Order", { filters: { customer: frm.doc.name, docstatus: ["<", 2] } }).then((count) => {
+			frm.toggle_display("history_tab", !!count);
+			if (!count) return;
+			window.add_forward_button(frm, "Sales");
+			if (frm.doc.chat_access !== "Active") {
+				frm.add_custom_button("Portal & Chat Access", () => open_portal_access_dialog(frm));
+			}
+		});
 
-		if (frm.doc.chat_access !== "Active") {
-			frm.add_custom_button("Portal & Chat Access", () => open_portal_access_dialog(frm));
-		} else {
+		if (frm.doc.chat_access === "Active") {
 			frm.add_custom_button("Revoke Portal Access", () => {
 				frappe.confirm(
 					"The customer will be signed out and lose access to the portal and chat straight away. You can restore it later by sending access again. Continue?",

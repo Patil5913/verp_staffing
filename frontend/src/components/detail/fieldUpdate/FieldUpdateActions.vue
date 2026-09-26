@@ -1,10 +1,10 @@
 <template>
   <template v-if="state.canUpdate">
-    <AppButton variant="outline" icon="pencil" :loading="preparing" @click="openUpdate">Update Detail</AppButton>
+    <AppButton v-if="!hideButtons" variant="outline" icon="pencil" :loading="preparing" @click="openUpdate">Update Detail</AppButton>
   </template>
   <AppBadge v-else-if="state.myPending" theme="orange" class="self-center">Your update request is pending approval</AppBadge>
 
-  <AppButton v-if="state.requests.length" variant="outline" icon="check-check" :loading="preparing" @click="openReview">
+  <AppButton v-if="state.requests.length && !hideButtons" variant="outline" icon="check-check" :loading="preparing" @click="openReview">
     Accept Updates ({{ state.requests.length }})
   </AppButton>
 
@@ -47,6 +47,8 @@ const props = defineProps({
   doctype: { type: String, required: true },
   name: { type: String, required: true },
   mode: { type: String, default: 'service' },
+  // Buttons live in a menu instead (openUpdate / openReview and `state` are exposed).
+  hideButtons: { type: Boolean, default: false },
   // Config-driven pages hand these to every action; not used here.
   locked: { type: Boolean, default: false },
   save: { type: Function, default: null },
@@ -148,4 +150,5 @@ async function onReviewed() {
   props.detail.refresh?.()
   emit('changed')
 }
+defineExpose({ openUpdate, openReview, state })
 </script>

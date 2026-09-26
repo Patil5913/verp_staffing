@@ -82,9 +82,23 @@ export function useDetailPageController(doctype, name, options = {}) {
   // for why submit's own errors aren't auto-toasted like everything else.
   async function onSubmit() {
     if (detail.isDirty.value && !(await detail.submit())) return { emailMissing: false }
+    // Fields a doctype needs before it can be submitted (options.requiredOnSubmit) -
+    // flag them inline and name them, instead of a bare server error after the fact.
+    const missing = (options.requiredOnSubmit || []).filter((fn) => !detail.values[fn])
+    if (missing.length) {
+      detail.triedSave.value = true
+      const labels = missing.map((fn) => detail.fields.value.find((f) => f.fieldname === fn)?.label || fn)
+      notify.error(`Fill in ${labels.join(' and ')} before submitting.`)
+      return { emailMissing: false }
+    }
     const result = await detail.submitDoc()
     if (result.ok) return { emailMissing: false }
     if (isEmailMissingError(result.error)) return { emailMissing: true }
+    if (result.missing?.length) {
+      const labels = result.missing.map((f) => f.label).join(', ')
+      notify.error(`Fill in ${labels} before submitting - they're marked on the form.`)
+      return { emailMissing: false }
+    }
     notify.error(normalizeError(result.error).message)
     return { emailMissing: false }
   }

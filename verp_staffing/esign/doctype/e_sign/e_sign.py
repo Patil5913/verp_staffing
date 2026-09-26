@@ -19,6 +19,14 @@ from datetime import datetime
 import io
 from PIL import Image
 from verp_staffing.crm.api.helpers import _validate_site_file_path
+from verp_staffing.esign.pdf_render import (
+    draw_checkbox,
+    draw_image_fit,
+    draw_text,
+    is_checked,
+    resolve_file_path,
+    stamp_pdf,
+)
 
 
 class ESign(Document):
@@ -61,39 +69,23 @@ def format_timestamp_UTC():
     )
 
 
-@frappe.whitelist(allow_guest=True)
-def complete_signing(token=None, fields=None):
+CONSENT_STATEMENTS = {
+    "my_electronic_signature_has_same_effect_as_handwritten": "My electronic signature has same effect as handwritten.",
+    "i_consent_to_receive_sign_and_store_documents_electronically": "I consent to receive, sign, and store documents electronically.",
+    "i_confirm_my_identity_and_signing_this_document_intentionally": "I confirm my identity and signing this document intentionally.",
+}
 
-    if not token or not fields:
-        frappe.throw("Missing data")
 
-    fields = frappe.parse_json(fields)
+def check_consents(concerns):
+    """The signer must accept all three consent statements; enforced here, not just in the page."""
+    accepted = frappe.parse_json(concerns) if concerns else {}
+    if any(not accepted.get(key) for key in CONSENT_STATEMENTS):
+        frappe.throw("Please accept all consent statements before submitting.")
 
-    #  Verification cookie check
-    verification_cookie = frappe.request.cookies.get(f"verify_{token}")
 
-    if not verification_cookie:
-        frappe.throw("Verification required")
-
-    verified = frappe.db.exists(
-        "Signature Fields",
-        {"sign_token": token, "verification_key": verification_cookie},
-    )
-
-    if not verified:
-        frappe.throw("Unauthorized access")
-
-    # Process fields
-    field = frappe.get_doc("Signature Fields", verified)
-
-    agreement = frappe.get_doc("E Sign", field.parent)
-
-    signer_fields = get_signer_fields(
-        agreement,
-        field.signer_email,
-        token,
-    )
-
+def _finish_signing(agreement, signer_email, signer_fields, fields, audit=None):
+    """Validate + store one signer's values, log the audit trail, rebuild the signed PDF, and when
+    everyone has signed issue the certificate. Shared by the emailed-link page and the portal."""
     validate_signer_fields(
         signer_fields,
         fields,
@@ -107,9 +99,25 @@ def complete_signing(token=None, fields=None):
         signer_fields,
         fields,
     )
+    methods = (frappe.parse_json(audit) or {}).get("signature_methods", {}) if audit else {}
+    for row in signer_fields:
+        if (row.field_type or "").lower() == "signature":
+            how = {"draw": "Drawn", "type": "Typed", "upload": "Uploaded image"}.get(methods.get(row.name), "Signature")
+            log_activity(
+                agreement=agreement,
+                email=signer_email,
+                event_type="SIGNATURE_ADDED",
+                event_details=f"{how} signature added ({row.field_label or 'Signature'})",
+            )
     log_activity(
         agreement=agreement,
-        email=field.signer_email,
+        email=signer_email,
+        event_type="CONSENT_ACCEPTED",
+        event_details="; ".join(CONSENT_STATEMENTS.values()),
+    )
+    log_activity(
+        agreement=agreement,
+        email=signer_email,
         event_type="DOCUMENT_SIGNED",
         event_details="Signer completed all assigned fields",
     )
@@ -137,6 +145,54 @@ def complete_signing(token=None, fields=None):
     return {"status": "success"}
 
 
+@frappe.whitelist(allow_guest=True)
+def complete_signing(token=None, fields=None, concerns=None, audit=None):
+
+    if not token or not fields:
+        frappe.throw("Missing data")
+
+    fields = frappe.parse_json(fields)
+
+    check_consents(concerns)
+
+    #  Verification cookie check
+    verification_cookie = frappe.request.cookies.get(f"verify_{token}")
+
+    if not verification_cookie:
+        frappe.throw("Verification required")
+
+    verified = frappe.db.exists(
+        "Signature Fields",
+        {"sign_token": token, "verification_key": verification_cookie},
+    )
+
+    if not verified:
+        frappe.throw("Unauthorized access")
+
+    # Process fields
+    field = frappe.get_doc("Signature Fields", verified)
+
+    agreement = frappe.get_doc("E Sign", field.parent)
+
+    signer_fields = get_signer_fields(
+        agreement,
+        field.signer_email,
+        token,
+    )
+
+    return _finish_signing(agreement, field.signer_email, signer_fields, fields, audit)
+
+def is_portal_signer(doc, email):
+    """True when this signer is the E Sign's customer and that customer has active portal access."""
+    if not doc.customer or not email:
+        return False
+    from verp_staffing.crm.doctype.customer.customer import get_customer_email
+
+    if frappe.db.get_value("Customer", doc.customer, "chat_access") != "Active":
+        return False
+    return (get_customer_email(doc.customer) or "").strip().lower() == email.strip().lower()
+
+
 @frappe.whitelist()
 def send_all_signers(agreement):
 
@@ -159,16 +215,24 @@ def send_all_signers(agreement):
         as_dict=True,
     )
 
+    if doc.status == "Fully Signed":
+        frappe.throw("This document is already fully signed.")
+
     for email in unique_emails:
-        token = str(uuid.uuid4())
-        for row in doc.signature_fields:
-            if row.signer_email == email:
-                if not row.sign_token:
-                    row.sign_token = token
-                if not row.email_sent_on:
-                    row.email_sent_on = format_timestamp_UTC()
+        rows = [r for r in doc.signature_fields if r.signer_email == email]
+        if all(r.signed for r in rows):
+            continue  # this signer is done; a resend only chases the others
+        # Reuse the signer's existing token so a resend keeps the earlier link working.
+        token = next((r.sign_token for r in rows if r.sign_token), None) or str(uuid.uuid4())
+        for row in rows:
+            row.sign_token = token
+            if not row.email_sent_on:
+                row.email_sent_on = format_timestamp_UTC()
 
         link = f"{frappe.utils.get_url()}/sign_document?token={token}"
+        if is_portal_signer(doc, email):
+            # the customer signs inside their portal (signed in, no emailed code)
+            link = f"{frappe.utils.get_url()}/verp/portal/agreements/{doc.name}"
 
         if template:
             context = {"link": link}
@@ -181,6 +245,8 @@ def send_all_signers(agreement):
             recipients=[email],
             subject=subject,
             message=message,
+            reference_doctype="E Sign",
+            reference_name=doc.name,
         )
 
         log_activity(
@@ -290,189 +356,18 @@ def calculate_file_hash(file_path):
     return sha256.hexdigest()
 
 
-FONT_NAME = "Helvetica"
-LINE_SPACING = 1  # line height = font size x 1
-# Where the first baseline sits below the top of the box (Helvetica/Arial ascent with
-# line-height 1) — matches how the builder's text lands, so both look alike.
-BASELINE_FROM_TOP = 0.85
-
-
-def _wrap_lines(text, width, font_size):
-    """Greedy word wrap to `width` points; explicit newlines kept; a word longer
-    than the box is broken by characters."""
-    from reportlab.pdfbase.pdfmetrics import stringWidth
-
-    def w(s):
-        return stringWidth(s, FONT_NAME, font_size)
-
-    lines = []
-    for paragraph in str(text).replace("\r\n", "\n").split("\n"):
-        current = ""
-        for word in paragraph.split(" "):
-            candidate = word if not current else f"{current} {word}"
-            if w(candidate) <= width:
-                current = candidate
-                continue
-            if current:
-                lines.append(current)
-            current = ""
-            while w(word) > width and len(word) > 1:  # break an over-long word
-                cut = len(word) - 1
-                while cut > 1 and w(word[:cut]) > width:
-                    cut -= 1
-                lines.append(word[:cut])
-                word = word[cut:]
-            current = word
-        lines.append(current)
-    return lines
-
-
-def render_text(
-    canvas_obj,
-    value,
-    x,
-    y,
-    height,
-    font_size=12,
-    width=None,
-):
+def rebuild_signed_pdf(agreement):
     """
-    Draw a text value inside its box: wrapped to the box width, line spacing 1,
-    starting at the top; a line that doesn't fit in the remaining height is not
-    drawn (nothing spills outside the box).
+    Rebuild the signed PDF from DB state. Always drawn onto the untouched
+    original, so repeated rebuilds never stack fields on top of each other.
     """
+    source_path = resolve_file_path(agreement.original_pdf)
+    if not source_path:
+        frappe.throw("Original PDF not found on disk")
 
-    if not value:
-        return
-
-    size = float(font_size or 12)
-    canvas_obj.setFont(FONT_NAME, size)
-
-    lines = _wrap_lines(value, width, size) if width else [str(value)]
-    step = size * LINE_SPACING
-    top = y + height
-
-    for index, line in enumerate(lines):
-        line_bottom = top - (index + 1) * step
-        if line_bottom < y - 0.01:
-            break
-        if line:
-            canvas_obj.drawString(x, top - index * step - size * BASELINE_FROM_TOP, line)
-
-
-def render_checkbox(canvas_obj, value, x, y, height, width):
-    """
-    Render checkbox.
-    """
-    checkbox_size = min(width, height) * 0.5
-    box_x = x + ((width - checkbox_size) / 2)
-    box_y = y + ((height - checkbox_size) / 2)
-
-    canvas_obj.rect(box_x, box_y, checkbox_size, checkbox_size, stroke=1, fill=0)
-
-    checked = str(value).lower() in (
-        "1",
-        "true",
-        "yes",
-        "checked",
-    )
-
-    if checked:
-        canvas_obj.line(
-            box_x + checkbox_size * 0.20,
-            box_y + checkbox_size * 0.55,
-            box_x + checkbox_size * 0.42,
-            box_y + checkbox_size * 0.25,
-        )
-
-        canvas_obj.line(
-            box_x + checkbox_size * 0.42,
-            box_y + checkbox_size * 0.25,
-            box_x + checkbox_size * 0.80,
-            box_y + checkbox_size * 0.80,
-        )
-
-
-def render_signature(
-    canvas_obj,
-    file_url,
-    x,
-    y,
-    width,
-    height,
-):
-    """
-    Draw signature image.
-    """
-
-    if not file_url:
-        return
-
-    image_path = frappe.get_site_path(file_url.replace("/files/", "public/files/"))
-
-    if not os.path.exists(image_path):
-        return
-
-    img = Image.open(image_path)
-
-    canvas_obj.drawImage(
-        ImageReader(img),
-        x,
-        y,
-        width=width,
-        height=height,
-        mask="auto",
-    )
-
-
-def calculate_pdf_coordinates(
-    field,
-    page_width,
-    page_height,
-):
-    """
-    Convert percentage coordinates
-    into PDF coordinates.
-    """
-
-    x = page_width * (field.x_percent / 100)
-
-    width = page_width * (field.width_percent / 100)
-
-    height = page_height * (field.height_percent / 100)
-
-    top_y = page_height * (field.y_percent / 100)
-
-    y = page_height - (top_y + height)
-
-    return (
-        x,
-        y,
-        width,
-        height,
-    )
-
-
-def rebuild_signed_pdf(
-    agreement,
-):
-    """
-    Rebuild entire signed PDF
-    from DB state.
-    """
-
-    pdf_url = agreement.signed_pdf or agreement.original_pdf
-    source_path = frappe.get_site_path(pdf_url.replace("/files/", "public/files/"))
-
-    reader = PdfReader(source_path)
-
-    writer = PdfWriter()
-
-    signature_fields = frappe.get_all(
+    fields = frappe.get_all(
         "Signature Fields",
-        filters={
-            "parent": agreement.name,
-        },
+        filters={"parent": agreement.name},
         fields=[
             "x_percent",
             "y_percent",
@@ -481,90 +376,31 @@ def rebuild_signed_pdf(
             "page_number",
             "signature_image",
             "field_type",
-            "field_label",
             "field_value",
             "font_size",
+            "line_height",
         ],
     )
-    for page_index, page in enumerate(reader.pages):
-        page_width = float(page.MediaBox[2])
 
-        page_height = float(page.MediaBox[3])
-
-        packet = io.BytesIO()
-
-        c = canvas.Canvas(
-            packet,
-            pagesize=(
-                page_width,
-                page_height,
-            ),
-        )
-
-        for field in signature_fields:
-            if (field.page_number or 1) - 1 != page_index:
+    def draw_page(c, page_number, geo):
+        for field in fields:
+            if (field.page_number or 1) != page_number:
                 continue
-
-            x, y, width, height = calculate_pdf_coordinates(
-                field,
-                page_width,
-                page_height,
+            x, y, w, h = geo.rect(
+                (field.x_percent or 0) / 100,
+                (field.y_percent or 0) / 100,
+                (field.width_percent or 0) / 100,
+                (field.height_percent or 0) / 100,
             )
+            kind = (field.field_type or "").lower()
+            if kind == "signature":
+                draw_image_fit(c, field.signature_image, x, y, w, h)
+            elif kind == "checkbox":
+                draw_checkbox(c, is_checked(field.field_value), x, y, w, h)
+            elif kind in ("text", "number", "date"):
+                draw_text(c, field.field_value, x, y, w, h, field.font_size, field.line_height or 1)
 
-            field_type = (field.field_type or "").lower()
-            if field_type == "signature":
-                render_signature(
-                    c,
-                    field.signature_image,
-                    x,
-                    y,
-                    width,
-                    height,
-                )
-
-            elif field_type == "checkbox":
-                render_checkbox(
-                    c,
-                    field.field_value,
-                    x,
-                    y,
-                    height,
-                    width,
-                )
-
-            elif field_type in (
-                "text",
-                "number",
-                "date",
-            ):
-                render_text(
-                    c,
-                    field.field_value,
-                    x,
-                    y,
-                    height,
-                    field.font_size,
-                    width,
-                )
-        c.showPage()
-        c.save()
-
-        packet.seek(0)
-
-        overlay = PdfReader(packet)
-
-        if overlay.pages:
-            PageMerge(page).add(overlay.pages[0]).render()
-
-        writer.addpage(page)
-
-    output = io.BytesIO()
-
-    writer.write(output)
-
-    output.seek(0)
-
-    return output.getvalue()
+    return stamp_pdf(source_path, draw_page)
 
 
 def save_rebuilt_pdf(agreement):
@@ -701,6 +537,31 @@ def save_signer_values(
         field.signed_on = format_timestamp_UTC()
 
         field.save(ignore_permissions=True)
+
+
+AUDIT_LABELS = {
+    "DOCUMENT_VIEWED": "Document opened",
+    "OTP_VERIFIED": "Email verified with one-time code",
+    "PORTAL_VERIFIED": "Signed in to the customer portal",
+    "CONSENT_ACCEPTED": "Consent statements accepted",
+    "SIGNATURE_ADDED": "Signature added",
+    "DOCUMENT_SIGNED": "Document signed",
+}
+
+
+def _audit_label(act):
+    if act.event_type == "EMAIL_SENT":
+        return "Verification code emailed" if "OTP" in (act.event_details or "") else "Signing link emailed"
+    if act.event_type in ("SIGNATURE_ADDED", "CONSENT_ACCEPTED") and act.event_details and act.event_type == "SIGNATURE_ADDED":
+        return act.event_details
+    return AUDIT_LABELS.get(act.event_type, act.event_type or "Activity")
+
+
+def _audit_sort_key(act):
+    try:
+        return datetime.strptime(act.visited_at, "%d-%m-%Y, %H:%M:%S UTC")
+    except Exception:
+        return datetime.min
 
 
 def generate_certificate_page(agreement_name):
@@ -966,6 +827,28 @@ def generate_certificate_page(agreement_name):
         divider(c, MARGIN, top_y - 6, COL_W, color=BORDER)
         return top_y - 20
 
+    def draw_audit_row(c, top_y, act):
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+
+        label = _audit_label(act)
+        c.setFont("Helvetica", 7)
+        set_fill(c, SUBTEXT)
+        c.drawString(MARGIN + 4, top_y, act.visited_at or "")
+        c.setFont("Helvetica-Bold", 8)
+        set_fill(c, DARK)
+        c.drawString(MARGIN + 130, top_y, label)
+        detail = " · ".join(
+            x for x in (act.email, act.ip_address, " / ".join(filter(None, (act.browser, act.os, act.device)))) if x
+        )
+        c.setFont("Helvetica", 7)
+        set_fill(c, SUBTEXT)
+        max_w = COL_W - 134
+        while detail and stringWidth(detail, "Helvetica", 7) > max_w:
+            detail = detail[:-2]
+        c.drawString(MARGIN + 130, top_y - 10, detail)
+        divider(c, MARGIN, top_y - 16, COL_W, color=BORDER, lw=0.3)
+        return top_y - 26
+
     # certificate helper
     def draw_certificate_background(c):
 
@@ -1212,7 +1095,7 @@ def generate_certificate_page(agreement_name):
         c.drawString(INNER_X, verify_y, "VERIFICATION METHOD")
         c.setFont("Helvetica-Bold", 8.5)
         set_fill(c, DARK)
-        c.drawString(INNER_X, verify_y - 13, "Email OTP")
+        c.drawString(INNER_X, verify_y - 13, signer.get("method") or "Email OTP")
 
         return card_bottom - 14  # gap below card
 
@@ -1252,6 +1135,7 @@ def generate_certificate_page(agreement_name):
             "sent_at": None,
             "viewed_at": None,
             "verified_at": None,
+            "method": "Email OTP",
             "signed_at": field.signed_on,
             "ip_address": None,
             "browser": None,
@@ -1267,8 +1151,9 @@ def generate_certificate_page(agreement_name):
                 signer_data["browser"] = act.browser
                 signer_data["os"] = act.os
                 signer_data["device"] = act.device
-            elif act.event_type == "OTP_VERIFIED":
+            elif act.event_type in ("OTP_VERIFIED", "PORTAL_VERIFIED"):
                 signer_data["verified_at"] = act.visited_at
+                signer_data["method"] = "Customer portal sign-in" if act.event_type == "PORTAL_VERIFIED" else "Email OTP"
         signers.append(signer_data)
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -1299,6 +1184,23 @@ def generate_certificate_page(agreement_name):
 
         cursor_y = draw_participant_card(c, cursor_y, signer)
 
+    # Audit trail – every recorded event, in time order
+    events = sorted(agreement.activity, key=lambda a: _audit_sort_key(a))
+    if events:
+        if cursor_y - 60 < FOOTER_H + 24:
+            c.showPage()
+            page_num += 1
+            cursor_y = start_page(c, page_num)
+        cursor_y -= 8
+        cursor_y = draw_section_title(c, cursor_y, "Audit Trail")
+        for act in events:
+            if cursor_y - 26 < FOOTER_H + 24:
+                c.showPage()
+                page_num += 1
+                cursor_y = start_page(c, page_num)
+                cursor_y = draw_section_title(c, cursor_y, "Audit Trail (continued)")
+            cursor_y = draw_audit_row(c, cursor_y, act)
+
     # Completion summary – may need a new page
     if cursor_y - 60 - 20 < FOOTER_H + 24:
         c.showPage()
@@ -1310,6 +1212,17 @@ def generate_certificate_page(agreement_name):
     draw_completion_summary(c, cursor_y, completed_on)
 
     c.save()
+
+    # The certificate on its own too, so it can be shared/downloaded separately.
+    certificate_file = save_file(
+        fname=f"{document_title}_certificate.pdf",
+        content=packet.getvalue(),
+        dt="E Sign",
+        dn=agreement.name,
+        df="certificate_pdf",
+        is_private=0,
+    )
+    frappe.db.set_value("E Sign", agreement.name, "certificate_pdf", certificate_file.file_url, update_modified=False)
 
     # ── Merge with signed document ─────────────────────────────────────────
     packet.seek(0)
@@ -1379,7 +1292,9 @@ def send_otp(token=None):
 
         existing = frappe.cache().get_value(cache_key)
         if existing and isinstance(existing, dict):
-            expires_at = existing.get("_expires_at")
+            # stored under "expires_at" (send_otp below); "_expires_at" was never written, which
+            # made a second click within the 5 minutes crash with None - float.
+            expires_at = existing.get("expires_at") or existing.get("_expires_at") or 0
             ttl = int(expires_at - frappe.utils.now_datetime().timestamp())
             if ttl > 0:
                 return {"status": "already_sent", "expires_in": ttl}
@@ -1504,7 +1419,9 @@ def verify_otp(token=None, otp=None):
             key=f"verify_{token}",
             value=verification_key,
             max_age=60 * 60 * 24 * 7,
-            secure=True,
+            # Secure-only cookies are dropped by browsers on plain http (local/dev sites),
+            # so the verification would silently not stick.
+            secure=bool(frappe.request and frappe.request.scheme == "https"),
             httponly=True,
             samesite="Lax",
         )
@@ -1521,6 +1438,32 @@ def verify_otp(token=None, otp=None):
         return {"status": "error"}
 
 
+def _client_info():
+    """Browser / OS / device of the current request, from its User-Agent."""
+    ua = (frappe.get_request_header("User-Agent") or "") if getattr(frappe.local, "request", None) else ""
+    device, platform = "Desktop", "Unknown OS"
+    if "Windows" in ua:
+        platform = "Windows"
+    elif "Android" in ua:
+        platform, device = "Android", "Mobile"
+    elif "iPhone" in ua or "iPad" in ua:
+        platform, device = "iOS", "Mobile"
+    elif "Macintosh" in ua:
+        platform = "macOS"
+    elif "Linux" in ua:
+        platform = "Linux"
+    browser = "Unknown Browser"
+    if "Firefox" in ua:
+        browser = "Firefox"
+    elif "Edg" in ua:
+        browser = "Edge"
+    elif "Chrome" in ua:
+        browser = "Chrome"
+    elif "Safari" in ua:
+        browser = "Safari"
+    return {"browser": browser, "os": platform, "device": device}
+
+
 def log_activity(
     agreement,
     email,
@@ -1532,6 +1475,7 @@ def log_activity(
     ip_address=None,
 ):
 
+    client = _client_info()
     agreement.append(
         "activity",
         {
@@ -1539,10 +1483,23 @@ def log_activity(
             "event_type": event_type,
             "event_details": event_details,
             "ip_address": (ip_address or frappe.local.request_ip),
-            "browser": browser,
-            "os": os,
-            "device": device,
+            "browser": browser or client["browser"],
+            "os": os or client["os"],
+            "device": device or client["device"],
             "visited_at": format_timestamp_UTC(),
             "agreement": agreement.name,
         },
     )
+
+
+@frappe.whitelist()
+def regenerate_certificate(esign):
+    """Rebuild the signed PDF from its fields and re-issue the certificate from the current audit trail."""
+    doc = frappe.get_doc("E Sign", esign)
+    doc.check_permission("write")
+    if doc.status != "Fully Signed":
+        frappe.throw("The certificate is issued once every signer has signed.")
+    save_rebuilt_pdf(doc)
+    doc.reload()
+    generate_certificate_page(doc.name)
+    return {"certificate_pdf": frappe.db.get_value("E Sign", doc.name, "certificate_pdf")}

@@ -133,10 +133,8 @@ def generate_form_url(
 
         token = generate_token(data)
 
-        # Agreement signing lives in the customer portal (session-authenticated,
-        # same token); everything else keeps the webform link.
-        if ia:
-            return f"{base_url}/verp/sign-agreement?t={token}"
+        # Customers sign via this tokenised link with an email OTP - no portal
+        # account or login needed.
         return f"{base_url}/details-form/new?t={token}"
 
     except Exception as e:
@@ -443,137 +441,52 @@ def get_template_path(template):
 
 
 def generate_pdf(input_pdf_path, fields, data_dict):
-    import io
-    from pdfrw import PdfReader, PdfWriter, PageMerge
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.utils import ImageReader
-    from PIL import Image
+    """Fill a template PDF. Builder boxes are pixels on the rendered page
+    (`page_width`/`page_height` say how big that was), turned here into
+    fractions of the visible page so rotation/CropBox are handled once, in
+    esign.pdf_render."""
+    from verp_staffing.esign.pdf_render import (
+        draw_checkbox,
+        draw_image_fit,
+        draw_text,
+        is_checked,
+        stamp_pdf,
+    )
 
-    reader = PdfReader(input_pdf_path)
-    writer = PdfWriter()
-
-    for page_index, page in enumerate(reader.pages):
-        page_width = float(page.MediaBox[2])
-        page_height = float(page.MediaBox[3])
-
-        packet = io.BytesIO()
-        c = canvas.Canvas(packet, pagesize=(page_width, page_height))
-
+    def draw_page(c, page_number, geo):
         for f in fields:
-            if int(f.get("page", 1)) - 1 != page_index:
+            if int(f.get("page", 1)) != page_number:
                 continue
             px_w = float(f.get("page_width") or 0)
             px_h = float(f.get("page_height") or 0)
             if not px_w or not px_h:
                 frappe.throw("Missing page_width/page_height in field JSON")
 
-            sx = page_width / px_w
-            sy = page_height / px_h
-
-            bx = float(f.get("x") or 0)
-            by = float(f.get("y") or 0)
-            bw = float(f.get("width") or 150)
-            bh = float(f.get("height") or 30)
-
-            x = bx * sx
-            y = page_height - ((by + bh) * sy)
-            w = bw * sx
-            h = bh * sy
-            # padding = 4 in field rectangle
-            padding_x = 4 * sx
-            padding_y = 4 * sy
-
-            text_x = x + padding_x
-            text_y = y + padding_y
-
-            usable_width = w - (padding_x * 2)
-            usable_height = h - (padding_y * 2)
-
-            name = f.get("name")
+            x, y, w, h = geo.rect(
+                float(f.get("x") or 0) / px_w,
+                float(f.get("y") or 0) / px_h,
+                float(f.get("width") or 150) / px_w,
+                float(f.get("height") or 30) / px_h,
+            )
             ftype = f.get("type", "Text")
-            key = f"{ftype}::{name}"
-            val = data_dict.get(key, "")
-            fontsize = int(f.get("font_size") or 11)
-            if ftype == "Text" and val:
-                render_text_box(
-                    c,
-                    str(val),
-                    text_x,
-                    text_y,
-                    usable_width,
-                    usable_height,
-                    fontsize,
-                    f.get("line_height", 1.2),
-                )
-            elif ftype == "Number" and val:
-                render_text_box(
-                    c,
-                    str(val),
-                    text_x,
-                    text_y,
-                    usable_width,
-                    usable_height,
-                    fontsize,
-                    f.get("line_height", 1.2),
-                )
-            elif ftype == "Checkbox" and val:
-                c.rect(text_x, text_y, usable_height, usable_height, stroke=1, fill=0)
-                c.line(text_x, text_y, x + usable_height, y + h)
-                c.line(text_x, y + usable_height, x + usable_height, y)
-            elif ftype == "Date" and val:
-                formatted = format_date_value(val)
+            val = data_dict.get(f"{ftype}::{f.get('name')}", "")
+            if not val:
+                continue
+            size = int(f.get("font_size") or 12)
+            line_height = float(f.get("line_height") or 1.2)
 
-                render_text_box(
-                    c,
-                    formatted,
-                    text_x,
-                    text_y,
-                    usable_width,
-                    usable_height,
-                    fontsize,
-                    f.get("line_height", 1.2),
-                )
-            elif ftype == "Signature" and val:
-                img = Image.open(val)
-                c.drawImage(
-                    ImageReader(img),
-                    text_x,
-                    text_y,
-                    width=usable_width,
-                    height=h,
-                    mask="auto",
-                )
+            if ftype in ("Text", "Number"):
+                draw_text(c, val, x, y, w, h, size, line_height)
+            elif ftype == "Date":
+                draw_text(c, format_date_value(val), x, y, w, h, size, line_height)
+            elif ftype == "Checkbox":
+                draw_checkbox(c, is_checked(val), x, y, w, h)
+            elif ftype == "Signature":
+                draw_image_fit(c, val, x, y, w, h)
+            elif ftype == "Rich_Text":
+                render_html_box(c, str(val), x, y, w, h, size, line_height)
 
-            elif ftype == "Rich_Text" and val:
-                render_html_box(
-                    c,
-                    str(val),
-                    text_x,
-                    text_y,
-                    usable_width,
-                    usable_height,
-                    fontsize,
-                    f.get("line_height", 1.2),
-                )
-
-        c.showPage()
-        c.save()
-
-        packet.seek(0)
-        overlay_pdf = PdfReader(packet)
-
-        if overlay_pdf.pages:
-            PageMerge(page).add(overlay_pdf.pages[0]).render()
-
-        writer.addpage(page)
-
-    output = io.BytesIO()
-
-    writer.write(output)
-
-    output.seek(0)
-
-    return output.getvalue()
+    return stamp_pdf(input_pdf_path, draw_page)
 
 
 def format_date_value(value, output_format="%d-%m-%Y"):
@@ -1109,50 +1022,40 @@ def get_agreement_cards(sales_order):
         order_by="creation desc",
     )
 
-    now = now_datetime()
-
     for ag in agreements:
-        email = frappe.get_all(
-            "Email Queue",
-            filters={
-                "reference_doctype": "Agreement",
-                "reference_name": ag.name,
-            },
-            fields=[
-                "name",
-                "status",
-                "modified",
-                "error",
-            ],
-            order_by="creation desc",
-            limit=1,
-        )
-
-        if not email:
-            ag.email_status = None
-            ag.email_modified = None
-            ag.can_resend = False
-            continue
-
-        email = email[0]
-
-        ag.email_error = email.error
-        ag.email_modified = email.modified
-        ag.email_status = STATUS_LABEL.get(email.status, email.status)
-
-        age = time_diff_in_seconds(now, email.modified)
-
-        remaining = max(0, 600 - int(age))
-
-        ag.resend_after = remaining
-
-        if email.status == "Error":
-            ag.can_resend = True
-
-        elif email.status in ("Not Sent", "Sent"):
-            ag.can_resend = remaining == 0
-
-        else:
-            ag.can_resend = False
+        ag.update(get_email_state("Agreement", ag.name, STATUS_LABEL))
 
     return agreements
+
+
+def get_email_state(doctype, name, status_label=None):
+    """Latest Email Queue entry for a document: label, error, time, and when it
+    can be resent (10 min throttle, immediately after an error)."""
+    from frappe.utils import now_datetime, time_diff_in_seconds
+
+    status_label = status_label or {
+        "Not Sent": "Pending in queue",
+        "Sending": "Sending",
+        "Sent": "Sent",
+        "Error": "Error",
+    }
+    email = frappe.get_all(
+        "Email Queue",
+        filters={"reference_doctype": doctype, "reference_name": name},
+        fields=["name", "status", "modified", "error"],
+        order_by="creation desc",
+        limit=1,
+    )
+    if not email:
+        return {"email_status": None, "email_modified": None, "can_resend": False}
+
+    email = email[0]
+    remaining = max(0, 600 - int(time_diff_in_seconds(now_datetime(), email.modified)))
+    return {
+        "email_error": email.error,
+        "email_modified": email.modified,
+        "email_status": status_label.get(email.status, email.status),
+        "resend_after": remaining,
+        "can_resend": email.status == "Error"
+        or (email.status in ("Not Sent", "Sent") and remaining == 0),
+    }

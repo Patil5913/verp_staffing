@@ -86,6 +86,7 @@
                 >
                   {{ row.payment_status === 'Rejected' ? 'Re-request' : 'Mark as Paid' }}
                 </AppButton>
+                <span v-else-if="!row.name && detail.docstatus.value === 1" class="text-p-xs text-app-text-muted">Save to enable payment</span>
                 <span v-else-if="row.payment_status === 'Pending Verification'" class="text-p-xs text-app-text-muted">Awaiting verification</span>
                 <AppButton
                   v-if="!disabled && !isTermLocked(row) && !isRowActive(idx)"
@@ -399,8 +400,10 @@ function verificationLogLines(row) {
 }
 
 // ── Mark as Paid / Re-request (ported from the old PaymentTermsPanel) ─────
+// A row added in this session has no `name` until the Sales Order is saved -
+// the server looks the term up by that name, so it can't be paid before then.
 function canMarkAsPaid(row) {
-  return !isRowReadOnly(row) && props.detail.docstatus.value === 1
+  return !!row.name && !isRowReadOnly(row) && props.detail.docstatus.value === 1
 }
 
 const markAsPaidOpen = ref(false)

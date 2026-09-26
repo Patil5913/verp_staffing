@@ -1,6 +1,6 @@
 <template>
   <div v-if="!pdfUrl" class="rounded-xl border border-dashed border-app-border p-8 text-center text-p-sm text-app-text-muted">
-    Upload the original PDF (Details tab) and save - then place signature fields here.
+    Upload the original PDF (Details tab), then place fields here - no need to save first.
   </div>
 
   <div v-else class="relative flex h-[calc(100dvh-160px)] flex-col md:flex-row min-h-[540px] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-sm">
@@ -75,14 +75,16 @@
               :class="keyOf(row) === selectedKey ? 'ring-2 ring-offset-1' : ''"
               :style="{ ...boxStyle(row), boxShadow: `inset 0 0 0 2px ${colorFor(row.signer_email)}`, background: colorFor(row.signer_email) + '22', color: colorFor(row.signer_email), '--tw-ring-color': colorFor(row.signer_email) }"
               @pointerdown="startMove(row, page, $event)"
+              tabindex="0"
               @click.stop="selectedKey = keyOf(row)"
+              @focus="selectedKey = keyOf(row)"
+              @keydown="onRowKey(row, page, $event)"
             >
-              <span v-if="row.field_type === 'checkbox'" class="lucide-check-square mx-auto mt-0.5 size-4" />
               <!-- Builder-only text: the placeholder (the label is for the signer, shown in the sidebar).
                    Wraps inside the box, line spacing 1, and is cut off where the box ends - the
                    same way the PDF drawer (e_sign.py render_text) lays it out. -->
               <span v-if="row.field_type === 'checkbox'" class="lucide-check-square absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2" />
-              <div v-else class="pointer-events-none absolute inset-0 overflow-hidden" :style="textStyle">{{ row.placeholder_text || labelFor(row.field_type) }}</div>
+              <div v-else class="pointer-events-none absolute inset-0 overflow-hidden" :style="textStyle">{{ row.field_value || row.placeholder_text || labelFor(row.field_type) }}</div>
               <button
                 v-if="!disabled"
                 type="button"
@@ -124,7 +126,7 @@
           <p class="text-p-xs text-app-text-muted">This will be shown in the builder only.</p>
         </div>
         <AppInput
-          v-if="selected.field_type !== 'signature'"
+          v-if="selected.field_type !== 'signature' && selected.field_type !== 'checkbox'"
           type="number"
           label="Font size"
           :model-value="selected.font_size || 12"
@@ -132,6 +134,21 @@
           @update:model-value="(v) => patch(selected, { font_size: String(Number(v) || 12) })"
         />
       </template>
+      <div v-if="selected.field_type !== 'signature'" class="flex flex-col gap-1">
+          <label v-if="selected.field_type === 'checkbox'" class="flex items-center gap-2 text-p-sm text-app-text">
+            <input type="checkbox" :checked="isOn(selected.field_value)" :disabled="disabled" @change="(e) => patch(selected, { field_value: e.target.checked ? '1' : '' })" />
+            Pre-checked
+          </label>
+          <AppInput
+            v-else
+            label="Fill it now (optional)"
+            :type="selected.field_type === 'number' ? 'number' : selected.field_type === 'date' ? 'date' : 'text'"
+            :model-value="selected.field_value || ''"
+            :disabled="disabled"
+            @update:model-value="(v) => patch(selected, { field_value: String(v ?? '') })"
+          />
+          <p class="text-p-xs text-app-text-muted">Filled in by you now; the signer sees it pre-filled and can change it before signing.</p>
+        </div>
     </aside>
   </div>
 </template>
@@ -188,6 +205,7 @@ const activeRecipient = ref('')
 const newEmail = ref('')
 const colorFor = (email) => PALETTE[Math.max(0, recipients.value.indexOf(email)) % PALETTE.length]
 const countFor = (email) => rows.value.filter((r) => r.signer_email === email).length
+const isOn = (v) => ['1', 'true', 'yes', 'checked', 'on'].includes(String(v ?? '').toLowerCase())
 const labelFor = (type) => TOOLS.find((t) => t.type === type)?.label || type
 
 function addRecipient() {
@@ -221,8 +239,8 @@ function onDrop(page, event) {
   const [w, h] = SIZES[dragging.value] || SIZES.default
   const row = {
     page_number: page.number,
-    x_percent: Math.min(100 - w, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100)),
-    y_percent: Math.min(100 - h, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100)),
+    x_percent: Math.min(100 - w, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100 - w / 2)),
+    y_percent: Math.min(100 - h, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100 - h / 2)),
     width_percent: w,
     height_percent: h,
     signer_email: activeRecipient.value,
@@ -235,11 +253,28 @@ function onDrop(page, event) {
   selectedKey.value = keyOf(row)
 }
 
+// Arrow keys nudge (Shift = 1%), Delete removes.
+function onRowKey(row, page, event) {
+  if (disabled.value || event.target !== event.currentTarget) return
+  const step = (event.shiftKey ? 1 : 0.1)
+  const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[event.key]
+  if (move) {
+    patch(row, {
+      x_percent: Math.max(0, Math.min(100 - row.width_percent, row.x_percent + move[0])),
+      y_percent: Math.max(0, Math.min(100 - row.height_percent, row.y_percent + move[1])),
+    })
+    event.preventDefault()
+  } else if (event.key === 'Delete' || event.key === 'Backspace') {
+    removeRow(row)
+    event.preventDefault()
+  }
+}
+
 // Move / resize: pointer deltas in page pixels -> percent of the page.
 let session = null
 function track(row, page, event, mode) {
   if (disabled.value || event.button !== 0) return
-  session = { key: keyOf(row), page, mode, startX: event.pageX, startY: event.pageY, orig: { ...row } }
+  session = { key: keyOf(row), page, mode, startX: event.clientX, startY: event.clientY, orig: { ...row } }
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
   event.preventDefault()
@@ -249,8 +284,8 @@ const startResize = (row, page, e) => track(row, page, e, 'resize')
 function onMove(event) {
   if (!session) return
   const { key, page, mode, startX, startY, orig } = session
-  const dx = ((event.pageX - startX) / page.width) * 100
-  const dy = ((event.pageY - startY) / page.height) * 100
+  const dx = ((event.clientX - startX) / page.width) * 100
+  const dy = ((event.clientY - startY) / page.height) * 100
   const changes =
     mode === 'move'
       ? {

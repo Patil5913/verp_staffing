@@ -109,6 +109,8 @@ const fields = computed(() => {
   const doc = { ...props.detail.hidden, ...props.detail.values, docstatus: props.detail.docstatus?.value ?? 0, __islocal: props.detail.isNew?.value }
   let all = props.detail.fields.value
     .filter((f) => dependsOnPasses(f, doc))
+    // Fields the server said a failed Submit still needs: shown as required until filled.
+    .map((f) => (props.detail.serverMissing?.value?.includes(f.fieldname) ? { ...f, reqd: 1 } : f))
     .map((f) => (props.fieldOverrides[f.fieldname] ? { ...f, ...props.fieldOverrides[f.fieldname] } : f))
   if (props.hideEmptyReadOnly) {
     all = all.filter((f) => {

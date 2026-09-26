@@ -32,11 +32,19 @@ ALLOWED_METHODS = {
     # agreement signing on the portal (signature image upload + audit fingerprint)
     "verp_staffing.crm.api.upload.upload_file",
     "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_ip_and_device",
+    # E Sign signing page (/sign_document?token=...): a customer who is signed in to the portal
+    # can also be the signer. These are the same guest endpoints, protected by the link's token and
+    # the emailed code, so they open to a portal session exactly as they are to a visitor.
+    "verp_staffing.esign.doctype.e_sign.e_sign.send_otp",
+    "verp_staffing.esign.doctype.e_sign.e_sign.verify_otp",
+    "verp_staffing.esign.doctype.e_sign.e_sign.track_ip_and_device",
+    "verp_staffing.esign.doctype.e_sign.e_sign.complete_signing",
 }
 ALLOWED_PREFIXES = (
     "verp_staffing.www.customer.",
     "verp_staffing.www.candidate_details.",
     "verp_staffing.www.agreement_sign.",
+    "verp_staffing.esign.portal.",
     "verp_staffing.crm.api.customer_portal.",
     "vruglechat.api.",
     "frappe.realtime.",

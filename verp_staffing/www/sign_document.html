@@ -107,28 +107,31 @@
 	style="height: 85vh; overflow: auto; padding: 20px; background: #f3f4f6"
 ></div>
 
-<div
-	id="fp-submit-wrap"
-	style="
-		display: none;
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		z-index: 999;
-		padding: 16px 24px;
-		background: #ffffff;
-		border-top: 1px solid #e5e7eb;
-		text-align: center;
-		box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
-	"
->
-	<button id="finish-btn" onclick="submitFields()" class="finish-btn">
-		Submit Signed Document
-	</button>
-	<p style="margin-top: 8px; font-size: 12px; color: #9ca3af">
-		All fields completed. Please review before submitting.
-	</p>
+<div id="fp-submit-wrap">
+	<div class="submit-inner">
+		<fieldset class="consent-card">
+			<legend>Before you submit</legend>
+			<label class="consent-row">
+				<input type="checkbox" class="consent-box" data-key="my_electronic_signature_has_same_effect_as_handwritten" />
+				<span class="consent-tick" aria-hidden="true"></span>
+				<span class="consent-text">My electronic signature has same effect as handwritten.</span>
+			</label>
+			<label class="consent-row">
+				<input type="checkbox" class="consent-box" data-key="i_consent_to_receive_sign_and_store_documents_electronically" />
+				<span class="consent-tick" aria-hidden="true"></span>
+				<span class="consent-text">I consent to receive, sign, and store documents electronically.</span>
+			</label>
+			<label class="consent-row">
+				<input type="checkbox" class="consent-box" data-key="i_confirm_my_identity_and_signing_this_document_intentionally" />
+				<span class="consent-tick" aria-hidden="true"></span>
+				<span class="consent-text">I confirm my identity and signing this document intentionally.</span>
+			</label>
+		</fieldset>
+		<div class="submit-side">
+			<button id="finish-btn" onclick="submitFields()" class="finish-btn" disabled>Submit Signed Document</button>
+			<p id="consent-hint">Accept all three statements to submit.</p>
+		</div>
+	</div>
 </div>
 
 <div id="signature-modal" role="dialog" aria-modal="true" aria-labelledby="sg-title">
@@ -898,6 +901,140 @@
 		display: none;
 	}
 
+	/* ── Submit bar: consent statements + submit ── */
+	#fp-submit-wrap {
+		display: none;
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 999;
+		padding: 14px 20px;
+		background: #ffffff;
+		border-top: 1px solid #e5e7eb;
+		box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.08);
+	}
+	.submit-inner {
+		max-width: 920px;
+		margin: 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 24px;
+	}
+	.consent-card {
+		flex: 1;
+		min-width: 0;
+		margin: 0;
+		padding: 10px 14px 12px;
+		border: 1px solid #e5e7eb;
+		border-radius: 10px;
+		background: #f9fafb;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.consent-card legend {
+		float: left;
+		width: 100%;
+		margin: 0 0 2px;
+		padding: 0;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: #6b7280;
+	}
+	.consent-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		margin: 0;
+		font-size: 13px;
+		line-height: 1.4;
+		color: #1f2937;
+		cursor: pointer;
+		font-weight: 400;
+	}
+	.consent-row input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.consent-tick {
+		flex: 0 0 auto;
+		width: 18px;
+		height: 18px;
+		margin-top: 1px;
+		border: 1.5px solid #9ca3af;
+		border-radius: 5px;
+		background: #ffffff;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		transition: background 0.15s ease, border-color 0.15s ease;
+	}
+	.consent-tick::after {
+		content: "";
+		width: 5px;
+		height: 9px;
+		margin-top: -2px;
+		border: solid #ffffff;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg) scale(0);
+		transition: transform 0.12s ease;
+	}
+	.consent-row:hover .consent-tick {
+		border-color: #2563eb;
+	}
+	.consent-row input:checked + .consent-tick {
+		background: #2563eb;
+		border-color: #2563eb;
+	}
+	.consent-row input:checked + .consent-tick::after {
+		transform: rotate(45deg) scale(1);
+	}
+	.consent-row input:focus-visible + .consent-tick {
+		outline: 2px solid #93c5fd;
+		outline-offset: 2px;
+	}
+	.submit-side {
+		flex: 0 0 auto;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+	}
+	.submit-side .finish-btn {
+		white-space: nowrap;
+	}
+	.finish-btn:disabled {
+		background: #cbd5e1;
+		color: #ffffff;
+		cursor: not-allowed;
+	}
+	#consent-hint {
+		margin: 0;
+		font-size: 12px;
+		color: #9ca3af;
+	}
+	#consent-hint.ok {
+		color: #16a34a;
+	}
+	@media (max-width: 640px) {
+		#fp-submit-wrap {
+			padding: 12px;
+		}
+		.submit-inner {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 10px;
+		}
+		.submit-side .finish-btn {
+			width: 100%;
+		}
+	}
+
 	.finish-btn {
 		background: #2563eb;
 		color: #ffffff;
@@ -1532,13 +1669,22 @@
 
 		input.placeholder = field.field_label || "";
 
+		// Value the sender filled in when setting the document up; the signer can still change it.
+		if (field.field_value) {
+			if (field.field_type === "checkbox") {
+				input.checked = ["1", "true", "yes", "checked", "on"].includes(String(field.field_value).toLowerCase());
+			} else {
+				input.value = field.field_value;
+			}
+		}
+
 		box.appendChild(input);
 
 		return box;
 	}
 
 	let currentField = null;
-	window.csrf_token = "{{ frappe.session.csrf_token }}";
+	window.csrf_token = "{{ csrf_token }}";
 	let currentMode = "draw";
 	let selectedFont = "'Pacifico', cursive";
 	let uploadedImageData = null;
@@ -1548,6 +1694,7 @@
 	let canvas = null;
 	let ctx = null;
 	let fieldImages = {};
+	let fieldMethods = {};
 
 	function switchMode(mode) {
 		currentMode = mode;
@@ -2234,10 +2381,10 @@
 		// Also explicitly show the button inside it
 		const btn = document.getElementById("finish-btn");
 		btn.style.display = "inline-block";
-		btn.style.opacity = "1";
 		btn.style.transform = "none";
 
-		document.body.style.paddingBottom = "100px";
+		// keep the last page clear of the taller bar
+		document.body.style.paddingBottom = wrap.offsetHeight + 24 + "px";
 	}
 	const fontBoxes = document.querySelectorAll(".font-box");
 
@@ -2507,6 +2654,7 @@
 		}
 
 		fieldImages[currentField] = imageData;
+		fieldMethods[currentField] = currentMode;
 
 		fpMarkSignature(currentField);
 
@@ -2551,10 +2699,16 @@
 					btn.style.display = "none";
 					startOTPTimer();
 				} else if (data.message?.status == "already_sent") {
-					alert(`Otp already sent, please try resending after ${expires_in} seconds`);
+					// A code was already emailed and is still valid: let them enter it.
+					document.getElementById("otp-section").style.display = "block";
+					const otpBox = document.getElementById("otp-input");
+					if (otpBox) otpBox.style.display = "block";
+					const verifyButton = document.getElementById("verify-btn");
+					if (verifyButton) verifyButton.style.display = "block";
 					loader.style.display = "none";
 					btnText.innerText = "Resend OTP";
 					btn.style.display = "none";
+					startOTPTimer(data.message.expires_in || 300);
 				} else {
 					throw new Error("Failed");
 				}
@@ -2570,7 +2724,28 @@
 			});
 	}
 
+	// The three consent statements must all be ticked before the document can be submitted.
+	function consentState() {
+		const state = {};
+		document.querySelectorAll(".consent-box").forEach((cb) => (state[cb.dataset.key] = cb.checked ? 1 : 0));
+		return state;
+	}
+	function updateSubmitEnabled() {
+		const all = Object.values(consentState()).every(Boolean);
+		document.getElementById("finish-btn").disabled = !all;
+		const hint = document.getElementById("consent-hint");
+		hint.textContent = all ? "All set - you can submit." : "Accept all three statements to submit.";
+		hint.classList.toggle("ok", all);
+	}
+	document.addEventListener("change", (e) => {
+		if (e.target.classList && e.target.classList.contains("consent-box")) updateSubmitEnabled();
+	});
+
 	function submitFields() {
+		if (!Object.values(consentState()).every(Boolean)) {
+			alert("Please accept all three consent statements before submitting.");
+			return;
+		}
 		const boxes = document.querySelectorAll(".field-box");
 		let valid = true;
 		const payloadFields = {};
@@ -2640,6 +2815,8 @@
 			body: JSON.stringify({
 				token: "{{ token }}",
 				fields: payloadFields,
+				concerns: consentState(),
+				audit: { signature_methods: fieldMethods },
 			}),
 		})
 			.then((r) => r.json().catch(() => ({})))
@@ -2657,8 +2834,8 @@
 			})
 			.catch((err) => {
 				console.error(err);
-				btn.disabled = false;
 				btn.innerHTML = originalText;
+				updateSubmitEnabled();
 				alert(err && err.message ? err.message : "Error completing document. Please try again.");
 			});
 	}
@@ -2705,11 +2882,20 @@
 		})
 			.then((res) => res.json())
 			.then((data) => {
-				if (data.message.status === "verified") {
+				const status = data.message && data.message.status;
+				if (status === "verified") {
 					location.reload();
-				} else {
+				} else if (status === "expired") {
+					alert("This code has expired. Please request a new one.");
+				} else if (status === "invalid_otp") {
 					alert("Invalid OTP");
+				} else {
+					throw new Error(serverErrorText(data) || "Could not verify the code");
 				}
+			})
+			.catch((err) => {
+				console.error("err verifying otp: ", err);
+				alert(err && err.message ? err.message : "Could not verify the code. Please try again.");
 			});
 	}
 </script>

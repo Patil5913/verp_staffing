@@ -116,12 +116,14 @@ function select(index) {
   const item = results.value[index]
   if (!item?.route) return
   open.value = false
-  if (item.route.startsWith('/verp')) {
+  // The app's own pages always live under /verp, even if a stored route forgot the prefix.
+  const route = /^\/(pending-pe-requests|email-inbox|permission-manager|setup)(\/|$)/.test(item.route) ? `/verp${item.route}` : item.route
+  if (route.startsWith('/verp')) {
     // router's path space excludes the '/verp' history base (see
     // SidebarLink.vue) - pushing the full route would double it up.
-    router.push(item.route.replace(/^\/verp/, '') || '/')
+    router.push(route.replace(/^\/verp/, '') || '/')
   } else {
-    window.location.href = item.route
+    window.location.href = route
   }
 }
 </script>

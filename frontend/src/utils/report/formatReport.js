@@ -1,3 +1,4 @@
+import { moneyOptions } from '@/utils/common/defaultCurrency'
 import { formatDate, formatDatetime } from '@/utils/list/formatValue'
 
 // Everything about turning a Script Report's raw result into display: columns
@@ -21,7 +22,7 @@ export function formatCurrency(value, currency) {
   const n = Number(value)
   if (Number.isNaN(n)) return String(value)
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'INR', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 2 }).format(n)
+    return new Intl.NumberFormat(undefined, moneyOptions(currency, { maximumFractionDigits: 2 })).format(n)
   } catch {
     return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }

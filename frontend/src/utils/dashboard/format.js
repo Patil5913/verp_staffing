@@ -1,6 +1,7 @@
 // Number display for dashboard tiles, tables and charts. Values arrive raw
 // from the server with a `format` tag (utils/dashboard.py); currency is the
 // board's company currency.
+import { moneyOptions } from '@/utils/common/defaultCurrency'
 
 export const PALETTE = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0d9488', '#db2777', '#dc2626', '#64748b', '#0891b2', '#84cc16']
 
@@ -12,7 +13,7 @@ export function formatMetric(value, format = 'number', currency = '', { compact 
   switch (format) {
     case 'currency':
       try {
-        return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'INR', currencyDisplay: 'narrowSymbol', ...notation }).format(n)
+        return new Intl.NumberFormat(undefined, moneyOptions(currency, notation)).format(n)
       } catch {
         return n.toLocaleString(undefined, notation)
       }

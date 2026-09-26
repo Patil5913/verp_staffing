@@ -1,5 +1,5 @@
 <template>
-  <AppButton variant="outline" icon="arrow-right" @click="openDialog">Forward Candidate</AppButton>
+  <AppButton v-if="!hideButton" variant="outline" icon="arrow-right" @click="openDialog">Forward Candidate</AppButton>
 
   <Dialog v-model="open" :options="{ title: 'Forward Candidate', size: 'md' }">
     <template #body-content>
@@ -93,6 +93,8 @@ const props = defineProps({
   // from - the service name shown on this page, not always == doctype
   // (Technical Other Services forwards under its `service` item's name).
   fromServiceName: { type: String, required: true },
+  // Opened from a menu instead (via the exposed openDialog).
+  hideButton: { type: Boolean, default: false },
 })
 const emit = defineEmits(['forwarded'])
 
@@ -242,4 +244,5 @@ async function onSubmit() {
   open.value = false
   emit('forwarded')
 }
+defineExpose({ openDialog })
 </script>

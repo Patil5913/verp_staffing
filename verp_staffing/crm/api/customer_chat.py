@@ -143,6 +143,8 @@ def send_portal_access(customer: str, subject: str | None = None, message: str |
     frappe.db.set_value(
         "Customer", customer, {"chat_user": email, "chat_access": "Active"}, update_modified=False
     )
+    # Shown on the customer's History timeline (crm/api/customer_timeline.py).
+    frappe.get_doc("Customer", customer).add_comment("Info", f"Portal & chat access sent to {email}")
     _send_access_email(customer, row.name1 or customer, email, password, subject, message)
     return {"user": email}
 
@@ -228,6 +230,7 @@ def revoke_portal_access(customer: str) -> None:
     if frappe.db.get_value("Customer", customer, "chat_access") != "Active":
         frappe.throw(_("This customer has no active portal access."))
     revoke_chat_access(customer, "Revoked")
+    frappe.get_doc("Customer", customer).add_comment("Info", "Portal & chat access revoked")
 
 
 def revoke_chat_access(customer: str, state: str = "Ended") -> None:

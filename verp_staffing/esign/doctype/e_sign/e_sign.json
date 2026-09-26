@@ -8,6 +8,7 @@
   "title",
   "column_break_ygal",
   "signed_pdf",
+  "certificate_pdf",
   "status",
   "section_break_mqgi",
   "original_pdf",
@@ -15,7 +16,12 @@
   "section_break_crjn",
   "signature_fields",
   "section_break_ixwc",
-  "activity"
+  "activity",
+  "section_break_tpl",
+  "agreement_template",
+  "sales_order",
+  "customer",
+  "template_data"
  ],
  "fields": [
   {
@@ -39,6 +45,12 @@
    "fieldtype": "Attach",
    "label": "Signed PDF",
    "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "certificate_pdf",
+   "fieldtype": "Attach",
+   "label": "Certificate",
    "read_only": 1
   },
   {
@@ -85,6 +97,39 @@
   {
    "fieldname": "section_break_mqgi",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_tpl",
+   "fieldtype": "Section Break",
+   "label": "Source"
+  },
+  {
+   "fieldname": "agreement_template",
+   "fieldtype": "Link",
+   "label": "Agreement Template",
+   "options": "Pdf Agreement Template",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "template_data",
+   "fieldtype": "JSON",
+   "label": "Template Data",
+   "hidden": 1
   }
  ],
  "grid_page_length": 50,

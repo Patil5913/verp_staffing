@@ -13,6 +13,11 @@ def get_company_logo_url():
 def get_context(context):
 
     context.no_cache = 1
+    # A signed-in browser (portal / desk session) must send its CSRF token on POSTs or Frappe
+    # rejects them; `frappe.session.csrf_token` isn't available to the template, so hand it in.
+    from frappe.sessions import get_csrf_token
+
+    context.csrf_token = get_csrf_token() if frappe.session.user != "Guest" else ""
 
     token = frappe.form_dict.get("token")
     if not token:
@@ -37,6 +42,7 @@ def get_context(context):
             "field_label",
             "font_size",
             "line_height",
+            "field_value",
         ],
     )
     context.has_otp = False

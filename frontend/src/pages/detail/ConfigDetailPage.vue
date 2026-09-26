@@ -241,7 +241,7 @@ const {
   onSubmit,
   onCancelDoc,
   showCancelDialog,
-} = useDetailPageController(doctype, name)
+} = useDetailPageController(doctype, name, { requiredOnSubmit: props.config.requiredOnSubmit })
 
 // A config can supply submitConfirm(detail)/cancelConfirm(detail) returning
 // an HTML string for a doctype-specific "here's what this actually does"
