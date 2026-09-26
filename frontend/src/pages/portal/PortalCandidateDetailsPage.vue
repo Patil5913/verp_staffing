@@ -13,10 +13,15 @@
     </p>
 
     <template v-else>
-      <div v-if="errorList.length" class="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
-        <p class="mb-1 text-p-sm font-semibold text-red-700 dark:text-red-300">Please fix the following</p>
+      <div v-if="errorList.length" ref="summaryEl" class="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
+        <p class="mb-1 text-p-sm font-semibold text-red-700 dark:text-red-300">
+          Your details were not submitted - {{ errorList.length }} {{ errorList.length === 1 ? 'thing needs' : 'things need' }} fixing
+        </p>
         <ul class="list-disc pl-5 text-p-sm text-red-700 dark:text-red-300">
-          <li v-for="e in errorList" :key="e.key">{{ e.message }}</li>
+          <li v-for="e in errorList" :key="e.key">
+            <button v-if="e.key !== '_form'" type="button" class="text-left underline-offset-2 hover:underline" @click="jumpTo(e.key)">{{ e.message }}</button>
+            <span v-else>{{ e.message }}</span>
+          </li>
         </ul>
       </div>
 
@@ -54,13 +59,13 @@
 // from the server (ERP Configuration for the services on their open Sales
 // Orders); saving returns per-field errors shown inline, and locks the form
 // (Customer.lock_form = 1) on success.
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import { call, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import { notify } from '@/utils/common/notify'
-import { fieldProblem } from '@/utils/detail/fieldProblems'
+import { validateFieldValue, isMonthYearField, isValidMonthYear } from '@/utils/detail/fieldFormats'
 import { normalizeError } from '@/utils/common/errors'
 
 const loading = ref(true)
@@ -77,25 +82,69 @@ const fieldOf = (name) => fields.value.find((f) => f.fieldname === name)
 const tableOf = (name) => tables.value.find((t) => t.fieldname === name)
 const colClass = (n) => (n >= 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : n === 2 ? 'sm:grid-cols-2' : '')
 const labelOf = (name) => [...fields.value, ...tables.value].find((f) => f.fieldname === name)?.label || name
+const summaryEl = ref(null)
 const errorList = computed(() =>
-  Object.entries(errors.value).map(([key, message]) => ({
-    key,
-    message: key.includes('.') ? `${labelOf(key.split('.')[0])}, row ${key.split('.')[1]}: ${message}` : message,
-  })),
+  Object.entries(errors.value).map(([key, message]) => {
+    if (key === '_form') return { key, message }
+    const [name, row] = key.split('.')
+    if (row) return { key, message: `${labelOf(name)}, row ${row}: ${message}` }
+    // Prefix the field name unless the message already starts with it.
+    return { key, message: message.toLowerCase().startsWith(labelOf(name).toLowerCase()) ? message : `${labelOf(name)}: ${message}` }
+  }),
 )
+function jumpTo(key) {
+  const el = document.querySelector(`[data-field="${key.split('.')[0]}"]`)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el?.querySelector('input, textarea, select')?.focus({ preventScroll: true })
+}
 const rowErrors = (table) =>
   Object.entries(errors.value)
     .filter(([k]) => k.startsWith(`${table}.`))
     .map(([key, message]) => ({ key, message: `Row ${key.split('.')[1]}: ${message}` }))
 
-// Say what's wrong as soon as the user leaves an email/LinkedIn/phone input.
+// Say what's wrong as soon as the user leaves an input (required, format, MM-YYYY, ...).
 function checkField(field) {
-  const problem = fieldProblem(field, values[field.fieldname])
+  const problem = validateFieldValue(field, values[field.fieldname])
   const next = { ...errors.value }
   if (problem) next[field.fieldname] = problem
   else delete next[field.fieldname]
   errors.value = next
 }
+
+const blank = (v) => v === null || v === undefined || String(v).trim() === ''
+
+// Everything the server would reject, caught before the round trip. Same keys as
+// the server's errors ("table.row.field") so both render identically.
+function validateAll() {
+  const found = {}
+  for (const f of fields.value) {
+    if (readOnlyField(f)) continue
+    const problem = validateFieldValue(f, values[f.fieldname])
+    if (problem) found[f.fieldname] = problem
+  }
+  for (const t of tables.value) {
+    const rows = values[t.fieldname] || []
+    if (t.reqd && !rows.length) found[t.fieldname] = `Add at least one entry to ${t.label}`
+    rows.forEach((row, i) => {
+      const n = i + 1
+      for (const c of t.columns) {
+        const v = row[c.fieldname]
+        const problem = validateFieldValue({ ...c, reqd: false }, v)
+        if (problem) found[`${t.fieldname}.${n}.${c.fieldname}`] = problem
+        else if (!blank(v) && isMonthYearField(c.fieldname) && !isValidMonthYear(v))
+          found[`${t.fieldname}.${n}.${c.fieldname}`] = `${c.label} must be in MM-YYYY format (e.g. 03-2021)`
+      }
+      if (t.fieldname === 'past_experience_table') {
+        if (!row.is_currently_working && blank(row.end_date) && t.columns.some((c) => c.fieldname === 'end_date'))
+          found[`${t.fieldname}.${n}.end_date`] = 'End Date is required unless you currently work here'
+        const len = String(row.description || '').replace(/\s/g, '').length
+        if (len && len < 300) found[`${t.fieldname}.${n}.description`] = `Description needs at least 300 characters (you have ${len})`
+      }
+    })
+  }
+  return found
+}
+const readOnlyField = (f) => !!f.read_only
 
 async function load() {
   try {
@@ -115,22 +164,27 @@ async function load() {
 load()
 
 async function save() {
-  saving.value = true
   errors.value = {}
+  const local = validateAll()
+  if (Object.keys(local).length) return showErrors(local)
+  saving.value = true
   try {
     const res = await call('verp_staffing.www.candidate_details.save_candidate_form', { data: JSON.stringify(values) })
-    if (!res.ok) {
-      errors.value = res.errors
-      notify.error('Please fix the highlighted fields.')
-      document.querySelector(`[data-field="${Object.keys(res.errors)[0]?.split('.')[0]}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
-    }
+    if (!res.ok) return showErrors(res.errors)
     notify.success('Details submitted. Thank you!')
     readOnly.value = true
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
-    notify.error(normalizeError(e).message)
+    showErrors({ _form: normalizeError(e).message || 'Something went wrong saving your details. Please try again.' })
   } finally {
     saving.value = false
   }
+}
+
+async function showErrors(found) {
+  errors.value = found
+  notify.error(`Please fix ${Object.keys(found).length} highlighted ${Object.keys(found).length === 1 ? 'field' : 'fields'} and submit again.`)
+  await nextTick()
+  summaryEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>

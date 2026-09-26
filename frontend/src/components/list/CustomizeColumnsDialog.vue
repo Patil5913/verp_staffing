@@ -9,6 +9,18 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="flex min-w-0 flex-col gap-2">
           <h4 class="text-p-sm font-medium text-app-text-muted">Available columns</h4>
+          <div class="relative">
+            <FeatherIcon
+              name="search"
+              class="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-text-muted"
+            />
+            <input
+              v-model="search"
+              type="text"
+              placeholder="Search columns..."
+              class="w-full rounded-md border border-app-border bg-app-panel py-1.5 pl-7 pr-2 text-p-sm outline-none focus:border-app-text-muted"
+            />
+          </div>
           <draggable
             v-model="available"
             :group="{ name: 'columns' }"
@@ -17,6 +29,7 @@
           >
             <template #item="{ element }">
               <div
+                v-show="matchesSearch(element)"
                 class="flex cursor-grab items-center gap-2 rounded-md border border-app-border bg-app-panel px-2 py-1.5 text-p-sm active:cursor-grabbing"
               >
                 <FeatherIcon name="move" class="h-3.5 w-3.5 shrink-0 text-app-text-muted" />
@@ -26,6 +39,12 @@
             <template #footer>
               <p v-if="!available.length" class="px-1 py-2 text-p-sm text-app-text-muted">
                 All available columns are visible.
+              </p>
+              <p
+                v-else-if="!available.some(matchesSearch)"
+                class="px-1 py-2 text-p-sm text-app-text-muted"
+              >
+                No columns match "{{ search }}".
               </p>
             </template>
           </draggable>
@@ -117,6 +136,14 @@ const isOpen = computed({
 const selected = ref([])
 const available = ref([])
 const isResetting = ref(false)
+const search = ref('')
+
+// Hidden via v-show rather than filtering the list, so drag indexes stay
+// aligned with the underlying `available` array.
+function matchesSearch(field) {
+  const q = search.value.trim().toLowerCase()
+  return !q || `${field.label} ${field.fieldname}`.toLowerCase().includes(q)
+}
 const initialOrder = ref([])
 
 // Re-hydrated from the current meta every time the dialog opens, so it
@@ -126,6 +153,7 @@ watch(
   () => props.modelValue,
   (open) => {
     if (!open) return
+    search.value = ''
     const selectedNames = new Set(props.listFields.map((f) => f.fieldname))
     selected.value = props.listFields.map((f) => ({ ...f }))
     available.value = props.fields

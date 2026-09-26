@@ -25,6 +25,63 @@ class LeadDetailForm(Document):
 
         self.name = generate_name_series("Lead Detail Form", name)
 
+    def validate_field_formats(self):
+        # Same rules (and wording) as the customer portal form
+        # (www/candidate_details.py) so every entry point - desk, staff SPA,
+        # token webform - rejects the same bad input.
+        from verp_staffing.www.candidate_details import (
+            MM_YYYY,
+            _email_problem,
+            _linkedin_problem,
+            _phone_problem,
+        )
+
+        label = lambda f: self.meta.get_label(f) or f
+        errors = []
+
+        for f in ("email", "marketing_email_id"):
+            v = (self.get(f) or "").strip()
+            if v and _email_problem(v):
+                errors.append(_email_problem(v))
+
+        for f in ("personal_linkedin", "marketing_linkedin"):
+            v = (self.get(f) or "").strip()
+            if v and _linkedin_problem(v):
+                errors.append(_linkedin_problem(v))
+
+        for f in ("personal_phone_number", "number_for_marketing"):
+            v = self.get(f)
+            if v and _phone_problem(v, label(f)):
+                errors.append(_phone_problem(v, label(f)))
+
+        if self.ssn_digit and not re.fullmatch(r"\d{4}", str(self.ssn_digit).strip()):
+            errors.append(_("SSN must be exactly 4 digits"))
+
+        if self.entry_date and not MM_YYYY.match(str(self.entry_date).strip()):
+            errors.append(_("{0} must be in MM-YYYY format").format(label("entry_date")))
+
+        for table, fields in (
+            ("educational_details", ("start_date", "end_date")),
+            ("past_experience_table", ("start_date", "end_date")),
+            ("address_history", ("from_date", "to_date")),
+        ):
+            for row in self.get(table) or []:
+                for f in fields:
+                    v = row.get(f)
+                    if v and not MM_YYYY.match(str(v).strip()):
+                        errors.append(
+                            _("{0} row {1}: {2} must be in MM-YYYY format").format(
+                                _(self.meta.get_label(table)), row.idx, _(row.meta.get_label(f))
+                            )
+                        )
+
+        for row in self.get("past_experience_table") or []:
+            if not row.is_currently_working and not row.end_date:
+                errors.append(_("Past Experience row {0}: End Date is required").format(row.idx))
+
+        if errors:
+            frappe.throw("<br>".join(errors), title=_("Invalid details"))
+
     def validate(self):
         if self.personal_phone_number:
             self.personal_phone_number = re.sub(
@@ -34,13 +91,7 @@ class LeadDetailForm(Document):
             self.number_for_marketing = re.sub(
                 r"[()\s-]", "", self.number_for_marketing
             )
-        if self.personal_linkedin:
-            pattern = re.compile(
-                r"^https?://(www\.)?linkedin\.com/.+$",
-                re.IGNORECASE,
-            )
-            if not pattern.match(self.personal_linkedin):
-                frappe.throw(_("Please enter a valid LinkedIn profile URL."))
+        self.validate_field_formats()
 
         # Validate per-service required candidate fields if form_token is provided
         if self.form_token:

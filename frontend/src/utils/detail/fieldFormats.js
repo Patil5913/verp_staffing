@@ -5,7 +5,7 @@
 import { fieldProblem } from './fieldProblems'
 
 const EMAIL_FIELDS = new Set(['email', 'email_id', 'email_address'])
-const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date'])
+const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date', 'from_date', 'to_date'])
 // Lead Detail Form has two phone fields (personal + marketing) - both need
 // the same sanitize-then-regex validation.
 const PHONE_FIELDS = new Set([
@@ -71,7 +71,7 @@ export function sanitizePhone(value) {
 }
 
 export function isValidPhone(value) {
-  return /^\+[1-9]\d{10}$/.test(sanitizePhone(value))
+  return /^\+[1-9]\d{7,14}$/.test(sanitizePhone(value))
 }
 
 export function isValidEmail(value) {
