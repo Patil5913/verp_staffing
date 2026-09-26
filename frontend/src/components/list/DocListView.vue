@@ -143,7 +143,7 @@
             <colgroup>
               <col v-if="canDelete" class="w-10" />
               <col v-for="column in columns" :key="column.key" :style="colStyle(column.key)" />
-              <col v-if="canDelete || rowActionDefs.length" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
+              <col :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
             </colgroup>
             <thead>
               <tr>
@@ -172,7 +172,7 @@
                     <span class="w-0.5 group-hover:bg-app-text-muted" />
                   </span>
                 </th>
-                <th v-if="canDelete || rowActionDefs.length" class="sticky top-0 h-11 border-b border-app-border bg-app-panel-2 px-2" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
+                <th class="sticky top-0 h-11 border-b border-app-border bg-app-panel-2 px-2" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
               </tr>
             </thead>
             <tbody>
@@ -214,7 +214,7 @@
                   />
                   <span v-else class="truncate">{{ row[column.key] }}</span>
                 </td>
-                <td v-if="canDelete || rowActionDefs.length" class="h-11 border-b border-app-border px-2 text-right" :class="rowActionDefs.length ? 'w-36' : 'w-12 text-center'" @click.stop>
+                <td class="h-11 border-b border-app-border px-2 text-right" :class="rowActionDefs.length ? 'w-36' : 'w-12 text-center'" @click.stop>
                   <div class="flex items-center justify-end gap-1">
                     <AppButton
                       v-if="primaryRowAction && primaryRowAction.when(row)"
@@ -575,8 +575,29 @@ function rowActions(row) {
     .map((action) => ({ label: action.label, icon: action.icon, onClick: () => runAction(action, [row.name], `${action.label}:${row.name}`) }))
   return [
     ...extras,
+    { label: 'Edit', icon: 'edit', onClick: () => openRow(row) },
+    ...(canCreate.value ? [{ label: 'Duplicate', icon: 'copy', onClick: () => duplicateRow(row) }] : []),
     ...(canDelete.value ? [{ label: 'Delete', icon: 'trash-2', theme: 'red', onClick: () => confirmDelete([row.name]) }] : []),
   ]
+}
+
+// Opens a new, unsaved record pre-filled with this one's scalar fields - the
+// /new page takes defaults from the query string (see useDocDetail) - so the
+// user can edit before saving. Child tables aren't carried over.
+const SKIP_ON_DUPLICATE = ['name', 'owner', 'creation', 'modified', 'modified_by', 'docstatus', 'idx', 'amended_from']
+async function duplicateRow(row) {
+  try {
+    const source = await call('frappe.client.get', { doctype: props.doctype, name: row.name })
+    const query = {}
+    for (const [key, value] of Object.entries(source)) {
+      if (SKIP_ON_DUPLICATE.includes(key) || key.startsWith('_')) continue
+      if (value === null || value === undefined || typeof value === 'object') continue
+      query[key] = value
+    }
+    router.push({ path: `/${encodeURIComponent(props.doctype)}/new`, query })
+  } catch (e) {
+    notify.error(e?.messages?.[0] || e?.message || 'Could not duplicate this record.')
+  }
 }
 
 const showDeleteDialog = ref(false)

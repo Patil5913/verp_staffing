@@ -13,29 +13,16 @@
     </template>
 
     <template #tab-details>
-      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" />
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4 flex flex-col gap-6">
+        <DocDetailView
+          v-for="section in sections"
+          :key="section.title"
+          :doctype="doctype"
+          :detail="detail"
+          :title="section.title"
+          :fieldnames="section.fieldnames"
+        />
       </div>
-    </template>
-
-    <template #tab-notes>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['note', 'update']"
-        show-composer
-        empty-text="Nothing here yet - add the first note below."
-      />
-    </template>
-
-    <template #tab-activity>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['task', 'event']"
-        allow-create
-        empty-text="No tasks or events linked to this record yet."
-      />
     </template>
   </DetailPageLayout>
 
@@ -68,7 +55,6 @@ import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
-import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
 const route = useRoute()
@@ -79,11 +65,14 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const DEFAULT_TABS = [
-  { key: 'details', label: 'Details' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'activity', label: 'Activity' },
+// Details tab split into four cards, each a curated field subset.
+const sections = [
+  { title: 'Domain', fieldnames: ['domain_name'] },
+  { title: 'Outgoing Mail', fieldnames: ['smtp_server', 'smtp_port', 'use_tls', 'use_ssl_for_outgoing'] },
+  { title: 'Incoming Mail', fieldnames: ['email_server', 'incoming_port', 'use_imap', 'use_ssl', 'use_starttls'] },
+  { title: 'Mail Preferences', fieldnames: ['attachment_limit', 'append_emails_to_sent_folder', 'sent_folder_name'] },
 ]
-const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
+
+const tabs = [{ key: 'details', label: 'Details' }]
 const activeTab = ref('details')
 </script>

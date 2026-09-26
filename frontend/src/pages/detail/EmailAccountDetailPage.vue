@@ -13,29 +13,16 @@
     </template>
 
     <template #tab-details>
-      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="visibleFields" />
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4 flex flex-col gap-6">
+        <DocDetailView
+          v-for="section in sections"
+          :key="section.title"
+          :doctype="doctype"
+          :detail="detail"
+          :title="section.title"
+          :fieldnames="section.fieldnames"
+        />
       </div>
-    </template>
-
-    <template #tab-notes>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['note', 'update']"
-        show-composer
-        empty-text="Nothing here yet - add the first note below."
-      />
-    </template>
-
-    <template #tab-activity>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['task', 'event']"
-        allow-create
-        empty-text="No tasks or events linked to this record yet."
-      />
     </template>
   </DetailPageLayout>
 
@@ -68,7 +55,6 @@ import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
-import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { isSystemManager } from '@/utils/common/roles'
 
@@ -83,20 +69,15 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
 // override/email_account.js: everything but these fields is hidden, and only a
 // System Manager gets to choose the default outgoing account. Outgoing,
 // incoming and the Basic auth method are fixed rather than chosen.
-const VISIBLE_FIELDS = [
-  'email_account_name',
-  'email_id',
-  'domain',
-  'password',
-  'brand_logo',
-  'footer',
-  'signature',
-  'add_signature',
-  'enable_auto_reply',
-  'auto_reply_message',
-  'attachment_limit',
-]
-const visibleFields = computed(() => (isSystemManager() ? [...VISIBLE_FIELDS, 'default_outgoing'] : VISIBLE_FIELDS))
+const sections = computed(() => [
+  { title: 'Account', fieldnames: ['email_account_name', 'email_id', 'domain', 'password'] },
+  {
+    title: 'Mail Preferences',
+    fieldnames: isSystemManager() ? ['attachment_limit', 'default_outgoing'] : ['attachment_limit'],
+  },
+  { title: 'Branding & Footer', fieldnames: ['brand_logo', 'footer'] },
+  { title: 'Auto Reply', fieldnames: ['enable_auto_reply', 'auto_reply_message'] },
+])
 
 const FIXED_VALUES = { enable_outgoing: 1, enable_incoming: 1, auth_method: 'Basic' }
 // The desk form copies these from the Email Domain client-side; the server
@@ -118,11 +99,6 @@ async function saveWithDefaults() {
   return onSave()
 }
 
-const DEFAULT_TABS = [
-  { key: 'details', label: 'Details' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'activity', label: 'Activity' },
-]
-const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
+const tabs = [{ key: 'details', label: 'Details' }]
 const activeTab = ref('details')
 </script>
