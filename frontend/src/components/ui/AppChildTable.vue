@@ -16,6 +16,7 @@
           <tr v-for="(row, i) in rows" :key="i" class="border-b border-app-border last:border-0">
             <td class="px-3 py-1.5 text-app-text-muted">{{ i + 1 }}</td>
             <td v-for="c in columns" :key="c.key" class="px-2 py-1.5">
+              <slot :name="`cell-${c.key}`" :row="row" :index="i" :set="(v) => setValue(i, c.key, v)">
               <input
                 :type="c.type === 'number' ? 'number' : 'text'"
                 :value="row[c.key]"
@@ -24,6 +25,7 @@
                 :class="c.type === 'number' ? 'text-right tabular-nums' : ''"
                 @input="setCell(i, c, $event.target.value)"
               />
+              </slot>
             </td>
             <td v-if="!disabled" class="px-2 py-1.5 text-right">
               <AppButton variant="ghost" size="icon" icon="trash-2" @click="removeRow(i)" />
@@ -57,6 +59,7 @@ const rows = computed(() => props.modelValue || [])
 const emitRows = (next) => emit('update:modelValue', next)
 const addRow = () => emitRows([...rows.value, Object.fromEntries(props.columns.map((c) => [c.key, c.type === 'number' ? 0 : '']))])
 const removeRow = (i) => emitRows(rows.value.filter((_, idx) => idx !== i))
+const setValue = (i, key, v) => emitRows(rows.value.map((r, idx) => (idx === i ? { ...r, [key]: v } : r)))
 const setCell = (i, col, raw) =>
   emitRows(rows.value.map((r, idx) => (idx === i ? { ...r, [col.key]: col.type === 'number' ? Number(raw) : raw } : r)))
 </script>
