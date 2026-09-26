@@ -26,13 +26,13 @@
       <span
         v-for="(row, idx) in rows"
         :key="idx"
-        class="group inline-flex items-center gap-1.5 rounded-lg border border-app-border bg-app-panel-2 py-1.5 pl-3 pr-2 text-p-sm text-app-text transition-colors hover:border-app-text-muted"
+        class="group inline-flex items-center gap-1.5 rounded-lg border border-blue-700 bg-blue-600 py-1.5 pl-3 pr-2 text-p-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
       >
         {{ row[linkFieldname] }}
         <button
           v-if="!disabled"
           type="button"
-          class="rounded p-0.5 text-app-text-muted hover:bg-red-50 hover:text-red-600"
+          class="rounded p-0.5 text-blue-100 hover:bg-blue-800 hover:text-white"
           @click="removeRow(idx)"
         >
           <FeatherIcon name="x" class="h-3.5 w-3.5" />
