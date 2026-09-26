@@ -86,14 +86,19 @@
         </div>
 
         <div class="flex max-h-[calc(100vh-16rem)] flex-col gap-4 overflow-y-auto">
-          <div v-for="section in filteredSections" :key="section.label" class="flex flex-col gap-1.5">
+          <div
+            v-for="(section, si) in filteredSections"
+            :key="section.label"
+            class="flex flex-col gap-1.5 rounded-lg p-3"
+            :style="sectionStyle(si)"
+          >
             <button
               type="button"
               class="flex items-center gap-2 rounded-md py-1 text-left"
               @click="toggleSection(section.label)"
             >
               <FeatherIcon :name="isCollapsed(section.label) ? 'chevron-right' : 'chevron-down'" class="h-4 w-4 text-app-text-muted" />
-              <span class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ section.label }}</span>
+              <span class="text-p-xs font-semibold uppercase tracking-wide text-app-text">{{ section.label }}</span>
               <AppBadge>{{ sectionSelected(section.label) }}/{{ sectionTotal(section.label) }} selected</AppBadge>
             </button>
             <div v-show="!isCollapsed(section.label)" class="grid grid-cols-1 gap-1 sm:grid-cols-2">
@@ -101,7 +106,7 @@
                 v-for="field in section.fields"
                 :key="field.fieldname"
                 class="flex items-center justify-between gap-2 rounded-md px-2 py-1"
-                :class="isFieldSelected(currentItem, field.fieldname) ? 'bg-app-panel-2' : ''"
+                :class="isFieldSelected(currentItem, field.fieldname) ? 'bg-app-panel shadow-sm' : ''"
               >
                 <AppCheckbox
                   :label="field.label"
@@ -186,6 +191,18 @@ import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 import { useResource } from '@/composables/list/useResource'
 import { notify } from '@/utils/common/notify'
+
+// Each section is its own tinted block (cycling colours). Inline rgba so it
+// works in light and dark mode and doesn't depend on the Tailwind palette.
+const SECTION_RGB = ['37, 99, 235', '5, 150, 105', '217, 119, 6', '124, 58, 237', '225, 29, 72', '8, 145, 178']
+const sectionStyle = (i) => {
+  const rgb = SECTION_RGB[i % SECTION_RGB.length]
+  return {
+    backgroundColor: `rgba(${rgb}, 0.12)`,
+    border: `1px solid rgba(${rgb}, 0.4)`,
+    borderLeft: `5px solid rgb(${rgb})`,
+  }
+}
 
 const props = defineProps({
   title: { type: String, required: true },
