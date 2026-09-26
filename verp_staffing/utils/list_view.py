@@ -74,6 +74,12 @@ LIST_VIEW_COLUMN_SETTING_DOCTYPE = "List View Column Setting"
 # in_list_view can't say so).
 DEFAULT_OWNER_COLUMN_DOCTYPES = {"Interview"}
 
+# Fixed default column order for doctypes whose in_list_view flags can't be
+# changed (standard Frappe doctypes). An Administrator's custom set still wins.
+DEFAULT_LIST_COLUMNS = {
+    "User": ["full_name", "user_type", "enabled", "modified", "email"],
+}
+
 
 def _check_read(doctype):
     if not frappe.has_permission(doctype, "read"):
@@ -192,6 +198,11 @@ def get_list_view_meta(doctype):
 
     fields = fields + [LAST_UPDATED_FIELD]
     field_map = {f["fieldname"]: f for f in fields}
+
+    if doctype in DEFAULT_LIST_COLUMNS:
+        default_list_fields = [
+            field_map[f] for f in DEFAULT_LIST_COLUMNS[doctype] if f in field_map
+        ] or default_list_fields
 
     # The Administrator can override which columns show and in what order
     # (see set_list_view_columns) — a single setting shared by every role.

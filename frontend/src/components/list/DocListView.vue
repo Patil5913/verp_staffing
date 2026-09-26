@@ -207,6 +207,12 @@
                     size="md"
                   />
                   <AppBadge
+                    v-else-if="isUserStatusColumn(column.key)"
+                    :label="row[column.key]"
+                    :theme="row[column.key] === 'Yes' ? 'green' : 'red'"
+                    size="md"
+                  />
+                  <AppBadge
                     v-else-if="isSelectColumn(column.key)"
                     :label="row[column.key]"
                     :theme="statusBadgeTheme(row[column.key], { doctype, fieldname: column.key })"
@@ -481,6 +487,10 @@ function isSelectColumn(key) {
   // its generic keyword vocabulary), one of these fieldtype-agnostic
   // overrides only fires for the specific doctype.fieldname it targets.
   return fieldMap.value[key]?.fieldtype === 'Select' || hasStatusOverride(props.doctype, key)
+}
+
+function isUserStatusColumn(key) {
+  return props.doctype === 'User' && key === 'enabled'
 }
 
 function isDocstatusColumn(key) {
