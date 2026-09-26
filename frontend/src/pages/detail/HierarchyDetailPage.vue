@@ -104,8 +104,11 @@
             </div>
           </div>
 
-          <div v-if="departmentRoles.length" class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <h3 class="text-p-base font-medium text-app-text">Auto Assignment Rule</h3>
+          <div v-if="departmentRoles.length" class="flex flex-col gap-3 rounded-xl border-2 border-app-primary bg-app-primary-tint p-6 shadow-sm">
+            <h3 class="flex items-center gap-2 text-p-base font-semibold text-app-primary">
+              Auto Assignment Rule
+              <span class="rounded-full bg-app-primary px-2 py-0.5 text-p-xs font-medium text-white">Required</span>
+            </h3>
             <p class="text-p-sm text-app-text-muted">
               Select one role to enable automatic assignment. Only users with this role will be
               considered for auto and manual assignment.

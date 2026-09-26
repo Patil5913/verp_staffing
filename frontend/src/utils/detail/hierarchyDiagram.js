@@ -5,13 +5,13 @@
 // returning data for HierarchyDiagram.vue to render as SVG instead of
 // building the <svg> via direct DOM calls.
 
-const MIN_SPACING_X = 250
-const SPACING_Y = 150
+const MIN_SPACING_X = 185
+const SPACING_Y = 90
 const MARGIN_X = 50
-const MARGIN_Y = 50
+const MARGIN_Y = 30
 const SVG_WIDTH = 1200
-const RECT_WIDTH = 150
-const RECT_HEIGHT = 40
+const RECT_WIDTH = 160
+const RECT_HEIGHT = 46
 
 function findRoots(data) {
   const parents = new Set(data.map((d) => d.parent_role))
@@ -133,7 +133,7 @@ function layout(nodes, edges) {
   }
 
   const levelCount = Object.keys(levels).length
-  const svgHeight = Math.max(400, (levelCount + 1) * SPACING_Y + MARGIN_Y * 2)
+  const svgHeight = levelCount * SPACING_Y + MARGIN_Y + 20
   const centerX = SVG_WIDTH / 2
   const nodePos = {}
 
@@ -191,18 +191,29 @@ function layout(nodes, edges) {
     resolveCollisionsInLevel(levels[lvl], nodePos, MIN_SPACING_X, centerX)
   })
 
+  // Crop the canvas to the content instead of a fixed 1200px-wide one.
+  const xs = Object.values(nodePos).map((p) => p.x)
+  const pad = 16 + RECT_WIDTH / 2
+  const xShift = pad - Math.min(...xs)
+  Object.values(nodePos).forEach((p) => (p.x += xShift))
+  const contentWidth = Math.max(...xs) + xShift + pad
+
+  // [Start] is drawn as the entry point the top-level roles hang from.
+  const yShift = 0
   const renderedNodes = Object.keys(nodePos).map((id) => ({
     id,
     x: nodePos[id].x,
-    y: nodePos[id].y,
-    isStart: id === '[Start]',
+    y: nodePos[id].y - yShift,
+    level: nodeLevel[id] - 1,
+    reports: (childrenMap[id] || []).length,
+    isStart: nodeLevel[id] === 1,
+    isEntry: id === '[Start]',
   }))
 
   const renderedEdges = []
   edges.forEach((e) => {
-    const from = nodePos[e.from]
-    const to = nodePos[e.to]
-    if (!from || !to) return
+    const from = { ...nodePos[e.from], y: nodePos[e.from].y - yShift }
+    const to = { ...nodePos[e.to], y: nodePos[e.to].y - yShift }
 
     const fromLevel = nodeLevel[e.from]
     const toLevel = nodeLevel[e.to]
@@ -229,7 +240,7 @@ function layout(nodes, edges) {
     renderedEdges.push({ id: `${e.from}->${e.to}`, d })
   })
 
-  return { nodes: renderedNodes, edges: renderedEdges, width: SVG_WIDTH, height: svgHeight }
+  return { nodes: renderedNodes, edges: renderedEdges, width: contentWidth, height: svgHeight - yShift }
 }
 
 // The single entry point HierarchyDiagram.vue calls. `data` is the parsed

@@ -18,20 +18,24 @@
             @dragstart="draggingTool = tool.type"
             @dragend="draggingTool = null"
           >
-            {{ tool.icon }} {{ tool.label }}
+            <FeatherIcon :name="tool.icon" class="h-4 w-4 shrink-0" /> {{ tool.label }}
           </div>
         </div>
       </div>
 
       <div>
         <div class="mb-2 text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Customer Fields</div>
-        <div
-          class="builder-tool"
-          :draggable="!disabled"
-          @dragstart="draggingTool = 'Signature'"
-          @dragend="draggingTool = null"
-        >
-          ✍ Signature
+        <div class="flex flex-col gap-1.5">
+          <div
+            v-for="tool in CUSTOMER_TOOLS"
+            :key="tool.type"
+            class="builder-tool"
+            :draggable="!disabled"
+            @dragstart="draggingTool = tool.type"
+            @dragend="draggingTool = null"
+          >
+            <FeatherIcon :name="tool.icon" class="h-4 w-4 shrink-0" /> {{ tool.label }}
+          </div>
         </div>
       </div>
 
@@ -73,7 +77,7 @@
               {{ field.builder_placeholder || PREVIEW_VALUES[field.type] || field.name }}
             </div>
             <button v-if="!disabled" type="button" class="field-close" @click.stop="removeField(field.field_id)">
-              ✕
+              <FeatherIcon name="x" class="h-3 w-3" />
             </button>
             <div v-if="!disabled" class="resize-handle" @pointerdown.stop="onResizeMouseDown(field, $event)" />
           </div>
@@ -118,7 +122,7 @@
       </template>
 
       <div class="rounded-lg border border-app-border bg-app-panel-2 p-3 text-p-xs leading-relaxed text-app-text-muted">
-        💡 <strong>Quick tips</strong><br />
+        <strong class="inline-flex items-center gap-1"><FeatherIcon name="info" class="h-3.5 w-3.5" /> Quick tips</strong><br />
         • Reuse the same Name on multiple fields to auto-fill the same value in all of them.<br />
         • Preview Text is only shown here in the builder, not in the final document.<br />
         • Drag a field to move it, or its corner handle to resize it. Arrow keys nudge a selected field (Shift = 10px); Delete removes it.
@@ -126,7 +130,7 @@
     </div>
   </div>
 
-  <Dialog v-model="showCreateDialog" :options="{ title: `Create ${newFieldType} Field` }">
+  <Dialog v-model="showCreateDialog" :options="{ title: `Create ${newFieldType.replace(/_/g, ' ')} Field` }">
     <template #body-content>
       <div class="flex flex-col gap-3">
         <FieldControl :field="NAME_FIELD" v-model="draft.name" show-errors />
@@ -153,7 +157,7 @@
 // instead of jQuery. The "Show Form Tour" walkthrough was left out - it
 // was UX sugar on top of the same builder, not core behavior.
 import { computed, ref, watch } from 'vue'
-import { Dialog, LoadingIndicator } from 'frappe-ui'
+import { Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
@@ -178,12 +182,25 @@ const PREVIEW_VALUES = {
   Rich_Text: 'Net 30 days from invoice date',
   Date: '31 March 2026',
   Signature: 'Johnathan Smith',
+  Customer_Text: 'Customer enters text',
+  Customer_Rich_Text: 'Customer enters details',
+  Customer_Number: '0',
+  Customer_Date: 'Customer picks a date',
 }
 const STANDARD_TOOLS = [
-  { type: 'Text', icon: '📝', label: 'Text' },
-  { type: 'Number', icon: '🔢', label: 'Number' },
-  { type: 'Date', icon: '📅', label: 'Date' },
-  { type: 'Rich_Text', icon: '📄', label: 'Text Editor' },
+  { type: 'Text', icon: 'type', label: 'Text' },
+  { type: 'Number', icon: 'hash', label: 'Number' },
+  { type: 'Date', icon: 'calendar', label: 'Date' },
+  { type: 'Rich_Text', icon: 'file-text', label: 'Text Editor' },
+]
+
+// Filled in by the customer on the signing page, not by staff.
+const CUSTOMER_TOOLS = [
+  { type: 'Signature', icon: 'edit-3', label: 'Signature' },
+  { type: 'Customer_Text', icon: 'type', label: 'Text' },
+  { type: 'Customer_Rich_Text', icon: 'file-text', label: 'Text Editor' },
+  { type: 'Customer_Number', icon: 'hash', label: 'Number' },
+  { type: 'Customer_Date', icon: 'calendar', label: 'Date' },
 ]
 
 const NAME_FIELD = { fieldname: 'name', label: 'Field Name', fieldtype: 'Data', reqd: 1 }
@@ -388,6 +405,9 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
 
 <style scoped>
 .builder-tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--app-border);

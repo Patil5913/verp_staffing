@@ -29,12 +29,25 @@ def _template_fields(tpl):
         return []
 
 
+# Template field types the customer completes while signing -> E Sign field_type.
+CUSTOMER_FIELD_TYPES = {
+    "Signature": "signature",
+    "Customer_Text": "text",
+    "Customer_Rich_Text": "text",
+    "Customer_Number": "number",
+    "Customer_Date": "date",
+}
+
+
 def _signature_rows(fields, signer_email):
-    """Template Signature slots -> Signature Fields rows (percent of the page)."""
+    """Template Signature and customer-filled slots -> Signature Fields rows (percent of the page)."""
     rows = []
+    has_signature = False
     for f in fields:
-        if f.get("type") != "Signature":
+        field_type = CUSTOMER_FIELD_TYPES.get(f.get("type"))
+        if not field_type:
             continue
+        has_signature = has_signature or field_type == "signature"
         pw, ph = float(f.get("page_width") or 0), float(f.get("page_height") or 0)
         if not pw or not ph:
             frappe.throw(_("Template field {0} is missing its page size. Re-save the template.").format(f.get("name")))
@@ -46,12 +59,13 @@ def _signature_rows(fields, signer_email):
                 "width_percent": float(f.get("width") or 150) / pw * 100,
                 "height_percent": float(f.get("height") or 30) / ph * 100,
                 "signer_email": signer_email,
-                "field_type": "signature",
+                "field_type": field_type,
                 "field_label": f.get("name") or "Signature",
-                "font_size": "12",
+                "placeholder_text": f.get("builder_placeholder") or "",
+                "font_size": str(f.get("font_size") or 12),
             }
         )
-    if not rows:
+    if not has_signature:
         frappe.throw(_("This template has no Signature field. Add one in the template builder first."))
     return rows
 
