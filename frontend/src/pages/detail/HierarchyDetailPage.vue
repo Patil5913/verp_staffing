@@ -26,70 +26,12 @@
           </div>
 
           <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <div class="flex items-center justify-between">
-              <h3 class="text-p-base font-medium text-app-text">Role Hierarchy</h3>
-              <AppButton variant="outline" icon="plus" @click="addRow">Add Row</AppButton>
-            </div>
+            <h3 class="text-p-base font-medium text-app-text">Role Hierarchy</h3>
 
             <p v-if="!detail.values.department" class="text-p-sm text-app-text-muted">
               Select a department above to define its role hierarchy.
             </p>
-
-            <div v-else class="overflow-auto rounded-lg border border-app-border">
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th class="h-9 border-b border-app-border bg-app-panel-2 px-3 text-left text-p-sm font-semibold text-app-text-muted">
-                      Parent Role
-                    </th>
-                    <th class="h-9 border-b border-app-border bg-app-panel-2 px-3 text-left text-p-sm font-semibold text-app-text-muted">
-                      Child Roles
-                    </th>
-                    <th class="h-9 w-12 border-b border-app-border bg-app-panel-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, idx) in rows" :key="idx" class="align-top">
-                    <td class="w-64 border-b border-app-border p-2">
-                      <AppLinkField
-                        doctype="Role"
-                        :filters="{ name: ['in', departmentRoles] }"
-                        v-model="row.parent_role"
-                      />
-                    </td>
-                    <td class="border-b border-app-border p-2">
-                      <div class="flex flex-wrap items-center gap-1.5">
-                        <span
-                          v-for="child in row.child_roles"
-                          :key="child"
-                          class="inline-flex items-center gap-1 rounded-full border border-app-border bg-app-panel-2 py-0.5 pl-2.5 pr-1 text-p-xs text-app-text"
-                        >
-                          {{ child }}
-                          <button
-                            type="button"
-                            class="rounded-full p-0.5 text-app-text-muted hover:bg-app-border hover:text-app-text"
-                            @click="removeChildRole(idx, child)"
-                          >
-                            <FeatherIcon name="x" class="h-3 w-3" />
-                          </button>
-                        </span>
-                        <AppLinkField
-                          v-if="availableChildRoles(idx).length"
-                          class="min-w-[160px] flex-1"
-                          placeholder="Add child role"
-                          doctype="Role"
-                          :filters="{ name: ['in', availableChildRoles(idx)] }"
-                          @update:model-value="(v) => addChildRole(idx, v)"
-                        />
-                      </div>
-                    </td>
-                    <td class="border-b border-app-border p-2 text-right">
-                      <AppButton variant="ghost" icon="trash-2" @click="removeRow(idx)" />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <HierarchyTreeEditor v-else v-model="rows" :roles="departmentRoles" />
           </div>
 
           <div v-if="departmentRoles.length" class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
@@ -121,15 +63,6 @@
       />
     </template>
 
-    <template #tab-activity>
-      <ActivityTimeline
-        :doctype="doctype"
-        :name="name"
-        :types="['task', 'event']"
-        allow-create
-        empty-text="No tasks or events linked to this record yet."
-      />
-    </template>
   </DetailPageLayout>
 
   <Dialog
@@ -185,12 +118,13 @@
 // surface before a round-trip, not the validation itself.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Dialog, FeatherIcon } from 'frappe-ui'
+import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
+import HierarchyTreeEditor from '@/components/detail/hierarchy/HierarchyTreeEditor.vue'
 import HierarchyDiagram from '@/components/detail/hierarchy/HierarchyDiagram.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import { useDocDetail } from '@/composables/detail/useDocDetail'
@@ -215,7 +149,6 @@ const recordTitle = computed(() => {
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
   { key: 'notes', label: 'Notes' },
-  { key: 'activity', label: 'Activity' },
 ]
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))
 const activeTab = ref('details')
@@ -230,26 +163,6 @@ function cleanRows(list) {
 const parsedRoleHierarchy = computed(() => cleanRows(rows.value))
 const roleHierarchyJson = computed(() => JSON.stringify(parsedRoleHierarchy.value))
 
-function addRow() {
-  rows.value.push({ parent_role: '', child_roles: [] })
-}
-function removeRow(idx) {
-  rows.value.splice(idx, 1)
-  if (!rows.value.length) rows.value.push({ parent_role: '', child_roles: [] })
-}
-function availableChildRoles(idx) {
-  const current = rows.value[idx]?.child_roles || []
-  return departmentRoles.value.filter((r) => !current.includes(r))
-}
-function addChildRole(idx, role) {
-  if (!role) return
-  const row = rows.value[idx]
-  if (!row.child_roles.includes(role)) row.child_roles.push(role)
-}
-function removeChildRole(idx, role) {
-  const row = rows.value[idx]
-  row.child_roles = row.child_roles.filter((r) => r !== role)
-}
 
 // ── Auto assignment (auto_assign_config) ──────────────────────────────────
 const autoAssignRole = ref('')
