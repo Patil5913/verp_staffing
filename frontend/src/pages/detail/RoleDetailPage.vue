@@ -23,7 +23,24 @@
 
     <template #tab-details>
       <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="DETAIL_FIELDS" />
+        <div class="flex flex-col gap-6">
+          <div v-for="group in DETAIL_GROUPS" :key="group.title" class="flex flex-col gap-2">
+            <h2 class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ group.title }}</h2>
+            <DocDetailView :doctype="doctype" :detail="detail" :fieldnames="group.fields" />
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template #tab-permissions>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <RolePermissionsTab :role="name" :can-write="detail.canWrite.value" />
+      </div>
+    </template>
+
+    <template #tab-users>
+      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+        <RoleUsersTab :role="name" :can-write="detail.canWrite.value" />
       </div>
     </template>
   </DetailPageLayout>
@@ -53,6 +70,8 @@ import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
+import RolePermissionsTab from '@/components/detail/role/RolePermissionsTab.vue'
+import RoleUsersTab from '@/components/detail/role/RoleUsersTab.vue'
 import DocDetailView from '@/components/detail/DocDetailView.vue'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
@@ -65,9 +84,21 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const TABS = [{ key: 'details', label: 'Details' }]
-const tabs = computed(() => TABS)
+const TABS = computed(() =>
+  detail.isNew.value
+    ? [{ key: 'details', label: 'Details' }]
+    : [
+        { key: 'details', label: 'Details' },
+        { key: 'permissions', label: 'Permissions' },
+        { key: 'users', label: 'Assigned Users' },
+      ],
+)
+const tabs = TABS
 const activeTab = ref('details')
 
-const DETAIL_FIELDS = ['role_name', 'disabled', 'desk_access', 'two_factor_auth', 'restrict_to_domain', 'home_page', 'is_custom']
+const DETAIL_GROUPS = [
+  { title: 'General', description: 'Name and status of the role.', fields: ['role_name', 'disabled', 'is_custom'] },
+  { title: 'Access', description: 'How users with this role can sign in.', fields: ['desk_access', 'two_factor_auth'] },
+  { title: 'Restrictions', description: 'Where this role lands and what it is limited to.', fields: ['home_page', 'restrict_to_domain'] },
+]
 </script>

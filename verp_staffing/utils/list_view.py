@@ -79,6 +79,7 @@ DEFAULT_OWNER_COLUMN_DOCTYPES = {"Interview"}
 DEFAULT_LIST_COLUMNS = {
     "User": ["full_name", "user_type", "enabled", "modified", "email"],
     "Employee": ["employee_name", "department", "designation", "enabled", "modified"],
+    "Role": ["name", "is_custom", "desk_access", "disabled", "modified"],
 }
 
 # Read-only columns derived from a child table (see get_employee_list), not
@@ -151,7 +152,7 @@ def get_list_view_meta(doctype):
         fields.append(
             {
                 "fieldname": df.fieldname,
-                "label": df.label or df.fieldname,
+                "label": "Status" if (doctype, df.fieldname) == ("Role", "disabled") else df.label or df.fieldname,
                 "fieldtype": df.fieldtype,
                 "options": df.options,
                 "in_list_view": bool(df.in_list_view),

@@ -208,8 +208,8 @@
                   />
                   <AppBadge
                     v-else-if="isUserStatusColumn(column.key)"
-                    :label="props.doctype === 'Employee' ? (row[column.key] === 'Yes' ? 'Active' : 'Inactive') : row[column.key]"
-                    :theme="row[column.key] === 'Yes' ? 'green' : 'red'"
+                    :label="userStatusBadge(row[column.key]).label"
+                    :theme="userStatusBadge(row[column.key]).theme"
                     size="md"
                   />
                   <AppBadge
@@ -490,7 +490,17 @@ function isSelectColumn(key) {
 }
 
 function isUserStatusColumn(key) {
-  return (props.doctype === 'User' || props.doctype === 'Employee') && key === 'enabled'
+  return (
+    ((props.doctype === 'User' || props.doctype === 'Employee') && key === 'enabled') ||
+    (props.doctype === 'Role' && key === 'disabled')
+  )
+}
+
+function userStatusBadge(value) {
+  // Role stores "disabled", so its Yes/No is inverted relative to "enabled".
+  const active = props.doctype === 'Role' ? value !== 'Yes' : value === 'Yes'
+  if (props.doctype === 'User') return { label: value, theme: active ? 'green' : 'red' }
+  return { label: active ? 'Active' : 'Inactive', theme: active ? 'green' : 'red' }
 }
 
 function isDocstatusColumn(key) {
