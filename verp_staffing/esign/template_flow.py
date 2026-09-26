@@ -100,6 +100,25 @@ def apply_template(esign, template, data=None, signer_email=None):
     return {"esign": doc.name, "file_url": doc.original_pdf}
 
 
+def _ensure_portal_access(customer):
+    """Signing happens in the customer's portal, so give them access if they don't have it yet.
+    Never blocks the agreement: if access can't be issued (chat app missing, service ended, no
+    permission, ...) the signer just gets the emailed link instead. Returns (status, reason)."""
+    if frappe.db.get_value("Customer", customer, "chat_access") == "Active":
+        return "already", ""
+    from verp_staffing.crm.api.customer_chat import send_portal_access
+
+    frappe.db.savepoint("portal_access")
+    try:
+        send_portal_access(customer)
+        return "granted", ""
+    except Exception as e:
+        frappe.db.rollback(save_point="portal_access")
+        reason = frappe.utils.strip_html(str(e)) or "unknown error"
+        frappe.local.message_log = []  # the throw's popup isn't wanted here
+        return "failed", reason
+
+
 @frappe.whitelist()
 def create_from_template(template, data, sales_order=None, signer_email=None, send=0, title=None):
     """New E Sign from a template; from a Sales Order it defaults the signer to
@@ -119,6 +138,7 @@ def create_from_template(template, data, sales_order=None, signer_email=None, se
                     "➜ Open Lead Detail Form</a>",
                 )
 
+    access, access_error = _ensure_portal_access(customer) if customer else ("", "")
     title_arg = (title or "").strip()
     title = frappe.db.get_value("Pdf Agreement Template", template, "title") or template
     doc = frappe.get_doc(
@@ -148,7 +168,7 @@ def create_from_template(template, data, sales_order=None, signer_email=None, se
         from verp_staffing.esign.doctype.e_sign.e_sign import send_all_signers
 
         send_all_signers(doc.name)
-    return result
+    return {**result, "portal_access": access, "portal_access_error": access_error}
 
 
 @frappe.whitelist()

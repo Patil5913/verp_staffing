@@ -144,13 +144,15 @@ async function create(send) {
   saving.value = true
   sendAfter.value = send
   try {
-    await call('verp_staffing.esign.template_flow.create_from_template', {
+    const r = await call('verp_staffing.esign.template_flow.create_from_template', {
       sales_order: props.name,
       template: form.value.template,
       data: form.value.payload(),
       send: send ? 1 : 0,
     })
     notify.success(send ? 'Agreement created and sent.' : 'Agreement created.')
+    if (r?.portal_access === 'granted') notify.success('The customer had no portal access, so it was sent to them - they can sign from their portal.')
+    else if (r?.portal_access === 'failed') notify.error(`Couldn't give the customer portal access (${r.portal_access_error}). They will get an emailed signing link instead.`)
     form.value.reset()
     loadCards()
   } catch (error) {
