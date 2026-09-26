@@ -140,6 +140,11 @@
             <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
           </div>
           <table v-else-if="rows.length" class="doc-table w-full min-w-[42rem] table-fixed border-collapse md:min-w-0">
+            <colgroup>
+              <col v-if="canDelete" class="w-10" />
+              <col v-for="column in columns" :key="column.key" :style="colStyle(column.key)" />
+              <col v-if="canDelete || rowActionDefs.length" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
+            </colgroup>
             <thead>
               <tr>
                 <th v-if="canDelete" class="sticky top-0 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
@@ -148,7 +153,7 @@
                 <th
                   v-for="column in columns"
                   :key="column.key"
-                  class="sticky top-0 h-11 cursor-pointer select-none truncate border-b border-app-border bg-app-panel-2 px-3 text-left text-p-base font-semibold text-app-text-muted hover:text-app-text"
+                  class="sticky top-0 h-11 cursor-pointer select-none truncate border-b border-r border-app-border bg-app-panel-2 px-3 text-left text-p-base font-semibold text-app-text-muted hover:text-app-text"
                   @click="onSort(column.key)"
                 >
                   <span class="inline-flex items-center gap-1">
@@ -158,6 +163,13 @@
                       :name="sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'"
                       class="h-3.5 w-3.5 shrink-0"
                     />
+                  </span>
+                  <span
+                    class="group absolute right-0 top-0 flex h-full w-2 cursor-col-resize justify-end"
+                    @click.stop
+                    @mousedown.prevent.stop="startResize($event, column.key)"
+                  >
+                    <span class="w-0.5 group-hover:bg-app-text-muted" />
                   </span>
                 </th>
                 <th v-if="canDelete || rowActionDefs.length" class="sticky top-0 h-11 border-b border-app-border bg-app-panel-2 px-2" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
@@ -180,7 +192,7 @@
                 <td
                   v-for="column in columns"
                   :key="column.key"
-                  class="h-11 truncate border-b border-app-border px-3 text-base"
+                  class="h-11 truncate border-b border-r border-app-border px-3 text-base"
                 >
                   <AppBadge
                     v-if="isDocstatusColumn(column.key) && listStatusColumn(doctype, rawRowByName[row.name])"
@@ -291,6 +303,7 @@ import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import { computed, ref, watch } from 'vue'
+import { columnWidths } from '@/composables/list/useColumnWidths'
 import { useRouter } from 'vue-router'
 import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
@@ -433,6 +446,25 @@ const isSubmittable = computed(() => Boolean(meta.resource.data?.is_submittable)
 // A fixed, non-customizable leading column - not part of list_fields/the
 // Customize Columns picker, since it's derived from docstatus rather than a
 // real doctype field.
+// Column widths live only in module memory: they survive navigating between
+// lists but reset on a hard refresh (deliberately not persisted).
+function colStyle(key) {
+  const w = columnWidths[`${props.doctype}:${key}`]
+  return w ? { width: `${w}px` } : {}
+}
+function startResize(e, key) {
+  const startX = e.clientX
+  const startW = e.target.closest('th').offsetWidth
+  const id = `${props.doctype}:${key}`
+  const move = (ev) => { columnWidths[id] = Math.max(60, startW + ev.clientX - startX) }
+  const up = () => {
+    window.removeEventListener('mousemove', move)
+    window.removeEventListener('mouseup', up)
+  }
+  window.addEventListener('mousemove', move)
+  window.addEventListener('mouseup', up)
+}
+
 const columns = computed(() => {
   const hideFields = STATUS_COLUMN_FIELDS_TO_HIDE[props.doctype] || new Set()
   const cols = listFields.value.filter((f) => !hideFields.has(f.fieldname)).map((f) => ({ key: f.fieldname, label: f.label }))
