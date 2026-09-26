@@ -78,6 +78,13 @@ DEFAULT_OWNER_COLUMN_DOCTYPES = {"Interview"}
 # changed (standard Frappe doctypes). An Administrator's custom set still wins.
 DEFAULT_LIST_COLUMNS = {
     "User": ["full_name", "user_type", "enabled", "modified", "email"],
+    "Employee": ["employee_name", "department", "designation", "enabled", "modified"],
+}
+
+# Read-only columns derived from a child table (see get_employee_list), not
+# docfields of the doctype itself.
+VIRTUAL_LIST_FIELDS = {
+    "Employee": [("department", "Department"), ("designation", "Designation")],
 }
 
 
@@ -179,7 +186,19 @@ def get_list_view_meta(doctype):
         "in_standard_filter": False,
         "reqd": False,
     }
-    fields = [name_field, owner_field] + fields
+    virtual_fields = [
+        {
+            "fieldname": fieldname,
+            "label": label,
+            "fieldtype": "Data",
+            "options": None,
+            "in_list_view": False,
+            "in_standard_filter": False,
+            "reqd": False,
+        }
+        for fieldname, label in VIRTUAL_LIST_FIELDS.get(doctype, [])
+    ]
+    fields = [name_field, owner_field] + fields + virtual_fields
 
     default_list_fields = [f for f in fields if f["in_list_view"]]
     if not meta.title_field:

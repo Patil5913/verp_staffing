@@ -653,3 +653,34 @@ def validate_employee_delete(doc):
                 "Other employees are assigned to this employee."
             ).format(doc.name)
         )
+
+
+@frappe.whitelist()
+def get_employee_list(fields=None, filters=None, order_by=None, limit_start=0, limit_page_length=20):
+    """get_list for the Employee list view, plus the derived `department` /
+    `designation` columns (taken from the top Employee Role Assignment row)."""
+    fields = frappe.parse_json(fields) if isinstance(fields, str) else (fields or [])
+    virtual = {"department", "designation"}
+    rows = frappe.get_list(
+        "Employee",
+        fields=[f for f in fields if f not in virtual] or ["name"],
+        filters=frappe.parse_json(filters) if isinstance(filters, str) else filters,
+        order_by=None if (order_by or "").split(" ")[0] in virtual else order_by,
+        limit_start=limit_start,
+        limit_page_length=limit_page_length,
+    )
+    if rows and virtual & set(fields):
+        details = frappe.get_all(
+            "Employee Assignment Detail",
+            filters={"parent": ["in", [r.name for r in rows]], "parenttype": "Employee"},
+            fields=["parent", "department", "designation"],
+            order_by="idx asc",
+        )
+        top = {}
+        for d in details:  # idx asc: the first row per employee is the top one
+            top.setdefault(d.parent, d)
+        for r in rows:
+            row = top.get(r.name)
+            r["department"] = (row.department if row else "") or ""
+            r["designation"] = (row.designation if row else "") or ""
+    return rows

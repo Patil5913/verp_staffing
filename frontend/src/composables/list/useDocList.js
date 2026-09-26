@@ -68,9 +68,14 @@ export function useDocList(doctype, options = {}) {
   const docs = useResource({
     // Interview's "Today" status is derived (not stored), so its list/count come
     // from its own API - same arguments as get_list.
-    url: doctype === 'Interview' ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list' : 'frappe.client.get_list',
+    url:
+      doctype === 'Interview'
+        ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list'
+        : doctype === 'Employee'
+          ? 'verp_staffing.employee.doctype.employee.employee.get_employee_list'
+          : 'frappe.client.get_list',
     makeParams: () => ({
-      ...(doctype === 'Interview' ? {} : { doctype }),
+      ...(doctype === 'Interview' || doctype === 'Employee' ? {} : { doctype }),
       fields: fieldsToFetch.value,
       filters: combinedFilters.value,
       order_by: orderBy.value,
