@@ -3,7 +3,7 @@
 // board's company currency.
 import { moneyOptions } from '@/utils/common/defaultCurrency'
 
-export const PALETTE = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0d9488', '#db2777', '#dc2626', '#64748b', '#0891b2', '#84cc16']
+export const PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#a78bfa', '#14b8a6', '#f472b6', '#f43f5e', '#94a3b8', '#38bdf8', '#a3e635']
 
 export function formatMetric(value, format = 'number', currency = '', { compact = false } = {}) {
   if (value === null || value === undefined || value === '') return '-'

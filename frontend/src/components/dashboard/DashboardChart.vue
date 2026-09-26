@@ -40,7 +40,7 @@ const props = defineProps({
   currency: { type: String, default: '' },
 })
 
-const TONES = { success: 'bg-green-500', danger: 'bg-red-500', warning: 'bg-amber-500', info: 'bg-blue-500' }
+const TONES = { success: 'bg-emerald-500', danger: 'bg-rose-500', warning: 'bg-amber-500', info: 'bg-indigo-500' }
 
 const seriesNames = computed(() => props.chart.series.map((s) => s.name))
 const hasData = computed(() => {

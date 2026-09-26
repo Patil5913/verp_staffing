@@ -26,13 +26,14 @@ from verp_staffing.utils.reports import _default_company
 #   table  {id, title, columns: [{key, label, format}], rows, href}
 #   alert  {id, label, value, tone, href, hint}
 
-GREEN, RED, BLUE, AMBER, VIOLET, TEAL, PINK, SLATE = "#16a34a", "#dc2626", "#2563eb", "#d97706", "#7c3aed", "#0d9488", "#db2777", "#64748b"
+GREEN, RED, BLUE, AMBER, VIOLET, TEAL, PINK, SLATE = "#10b981", "#f43f5e", "#6366f1", "#f59e0b", "#a78bfa", "#14b8a6", "#f472b6", "#94a3b8"
 
 SECTIONS = [
     {"key": "overview", "label": "Overview", "icon": "layout-dashboard", "doctypes": []},
     {"key": "accounts", "label": "Accounts", "icon": "landmark", "doctypes": ["Sales Invoice", "Purchase Invoice", "Payment Entry", "GL Entry"]},
     {"key": "crm", "label": "CRM", "icon": "users", "doctypes": ["Lead", "Opportunity", "Customer", "Sales Order"]},
     {"key": "marketing", "label": "Marketing", "icon": "megaphone", "doctypes": ["Marketing", "Interview"]},
+    {"key": "technical", "label": "Technical", "icon": "wrench", "doctypes": ["Training", "RUC", "JDC", "Technical Other Services", "Interview Support", "Resume", "Cover Letter"]},
     {"key": "operations", "label": "Operations", "icon": "clipboard-list", "doctypes": ["Resume", "Training", "RUC", "JDC", "Cover Letter", "Technical Other Services", "Interview Support", "Other Services", "CR", "Onboardings"]},
 ]
 
@@ -56,6 +57,7 @@ DEPARTMENT_SECTIONS = {
 }
 
 SERVICE_DOCTYPES = ["Resume", "Training", "RUC", "JDC", "Cover Letter", "Technical Other Services", "Interview Support", "Other Services", "Marketing Other Services"]
+TECHNICAL_DOCTYPES = ["Training", "RUC", "JDC", "Technical Other Services", "Interview Support"]
 OPEN_SERVICE_STATUSES = ("Pending", "Request for Update")
 ATTENDED = ("Completed", "Get The Offer", "Rejected")
 OPEN_OPPORTUNITY = ("Open", "Quotation", "Replied")
@@ -128,7 +130,7 @@ def get_dashboard(section="overview", from_date=None, to_date=None, company=None
             return hit
 
     board = Board()
-    builders = {"overview": _overview, "accounts": _accounts, "crm": _crm, "marketing": _marketing, "operations": _operations}
+    builders = {"overview": _overview, "accounts": _accounts, "crm": _crm, "marketing": _marketing, "operations": _operations, "technical": _technical}
     if chosen.get("department"):
         _department_board(chosen["department"], board, period, company)
     else:
@@ -874,8 +876,14 @@ def _mkt_finish(b, p, company):
 
 def _operations(b, p, company):
     _run(b, _ops_services, p, company)
+    _run(b, _ops_technical, p, company)
     _run(b, _ops_care, p, company)
     _run(b, _ops_turnaround, p, company)
+
+
+def _technical(b, p, company):
+    _run(b, _ops_services, p, company, TECHNICAL_DOCTYPES + ["Resume", "Cover Letter"])
+    _run(b, _ops_technical, p, company)
 
 
 def _ops_services(b, p, company, doctypes=None):
@@ -931,6 +939,95 @@ def _ops_services(b, p, company, doctypes=None):
     )
 
 
+def _ops_technical(b, p, company):
+    """Technical department: documents submitted as proof of work, RUC sessions
+    held, and JDC / Interview Support (mock) sessions scheduled."""
+    names = _employee_names()
+    docs_by_type, scheduled = {}, []
+    for dt in ("Training", "JDC", "Interview Support", "Technical Other Services"):
+        try:
+            rows = _get(dt, ["name", "customer", "assign_to", "status"] + (["scheduled_on", "from_time"] if dt == "JDC" else []) + (["interview_round"] if dt in ("JDC", "Interview Support") else []))
+        except frappe.PermissionError:
+            continue
+        docs_by_type[dt] = rows
+    try:
+        rucs = _get("RUC", ["name", "customer", "assign_to", "status"])
+    except frappe.PermissionError:
+        rucs = []
+    if rucs:
+        docs_by_type["RUC"] = rucs
+    if not docs_by_type:
+        return
+
+    # Proof-of-work documents attached to each service (Document References).
+    submitted = []
+    for dt, rows in docs_by_type.items():
+        if dt == "RUC":
+            continue
+        by_name = {r.name: r for r in rows}
+        for d in _children("Document References", dt, list(by_name), ["parent", "date", "document", "creation"]):
+            submitted.append({"service": dt, "parent": d.parent, "date": d.date or d.creation, "has_file": bool(d.document)})
+    doc_cur, doc_prev = _sum_split(p, submitted, "date")
+    with_docs = {(d["service"], d["parent"]) for d in submitted}
+    proof_services = [r for dt, rows in docs_by_type.items() if dt != "RUC" for r in rows if r.status == "Completed"]
+    missing = sum(1 for dt, rows in docs_by_type.items() if dt != "RUC" for r in rows if r.status == "Completed" and (dt, r.name) not in with_docs)
+    b.kpi("docs_submitted", "Documents submitted", doc_cur, "number", doc_prev, icon="file-check", hint="Proof of work attached in the period")
+    b.kpi("docs_total", "Documents on file", len(submitted), "number", icon="files")
+    b.kpi("docs_missing", "Completed without proof", missing, "number", invert=True, icon="file-x", tone="bad" if missing else "good", hint=f"Of {len(proof_services)} completed request(s)")
+    b.alert("completed_no_proof", "Completed technical requests with no document attached", missing, "warn")
+
+    # RUC: one row per session logged in the child table.
+    ruc_names = {r.name: r for r in rucs}
+    sessions = _children("Session Details", "RUC", list(ruc_names), ["parent", "date", "quality", "session_duration_in_hour"])
+    s_cur, s_prev = _sum_split(p, sessions, "date")
+    ruc_upcoming = [x for x in sessions if x.date and _d(x.date) >= p.today]
+    if rucs:
+        b.kpi("ruc_total", "RUC requests", len(rucs), "number", icon="phone-call", href=_href("RUC"))
+        b.kpi("ruc_scheduled", "RUC sessions scheduled", s_cur, "number", s_prev, icon="calendar-check", hint=f"{len(ruc_upcoming)} still to come")
+        b.kpi("ruc_hours", "RUC hours", round(sum(flt(x.session_duration_in_hour) for x in sessions if p.in_cur(_d(x.date))), 1), "number", icon="timer")
+        b.chart("ruc_sessions_trend", "RUC sessions over time", "bar", _trend(p, {"Sessions": [(_d(x.date), 1) for x in sessions]}), _series(("Sessions", "bar", TEAL)), span=2)
+        b.chart("ruc_quality", "RUC session quality", "donut", _counts([x.quality for x in sessions if p.in_cur(_d(x.date))], ["EXCELLENT", "GOOD", "AVERAGE", "BAD", "WORST"]))
+        b.chart("ruc_status", "RUC by status", "donut", _counts([r.status for r in rucs], ["Pending", "Request for Update", "Completed"]))
+
+    # JDC and Interview Support (mock interviews) carry a scheduled date.
+    round_names = [r.interview_round for dt in ("JDC", "Interview Support") for r in docs_by_type.get(dt, []) if r.get("interview_round")]
+    rounds = {r.name: r for r in _in_chunks("Interview Round", list(set(round_names)), ["name", "date_of_interview", "status", "cancelled_by"])} if round_names else {}
+    for dt, key, label, icon in (("JDC", "jdc", "JDC", "clipboard-check"), ("Interview Support", "mock", "Mock / interview support", "mic")):
+        rows = docs_by_type.get(dt)
+        if rows is None:
+            continue
+        when = lambda r, dt=dt: _d(r.get("scheduled_on")) if dt == "JDC" else _d((rounds.get(r.get("interview_round")) or {}).get("date_of_interview"))  # noqa: E731
+        dated = [(r, when(r)) for r in rows if when(r)]
+        cur_n = sum(1 for _r, d in dated if p.in_cur(d))
+        prev_n = sum(1 for _r, d in dated if p.in_prev(d))
+        upcoming = [(r, d) for r, d in dated if p.today <= d <= add_days(p.today, 14) and r.status != "Completed"]
+        b.kpi(f"{key}_scheduled", f"{label} scheduled", cur_n, "number", prev_n, icon=icon, href=_href(dt))
+        b.kpi(f"{key}_upcoming", f"{label} - next 14 days", len(upcoming), "number", icon="calendar-range", tone="info" if upcoming else None)
+        b.kpi(f"{key}_unscheduled", f"{label} not scheduled", sum(1 for r in rows if r.status != "Completed" and not when(r)), "number", icon="calendar-x", hint="Open with no date yet")
+        b.chart(f"{key}_trend", f"{label} scheduled over time", "bar", _trend(p, {"Scheduled": [(d, 1) for _r, d in dated]}), _series(("Scheduled", "bar", VIOLET)))
+        if upcoming:
+            b.table(
+                f"{key}_upcoming_table",
+                f"Upcoming {label}",
+                [{"key": "name", "label": "Request", "format": "link"}, {"key": "customer", "label": "Customer"}, {"key": "who", "label": "Assigned to"}, {"key": "date", "label": "Date", "format": "date"}],
+                [{"name": r.name, "customer": r.customer, "who": names.get(r.assign_to, r.assign_to), "date": _sd(d), "_href": _href(dt, r.name)} for r, d in sorted(upcoming, key=lambda x: x[1])[:10]],
+                href=_href(dt),
+            )
+
+    # Per-service summary: everything the technical team holds, in one table.
+    def summary_row(dt, rows):
+        return {"service": dt, "total": len(rows), "open": sum(1 for r in rows if r.status in OPEN_SERVICE_STATUSES), "done": sum(1 for r in rows if r.status == "Completed"), "docs": sum(1 for d in submitted if d["service"] == dt)}
+
+    b.table(
+        "technical_summary",
+        "Technical services at a glance",
+        [{"key": "service", "label": "Service"}, {"key": "total", "label": "Total", "format": "number"}, {"key": "open", "label": "Open", "format": "number"}, {"key": "done", "label": "Completed", "format": "number"}, {"key": "docs", "label": "Documents", "format": "number"}],
+        [summary_row(dt, rows) for dt, rows in docs_by_type.items()],
+    )
+    b.chart("docs_by_service", "Documents submitted by service", "bar", [{"label": dt, "Documents": sum(1 for d in submitted if d["service"] == dt and p.in_cur(_d(d["date"])))} for dt in docs_by_type if dt != "RUC"], _series(("Documents", "bar", BLUE)))
+    b.chart("docs_trend", "Documents submitted over time", "area", _trend(p, {"Documents": [(_d(d["date"]), 1) for d in submitted]}), _series(("Documents", "area", TEAL)), span=2)
+
+
 def _ops_care(b, p, company, only=None):
     names = _employee_names()
     try:
@@ -944,6 +1041,12 @@ def _ops_care(b, p, company, only=None):
         b.kpi("open_disputes", "Open disputes", len(pending), "number", icon="scale", tone="bad" if pending else "good", href=_href("CR"))
         b.chart("dispute_status", "Customer disputes", "donut", _counts([r.status for r in disputes], ["Dispute Pending", "Dispute Resolved", "Refund"]))
         b.alert("open_disputes", "Customer disputes pending", len(pending), "bad", _href("CR"))
+        made, made_prev = _sum_split(p, disputes, "creation")
+        b.kpi("disputes_new", "New disputes", made, "number", made_prev, invert=True, icon="file-warning")
+        b.kpi("disputes_resolved", "Resolved", sum(1 for r in disputes if r.status == "Dispute Resolved"), "number", icon="circle-check")
+        b.kpi("disputes_refund", "Refunds", sum(1 for r in disputes if r.status == "Refund"), "number", icon="undo-2")
+        b.chart("disputes_trend", "Disputes raised over time", "bar", _trend(p, {"Disputes": [(_d(r.creation), 1) for r in disputes]}), _series(("Disputes", "bar", RED)), span=2)
+        b.chart("disputes_customer", "Disputes per customer", "hbar", _counts([r.customer for r in disputes], n=10))
         b.chart("dispute_owner", "Disputes per handler", "hbar", _counts([names.get(r.assign_to, r.assign_to) for r in pending], n=10), subtitle="Pending disputes")
 
     try:
@@ -956,6 +1059,8 @@ def _ops_care(b, p, company, only=None):
         new, new_prev = _sum_split(p, onboardings, "creation")
         b.kpi("onboardings_active", "Active onboardings", sum(1 for r in onboardings if r.status == "Active"), "number", icon="user-check", href=_href("Onboardings"))
         b.kpi("onboardings_new", "New onboardings", new, "number", new_prev, icon="user-round-plus")
+        b.chart("onboardings_trend", "Onboardings over time", "bar", _trend(p, {"Onboardings": [(_d(r.creation), 1) for r in onboardings]}), _series(("Onboardings", "bar", TEAL)), span=2)
+        b.chart("onboarding_customer", "Onboardings per customer", "hbar", _counts([r.customer for r in onboardings], n=10))
         b.chart("onboarding_status", "Onboardings by status", "donut", _counts([r.status for r in onboardings], ["Active", "Completed", "Returned"]))
 
 
@@ -992,7 +1097,7 @@ def _hr(b, p, company):
 
 def _department_board(department, b, p, company):
     """One department's tab, built from the matching widget groups above."""
-    services = {"Resume": ["Resume", "Cover Letter"], "Technical": ["Training", "RUC", "JDC", "Technical Other Services", "Interview Support"]}
+    services = {"Resume": ["Resume", "Cover Letter"], "Technical": TECHNICAL_DOCTYPES}
     if department == "Lead":
         _run(b, _crm_leads, p, company)
     elif department == "Sales":
@@ -1002,6 +1107,8 @@ def _department_board(department, b, p, company):
         _run(b, _marketing, p, company)
     elif department in services:
         _run(b, _ops_services, p, company, services[department])
+        if department == "Technical":
+            _run(b, _ops_technical, p, company)
     elif department == "CR":
         _run(b, _ops_care, p, company, "CR")
     elif department == "Onboarding":
