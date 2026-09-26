@@ -60,6 +60,7 @@ const FIELD_GROUPS = [
 export function useSystemSettingsPanel() {
   const values = ref({})
   const timezones = ref([])
+  const ready = ref(false)
   let pending = {}
 
   const fieldGroups = computed(() =>
@@ -86,9 +87,11 @@ export function useSystemSettingsPanel() {
 
   async function load() {
     const data = await loadResource.resource.fetch()
-    if (!data) return
-    values.value = data.values || {}
-    timezones.value = data.timezones || []
+    if (data) {
+      values.value = data.values || {}
+      timezones.value = data.timezones || []
+    }
+    ready.value = true
   }
   load()
 
@@ -116,5 +119,5 @@ export function useSystemSettingsPanel() {
     return true
   }
 
-  return { values, fieldGroups, stage, flush }
+  return { values, fieldGroups, ready, stage, flush }
 }

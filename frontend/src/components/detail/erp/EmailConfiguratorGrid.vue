@@ -33,28 +33,17 @@
               />
             </td>
             <td class="border-b border-app-border p-2">
-              <div class="flex flex-wrap items-center gap-1.5">
-                <span
-                  v-for="type in row.types"
-                  :key="type"
-                  class="inline-flex items-center gap-1 rounded-full border border-app-border bg-app-panel-2 py-0.5 pl-2.5 pr-1 text-p-xs text-app-text"
-                >
-                  {{ type }}
-                  <button
-                    type="button"
-                    class="rounded-full p-0.5 text-app-text-muted hover:bg-app-border hover:text-app-text"
-                    @click="removeType(idx, type)"
-                  >
-                    <FeatherIcon name="x" class="h-3 w-3" />
-                  </button>
-                </span>
-                <AppCombobox v-if="!disabled && selectableTypes(idx).length" compact class="w-36" model-value="" placeholder="+ Add type" :options="selectableTypes(idx)" @update:model-value="(v) => addType(idx, v)" />
-                <span v-else-if="!disabled" class="text-p-xs text-app-text-muted">All types used</span>
-              </div>
+              <AppChipInput
+                :disabled="disabled"
+                placeholder="+ Add type"
+                :model-value="row.types"
+                :options="selectableTypes(idx)"
+                @update:model-value="(v) => setTypes(idx, v)"
+              />
             </td>
           </tr>
           <tr v-if="!rows.length">
-            <td colspan="4" class="border-b border-app-border p-6 text-center text-p-sm text-app-text-muted">No rows.</td>
+            <td colspan="4" class="p-6 text-center text-p-sm text-app-text-muted">No email accounts configured yet - use Add Row.</td>
           </tr>
         </tbody>
       </table>
@@ -68,7 +57,7 @@
 </template>
 
 <script setup>
-import AppCombobox from '@/components/ui/AppCombobox.vue'
+import AppChipInput from '@/components/ui/AppChipInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // Ports ERP Configuration's Email Usage Configuration grid (email_configuration
 // / email_configuration_detail) onto AppLinkField/Checkbox/AppButton instead
@@ -76,7 +65,6 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // "each type usable in only one row" constraint (enforced the same way: the
 // per-row type dropdown excludes types already used elsewhere).
 import { computed, ref, watch } from 'vue'
-import { FeatherIcon } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 
@@ -134,15 +122,10 @@ function setEmailAccount(idx, value) {
 const allUsedTypes = computed(() => new Set(rows.value.flatMap((r) => r.types)))
 function selectableTypes(idx) {
   const rowTypes = rows.value[idx].types
-  return TYPE_OPTIONS.filter((t) => !allUsedTypes.value.has(t) || rowTypes.includes(t)).filter((t) => !rowTypes.includes(t))
+  return TYPE_OPTIONS.filter((t) => !allUsedTypes.value.has(t) && !rowTypes.includes(t))
 }
-function addType(idx, type) {
-  if (!type) return
-  if (!rows.value[idx].types.includes(type)) rows.value[idx].types.push(type)
-  emitUpdate()
-}
-function removeType(idx, type) {
-  rows.value[idx].types = rows.value[idx].types.filter((t) => t !== type)
+function setTypes(idx, types) {
+  rows.value[idx].types = types
   emitUpdate()
 }
 </script>

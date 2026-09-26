@@ -7,8 +7,19 @@ const DEFAULT_NAME = 'Verp Placements'
 // dynamic binding so Vite doesn't try to resolve this as a local build asset
 const DEFAULT_LOGO = '/assets/verp_staffing/images/Vrugle-icon-Logo-trimmed.png'
 
-const appName = ref(DEFAULT_NAME)
-const appLogo = ref(DEFAULT_LOGO)
+// Last-known branding is cached so a hard refresh paints the real logo/name
+// straight away instead of flashing the defaults and then swapping.
+const CACHE_KEY = 'verp_branding'
+function readCache() {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+const cached = readCache()
+const appName = ref(cached.name || DEFAULT_NAME)
+const appLogo = ref(cached.logo || DEFAULT_LOGO)
 let loaded = false
 
 async function load() {
@@ -20,6 +31,11 @@ async function load() {
     )
     if (data?.app_name) appName.value = data.app_name
     if (data?.app_logo) appLogo.value = data.app_logo
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ name: appName.value, logo: appLogo.value }))
+    } catch {
+      // storage unavailable - fine, defaults show next time
+    }
   } catch {
     loaded = false // keep the defaults; retry on next use
   }

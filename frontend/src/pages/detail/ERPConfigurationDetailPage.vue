@@ -1,56 +1,82 @@
 <template>
   <DetailPageLayout title="ERP Configuration" :tabs="tabs" v-model:active-tab="activeTab" @back="goBack">
     <template #actions>
-      <RecordActionBar show-save save-dirty :save-loading="saving" @save="onSave" />
+      <RecordActionBar show-save :save-dirty="isDirty" :save-loading="saving" @save="onSave" />
     </template>
 
     <template #tab-general>
-      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-        <div class="flex flex-col gap-6">
-          <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <h3 class="text-p-base font-medium text-app-text">Immediate Triggerer Configuration</h3>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FieldControl v-for="f in fieldsFor(['send_agreement_immediatly_after_sales_order_creation','send_candidate_form_immediatly_after_sales_order_creation','expiry_hours_of_agreement'])" :key="f.fieldname" :field="f" :disabled="!canWrite" :model-value="values[f.fieldname]" show-errors @update:model-value="(v) => (values[f.fieldname] = v)" />
-            </div>
-          </div>
+      <div class="flex h-full flex-col">
+        <SectionPills :sections="GENERAL_SECTIONS" />
+        <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-6">
+        <div class="flex flex-col gap-4">
 
-          <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <h3 class="text-p-base font-medium text-app-text">Interview &amp; Company Configuration</h3>
+          <SectionCard id="gen-triggers" title="Immediate Triggers" subtitle="What happens automatically when a Sales Order is created.">
+            <div class="flex flex-col gap-4">
+              <AppSwitch
+                label="Send Agreement immediately"
+                description="Email the agreement as soon as the Sales Order is created."
+                :disabled="!canWrite"
+                v-model="values.send_agreement_immediatly_after_sales_order_creation"
+              />
+              <AppSwitch
+                label="Send Candidate Form immediately"
+                description="Email the candidate form as soon as the Sales Order is created."
+                :disabled="!canWrite"
+                v-model="values.send_candidate_form_immediatly_after_sales_order_creation"
+              />
+              <div class="max-w-sm">
+                <AppDurationInput
+                  label="Agreement Expiry Duration"
+                  storage="hhmm"
+                  :units="['Minutes', 'Hours']"
+                  :disabled="!canWrite || !values.send_agreement_immediatly_after_sales_order_creation"
+                  :muted="!values.send_agreement_immediatly_after_sales_order_creation"
+                  :error="expiryError"
+                  hint="Between 1 minute and 99 hours 59 minutes."
+                  v-model="values.expiry_hours_of_agreement"
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard id="gen-defaults" title="Interview & Company Defaults">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FieldControl v-for="f in fieldsFor(['default_interview_status','default_company'])" :key="f.fieldname" :field="f" :disabled="!canWrite" :model-value="values[f.fieldname]" show-errors @update:model-value="(v) => (values[f.fieldname] = v)" />
             </div>
-          </div>
+          </SectionCard>
 
-          <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <div class="flex items-center justify-between">
-              <h3 class="text-p-base font-medium text-app-text">Permission Request Configuration</h3>
-            </div>
-            <ChildTableField
-              :table="permissionTable"
-              :rows="tableRows"
-              :disabled="!canWrite"
-              :link-queries="permissionRoleLinkQueries"
-              @update:rows="(rows) => (tableRows = rows)"
-            />
-          </div>
+          <SectionCard id="gen-permission" title="Permission Request Configuration" subtitle="Who can be asked for permission, per department.">
+            <PermissionRequestTable :disabled="!canWrite" v-model="tableRows" />
+          </SectionCard>
 
-          <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <h3 class="text-p-base font-medium text-app-text">Email Usage Configuration</h3>
+          <SectionCard id="gen-email" title="Email Usage Configuration" subtitle="Which email account is used for which kind of email.">
             <EmailConfiguratorGrid :disabled="!canWrite" v-model="emailConfigRows" />
-          </div>
+          </SectionCard>
 
-          <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <h3 class="text-p-base font-medium text-app-text">Social Links Configuration</h3>
-            <p class="text-p-sm text-app-text-muted">Add social links of the company which display in emails.</p>
+          <SectionCard id="gen-social" title="Social Links" subtitle="Company links shown in emails. Must start with http:// or https://.">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FieldControl v-for="f in fieldsFor(['linkedin','facebook','twitter_x','youtube'])" :key="f.fieldname" :field="f" :disabled="!canWrite" :model-value="values[f.fieldname]" @update:model-value="(v) => (values[f.fieldname] = v)" />
+              <AppInput
+                v-for="f in fieldsFor(SOCIAL_FIELDS)"
+                :key="f.fieldname"
+                :label="f.label"
+                placeholder="https://"
+                :disabled="!canWrite"
+                :error="socialErrors[f.fieldname]"
+                :model-value="values[f.fieldname] || ''"
+                @update:model-value="(v) => (values[f.fieldname] = v)"
+              />
             </div>
-          </div>
+          </SectionCard>
 
-          <div class="flex flex-col gap-3 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-            <h3 class="text-p-base font-medium text-app-text">Sample Data</h3>
+          <SectionCard
+            id="gen-danger"
+            title="Danger Zone"
+            subtitle="Irreversible actions. You'll be asked to confirm."
+            class="!border-dashed !border-red-400"
+          >
             <SampleDataPanel :is-sample-data-removed="values.is_sample_data_removed" @removed="loadHiddenFields" />
-          </div>
+          </SectionCard>
+        </div>
         </div>
       </div>
     </template>
@@ -63,10 +89,12 @@
           impact="Affects: Candidate application form"
           selector-label="service"
           is-candidate-form
+          allow-add-field
           :items-list="services"
           :field-sections="fieldSections"
           :disabled="!canWrite"
           v-model="candidateFormConfig"
+          @field-added="sectionsResource.resource.reload()"
         />
       </div>
     </template>
@@ -102,7 +130,7 @@
     </template>
 
     <template #tab-website>
-      <div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+      <div class="h-full">
         <WebsiteSystemSettingsPanel
           :field-groups="systemSettings.fieldGroups.value"
           :values="systemSettings.values.value"
@@ -126,13 +154,19 @@
 // Pdf Agreement Template's hidden fields. No delete/create flow - a
 // Single always exists - so this page skips the usual
 // isNew/delete/unsaved-changes-guard machinery entirely.
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUnsavedChangesGuard } from '@/composables/common/useUnsavedChangesGuard'
 import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
 import DetailPageLayout from '@/components/detail/DetailPageLayout.vue'
 import RecordActionBar from '@/components/common/RecordActionBar.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
-import ChildTableField from '@/components/detail/ChildTableField.vue'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppSwitch from '@/components/ui/AppSwitch.vue'
+import AppDurationInput from '@/components/ui/AppDurationInput.vue'
+import SectionCard from '@/components/common/SectionCard.vue'
+import SectionPills from '@/components/common/SectionPills.vue'
+import PermissionRequestTable from '@/components/detail/erp/PermissionRequestTable.vue'
 import EmailConfiguratorGrid from '@/components/detail/erp/EmailConfiguratorGrid.vue'
 import FieldSelectorWidget from '@/components/detail/erp/FieldSelectorWidget.vue'
 import WebsiteSystemSettingsPanel from '@/components/detail/erp/WebsiteSystemSettingsPanel.vue'
@@ -179,29 +213,7 @@ function fieldsFor(fieldnames) {
 
 // ── Hidden JSON fields + the table, fetched once via frappe.client.get
 // (same as Hierarchy/Pdf Agreement Template's hidden-field pattern) ────────
-const permissionTable = {
-  fieldname: 'table_tpxt',
-  label: 'Permission Request Configuration',
-  columns: [
-    { fieldname: 'department', label: 'Department', fieldtype: 'Link', options: 'Department', reqd: true },
-    { fieldname: 'role', label: 'Role', fieldtype: 'Link', options: 'Role', reqd: true },
-  ],
-}
 const tableRows = ref([])
-// Role options come from the row's own Department's Hierarchy, not every
-// Role in the system - same get_department_hierarchy_roles_query used by
-// Employee's Assignment Details table (see EmployeeDetailPage.vue).
-function permissionRoleLinkQueries(draft, rows, editingIndex) {
-  return {
-    role: {
-      query: 'verp_staffing.settings.doctype.hierarchy.hierarchy.get_department_hierarchy_roles_query',
-      filters: {
-        department: draft.department,
-        exclude: rows.filter((_, i) => i !== editingIndex).map((r) => r.role).filter(Boolean),
-      },
-    },
-  }
-}
 const emailConfigRows = ref([])
 const candidateFormConfig = ref({})
 const deptDisplayConfig = ref({})
@@ -224,6 +236,7 @@ async function loadHiddenFields() {
   candidateFormConfig.value = parseJSON(doc.candidate_details_form_fields, {})
   deptDisplayConfig.value = parseJSON(doc.department_display_form_fields, {})
   deptAccessConfig.value = parseJSON(doc.department_access_form_fields, {})
+  hiddenLoaded.value = true
 }
 
 watch(
@@ -263,15 +276,76 @@ const fieldSections = computed(() => sectionsResource.resource.data || [])
 // ── Website Settings tab's System Settings panel ────────────────────────
 const systemSettings = useSystemSettingsPanel()
 
+// ── General tab validation ──────────────────────────────────────────────
+const GENERAL_SECTIONS = [
+  { id: 'gen-triggers', label: 'Triggers' },
+  { id: 'gen-defaults', label: 'Defaults' },
+  { id: 'gen-permission', label: 'Permission Requests' },
+  { id: 'gen-email', label: 'Email Usage' },
+  { id: 'gen-social', label: 'Social Links' },
+  { id: 'gen-danger', label: 'Danger Zone' },
+]
+const SOCIAL_FIELDS = ['linkedin', 'facebook', 'twitter_x', 'youtube']
+
+// Stored as "HH:MM" - hh is 2 digits, so 99:59 is the ceiling.
+const expiryError = computed(() => {
+  const v = values.expiry_hours_of_agreement
+  if (!v) return 'Enter a duration'
+  const [h, m] = String(v).split(':').map((n) => parseInt(n, 10) || 0)
+  const minutes = h * 60 + m
+  if (minutes <= 0) return 'Must be greater than zero'
+  if (h > 99) return 'Maximum is 99 hours 59 minutes'
+  return ''
+})
+const socialErrors = computed(() =>
+  Object.fromEntries(
+    SOCIAL_FIELDS.map((f) => {
+      const v = (values[f] || '').trim()
+      return [f, v && !/^https?:\/\/\S+$/i.test(v) ? 'Must start with http:// or https://' : '']
+    }),
+  ),
+)
+
+// ── Dirty tracking (one Save covers every tab, so one flag) ───────────────
+const snapshot = () =>
+  JSON.stringify([
+    values,
+    tableRows.value,
+    emailConfigRows.value,
+    candidateFormConfig.value,
+    deptDisplayConfig.value,
+    deptAccessConfig.value,
+    systemSettings.values.value,
+  ])
+const baseline = ref(null)
+const isDirty = computed(() => baseline.value !== null && snapshot() !== baseline.value)
+
+const hiddenLoaded = ref(false)
+const ready = computed(() => hiddenLoaded.value && !!metaResource.resource.data && systemSettings.ready.value)
+watch(
+  ready,
+  async (r) => {
+    if (!r || baseline.value !== null) return
+    await nextTick()
+    baseline.value = snapshot()
+  },
+  { immediate: true },
+)
+
 // ── Save ────────────────────────────────────────────────────────────────
 const saving = ref(false)
 const saveResource = useResource({ url: 'frappe.client.set_value' })
 
 async function onSave() {
+  const problem = expiryError.value || Object.values(socialErrors.value).find(Boolean)
+  if (problem) {
+    notify.error(problem)
+    return false
+  }
   saving.value = true
   try {
     const flushed = await systemSettings.flush()
-    if (!flushed) return
+    if (!flushed) return false
 
     const payload = {
       ...values,
@@ -287,7 +361,7 @@ async function onSave() {
       name: 'ERP Configuration',
       fieldname: payload,
     })
-    if (!result) return
+    if (!result) return false
 
     // frappe.client.set_value's response is the doc as it now stands on the
     // server - re-seed metaResource's cache from it directly instead of
@@ -297,16 +371,14 @@ async function onSave() {
     metaResource.resource.setData({ ...metaResource.resource.data, values: result })
     seedValues()
     notify.success('Saved.')
+    await nextTick()
+    baseline.value = snapshot()
+    return true
   } finally {
     saving.value = false
   }
 }
 
-// This page's Save button has no dirty-tracking of its own (`save-dirty` is
-// a bare always-on attribute above) - Ctrl+S matches that same always-save
-// behavior rather than inventing dirty-tracking across the half-dozen
-// independent reactive pieces (values/tableRows/emailConfigRows/
-// candidateFormConfig/deptDisplayConfig/deptAccessConfig/systemSettings)
-// this page manages.
-useSaveShortcut(computed(() => true), onSave)
+useUnsavedChangesGuard(isDirty, onSave)
+useSaveShortcut(isDirty, onSave)
 </script>
