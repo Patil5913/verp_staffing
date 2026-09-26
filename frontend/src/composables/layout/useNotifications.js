@@ -1,5 +1,7 @@
-import { computed, ref } from 'vue'
-import { call } from 'frappe-ui'
+import { computed, h, ref } from 'vue'
+import { call, toast } from 'frappe-ui'
+import LucideBell from '~icons/lucide/bell'
+import router from '@/router'
 import { getSocket } from '@/utils/common/realtime'
 import { notify } from '@/utils/common/notify'
 import { deskToSpaPath, isDeskPath } from '@/utils/common/deskRoute'
@@ -57,11 +59,43 @@ async function markAllAsRead() {
 // Same channel core's own bell listens on (see notification_log.py's
 // after_insert -> frappe.publish_realtime("notification", user=...)):
 // a new notification for this user just refetches the list.
+const escapeHtml = (t) =>
+  String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+
+// Rich toast: the source document type as a bold heading, the subject under
+// it, and a View action that opens the record (or the notifications page).
+function showToast(n) {
+  const subject = new DOMParser().parseFromString(n.subject || '', 'text/html').body.textContent.trim()
+  const heading = n.document_type || 'Notification'
+  const name = n.document_name ? ` &middot; ${escapeHtml(n.document_name)}` : ''
+  toast.create({
+    type: 'info',
+    icon: (props) => h(LucideBell, { ...props, class: [props.class, 'text-ink-white'] }),
+    duration: 10,
+    message: `<strong>${escapeHtml(heading)}</strong>${name}<br>${escapeHtml(subject || 'New notification')}`,
+    action: {
+      label: 'View',
+      onClick: async () => {
+        markAsRead(n.name)
+        router.push(await resolveRoute(n))
+      },
+    },
+  })
+}
+
 let socket = null
 function connectRealtime() {
   if (socket) return
   socket = getSocket()
-  socket.on('notification', () => load())
+  // Baseline so the first realtime event can tell which notifications are new.
+  load()
+  socket.on('notification', async () => {
+    const seen = new Set(notifications.value.map((n) => n.name))
+    await load()
+    notifications.value
+      .filter((n) => !n.read && !seen.has(n.name))
+      .forEach(showToast)
+  })
 }
 
 // Same link-resolution priority as get_form_link() in core: an explicit
