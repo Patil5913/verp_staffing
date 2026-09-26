@@ -7,7 +7,6 @@ frappe.ui.form.on("Email Account", {
 function configure_email_account(frm) {
     const is_admin = frappe.user.has_role("System Manager");
     const allowed = [
-        "brand_logo",
         "signature",
         "add_signature",
         "attachment_limit",

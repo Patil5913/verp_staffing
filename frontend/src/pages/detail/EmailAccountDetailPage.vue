@@ -75,7 +75,6 @@ const sections = computed(() => [
     title: 'Mail Preferences',
     fieldnames: isSystemManager() ? ['attachment_limit', 'default_outgoing'] : ['attachment_limit'],
   },
-  { title: 'Branding', fieldnames: ['brand_logo'] },
 ])
 
 const FIXED_VALUES = { enable_outgoing: 1, enable_incoming: 1, auth_method: 'Basic' }
