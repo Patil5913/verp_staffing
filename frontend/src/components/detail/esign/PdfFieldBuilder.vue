@@ -3,9 +3,9 @@
     Upload a PDF template above to start building.
   </div>
 
-  <div v-else class="relative flex h-[calc(100dvh-220px)] flex-col md:flex-row min-h-[520px] overflow-hidden rounded-lg md:h-[calc(100dvh-320px)] border border-app-border">
+  <div v-else class="relative flex h-[calc(100dvh-140px)] flex-col md:flex-row min-h-[720px] overflow-hidden rounded-lg md:h-[calc(100dvh-160px)] border border-app-border">
     <!-- Toolbox -->
-    <div class="flex max-h-44 w-full shrink-0 flex-col gap-4 overflow-y-auto border-b border-app-border bg-app-panel p-4 md:max-h-none md:w-56 md:border-b-0 md:border-r">
+    <div class="flex max-h-44 w-full shrink-0 flex-col gap-4 overflow-y-auto border-b border-app-border bg-app-panel p-4 md:max-h-none md:w-52 md:border-b-0 md:border-r">
       <p class="text-p-xs text-app-text-muted md:hidden">Dragging fields onto the page needs a mouse; use a tablet or desktop to place them.</p>
       <div>
         <div class="mb-2 text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Standard Fields</div>
@@ -46,6 +46,18 @@
     </div>
 
     <!-- PDF pages -->
+    <div class="flex min-w-0 flex-1 flex-col">
+    <div class="flex shrink-0 items-center justify-between gap-3 border-b border-app-border bg-app-panel px-4 py-2">
+      <div class="flex items-center gap-1">
+        <AppButton variant="outline" size="icon" icon="minus" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-ZOOM_STEP)" />
+        <button type="button" class="h-8 min-w-[3.5rem] rounded-md px-2 text-p-sm font-medium tabular-nums text-app-text hover:bg-app-panel-2" title="Reset zoom" @click="zoom = 1">{{ Math.round(zoom * 100) }}%</button>
+        <AppButton variant="outline" size="icon" icon="plus" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(ZOOM_STEP)" />
+      </div>
+      <div class="flex items-center gap-2 text-p-xs">
+        <button type="button" class="kind-badge kind-company" :disabled="!standardCount" title="Click to jump to the next company field" @click="jumpTo('company')">Company <strong class="tabular-nums">{{ standardCount }}</strong></button>
+        <button type="button" class="kind-badge kind-customer" :disabled="!customerCount" title="Click to jump to the next customer field" @click="jumpTo('customer')">Customer <strong class="tabular-nums">{{ customerCount }}</strong></button>
+      </div>
+    </div>
     <div class="flex-1 overflow-auto bg-app-panel-2 p-6">
       <div v-if="loadingPdf" class="flex justify-center py-16">
         <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
@@ -55,8 +67,12 @@
       <div
         v-for="page in pages"
         :key="page.number"
+        class="pdf-page-sizer"
+        :style="{ width: page.width * zoom + 'px', height: page.height * zoom + 'px' }"
+      >
+      <div
         class="pdf-page-container"
-        :style="{ width: page.width + 'px', height: page.height + 'px' }"
+        :style="{ width: page.width + 'px', height: page.height + 'px', transform: `scale(${zoom})` }"
         @click="selectedFieldId = null"
       >
         <img :src="page.dataUrl" class="pdf-page-img" />
@@ -65,7 +81,8 @@
             v-for="field in fieldsOnPage(page.number)"
             :key="field.field_id"
             class="pdf-field"
-            :class="{ selected: field.field_id === selectedFieldId }"
+            :data-field-id="field.field_id"
+            :class="[isCustomer(field) ? 'kind-customer' : 'kind-company', { selected: field.field_id === selectedFieldId }]"
             :style="fieldStyle(field)"
             @pointerdown="onFieldMouseDown(field, $event)"
             tabindex="0"
@@ -81,17 +98,22 @@
             </button>
             <div v-if="!disabled" class="resize-handle" @pointerdown.stop="onResizeMouseDown(field, $event)" />
           </div>
-        </div>
       </div>
+      </div>
+      </div>
+    </div>
     </div>
 
     <!-- Properties -->
-    <div v-if="selectedField" class="absolute inset-x-0 bottom-0 z-20 flex max-h-[60%] flex-col gap-3 overflow-y-auto border-t border-app-border bg-app-panel p-4 shadow-2xl md:static md:max-h-none md:w-80 md:shrink-0 md:border-l md:border-t-0 md:shadow-none">
+    <div :class="selectedField ? 'flex' : 'hidden md:flex'" class="absolute inset-x-0 bottom-0 z-20 max-h-[60%] flex-col gap-3 overflow-y-auto border-t border-app-border bg-app-panel p-4 shadow-2xl md:static md:max-h-none md:w-64 md:shrink-0 md:border-l md:border-t-0 md:shadow-none">
       <div class="flex items-center justify-between">
         <h4 class="text-p-base font-medium text-app-text">Properties</h4>
-        <AppButton variant="ghost" size="icon" icon="x" @click="selectedFieldId = null" />
+        <AppButton v-if="selectedField" variant="ghost" size="icon" icon="x" @click="selectedFieldId = null" />
       </div>
 
+      <p v-if="!selectedField" class="rounded-lg border border-dashed border-app-border p-3 text-p-xs text-app-text-muted">Select a field on the page to edit its properties.</p>
+
+      <template v-if="selectedField">
       <FieldControl
         :field="NAME_FIELD"
         :disabled="disabled"
@@ -112,17 +134,19 @@
           :model-value="selectedField.font_size"
           @update:model-value="(v) => updateSelectedField('font_size', Number(v) || 12)"
         />
-        <FieldControl
-          :field="LINE_HEIGHT_FIELD"
-          :disabled="disabled"
-          :model-value="selectedField.line_height"
-          @update:model-value="(v) => updateSelectedField('line_height', Number(v) || 1.2)"
-        />
-        <p v-if="lineHeightWarning" class="text-p-xs text-red-600">{{ lineHeightWarning }}</p>
       </template>
 
-      <div class="rounded-lg border border-app-border bg-app-panel-2 p-3 text-p-xs leading-relaxed text-app-text-muted">
-        <strong class="inline-flex items-center gap-1"><FeatherIcon name="info" class="h-3.5 w-3.5" /> Quick tips</strong><br />
+      <div class="grid grid-cols-2 gap-2">
+        <FieldControl v-for="k in GEOMETRY_FIELDS" :key="k.fieldname" :field="k" :disabled="disabled" :model-value="selectedField[k.fieldname]" @update:model-value="(v) => setGeometry(k.fieldname, v)" />
+      </div>
+      </template>
+
+      <button v-if="selectedField" type="button" class="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-p-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50" :disabled="disabled" @click="removeField(selectedField.field_id)">
+        <FeatherIcon name="trash-2" class="h-4 w-4" /> Remove Field
+      </button>
+
+      <div class="shrink-0 rounded-lg border border-amber-300 bg-amber-50 p-3 text-p-xs leading-relaxed" style="color:#422006" :class="selectedField ? '' : 'mt-auto'">
+        <strong class="mb-1 block text-p-sm font-semibold" style="color:#1c1917">Quick tips</strong>
         • Reuse the same Name on multiple fields to auto-fill the same value in all of them.<br />
         • Preview Text is only shown here in the builder, not in the final document.<br />
         • Drag a field to move it, or its corner handle to resize it. Arrow keys nudge a selected field (Shift = 10px); Delete removes it.
@@ -137,7 +161,6 @@
         <template v-if="newFieldType !== 'Signature'">
           <FieldControl :field="PLACEHOLDER_FIELD" v-model="draft.placeholder" />
           <FieldControl :field="FONT_SIZE_FIELD" v-model.number="draft.font_size" />
-          <FieldControl :field="LINE_HEIGHT_FIELD" v-model.number="draft.line_height" />
         </template>
       </div>
     </template>
@@ -157,6 +180,7 @@
 // instead of jQuery. The "Show Form Tour" walkthrough was left out - it
 // was UX sugar on top of the same builder, not core behavior.
 import { computed, ref, watch } from 'vue'
+import { nextTick } from 'vue'
 import { Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
@@ -203,6 +227,14 @@ const CUSTOMER_TOOLS = [
   { type: 'Customer_Date', icon: 'calendar', label: 'Date' },
 ]
 
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 2
+const ZOOM_STEP = 0.1
+const zoom = ref(1)
+function stepZoom(d) {
+  zoom.value = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom.value + d)) * 100) / 100
+}
+
 const NAME_FIELD = { fieldname: 'name', label: 'Field Name', fieldtype: 'Data', reqd: 1 }
 const PLACEHOLDER_FIELD = { fieldname: 'placeholder', label: 'Preview Text', fieldtype: 'Data' }
 const FONT_SIZE_FIELD = { fieldname: 'font_size', label: 'Font Size', fieldtype: 'Int' }
@@ -222,6 +254,66 @@ function emitUpdate() {
     'update:modelValue',
     localFields.value.map((f) => ({ ...f })),
   )
+}
+
+const isCustomer = (f) => f.type === 'Signature' || f.type.startsWith('Customer_')
+const customerCount = computed(() => localFields.value.filter(isCustomer).length)
+const standardCount = computed(() => localFields.value.length - customerCount.value)
+
+// Click a badge to step through that kind of field, scrolling each into view.
+const jumpIndex = { company: -1, customer: -1 }
+function jumpTo(kind) {
+  const list = localFields.value.filter((f) => (kind === 'customer') === isCustomer(f))
+  if (!list.length) return
+  jumpIndex[kind] = (jumpIndex[kind] + 1) % list.length
+  const f = list[jumpIndex[kind]]
+  selectedFieldId.value = f.field_id
+  nextTick(() => {
+    const el = document.querySelector(`[data-field-id="${f.field_id}"]`)
+    el?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+    el?.classList.add('flash')
+    setTimeout(() => el?.classList.remove('flash'), 1200)
+  })
+}
+
+// ── Precise placement: 5px grid + snap to other fields' edges (hold Alt to
+// place freely), plus exact X/Y/W/H inputs in Properties.
+const GRID = 5
+const EDGE_SNAP = 6
+const GEOMETRY_FIELDS = [
+  { fieldname: 'x', label: 'X', fieldtype: 'Int' },
+  { fieldname: 'y', label: 'Y', fieldtype: 'Int' },
+  { fieldname: 'width', label: 'Width', fieldtype: 'Int' },
+  { fieldname: 'height', label: 'Height', fieldtype: 'Int' },
+]
+function setGeometry(key, v) {
+  const f = selectedField.value
+  if (!f) return
+  const page = pages.value.find((p) => p.number === f.page)
+  let n = Math.round(Number(v) || 0)
+  if (key === 'width') n = Math.min(Math.max(20, n), (page?.width || Infinity) - f.x)
+  else if (key === 'height') n = Math.min(Math.max(10, n), (page?.height || Infinity) - f.y)
+  else if (key === 'x') n = Math.min(Math.max(0, n), (page?.width || Infinity) - (f.width || 150))
+  else n = Math.min(Math.max(0, n), (page?.height || Infinity) - (f.height || 30))
+  updateSelectedField(key, n)
+}
+// Snap `value` (the leading edge; `size` is the extent) to the nearest other
+// field edge within EDGE_SNAP, else to the grid.
+function snap(value, size, axis, field, free) {
+  if (free) return value
+  const others = localFields.value.filter((o) => o.page === field.page && o.field_id !== field.field_id)
+  let best = null
+  for (const o of others) {
+    const start = axis === 'x' ? o.x : o.y
+    const len = axis === 'x' ? o.width || 150 : o.height || 30
+    for (const target of [start, start + len]) {
+      for (const cand of [target, target - size]) {
+        const d = Math.abs(cand - value)
+        if (d <= EDGE_SNAP && (!best || d < best.d)) best = { d, v: cand }
+      }
+    }
+  }
+  return best ? best.v : Math.round(value / GRID) * GRID
 }
 
 function fieldsOnPage(pageNumber) {
@@ -290,11 +382,15 @@ function onDrop(pageNumber, event) {
   if (props.disabled || !draggingTool.value) return
   const rect = event.currentTarget.getBoundingClientRect()
   newFieldType.value = draggingTool.value
-  newFieldDropPos.value = {
+  const dropPos = {
     page: pageNumber,
-    x: Math.min(rect.width - NEW_FIELD_WIDTH, event.clientX - rect.left - NEW_FIELD_WIDTH / 2),
-    y: Math.min(rect.height - NEW_FIELD_HEIGHT, event.clientY - rect.top - NEW_FIELD_HEIGHT / 2),
+    x: Math.min(rect.width / zoom.value - NEW_FIELD_WIDTH, (event.clientX - rect.left) / zoom.value - NEW_FIELD_WIDTH / 2),
+    y: Math.min(rect.height / zoom.value - NEW_FIELD_HEIGHT, (event.clientY - rect.top) / zoom.value - NEW_FIELD_HEIGHT / 2),
   }
+  const probe = { field_id: '', page: pageNumber }
+  dropPos.x = snap(Math.max(0, dropPos.x), NEW_FIELD_WIDTH, 'x', probe, event.altKey)
+  dropPos.y = snap(Math.max(0, dropPos.y), NEW_FIELD_HEIGHT, 'y', probe, event.altKey)
+  newFieldDropPos.value = dropPos
   draft.value = { name: '', placeholder: '', font_size: 12, line_height: 1.2 }
   showCreateDialog.value = true
 }
@@ -361,8 +457,11 @@ function onFieldMouseMove(event) {
   const page = pages.value.find((p) => p.number === field.page)
   const maxLeft = (page?.width || 0) - (field.width || 150)
   const maxTop = (page?.height || 0) - (field.height || 30)
-  field.x = Math.round(Math.max(0, Math.min(origX + (event.clientX - startX), maxLeft)))
-  field.y = Math.round(Math.max(0, Math.min(origY + (event.clientY - startY), maxTop)))
+  const free = event.altKey
+  const nx = snap(origX + (event.clientX - startX) / zoom.value, field.width || 150, 'x', field, free)
+  const ny = snap(origY + (event.clientY - startY) / zoom.value, field.height || 30, 'y', field, free)
+  field.x = Math.round(Math.max(0, Math.min(nx, maxLeft)))
+  field.y = Math.round(Math.max(0, Math.min(ny, maxTop)))
 }
 function onFieldMouseUp() {
   if (!dragSession) return
@@ -388,8 +487,11 @@ function onResizeMouseMove(event) {
   const page = pages.value.find((p) => p.number === field.page)
   const maxW = (page?.width || Infinity) - field.x
   const maxH = (page?.height || Infinity) - field.y
-  field.width = Math.round(Math.min(maxW, Math.max(40, startWidth + (event.clientX - startX))))
-  field.height = Math.round(Math.min(maxH, Math.max(20, startHeight + (event.clientY - startY))))
+  const free = event.altKey
+  const right = snap(field.x + startWidth + (event.clientX - startX) / zoom.value, 0, 'x', field, free)
+  const bottom = snap(field.y + startHeight + (event.clientY - startY) / zoom.value, 0, 'y', field, free)
+  field.width = Math.round(Math.min(maxW, Math.max(20, right - field.x)))
+  field.height = Math.round(Math.min(maxH, Math.max(10, bottom - field.y)))
 }
 function onResizeMouseUp() {
   if (!resizeSession) return
@@ -424,9 +526,12 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
   background: var(--app-primary-tint);
 }
 
+.pdf-page-sizer {
+  margin: 0 auto 18px;
+}
 .pdf-page-container {
   position: relative;
-  margin: 0 auto 18px;
+  transform-origin: top left;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   background: #fff;
 }
@@ -442,10 +547,10 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
 
 .pdf-field {
   position: absolute;
-  border: 1px dashed var(--app-text-muted);
+  border: 2px solid var(--kind-border);
   outline: none;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--kind-bg);
   cursor: move;
   touch-action: none;
   /* Not overflow:hidden here - .field-close and .resize-handle are its own
@@ -453,10 +558,52 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
      etc.), and hiding this box's overflow clipped them to invisible.
      .pdf-field-preview below clips the field's text content on its own. */
 }
+.kind-company {
+  --kind-border: #1d4ed8;
+  --kind-bg: rgba(59, 130, 246, 0.14);
+  --kind-text: #1e3a8a;
+}
+.kind-customer {
+  --kind-border: #c2410c;
+  --kind-bg: rgba(249, 115, 22, 0.16);
+  --kind-text: #7c2d12;
+}
+:global([data-theme='dark']) .kind-company {
+  --kind-border: #60a5fa;
+  --kind-bg: rgba(96, 165, 250, 0.22);
+  --kind-text: #dbeafe;
+}
+:global([data-theme='dark']) .kind-customer {
+  --kind-border: #fb923c;
+  --kind-bg: rgba(251, 146, 60, 0.24);
+  --kind-text: #ffedd5;
+}
+.kind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 2px solid var(--kind-border);
+  background: var(--kind-bg);
+  color: var(--kind-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.kind-badge:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .pdf-field.selected {
-  border-color: var(--app-primary);
-  background: var(--app-primary-tint);
-  box-shadow: 0 0 0 3px var(--app-primary-tint);
+  box-shadow: 0 0 0 3px var(--kind-border);
+}
+.pdf-field.flash {
+  animation: field-flash 0.4s ease-in-out 3;
+}
+@keyframes field-flash {
+  50% {
+    box-shadow: 0 0 0 8px var(--kind-border);
+  }
 }
 .pdf-field-preview {
   /* Matches the exported PDF: Helvetica, no padding, text from the top-left. */
@@ -466,7 +613,7 @@ const { pages, loading: loadingPdf, error: pdfError } = usePdfPages(computed(() 
   overflow: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #111;
+  color: var(--kind-text);
 }
 .field-close {
   position: absolute;
