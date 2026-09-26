@@ -4,6 +4,8 @@ Image: parthpatil5/verp_staffing (Docker Hub, private)
 Contains: frappe v15 + verp_staffing + vruglechat (chat is baked in but NOT
 installed on any site until you run add-app.sh).
 One image, many tenants: each tenant = one Frappe site named after its domain.
+Two ways to run it: FOLDER 2 (one stack, same code for all tenants) or
+FOLDER 4 (one stack per client, custom code per client, shared MariaDB).
 
 NEVER: run "docker compose down -v" (deletes all data), or paste tokens /
 passwords into chat or tickets.
@@ -86,11 +88,75 @@ Do NOT expose MariaDB to the public internet: use a VPN/private link (and TLS).
 
 
 -----------------------------------------------------------------------
+FOLDER 4: docker/shared/ + docker/deploy/client.sh   (MANY CLIENTS, custom code)
+-----------------------------------------------------------------------
+Use when clients need DIFFERENT code (e.g. a client/<name> branch). Frappe
+shares code per bench, so each such client gets its own image and its own
+lean compose project, while ONE MariaDB is shared to save RAM.
+
+  shared MariaDB (verp-shared-db, network verp_shared)   <- one, for all
+  project "acme": backend, frontend, websocket, scheduler, worker, redis
+  project "beta": backend, frontend, websocket, scheduler, worker, redis
+
+Each site has its own database + DB user inside the shared MariaDB.
+Per-client footprint is reduced: 2 gunicorn workers (GUNICORN_WORKERS),
+one worker for all queues, one redis capped at 128 MB (cache + queue).
+Trade-off: a restart of verp-shared-db affects every client.
+
+1) Once per server - start the shared DB:
+  cd docker/shared
+  cp .env.example .env         # set DB_PASSWORD; INNODB_BUFFER_POOL_SIZE (default 1G)
+  docker compose up -d
+
+2) Build the client's image (see FOLDER 1). Point build/apps.json at the
+   client's branch and use a client-specific tag, e.g. acme-1.0.0.
+   NOTE: build.sh also pushes :latest - do not let a client build overwrite
+   the tag other clients use; deploy by the explicit client tag.
+
+3) Per client - env file and start:
+  cd docker/deploy
+  cp clients/example.env clients/acme.env
+       # IMAGE=parthpatil5/verp_staffing:acme-1.0.0
+       # HTTP_PORT=8081        (unique per client)
+       # GUNICORN_WORKERS=2
+  ./client.sh acme up
+  ./client.sh acme create-site acme.example.com     # prints Administrator password
+  sudo ./host-nginx-site.sh acme.example.com 8081   # publish (DNS must point here)
+
+client.sh commands (client = name of clients/<client>.env; also the -p project):
+  ./client.sh <client> up                      start / apply env or image change
+  ./client.sh <client> down                    stop (volumes kept, never use -v)
+  ./client.sh <client> logs [service]          follow logs
+  ./client.sh <client> create-site <domain> [admin-password]
+  ./client.sh <client> add-app <site> vruglechat
+  ./client.sh <client> migrate                 migrate every site of that client
+  ./client.sh <client> backup                  DB + files, into that client's sites volume
+  ./client.sh <client> bench <args...>         any bench command
+
+Update ONE client (others keep running):
+  # set the new IMAGE tag in clients/acme.env, then:
+  docker login -u parthpatil5
+  ./client.sh acme up
+  ./client.sh acme migrate
+
+Health check:
+  curl -s -H "Host: acme.example.com" http://localhost:8081/api/method/ping
+
+Notes:
+- The older single-stack files (docker-compose.yml, create-site.sh,
+  migrate-all.sh, backup.sh, add-app.sh) are for ONE all-in-one deployment;
+  do not mix them with the client stacks on the same server.
+- Backups are stored per client in its sites volume; the shared DB volume
+  (verp_shared_db-data) holds all client databases - snapshot/dump it too.
+
+
+-----------------------------------------------------------------------
 SECURITY NOTES
 -----------------------------------------------------------------------
 - Containers have no passwords; whoever can run "docker" on the host can enter
   any container. Restrict SSH and the "docker" group.
 - App containers run read-only with dropped privileges (frontend/nginx and db
   are the exceptions).
-- MariaDB root password = DB_PASSWORD in docker/deploy/.env (not in git).
+- MariaDB root password = DB_PASSWORD in docker/deploy/.env (single stack) or
+  docker/shared/.env (shared DB). Neither is in git.
 - Each tenant has its own Administrator password (printed once by create-site.sh).

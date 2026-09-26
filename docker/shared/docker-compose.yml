@@ -1,0 +1,33 @@
+# ONE MariaDB shared by every client stack (docker-compose.client.yml).
+# Start once:  cp .env.example .env && docker compose up -d
+# Each client's site gets its own database + user, so data stays isolated.
+name: verp-shared
+
+services:
+  db:
+    image: mariadb:10.6
+    container_name: verp-shared-db
+    restart: unless-stopped
+    networks: [shared]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --password=$$MARIADB_ROOT_PASSWORD"]
+      interval: 5s
+      retries: 30
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+      - --max-connections=500
+      # Size to the machine (roughly 50-60% of what you give the DB).
+      - --innodb-buffer-pool-size=${INNODB_BUFFER_POOL_SIZE:-1G}
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/mysql
+
+volumes:
+  db-data: { name: verp_shared_db-data }
+
+networks:
+  shared: { name: verp_shared }
