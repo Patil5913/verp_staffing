@@ -3,7 +3,7 @@
     Upload a PDF template above to start building.
   </div>
 
-  <div v-else class="relative flex h-[calc(100dvh-140px)] flex-col md:flex-row min-h-[720px] overflow-hidden rounded-lg md:h-[calc(100dvh-160px)] border border-app-border">
+  <div v-else class="relative flex h-[calc(100dvh-140px)] flex-col md:flex-row min-h-[480px] overflow-hidden rounded-lg md:h-[calc(100dvh-160px)] md:min-h-[560px] border border-app-border">
     <!-- Toolbox -->
     <div class="flex max-h-44 w-full shrink-0 flex-col gap-4 overflow-y-auto border-b border-app-border bg-app-panel p-4 md:max-h-none md:w-52 md:border-b-0 md:border-r">
       <p class="text-p-xs text-app-text-muted md:hidden">Dragging fields onto the page needs a mouse; use a tablet or desktop to place them.</p>
@@ -58,7 +58,7 @@
         <button type="button" class="kind-badge kind-customer" :disabled="!customerCount" title="Click to jump to the next customer field" @click="jumpTo('customer')">Customer <strong class="tabular-nums">{{ badgeLabel('customer', customerCount) }}</strong></button>
       </div>
     </div>
-    <div class="flex-1 overflow-auto bg-app-panel-2 p-6">
+    <div ref="scrollerEl" class="min-h-0 flex-1 overflow-auto overscroll-contain bg-app-panel-2 p-6">
       <div v-if="loadingPdf" class="flex justify-center py-16">
         <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
       </div>
@@ -261,6 +261,7 @@ const customerCount = computed(() => localFields.value.filter(isCustomer).length
 const standardCount = computed(() => localFields.value.length - customerCount.value)
 
 // Click a badge to step through that kind of field, scrolling each into view.
+const scrollerEl = ref(null)
 const jumpIndex = ref({ company: -1, customer: -1 })
 const badgeLabel = (kind, count) => (jumpIndex.value[kind] >= 0 && jumpIndex.value[kind] < count ? `${jumpIndex.value[kind] + 1}/${count}` : count)
 function jumpTo(kind) {
@@ -271,7 +272,18 @@ function jumpTo(kind) {
   selectedFieldId.value = f.field_id
   nextTick(() => {
     const el = document.querySelector(`[data-field-id="${f.field_id}"]`)
-    el?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+    // Scroll only the PDF pane - scrollIntoView would also scroll the page
+    // (and push the sticky navbar away) on some browsers/OSes.
+    const box = scrollerEl.value
+    if (el && box) {
+      const a = el.getBoundingClientRect()
+      const b = box.getBoundingClientRect()
+      box.scrollTo({
+        top: box.scrollTop + (a.top - b.top) - (b.height - a.height) / 2,
+        left: box.scrollLeft + (a.left - b.left) - (b.width - a.width) / 2,
+        behavior: 'smooth',
+      })
+    }
     el?.classList.add('flash')
     setTimeout(() => el?.classList.remove('flash'), 1200)
   })
