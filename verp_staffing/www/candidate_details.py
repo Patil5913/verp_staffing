@@ -45,17 +45,12 @@ def _email_problem(v):
     return None
 
 
-def _normalize_linkedin(v):
-    """People paste 'linkedin.com/in/x' or 'www.linkedin.com/in/x' - accept it and add https://."""
-    v = (v or "").strip()
-    return v if re.match(r"^https?://", v, re.IGNORECASE) else f"https://{v}" if v else v
-
-
 def _linkedin_problem(v):
-    v = _normalize_linkedin(v)
-    if not re.match(r"^https?://([\w-]+\.)*linkedin\.com(/|$)", v, re.IGNORECASE):
+    if not re.match(r"^https?://", v, re.IGNORECASE):
+        return _("LinkedIn URL must start with https://")
+    if not re.match(r"^https?://(www\.)?linkedin\.com", v, re.IGNORECASE):
         return _("LinkedIn URL must be on linkedin.com (e.g. https://www.linkedin.com/in/your-name)")
-    if not re.match(r"^https?://([\w-]+\.)*linkedin\.com/.+$", v, re.IGNORECASE):
+    if not LINKEDIN.match(v):
         return _("LinkedIn URL is missing the profile path after linkedin.com/")
     return None
 
@@ -69,8 +64,8 @@ def _phone_problem(v, label):
         return _("{0} may contain only digits after the + (spaces, ( ) and - are allowed)").format(label)
     if digits.startswith("0"):
         return _("{0}: the country code cannot start with 0").format(label)
-    if not 8 <= len(digits) <= 15:
-        return _("{0} needs 8 to 15 digits including the country code, you entered {1}").format(label, len(digits))
+    if len(digits) != 11:
+        return _("{0} needs 11 digits including the country code, you entered {1}").format(label, len(digits))
     return None
 
 
@@ -254,8 +249,8 @@ def _validate(data, names, required, tables):
         if f in tables:
             continue
         s = str(v).strip()
-        if f == "email" and _email_problem(s):
-            errors[f] = _email_problem(s)
+        if f == "email" and (_email_problem(s) or not validate_email_address(s)):
+            errors[f] = _email_problem(s) or _("Email is not a valid email address")
         elif f in ("personal_linkedin", "marketing_linkedin") and _linkedin_problem(s):
             errors[f] = _linkedin_problem(s)
         elif f in PHONE_FIELDS and _phone_problem(s, label(f)):
@@ -279,10 +274,10 @@ def _validate(data, names, required, tables):
             yield from mm(row, "start_date", "Start Date")
             yield from mm(row, "end_date", "End Date")
             try:
-                if row.get("grade") not in (None, "") and not 0 <= float(row["grade"]) <= 100:
-                    yield "grade", _("Grade must be a number between 0 and 100")
+                if row.get("grade") not in (None, "") and not 0 <= float(row["grade"]) <= 10:
+                    yield "grade", _("Grade must be between 0 and 10")
             except (TypeError, ValueError):
-                yield "grade", _("Grade must be a number between 0 and 100")
+                yield "grade", _("Grade must be between 0 and 10")
         row_errors("educational_details", edu)
 
     if "past_experience_table" in names:
@@ -293,8 +288,8 @@ def _validate(data, names, required, tables):
                     yield "end_date", _("End Date is required")
                 else:
                     yield from mm(row, "end_date", "End Date")
-            if row.get("description") and len(re.sub(r"\s", "", row["description"])) < 300:
-                yield "description", _("Description must contain at least 300 characters")
+            if row.get("description") and len(re.sub(r"\s", "", row["description"])) < 800:
+                yield "description", _("Description must contain at least 800 characters")
         row_errors("past_experience_table", exp)
 
     if "address_history" in names:
@@ -336,8 +331,6 @@ def save_candidate_form(data):
             v = data[f]
             if f in PHONE_FIELDS and isinstance(v, str):
                 v = re.sub(r"[()\s-]", "", v)
-            elif f in ("personal_linkedin", "marketing_linkedin") and isinstance(v, str):
-                v = _normalize_linkedin(v)
             doc.set(f, v)
     try:
         doc.save(ignore_permissions=True)

@@ -14,12 +14,11 @@ export function emailProblem(v) {
   return null
 }
 
-// People paste "linkedin.com/in/x" without the scheme - accepted; the server adds https://.
 export function linkedinProblem(v) {
-  const url = /^https?:\/\//i.test(v) ? v : `https://${v}`
-  if (!/^https?:\/\/([\w-]+\.)*linkedin\.com(\/|$)/i.test(url))
+  if (!/^https?:\/\//i.test(v)) return 'LinkedIn URL must start with https://'
+  if (!/^https?:\/\/(www\.)?linkedin\.com/i.test(v))
     return 'LinkedIn URL must be on linkedin.com (e.g. https://www.linkedin.com/in/your-name)'
-  if (!/^https?:\/\/([\w-]+\.)*linkedin\.com\/.+$/i.test(url)) return 'LinkedIn URL is missing the profile path after linkedin.com/'
+  if (!/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(v)) return 'LinkedIn URL is missing the profile path after linkedin.com/'
   return null
 }
 
@@ -29,8 +28,7 @@ export function phoneProblem(v, label = 'Phone number') {
   const digits = p.slice(1)
   if (!/^\d+$/.test(digits)) return `${label} may contain only digits after the + (spaces, ( ) and - are allowed)`
   if (digits.startsWith('0')) return `${label}: the country code cannot start with 0`
-  if (digits.length < 8 || digits.length > 15)
-    return `${label} needs 8 to 15 digits including the country code, you entered ${digits.length}`
+  if (digits.length !== 11) return `${label} needs 11 digits including the country code, you entered ${digits.length}`
   return null
 }
 
