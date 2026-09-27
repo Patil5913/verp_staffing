@@ -67,10 +67,7 @@
         description="Create a Company first - accounts belong to one."
       />
       <template v-else-if="company">
-        <div class="flex items-center gap-2">
-          <AppCombobox v-model="company" class="w-56" compact :options="companies" :disabled="!companies.length" />
-          <AppButton variant="surface" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
-        </div>
+        <AppCombobox v-model="company" class="w-56" compact :options="companies" :disabled="!companies.length" />
 
         <div class="flex flex-wrap items-center gap-2 text-p-xs text-app-text-muted">
           <span v-for="t in ROOT_TYPES" :key="t.name" class="inline-flex items-center gap-1.5 rounded-full border border-app-border bg-app-panel px-2.5 py-1">

@@ -98,6 +98,14 @@ const routes = [
     component: () => import('@/pages/detail/ERPConfigurationDetailPage.vue'),
   },
   {
+    // Same trick for Accounts Settings - a real detail-page look (FieldControl
+    // per-fieldtype rendering, section card) instead of SettingsFormPage's
+    // generic text-input-for-everything fallback.
+    path: '/settings/Accounts%20Settings',
+    name: 'AccountsSettingsDetail',
+    component: () => import('@/pages/detail/AccountsSettingsDetailPage.vue'),
+  },
+  {
     // Single doctypes (ERP Configuration, Accounts Settings) - old desk UI
     // jumps straight to the one record's edit form, never a list. This is
     // the fallback for every single doctype without its own page above.
