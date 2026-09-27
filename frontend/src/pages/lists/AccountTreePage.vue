@@ -19,6 +19,9 @@
                   <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
                   <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
                 </div>
+                <p class="border-b border-app-border px-4 py-2 text-p-xs text-app-text-muted">
+                  Click a filter below to apply it to the search bar.
+                </p>
                 <div class="flex flex-col divide-y divide-app-border">
                   <div v-for="group in treeSearchSyntaxHelp" :key="group.title" class="flex flex-col gap-2.5 px-4 py-3">
                     <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ group.title }}</p>

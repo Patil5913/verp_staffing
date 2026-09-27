@@ -6,9 +6,10 @@
     >
       <div class="flex min-w-0 flex-1 items-center gap-3 md:flex-none">
         <h1
-          class="min-w-0 shrink-0 truncate rounded-lg border border-app-primary/15 bg-app-primary-tint px-3 py-1 text-p-lg font-semibold tracking-tight text-app-primary"
+          class="flex min-w-0 shrink-0 items-center gap-1.5 truncate rounded-lg border border-app-primary/15 bg-app-primary-tint px-3 py-1 text-p-lg font-semibold tracking-tight text-app-primary"
         >
-          {{ doctype }}
+          <span :class="['lucide-' + titleIcon, 'size-4', 'shrink-0', 'text-app-primary']" />
+          <span class="truncate">{{ doctype }}</span>
         </h1>
         <ViewSwitcher :doctype="doctype" current="list" />
       </div>
@@ -36,6 +37,9 @@
                     <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
                     <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
                   </div>
+                  <p class="border-b border-app-border px-4 py-2 text-p-xs text-app-text-muted">
+                    Click a filter below to apply it to the search bar.
+                  </p>
 
                   <div class="flex flex-col divide-y divide-app-border">
                     <div
@@ -339,12 +343,24 @@ import PersonQuickCreateDialog from '@/components/common/PersonQuickCreateDialog
 import { PERSON_DOCTYPES, STATUS_COLUMN_FIELDS_TO_HIDE } from '@/configs/detail/listOptions'
 import Pagination from './Pagination.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
+import { resolveIconName } from '@/utils/layout/sidebarIcons'
+
+// A doctype name's sidebar nav key is normally just its kebab-case form
+// ("Sales Invoice" -> "sales-invoice") - see sidebarIcons.js's
+// KEY_ICON_OVERRIDES - except the handful listed here whose nav key doesn't
+// follow that pattern.
+const SIDEBAR_KEY_OVERRIDES = { 'Interview Support': 'interview_support' }
+function sidebarKey(doctype) {
+  return SIDEBAR_KEY_OVERRIDES[doctype] || doctype.toLowerCase().replace(/\s+/g, '-')
+}
 
 const props = defineProps({
   doctype: { type: String, required: true },
 })
 
 const router = useRouter()
+
+const titleIcon = computed(() => resolveIconName(null, sidebarKey(props.doctype)))
 
 // Interview's "Select Customer" scoping - same shared selection Kanban/
 // Calendar read/write, applied here as an extra get_list filter.
