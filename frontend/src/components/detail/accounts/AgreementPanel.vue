@@ -1,5 +1,13 @@
 <template>
   <div class="flex flex-col gap-6">
+    <SectionCard v-if="canCreate" title="Create Agreement" :subtitle="`Fill a template for ${name}.`">
+      <TemplateFillForm ref="form" />
+      <div v-if="hasTemplate" class="flex flex-wrap gap-2">
+        <AppButton icon="save" :loading="saving && !sendAfter" :disabled="saving" @click="create(false)">Save</AppButton>
+        <AppButton variant="outline" icon="send" :loading="saving && sendAfter" :disabled="saving" @click="create(true)">Save &amp; Send</AppButton>
+      </div>
+    </SectionCard>
+
     <SectionCard title="Agreements" :subtitle="`${cards.length} ${cards.length === 1 ? 'agreement' : 'agreements'}`">
       <template #actions>
         <AppButton variant="outline" size="sm" icon="refresh-cw" :loading="loadingCards" @click="loadCards">Refresh</AppButton>
@@ -45,14 +53,6 @@
             </template>
           </div>
         </div>
-      </div>
-    </SectionCard>
-
-    <SectionCard v-if="canCreate" title="Create Agreement" :subtitle="`Fill a template for ${name}.`">
-      <TemplateFillForm ref="form" />
-      <div v-if="hasTemplate" class="flex flex-wrap gap-2">
-        <AppButton icon="save" :loading="saving && !sendAfter" :disabled="saving" @click="create(false)">Save</AppButton>
-        <AppButton variant="outline" icon="send" :loading="saving && sendAfter" :disabled="saving" @click="create(true)">Save &amp; Send</AppButton>
       </div>
     </SectionCard>
 
