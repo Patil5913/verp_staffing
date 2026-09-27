@@ -35,7 +35,7 @@
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <div class="mx-auto flex max-w-3xl flex-col gap-4 px-3 md:px-6 py-5">
+        <div class="mx-auto flex max-w-5xl flex-col gap-4 px-3 md:px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <h2 class="text-xl font-semibold leading-snug text-app-text">{{ message.subject || '(no subject)' }}</h2>
             <span v-if="folder === 'spam'" class="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-p-xs font-medium tone-red">Spam</span>
@@ -77,10 +77,18 @@
               <button type="button" class="flex items-center gap-1 text-p-xs text-app-text-muted hover:text-app-text" @click="showRecipients = !showRecipients">
                 to {{ shortRecipients }}<span class="size-3" :class="showRecipients ? 'lucide-chevron-up' : 'lucide-chevron-down'" />
               </button>
-              <dl v-if="showRecipients" class="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-p-xs text-app-text-muted">
-                <dt>To</dt><dd class="break-words text-app-text">{{ message.recipients || '-' }}</dd>
-                <template v-if="message.cc"><dt>Cc</dt><dd class="break-words text-app-text">{{ message.cc }}</dd></template>
-                <template v-if="message.bcc"><dt>Bcc</dt><dd class="break-words text-app-text">{{ message.bcc }}</dd></template>
+              <dl v-if="showRecipients" class="mt-1.5 grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1.5 text-p-xs text-app-text-muted">
+                <template v-for="[label, value] in [['To', message.recipients], ['Cc', message.cc], ['Bcc', message.bcc]]" :key="label">
+                  <template v-if="value || label === 'To'">
+                    <dt class="pt-0.5">{{ label }}</dt>
+                    <dd class="flex flex-wrap gap-1">
+                      <span v-for="a in displayAddresses(value)" :key="a.email" class="max-w-full truncate rounded-full border border-app-border bg-app-bg px-2 py-0.5 text-app-text" :title="a.email">
+                        {{ a.name || a.email }}<span v-if="a.name" class="text-app-text-muted"> &lt;{{ a.email }}&gt;</span>
+                      </span>
+                      <span v-if="!value">-</span>
+                    </dd>
+                  </template>
+                </template>
               </dl>
               <router-link v-if="message.reference_name" :to="`/${encodeURIComponent(message.reference_doctype)}/${encodeURIComponent(message.reference_name)}`" class="mt-1.5 inline-flex items-center gap-1 rounded-full bg-app-primary-tint px-2 py-0.5 text-p-xs font-medium text-app-primary hover:underline">
                 <span class="lucide-link size-3" />{{ message.reference_doctype }}: {{ message.reference_title || message.reference_name }}
@@ -145,7 +153,7 @@ import { MAIL_MENU } from '@/utils/mail/editorMenu'
 import AppButton from '@/components/ui/AppButton.vue'
 import MailBody from './MailBody.vue'
 import { useSendMail } from '@/composables/mail/useSendMail'
-import { avatarTone, fileSize, initials, mailDate, quoteMessage, senderName, withPrefix } from '@/utils/mail/format'
+import { avatarTone, displayAddresses, fileSize, initials, mailDate, quoteMessage, senderName, withPrefix } from '@/utils/mail/format'
 
 const props = defineProps({
   message: { type: Object, default: null },
@@ -169,7 +177,7 @@ const toggleThread = (n) => (openThread.has(n) ? openThread.delete(n) : openThre
 const canReply = computed(() => props.message && !props.message.queue && props.message.sent_or_received === 'Received' && props.folder !== 'trash')
 const hasOthers = computed(() => (props.message?.recipients || '').split(',').filter(Boolean).length > 1 || !!props.message?.cc)
 const shortRecipients = computed(() => {
-  const list = String(props.message?.recipients || '').split(',').map((s) => s.trim()).filter(Boolean)
+  const list = displayAddresses(props.message?.recipients).map((a) => a.name || a.email)
   return list.length ? (list.length > 2 ? `${list[0]} and ${list.length - 1} others` : list.join(', ')) : 'me'
 })
 const hint = computed(() => ({ drafts: 'Pick a draft to keep writing.', outbox: 'Pick a message to retry or cancel it.' })[props.folder] || 'Your messages open here.')

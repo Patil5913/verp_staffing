@@ -266,8 +266,28 @@ def get_mailbox(folder="inbox", search="", filter="all", start=0, page_length=PA
         as_dict=True,
     )
     result["items"] = [_row(r, user) for r in rows]
+    _add_thread_counts(result["items"], scope_sql, params)
     result["total"] = frappe.db.sql(f"SELECT COUNT(*) FROM `tabCommunication` c WHERE {where_sql}", params)[0][0]
     return result
+
+
+def _add_thread_counts(items, scope_sql, params):
+    """Set thread_count on each row: how many messages share its (Re:/Fwd:-stripped) subject."""
+    norms = {_normalise_subject(i["subject"]) for i in items if i["subject"]}
+    if not norms:
+        return
+    variants = list(norms | {f"Re: {n}" for n in norms} | {i["subject"] for i in items if i["subject"]})
+    rows = frappe.db.sql(
+        f"SELECT c.subject, COUNT(*) AS n FROM `tabCommunication` c WHERE ({scope_sql}) AND {_STATUS} != 'Trash' AND c.subject IN %(subjects)s GROUP BY c.subject",
+        {**params, "subjects": variants},
+        as_dict=True,
+    )
+    totals = {}
+    for r in rows:
+        key = _normalise_subject(r.subject)
+        totals[key] = totals.get(key, 0) + r.n
+    for i in items:
+        i["thread_count"] = totals.get(_normalise_subject(i["subject"]), 1)
 
 
 # ── one message ───────────────────────────────────────────────────────────

@@ -1,7 +1,21 @@
 <template>
-  <Dialog v-model="open" :options="{ title: title, size: '3xl' }">
-    <template #body-content>
-      <div :key="formKey" class="flex flex-col gap-3">
+  <Teleport to="body">
+  <div v-if="open && minimized" class="fixed bottom-0 right-6 z-50 flex w-72 items-center gap-2 rounded-t-xl border border-b-0 border-app-border bg-app-panel px-3 py-2 shadow-xl">
+    <button type="button" class="min-w-0 flex-1 truncate text-left text-p-sm font-medium text-app-text" @click="minimized = false">{{ form.subject || title }}</button>
+    <button type="button" class="flex size-7 items-center justify-center rounded-md text-app-text-muted hover:bg-app-panel-2" title="Expand" @click="minimized = false"><span class="lucide-maximize-2 size-4" /></button>
+    <button type="button" class="flex size-7 items-center justify-center rounded-md text-app-text-muted hover:bg-app-panel-2" title="Save and close" @click="saveAndClose"><span class="lucide-x size-4" /></button>
+  </div>
+  <div v-show="open && !minimized" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="flex h-[90vh] w-[90vw] flex-col overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl">
+    <div class="flex h-12 shrink-0 items-center gap-2 border-b border-app-border px-4">
+      <h2 class="flex-1 truncate text-p-lg font-semibold text-app-text">{{ title }}</h2>
+      <span class="hidden items-center gap-1.5 text-p-xs text-app-text-muted sm:flex">Press <kbd class="rounded border border-app-border bg-app-panel-2 px-1.5 py-0.5 font-sans font-medium text-app-text">Esc</kbd> to exit</span>
+      <button type="button" class="inline-flex h-8 items-center gap-1 rounded-md border border-app-border px-2.5 text-p-xs font-medium text-app-text hover:bg-app-panel-2" title="Exit (Esc)" @click="saveAndClose">Esc</button>
+      <button type="button" class="flex size-8 items-center justify-center rounded-md text-app-text-muted hover:bg-app-panel-2 hover:text-app-text" title="Minimize" @click="minimized = true"><span class="lucide-minus size-4" /></button>
+      <button type="button" class="flex size-8 items-center justify-center rounded-md text-app-text-muted hover:bg-app-panel-2 hover:text-app-text" title="Save draft and close" @click="saveAndClose"><span class="lucide-x size-4" /></button>
+    </div>
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <div :key="formKey" class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-5">
         <div class="grid grid-cols-[3.5rem_1fr] items-center gap-x-3 gap-y-2.5">
           <template v-if="accounts.length > 1">
             <label class="text-p-sm text-app-text-muted">From</label>
@@ -34,7 +48,7 @@
           <AppInput v-model="form.subject" placeholder="Subject" />
         </div>
 
-        <TextEditor class="mail-editor" :fixed-menu="MAIL_MENU" :content="form.content" editor-class="min-h-[220px] max-h-[45vh] overflow-y-auto rounded-lg border border-app-border px-3 py-2 text-p-sm" placeholder="Write your message…" @change="(html) => (form.content = html)" />
+        <TextEditor class="mail-editor" :fixed-menu="MAIL_MENU" :content="form.content" editor-class="min-h-[45vh] text-p-sm" placeholder="Write your message…" @change="(html) => (form.content = html)" />
 
         <div class="flex flex-wrap items-center gap-2">
           <FileUploader :upload-args="{ private: true }" @success="(f) => form.attachments.push(f)" @failure="() => notify.error('Upload failed')">
@@ -52,17 +66,19 @@
 
         <p v-if="problem" class="text-p-sm text-red-600">{{ problem }}</p>
       </div>
-    </template>
-    <template #actions>
-      <div class="flex w-full items-center justify-between gap-2">
+    </div>
+    <div class="shrink-0 border-t border-app-border px-4 py-3">
+      <div class="mx-auto flex w-full max-w-5xl items-center justify-between gap-2">
         <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-p-sm text-app-text-muted transition-colors hover:bg-app-panel-2 hover:text-red-600" @click="discard"><span class="lucide-trash-2 size-4" />Discard</button>
         <div class="flex items-center gap-2">
           <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-p-sm font-medium text-app-text transition-colors hover:bg-app-panel-2" @click="saveAndClose"><span class="lucide-save size-4" />Save draft</button>
           <AppButton icon="send" :loading="sending" @click="submit">Send</AppButton>
         </div>
       </div>
-    </template>
-  </Dialog>
+    </div>
+  </div>
+  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -70,8 +86,8 @@ import AppInput from '@/components/ui/AppInput.vue'
 // New message / reply / reply all / forward. Closing with something written
 // keeps it as a draft (on this device); Send goes through the mailbox API,
 // which sends as one of the user's own accounts.
-import { computed, reactive, ref, watch } from 'vue'
-import { Dialog, FileUploader, TextEditor } from 'frappe-ui'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { FileUploader, TextEditor } from 'frappe-ui'
 import { MAIL_MENU } from '@/utils/mail/editorMenu'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
@@ -93,10 +109,17 @@ const { send, sending } = useSendMail()
 const blank = () => ({ to: [], cc: [], bcc: [], subject: '', content: '', attachments: [], account: '', inReplyTo: '', draftId: '' })
 const form = reactive(blank())
 const formKey = ref(0)
+const minimized = ref(false)
 const showCc = ref(false)
 const showBcc = ref(false)
 const problem = ref('')
 let handled = false // sent, saved or discarded - nothing left to auto-save
+
+const onKey = (e) => {
+  if (e.key === 'Escape' && open.value && !minimized.value) saveAndClose()
+}
+onMounted(() => window.addEventListener('keydown', onKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
 const title = computed(() => (form.inReplyTo ? 'Reply' : form.subject.startsWith('Fwd:') ? 'Forward' : 'New message'))
 const outgoing = computed(() => props.accounts.filter((a) => a.enable_outgoing))
@@ -112,6 +135,7 @@ watch(open, (isOpen) => {
     showCc.value = form.cc.length > 0
     showBcc.value = form.bcc.length > 0
     problem.value = ''
+    minimized.value = false
     handled = false
     formKey.value++
   } else if (!handled && hasContent()) {

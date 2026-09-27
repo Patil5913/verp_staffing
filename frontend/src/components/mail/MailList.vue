@@ -72,7 +72,7 @@
           <div class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-p-xs font-semibold" :class="avatarTone(counterpart(m))">{{ initials(counterpartName(m)) }}</div>
           <div class="min-w-0 flex-1">
             <div class="flex items-baseline justify-between gap-2">
-              <span class="truncate text-p-sm text-app-text" :class="m.seen ? '' : 'font-bold'">{{ counterpartName(m) }}</span>
+              <span class="flex min-w-0 items-baseline gap-1"><span class="truncate text-p-sm text-app-text" :class="m.seen ? '' : 'font-bold'">{{ counterpartName(m) }}</span><span v-if="m.thread_count > 1" class="shrink-0 text-p-xs text-app-text-muted" :title="`${m.thread_count} messages in this conversation`">({{ m.thread_count }})</span></span>
               <span class="flex shrink-0 items-center gap-1.5 text-p-xs" :class="m.seen ? 'text-app-text-muted' : 'font-semibold text-app-primary'">
                 <span v-if="!m.seen && m.kind !== 'queue'" class="size-2 rounded-full bg-app-primary" title="Unread" />{{ mailDate(m.communication_date) }}
               </span>

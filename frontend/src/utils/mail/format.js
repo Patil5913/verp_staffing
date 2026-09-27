@@ -39,6 +39,14 @@ export function parseAddresses(text) {
     .map((raw) => ({ raw, email: (raw.match(/<([^>]+)>/)?.[1] || raw).trim() }))
 }
 
+// '"a@x.com" <a@x.com>, Ann <ann@y.com>' → [{ name, email }]; name is blank when it only repeats the address.
+export function displayAddresses(text) {
+  return parseAddresses(text).map(({ raw, email }) => {
+    const name = raw.replace(/<[^>]*>/, '').replace(/^["'\s]+|["'\s]+$/g, '')
+    return { name: name && name.toLowerCase() !== email.toLowerCase() ? name : '', email }
+  })
+}
+
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
 // The original message quoted beneath a reply / forward.

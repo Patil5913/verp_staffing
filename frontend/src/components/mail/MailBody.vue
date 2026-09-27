@@ -29,7 +29,7 @@ const css = () => {
   const muted = style.getPropertyValue('--app-text-muted').trim() || '#6b7280'
   const link = style.getPropertyValue('--app-primary').trim() || '#2563eb'
   return `<style>
-    html,body{margin:0;padding:0;background:transparent}
+    html,body{margin:0;padding:0;background:transparent}html{overflow-x:hidden}
     body{font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:${text};word-break:break-word;overflow-wrap:anywhere}
     a{color:${link}} img{max-width:100%;height:auto} table{max-width:100%}
     blockquote{margin:.5em 0 .5em .25em;padding-left:.85em;border-left:3px solid ${muted}55;color:${muted}}
@@ -63,7 +63,13 @@ function fit() {
   const body = frame.value?.contentDocument?.body
   if (!body) return
   dropBrokenImages(body)
-  const measure = () => (height.value = Math.max(60, body.scrollHeight + 4))
+  const measure = () => {
+    // Wide newsletter-style mail: shrink to fit instead of cutting it off.
+    body.style.zoom = ''
+    const avail = body.clientWidth
+    if (avail && body.scrollWidth > avail + 2) body.style.zoom = String(Math.max(0.4, avail / body.scrollWidth))
+    height.value = Math.max(60, body.scrollHeight + 4)
+  }
   measure()
   observer?.disconnect()
   if (typeof ResizeObserver !== 'undefined') {
