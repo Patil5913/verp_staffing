@@ -14,8 +14,8 @@
 
     <div class="flex min-h-0 flex-1 flex-col gap-3 px-3 md:px-6 py-3">
       <StateBanner v-if="!config" icon="columns-3" title="No board for this doctype" />
-      <StateBanner v-else-if="cardsResource.hasError" icon="alert-triangle" title="Couldn't load the board" :description="cardsResource.errorMessage" />
-      <div v-else-if="cardsResource.isLoading && !cardsResource.resource.data" class="flex justify-center py-16">
+      <StateBanner v-else-if="loadError" icon="alert-triangle" title="Couldn't load the board" :description="loadError" />
+      <div v-else-if="initialLoading" class="flex justify-center py-16">
         <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
       </div>
       <KanbanBoard
@@ -24,8 +24,12 @@
         :columns="config.columns"
         :cards="filtered"
         :status-field="config.statusField"
+        :has-more="hasMoreMap"
+        :loading-more="loadingMore"
+        :counts="counts"
         @open="(card) => router.push(`/${encodeURIComponent(doctype)}/${encodeURIComponent(card.name)}`)"
         @move="onMove"
+        @load-more="onLoadMore"
       >
         <template #card="{ card }">
           <p class="truncate text-p-sm font-medium text-app-text">{{ card[config.title] || card.name }}</p>
@@ -62,9 +66,10 @@
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 // Kanban view of a doctype (today: Interview, ported from interview_list.js).
-// Loads every card, groups them by status column, and turns a drag into the
-// doctype's own move method - optimistic, rolled back if the server refuses
-// (e.g. a round that's already Completed can't be moved again).
+// Each column loads its own page of cards (PAGE_SIZE at a time, more on
+// scroll), and turns a drag into the doctype's own move method - optimistic,
+// rolled back if the server refuses (e.g. a round that's already Completed
+// can't be moved again).
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { call, Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
@@ -76,7 +81,6 @@ import ViewSwitcher from '@/components/common/ViewSwitcher.vue'
 import KanbanBoard from '@/components/list/KanbanBoard.vue'
 import SelectCustomerDialog from '@/components/list/SelectCustomerDialog.vue'
 import { KANBAN } from '@/configs/detail/listOptions'
-import { useResource } from '@/composables/list/useResource'
 import { useMarketingCustomerFilter } from '@/composables/list/useMarketingCustomerFilter'
 import { formatDate } from '@/utils/list/formatValue'
 import { notify } from '@/utils/common/notify'
@@ -95,37 +99,87 @@ const showCustomerDialog = ref(false)
 // was last set to after that.
 const { selectedCustomers, ensureDefaultCustomers } = useMarketingCustomerFilter()
 
+const PAGE_SIZE = 10
 const cards = ref([])
 const rounds = ref({})
+const initialLoading = ref(true)
+const loadError = ref('')
+// { [column]: { start, hasMore } } - each column paginates independently.
+const pageState = reactive({})
+const loadingMore = reactive({})
+const counts = reactive({}) // { [column]: total rows on the server, not just loaded }
+const hasMoreMap = computed(() => Object.fromEntries(config.value.columns.map((c) => [c, !!pageState[c]?.hasMore])))
 
-const cardsResource = useResource({
-  url: doctype.value === 'Interview' ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list' : 'frappe.client.get_list',
-  makeParams: () => ({
-    ...(doctype.value === 'Interview' ? {} : { doctype: doctype.value }),
-    fields: ['name', config.value.statusField, ...config.value.cardFields],
-    filters: doctype.value === 'Interview' && selectedCustomers.value.length ? { marketing_link: ['in', selectedCustomers.value] } : undefined,
-    order_by: 'modified desc',
-    limit_page_length: 500,
-  }),
-  onSuccess(data) {
-    cards.value = data || []
-    loadRounds()
-  },
-})
-
-async function loadRounds() {
-  if (!config.value?.summaryMethod || !cards.value.length) return
+async function fetchCount(column) {
+  const isInterview = doctype.value === 'Interview'
+  const baseFilters = isInterview && selectedCustomers.value.length ? { marketing_link: ['in', selectedCustomers.value] } : {}
+  const filters = { ...baseFilters, [config.value.statusField]: column }
   try {
-    rounds.value = await call(config.value.summaryMethod, { names: JSON.stringify(cards.value.map((c) => c.name)) })
+    counts[column] = isInterview
+      ? await call('verp_staffing.marketing.doctype.interview.interview.get_interview_count', { filters })
+      : await call('frappe.client.get_count', { doctype: doctype.value, filters })
   } catch {
-    rounds.value = {}
+    delete counts[column] // falls back to the loaded count in KanbanBoard
+  }
+}
+
+async function loadRoundsFor(rows) {
+  if (!config.value?.summaryMethod || !rows.length) return
+  try {
+    const data = await call(config.value.summaryMethod, { names: JSON.stringify(rows.map((c) => c.name)) })
+    Object.assign(rounds.value, data)
+  } catch {
+    // stale round summaries stay as-is; not worth failing the board over.
+  }
+}
+
+async function fetchColumn(column, { append = false } = {}) {
+  const state = pageState[column]
+  const isInterview = doctype.value === 'Interview'
+  const baseFilters = isInterview && selectedCustomers.value.length ? { marketing_link: ['in', selectedCustomers.value] } : {}
+  const rows = await call(isInterview ? 'verp_staffing.marketing.doctype.interview.interview.get_interview_list' : 'frappe.client.get_list', {
+    ...(isInterview ? {} : { doctype: doctype.value }),
+    fields: ['name', config.value.statusField, ...config.value.cardFields],
+    filters: { ...baseFilters, [config.value.statusField]: column },
+    order_by: 'modified desc',
+    limit_start: state.start,
+    limit_page_length: PAGE_SIZE,
+  })
+  state.hasMore = rows.length === PAGE_SIZE
+  state.start += rows.length
+  cards.value = append ? [...cards.value, ...rows] : [...cards.value.filter((c) => c[config.value.statusField] !== column), ...rows]
+  loadRoundsFor(rows)
+}
+
+async function onLoadMore(column) {
+  if (loadingMore[column] || !pageState[column]?.hasMore) return
+  loadingMore[column] = true
+  try {
+    await fetchColumn(column, { append: true })
+  } catch (error) {
+    notify.error(normalizeError(error).message)
+  } finally {
+    loadingMore[column] = false
   }
 }
 
 async function load() {
   if (!config.value) return
   if (doctype.value === 'Interview') await ensureDefaultCustomers()
-  cardsResource.resource.submit()
+  cards.value = []
+  for (const column of config.value.columns) {
+    pageState[column] = { start: 0, hasMore: true }
+    loadingMore[column] = false
+  }
+  initialLoading.value = true
+  loadError.value = ''
+  try {
+    await Promise.all(config.value.columns.flatMap((column) => [fetchColumn(column), fetchCount(column)]))
+  } catch (error) {
+    loadError.value = normalizeError(error).message
+  } finally {
+    initialLoading.value = false
+  }
 }
 watch(doctype, load, { immediate: true })
 
@@ -146,7 +200,9 @@ async function moveCard(card, to, extra = {}) {
   try {
     await call(config.value.moveMethod, { [config.value.moveArg]: card.name, status: to, ...extra })
     notify.success(`${card.name} moved to ${to}.`)
-    loadRounds()
+    loadRoundsFor([card])
+    fetchCount(from)
+    fetchCount(to)
     return true
   } catch (error) {
     card[field] = from

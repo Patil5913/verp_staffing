@@ -14,10 +14,10 @@
           <span class="size-2 shrink-0 rounded-full" :class="stage(column).dot" />
           <h2 class="truncate text-p-sm font-semibold text-app-text">{{ column }}</h2>
         </div>
-        <span class="rounded-full bg-app-panel px-2 py-0.5 text-p-xs font-medium text-app-text-muted">{{ grouped[column].length }}</span>
+        <span class="rounded-full bg-app-panel px-2 py-0.5 text-p-xs font-medium text-app-text-muted">{{ counts[column] ?? grouped[column].length }}</span>
       </header>
 
-      <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
+      <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2" @scroll="onColumnScroll(column, $event)">
         <article
           v-for="card in grouped[column]"
           :key="card.name"
@@ -35,6 +35,12 @@
         <p v-if="!grouped[column].length" class="rounded-lg border border-dashed border-app-border px-3 py-6 text-center text-p-xs text-app-text-muted">
           Nothing here
         </p>
+        <div v-if="loadingMore[column]" class="flex justify-center py-2">
+          <FeatherIcon name="loader" class="h-4 w-4 animate-spin text-app-text-muted" />
+        </div>
+        <p v-else-if="hasMore[column] && grouped[column].length" class="py-1 text-center text-p-xs text-app-text-muted">
+          Scroll for more
+        </p>
       </div>
     </section>
   </div>
@@ -46,6 +52,7 @@
 // (emit 'move') - the page decides whether it's allowed and updates the card,
 // so a rejected drop simply leaves the card where it was.
 import { computed, ref } from 'vue'
+import { FeatherIcon } from 'frappe-ui'
 
 const props = defineProps({
   columns: { type: Array, required: true },
@@ -53,8 +60,23 @@ const props = defineProps({
   statusField: { type: String, default: 'status' },
   // { column: 'cyan' | 'yellow' | 'blue' | 'gray' | 'orange' | 'green' | 'red' }
   columnColors: { type: Object, default: () => ({}) },
+  // { column: boolean } - whether that column has more pages to fetch.
+  hasMore: { type: Object, default: () => ({}) },
+  // { column: boolean } - a fetch for that column's next page is in flight.
+  loadingMore: { type: Object, default: () => ({}) },
+  // { column: number } - the column's total row count on the server, shown
+  // in the header instead of how many are actually loaded (capped at a page).
+  counts: { type: Object, default: () => ({}) },
 })
-const emit = defineEmits(['move', 'open'])
+const emit = defineEmits(['move', 'open', 'load-more'])
+
+// Each column loads its own page (see KanbanPage's fetchColumn) - scrolling
+// near the bottom of a column asks the page for the next one.
+function onColumnScroll(column, e) {
+  const el = e.target
+  if (!props.hasMore[column] || props.loadingMore[column]) return
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) emit('load-more', column)
+}
 
 const dragging = ref('')
 const overColumn = ref('')
