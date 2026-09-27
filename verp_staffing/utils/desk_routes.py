@@ -88,8 +88,11 @@ def desk_path_to_spa(path: str) -> str | None:
 
 def redirect_desk_to_spa():
     """before_request. A desk page opened from outside the site — an email
-    link — lands in the app. Navigating inside the desk, and typing /app
-    itself, still open the desk."""
+    link, or the desk's own post-login redirect (LoginManager.set_user_info
+    sends a fresh login straight to "/app/<workspace slug>") — lands in the
+    app instead. Navigating inside the desk, and typing /app itself, still
+    open the desk."""
+    from urllib.parse import urlparse
     from werkzeug.routing import RequestRedirect
 
     request = frappe.local.request
@@ -99,10 +102,14 @@ def redirect_desk_to_spa():
     if frappe.session.user == "Guest":
         return  # the desk's own login flow
 
-    site = request.headers.get("Sec-Fetch-Site")
     dest = request.headers.get("Sec-Fetch-Dest")
-    if (dest and dest != "document") or site in ("same-origin", "same-site") or not site:
-        return  # assets/XHR, moving around inside the desk, or a client that sends no hints
+    if dest and dest != "document":
+        return  # assets/XHR
+
+    site = request.headers.get("Sec-Fetch-Site")
+    referer_path = urlparse(request.headers.get("Referer") or "").path
+    if site in ("same-origin", "same-site") and referer_path.startswith("/app"):
+        return  # moving from one desk page to another, e.g. a link inside the desk
 
     is_root = path.rstrip("/") == "/app"
     if is_root and site == "none":

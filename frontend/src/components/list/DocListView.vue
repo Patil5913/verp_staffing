@@ -447,8 +447,8 @@ const searchSyntaxHelp = computed(() => {
     {
       title: 'Combine conditions',
       rows: [
-        { example: `${field}=${value} ${field2}=parth`, description: 'Multiple fields - all must match (AND).' },
-        { example: `${field}=${value} or ${field2}=parth`, description: 'Either one can match (OR) instead.' },
+        { example: `${field}=${value} ${field2}=vrugle`, description: 'Multiple fields - all must match (AND).' },
+        { example: `${field}=${value} or ${field2}=vrugle`, description: 'Either one can match (OR) instead.' },
       ],
     },
     {

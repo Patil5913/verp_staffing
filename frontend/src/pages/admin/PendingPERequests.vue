@@ -283,7 +283,7 @@ const searchSyntaxHelp = [
   {
     title: 'Match a field',
     rows: [
-      { example: 'party=Acme', description: 'Scope the match to party, entry, mode or reference.' },
+      { example: 'party=vrugle', description: 'Scope the match to party, entry, mode or reference.' },
       { example: 'mode="Bank Transfer"', description: 'Quote a value that has spaces.' },
       { example: 'razorpay', description: 'A plain word matches any of those fields instead.' },
     ],
@@ -291,8 +291,8 @@ const searchSyntaxHelp = [
   {
     title: 'Combine conditions',
     rows: [
-      { example: 'party=Acme mode=Cash', description: 'Multiple fields - all must match (AND).' },
-      { example: 'party=Acme or party=Globex', description: 'Either one can match (OR) instead.' },
+      { example: 'party=vrugle mode=Cash', description: 'Multiple fields - all must match (AND).' },
+      { example: 'party=vrugle or mode=Cash', description: 'Either one can match (OR) instead.' },
     ],
   },
 ]

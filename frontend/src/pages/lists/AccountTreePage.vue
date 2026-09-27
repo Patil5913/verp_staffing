@@ -185,7 +185,7 @@ const treeSearchSyntaxHelp = [
     rows: [
       { example: 'account_type=Bank', description: 'Scope the match to one column, by its name or column label.' },
       { example: 'root_type="Fixed Asset"', description: 'Quote a value that has spaces.' },
-      { example: 'parth', description: 'A plain word matches any visible column instead.' },
+      { example: 'vrugle', description: 'A plain word matches any visible column instead.' },
     ],
   },
   {

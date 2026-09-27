@@ -100,20 +100,20 @@ const treeSearchSyntaxHelp = [
     rows: [
       { example: `${doctype.value}=open`, description: 'Scope the match to one column, by its name or column label.' },
       { example: `${doctype.value}="in progress"`, description: 'Quote a value that has spaces.' },
-      { example: 'parth', description: 'A plain word matches any visible column instead.' },
+      { example: 'vrugle', description: 'A plain word matches any visible column instead.' },
     ],
   },
   {
     title: 'Combine conditions',
     rows: [
-      { example: 'name=parth type=Bank', description: 'Multiple fields - all must match (AND).' },
-      { example: 'name=parth or type=Bank', description: 'Either one can match (OR) instead.' },
+      { example: 'name=vrugle type=Bank', description: 'Multiple fields - all must match (AND).' },
+      { example: 'name=vrugle or type=Bank', description: 'Either one can match (OR) instead.' },
     ],
   },
   {
     title: 'Compare & range',
     rows: [
-      { example: 'name!=parth', description: 'Not equal, also works with >, <, >=, <=.' },
+      { example: 'name!=vrugle', description: 'Not equal, also works with >, <, >=, <=.' },
       { example: 'name between a to m', description: 'A range on one field.' },
     ],
   },
