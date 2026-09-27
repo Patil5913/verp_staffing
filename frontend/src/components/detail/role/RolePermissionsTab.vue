@@ -52,7 +52,7 @@
 				</div>
 			</div>
 			<p v-if="!sections.length" class="py-8 text-center text-p-sm text-app-text-muted">
-				No permissions set for this role yet.
+				{{ search ? 'No matching DocTypes.' : 'No permissions set for this role yet.' }}
 			</p>
 		</div>
 	</div>
@@ -97,19 +97,29 @@ const perms = useResource({
 
 const sections = computed(() => {
 	const groups = {};
-	for (const row of perms.resource.data || []) (groups[row.module] ||= []).push(row);
+	const q = search.value.trim().toLowerCase();
+	for (const row of perms.resource.data || [])
+		if (!q || row.parent.toLowerCase().includes(q) || row.module.toLowerCase().includes(q))
+			(groups[row.module] ||= []).push(row);
 	return Object.keys(groups)
 		.sort()
 		.map((label) => ({ label, rows: groups[label] }));
 });
 
-const open = ref(new Set());
-const isOpen = (label) => open.value.has(label);
+const search = ref("");
+const collapsed = ref(new Set());
+const isOpen = (label) => !collapsed.value.has(label);
 function toggleSection(label) {
-	const next = new Set(open.value);
+	const next = new Set(collapsed.value);
 	if (next.has(label)) next.delete(label);
 	else next.add(label);
-	open.value = next;
+	collapsed.value = next;
+}
+
+const PTYPES = ["read", "write", "create", "delete", "submit", "cancel", "amend", "report", "export", "import", "share", "print", "email", "select"];
+async function setAll(section, value) {
+	for (const row of section.rows)
+		for (const pt of PTYPES) if (!!row[pt] !== !!value) await toggle(row, pt);
 }
 
 const updating = useResource({
