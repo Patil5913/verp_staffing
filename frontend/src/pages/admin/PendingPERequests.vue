@@ -1,31 +1,76 @@
 <template>
   <div class="flex h-full flex-col bg-app-bg">
-    <SubNavbar title="Payment Verification">
-      <template #left>
-        <div class="inline-flex shrink-0 items-center rounded-full border border-app-border bg-app-panel-2 p-0.5">
-          <button
-            v-for="tab in TABS"
-            :key="tab.status"
-            type="button"
-            class="inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-p-xs font-medium transition-colors"
-            :class="tab.status === activeStatus ? 'bg-app-panel text-app-text shadow-sm' : 'text-app-text-muted hover:text-app-text'"
-            @click="activeStatus = tab.status"
-          >
-            {{ tab.label }}
-            <span class="rounded-full px-1.5 text-p-xs" :class="tab.status === activeStatus ? tab.badge : 'bg-app-panel'">{{ counts[tab.status] ?? 0 }}</span>
-          </button>
-        </div>
-      </template>
-
+    <SubNavbar title="Payment Verification" icon="clock">
       <AppSearchInput v-model="search" class="w-full" placeholder="Search party, entry or mode of payment">
+        <template #suffix>
+          <Popover trigger="click" placement="bottom-end">
+            <template #target="{ togglePopover }">
+              <FeatherIcon
+                name="info"
+                class="h-4 w-4 cursor-pointer text-app-text-muted hover:text-app-primary"
+                @click="togglePopover()"
+              />
+            </template>
+            <template #body="{ close }">
+              <div
+                class="my-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
+              >
+                <div class="flex items-center gap-2 border-b border-app-border bg-app-panel-2 px-4 py-3">
+                  <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
+                  <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
+                </div>
+                <p class="border-b border-app-border px-4 py-2 text-p-xs text-app-text-muted">
+                  Click a filter below to apply it to the search bar.
+                </p>
+                <div class="flex flex-col divide-y divide-app-border">
+                  <div v-for="group in searchSyntaxHelp" :key="group.title" class="flex flex-col gap-2.5 px-4 py-3">
+                    <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ group.title }}</p>
+                    <div v-for="row in group.rows" :key="row.example" class="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 text-left font-mono text-p-xs text-app-primary hover:bg-app-primary-tint"
+                        @click="search = row.example, close()"
+                      >
+                        {{ row.example }}
+                      </button>
+                      <span class="text-p-sm leading-snug text-app-text-muted">{{ row.description }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </Popover>
+        </template>
       </AppSearchInput>
+      <AppButton
+        variant="outline"
+        theme="red"
+        icon="x"
+        tooltip="Clear search"
+        :disabled="!search"
+        @click="search = ''"
+      />
 
       <template #right>
-        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="reload" />
+        <AppButton variant="surface" icon="refresh-cw" tooltip="Refresh" @click="reload" />
       </template>
     </SubNavbar>
 
     <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 md:px-6 py-4">
+      <div class="inline-flex w-fit shrink-0 items-center rounded-full border border-app-border bg-app-panel-2 p-0.5">
+        <button
+          v-for="tab in TABS"
+          :key="tab.status"
+          type="button"
+          class="inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-p-xs font-medium transition-colors"
+          :class="tab.status === activeStatus ? 'bg-app-panel text-app-text shadow-sm' : 'text-app-text-muted hover:text-app-text'"
+          @click="activeStatus = tab.status"
+        >
+          {{ tab.label }}
+          <span class="rounded-full px-1.5 text-p-xs" :class="tab.status === activeStatus ? tab.badge : 'bg-app-panel'">{{ counts[tab.status] ?? 0 }}</span>
+        </button>
+      </div>
+
       <StateBanner
         v-if="rows.isPermissionError"
         icon="lock"
@@ -165,7 +210,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // history the desk page didn't have.
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Dialog, FeatherIcon, LoadingIndicator } from 'frappe-ui'
+import { Dialog, FeatherIcon, LoadingIndicator, Popover } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
@@ -187,6 +232,70 @@ const TABS = [
 ]
 const activeStatus = ref('Pending Verification')
 const search = ref('')
+
+// A small echo of the list/tree views' field=value search syntax, scoped to
+// this page's own columns - client-side, since every row is already loaded.
+const FIELD_ALIASES = {
+  entry: 'name',
+  name: 'name',
+  party: 'party_name',
+  mode: 'mode_of_payment',
+  reference: 'reference_no',
+  ref: 'reference_no',
+}
+function unquote(v) {
+  if (v.length >= 2 && ((v[0] === '"' && v.at(-1) === '"') || (v[0] === "'" && v.at(-1) === "'"))) return v.slice(1, -1)
+  return v
+}
+function parseQuery(text) {
+  const keyAlt = Object.keys(FIELD_ALIASES)
+    .sort((a, b) => b.length - a.length)
+    .join('|')
+  const conditions = []
+  let remaining = text.replace(new RegExp(`(${keyAlt})\\s*=\\s*("[^"]*"|'[^']*'|\\S+)`, 'gi'), (_m, key, value) => {
+    conditions.push({ field: FIELD_ALIASES[key.toLowerCase()], value: unquote(value) })
+    return ' '
+  })
+
+  let mode = 'and'
+  const terms = []
+  for (const raw of remaining.match(/"[^"]*"|'[^']*'|\S+/g) || []) {
+    const lower = raw.toLowerCase()
+    if (lower === 'or') mode = 'or'
+    else if (lower !== 'and') terms.push(unquote(raw))
+  }
+  return { conditions, mode, terms }
+}
+function rowMatches(row, q) {
+  if (!q.conditions.length && !q.terms.length) return true
+  const termMatch = (t) =>
+    [row.name, row.party, row.party_name, row.mode_of_payment, row.reference_no].some((v) =>
+      String(v ?? '').toLowerCase().includes(t.toLowerCase()),
+    )
+  const results = [
+    ...q.conditions.map((c) => String(row[c.field] ?? '').toLowerCase().includes(c.value.toLowerCase())),
+    ...q.terms.map(termMatch),
+  ]
+  return q.mode === 'or' ? results.some(Boolean) : results.every(Boolean)
+}
+
+const searchSyntaxHelp = [
+  {
+    title: 'Match a field',
+    rows: [
+      { example: 'party=Acme', description: 'Scope the match to party, entry, mode or reference.' },
+      { example: 'mode="Bank Transfer"', description: 'Quote a value that has spaces.' },
+      { example: 'razorpay', description: 'A plain word matches any of those fields instead.' },
+    ],
+  },
+  {
+    title: 'Combine conditions',
+    rows: [
+      { example: 'party=Acme mode=Cash', description: 'Multiple fields - all must match (AND).' },
+      { example: 'party=Acme or party=Globex', description: 'Either one can match (OR) instead.' },
+    ],
+  },
+]
 
 const rows = useResource({
   url: 'frappe.client.get_list',
@@ -222,14 +331,10 @@ const counts = computed(() => {
   return out
 })
 
-const visible = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  return all.value.filter(
-    (r) =>
-      r.verification_status === activeStatus.value &&
-      (!q || [r.name, r.party, r.party_name, r.mode_of_payment, r.reference_no].some((v) => String(v ?? '').toLowerCase().includes(q))),
-  )
-})
+const parsedQuery = computed(() => parseQuery(search.value.trim()))
+const visible = computed(() =>
+  all.value.filter((r) => r.verification_status === activeStatus.value && rowMatches(r, parsedQuery.value)),
+)
 
 const pendingTotal = computed(() =>
   all.value.filter((r) => r.verification_status === 'Pending Verification').reduce((sum, r) => sum + Number(r.paid_amount || 0), 0),

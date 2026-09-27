@@ -6,9 +6,10 @@
   <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-app-border bg-app-panel py-2 md:grid md:h-11 md:grid-cols-[minmax(0,1fr)_minmax(0,2.25fr)_minmax(0,1fr)] md:gap-3 md:py-0 px-3 md:px-6">
     <div class="flex min-w-0 flex-1 items-center gap-3 md:flex-none">
       <h1
-        class="min-w-0 shrink-0 truncate rounded-lg border border-app-primary/15 bg-app-primary-tint px-3 py-1 text-p-lg font-semibold tracking-tight text-app-primary"
+        class="flex min-w-0 shrink-0 items-center gap-1.5 truncate rounded-lg border border-app-primary/15 bg-app-primary-tint px-3 py-1 text-p-lg font-semibold tracking-tight text-app-primary"
       >
-        {{ title }}
+        <span v-if="icon" :class="['lucide-' + icon, 'size-4', 'shrink-0', 'text-app-primary']" />
+        <span class="truncate">{{ title }}</span>
       </h1>
       <slot name="left" />
     </div>
@@ -18,5 +19,8 @@
 </template>
 
 <script setup>
-defineProps({ title: { type: String, default: '' } })
+// `icon` is an optional Lucide name (see utils/layout/sidebarIcons.js) to
+// match this page's icon in the sidebar - same badge look DocListView gives
+// every doctype's list title.
+defineProps({ title: { type: String, default: '' }, icon: { type: String, default: '' } })
 </script>
