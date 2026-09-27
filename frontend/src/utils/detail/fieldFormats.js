@@ -41,6 +41,10 @@ export function isSsnField(fieldname) {
   return (fieldname || '').toLowerCase().includes('ssn')
 }
 
+export function isAvailabilityField(fieldname) {
+  return (fieldname || '').toLowerCase() === 'availability_for_interview'
+}
+
 // These fields are already stored as the literal string "MM-YYYY" - the old
 // desk lead_details_form.js's is_valid_mm_yyyy validates and saves it
 // exactly as typed, no reformatting. toMonthYear/fromMonthYear used to

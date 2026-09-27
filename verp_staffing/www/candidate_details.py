@@ -25,6 +25,21 @@ LINKEDIN = re.compile(r"^https?://(www\.)?linkedin\.com/.+$", re.IGNORECASE)
 PHONE_FIELDS = ("personal_phone_number", "number_for_marketing")
 MM_YYYY_FIELDS = ("entry_date",)
 SKIP_TYPES = ("Section Break", "Column Break", "Tab Break", "HTML", "Button")
+# Belongs to the emailed-token agreement/e-sign flow, not something a candidate
+# fills in here, however an ERP Configuration entry is set up.
+SYSTEM_FIELDS = frozenset({
+    "authentication_html",
+    "form_token",
+    "agreement_html",
+    "signature_method",
+    "signature",
+    "signature_custom_html",
+    "my_electronic_signature_has_same_effect_as_handwritten",
+    "i_consent_to_receive_sign_and_store_documents_electronically",
+    "i_confirm_my_identity_and_signing_this_document_intentionally",
+    "reference_table",
+    "files_custom_html",
+})
 
 
 def _email_problem(v):
@@ -103,7 +118,7 @@ def _config_for(services):
         for entry in entries or []:
             if isinstance(entry, dict):
                 name = entry.get("field_name") or entry.get("field") or entry.get("fieldname")
-                if not name:
+                if not name or name in SYSTEM_FIELDS:
                     continue
                 if name not in fields:
                     fields.append(name)
@@ -111,7 +126,7 @@ def _config_for(services):
                     required.add(name)
                 if entry.get("columns"):
                     columns[name] = entry["columns"]
-            elif isinstance(entry, str) and entry not in fields:
+            elif isinstance(entry, str) and entry not in SYSTEM_FIELDS and entry not in fields:
                 fields.append(entry)
     return fields, required, columns
 

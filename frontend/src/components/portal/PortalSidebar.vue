@@ -28,23 +28,35 @@ import SidebarLink from '@/components/layout/SidebarLink.vue'
 import ProfileMenu from '@/components/layout/ProfileMenu.vue'
 import { useSidebar } from '@/composables/layout/useSidebar'
 import { usePortal } from '@/composables/portal/usePortal'
+import { usePortalGate } from '@/composables/portal/usePortalGate'
 
 const route = useRoute()
 const { sidebarOpen, isMobile, mobileNavOpen } = useSidebar()
 const { data, technicalServices } = usePortal()
+const { blocked } = usePortalGate()
 
 // Icon classes are written out in full so Tailwind's icon plugin generates them: lucide-layout-dashboard
 // lucide-user-round lucide-briefcase lucide-calendar-days lucide-wrench lucide-receipt lucide-file-text lucide-file-signature lucide-message-square
-const items = computed(() => [
-  { route: '/verp/portal/dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
-  { route: '/verp/portal/services', label: 'Services', icon: 'briefcase' },
-  { route: '/verp/portal/interviews', label: 'Interviews', icon: 'calendar-days' },
-  // only when the customer has availed a technical service
-  ...(technicalServices.value.length ? [{ route: '/verp/portal/technical', label: 'Technical', icon: 'wrench' }] : []),
-  { route: '/verp/portal/accounts', label: 'Accounts', icon: 'receipt' },
-  { route: '/verp/portal/documents', label: 'Documents', icon: 'file-text' },
-  { route: '/verp/portal/candidate-details', label: 'Candidate Details', icon: 'user-round' },
-  { route: '/verp/portal/agreements', label: 'Agreements', icon: 'file-signature' },
-  ...(data.value?.chat_enabled ? [{ route: '/verp/portal/messages', label: 'Messages', icon: 'message-square' }] : []),
-])
+const items = computed(() => {
+  // While the candidate details form or an agreement is pending, only those
+  // two tabs stay reachable (CandidateFormGate blocks direct navigation too).
+  if (blocked.value) {
+    return [
+      { route: '/verp/portal/candidate-details', label: 'Candidate Details', icon: 'user-round' },
+      { route: '/verp/portal/agreements', label: 'Agreements', icon: 'file-signature' },
+    ]
+  }
+  return [
+    { route: '/verp/portal/dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+    { route: '/verp/portal/services', label: 'Services', icon: 'briefcase' },
+    { route: '/verp/portal/interviews', label: 'Interviews', icon: 'calendar-days' },
+    // only when the customer has availed a technical service
+    ...(technicalServices.value.length ? [{ route: '/verp/portal/technical', label: 'Technical', icon: 'wrench' }] : []),
+    { route: '/verp/portal/accounts', label: 'Accounts', icon: 'receipt' },
+    { route: '/verp/portal/documents', label: 'Documents', icon: 'file-text' },
+    { route: '/verp/portal/candidate-details', label: 'Candidate Details', icon: 'user-round' },
+    { route: '/verp/portal/agreements', label: 'Agreements', icon: 'file-signature' },
+    ...(data.value?.chat_enabled ? [{ route: '/verp/portal/messages', label: 'Messages', icon: 'message-square' }] : []),
+  ]
+})
 </script>

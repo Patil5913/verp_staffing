@@ -33,13 +33,14 @@ export function phoneProblem(v, label = 'Phone number') {
 }
 
 const EMAIL_NAMES = new Set(['email', 'email_id', 'email_address', 'marketing_email_id'])
+const LINKEDIN_NAMES = new Set(['personal_linkedin', 'marketing_linkedin'])
 
 export function fieldProblem(field, value) {
   const v = String(value ?? '').trim()
   if (!v) return null
   const n = (field.fieldname || '').toLowerCase()
   if (EMAIL_NAMES.has(n) || field.options === 'Email') return emailProblem(v)
-  if (n.includes('linkedin')) return linkedinProblem(v)
+  if (LINKEDIN_NAMES.has(n)) return linkedinProblem(v)
   if (n === 'personal_phone_number' || n === 'number_for_marketing') return phoneProblem(v, field.label)
   return null
 }

@@ -201,6 +201,12 @@
 			:disabled="disabled"
 			@update:model-value="onInput"
 		/>
+		<AppAvailabilityPicker
+			v-else-if="isAvailability"
+			:model-value="displayValue ?? ''"
+			:disabled="disabled"
+			@update:model-value="onInput"
+		/>
 		<AppInput
 			v-else
 			:type="controlType"
@@ -229,6 +235,7 @@ import AppLinkField from "@/components/common/AppLinkField.vue";
 import AppInput from "@/components/ui/AppInput.vue";
 import { currencyCodeFor, currencySymbol } from "@/utils/detail/currency";
 import AppTimeInput from "@/components/ui/AppTimeInput.vue";
+import AppAvailabilityPicker from "@/components/ui/AppAvailabilityPicker.vue";
 import TruncatedText from "@/components/ui/TruncatedText.vue";
 import AppTextarea from "@/components/ui/AppTextarea.vue";
 import {
@@ -236,6 +243,7 @@ import {
 	isLinkedinField,
 	isMonthYearField,
 	isPhoneField,
+	isAvailabilityField,
 	toMonthYear,
 	fromMonthYear,
 	validateFieldValue,
@@ -313,6 +321,7 @@ async function clearFile() {
 const isDataField = computed(() => props.field.fieldtype === "Data");
 const isMonthYear = computed(() => isDataField.value && isMonthYearField(props.field.fieldname));
 const isPhone = computed(() => isDataField.value && isPhoneField(props.field.fieldname));
+const isAvailability = computed(() => isDataField.value && isAvailabilityField(props.field.fieldname));
 
 const currencyInfo = computed(() => {
 	if (props.field.fieldtype !== "Currency") return { symbol: "", code: "" };
