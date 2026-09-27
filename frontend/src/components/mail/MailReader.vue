@@ -38,13 +38,13 @@
         <div class="mx-auto flex max-w-3xl flex-col gap-4 px-3 md:px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <h2 class="text-xl font-semibold leading-snug text-app-text">{{ message.subject || '(no subject)' }}</h2>
-            <span v-if="folder === 'spam'" class="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-p-xs font-medium text-red-700">Spam</span>
+            <span v-if="folder === 'spam'" class="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-p-xs font-medium tone-red">Spam</span>
           </div>
 
-          <div v-if="message.error" class="flex items-start gap-2 rounded-lg border border-red-300 bg-red-500/10 px-3 py-2 text-p-sm text-red-700">
+          <div v-if="message.error" class="flex items-start gap-2 rounded-lg border border-red-300 bg-red-500/10 px-3 py-2 text-p-sm tone-red">
             <span class="lucide-triangle-alert mt-0.5 size-4 shrink-0" /><span class="min-w-0 break-words">{{ message.error }}</span>
           </div>
-          <div v-if="folder === 'spam'" class="rounded-lg border border-amber-300 bg-amber-500/10 px-3 py-2 text-p-sm text-amber-800">
+          <div v-if="folder === 'spam'" class="rounded-lg border border-amber-300 bg-amber-500/10 px-3 py-2 text-p-sm tone-amber">
             This sender was reported as spam. Pictures and links are shown as sent - only open things you trust.
           </div>
 
@@ -93,11 +93,28 @@
           <p v-else class="text-p-sm text-app-text-muted">{{ message.snippet }}</p>
 
           <div v-if="message.attachments?.length" class="flex flex-wrap gap-2 border-t border-app-border pt-3">
-            <a v-for="f in message.attachments" :key="f.name" :href="f.file_url" target="_blank" rel="noopener" class="flex max-w-xs items-center gap-2 rounded-lg border border-app-border bg-app-bg px-3 py-1.5 text-p-sm text-app-text transition-colors hover:border-app-primary/50">
-              <span class="lucide-paperclip size-4 shrink-0 text-app-text-muted" />
+            <button v-for="f in message.attachments" :key="f.name" type="button" class="flex max-w-xs items-center gap-2 rounded-lg border border-app-border bg-app-bg px-3 py-1.5 text-left text-p-sm text-app-text transition-colors hover:border-app-primary/50" title="Preview" @click="preview = f">
+              <img v-if="kind(f) === 'image'" :src="f.file_url" alt="" class="size-6 shrink-0 rounded object-cover" />
+              <span v-else :class="kind(f) === 'pdf' ? 'lucide-file-text' : 'lucide-paperclip'" class="size-4 shrink-0 text-app-text-muted" />
               <span class="min-w-0 truncate">{{ f.file_name }}</span>
               <span class="shrink-0 text-p-xs text-app-text-muted">{{ fileSize(f.file_size) }}</span>
-            </a>
+            </button>
+          </div>
+
+          <div v-if="preview" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="preview = null" @keydown.esc="preview = null">
+            <div class="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl">
+              <div class="flex items-center gap-2 border-b border-app-border px-4 py-2">
+                <span class="min-w-0 flex-1 truncate text-p-sm font-medium text-app-text">{{ preview.file_name }}</span>
+                <a :href="preview.file_url" download class="tool"><span class="lucide-download size-4" />Download</a>
+                <a :href="preview.file_url" target="_blank" rel="noopener" class="icon-tool" title="Open in new tab"><span class="lucide-external-link size-4" /></a>
+                <button type="button" class="icon-tool" title="Close" @click="preview = null"><span class="lucide-x size-4" /></button>
+              </div>
+              <div class="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-app-bg p-2">
+                <img v-if="kind(preview) === 'image'" :src="preview.file_url" :alt="preview.file_name" class="max-h-[75vh] max-w-full object-contain" />
+                <iframe v-else-if="kind(preview) === 'pdf'" :src="preview.file_url" class="h-[75vh] w-full border-0" :title="preview.file_name" />
+                <p v-else class="py-16 text-p-sm text-app-text-muted">No preview for this file type. Use Download.</p>
+              </div>
+            </div>
           </div>
 
           <!-- Quick reply -->
@@ -107,7 +124,7 @@
             </button>
             <div v-else class="flex flex-col gap-2 p-3">
               <p class="text-p-xs text-app-text-muted">To: {{ message.sender }}</p>
-              <TextEditor :content="replyHtml" editor-class="min-h-[110px] rounded-lg border border-app-border bg-app-panel px-3 py-2 text-p-sm" placeholder="Write your reply…" @change="(html) => (replyHtml = html)" />
+              <TextEditor class="mail-editor" :fixed-menu="MAIL_MENU" :content="replyHtml" editor-class="min-h-[110px] rounded-lg border border-app-border bg-app-panel px-3 py-2 text-p-sm" placeholder="Write your reply…" @change="(html) => (replyHtml = html)" />
               <div class="flex items-center justify-end gap-2">
                 <button type="button" class="rounded-lg px-3 py-1.5 text-p-sm text-app-text-muted hover:bg-app-panel-2" @click="discardReply">Discard</button>
                 <button type="button" class="rounded-lg px-3 py-1.5 text-p-sm text-app-text-muted hover:bg-app-panel-2" title="Open in the full editor" @click="expandReply">Pop out</button>
@@ -124,6 +141,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { LoadingIndicator, TextEditor } from 'frappe-ui'
+import { MAIL_MENU } from '@/utils/mail/editorMenu'
 import AppButton from '@/components/ui/AppButton.vue'
 import MailBody from './MailBody.vue'
 import { useSendMail } from '@/composables/mail/useSendMail'
@@ -137,6 +155,12 @@ const props = defineProps({
 })
 const emit = defineEmits(['close', 'action', 'reply', 'reply-all', 'forward', 'outbox', 'sent', 'expand'])
 
+const preview = ref(null)
+const kind = (f) => {
+  const n = String(f.file_name || f.file_url || '').toLowerCase()
+  if (/\.(png|jpe?g|gif|webp|svg|bmp)$/.test(n)) return 'image'
+  return n.endsWith('.pdf') ? 'pdf' : 'other'
+}
 const showThread = ref(false)
 const showRecipients = ref(false)
 const openThread = reactive(new Set())
@@ -187,6 +211,10 @@ function expandReply() {
 </script>
 
 <style scoped>
+.tone-red { color: #b91c1c; }
+.tone-amber { color: #92400e; }
+[data-theme='dark'] .tone-red { color: #fca5a5; }
+[data-theme='dark'] .tone-amber { color: #fcd34d; }
 .tool {
   display: inline-flex;
   height: 1.75rem;

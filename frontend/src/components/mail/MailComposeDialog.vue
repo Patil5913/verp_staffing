@@ -34,7 +34,7 @@
           <AppInput v-model="form.subject" placeholder="Subject" />
         </div>
 
-        <TextEditor :content="form.content" editor-class="min-h-[220px] max-h-[45vh] overflow-y-auto rounded-lg border border-app-border px-3 py-2 text-p-sm" placeholder="Write your message…" @change="(html) => (form.content = html)" />
+        <TextEditor class="mail-editor" :fixed-menu="MAIL_MENU" :content="form.content" editor-class="min-h-[220px] max-h-[45vh] overflow-y-auto rounded-lg border border-app-border px-3 py-2 text-p-sm" placeholder="Write your message…" @change="(html) => (form.content = html)" />
 
         <div class="flex flex-wrap items-center gap-2">
           <FileUploader :upload-args="{ private: true }" @success="(f) => form.attachments.push(f)" @failure="() => notify.error('Upload failed')">
@@ -72,6 +72,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // which sends as one of the user's own accounts.
 import { computed, reactive, ref, watch } from 'vue'
 import { Dialog, FileUploader, TextEditor } from 'frappe-ui'
+import { MAIL_MENU } from '@/utils/mail/editorMenu'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import RecipientInput from './RecipientInput.vue'

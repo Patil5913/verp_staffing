@@ -190,3 +190,40 @@ body {
 [data-reka-popper-content-wrapper] {
   z-index: 110 !important;
 }
+
+/* Mail editor: one rounded card, quiet toolbar, themed for light and dark. */
+.mail-editor {
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+.mail-editor:focus-within {
+  border-color: var(--app-primary);
+}
+.mail-editor > .overflow-x-auto {
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
+  border-radius: 0;
+  background: var(--app-panel-2);
+  padding: 0.25rem 0.5rem;
+}
+.mail-editor > .overflow-x-auto button {
+  color: var(--app-text-muted);
+  border-radius: 0.375rem;
+}
+.mail-editor > .overflow-x-auto button:hover {
+  background: var(--app-border);
+  color: var(--app-text);
+}
+.mail-editor .ProseMirror {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--app-text);
+  padding: 0.75rem 1rem !important;
+  outline: none;
+}
+.mail-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--app-text-muted);
+}
