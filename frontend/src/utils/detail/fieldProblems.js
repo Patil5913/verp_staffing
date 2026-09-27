@@ -32,6 +32,32 @@ export function phoneProblem(v, label = 'Phone number') {
   return null
 }
 
+const MM_YYYY = /^(0[1-9]|1[0-2])-\d{4}$/
+
+export function mmYyyyProblem(v, label = 'Date') {
+  if (!MM_YYYY.test(v)) return `${label} must be in MM-YYYY format (e.g. 01-2024)`
+  return null
+}
+
+export const DESCRIPTION_MIN_LENGTH = 800
+
+export function descriptionLengthProblem(v, min = DESCRIPTION_MIN_LENGTH) {
+  const stripped = v.replace(/\s/g, '')
+  if (stripped.length < min) return `Description must contain at least ${min} characters (currently ${stripped.length})`
+  return null
+}
+
+export function ssnDigitProblem(v) {
+  if (!/^\d{4}$/.test(v)) return 'SSN digit must be exactly 4 digits'
+  return null
+}
+
+export function gradeProblem(v) {
+  const n = Number(v)
+  if (Number.isNaN(n) || n < 0 || n > 10) return 'Grade must be a number between 0 and 10'
+  return null
+}
+
 const EMAIL_NAMES = new Set(['email', 'email_id', 'email_address', 'marketing_email_id'])
 const LINKEDIN_NAMES = new Set(['personal_linkedin', 'marketing_linkedin'])
 
@@ -42,5 +68,37 @@ export function fieldProblem(field, value) {
   if (EMAIL_NAMES.has(n) || field.options === 'Email') return emailProblem(v)
   if (LINKEDIN_NAMES.has(n)) return linkedinProblem(v)
   if (n === 'personal_phone_number' || n === 'number_for_marketing') return phoneProblem(v, field.label)
+  if (n === 'entry_date') return mmYyyyProblem(v, field.label)
+  if (n === 'ssn_digit') return ssnDigitProblem(v)
+  return null
+}
+
+// Mirrors candidate_details.py's row-level checks (MM-YYYY dates, the
+// past_experience_table description minimum, educational_details' grade
+// range, and end_date being required unless currently working) so a row
+// fails in the dialog instead of only after submit.
+const MM_YYYY_ROW_FIELDS = {
+  past_experience_table: ['start_date', 'end_date'],
+  educational_details: ['start_date', 'end_date'],
+  address_history: ['from_date', 'to_date'],
+}
+
+export function rowFieldProblem(table, fieldname, value) {
+  const v = String(value ?? '').trim()
+  if (!v) return null
+  if (MM_YYYY_ROW_FIELDS[table]?.includes(fieldname)) return mmYyyyProblem(v, fieldname)
+  if (table === 'past_experience_table' && fieldname === 'description') return descriptionLengthProblem(v)
+  if (table === 'educational_details' && fieldname === 'grade') return gradeProblem(v)
+  return null
+}
+
+export function rowProblem(table, row) {
+  for (const [fieldname, value] of Object.entries(row)) {
+    const problem = rowFieldProblem(table, fieldname, value)
+    if (problem) return problem
+  }
+  if (table === 'past_experience_table' && !row.is_currently_working && !String(row.end_date ?? '').trim()) {
+    return 'End date is required unless currently working here'
+  }
   return null
 }

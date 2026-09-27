@@ -11,7 +11,8 @@ from datetime import datetime
 from frappe.utils import convert_utc_to_system_timezone, get_datetime
 
 PORTAL_MARKER = "Portal & chat access"
-GROUPS = {"sales_order": "Sales Orders", "agreement": "Agreements", "payment": "Payments", "portal": "Portal Access", "service": "Forwards"}
+CANDIDATE_FORM_MARKER = "Candidate details form"
+GROUPS = {"sales_order": "Sales Orders", "agreement": "Agreements", "payment": "Payments", "portal": "Portal Access", "service": "Forwards", "candidate_form": "Candidate Form"}
 
 E_SIGN_EVENTS = {
     "EMAIL_SENT": ("Agreement sent for signature", "send"),
@@ -188,6 +189,14 @@ def get_customer_timeline(customer):
         fields=["creation", "content"],
     ):
         events.append(_ev(c.creation, "portal", c.content))
+
+    ldf = frappe.db.get_value("Customer", customer, "lead_details")
+    for c in frappe.get_all(
+        "Comment",
+        filters={"reference_doctype": "Customer", "reference_name": customer, "comment_type": "Info", "content": ["like", f"{CANDIDATE_FORM_MARKER}%"]},
+        fields=["creation", "content"],
+    ):
+        events.append(_ev(c.creation, "candidate_form", c.content, link=["Lead Detail Form", ldf] if ldf else None))
 
     stage = frappe.db.get_value("Customer", customer, "stage")
     try:

@@ -247,6 +247,8 @@ def send_all_signers(agreement):
             message=message,
             reference_doctype="E Sign",
             reference_name=doc.name,
+            send_priority=5,
+            now=True,
         )
 
         log_activity(
@@ -341,6 +343,8 @@ def send_final_signed_email(agreement_name):
             attachments=[
                 {"fname": "Final_Signed_Agreement.pdf", "fcontent": pdf_content}
             ],
+            send_priority=5,
+            now=True,
         )
 
 

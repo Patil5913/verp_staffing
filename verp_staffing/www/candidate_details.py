@@ -356,4 +356,6 @@ def save_candidate_form(data):
         frappe.local.message_log = []
         return {"ok": False, "errors": {"_form": " ".join(re.sub(r"<[^>]+>", " ", m or "").strip() for m in msgs) or _("Could not save your details.")}}
     frappe.db.set_value("Customer", customer, "lock_form", 1, update_modified=False)
+    # Shown on the customer's History timeline (crm/api/customer_timeline.py).
+    frappe.get_doc("Customer", customer).add_comment("Info", "Candidate details form submitted")
     return {"ok": True}

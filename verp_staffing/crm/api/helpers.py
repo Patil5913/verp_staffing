@@ -697,8 +697,9 @@ def send_email(
         subject=subject,
         message=message,
         attachments=attachments,
-        delayed=(not now) if now is not None else True,
+        delayed=False,
         retry=3,
+        send_priority=5,
         reference_doctype=reference_doctype,
         reference_name=reference_name,
     )

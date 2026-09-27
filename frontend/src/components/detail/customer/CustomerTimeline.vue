@@ -70,6 +70,7 @@ const STYLES = {
   portal: { icon: 'key', bg: 'bg-amber-500/15', fg: 'text-amber-500' },
   service: { icon: 'send', bg: 'bg-app-panel-2', fg: 'text-app-text-muted' },
   department: { icon: 'briefcase', bg: 'bg-sky-500/15', fg: 'text-sky-500' },
+  candidate_form: { icon: 'user-round', bg: 'bg-rose-500/15', fg: 'text-rose-500' },
 }
 
 const timeline = useResource({

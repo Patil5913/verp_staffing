@@ -31,7 +31,13 @@
           <div v-for="(col, ci) in section.columns" :key="ci" class="flex min-w-0 flex-col gap-5">
             <template v-for="name in col" :key="name">
               <div v-if="tableOf(name)" :data-field="name">
-                <ChildTableField :table="tableOf(name)" :rows="values[name] || []" :disabled="readOnly" @update:rows="(rows) => (values[name] = rows)" />
+                <ChildTableField
+                  :table="tableOf(name)"
+                  :rows="values[name] || []"
+                  :disabled="readOnly"
+                  :validate-row="(draft) => rowProblem(name, draft)"
+                  @update:rows="(rows) => (values[name] = rows)"
+                />
                 <p v-if="errors[name]" class="mt-1 text-p-xs text-red-600">{{ errors[name] }}</p>
                 <ul v-if="rowErrors(name).length" class="mt-1 list-disc pl-5 text-p-xs text-red-600">
                   <li v-for="e in rowErrors(name)" :key="e.key">{{ e.message }}</li>
@@ -65,7 +71,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import FieldControl from '@/components/detail/FieldControl.vue'
 import ChildTableField from '@/components/detail/ChildTableField.vue'
 import { notify } from '@/utils/common/notify'
-import { fieldProblem } from '@/utils/detail/fieldProblems'
+import { fieldProblem, rowProblem } from '@/utils/detail/fieldProblems'
 import { normalizeError } from '@/utils/common/errors'
 
 const loading = ref(true)

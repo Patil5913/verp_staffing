@@ -68,6 +68,13 @@
               @update:model-value="(v) => onFieldInput(col.fieldname, v)"
               @file-meta="(f) => onFileMeta(col.fieldname, f)"
             />
+            <p
+              v-if="col.fieldname === 'description'"
+              class="mt-1 text-p-xs"
+              :class="descriptionCharCount >= DESCRIPTION_MIN_LENGTH ? 'text-app-text-muted' : 'text-amber-600'"
+            >
+              {{ descriptionCharCount }} / {{ DESCRIPTION_MIN_LENGTH }} characters minimum
+            </p>
           </div>
           <p v-if="rowError" class="w-full text-p-sm text-red-600">{{ rowError }}</p>
         </div>
@@ -86,6 +93,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import TruncatedText from '@/components/ui/TruncatedText.vue'
 import FieldControl from './FieldControl.vue'
 import { dependsOnPasses } from '@/utils/detail/dependsOn'
+import { DESCRIPTION_MIN_LENGTH } from '@/utils/detail/fieldProblems'
 
 const props = defineProps({
   table: { type: Object, required: true },
@@ -168,6 +176,7 @@ async function onFileMeta(fieldname, fileMeta) {
 }
 
 const previewColumns = computed(() => props.table.columns.slice(0, 4))
+const descriptionCharCount = computed(() => String(draft.value.description ?? '').replace(/\s/g, '').length)
 
 function isWide(col) {
   return ['Small Text', 'Long Text', 'Text Editor'].includes(col.fieldtype)

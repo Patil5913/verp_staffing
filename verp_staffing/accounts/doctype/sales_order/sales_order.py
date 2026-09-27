@@ -623,6 +623,14 @@ def get_candidate_form_order(customer):
 def send_details_form_notification(recipient, sales_order, customer):
 
     try:
+        # The candidate details form is filled from the customer's portal (signed
+        # in, no token) - same as the E Sign agreement flow, give them portal
+        # access here if they don't have it yet rather than sending a link they
+        # can't use. Never blocks the email: falls back silently if it fails.
+        from verp_staffing.esign.template_flow import _ensure_portal_access
+
+        access, access_error = _ensure_portal_access(customer)
+
         # The customer now fills details from their portal (signed in, no
         # token) — the link goes to that page, and sending it reopens the form.
         form_url = f"{frappe.utils.get_url()}/verp/portal/candidate-details"
@@ -676,7 +684,10 @@ def send_details_form_notification(recipient, sales_order, customer):
             send_system=0,
         )
 
-        return {"success": "Details form sent"}
+        # Shown on the customer's History timeline (crm/api/customer_timeline.py).
+        frappe.get_doc("Customer", customer).add_comment("Info", f"Candidate details form sent to {recipient}")
+
+        return {"success": "Details form sent", "portal_access": access, "portal_access_error": access_error}
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Details Form Notification Error")
