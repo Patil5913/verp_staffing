@@ -1,18 +1,58 @@
 <template>
   <div class="flex h-full flex-col bg-app-bg">
     <SubNavbar title="Chart of Accounts">
-      <template #left>
-        <AppCombobox v-model="company" class="w-56" compact :options="companies" :disabled="!companies.length" />
-      </template>
-
       <AppSearchInput v-model="search" class="w-full" placeholder="Search account name, number or type">
+        <template #suffix>
+          <Popover trigger="click" placement="bottom-end">
+            <template #target="{ togglePopover }">
+              <FeatherIcon
+                name="info"
+                class="h-4 w-4 cursor-pointer text-app-text-muted hover:text-app-primary"
+                @click="togglePopover()"
+              />
+            </template>
+            <template #body="{ close }">
+              <div
+                class="my-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
+              >
+                <div class="flex items-center gap-2 border-b border-app-border bg-app-panel-2 px-4 py-3">
+                  <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
+                  <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
+                </div>
+                <div class="flex flex-col divide-y divide-app-border">
+                  <div v-for="group in treeSearchSyntaxHelp" :key="group.title" class="flex flex-col gap-2.5 px-4 py-3">
+                    <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ group.title }}</p>
+                    <div v-for="row in group.rows" :key="row.example" class="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 text-left font-mono text-p-xs text-app-primary hover:bg-app-primary-tint"
+                        @click="search = row.example, close()"
+                      >
+                        {{ row.example }}
+                      </button>
+                      <span class="text-p-sm leading-snug text-app-text-muted">{{ row.description }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </Popover>
+        </template>
       </AppSearchInput>
+      <AppButton
+        variant="outline"
+        theme="red"
+        icon="x"
+        tooltip="Clear search"
+        :disabled="!search"
+        @click="search = ''"
+      />
 
       <template #right>
-        <AppButton variant="outline" size="sm" icon="chevrons-down" @click="tree?.expandAll()">Expand all</AppButton>
-        <AppButton variant="outline" size="sm" icon="chevrons-up" @click="tree?.collapseAll()">Collapse</AppButton>
-        <AppButton v-if="canCreate" size="sm" icon="plus" @click="openNew(null)">New Account</AppButton>
-        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
+        <AppButton variant="outline" icon="chevrons-down" tooltip="Expand all" @click="tree?.expandAll()" />
+        <AppButton variant="outline" icon="chevrons-up" tooltip="Collapse" @click="tree?.collapseAll()" />
+        <AppButton v-if="canCreate" variant="primary" icon="plus" tooltip="New Account" @click="openNew(null)" />
+        <AppButton variant="surface" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
       </template>
     </SubNavbar>
 
@@ -24,6 +64,11 @@
         description="Create a Company first - accounts belong to one."
       />
       <template v-else-if="company">
+        <div class="flex items-center gap-2">
+          <AppCombobox v-model="company" class="w-56" compact :options="companies" :disabled="!companies.length" />
+          <AppButton variant="surface" icon="refresh-cw" tooltip="Refresh" @click="tree?.reload()" />
+        </div>
+
         <div class="flex flex-wrap items-center gap-2 text-p-xs text-app-text-muted">
           <span v-for="t in ROOT_TYPES" :key="t.name" class="inline-flex items-center gap-1.5 rounded-full border border-app-border bg-app-panel px-2.5 py-1">
             <span class="size-2 rounded-full" :class="t.dot" />{{ t.name }}
@@ -102,7 +147,7 @@ import AppCombobox from '@/components/ui/AppCombobox.vue'
 // through add_ac.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { call, Dialog, FeatherIcon } from 'frappe-ui'
+import { call, Dialog, FeatherIcon, Popover } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
@@ -133,6 +178,31 @@ const company = ref('')
 watch(search, (value, prev) => {
   if (value.trim() && !prev.trim()) tree.value?.expandAll()
 })
+
+const treeSearchSyntaxHelp = [
+  {
+    title: 'Match a field',
+    rows: [
+      { example: 'account_type=Bank', description: 'Scope the match to one column, by its name or column label.' },
+      { example: 'root_type="Fixed Asset"', description: 'Quote a value that has spaces.' },
+      { example: 'parth', description: 'A plain word matches any visible column instead.' },
+    ],
+  },
+  {
+    title: 'Combine conditions',
+    rows: [
+      { example: 'root_type=Asset account_type=Bank', description: 'Multiple fields - all must match (AND).' },
+      { example: 'root_type=Asset or root_type=Liability', description: 'Either one can match (OR) instead.' },
+    ],
+  },
+  {
+    title: 'Compare & range',
+    rows: [
+      { example: 'root_type!=Expense', description: 'Not equal, also works with >, <, >=, <=.' },
+      { example: 'name between a to m', description: 'A range on one field.' },
+    ],
+  },
+]
 
 const companyList = useResource({
   url: 'frappe.client.get_list',

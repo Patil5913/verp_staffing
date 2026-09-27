@@ -52,7 +52,7 @@
         :class="bare ? 'bg-transparent' : [
           'rounded-lg border bg-app-panel transition-colors focus:border-app-primary focus:ring-2 focus:ring-app-primary/20',
           error ? 'border-red-500' : 'border-app-border',
-          compact ? 'h-8' : 'h-9',
+          compact ? 'h-7' : 'h-8',
           prefix ? (prefix.length > 2 ? 'pl-10 pr-3' : 'pl-7 pr-3') : (compact ? 'px-2' : 'px-3'),
           isPassword ? '!pr-9' : '',
         ]"

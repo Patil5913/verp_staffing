@@ -5,8 +5,12 @@
       class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-app-border bg-app-panel px-3 py-2 shadow-sm md:h-14 md:flex-nowrap md:gap-4 md:px-6 md:py-0"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2 md:flex-none md:shrink-0 md:gap-3">
-        <AppButton variant="ghost" size="icon" icon="arrow-left" @click="emit('back')" />
-        <h1 class="min-w-0 max-w-full truncate md:max-w-xs text-p-lg font-medium text-app-text">{{ title }}</h1>
+        <AppButton variant="ghost" icon="chevron-left" tooltip="Back" @click="emit('back')" />
+        <h1
+          class="min-w-0 max-w-full truncate rounded-lg border border-app-primary/15 bg-app-primary-tint px-3 py-1 md:max-w-xs text-p-lg font-semibold tracking-tight text-app-primary"
+        >
+          {{ title }}
+        </h1>
         <slot name="title-extra" />
       </div>
 

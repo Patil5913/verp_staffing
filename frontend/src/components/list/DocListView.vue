@@ -2,28 +2,33 @@
   <div class="flex h-full flex-col">
     <!-- Sub navbar: doc name, search, refresh -->
     <div
-      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-app-border bg-app-panel px-3 py-2 md:grid md:h-11 md:grid-cols-3 md:gap-0 md:px-6 md:py-0"
+      class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-app-border bg-app-panel px-3 py-2 md:grid md:h-11 md:grid-cols-[minmax(0,1fr)_minmax(0,2.25fr)_minmax(0,1fr)] md:gap-3 md:px-6 md:py-0"
     >
       <div class="flex min-w-0 flex-1 items-center gap-3 md:flex-none">
-        <h1 class="min-w-0 shrink-0 truncate text-p-lg font-medium text-app-text">{{ doctype }}</h1>
+        <h1
+          class="min-w-0 shrink-0 truncate rounded-lg border border-app-primary/15 bg-app-primary-tint px-3 py-1 text-p-lg font-semibold tracking-tight text-app-primary"
+        >
+          {{ doctype }}
+        </h1>
         <ViewSwitcher :doctype="doctype" current="list" />
       </div>
 
-      <div class="order-last flex w-full min-w-0 items-center gap-2 md:order-none md:w-auto md:flex-1">
+      <div class="order-last flex w-full min-w-0 items-center gap-2 md:order-none md:w-full">
         <AppSearchInput
           v-model="searchText"
           class="w-full"
           placeholder='Try: "status=open", "modified between 17 sept to 25 sept"'
         >
           <template #suffix>
-            <Popover trigger="hover" :hover-delay="0.15" :leave-delay="0.15" placement="bottom-end">
-              <template #target>
+            <Popover trigger="click" placement="bottom-end">
+              <template #target="{ togglePopover }">
                 <FeatherIcon
                   name="info"
-                  class="h-4 w-4 cursor-help text-app-text-muted hover:text-app-primary"
+                  class="h-4 w-4 cursor-pointer text-app-text-muted hover:text-app-primary"
+                  @click="togglePopover()"
                 />
               </template>
-              <template #body>
+              <template #body="{ close }">
                 <div
                   class="my-2 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
                 >
@@ -42,10 +47,13 @@
                         {{ group.title }}
                       </p>
                       <div v-for="row in group.rows" :key="row.example" class="flex flex-col gap-1">
-                        <code
-                          class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 font-mono text-p-xs text-app-primary"
-                          >{{ row.example }}</code
+                        <button
+                          type="button"
+                          class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 text-left font-mono text-p-xs text-app-primary hover:bg-app-primary-tint"
+                          @click="searchText = row.example, close()"
                         >
+                          {{ row.example }}
+                        </button>
                         <span class="text-p-sm leading-snug text-app-text-muted">{{ row.description }}</span>
                       </div>
                     </div>
@@ -67,9 +75,14 @@
       </div>
 
       <div class="ml-auto flex items-center justify-end gap-2">
-        <AppButton v-if="canCreate" variant="primary" icon="plus" @click="onAddNew">
-          Add New
-        </AppButton>
+        <AppButton
+          v-if="canDelete && selected.size"
+          variant="danger"
+          icon="trash-2"
+          :tooltip="`Delete (${selected.size})`"
+          @click="confirmBulkDelete"
+        />
+        <AppButton v-if="canCreate" variant="primary" icon="plus" tooltip="Add New" @click="onAddNew" />
         <AppButton
           v-for="action in bulkActions"
           v-show="selected.size"
@@ -82,12 +95,9 @@
         >
           {{ action.label }} ({{ selected.size }})
         </AppButton>
-        <AppButton v-if="canDelete && selected.size" variant="danger" icon="trash-2" @click="confirmBulkDelete">
-          Delete ({{ selected.size }})
-        </AppButton>
         <AppButton
           v-if="isAdmin"
-          variant="ghost"
+          variant="surface"
           icon="settings"
           tooltip="Customize columns"
           @click="showCustomizeColumns = true"
@@ -95,7 +105,7 @@
         <AppButton v-if="doctype === 'Interview'" variant="outline" size="sm" icon="users" @click="showCustomerDialog = true">
           Select Customer
         </AppButton>
-        <AppButton variant="ghost" icon="refresh-cw" tooltip="Refresh" @click="refresh" />
+        <AppButton variant="surface" icon="refresh-cw" tooltip="Refresh" @click="refresh" />
       </div>
     </div>
 
@@ -388,39 +398,61 @@ const {
 
 const pageLengthOptions = [15, 30, 50, 100].map((n) => ({ label: String(n), value: String(n) }))
 
-const searchSyntaxHelp = [
-  {
-    title: 'Match a field',
-    rows: [
-      { example: 'status=open', description: 'Scope the match to one field, by its name or column label.' },
-      { example: 'status="in progress"', description: 'Quote a value that has spaces.' },
-      { example: 'parth', description: 'A plain word matches any searchable field instead.' },
-    ],
-  },
-  {
-    title: 'Combine conditions',
-    rows: [
-      { example: 'status=open name=parth', description: 'Multiple fields - all must match (AND).' },
-      { example: 'status=open or name=parth', description: 'Either one can match (OR) instead.' },
-    ],
-  },
-  {
-    title: 'Compare numbers & dates',
-    rows: [
-      { example: 'status!=open', description: 'Not equal.' },
-      { example: 'modified>=2026-09-17', description: 'Also works with >, <, <=.' },
-    ],
-  },
-  {
-    title: 'Date & number ranges',
-    rows: [
-      {
-        example: 'modified between 17 sept to 25 sept',
-        description: 'A range on one field - values here don’t need quotes.',
-      },
-    ],
-  },
-]
+// Search-syntax examples, built from this doctype's own visible columns
+// instead of hardcoded field names, so "status=open" only shows up when
+// this list actually has a status-like column to match against.
+const primaryExampleField = computed(() => firstSelectField.value?.fieldname || columns.value[0]?.key || 'name')
+const primaryExampleValue = computed(() => fieldOptions(firstSelectField.value || {})[0] || 'value')
+const secondaryExampleField = computed(() => {
+  const col = columns.value.find((c) => c.key !== primaryExampleField.value)
+  return col?.key || 'name'
+})
+const dateExampleField = computed(() => {
+  const dateField = docfields.value.find((f) => ['Date', 'Datetime'].includes(f.fieldtype))
+  return dateField?.fieldname || 'modified'
+})
+
+const searchSyntaxHelp = computed(() => {
+  const field = primaryExampleField.value
+  const value = primaryExampleValue.value
+  const quotedValue = /\s/.test(value) ? `"${value}"` : value
+  const field2 = secondaryExampleField.value
+  const dateField = dateExampleField.value
+
+  return [
+    {
+      title: 'Match a field',
+      rows: [
+        { example: `${field}=${value}`, description: 'Scope the match to one field, by its name or column label.' },
+        { example: `${field}=${quotedValue}`, description: 'Quote a value that has spaces.' },
+        { example: value, description: 'A plain word matches any searchable field instead.' },
+      ],
+    },
+    {
+      title: 'Combine conditions',
+      rows: [
+        { example: `${field}=${value} ${field2}=parth`, description: 'Multiple fields - all must match (AND).' },
+        { example: `${field}=${value} or ${field2}=parth`, description: 'Either one can match (OR) instead.' },
+      ],
+    },
+    {
+      title: 'Compare numbers & dates',
+      rows: [
+        { example: `${field}!=${value}`, description: 'Not equal.' },
+        { example: `${dateField}>=2026-09-17`, description: 'Also works with >, <, <=.' },
+      ],
+    },
+    {
+      title: 'Date & number ranges',
+      rows: [
+        {
+          example: `${dateField} between 17 sept to 25 sept`,
+          description: 'A range on one field - values here don’t need quotes.',
+        },
+      ],
+    },
+  ]
+})
 
 const showFooter = computed(() => {
   if (meta.isPermissionError || meta.hasError) return false
@@ -429,6 +461,13 @@ const showFooter = computed(() => {
 })
 
 const hasFilters = computed(() => searchText.value.trim().length > 0)
+
+// The first Select field's options, used only to make the search-syntax
+// examples below reference a real field/value on this doctype.
+const firstSelectField = computed(() => docfields.value.find((f) => f.fieldtype === 'Select' && f.options))
+function fieldOptions(field) {
+  return (field.options || '').split('\n').map((o) => o.trim()).filter(Boolean)
+}
 
 const docfields = computed(() => meta.resource.data?.fields || [])
 const listFields = computed(() => meta.resource.data?.list_fields || [])

@@ -10,7 +10,7 @@
           role="group"
           class="group flex w-full min-w-0 items-center gap-2 rounded-lg border bg-app-panel text-left text-p-sm outline-none transition-colors"
           :class="[
-            compact ? 'h-8 px-2' : 'h-9 px-3',
+            compact ? 'h-7 px-2' : 'h-8 px-3',
             disabled ? 'cursor-not-allowed opacity-60' : '',
             error || typedError ? 'border-red-500' : isOpen ? 'border-app-primary ring-2 ring-app-primary/20' : 'border-app-border hover:border-app-primary/50',
           ]"

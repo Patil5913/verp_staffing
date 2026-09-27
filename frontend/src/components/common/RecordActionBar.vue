@@ -16,23 +16,32 @@
       <FeatherIcon name="check" class="h-4 w-4" /> Changes saved
     </span>
 
-    <AppButton v-if="showSubmit" variant="primary" icon="check-circle" :loading="submitLoading" @click="$emit('submit')">
-      Submit
-    </AppButton>
-    <AppButton v-if="showCancel" variant="outline" icon="x-circle" @click="$emit('cancel')">Cancel</AppButton>
+    <AppButton
+      v-if="showSubmit"
+      variant="primary"
+      icon="check-circle"
+      tooltip="Submit"
+      :loading="submitLoading"
+      @click="$emit('submit')"
+    />
+    <AppButton v-if="showCancel" variant="outline" icon="x-circle" tooltip="Cancel" @click="$emit('cancel')" />
     <AppButton
       v-if="showSave"
       variant="primary"
       icon="save"
+      tooltip="Save"
       :disabled="!saveDirty && tracked"
       :loading="saveLoading"
       @click="$emit('save')"
-    >
-      Save
-    </AppButton>
-    <AppButton v-if="showDelete" variant="danger" icon="trash-2" :loading="deleteLoading" @click="$emit('delete')">
-      Delete
-    </AppButton>
+    />
+    <AppButton
+      v-if="showDelete"
+      variant="danger"
+      icon="trash-2"
+      tooltip="Delete"
+      :loading="deleteLoading"
+      @click="$emit('delete')"
+    />
   </div>
 </template>
 

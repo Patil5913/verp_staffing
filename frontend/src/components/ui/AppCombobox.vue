@@ -48,7 +48,7 @@ const options = computed(() => props.options.map((o) => (typeof o === 'string' ?
    never gets this component's scope attribute. */
 .app-combobox {
   box-sizing: border-box;
-  height: 2.25rem;
+  height: 2rem;
   min-height: 0;
   width: 100%;
   min-width: 0;
@@ -69,7 +69,7 @@ const options = computed(() => props.options.map((o) => (typeof o === 'string' ?
 
 .app-combobox--compact {
   height: 1.75rem;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   padding: 0 0.5rem;
 }
 </style>

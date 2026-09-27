@@ -179,13 +179,125 @@ function collapseAll() {
   walk(roots.value)
 }
 
-const query = computed(() => props.search.trim().toLowerCase())
+// A client-side echo of useDocList's search syntax (list_view.py's
+// resolve_search_filter) - field=value / comparisons / between / and/or -
+// since a tree's nodes are already loaded in memory, there's no server
+// round-trip to delegate this to.
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+function unquote(v) {
+  if (v.length >= 2 && ((v[0] === '"' && v.at(-1) === '"') || (v[0] === "'" && v.at(-1) === "'"))) {
+    return v.slice(1, -1)
+  }
+  return v
+}
+
+// Maps a search key (case-insensitive fieldname or column label) to how to
+// read it off a node: 'label' for the name column, 'value' for its raw id,
+// or the column's own key for anything else.
+const fieldAliases = computed(() => {
+  const map = {}
+  map[props.nameLabel.toLowerCase()] = 'label'
+  map.name = 'value'
+  map.label = 'label'
+  for (const col of props.columns) {
+    map[col.key.toLowerCase()] = col.key
+    if (col.label) map[col.label.toLowerCase()] = col.key
+  }
+  return map
+})
+
+function fieldValue(node, key) {
+  const resolved = fieldAliases.value[key.toLowerCase()]
+  if (!resolved) return undefined
+  return resolved === 'label' ? node.label : resolved === 'value' ? node.value : node[resolved]
+}
+
+function compareValues(actual, op, expected) {
+  const numA = Number(actual)
+  const numE = Number(expected)
+  const bothNumeric = actual !== '' && expected !== '' && !Number.isNaN(numA) && !Number.isNaN(numE)
+  const dateA = Date.parse(actual)
+  const dateE = Date.parse(expected)
+  const bothDate = !bothNumeric && !Number.isNaN(dateA) && !Number.isNaN(dateE)
+  const cmp = bothNumeric ? numA - numE : bothDate ? dateA - dateE : String(actual).localeCompare(String(expected))
+  const exact = bothNumeric || bothDate
+  switch (op) {
+    case '!=':
+      return exact ? cmp !== 0 : !String(actual).toLowerCase().includes(String(expected).toLowerCase())
+    case '>':
+      return cmp > 0
+    case '>=':
+      return cmp >= 0
+    case '<':
+      return cmp < 0
+    case '<=':
+      return cmp <= 0
+    default:
+      return exact ? cmp === 0 : String(actual).toLowerCase().includes(String(expected).toLowerCase())
+  }
+}
+
+const TOKEN_RE = /"[^"]*"|'[^']*'|\S+/g
+
+const parsedQuery = computed(() => {
+  const keys = Object.keys(fieldAliases.value)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+  const keyAlt = keys.join('|')
+  const conditions = []
+  let remaining = props.search.trim()
+
+  if (keyAlt) {
+    remaining = remaining.replace(
+      new RegExp(`(${keyAlt})\\s+between\\s+("[^"]*"|'[^']*'|\\S+)\\s+(?:and|to)\\s+("[^"]*"|'[^']*'|\\S+)`, 'gi'),
+      (_m, key, v1, v2) => {
+        conditions.push({ key, op: 'between', value: [unquote(v1), unquote(v2)] })
+        return ' '
+      },
+    )
+    remaining = remaining.replace(
+      new RegExp(`(${keyAlt})\\s*(>=|<=|!=|=|>|<)\\s*("[^"]*"|'[^']*'|\\S+)`, 'gi'),
+      (_m, key, op, value) => {
+        conditions.push({ key, op, value: unquote(value) })
+        return ' '
+      },
+    )
+  }
+
+  let mode = 'and'
+  const terms = []
+  for (const raw of remaining.match(TOKEN_RE) || []) {
+    const lower = raw.toLowerCase()
+    if (lower === 'or') mode = 'or'
+    else if (lower !== 'and') terms.push(unquote(raw))
+  }
+
+  return { conditions, mode, terms }
+})
+
+function conditionMatches(node, cond) {
+  const actual = fieldValue(node, cond.key)
+  if (actual === undefined || actual === null) return false
+  if (cond.op === 'between') {
+    return compareValues(actual, '>=', cond.value[0]) && compareValues(actual, '<=', cond.value[1])
+  }
+  return compareValues(actual, cond.op, cond.value)
+}
+
+function termMatches(node, term) {
+  const text = [node.label, node.value, ...props.columns.map((c) => node[c.key])].join(' ').toLowerCase()
+  return text.includes(term.toLowerCase())
+}
 
 // With a search term, show only nodes that match or that lead to a match (so
 // the path down to it stays visible), regardless of expanded state.
 function matches(node) {
-  const text = [node.label, node.value, ...props.columns.map((c) => node[c.key])].join(' ').toLowerCase()
-  return text.includes(query.value)
+  const q = parsedQuery.value
+  if (!q.conditions.length && !q.terms.length) return true
+  const results = [...q.conditions.map((c) => conditionMatches(node, c)), ...q.terms.map((t) => termMatches(node, t))]
+  return q.mode === 'or' ? results.some(Boolean) : results.every(Boolean)
 }
 function hasMatch(node) {
   return matches(node) || node.children.some(hasMatch)
@@ -193,7 +305,7 @@ function hasMatch(node) {
 
 const visibleRows = computed(() => {
   const out = []
-  const searching = Boolean(query.value)
+  const searching = Boolean(props.search.trim())
   const walk = (nodes) => {
     for (const node of nodes) {
       if (searching && !hasMatch(node)) continue

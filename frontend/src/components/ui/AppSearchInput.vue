@@ -7,7 +7,7 @@
       type="text"
       :placeholder="placeholder"
       class="w-full min-w-0 rounded-lg border border-app-border bg-app-panel pl-9 text-p-sm text-app-text outline-none transition-colors placeholder:text-app-text-muted focus:border-app-primary focus:ring-2 focus:ring-app-primary/20"
-      :class="[compact ? 'h-8' : 'h-9', $slots.suffix ? 'pr-9' : 'pr-3']"
+      :class="[compact ? 'h-7' : 'h-8', $slots.suffix ? 'pr-9' : 'pr-3']"
       @input="emit('update:modelValue', $event.target.value)"
     />
     <div v-if="$slots.suffix" class="absolute right-3 flex items-center"><slot name="suffix" /></div>

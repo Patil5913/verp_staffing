@@ -8,7 +8,7 @@
       step="1"
       :value="displayValue"
       :disabled="disabled"
-      class="h-9 w-full min-w-0 rounded-lg border bg-app-panel px-3 text-p-sm text-app-text outline-none transition-colors focus:border-app-primary focus:ring-2 focus:ring-app-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+      class="h-8 w-full min-w-0 rounded-lg border bg-app-panel px-3 text-p-sm text-app-text outline-none transition-colors focus:border-app-primary focus:ring-2 focus:ring-app-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
       :class="error ? 'border-red-500' : 'border-app-border'"
       @input="$event.target.value && emit('update:modelValue', $event.target.value)"
     />
