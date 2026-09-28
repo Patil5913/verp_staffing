@@ -29,6 +29,36 @@ class Resume(Document):
             service="resume",
         )
 
+    def on_update(self):
+        self.link_resume_attachments()
+
+    def link_resume_attachments(self):
+        # The resume_table's "document" control is rendered as a bare cell
+        # widget (see resume.js render_resume_document_table), not through
+        # frm's standard Attach binding, so the uploaded File never gets
+        # attached_to_doctype/attached_to_name set. Without that link, File
+        # permission checks (frappe/core/doctype/file/file.py has_permission)
+        # can't route through Resume's has_permission hook at all and just
+        # deny everyone but the uploader — so back-fill it here on every save.
+        for row in self.resume_table or []:
+            if not row.document:
+                continue
+
+            file_name = frappe.db.get_value(
+                "File",
+                {"file_url": row.document},
+                "name",
+            )
+            if not file_name:
+                continue
+
+            frappe.db.set_value(
+                "File",
+                file_name,
+                {"attached_to_doctype": "Resume", "attached_to_name": self.name},
+                update_modified=False,
+            )
+
 
     def get_existing_resume_row_names(self):
         if self.is_new():
