@@ -79,6 +79,51 @@ def _honour_system_max_file_size():
         pass
 
 
+def _prioritise_verp_home_page():
+    """verp_staffing is this site's only real app (home_page = "verp", and "/" itself
+    redirects here — see website_redirects in hooks.py); vruglechat is installed alongside
+    it purely to power the chat inside the portal, not as a destination on its own.
+
+    Frappe's own "which app do you land on after login" logic (frappe.apps.get_default_path)
+    lists every installed app with an add_to_apps_screen hook whose has_permission passes, and
+    picks the app when only one qualifies. verp_staffing's own hook denies website users (see
+    vrugle_staffing_erp/api/permission.check_app_permission — customers only belong in the
+    portal, not the desk app list), which left vruglechat's "/chat" as the only candidate for
+    a customer, and login sent them there with no way back into /verp.
+
+    get_default_path is imported by name (`from frappe.apps import get_default_path`) into
+    several modules that call it during login — patching frappe.apps.get_default_path alone
+    would leave those old references pointing at the original function, so each is patched too.
+    A user's own explicit choice (User.default_app) is still respected.
+    """
+    import frappe.apps
+
+    original = frappe.apps.get_default_path
+
+    def get_default_path(apps=None):
+        if frappe.db.get_value("User", frappe.session.user, "default_app"):
+            return original(apps)
+        if "verp_staffing" in frappe.get_installed_apps():
+            return "/verp"
+        return original(apps)
+
+    frappe.apps.get_default_path = get_default_path
+    for module_name in (
+        "frappe.auth",
+        "frappe.sessions",
+        "frappe.www.login",
+        "frappe.utils.oauth",
+        "frappe.website.utils",
+        "frappe.core.doctype.user.user",
+    ):
+        try:
+            module = __import__(module_name, fromlist=["get_default_path"])
+            module.get_default_path = get_default_path
+        except Exception:
+            pass
+
+
 _guard_errprint()
 _guard_std_streams()
 _honour_system_max_file_size()
+_prioritise_verp_home_page()

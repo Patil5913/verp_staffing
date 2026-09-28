@@ -4,26 +4,40 @@
       {{ label }}<span v-if="required" class="text-red-600"> *</span>
     </label>
 
-    <Combobox
-      v-model="model"
-      v-model:open="isOpen"
-      class="app-link-combobox"
-      :class="{ 'app-link-combobox--compact': compact }"
-      :options="comboOptions"
-      :placeholder="placeholder || `Select ${doctype}`"
-      :disabled="disabled"
-      :loading="search.isLoading"
-      open-on-focus
-      @input="handleInput"
-      @focus="loadOptions('')"
-    >
-      <template v-if="!hideAddNew" #footer>
-        <button type="button" class="app-link-add-new" @click="openQuickCreate">
-          <FeatherIcon name="plus" class="h-3.5 w-3.5 shrink-0" />
-          <span class="truncate">Add New {{ doctype }}</span>
-        </button>
-      </template>
-    </Combobox>
+    <div class="relative">
+      <Combobox
+        v-model="model"
+        v-model:open="isOpen"
+        class="app-link-combobox"
+        :class="{ 'app-link-combobox--compact': compact, 'app-link-combobox--clearable': showClear }"
+        :options="comboOptions"
+        :placeholder="placeholder || `Select ${doctype}`"
+        :disabled="disabled"
+        :loading="search.isLoading"
+        open-on-focus
+        @input="handleInput"
+        @focus="loadOptions('')"
+      >
+        <template v-if="!hideAddNew" #footer>
+          <button type="button" class="app-link-add-new" @click="openQuickCreate">
+            <FeatherIcon name="plus" class="h-3.5 w-3.5 shrink-0" />
+            <span class="truncate">Add New {{ doctype }}</span>
+          </button>
+        </template>
+      </Combobox>
+      <!-- Clears the field without opening the dropdown - only ever shown while the field is
+           actually editable (not disabled/read-only), and only once there's something to clear. -->
+      <button
+        v-if="showClear"
+        type="button"
+        class="app-link-clear"
+        tabindex="-1"
+        title="Clear"
+        @mousedown.stop.prevent="model = ''"
+      >
+        <FeatherIcon name="x" class="h-3.5 w-3.5" />
+      </button>
+    </div>
 
     <PersonQuickCreateDialog
       v-if="!hideAddNew && showQuickCreate && isPersonDoctype"
@@ -84,6 +98,9 @@ const model = computed({
   get: () => props.modelValue || '',
   set: (value) => emit('update:modelValue', value),
 })
+// Only while the field can actually be changed - never on a disabled/read-only field - and
+// only once there's a value worth clearing.
+const showClear = computed(() => !props.disabled && !props.required && Boolean(model.value))
 
 const router = useRouter()
 
@@ -216,6 +233,27 @@ function onCreated(newName) {
 .app-link-add-new:hover {
   background-color: var(--app-panel-2);
 }
+
+.app-link-clear {
+  position: absolute;
+  top: 50%;
+  right: 1.75rem;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: flex;
+  height: 1.125rem;
+  width: 1.125rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: var(--app-text-muted);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.app-link-clear:hover {
+  color: var(--app-text);
+  background-color: var(--app-panel-2);
+}
 </style>
 
 <style>
@@ -240,6 +278,11 @@ function onCreated(newName) {
 
 .app-link-combobox--compact input {
   font-size: 13px;
+}
+
+/* Room for the clear (x) button so it never sits over the field's own text. */
+.app-link-combobox--clearable {
+  padding-right: 1.75rem;
 }
 
 .app-link-combobox--compact:focus-within {

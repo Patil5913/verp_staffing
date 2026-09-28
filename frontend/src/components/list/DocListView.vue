@@ -424,7 +424,9 @@ const secondaryExampleField = computed(() => {
   return col?.key || 'name'
 })
 const dateExampleField = computed(() => {
-  const dateField = docfields.value.find((f) => ['Date', 'Datetime'].includes(f.fieldtype))
+  // "modified" (Last Updated) is always a visible column - see list_view.py - so it's a
+  // safe fallback when no other date/datetime column is shown.
+  const dateField = visibleDocfields.value.find((f) => ['Date', 'Datetime'].includes(f.fieldtype))
   return dateField?.fieldname || 'modified'
 })
 
@@ -479,8 +481,12 @@ const showFooter = computed(() => {
 const hasFilters = computed(() => searchText.value.trim().length > 0)
 
 // The first Select field's options, used only to make the search-syntax
-// examples below reference a real field/value on this doctype.
-const firstSelectField = computed(() => docfields.value.find((f) => f.fieldtype === 'Select' && f.options))
+// examples below reference a real field/value on this doctype - scoped to
+// the columns actually shown in the list (columns.value), not every field
+// the doctype happens to have, so a suggestion like "status=open" only
+// appears when Status is a column here to search by.
+const visibleDocfields = computed(() => columns.value.map((c) => fieldMap.value[c.key]).filter(Boolean))
+const firstSelectField = computed(() => visibleDocfields.value.find((f) => f.fieldtype === 'Select' && f.options))
 function fieldOptions(field) {
   return (field.options || '').split('\n').map((o) => o.trim()).filter(Boolean)
 }

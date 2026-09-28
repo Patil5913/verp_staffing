@@ -10,32 +10,18 @@
 
     <template v-else-if="data">
       <!-- welcome -->
-      <div class="relative overflow-hidden rounded-2xl border border-app-border bg-app-panel p-5 md:p-7" :style="{ backgroundImage: 'radial-gradient(60rem 18rem at 100% -20%, var(--app-primary-tint), transparent)' }">
-        <p class="text-p-sm text-app-text-muted">{{ today }}</p>
-        <h2 class="mt-1 text-2xl font-bold tracking-tight text-app-text md:text-3xl">Welcome back, {{ firstName }}</h2>
-        <p class="mt-1 max-w-xl text-p-base text-app-text-muted">
-          Here's where things stand for <strong class="font-semibold text-app-text">{{ data.customer_title }}</strong>. Follow your services, prepare for interviews and message your team.
-        </p>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <AppButton v-if="data.chat_enabled" icon="message-square" @click="router.push('/portal/messages')">Message your team</AppButton>
+      <div class="relative overflow-hidden rounded-2xl border border-app-border bg-app-panel p-4 md:p-5" :style="{ backgroundImage: 'radial-gradient(60rem 18rem at 100% -20%, var(--app-primary-tint), transparent)' }">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-p-sm text-app-text-muted">{{ today }}</p>
+            <h2 class="mt-0.5 text-xl font-bold tracking-tight text-app-text md:text-2xl">Welcome back, {{ firstName }}</h2>
+            <p class="mt-1 max-w-xl text-p-sm text-app-text-muted">
+              Here's where things stand for <strong class="font-semibold text-app-text">{{ data.customer_title }}</strong>. Follow your services and prepare for interviews.
+            </p>
+          </div>
+          <AppButton v-if="data.chat_enabled" icon="message-square" class="shrink-0" @click="router.push('/portal/messages')">Message your team</AppButton>
         </div>
       </div>
-
-      <!-- documents: the priority -->
-      <SectionCard
-        title="Your documents"
-        :subtitle="missingDocs.length ? `${missingDocs.length} still needed. Please upload them so we can keep things moving.` : 'Everything is uploaded. Keep them up to date.'"
-        :class="missingDocs.length ? '!border-amber-400/70' : ''"
-      >
-        <template v-if="data.lead_documents.length">
-          <div class="mb-3 flex items-center gap-3">
-            <div class="h-2 flex-1 overflow-hidden rounded-full bg-app-panel-2"><div class="h-full rounded-full transition-all duration-700" :class="missingDocs.length ? 'bg-amber-500' : 'bg-green-600'" :style="{ width: docPct + '%' }" /></div>
-            <span class="shrink-0 text-p-sm font-semibold text-app-text">{{ uploadedDocs }} of {{ data.lead_documents.length }} uploaded</span>
-          </div>
-          <PortalDocumentList />
-        </template>
-        <p v-else class="text-p-sm text-app-text-muted">There are no documents to upload right now.</p>
-      </SectionCard>
 
       <!-- key numbers -->
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -129,6 +115,22 @@
           <div class="pt-3"><AppButton variant="outline" size="sm" @click="router.push('/portal/accounts')">View accounts</AppButton></div>
         </SectionCard>
       </div>
+
+      <!-- documents: lower priority than the day-to-day sections above, so it sits last -->
+      <SectionCard
+        title="Your documents"
+        :subtitle="missingDocs.length ? `${missingDocs.length} still needed. Please upload them so we can keep things moving.` : 'Everything is uploaded. Keep them up to date.'"
+        :class="missingDocs.length ? '!border-amber-400/70' : ''"
+      >
+        <template v-if="data.lead_documents.length">
+          <div class="mb-3 flex items-center gap-3">
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-app-panel-2"><div class="h-full rounded-full transition-all duration-700" :class="missingDocs.length ? 'bg-amber-500' : 'bg-green-600'" :style="{ width: docPct + '%' }" /></div>
+            <span class="shrink-0 text-p-sm font-semibold text-app-text">{{ uploadedDocs }} of {{ data.lead_documents.length }} uploaded</span>
+          </div>
+          <PortalDocumentList />
+        </template>
+        <p v-else class="text-p-sm text-app-text-muted">There are no documents to upload right now.</p>
+      </SectionCard>
     </template>
   </div>
 </template>

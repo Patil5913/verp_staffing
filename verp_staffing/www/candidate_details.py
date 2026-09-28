@@ -247,6 +247,8 @@ def _serialize(df):
         "read_only": bool(df.read_only),
         "depends_on": df.depends_on,
         "description": df.description,
+        # SSN's own declared max length (4) — the frontend caps typing to it.
+        "length": df.length,
     }
 
 

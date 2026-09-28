@@ -49,6 +49,7 @@
                 <AppInput
                   v-if="isRowActive(idx) && row.payment_condition != 'Not Applied'"
                   type="number"
+                  min="0"
                   compact
                   :model-value="row.counter ?? ''"
                   @update:model-value="(v) => onChange(idx, 'counter', v)"
@@ -274,9 +275,12 @@ function removeRow(idx) {
 }
 
 function addDays(dateStr, days) {
-  const d = new Date(`${dateStr}T00:00:00`)
-  d.setDate(d.getDate() + Number(days || 0))
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + Number(days || 0))
+  // Built from local y/m/d (not toISOString, which converts to UTC and can roll the date
+  // back a day in a positive-offset timezone, e.g. 29-09-2026 + 1 landing back on 29-09-2026).
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -317,6 +321,10 @@ async function onChange(idx, fieldname, value) {
       row.current_interview_count = count || 0
     }
   } else if (fieldname === 'counter') {
+    if (Number(value) < 0) {
+      notify.error('Count cannot be negative.')
+      return
+    }
     if (row.payment_condition === 'Number of Days' && row.start_date) row.due_date = addDays(row.start_date, value)
   } else if (fieldname === 'start_date') {
     if (value && value < today()) {

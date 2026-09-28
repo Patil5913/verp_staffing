@@ -93,7 +93,7 @@ const nameLabel = computed(() => detail.fields.value.find((f) => f.fieldname ===
 
 const name = ref(props.initialValue)
 // A new Lead starts with the +1 country code already typed in.
-const DEFAULT_PHONE = props.doctype === 'Lead' ? '+1' : ''
+const DEFAULT_PHONE = ['Lead', 'Opportunity', 'Customer'].includes(props.doctype) ? '+1' : ''
 const phone = ref(DEFAULT_PHONE)
 // Just the untouched prefix is "no phone", not an invalid one.
 const phoneEntered = computed(() => phone.value.trim() && phone.value.trim() !== DEFAULT_PHONE)

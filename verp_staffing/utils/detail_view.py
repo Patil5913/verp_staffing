@@ -40,6 +40,8 @@ def _serialize_field(df):
         "fieldtype": df.fieldtype,
         "options": df.options,
         "reqd": bool(df.reqd),
+        "non_negative": bool(df.non_negative),
+        "length": df.length,
         "in_list_view": bool(df.in_list_view),
         # Frappe fills a fetch_from field (e.g. Sales Order.currency <-
         # company.default_currency) on save, so the form must not demand it.

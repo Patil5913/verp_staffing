@@ -5,7 +5,7 @@
 import { fieldProblem } from './fieldProblems'
 
 const EMAIL_FIELDS = new Set(['email', 'email_id', 'email_address'])
-const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date'])
+const MONTH_YEAR_FIELDS = new Set(['start_date', 'end_date', 'entry_date', 'from_date', 'to_date'])
 // Lead Detail Form has two phone fields (personal + marketing) - both need
 // the same sanitize-then-regex validation.
 const PHONE_FIELDS = new Set([
@@ -62,6 +62,23 @@ export function fromMonthYear(value) {
   return value || ''
 }
 
+// Masks free typing into MM-YYYY: only digits are kept (up to 6 of them), the first two
+// become the month and the rest the year, with the dash inserted automatically - so
+// "122026" reads as "12-2026" as it's typed, rather than accepting any shape (a bare regex
+// on the final string, e.g. "99-9999", would match "\d\d-\d\d\d\d" without saying the month
+// is impossible). Range-checking the extracted month/year still happens separately, in
+// isValidMonthYear / mmYyyyProblem, once this has a full MM-YYYY value to check.
+export function maskMonthYearInput(raw) {
+  const digits = String(raw ?? '').replace(/\D/g, '').slice(0, 6)
+  return digits.length <= 2 ? digits : `${digits.slice(0, 2)}-${digits.slice(2)}`
+}
+
+// Digits only, capped to `max` - used for SSN (last 4 digits): typing a 5th digit or a
+// letter simply has no effect, rather than being accepted and only rejected afterwards.
+export function maskDigitsInput(raw, max) {
+  return String(raw ?? '').replace(/\D/g, '').slice(0, max)
+}
+
 export function isValidMonthYear(value) {
   const match = String(value).match(/^(\d{2})-(\d{4})$/)
   if (!match) return false
@@ -115,8 +132,9 @@ export function validateFieldValue(field, value) {
       return `${label} must be exactly 4 digits`
     }
   }
-  if (['Int', 'Float', 'Currency', 'Percent', 'Duration'].includes(field.fieldtype) && isNaN(strValue)) {
-    return `${label} must be a number`
+  if (['Int', 'Float', 'Currency', 'Percent', 'Duration'].includes(field.fieldtype)) {
+    if (isNaN(strValue)) return `${label} must be a number`
+    if (field.non_negative && Number(strValue) < 0) return `${label} cannot be negative`
   }
   if (field.fieldtype === 'Date' && isNaN(Date.parse(strValue))) {
     return `${label} must be a valid date`

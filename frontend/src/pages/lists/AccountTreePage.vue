@@ -258,8 +258,12 @@ function loadChildren(parent) {
   })
 }
 
+// get_account_balances already returns a debit balance as positive and a credit balance as
+// negative - only the display was hiding that sign behind Math.abs() + a "Dr"/"Cr" word. Now
+// shown as a signed number instead, per account convention: positive for debit, negative for
+// credit.
 const fmt = (n, currency) =>
-  new Intl.NumberFormat(undefined, moneyOptions(currency)).format(Math.abs(n))
+  new Intl.NumberFormat(undefined, moneyOptions(currency)).format(n)
 
 async function attachBalances(nodes) {
   if (!showBalances.value || !nodes.length) return
@@ -272,7 +276,7 @@ async function attachBalances(nodes) {
       const node = nodes.find((n) => n.value === row.value)
       if (!node) continue
       node.balance = row.balance
-      node.balanceText = `${fmt(row.balance, row.company_currency)} ${row.balance > 0 ? 'Dr' : row.balance < 0 ? 'Cr' : ''}`.trim()
+      node.balanceText = fmt(row.balance, row.company_currency)
     }
   } catch {
     // Balances are decoration - a failure here shouldn't hide the chart.

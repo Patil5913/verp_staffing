@@ -36,6 +36,7 @@
                   :rows="values[name] || []"
                   :disabled="readOnly"
                   :validate-row="(draft) => rowProblem(name, draft)"
+                  dialog-size="3xl"
                   @update:rows="(rows) => (values[name] = rows)"
                 />
                 <p v-if="errors[name]" class="mt-1 text-p-xs text-red-600">{{ errors[name] }}</p>
@@ -44,7 +45,13 @@
                 </ul>
               </div>
               <div v-else :data-field="name" @focusout="checkField(fieldOf(name))">
-                <FieldControl :field="fieldOf(name)" v-model="values[name]" :file-info="files[name]" :disabled="readOnly || fieldOf(name).read_only" />
+                <FieldControl
+                  :field="fieldOf(name)"
+                  :model-value="values[name]"
+                  :file-info="files[name]"
+                  :disabled="readOnly || fieldOf(name).read_only"
+                  @update:model-value="(v) => onFieldInput(name, v)"
+                />
                 <p v-if="errors[name]" class="mt-1 text-p-xs text-red-600">{{ errors[name] }}</p>
               </div>
             </template>
@@ -108,13 +115,23 @@ const rowErrors = (table) =>
     .filter(([k]) => k.startsWith(`${table}.`))
     .map(([key, message]) => ({ key, message: `Row ${key.split('.')[1]}: ${message}` }))
 
-// Say what's wrong as soon as the user leaves an email/LinkedIn/phone input.
+// Live validation: says exactly what's wrong (format, e.g. a phone number) as it is typed,
+// not just once the field is left, so the field itself guides what to fill in. Runs on every
+// keystroke (onFieldInput) and on leaving the field (focusout, for pickers/selects that do
+// not fire on every keystroke).
 function checkField(field) {
-  const problem = fieldProblem(field, values[field.fieldname])
+  const value = values[field.fieldname]
+  const strValue = String(value ?? '').trim()
+  let problem = fieldProblem(field, value)
+  if (!problem && field.reqd && !strValue) problem = `${field.label} is required`
   const next = { ...errors.value }
   if (problem) next[field.fieldname] = problem
   else delete next[field.fieldname]
   errors.value = next
+}
+function onFieldInput(name, value) {
+  values[name] = value
+  checkField(fieldOf(name))
 }
 
 async function load() {

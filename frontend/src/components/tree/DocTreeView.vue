@@ -32,7 +32,7 @@
             v-for="node in visibleRows"
             :key="node.value"
             class="group cursor-pointer border-b border-app-border/60 transition-colors last:border-0 hover:bg-app-panel-2"
-            @click="emit('open', node)"
+            @click="onRowClick(node)"
           >
             <td class="h-10 px-4">
               <div class="flex min-w-0 items-center" :style="{ paddingLeft: `${node._depth * 20}px` }">
@@ -55,6 +55,19 @@
                     {{ node.label }}
                   </span>
                 </slot>
+                <!-- A group node's own click toggles it open/closed (there's more useful to do
+                     with a click than leave the tree for its detail page) - this is the way to
+                     still get there, an explicit "go to this record" affordance next to the
+                     name rather than folded into the row click. -->
+                <button
+                  v-if="node.expandable"
+                  type="button"
+                  class="ml-1.5 flex size-5 shrink-0 items-center justify-center rounded text-app-text-muted opacity-0 transition-opacity hover:bg-app-border/60 hover:text-app-primary group-hover:opacity-100"
+                  title="Open"
+                  @click.stop="emit('open', node)"
+                >
+                  <span class="lucide-arrow-right size-3.5" />
+                </button>
               </div>
             </td>
             <td
@@ -155,6 +168,14 @@ async function ensureLoaded(node) {
 async function toggle(node) {
   if (!node._open) await ensureLoaded(node)
   node._open = !node._open
+}
+
+// A group node's own row expands/collapses it on click (see the hover "open" arrow next to
+// its name for going to its detail page instead); a leaf node has nothing to expand, so
+// clicking it goes straight to its detail page, same as before.
+function onRowClick(node) {
+  if (node.expandable) toggle(node)
+  else emit('open', node)
 }
 
 // Breadth-first so a big chart fills top-down and each level's loads run in

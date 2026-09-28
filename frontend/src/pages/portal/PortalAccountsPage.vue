@@ -41,14 +41,13 @@
         <div v-else class="overflow-x-auto rounded-lg border border-app-border">
           <table class="w-full text-p-sm">
             <thead class="bg-app-panel-2 text-left text-2xs uppercase text-app-text-muted">
-              <tr><th class="px-3 py-2">Order</th><th class="px-3 py-2">Date</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2">Agreement</th><th class="px-3 py-2" /></tr>
+              <tr><th class="px-3 py-2">Order</th><th class="px-3 py-2">Date</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2" /></tr>
             </thead>
             <tbody>
               <tr v-for="o in accounts.orders" :key="o.name" class="border-t border-app-border">
                 <td class="whitespace-nowrap px-3 py-2 font-medium text-app-text">{{ o.name }}</td>
                 <td class="whitespace-nowrap px-3 py-2">{{ o.posting_date }}</td>
                 <td class="whitespace-nowrap px-3 py-2 text-right">{{ money(o.grand_total, o.currency) }}</td>
-                <td class="px-3 py-2"><AppBadge :label="o.agreement_status || 'No agreement'" :theme="o.agreement_signed ? 'green' : o.agreement_status === 'Sent' ? 'orange' : 'gray'" /></td>
                 <td class="px-3 py-2 text-right"><AppButton v-if="o.agreement_signed" variant="outline" size="sm" icon="download" @click="downloadAgreement(o.agreement)">Signed agreement</AppButton></td>
               </tr>
             </tbody>

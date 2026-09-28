@@ -215,6 +215,9 @@
 			:placeholder="placeholder"
 			:prefix="currencyInfo.symbol"
 			:prefix-title="currencyInfo.code"
+			:min="field.non_negative ? 0 : undefined"
+			:maxlength="maxLength"
+			:inputmode="isMonthYear || isSsn ? 'numeric' : undefined"
 			@update:model-value="onInput"
 		/>
 		<p v-if="field.description" class="-mt-1 text-p-xs text-app-text-muted">
@@ -244,8 +247,11 @@ import {
 	isMonthYearField,
 	isPhoneField,
 	isAvailabilityField,
+	isSsnField,
 	toMonthYear,
 	fromMonthYear,
+	maskMonthYearInput,
+	maskDigitsInput,
 	validateFieldValue,
 } from "@/utils/detail/fieldFormats";
 
@@ -322,6 +328,7 @@ const isDataField = computed(() => props.field.fieldtype === "Data");
 const isMonthYear = computed(() => isDataField.value && isMonthYearField(props.field.fieldname));
 const isPhone = computed(() => isDataField.value && isPhoneField(props.field.fieldname));
 const isAvailability = computed(() => isDataField.value && isAvailabilityField(props.field.fieldname));
+const isSsn = computed(() => isDataField.value && isSsnField(props.field.fieldname));
 
 const currencyInfo = computed(() => {
 	if (props.field.fieldtype !== "Currency") return { symbol: "", code: "" };
@@ -342,6 +349,14 @@ const placeholder = computed(() => {
 	return undefined;
 });
 
+// MM-YYYY masks to 7 chars ("MM-YYYY"); SSN's own declared `length` (4) if the doctype set
+// one, else 4 as the fallback every SSN-named field in this app actually uses.
+const maxLength = computed(() => {
+	if (isMonthYear.value) return 7;
+	if (isSsn.value) return props.field.length || 4;
+	return undefined;
+});
+
 const displayValue = computed(() => {
 	if (isMonthYear.value) return toMonthYear(props.modelValue);
 	return props.modelValue;
@@ -349,7 +364,11 @@ const displayValue = computed(() => {
 
 function onInput(value) {
 	if (isMonthYear.value) {
-		emit("update:modelValue", fromMonthYear(value));
+		emit("update:modelValue", fromMonthYear(maskMonthYearInput(value)));
+		return;
+	}
+	if (isSsn.value) {
+		emit("update:modelValue", maskDigitsInput(value, maxLength.value));
 		return;
 	}
 	emit("update:modelValue", value);

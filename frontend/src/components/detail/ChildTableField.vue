@@ -44,7 +44,7 @@
       No rows yet.
     </div>
 
-    <Dialog v-model="dialogOpen" :options="{ title: dialogTitle, size: 'xl' }">
+    <Dialog v-model="dialogOpen" :options="{ title: dialogTitle, size: dialogSize }">
       <template #body-content>
         <div class="flex flex-wrap gap-3">
           <div
@@ -68,6 +68,8 @@
               @update:model-value="(v) => onFieldInput(col.fieldname, v)"
               @file-meta="(f) => onFileMeta(col.fieldname, f)"
             />
+            <!-- Live, per-field guidance (e.g. must be MM-YYYY) as it is typed, not only once Done is clicked. -->
+            <p v-if="fieldProblems[col.fieldname]" class="mt-1 text-p-xs text-red-600">{{ fieldProblems[col.fieldname] }}</p>
             <p
               v-if="col.fieldname === 'description'"
               class="mt-1 text-p-xs"
@@ -93,7 +95,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import TruncatedText from '@/components/ui/TruncatedText.vue'
 import FieldControl from './FieldControl.vue'
 import { dependsOnPasses } from '@/utils/detail/dependsOn'
-import { DESCRIPTION_MIN_LENGTH } from '@/utils/detail/fieldProblems'
+import { DESCRIPTION_MIN_LENGTH, rowFieldProblem } from '@/utils/detail/fieldProblems'
 
 const props = defineProps({
   table: { type: Object, required: true },
@@ -137,6 +139,9 @@ const props = defineProps({
   // submission enforces the same limit server-side, this is just the UI
   // half so the button doesn't invite an add that would fail on save).
   maxRows: { type: Number, default: null },
+  // Dialog width (frappe-ui Dialog `size`) — 'xl' fits most tables, but a wide one (e.g. the
+  // portal's education/experience/address tables) can ask for more room.
+  dialogSize: { type: String, default: 'xl' },
 })
 const emit = defineEmits(['update:rows'])
 
@@ -164,9 +169,20 @@ const visibleColumns = computed(() =>
 
 async function onFieldInput(fieldname, value) {
   draft.value[fieldname] = value
-  if (!props.onFieldChange) return
-  const patch = await props.onFieldChange(fieldname, value, draft.value)
-  if (patch) Object.assign(draft.value, patch)
+  if (props.onFieldChange) {
+    const patch = await props.onFieldChange(fieldname, value, draft.value)
+    if (patch) Object.assign(draft.value, patch)
+  }
+  liveCheck(fieldname)
+}
+
+// A per-field message (MM-YYYY, grade range, and so on) as soon as that field changes.
+// Distinct from rowError (the single message a full validateRow check returns), which still
+// runs on Done.
+const fieldProblems = ref({})
+function liveCheck(fieldname) {
+  const problem = rowFieldProblem(props.table.fieldname, fieldname, draft.value[fieldname])
+  fieldProblems.value = { ...fieldProblems.value, [fieldname]: problem || '' }
 }
 
 async function onFileMeta(fieldname, fileMeta) {
@@ -218,6 +234,7 @@ function openRow(idx) {
     draft.value = { ...props.rows[idx] }
   }
   rowError.value = ''
+  fieldProblems.value = {}
   dialogOpen.value = true
 }
 
@@ -225,6 +242,10 @@ const rowError = ref('')
 const validating = ref(false)
 
 async function commitRow() {
+  if (Object.values(fieldProblems.value).some(Boolean)) {
+    rowError.value = 'Please fix the highlighted field before continuing.'
+    return
+  }
   if (props.validateRow) {
     validating.value = true
     try {
