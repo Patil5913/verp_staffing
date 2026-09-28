@@ -1,3 +1,4 @@
+import json
 from collections import Counter, defaultdict
 from datetime import timedelta
 from urllib.parse import quote
@@ -198,8 +199,8 @@ class Board:
     def __init__(self):
         self.kpis, self.charts, self.tables, self.alerts, self.stash = {}, {}, {}, {}, {}
 
-    def kpi(self, id, label, value, fmt="number", prev=None, invert=False, icon=None, tone=None, hint=None, href=None):
-        self.kpis[id] = {"id": id, "label": label, "value": value, "format": fmt, "delta": _delta(value, prev) if prev is not None else None, "invert": invert, "icon": icon, "tone": tone, "hint": hint, "href": href}
+    def kpi(self, id, label, value, fmt="number", prev=None, invert=False, icon=None, tone=None, hint=None, href=None, calc=None):
+        self.kpis[id] = {"id": id, "label": label, "value": value, "format": fmt, "delta": _delta(value, prev) if prev is not None else None, "invert": invert, "icon": icon, "tone": tone, "hint": hint, "href": href, "calc": calc}
 
     def chart(self, id, title, type, data, series=None, fmt="number", subtitle=None, span=1):
         self.charts[id] = {"id": id, "title": title, "subtitle": subtitle, "type": type, "data": data, "series": series or [], "format": fmt, "span": span}
@@ -314,9 +315,24 @@ def _counts(values, order=None, n=None):
     return [{"label": k, "value": c[k]} for k in keys]
 
 
-def _href(doctype, name=None):
+def _href(doctype, name=None, filters=None):
+    """A card's click-through target: a single doc, a doctype's whole list, or
+    (with `filters`, get_list-style tuples) that list pre-scoped to exactly the
+    rows the card counted - e.g. [["status", "=", "Get The Offer"]]."""
     base = f"/{quote(doctype)}"
-    return f"{base}/{quote(str(name))}" if name else base
+    if name:
+        return f"{base}/{quote(str(name))}"
+    if filters:
+        return f"{base}?filters={quote(json.dumps(filters))}"
+    return base
+
+
+def _href_in(doctype, names):
+    """Link to just these docs (e.g. the parent Interviews behind the rounds a
+    KPI counted) - falls back to the plain list when there's nothing to scope to,
+    rather than a filter that would match zero rows."""
+    names = sorted({n for n in names if n})
+    return _href(doctype, filters=[["name", "in", names]]) if names else _href(doctype)
 
 
 def _employee_names():
@@ -385,11 +401,12 @@ def _acc_sales(b, p, company):
     overdue = [r for r in open_rows if _d(r.due_date) and _d(r.due_date) < p.today]
     overdue_amt = sum(_outstanding(r) for r in overdue)
 
-    b.kpi("invoiced", "Invoiced", invoiced, "currency", prev, icon="receipt", href=_href("Sales Invoice"))
-    b.kpi("invoice_count", "Sales invoices", count, "number", count_prev, icon="file-text", href=_href("Sales Invoice"))
-    b.kpi("avg_invoice", "Avg invoice value", invoiced / count if count else 0, "currency", (prev / count_prev) if count_prev else None, icon="calculator")
-    b.kpi("receivables", "Receivables", receivable, "currency", icon="hand-coins", hint="Unpaid customer invoices, all periods", href=_href("Sales Invoice"))
-    b.kpi("overdue_receivables", "Overdue receivables", overdue_amt, "currency", icon="alarm-clock", tone="bad" if overdue_amt else "good", hint=f"{len(overdue)} invoice(s) past due")
+    period_filter = ["posting_date", "between", [str(p.frm), str(p.to)]]
+    b.kpi("invoiced", "Invoiced", invoiced, "currency", prev, icon="receipt", href=_href("Sales Invoice", filters=[["company", "=", company], ["docstatus", "=", 1], period_filter]), calc="Sum of base_grand_total on submitted Sales Invoices for this company, posting_date in the selected period.")
+    b.kpi("invoice_count", "Sales invoices", count, "number", count_prev, icon="file-text", href=_href("Sales Invoice", filters=[["company", "=", company], ["docstatus", "=", 1], period_filter]), calc="Count of submitted Sales Invoices for this company, posting_date in the selected period.")
+    b.kpi("avg_invoice", "Avg invoice value", invoiced / count if count else 0, "currency", (prev / count_prev) if count_prev else None, icon="calculator", calc="Invoiced ÷ Sales invoices for the selected period.")
+    b.kpi("receivables", "Receivables", receivable, "currency", icon="hand-coins", hint="Unpaid customer invoices, all periods", href=_href("Sales Invoice", filters=[["company", "=", company], ["docstatus", "=", 1], ["outstanding_amount", ">", 0]]), calc="Sum of outstanding_amount × conversion_rate on all submitted Sales Invoices with outstanding_amount > 0 - not limited to the selected period.")
+    b.kpi("overdue_receivables", "Overdue receivables", overdue_amt, "currency", icon="alarm-clock", tone="bad" if overdue_amt else "good", hint=f"{len(overdue)} invoice(s) past due", href=_href_in("Sales Invoice", (r.name for r in overdue)), calc="Sum of outstanding amount on submitted Sales Invoices with outstanding_amount > 0 and due_date before today.")
     b.stash["invoiced"], b.stash["invoiced_prev"], b.stash["si_span"] = invoiced, prev, span
     b.stash["ar_aging"] = _aging(open_rows, p.today)
 
@@ -401,9 +418,9 @@ def _acc_sales(b, p, company):
         "Overdue customer invoices",
         [{"key": "name", "label": "Invoice", "format": "link"}, {"key": "party", "label": "Customer"}, {"key": "due", "label": "Due", "format": "date"}, {"key": "late", "label": "Days late", "format": "number"}, {"key": "amount", "label": "Outstanding", "format": "currency"}],
         [{"name": r.name, "party": r.customer, "due": _sd(r.due_date), "late": date_diff(p.today, _d(r.due_date)), "amount": round(_outstanding(r), 2), "_href": _href("Sales Invoice", r.name)} for r in sorted(overdue, key=_outstanding, reverse=True)[:8]],
-        href=_href("Sales Invoice"),
+        href=_href_in("Sales Invoice", (r.name for r in overdue)),
     )
-    b.alert("overdue_invoices", "Overdue customer invoices", len(overdue), "bad", _href("Sales Invoice"), f"{overdue_amt:,.0f} outstanding")
+    b.alert("overdue_invoices", "Overdue customer invoices", len(overdue), "bad", _href_in("Sales Invoice", (r.name for r in overdue)), f"{overdue_amt:,.0f} outstanding")
 
 
 def _acc_purchases(b, p, company):
@@ -416,9 +433,9 @@ def _acc_purchases(b, p, company):
     overdue = [r for r in open_rows if _d(r.due_date) and _d(r.due_date) < p.today]
     overdue_amt = sum(_outstanding(r) for r in overdue)
 
-    b.kpi("billed", "Purchases billed", billed, "currency", prev, invert=True, icon="shopping-cart", href=_href("Purchase Invoice"))
-    b.kpi("payables", "Payables", payable, "currency", icon="banknote-arrow-up", hint="Unpaid supplier bills, all periods", href=_href("Purchase Invoice"))
-    b.kpi("overdue_payables", "Overdue payables", overdue_amt, "currency", icon="alarm-clock", tone="bad" if overdue_amt else "good", hint=f"{len(overdue)} bill(s) past due")
+    b.kpi("billed", "Purchases billed", billed, "currency", prev, invert=True, icon="shopping-cart", href=_href("Purchase Invoice", filters=[["company", "=", company], ["docstatus", "=", 1], ["posting_date", "between", [str(p.frm), str(p.to)]]]), calc="Sum of base_grand_total on submitted Purchase Invoices for this company, posting_date in the selected period.")
+    b.kpi("payables", "Payables", payable, "currency", icon="banknote-arrow-up", hint="Unpaid supplier bills, all periods", href=_href("Purchase Invoice", filters=[["company", "=", company], ["docstatus", "=", 1], ["outstanding_amount", ">", 0]]), calc="Sum of outstanding_amount × conversion_rate on all submitted Purchase Invoices with outstanding_amount > 0 - not limited to the selected period.")
+    b.kpi("overdue_payables", "Overdue payables", overdue_amt, "currency", icon="alarm-clock", tone="bad" if overdue_amt else "good", hint=f"{len(overdue)} bill(s) past due", href=_href_in("Purchase Invoice", (r.name for r in overdue)), calc="Sum of outstanding amount on submitted Purchase Invoices with outstanding_amount > 0 and due_date before today.")
     b.stash["ap_aging"] = _aging(open_rows, p.today)
     b.stash["pi_span"] = span
 
@@ -428,9 +445,9 @@ def _acc_purchases(b, p, company):
         "Supplier bills past due",
         [{"key": "name", "label": "Bill", "format": "link"}, {"key": "party", "label": "Supplier"}, {"key": "due", "label": "Due", "format": "date"}, {"key": "late", "label": "Days late", "format": "number"}, {"key": "amount", "label": "Outstanding", "format": "currency"}],
         [{"name": r.name, "party": r.supplier, "due": _sd(r.due_date), "late": date_diff(p.today, _d(r.due_date)), "amount": round(_outstanding(r), 2), "_href": _href("Purchase Invoice", r.name)} for r in sorted(overdue, key=_outstanding, reverse=True)[:8]],
-        href=_href("Purchase Invoice"),
+        href=_href_in("Purchase Invoice", (r.name for r in overdue)),
     )
-    b.alert("overdue_bills", "Supplier bills past due", len(overdue), "warn", _href("Purchase Invoice"), f"{overdue_amt:,.0f} to pay")
+    b.alert("overdue_bills", "Supplier bills past due", len(overdue), "warn", _href_in("Purchase Invoice", (r.name for r in overdue)), f"{overdue_amt:,.0f} to pay")
 
 
 def _acc_gl(b, p, company):
@@ -460,10 +477,10 @@ def _acc_gl(b, p, company):
     exp, exp_prev = _sum_split(p, expense, "posting_date", amount)
     profit, profit_prev = inc - exp, inc_prev - exp_prev
 
-    b.kpi("income", "Total income", inc, "currency", inc_prev, icon="trending-up", hint="From the general ledger")
-    b.kpi("expenses", "Total expenses", exp, "currency", exp_prev, invert=True, icon="trending-down")
-    b.kpi("net_profit", "Net profit", profit, "currency", profit_prev, icon="piggy-bank", tone="good" if profit >= 0 else "bad", href="/report/Profit%20and%20Loss%20Statement")
-    b.kpi("margin", "Profit margin", _pct(profit, inc), "percent", _pct(profit_prev, inc_prev) if inc_prev else None, icon="percent")
+    b.kpi("income", "Total income", inc, "currency", inc_prev, icon="trending-up", hint="From the general ledger", calc="Sum of (credit − debit) on non-opening GL Entries against Income accounts, posting_date in the selected period.")
+    b.kpi("expenses", "Total expenses", exp, "currency", exp_prev, invert=True, icon="trending-down", calc="Sum of (debit − credit) on non-opening GL Entries against Expense accounts, posting_date in the selected period.")
+    b.kpi("net_profit", "Net profit", profit, "currency", profit_prev, icon="piggy-bank", tone="good" if profit >= 0 else "bad", href="/report/Profit%20and%20Loss%20Statement", calc="Total income − Total expenses for the selected period.")
+    b.kpi("margin", "Profit margin", _pct(profit, inc), "percent", _pct(profit_prev, inc_prev) if inc_prev else None, icon="percent", calc="Net profit ÷ Total income × 100 for the selected period.")
 
     cur = [r for r in rows if p.in_cur(_d(r.posting_date))]
     b.chart(
@@ -505,8 +522,8 @@ def _acc_balances(b, p, company):
     liabilities = -sum(flt(r.balance) for r in rows if r.root_type == "Liability")
     cash = [r for r in rows if r.account_type in ("Bank", "Cash") and abs(flt(r.balance)) >= 0.005]
 
-    b.kpi("cash", "Cash & bank", sum(flt(r.balance) for r in cash), "currency", icon="wallet", hint=f"As at {p.to}")
-    b.kpi("net_worth", "Net worth", assets - liabilities, "currency", icon="scale", tone="good" if assets >= liabilities else "bad", hint="Assets less liabilities", href="/report/Balance%20Sheet")
+    b.kpi("cash", "Cash & bank", sum(flt(r.balance) for r in cash), "currency", icon="wallet", hint=f"As at {p.to}", calc="Sum of (debit − credit) balances on GL accounts of type Bank/Cash, all postings up to the end of the selected period.")
+    b.kpi("net_worth", "Net worth", assets - liabilities, "currency", icon="scale", tone="good" if assets >= liabilities else "bad", hint="Assets less liabilities", href="/report/Balance%20Sheet", calc="Total Asset account balances − total Liability account balances, all postings up to the end of the selected period.")
     b.chart(
         "balance_snapshot",
         "Balance sheet snapshot",
@@ -526,12 +543,13 @@ def _acc_payments(b, p, company):
     got, got_prev = _sum_split(p, received, "posting_date", amt)
     out, out_prev = _sum_split(p, paid, "posting_date", amt)
 
-    b.kpi("collected", "Collected", got, "currency", got_prev, icon="circle-dollar-sign", href=_href("Payment Entry"))
-    b.kpi("paid_out", "Paid out", out, "currency", out_prev, invert=True, icon="send", href=_href("Payment Entry"))
-    b.kpi("net_cash_flow", "Net cash flow", got - out, "currency", got_prev - out_prev, icon="arrow-left-right", tone="good" if got >= out else "bad")
+    period_filter = ["posting_date", "between", [str(p.frm), str(p.to)]]
+    b.kpi("collected", "Collected", got, "currency", got_prev, icon="circle-dollar-sign", href=_href("Payment Entry", filters=[["company", "=", company], ["docstatus", "=", 1], ["payment_type", "=", "Receive"], period_filter]), calc="Sum of base_paid_amount on submitted Payment Entries of type Receive, posting_date in the selected period.")
+    b.kpi("paid_out", "Paid out", out, "currency", out_prev, invert=True, icon="send", href=_href("Payment Entry", filters=[["company", "=", company], ["docstatus", "=", 1], ["payment_type", "=", "Pay"], period_filter]), calc="Sum of base_paid_amount on submitted Payment Entries of type Pay, posting_date in the selected period.")
+    b.kpi("net_cash_flow", "Net cash flow", got - out, "currency", got_prev - out_prev, icon="arrow-left-right", tone="good" if got >= out else "bad", calc="Collected − Paid out for the selected period.")
     invoiced = b.stash.get("invoiced")
     if invoiced is not None:
-        b.kpi("collection_rate", "Collection rate", _pct(got, invoiced), "percent", icon="badge-percent", hint="Collected against invoiced in the period")
+        b.kpi("collection_rate", "Collection rate", _pct(got, invoiced), "percent", icon="badge-percent", hint="Collected against invoiced in the period", calc="Collected ÷ Invoiced × 100 for the selected period.")
 
     trend = _trend(p, {"Invoiced": [(_d(r.posting_date), r.base_grand_total) for r in b.stash.get("si_span", [])], "Collected": [(_d(r.posting_date), amt(r)) for r in received], "Paid out": [(_d(r.posting_date), amt(r)) for r in paid]})
     b.chart("cash_trend", "Invoiced, collected and paid out", "area", trend, _series(("Invoiced", "area", BLUE), ("Collected", "area", GREEN), ("Paid out", "line", RED)), "currency", span=2)
@@ -546,7 +564,7 @@ def _acc_payments(b, p, company):
 
     # Verification is a separate queue from posting: include drafts.
     pending = _get("Payment Entry", ["name", "posting_date", "party_name", "party", "payment_type", "base_paid_amount"], {"company": company, "docstatus": ["<", 2], "verification_status": "Pending Verification"}, "posting_date desc")
-    b.kpi("pending_verification", "Payments awaiting verification", len(pending), "number", icon="shield-check", tone="warn" if pending else "good", href="/pending-pe-requests")
+    b.kpi("pending_verification", "Payments awaiting verification", len(pending), "number", icon="shield-check", tone="warn" if pending else "good", href="/pending-pe-requests", calc="Count of Payment Entries (draft or submitted) for this company with verification_status = Pending Verification - not limited to the selected period.")
     b.alert("pending_pe", "Payment entries awaiting verification", len(pending), "warn", "/pending-pe-requests")
     b.table(
         "pending_payments",
@@ -603,11 +621,11 @@ def _crm_leads(b, p, company):
     interested = [r for r in cur if r.status not in ("Open", "Lead", "Lost")]
     converted = {o.opportunity_from_lead for o in opps if o.opportunity_from_lead in cur_names and o.status == "Converted"}
 
-    b.kpi("new_leads", "New leads", new, "number", new_prev, icon="user-plus", href=_href("Lead"))
-    b.kpi("open_leads", "Active leads", open_leads, "number", icon="users", hint="Not yet won, lost or turned into an opportunity")
-    b.kpi("lead_to_opp", "Lead to opportunity", _pct(len(with_opp), len(cur)), "percent", icon="filter", hint="Of leads created in the period")
-    b.kpi("won_leads", "Leads won", sum(1 for r in cur if r.status == "Won"), "number", icon="trophy")
-    b.kpi("lost_leads", "Leads lost", sum(1 for r in cur if r.status == "Lost"), "number", invert=True, icon="circle-x")
+    b.kpi("new_leads", "New leads", new, "number", new_prev, icon="user-plus", href=_href_in("Lead", (r.name for r in cur)), calc="Count of Lead docs with creation date in the selected period.")
+    b.kpi("open_leads", "Active leads", open_leads, "number", icon="users", hint="Not yet won, lost or turned into an opportunity", href=_href_in("Lead", (r.name for r in leads if r.status not in ("Won", "Lost", "Opportunity"))), calc="Count of all Lead docs (any creation date) with status not in Won/Lost/Opportunity.")
+    b.kpi("lead_to_opp", "Lead to opportunity", _pct(len(with_opp), len(cur)), "percent", icon="filter", hint="Of leads created in the period", calc="Leads created in the selected period that have a linked Opportunity ÷ leads created in the period × 100.")
+    b.kpi("won_leads", "Leads won", sum(1 for r in cur if r.status == "Won"), "number", icon="trophy", href=_href_in("Lead", (r.name for r in cur if r.status == "Won")), calc="Leads created in the selected period with status = Won.")
+    b.kpi("lost_leads", "Leads lost", sum(1 for r in cur if r.status == "Lost"), "number", invert=True, icon="circle-x", href=_href_in("Lead", (r.name for r in cur if r.status == "Lost")), calc="Leads created in the selected period with status = Lost.")
 
     b.chart("lead_funnel", "Lead conversion funnel", "funnel", [{"label": "Leads", "value": len(cur)}, {"label": "Interested", "value": len(interested)}, {"label": "Opportunities", "value": len(with_opp)}, {"label": "Converted", "value": len(converted)}], subtitle="Leads created in the period")
     b.chart("leads_trend", "New leads over time", "area", _trend(p, {"Leads": [(_d(r.creation), 1) for r in leads], "Opportunities": [(_d(o.creation), 1) for o in opps]}), _series(("Leads", "area", BLUE), ("Opportunities", "line", GREEN)), span=2)
@@ -642,10 +660,10 @@ def _crm_opportunities(b, p, company):
         won, lost = sum(1 for r in rows if r.status == "Converted"), sum(1 for r in rows if r.status == "Lost")
         return _pct(won, won + lost)
 
-    b.kpi("new_opps", "New opportunities", len(cur), "number", len(prev), icon="target", href=_href("Opportunity"))
-    b.kpi("open_pipeline", "Open pipeline", pipeline, "currency", icon="funnel", hint=f"{len(open_)} open opportunity(ies)", href=_href("Opportunity"))
-    b.kpi("weighted_pipeline", "Weighted pipeline", weighted, "currency", icon="scale", hint="Amount x probability")
-    b.kpi("win_rate", "Win rate", win_rate(cur), "percent", win_rate(prev) or None, icon="trophy", hint="Converted / (converted + lost)")
+    b.kpi("new_opps", "New opportunities", len(cur), "number", len(prev), icon="target", href=_href_in("Opportunity", (r.name for r in cur)), calc="Count of Opportunity docs with creation date in the selected period.")
+    b.kpi("open_pipeline", "Open pipeline", pipeline, "currency", icon="funnel", hint=f"{len(open_)} open opportunity(ies)", href=_href_in("Opportunity", (r.name for r in open_)), calc="Sum of opportunity_amount on all Opportunities with status in Open/Quotation/Replied - not limited to the selected period.")
+    b.kpi("weighted_pipeline", "Weighted pipeline", weighted, "currency", icon="scale", hint="Amount x probability", calc="Sum of opportunity_amount × probability_ ÷ 100 over the same open opportunities as Open pipeline.")
+    b.kpi("win_rate", "Win rate", win_rate(cur), "percent", win_rate(prev) or None, icon="trophy", hint="Converted / (converted + lost)", calc="Opportunities created in the selected period with status = Converted ÷ (Converted + Lost) × 100.")
 
     names = _employee_names()
     stages = defaultdict(float)
@@ -683,10 +701,10 @@ def _crm_opportunities(b, p, company):
         "Opportunities closing soon",
         [{"key": "name", "label": "Opportunity", "format": "link"}, {"key": "stage", "label": "Stage"}, {"key": "close", "label": "Closing", "format": "date"}, {"key": "owner", "label": "Owner"}, {"key": "amount", "label": "Amount", "format": "currency"}],
         [{"name": r.title or r.name1 or r.name, "stage": r.sales_stage, "close": _sd(r.expected_closing_date), "owner": names.get(r.opportunity_owner, r.opportunity_owner), "amount": flt(r.opportunity_amount), "_href": _href("Opportunity", r.name)} for r in soon],
-        href=_href("Opportunity"),
+        href=_href_in("Opportunity", (r.name for r in soon)),
     )
-    late = sum(1 for r in open_ if r.expected_closing_date and _d(r.expected_closing_date) < p.today)
-    b.alert("stale_opps", "Opportunities past their closing date", late, "warn", _href("Opportunity"))
+    stale_opps = [r for r in open_ if r.expected_closing_date and _d(r.expected_closing_date) < p.today]
+    b.alert("stale_opps", "Opportunities past their closing date", len(stale_opps), "warn", _href_in("Opportunity", (r.name for r in stale_opps)))
 
 
 def _crm_sales(b, p, company):
@@ -698,9 +716,9 @@ def _crm_sales(b, p, company):
     cur = [r for r in rows if p.in_cur(_d(r.posting_date))]
     users = _user_names()
 
-    b.kpi("orders", "Sales orders", count, "number", count_prev, icon="shopping-bag", href=_href("Sales Order"))
-    b.kpi("order_value", "Order value", value, "currency", prev, icon="banknote")
-    b.kpi("avg_deal", "Average deal size", value / count if count else 0, "currency", (prev / count_prev) if count_prev else None, icon="calculator")
+    b.kpi("orders", "Sales orders", count, "number", count_prev, icon="shopping-bag", href=_href("Sales Order", filters=[["company", "=", company], ["docstatus", "=", 1], ["posting_date", "between", [str(p.frm), str(p.to)]]]), calc="Count of submitted Sales Orders for this company, posting_date in the selected period.")
+    b.kpi("order_value", "Order value", value, "currency", prev, icon="banknote", calc="Sum of base_grand_total on submitted Sales Orders for this company, posting_date in the selected period.")
+    b.kpi("avg_deal", "Average deal size", value / count if count else 0, "currency", (prev / count_prev) if count_prev else None, icon="calculator", calc="Order value ÷ Sales orders for the selected period.")
     b.chart("orders_trend", "Sales orders over time", "bar", _trend(p, {"Order value": [(_d(r.posting_date), r.base_grand_total) for r in rows]}), _series(("Order value", "bar", VIOLET)), "currency", span=2)
     b.chart("orders_customers", "Top customers by order value", "hbar", _top([(r.customer, r.base_grand_total) for r in cur], 10), fmt="currency")
     b.chart("orders_owner", "Revenue by salesperson", "hbar", _top([(users.get(r.owner, r.owner), r.base_grand_total) for r in cur], 10), fmt="currency", subtitle="Submitted sales orders by owner")
@@ -711,15 +729,15 @@ def _crm_customers(b, p, company):
     customers = _get("Customer", ["name", "creation", "overall_status", "customer_owner"])
     new, new_prev = _sum_split(p, customers, "creation")
     names = _employee_names()
-    b.kpi("customers", "Customers", len(customers), "number", icon="building-2", href=_href("Customer"))
-    b.kpi("new_customers", "New customers", new, "number", new_prev, icon="user-round-plus")
+    b.kpi("customers", "Customers", len(customers), "number", icon="building-2", href=_href("Customer"), calc="Count of all Customer docs.")
+    b.kpi("new_customers", "New customers", new, "number", new_prev, icon="user-round-plus", href=_href("Customer", filters=[["creation", "between", [str(p.frm), str(p.to)]]]), calc="Count of Customer docs with creation date in the selected period.")
     b.chart("customer_status", "Customers by status", "donut", _counts([r.overall_status for r in customers], n=8))
     b.chart("customer_owner", "Customers per owner", "hbar", _counts([names.get(r.customer_owner, r.customer_owner) for r in customers], n=10))
 
     try:
         agreements = _get("Agreement", ["name", "status"])
         b.chart("agreements", "Agreements", "donut", _counts([r.status for r in agreements], ["Ready To Send", "Sent", "Agreement signed"]), subtitle="Signing progress")
-        b.alert("awaiting_signature", "Agreements awaiting signature", sum(1 for r in agreements if r.status == "Sent"), "info", _href("Agreement"))
+        b.alert("awaiting_signature", "Agreements awaiting signature", sum(1 for r in agreements if r.status == "Sent"), "info", _href("Agreement", filters=[["status", "=", "Sent"]]))
     except frappe.PermissionError:
         pass
 
@@ -733,8 +751,8 @@ def _crm_calls(b, p, company):
     cur = [c for c in calls if p.in_cur(_d(c.date))]
     names = _employee_names()
 
-    b.kpi("calls", "Calls logged", n, "number", n_prev, icon="phone")
-    b.kpi("talk_time", "Talk time", round(secs / 3600, 1), "hours", round(secs_prev / 3600, 1), icon="clock")
+    b.kpi("calls", "Calls logged", n, "number", n_prev, icon="phone", href=_href_in("Opportunity", (c.parent for c in cur)), calc="Count of Call Details rows (Opportunity's call log) with date in the selected period.")
+    b.kpi("talk_time", "Talk time", round(secs / 3600, 1), "hours", round(secs_prev / 3600, 1), icon="clock", href=_href_in("Opportunity", (c.parent for c in cur)), calc="Sum of duration (seconds ÷ 3600) on Call Details rows with date in the selected period.")
     b.chart("calls_trend", "Calls and talk time", "bar", [{**row, "Talk time (h)": round(row["Talk time (h)"] / 3600, 2)} for row in _trend(p, {"Calls": [(_d(c.date), 1) for c in calls], "Talk time (h)": [(_d(c.date), c.duration) for c in calls]})], _series(("Calls", "bar", BLUE), ("Talk time (h)", "line", AMBER)), span=2)
     b.chart("calls_owner", "Calls per employee", "hbar", _counts([names.get(owner.get(c.parent), owner.get(c.parent)) for c in cur], n=10))
 
@@ -745,15 +763,15 @@ def _crm_tasks(b, p, company):
     due = [t for t in tasks if _d(t.date) and _d(t.date) <= add_days(p.today, 3)]
     overdue = [t for t in tasks if _d(t.date) and _d(t.date) < p.today]
 
-    b.kpi("open_tasks", "Open follow-ups", len(tasks), "number", icon="list-checks", href=_href("CRM Task"))
-    b.kpi("overdue_tasks", "Overdue follow-ups", len(overdue), "number", icon="alarm-clock", tone="bad" if overdue else "good")
-    b.alert("overdue_followups", "Overdue CRM follow-ups", len(overdue), "bad", _href("CRM Task"))
+    b.kpi("open_tasks", "Open follow-ups", len(tasks), "number", icon="list-checks", href=_href("CRM Task", filters=[["is_completed", "=", 0]]), calc="Count of CRM Task docs with is_completed = 0 - not limited to the selected period.")
+    b.kpi("overdue_tasks", "Overdue follow-ups", len(overdue), "number", icon="alarm-clock", tone="bad" if overdue else "good", href=_href_in("CRM Task", (t.name for t in overdue)), calc="Open CRM Tasks with a due date before today.")
+    b.alert("overdue_followups", "Overdue CRM follow-ups", len(overdue), "bad", _href_in("CRM Task", (t.name for t in overdue)))
     b.table(
         "followups",
         "Follow-ups due",
         [{"key": "name", "label": "Task", "format": "link"}, {"key": "date", "label": "Due", "format": "date"}, {"key": "who", "label": "Assigned to"}, {"key": "about", "label": "Related to"}],
         [{"name": (t.description or t.name)[:70], "date": _sd(t.date), "who": users.get(t.assigned_to, t.assigned_to), "about": f"{t.reference_doctype or ''} {t.related_to or ''}".strip(), "_href": _href("CRM Task", t.name)} for t in due[:8]],
-        href=_href("CRM Task"),
+        href=_href_in("CRM Task", (t.name for t in due)),
     )
 
 
@@ -777,9 +795,9 @@ def _mkt_applications(b, p, company):
     names = _employee_names()
 
     b.stash["applications"], b.stash["apps_rows"], b.stash["recruiter_of"] = n, cur, recruiter
-    b.kpi("applications", "Applications sent", n, "number", n_prev, icon="send", href=_href("Marketing"))
-    b.kpi("large_share", "Large-application share", _pct(sum(flt(a.large_application) for a in cur), n), "percent", icon="layers")
-    b.kpi("active_campaigns", "Active marketing", sum(1 for m in campaigns if m.status == "Started"), "number", icon="play", hint=f"{len(campaigns)} campaign(s) in total")
+    b.kpi("applications", "Applications sent", n, "number", n_prev, icon="send", href=_href_in("Marketing", (a.parent for a in cur)), calc="Sum of total_application (or small_application + large_application) on Job Application Count rows with date in the selected period.")
+    b.kpi("large_share", "Large-application share", _pct(sum(flt(a.large_application) for a in cur), n), "percent", icon="layers", calc="Sum of large_application ÷ Applications sent × 100, for the selected period.")
+    b.kpi("active_campaigns", "Active marketing", sum(1 for m in campaigns if m.status == "Started"), "number", icon="play", hint=f"{len(campaigns)} campaign(s) in total", href=_href("Marketing", filters=[["status", "=", "Started"]]), calc="Count of all Marketing docs with status = Started - not limited to the selected period.")
 
     b.chart("applications_trend", "Applications over time", "bar", _trend(p, {"Small": [(_d(a.date), a.small_application) for a in apps], "Large": [(_d(a.date), a.large_application) for a in apps]}), _series(("Small", "bar", BLUE), ("Large", "bar", VIOLET)), span=2)
     b.chart("applications_recruiter", "Applications per recruiter", "hbar", _top([(names.get(recruiter.get(a.parent), recruiter.get(a.parent)), total(a)) for a in cur], 10))
@@ -802,19 +820,19 @@ def _mkt_interviews(b, p, company):
     offers = [r for r in cur if r.status == "Get The Offer"]
     offers_prev = sum(1 for r in span if p.in_prev(_d(r.date_of_interview)) and r.status == "Get The Offer")
     cancels = [r for r in cur if cancelled(r)]
-    today_n = sum(1 for r in rounds if _d(r.date_of_interview) == p.today and not cancelled(r))
+    today_rounds = [r for r in rounds if _d(r.date_of_interview) == p.today and not cancelled(r)]
     upcoming = sorted((r for r in rounds if p.today <= _d(r.date_of_interview) <= add_days(p.today, 14) and not cancelled(r)), key=lambda r: (_d(r.date_of_interview), str(r.from_time or "")))
     support_needed = sum(1 for r in upcoming if r.support)
     apps = b.stash.get("applications")
 
     b.stash["rounds_cur"] = len(cur)
-    b.kpi("interviews", "Interviews", n, "number", n_prev, icon="calendar-check", href=_href("Interview"))
+    b.kpi("interviews", "Interviews", n, "number", n_prev, icon="calendar-check", href=_href_in("Interview", (r.parent for r in cur)), calc="Count of Interview Round child rows (not Interview docs) with date_of_interview in the selected period. One Interview can have several rounds, so the linked list may show fewer records than this number.")
     if apps:
-        b.kpi("interview_rate", "Application to interview", _pct(len(cur), apps), "percent", icon="percent", hint="Rounds scheduled per application")
-    b.kpi("offers", "Offers", len(offers), "number", offers_prev, icon="party-popper", tone="good" if offers else None)
-    b.kpi("cancel_rate", "Cancellation rate", _pct(len(cancels), len(cur)), "percent", invert=True, icon="calendar-x")
-    b.kpi("interviews_today", "Interviews today", today_n, "number", icon="calendar-clock", href=_href("Interview"))
-    b.kpi("upcoming_interviews", "Next 14 days", len(upcoming), "number", icon="calendar-range", hint=f"{support_needed} need interview support")
+        b.kpi("interview_rate", "Application to interview", _pct(len(cur), apps), "percent", icon="percent", hint="Rounds scheduled per application", calc="Interview rounds in the selected period ÷ Applications sent in the selected period × 100.")
+    b.kpi("offers", "Offers", len(offers), "number", offers_prev, icon="party-popper", tone="good" if offers else None, href=_href_in("Interview", (r.parent for r in offers)), calc="Interview rounds in the selected period with status = Get The Offer.")
+    b.kpi("cancel_rate", "Cancellation rate", _pct(len(cancels), len(cur)), "percent", invert=True, icon="calendar-x", href=_href_in("Interview", (r.parent for r in cancels)), calc="Interview rounds in the selected period that are cancelled (cancelled_by set, or status = Cancelled) ÷ all rounds in the period × 100.")
+    b.kpi("interviews_today", "Interviews today", len(today_rounds), "number", icon="calendar-clock", href=_href_in("Interview", (r.parent for r in today_rounds)), calc="Interview rounds (any period) with date_of_interview = today, excluding cancelled ones.")
+    b.kpi("upcoming_interviews", "Next 14 days", len(upcoming), "number", icon="calendar-range", hint=f"{support_needed} need interview support", href=_href_in("Interview", (r.parent for r in upcoming)), calc="Interview rounds (any period) with date_of_interview between today and 14 days out, excluding cancelled ones.")
 
     b.chart("interviews_trend", "Interviews over time", "bar", _trend(p, {"Interviews": [(_d(r.date_of_interview), 1) for r in span], "Cancelled": [(_d(r.date_of_interview), 1) for r in span if cancelled(r)], "Offers": [(_d(r.date_of_interview), 1) for r in span if r.status == "Get The Offer"]}), _series(("Interviews", "bar", BLUE), ("Cancelled", "bar", RED), ("Offers", "line", GREEN)), span=2)
     b.chart("interview_status", "Interviews by status", "donut", _counts([r.status for r in cur], ["Scheduled", "Today", "Completed", "Rescheduled", "Get The Offer", "Rejected", "Cancelled"]))
@@ -836,10 +854,12 @@ def _mkt_interviews(b, p, company):
         "Upcoming interviews",
         [{"key": "name", "label": "Interview", "format": "link"}, {"key": "customer", "label": "Customer"}, {"key": "round", "label": "Round"}, {"key": "type", "label": "Type"}, {"key": "date", "label": "Date", "format": "date"}, {"key": "time", "label": "Time"}, {"key": "support", "label": "Support"}],
         [{"name": meta[r.parent].role or r.parent, "customer": meta[r.parent].customer, "round": r.round, "type": r.type_of_interview, "date": _sd(r.date_of_interview), "time": f"{_time(r.from_time)} {r.edt_est or ''}".strip(), "support": "Yes" if r.support else "", "_href": _href("Interview", r.parent)} for r in upcoming[:10]],
-        href=_href("Interview"),
+        href=_href_in("Interview", (r.parent for r in upcoming)),
     )
-    b.alert("interviews_soon", "Interviews in the next 3 days", sum(1 for r in upcoming if _d(r.date_of_interview) <= add_days(p.today, 3)), "info", _href("Interview"))
-    b.alert("support_needed", "Upcoming interviews needing support", support_needed, "warn", _href("Interview"))
+    soon = [r for r in upcoming if _d(r.date_of_interview) <= add_days(p.today, 3)]
+    needing_support = [r for r in upcoming if r.support]
+    b.alert("interviews_soon", "Interviews in the next 3 days", len(soon), "info", _href_in("Interview", (r.parent for r in soon)))
+    b.alert("support_needed", "Upcoming interviews needing support", support_needed, "warn", _href_in("Interview", (r.parent for r in needing_support)))
 
     # Recruiter leaderboard: applications sent + interviews their profiles landed.
     recruiter_of, names = b.stash.get("recruiter_of", {}), _employee_names()
@@ -862,7 +882,7 @@ def _mkt_interviews(b, p, company):
 def _mkt_services(b, p, company):
     rows = _get("Marketing Other Services", ["name", "status", "creation"])
     pending = sum(1 for r in rows if r.status in OPEN_SERVICE_STATUSES)
-    b.kpi("mkt_services_pending", "Marketing services open", pending, "number", icon="briefcase", hint="Pending or awaiting an update", href=_href("Marketing Other Services"))
+    b.kpi("mkt_services_pending", "Marketing services open", pending, "number", icon="briefcase", hint="Pending or awaiting an update", href=_href("Marketing Other Services", filters=[["status", "in", list(OPEN_SERVICE_STATUSES)]]), calc="Count of all Marketing Other Services docs with status Pending or Request for Update - not limited to the selected period.")
 
 
 def _mkt_finish(b, p, company):
@@ -907,11 +927,12 @@ def _ops_services(b, p, company, doctypes=None):
     age = lambda r: date_diff(p.today, _d(r.creation))  # noqa: E731
     stale = [r for r in open_ if age(r) > 7]
 
-    b.kpi("requests", "Service requests raised", raised, "number", raised_prev, icon="inbox")
-    b.kpi("requests_open", "Open requests", len(open_), "number", icon="clipboard-list", hint="Pending or awaiting an update")
-    b.kpi("requests_waiting", "Awaiting update", len(waiting), "number", icon="message-square-warning", tone="warn" if waiting else None)
-    b.kpi("completion_rate", "Completion rate", _pct(len(done), len(cur)), "percent", icon="circle-check", hint="Of requests raised in the period")
-    b.kpi("stale_requests", "Open over 7 days", len(stale), "number", invert=True, icon="hourglass", tone="bad" if stale else "good")
+    service_list = ", ".join(doctypes or SERVICE_DOCTYPES)
+    b.kpi("requests", "Service requests raised", raised, "number", raised_prev, icon="inbox", calc=f"Count of docs with creation date in the selected period, across: {service_list}.")
+    b.kpi("requests_open", "Open requests", len(open_), "number", icon="clipboard-list", hint="Pending or awaiting an update", calc=f"Count of all docs (any creation date) with status Pending or Request for Update, across: {service_list}.")
+    b.kpi("requests_waiting", "Awaiting update", len(waiting), "number", icon="message-square-warning", tone="warn" if waiting else None, calc="Of Open requests, those with status = Request for Update.")
+    b.kpi("completion_rate", "Completion rate", _pct(len(done), len(cur)), "percent", icon="circle-check", hint="Of requests raised in the period", calc="Requests raised in the selected period with status = Completed ÷ all requests raised in the period × 100.")
+    b.kpi("stale_requests", "Open over 7 days", len(stale), "number", invert=True, icon="hourglass", tone="bad" if stale else "good", calc="Of Open requests, those with creation date more than 7 days before today.")
     b.alert("stale_service_requests", "Service requests open for over a week", len(stale), "bad", None, "Pending or awaiting an update")
 
     by_service = defaultdict(Counter)
@@ -971,9 +992,9 @@ def _ops_technical(b, p, company):
     with_docs = {(d["service"], d["parent"]) for d in submitted}
     proof_services = [r for dt, rows in docs_by_type.items() if dt != "RUC" for r in rows if r.status == "Completed"]
     missing = sum(1 for dt, rows in docs_by_type.items() if dt != "RUC" for r in rows if r.status == "Completed" and (dt, r.name) not in with_docs)
-    b.kpi("docs_submitted", "Documents submitted", doc_cur, "number", doc_prev, icon="file-check", hint="Proof of work attached in the period")
-    b.kpi("docs_total", "Documents on file", len(submitted), "number", icon="files")
-    b.kpi("docs_missing", "Completed without proof", missing, "number", invert=True, icon="file-x", tone="bad" if missing else "good", hint=f"Of {len(proof_services)} completed request(s)")
+    b.kpi("docs_submitted", "Documents submitted", doc_cur, "number", doc_prev, icon="file-check", hint="Proof of work attached in the period", calc="Count of Document References child rows (proof of work) with date in the selected period, across Training/JDC/Interview Support/Technical Other Services.")
+    b.kpi("docs_total", "Documents on file", len(submitted), "number", icon="files", calc="Count of all Document References rows on record, across Training/JDC/Interview Support/Technical Other Services - not limited to the selected period.")
+    b.kpi("docs_missing", "Completed without proof", missing, "number", invert=True, icon="file-x", tone="bad" if missing else "good", hint=f"Of {len(proof_services)} completed request(s)", calc="Docs with status = Completed (any date) that have no Document References row attached.")
     b.alert("completed_no_proof", "Completed technical requests with no document attached", missing, "warn")
 
     # RUC: one row per session logged in the child table.
@@ -982,9 +1003,9 @@ def _ops_technical(b, p, company):
     s_cur, s_prev = _sum_split(p, sessions, "date")
     ruc_upcoming = [x for x in sessions if x.date and _d(x.date) >= p.today]
     if rucs:
-        b.kpi("ruc_total", "RUC requests", len(rucs), "number", icon="phone-call", href=_href("RUC"))
-        b.kpi("ruc_scheduled", "RUC sessions scheduled", s_cur, "number", s_prev, icon="calendar-check", hint=f"{len(ruc_upcoming)} still to come")
-        b.kpi("ruc_hours", "RUC hours", round(sum(flt(x.session_duration_in_hour) for x in sessions if p.in_cur(_d(x.date))), 1), "number", icon="timer")
+        b.kpi("ruc_total", "RUC requests", len(rucs), "number", icon="phone-call", href=_href("RUC"), calc="Count of all RUC docs.")
+        b.kpi("ruc_scheduled", "RUC sessions scheduled", s_cur, "number", s_prev, icon="calendar-check", hint=f"{len(ruc_upcoming)} still to come", href=_href_in("RUC", (x.parent for x in sessions if p.in_cur(_d(x.date)))), calc="Count of Session Details child rows (RUC's session log) with date in the selected period.")
+        b.kpi("ruc_hours", "RUC hours", round(sum(flt(x.session_duration_in_hour) for x in sessions if p.in_cur(_d(x.date))), 1), "number", icon="timer", href=_href_in("RUC", (x.parent for x in sessions if p.in_cur(_d(x.date)))), calc="Sum of session_duration_in_hour on Session Details rows with date in the selected period.")
         b.chart("ruc_sessions_trend", "RUC sessions over time", "bar", _trend(p, {"Sessions": [(_d(x.date), 1) for x in sessions]}), _series(("Sessions", "bar", TEAL)), span=2)
         b.chart("ruc_quality", "RUC session quality", "donut", _counts([x.quality for x in sessions if p.in_cur(_d(x.date))], ["EXCELLENT", "GOOD", "AVERAGE", "BAD", "WORST"]))
         b.chart("ruc_status", "RUC by status", "donut", _counts([r.status for r in rucs], ["Pending", "Request for Update", "Completed"]))
@@ -1001,9 +1022,12 @@ def _ops_technical(b, p, company):
         cur_n = sum(1 for _r, d in dated if p.in_cur(d))
         prev_n = sum(1 for _r, d in dated if p.in_prev(d))
         upcoming = [(r, d) for r, d in dated if p.today <= d <= add_days(p.today, 14) and r.status != "Completed"]
-        b.kpi(f"{key}_scheduled", f"{label} scheduled", cur_n, "number", prev_n, icon=icon, href=_href(dt))
-        b.kpi(f"{key}_upcoming", f"{label} - next 14 days", len(upcoming), "number", icon="calendar-range", tone="info" if upcoming else None)
-        b.kpi(f"{key}_unscheduled", f"{label} not scheduled", sum(1 for r in rows if r.status != "Completed" and not when(r)), "number", icon="calendar-x", hint="Open with no date yet")
+        scheduled_cur = [r for r, d in dated if p.in_cur(d)]
+        unscheduled = [r for r in rows if r.status != "Completed" and not when(r)]
+        when_desc = "scheduled_on" if dt == "JDC" else "its linked Interview Round's date_of_interview"
+        b.kpi(f"{key}_scheduled", f"{label} scheduled", cur_n, "number", prev_n, icon=icon, href=_href_in(dt, (r.name for r in scheduled_cur)), calc=f"Count of {dt} docs whose {when_desc} falls in the selected period.")
+        b.kpi(f"{key}_upcoming", f"{label} - next 14 days", len(upcoming), "number", icon="calendar-range", tone="info" if upcoming else None, href=_href_in(dt, (r.name for r, _d in upcoming)), calc=f"{dt} docs (status ≠ Completed) whose {when_desc} falls between today and 14 days out.")
+        b.kpi(f"{key}_unscheduled", f"{label} not scheduled", len(unscheduled), "number", icon="calendar-x", hint="Open with no date yet", href=_href_in(dt, (r.name for r in unscheduled)), calc=f"{dt} docs with status ≠ Completed and no {when_desc}.")
         b.chart(f"{key}_trend", f"{label} scheduled over time", "bar", _trend(p, {"Scheduled": [(d, 1) for _r, d in dated]}), _series(("Scheduled", "bar", VIOLET)))
         if upcoming:
             b.table(
@@ -1011,7 +1035,7 @@ def _ops_technical(b, p, company):
                 f"Upcoming {label}",
                 [{"key": "name", "label": "Request", "format": "link"}, {"key": "customer", "label": "Customer"}, {"key": "who", "label": "Assigned to"}, {"key": "date", "label": "Date", "format": "date"}],
                 [{"name": r.name, "customer": r.customer, "who": names.get(r.assign_to, r.assign_to), "date": _sd(d), "_href": _href(dt, r.name)} for r, d in sorted(upcoming, key=lambda x: x[1])[:10]],
-                href=_href(dt),
+                href=_href_in(dt, (r.name for r, _d in upcoming)),
             )
 
     # Per-service summary: everything the technical team holds, in one table.
@@ -1038,13 +1062,16 @@ def _ops_care(b, p, company, only=None):
         disputes = []
     if disputes:
         pending = [r for r in disputes if r.status == "Dispute Pending"]
-        b.kpi("open_disputes", "Open disputes", len(pending), "number", icon="scale", tone="bad" if pending else "good", href=_href("CR"))
+        b.kpi("open_disputes", "Open disputes", len(pending), "number", icon="scale", tone="bad" if pending else "good", href=_href_in("CR", (r.name for r in pending)), calc="Count of all CR docs (any creation date) with status = Dispute Pending.")
         b.chart("dispute_status", "Customer disputes", "donut", _counts([r.status for r in disputes], ["Dispute Pending", "Dispute Resolved", "Refund"]))
-        b.alert("open_disputes", "Customer disputes pending", len(pending), "bad", _href("CR"))
-        made, made_prev = _sum_split(p, disputes, "creation")
-        b.kpi("disputes_new", "New disputes", made, "number", made_prev, invert=True, icon="file-warning")
-        b.kpi("disputes_resolved", "Resolved", sum(1 for r in disputes if r.status == "Dispute Resolved"), "number", icon="circle-check")
-        b.kpi("disputes_refund", "Refunds", sum(1 for r in disputes if r.status == "Refund"), "number", icon="undo-2")
+        b.alert("open_disputes", "Customer disputes pending", len(pending), "bad", _href_in("CR", (r.name for r in pending)))
+        made = [r for r in disputes if p.in_cur(_d(r.creation))]
+        made_n, made_prev = _sum_split(p, disputes, "creation")
+        resolved = [r for r in disputes if r.status == "Dispute Resolved"]
+        refunds = [r for r in disputes if r.status == "Refund"]
+        b.kpi("disputes_new", "New disputes", made_n, "number", made_prev, invert=True, icon="file-warning", href=_href_in("CR", (r.name for r in made)), calc="Count of CR docs with creation date in the selected period.")
+        b.kpi("disputes_resolved", "Resolved", len(resolved), "number", icon="circle-check", href=_href_in("CR", (r.name for r in resolved)), calc="Count of all CR docs (any creation date) with status = Dispute Resolved.")
+        b.kpi("disputes_refund", "Refunds", len(refunds), "number", icon="undo-2", href=_href_in("CR", (r.name for r in refunds)), calc="Count of all CR docs (any creation date) with status = Refund.")
         b.chart("disputes_trend", "Disputes raised over time", "bar", _trend(p, {"Disputes": [(_d(r.creation), 1) for r in disputes]}), _series(("Disputes", "bar", RED)), span=2)
         b.chart("disputes_customer", "Disputes per customer", "hbar", _counts([r.customer for r in disputes], n=10))
         b.chart("dispute_owner", "Disputes per handler", "hbar", _counts([names.get(r.assign_to, r.assign_to) for r in pending], n=10), subtitle="Pending disputes")
@@ -1056,9 +1083,11 @@ def _ops_care(b, p, company, only=None):
     except frappe.PermissionError:
         onboardings = []
     if onboardings:
+        active = [r for r in onboardings if r.status == "Active"]
+        new_rows = [r for r in onboardings if p.in_cur(_d(r.creation))]
         new, new_prev = _sum_split(p, onboardings, "creation")
-        b.kpi("onboardings_active", "Active onboardings", sum(1 for r in onboardings if r.status == "Active"), "number", icon="user-check", href=_href("Onboardings"))
-        b.kpi("onboardings_new", "New onboardings", new, "number", new_prev, icon="user-round-plus")
+        b.kpi("onboardings_active", "Active onboardings", len(active), "number", icon="user-check", href=_href_in("Onboardings", (r.name for r in active)), calc="Count of all Onboardings docs (any creation date) with status = Active.")
+        b.kpi("onboardings_new", "New onboardings", new, "number", new_prev, icon="user-round-plus", href=_href_in("Onboardings", (r.name for r in new_rows)), calc="Count of Onboardings docs with creation date in the selected period.")
         b.chart("onboardings_trend", "Onboardings over time", "bar", _trend(p, {"Onboardings": [(_d(r.creation), 1) for r in onboardings]}), _series(("Onboardings", "bar", TEAL)), span=2)
         b.chart("onboarding_customer", "Onboardings per customer", "hbar", _counts([r.customer for r in onboardings], n=10))
         b.chart("onboarding_status", "Onboardings by status", "donut", _counts([r.status for r in onboardings], ["Active", "Completed", "Returned"]))
@@ -1071,7 +1100,18 @@ def _ops_turnaround(b, p, company):
     prev = [h for d, h in hours if p.in_prev(d)]
     if not cur:
         return
-    b.kpi("turnaround", "Avg turnaround", round(sum(cur) / len(cur), 1), "hours", round(sum(prev) / len(prev), 1) if prev else None, invert=True, icon="timer", hint="Other Services: forwarded to completed")
+    b.kpi(
+        "turnaround",
+        "Avg turnaround",
+        round(sum(cur) / len(cur), 1),
+        "hours",
+        round(sum(prev) / len(prev), 1) if prev else None,
+        invert=True,
+        icon="timer",
+        hint="Other Services: forwarded to completed",
+        href=_href("Other Services", filters=[["status", "=", "Completed"], ["completed_on", "between", [str(p.frm), str(p.to)]]]),
+        calc="Average of (completed_on − forwarded_on) in hours, over Other Services docs with status = Completed and completed_on in the selected period.",
+    )
 
 
 # ── Department tabs ───────────────────────────────────────────────────────
@@ -1084,9 +1124,11 @@ def _hr(b, p, company):
         return
     active = [e for e in employees if e.enabled]
     joined, joined_prev = _sum_split(p, employees, "creation")
-    b.kpi("headcount", "Active employees", len(active), "number", icon="users", href=_href("Employee"))
-    b.kpi("inactive_employees", "Inactive employees", len(employees) - len(active), "number", icon="circle-x")
-    b.kpi("new_employees", "New employees", joined, "number", joined_prev, icon="user-round-plus")
+    inactive = [e for e in employees if not e.enabled]
+    new_rows = [e for e in employees if p.in_cur(_d(e.creation))]
+    b.kpi("headcount", "Active employees", len(active), "number", icon="users", href=_href("Employee", filters=[["enabled", "=", 1]]), calc="Count of all Employee docs with enabled = 1.")
+    b.kpi("inactive_employees", "Inactive employees", len(inactive), "number", icon="circle-x", href=_href("Employee", filters=[["enabled", "=", 0]]), calc="Count of all Employee docs with enabled = 0.")
+    b.kpi("new_employees", "New employees", joined, "number", joined_prev, icon="user-round-plus", href=_href_in("Employee", (e.name for e in new_rows)), calc="Count of Employee docs with creation date in the selected period.")
     try:
         rows = frappe.get_list("Employee Assignment Detail", fields=["department", "parent"], parent_doctype="Employee", limit_page_length=0)
     except frappe.PermissionError:

@@ -2,6 +2,7 @@
   <component
     :is="kpi.href ? 'router-link' : 'div'"
     :to="kpi.href || undefined"
+    :title="kpi.calc"
     class="group flex min-w-0 flex-col gap-1.5 rounded-xl border border-app-border bg-app-panel px-4 py-3 shadow-sm transition-colors"
     :class="kpi.href ? 'hover:border-app-primary/50' : ''"
   >
@@ -11,7 +12,7 @@
         <span :class="`lucide-${kpi.icon} size-3.5`" />
       </span>
     </div>
-    <p class="truncate text-xl font-semibold tabular-nums" :class="valueTone" :title="full">{{ text }}</p>
+    <p class="truncate text-xl font-semibold tabular-nums" :class="valueTone" :title="kpi.calc ? `${full}\n${kpi.calc}` : full">{{ text }}</p>
     <div class="flex min-h-4 items-center gap-2 text-p-xs">
       <span v-if="kpi.delta !== null && kpi.delta !== undefined" class="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 font-medium" :class="deltaTone">
         <span :class="kpi.delta >= 0 ? 'lucide-arrow-up-right size-3' : 'lucide-arrow-down-right size-3'" />{{ Math.abs(kpi.delta).toLocaleString(undefined, { maximumFractionDigits: 1 }) }}%

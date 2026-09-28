@@ -324,7 +324,7 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import { computed, ref, watch } from 'vue'
 import { columnWidths } from '@/composables/list/useColumnWidths'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
@@ -359,6 +359,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const route = useRoute()
 
 const titleIcon = computed(() => resolveIconName(null, sidebarKey(props.doctype)))
 
@@ -370,6 +371,20 @@ const interviewExtraFilters = computed(() =>
   props.doctype === 'Interview' && selectedCustomers.value.length ? [['marketing_link', 'in', selectedCustomers.value]] : [],
 )
 if (props.doctype === 'Interview') ensureDefaultCustomers()
+
+// A dashboard card ("3 interviews") links here as `?filters=<JSON get_list
+// filter tuples>` (see verp_staffing/utils/dashboard.py's _href) so the list
+// opens already scoped to exactly the records the card counted.
+const urlFilters = computed(() => {
+  if (typeof route.query.filters !== 'string') return []
+  try {
+    const parsed = JSON.parse(route.query.filters)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+})
+const combinedExtraFilters = computed(() => [...interviewExtraFilters.value, ...urlFilters.value])
 
 function openRow(row) {
   // A plain path, not a named route: some doctypes (Lead, User) have their
@@ -410,7 +425,7 @@ const {
   toggleSortOrder,
   clearFilters,
   refresh,
-} = useDocList(props.doctype, { extraFilters: interviewExtraFilters })
+} = useDocList(props.doctype, { extraFilters: combinedExtraFilters })
 
 const pageLengthOptions = [15, 30, 50, 100].map((n) => ({ label: String(n), value: String(n) }))
 
