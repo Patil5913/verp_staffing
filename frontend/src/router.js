@@ -135,6 +135,12 @@ const routes = [
     component: () => import('@/pages/admin/PermissionManager.vue'),
   },
   {
+    // Linked from the profile menu (not the sidebar) - see ProfileMenu.vue.
+    path: '/data-import',
+    name: 'DataImport',
+    component: () => import('@/pages/setup/DataImportPage.vue'),
+  },
+  {
     path: '/pending-pe-requests',
     name: 'PendingPERequests',
     component: () => import('@/pages/admin/PendingPERequests.vue'),

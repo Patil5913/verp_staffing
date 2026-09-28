@@ -24,6 +24,21 @@
         <p class="text-p-sm text-app-text-muted">This can take a minute. Please don't close this page.</p>
       </div>
 
+      <!-- Setup itself is already complete at this point - this is an extra,
+      fully optional screen (admin can skip straight to the workspace). -->
+      <div v-else-if="showImportStep" class="flex flex-col gap-5 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
+        <div>
+          <h2 class="text-p-base font-semibold text-app-text">Do you want to import your existing data?</h2>
+          <p class="mt-1 text-p-sm text-app-text-muted">
+            Bring in leads, customers or orders from a spreadsheet now, or skip this and do it later from your profile menu.
+          </p>
+        </div>
+        <DataImportWizard :on-done="goToWorkspace" />
+        <div class="flex justify-end border-t border-app-border pt-4">
+          <AppButton variant="outline" @click="goToWorkspace">Skip for now</AppButton>
+        </div>
+      </div>
+
       <form v-else class="flex flex-col gap-5 rounded-xl border border-app-border bg-app-panel p-6 shadow-sm" @submit.prevent="next">
         <div v-if="errorMessage" class="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-p-sm text-red-700 dark:text-red-300">{{ errorMessage }}</div>
 
@@ -110,6 +125,7 @@ import { call, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
+import DataImportWizard from '@/components/common/DataImportWizard.vue'
 import { EMAIL_PROVIDERS } from '@/utils/setup/emailProviders'
 import { normalizeError } from '@/utils/common/errors'
 
@@ -120,6 +136,7 @@ const working = ref(false)
 const workingMessage = ref('')
 const errorMessage = ref('')
 const showAdvanced = ref(false)
+const showImportStep = ref(false)
 const data = reactive({ languages: { languages: [] }, country_info: {}, all_timezones: [], currencies: [], current: {} })
 
 const form = reactive({
@@ -261,9 +278,15 @@ async function waitForBackgroundSetup() {
   errorMessage.value = 'Setup is taking longer than expected. Reload this page to check its progress.'
 }
 
-// Full reload so boot (setup_complete, sample-data flag, roles) is re-read.
+// Setup itself is done here - hand off to the optional "import your data"
+// screen instead of redirecting immediately (goToWorkspace does that).
 function finish() {
-  workingMessage.value = 'All set! Loading your workspace...'
+  working.value = false
+  showImportStep.value = true
+}
+
+// Full reload so boot (setup_complete, sample-data flag, roles) is re-read.
+function goToWorkspace() {
   window.location.href = '/verp'
 }
 </script>
