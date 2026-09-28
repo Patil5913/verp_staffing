@@ -9,6 +9,9 @@ import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
 import { registerServiceWorker } from '@/utils/pwa/registerServiceWorker'
 import { deskToSpaPath, isDeskOnlyPath, isDeskPath } from '@/utils/common/deskRoute'
+import { clearSelfHeal, selfHealReload } from '@/utils/common/selfHealReload'
+
+const BOOT_RELOAD_KEY = 'verp:boot-reload'
 
 setConfig('resourceFetcher', frappeRequest)
 
@@ -22,6 +25,18 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 let app = createApp(App)
+let mounted = false
+
+// Vue's default unhandled-error behavior is to log and otherwise do
+// nothing - if App.vue (or anything it renders synchronously on the way to
+// first paint) throws, #app is left empty with no visible error and no way
+// for the user to recover short of guessing to reload. Once the app has
+// actually rendered once, a later runtime error is left to whatever local
+// error boundary owns it - this is only the boot-time safety net.
+app.config.errorHandler = (err, instance, info) => {
+  console.error(err, info)
+  if (!mounted) selfHealReload(BOOT_RELOAD_KEY)
+}
 
 // Server-written messages (msgprint, validation errors, notifications) still
 // carry classic-desk links like /app/sales-order/SO-1. Catch those clicks and
@@ -51,8 +66,20 @@ app.use(FrappeUI)
 // placeholder initial route for a tick - defaulting to the AppShell layout
 // and firing its sidebar fetch as Guest - before swapping to the real
 // route's layout.
-router.isReady().then(() => {
-  app.mount('#app')
-})
+router
+  .isReady()
+  .then(() => {
+    app.mount('#app')
+    mounted = true
+    clearSelfHeal(BOOT_RELOAD_KEY)
+    clearSelfHeal('verp:sw-reload')
+  })
+  .catch((err) => {
+    // The initial navigation itself failed to resolve (e.g. a stale chunk
+    // reference router.onError's own regex didn't match) - same fallback as
+    // a mount-time render error: reload once rather than stay blank forever.
+    console.error(err)
+    selfHealReload(BOOT_RELOAD_KEY)
+  })
 
 registerServiceWorker()
