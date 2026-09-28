@@ -129,9 +129,14 @@ def get_latest_resume_document(customer):
     if not resume_name:
         return None
 
-    # Respect permission on the parent Resume.
+    # Respect permission on the parent Resume. Passing the doc (not just the
+    # doctype) is required here: it's what lets resume_has_permission check
+    # the *record's* customer/assign_to, e.g. granting a Marketing-stage
+    # recruiter access via their own department's assignment for the same
+    # customer, not only via Resume.assign_to.
     if not frappe.has_permission(
         "Resume",
+        doc=resume_name,
         ptype="read",
     ):
         frappe.throw(

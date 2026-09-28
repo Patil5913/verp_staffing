@@ -849,6 +849,53 @@ def generic_assign_has_permission(doc, ptype="read", user=None):
     return doc.assign_to in team
 
 
+RESUME_VIEWER_DOCTYPES = (
+    "Marketing",
+    "Interview Support",
+    "RUC",
+    "Training",
+    "JDC",
+    "Cover Letter",
+    "Technical Other Services",
+    "Marketing Other Services",
+)
+
+
+def resume_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    if ptype == "create":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if doc.assign_to in team:
+        return True
+
+    # The Resume is auto-assigned to whoever is next in the Technical
+    # department's rotation when it's created, independently of who the
+    # same customer's profile is later assigned to in Marketing/Interview
+    # Support/etc. Those are separate, never-synced `assign_to` fields —
+    # so a Marketing-stage recruiter viewing "their" candidate's resume
+    # must also be let in via the assignment on their own department's
+    # record for this customer, not just via Resume.assign_to.
+    if not doc.customer:
+        return False
+
+    for viewer_doctype in RESUME_VIEWER_DOCTYPES:
+        if frappe.db.exists(
+            viewer_doctype,
+            {"customer": doc.customer, "assign_to": ["in", team]},
+        ):
+            return True
+
+    return False
+
+
 def customer_has_permission(doc, ptype="read", user=None):
     user = user or frappe.session.user
     if user == "Administrator":

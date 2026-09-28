@@ -255,7 +255,7 @@ permission_query_conditions = {
 has_permission = {
     # customers stay inside the portal (see utils/portal_guard.py); a no-op for everyone else
     "*": "verp_staffing.utils.portal_guard.portal_has_permission",
-    "Resume": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Resume": "verp_staffing.crm.api.helpers.resume_has_permission",
     "RUC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "Marketing": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "Training": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
