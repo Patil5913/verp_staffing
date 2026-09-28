@@ -1,0 +1,72 @@
+"""What the site is allowed to do — always derived from the VERIFIED signed payload.
+
+The `status` column is informational only: editing it (or any other column) in the DB grants
+nothing, because state is recomputed here from the signature, the payload and its expiry.
+"""
+
+import json
+
+import frappe
+from frappe.utils import get_datetime, now_datetime
+
+from verp_staffing.core.license import crypto, repository
+
+ACTIVE, PENDING, EXPIRED, INVALID = "Active", "Pending", "Expired", "Invalid"
+
+
+def is_enforced() -> bool:
+	# Escape hatch for dev benches / emergencies: set in site or common_site_config.
+	return not frappe.conf.get("subscription_enforcement_disabled")
+
+
+def get_state() -> dict:
+	"""{"status": Active|Pending|Expired|Invalid, "payload": dict|None, "license": row|None}"""
+	cached = getattr(frappe.local, "site_license_state", None)
+	if cached is not None:
+		return cached
+	frappe.local.site_license_state = state = _compute_state()
+	return state
+
+
+def _compute_state() -> dict:
+	lic = repository.get_license()
+	if not lic or not lic.signed_payload or not lic.signature or not lic.public_key:
+		return {"status": PENDING, "payload": None, "license": lic}
+	if not crypto.verify(lic.signed_payload, lic.signature, lic.public_key):
+		return {"status": INVALID, "payload": None, "license": lic}
+	payload = json.loads(lic.signed_payload)
+	if payload.get("site_id") != lic.site_id or payload.get("installation_id") != lic.installation_id:
+		return {"status": INVALID, "payload": None, "license": lic}
+	if get_datetime(payload["expires_at"]) <= now_datetime():
+		return {"status": EXPIRED, "payload": payload, "license": lic}
+	return {"status": ACTIVE, "payload": payload, "license": lic}
+
+
+def get_status() -> str:
+	return ACTIVE if not is_enforced() else get_state()["status"]
+
+
+def is_active() -> bool:
+	return get_status() == ACTIVE
+
+
+def get_limit(code: str):
+	payload = get_state()["payload"]
+	for limit in (payload or {}).get("limits", []):
+		if limit["limit_code"] == code:
+			return limit["value"]
+	return None
+
+
+def get_quota() -> dict | None:
+	"""The licence in the shape quota.py has always read from site_config["quota"]; None when
+	there is no valid licence (callers then fall back to site_config)."""
+	state = get_state()
+	if state["status"] not in (ACTIVE, EXPIRED):
+		return None
+	payload = state["payload"]
+	return {
+		"users_limit": get_limit("USERS"),
+		"site_space_limit_gb": get_limit("STORAGE"),
+		"expiry_date": str(get_datetime(payload["expires_at"]).date()),
+	}

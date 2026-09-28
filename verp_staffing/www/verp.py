@@ -100,7 +100,19 @@ def get_boot():
 			# Fresh-site detection, same source as Desk's boot (frappe.is_setup_complete):
 			# false sends a System Manager to the setup wizard.
 			"setup_complete": bool(frappe.is_setup_complete()),
+			# Subscription gate (core/license): anything but "Active" sends the admin to /subscription.
+			"subscription_status": _subscription_status(),
 			# Lets the sample-data warning skip its server check once sample data is gone.
 			"is_sample_data_removed": _sample_data_removed(),
 		}
 	)
+
+
+def _subscription_status():
+	from verp_staffing.core.license.enforcement import get_status
+
+	try:
+		return get_status()
+	except Exception:
+		# Never let a licence-read problem take the whole shell down; the API guard still enforces.
+		return "Pending"

@@ -4,13 +4,21 @@ from datetime import datetime
 from verp_staffing.crm.api.helpers import send_notification
 
 
+def _quota():
+    """Limits + expiry: the signed site licence when there is one, else the legacy
+    site_config["quota"] (sites that predate the licence table)."""
+    from verp_staffing.core.license.enforcement import get_quota
+
+    return get_quota() or frappe.get_site_config().get("quota", {})
+
+
 # user limit validate
 def user_limit(doc=None, method=None):
     # The limit is for staff seats; customers signing in to the chat don't use one.
     if doc is not None and any(r.role == "Chat External" for r in doc.get("roles") or []):
         return
 
-    quota = frappe.get_site_config().get("quota", {})
+    quota = _quota()
     users_limit = quota.get("users_limit")
 
     # type check for users_limit
@@ -125,7 +133,7 @@ def on_file_after_delete(doc, method=None):
 
 def site_space_limit(doc=None, method=None):
     """before_insert — must be O(1), this runs on every upload."""
-    quota = frappe.get_site_config().get("quota", {})
+    quota = _quota()
     limit_gb = quota.get("site_space_limit_gb")
     if not isinstance(limit_gb, (int, float)):
         frappe.throw("Site space limit must be a number")
@@ -178,7 +186,7 @@ def nightly_reconcile():
 
 # site expiery check
 def site_expiry_check():
-    quota = frappe.get_site_config().get("quota", {})
+    quota = _quota()
     expiry_date = quota.get("expiry_date")
 
     if expiry_date:
@@ -206,7 +214,7 @@ def check_site_expiry():
     from frappe.utils import date_diff, nowdate
 
     # Load expiry date from site_config.json
-    quota = frappe.get_site_config().get("quota", {})
+    quota = _quota()
     expiry_date = quota.get("expiry_date")
     if not expiry_date:
         return

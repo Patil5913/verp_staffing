@@ -60,6 +60,8 @@ const PORTAL_ROUTES = [
   { path: '/portal/documents', name: 'PortalDocuments', component: () => import('@/pages/portal/PortalDocumentsPage.vue'), meta: { portal: true, title: 'Documents' } },
   // First-run setup for a fresh site (see the beforeEach guard: sent here while
   // the site's setup isn't complete). Blank layout, like the agreement page.
+  // Plan + add-on picker; the router sends everyone here until the site's subscription is Active.
+  { path: '/site-subscription', name: 'SiteSubscription', component: () => import('@/pages/setup/SubscriptionPage.vue'), meta: { standalone: true, title: 'Subscription' } },
   { path: '/setup-wizard', name: 'SetupWizard', component: () => import('@/pages/setup/SetupWizardPage.vue'), meta: { standalone: true, title: 'Set up' } },
   { path: '/sign-agreement', name: 'SignAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, standalone: true, title: 'Sign Agreement' } },
   { path: '/portal/agreements', name: 'PortalAgreements', component: () => import('@/pages/portal/PortalAgreementsPage.vue'), meta: { portal: true, title: 'Agreements' } },
@@ -388,6 +390,13 @@ router.beforeEach(async (to) => {
     const target = to.fullPath === '/' ? '/verp' : `/verp${to.fullPath}`
     return { name: 'Login', query: { 'redirect-to': target } }
   }
+
+  // No valid subscription (none bought yet, unpaid checkout, expired): nothing else opens.
+  // The server enforces this too (core/license/guard.py); this is the friendly half.
+  if (window.subscription_status && window.subscription_status !== 'Active') {
+    return to.path === '/site-subscription' ? true : { path: '/site-subscription' }
+  }
+  if (to.path === '/site-subscription') return { path: '/' }
 
   // Fresh site: Frappe (desk.js/router.js) sends the admin to its setup wizard
   // while boot.setup_complete is false; same rule here, for System Managers.

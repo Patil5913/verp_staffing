@@ -183,6 +183,7 @@ home_page = "verp"
 
 # before_install = "verp_staffing.install.before_install"
 after_install = [
+    "verp_staffing.core.license.install.after_install",
     "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
 ]
@@ -438,6 +439,8 @@ scheduler_events = {
         "verp_staffing.quota.utils.quota.nightly_reconcile",
     ],
     "cron": {
+        # Subscription dashboard sync, once a day at 12:00 (customers' off hours).
+        "0 12 * * *": ["verp_staffing.core.license.service.scheduled_sync"],
         "0/10 * * * *": ["verp_staffing.utils.mailbox.sync_extra_all"],
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
@@ -498,6 +501,7 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = [
+    "verp_staffing.core.license.guard.enforce_subscription",
     "verp_staffing.utils.portal_guard.restrict_portal_api",
     "verp_staffing.utils.desk_routes.redirect_desk_to_spa",
     "verp_staffing.utils.desk_routes.redirect_bare_spa_paths",
