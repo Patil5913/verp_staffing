@@ -259,6 +259,7 @@
 
 <script setup>
 import AppTextarea from '@/components/ui/AppTextarea.vue'
+import { siteNowIso } from '@/utils/common/siteTime'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import AppInput from '@/components/ui/AppInput.vue'
@@ -323,9 +324,7 @@ const EVENT_CATEGORIES = ['Event', 'Meeting', 'Call', 'Follow Up', 'Other']
 // dialogs default Date & Time to "now", the way CRM Task/CRM Event's own
 // before_insert() does server-side when the field is left blank.
 function nowForInput() {
-  const d = new Date()
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
-  return d.toISOString().slice(0, 16)
+  return siteNowIso().slice(0, 16).replace(' ', 'T')
 }
 
 const draft = ref('')

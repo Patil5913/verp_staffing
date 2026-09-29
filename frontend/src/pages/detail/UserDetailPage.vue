@@ -74,7 +74,12 @@
 						:doctype="doctype"
 						:detail="detail"
 						:fieldnames="GENERAL_FIELDS"
+						:field-overrides="{ time_zone: { fieldtype: 'Select', options: timeZoneOptions } }"
 					/>
+					<p class="-mt-4 text-p-xs text-app-text-muted">
+						Time Zone is the clock this user sees interview and other times on. It starts as the company time
+						zone (ERP Configuration &gt; Website Settings) and follows it when that changes, until you pick another.
+					</p>
 					<UserChangePassword :user="name" />
 				</div>
 			</div>
@@ -146,6 +151,10 @@ import { notify } from "@/utils/common/notify";
 
 const route = useRoute();
 const router = useRouter();
+
+// The zones offered by the Time Zone dropdown on the General tab.
+const timeZones = useResource({ url: "frappe.core.doctype.user.user.get_timezones", auto: true });
+const timeZoneOptions = computed(() => (timeZones.resource.data?.timezones || []).join("\n"));
 
 const doctype = computed(() => "User");
 const name = computed(() => route.params.name);

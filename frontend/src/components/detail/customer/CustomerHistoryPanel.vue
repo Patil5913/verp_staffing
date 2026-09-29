@@ -73,8 +73,8 @@
                   </td>
                   <td class="py-1.5 pr-4">{{ r.type_of_interview || '-' }}</td>
                   <td class="py-1.5 pr-4">{{ formatDate(r.date) || '-' }}</td>
-                  <td class="py-1.5 pr-4">{{ formatDate(r.date_of_interview) || '-' }}</td>
-                  <td class="py-1.5 pr-4">{{ r.from_time && r.to_time ? `${r.from_time} - ${r.to_time}` : '-' }}</td>
+                  <td class="py-1.5 pr-4">{{ formatDate(roundInZone(r).date) || '-' }}</td>
+                  <td class="py-1.5 pr-4" :title="roundInZone(r).converted ? `Entered ${r.from_time} ${r.edt_est}` : ''">{{ r.from_time && r.to_time ? `${roundInZone(r).from} - ${roundInZone(r).to} ${roundInZone(r).zone}`.trim() : '-' }}</td>
                   <td class="py-1.5 pr-4"><DocStatusBadge :status="r.status" /></td>
                   <td class="py-1.5 max-w-xs"><TruncatedText v-if="r.feedback" :text="r.feedback" :limit="20" /><template v-else>-</template></td>
                 </tr>
@@ -150,6 +150,7 @@
 // get_customer_history the customer portal uses.
 import { computed, ref, watch } from 'vue'
 import { LoadingIndicator } from 'frappe-ui'
+import { roundInZone } from '@/utils/common/siteTime'
 import AppButton from '@/components/ui/AppButton.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
@@ -217,8 +218,8 @@ function roundRows(r) {
   return [
     { label: 'Round', value: r.round },
     { label: 'Type', value: r.type_of_interview },
-    { label: 'Interview date', value: formatDate(r.date_of_interview) },
-    { label: 'Time', value: r.from_time && r.to_time ? `${r.from_time} – ${r.to_time}` : '' },
+    { label: 'Interview date', value: formatDate(roundInZone(r).date) },
+    { label: 'Time', value: r.from_time && r.to_time ? `${roundInZone(r).from} – ${roundInZone(r).to} ${roundInZone(r).zone}`.trim() : '' },
   ]
 }
 </script>

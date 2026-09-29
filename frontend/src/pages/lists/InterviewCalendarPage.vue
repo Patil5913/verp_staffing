@@ -214,7 +214,8 @@ const hhmm = (t) => {
   const [h = '', m = ''] = String(t ?? '').split(':')
   return h ? `${h.padStart(2, '0')}:${m.padStart(2, '0')}` : ''
 }
-const timeText = (e) => (e.allDay ? 'All day' : `${hhmm(e.from_time)} – ${hhmm(e.to_time)}${e.edt_est ? ` ${e.edt_est}` : ''}`)
+// The server has already moved each round from the Eastern time it was typed in to this user's zone.
+const timeText = (e) => (e.allDay ? 'All day' : `${hhmm(e.from_time)} – ${hhmm(e.to_time)} ${e.tz_label || e.edt_est || ''}`.trim() + (e.tz_label && e.entered && e.tz_label !== e.edt_est ? ` (entered ${e.entered})` : ''))
 
 const open = (e) => router.push(`/Interview/${encodeURIComponent(e.name)}`)
 const shift = (n) => (anchor.value = new Date(anchor.value.getFullYear(), anchor.value.getMonth() + n, 1))

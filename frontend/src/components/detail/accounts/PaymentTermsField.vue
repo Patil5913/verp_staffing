@@ -179,6 +179,7 @@
 // calc) and the old PaymentTermsPanel.vue's Mark as Paid dialog - both
 // consolidated here instead of split across two components.
 import { computed, reactive, ref, watch } from 'vue'
+import { siteTodayIso } from '@/utils/common/siteTime'
 import { Dialog, FeatherIcon, call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppInput from '@/components/ui/AppInput.vue'
@@ -282,7 +283,7 @@ function addDays(dateStr, days) {
   // back a day in a positive-offset timezone, e.g. 29-09-2026 + 1 landing back on 29-09-2026).
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => siteTodayIso()
 
 // Decided Amount can never push the scheduled total past the order's own
 // rounded_total - rejects the edit outright (row keeps its previous value)

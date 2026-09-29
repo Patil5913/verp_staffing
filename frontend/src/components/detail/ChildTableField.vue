@@ -90,6 +90,7 @@
 
 <script setup>
 import { computed, inject, provide, ref } from 'vue'
+import { siteNowIso, siteTodayIso } from '@/utils/common/siteTime'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import TruncatedText from '@/components/ui/TruncatedText.vue'
@@ -215,8 +216,8 @@ const dialogTitle = computed(() =>
 // Frappe's two dynamic default tokens - everything else is a literal
 // default value, applied as-is.
 function resolveDefault(raw) {
-  if (raw === 'Now') return new Date().toISOString().slice(0, 19).replace('T', ' ')
-  if (raw === 'Today') return new Date().toISOString().slice(0, 10)
+  if (raw === 'Now') return siteNowIso()
+  if (raw === 'Today') return siteTodayIso()
   return raw
 }
 

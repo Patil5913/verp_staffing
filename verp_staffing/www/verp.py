@@ -1,6 +1,7 @@
 from urllib.parse import quote
 
 import frappe
+from verp_staffing.utils.timezone import company_time_zone, time_zone_label, user_time_zone
 from frappe.www.login import sanitize_redirect
 
 no_cache = 1
@@ -85,6 +86,12 @@ def get_boot():
 			# The site's time zone (System Settings, edited from ERP Configuration) — what
 			# "today" means in the calendar, whatever the browser's own zone is.
 			"site_time_zone": frappe.utils.get_system_timezone(),
+			# The short name of that zone ("IST") for the navbar clock, which shows company time to everyone.
+			"site_time_zone_label": time_zone_label(company_time_zone()),
+			# The zone this user sees times in: their own Time Zone (the company's unless they chose
+			# another). Empty for portal customers, who see interview times as entered - Eastern.
+			"display_time_zone": "" if _is_chat_customer() else user_time_zone(user),
+			"display_time_zone_label": "" if _is_chat_customer() else time_zone_label(user_time_zone(user)),
 			# Fresh-site detection, same source as Desk's boot (frappe.is_setup_complete):
 			# false sends a System Manager to the setup wizard.
 			"setup_complete": bool(frappe.is_setup_complete()),

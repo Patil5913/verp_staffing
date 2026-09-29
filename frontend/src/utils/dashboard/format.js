@@ -2,6 +2,7 @@
 // from the server with a `format` tag (utils/dashboard.py); currency is the
 // board's company currency.
 import { moneyOptions } from '@/utils/common/defaultCurrency'
+import { siteTodayDate } from '@/utils/common/siteTime'
 
 export const PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#a78bfa', '#14b8a6', '#f472b6', '#f43f5e', '#94a3b8', '#38bdf8', '#a3e635']
 
@@ -52,8 +53,7 @@ export const PRESETS = [
 ]
 
 export function presetRange(preset, custom = {}) {
-  const t = new Date()
-  const today = new Date(t.getFullYear(), t.getMonth(), t.getDate())
+  const today = siteTodayDate() // today on this user's clock, so a range agrees with the server's "today"
   const y = today.getFullYear()
   const m = today.getMonth()
   const q = Math.floor(m / 3) * 3

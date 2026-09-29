@@ -47,6 +47,7 @@
 
 <script setup>
 import AppInput from '@/components/ui/AppInput.vue'
+import { siteTodayIso } from '@/utils/common/siteTime'
 // Marketing's "Job Application Count" grid, ported from marketing.js:
 // total = small + large (recomputed on every edit), a new row defaults to
 // today, and - unless you're a superior of the assignee - a row is only
@@ -70,7 +71,7 @@ const { isSuperior } = useIsSuperior(
   'Marketing',
 )
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => siteTodayIso()
 
 const summary = computed(() => {
   const total = rows.value.reduce((sum, r) => sum + Number(r.total_application || 0), 0)

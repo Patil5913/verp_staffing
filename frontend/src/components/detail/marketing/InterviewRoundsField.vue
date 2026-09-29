@@ -40,6 +40,7 @@
             </div>
           </template>
         </div>
+        <p v-if="inZone(row)" class="mt-3 text-p-xs text-app-text-muted">In your time zone: {{ inZone(row) }}</p>
       </div>
     </div>
     <p v-else class="rounded-lg border border-dashed border-app-border py-8 text-center text-p-sm text-app-text-muted">
@@ -85,6 +86,7 @@
 //    reason (interview_list.js's prompt_cancellation_details);
 //  * follow_up may only step up by exactly one.
 import { computed, reactive, ref, watch } from 'vue'
+import { roundInZone, siteTodayIso } from '@/utils/common/siteTime'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppInput from '@/components/ui/AppInput.vue'
@@ -114,6 +116,14 @@ const props = defineProps({
 
 const table = computed(() => props.detail.tables.value.find((t) => t.fieldname === 'interview_rounds_table'))
 // "round" is the position number, shown in the card header instead.
+// The round's time is typed in Eastern (EDT/EST); show what it is on this user's clock.
+function inZone(row) {
+  const z = roundInZone(row)
+  if (!z.converted) return ''
+  const day = z.movedDays > 0 ? ' (next day)' : z.movedDays < 0 ? ' (previous day)' : ''
+  return `${z.date} ${z.from}${z.to ? ` – ${z.to}` : ''} ${z.zone}${day}`
+}
+
 const columns = computed(() => (table.value?.columns || []).filter((c) => c.fieldname !== 'round'))
 const rows = computed(() => props.detail.values.interview_rounds_table || [])
 const editable = computed(() => !props.locked && props.detail.canWrite.value)
@@ -169,7 +179,7 @@ function addRound() {
   const idx = rows.value.length + 1
   commit([
     ...rows.value,
-    { round: String(idx), follow_up: 0, status: defaultStatus.resource.data || '', date: new Date().toISOString().slice(0, 10) },
+    { round: String(idx), follow_up: 0, status: defaultStatus.resource.data || '', date: siteTodayIso() },
   ])
 }
 const removeRound = (idx) => commit(rows.value.filter((_, i) => i !== idx))

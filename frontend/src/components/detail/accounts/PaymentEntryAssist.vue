@@ -29,6 +29,7 @@
 
 <script setup>
 import AppInput from '@/components/ui/AppInput.vue'
+import { siteTodayDate } from '@/utils/common/siteTime'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 // The client-side help the desk Payment Entry form gives while you fill it
 // in (payment_entry.js): choosing a party fills its receivable/payable
@@ -119,10 +120,10 @@ const filters = reactive({ from_posting_date: '', to_posting_date: '', outstandi
 
 function openDialog(invoices) {
   fetchInvoices.value = invoices
-  const today = new Date()
-  const back = new Date(today.getTime() - 30 * 86400000)
-  filters.from_posting_date = back.toISOString().slice(0, 10)
-  filters.to_posting_date = today.toISOString().slice(0, 10)
+  const today = siteTodayDate()
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  filters.from_posting_date = iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30))
+  filters.to_posting_date = iso(today)
   open.value = true
 }
 

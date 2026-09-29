@@ -1,5 +1,7 @@
 <template>
   <header class="flex min-w-0 flex-1 items-center gap-2 pl-2 pr-[max(0.75rem,env(safe-area-inset-right))] md:gap-4 md:px-4">
+    <NavbarClock />
+
     <div class="flex flex-1 justify-center">
       <button
         type="button"
@@ -27,6 +29,7 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import NavbarClock from '@/components/layout/NavbarClock.vue'
 import ChatBell from '@/components/layout/ChatBell.vue'
 import NotificationBell from '@/components/overlays/NotificationBell.vue'
 import CommandPalette from '@/components/overlays/CommandPalette.vue'

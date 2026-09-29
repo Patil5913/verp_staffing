@@ -292,6 +292,7 @@ override_doctype_class = {
 
 doc_events = {
     "Communication": {"after_insert": "verp_staffing.utils.mailbox.on_new_communication"},
+    "System Settings": {"on_update": "verp_staffing.utils.timezone.sync_users_to_company_time_zone"},
     "Resume": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },

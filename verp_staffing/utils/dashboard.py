@@ -5,9 +5,10 @@ from urllib.parse import quote
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, add_months, date_diff, flt, get_datetime, getdate, nowdate
+from frappe.utils import add_days, add_months, date_diff, flt, get_datetime, getdate
 
 from verp_staffing.utils.reports import _default_company
+from verp_staffing.utils.timezone import convert_round, round_day, user_time_zone, viewer_today
 
 # The data behind the dashboard page. One whitelisted call per tab returns a
 # ready-to-render board — KPI tiles, charts, tables and "needs attention"
@@ -156,7 +157,7 @@ class Period:
     ~4½ months, months beyond."""
 
     def __init__(self, from_date, to_date):
-        self.to = getdate(to_date or nowdate())
+        self.to = getdate(to_date) if to_date else viewer_today()
         self.frm = getdate(from_date) if from_date else add_days(self.to, -29)
         if self.frm > self.to:
             self.frm, self.to = self.to, self.frm
@@ -164,7 +165,7 @@ class Period:
         self.prev_to = add_days(self.frm, -1)
         self.prev_from = add_days(self.prev_to, -(self.days - 1))
         self.grain = "day" if self.days <= 31 else "week" if self.days <= 140 else "month"
-        self.today = getdate(nowdate())
+        self.today = viewer_today()
         self.buckets = self._buckets()
 
     def in_cur(self, d):
@@ -1075,9 +1076,10 @@ def _mkt_load(p):
         interviews = []
     ivs = {i.name: i for i in interviews}
     rounds = _children("Interview Round", "Interview", list(ivs), ["parent", "idx", "round", "date_of_interview", "type_of_interview", "status", "support", "cancelled_by", "from_time", "edt_est"])
+    # Rounds are typed in Eastern time; the board counts them on the viewer's day (their Time Zone).
     rounds = [r for r in rounds if r.date_of_interview]
     for r in rounds:
-        r.date = _d(r.date_of_interview)
+        r.date = round_day(r.date_of_interview, r.from_time, r.edt_est, user_time_zone())
 
     for i in interviews:
         i.opened = _d(i.creation)
@@ -1092,6 +1094,12 @@ def _mkt_load(p):
         "rounds": rounds,
         "employees": _employee_names(),
     }
+
+
+def _round_clock(r):
+    """A round's start time on the viewer's clock, with the zone - "07:30 IST"."""
+    local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.edt_est, user_time_zone())
+    return f"{_time(local['from_time'])} {local['tz_label']}".strip()
 
 
 def _mkt_apps_total(a):
@@ -1163,7 +1171,7 @@ def _mkt_calls(b, p, d):
         "upcoming_table",
         "Upcoming interviews",
         [{"key": "name", "label": "Candidate", "format": "link"}, {"key": "company", "label": "Company"}, {"key": "role", "label": "Role"}, {"key": "round", "label": "Round"}, {"key": "type", "label": "Type"}, {"key": "date", "label": "Date", "format": "date"}, {"key": "time", "label": "Time"}, {"key": "support", "label": "Support"}],
-        [{"name": ivs[r.parent].customer or r.parent, "company": ivs[r.parent].company, "role": ivs[r.parent].role, "round": r.round, "type": r.type_of_interview, "date": _sd(r.date), "time": f"{_time(r.from_time)} {r.edt_est or ''}".strip(), "support": "Yes" if r.support else "", "_href": _href("Interview", r.parent)} for r in upcoming[:10]],
+        [{"name": ivs[r.parent].customer or r.parent, "company": ivs[r.parent].company, "role": ivs[r.parent].role, "round": r.round, "type": r.type_of_interview, "date": _sd(r.date), "time": _round_clock(r), "support": "Yes" if r.support else "", "_href": _href("Interview", r.parent)} for r in upcoming[:10]],
         href=_href_in("Interview", (r.parent for r in upcoming)),
     )
 
@@ -1599,7 +1607,7 @@ def _tech_prep(b, p, dts):
     ivs = {i.name: i for i in _in_chunks("Interview", sorted({r.parent for r in rounds.values()}), ["name", "company", "role"])}
     for d in docs:
         rd = rounds.get(d.interview_round)
-        d["on"] = _d(rd.date_of_interview) if rd else None
+        d["on"] = round_day(rd.date_of_interview, rd.from_time, rd.edt_est, user_time_zone()) if rd else None
         d["off"] = bool(rd and rd.status in CALLED_OFF)
     jdc = [d for d in docs if d.service_dt == "JDC"]
     support = [d for d in docs if d.service_dt == "Interview Support"]
@@ -1629,13 +1637,16 @@ def _tech_prep(b, p, dts):
     # How many of the interviews actually held had a JDC prep (needs read access to Interview).
     try:
         interviews = {i.name: i for i in _get("Interview", ["name", "customer", "company", "role"])}
-        all_rounds = _children("Interview Round", "Interview", list(interviews), ["parent", "name", "date_of_interview", "status"], {"date_of_interview": _between(p.frm, add_days(p.today, 7))})
+        # a day either side: a round typed in Eastern time can land on the next day here
+        all_rounds = _children("Interview Round", "Interview", list(interviews), ["parent", "name", "date_of_interview", "from_time", "edt_est", "status"], {"date_of_interview": _between(add_days(p.frm, -1), add_days(p.today, 8))})
+        for r in all_rounds:
+            r["day"] = round_day(r.date_of_interview, r.from_time, r.edt_est, user_time_zone())
     except frappe.PermissionError:
         all_rounds = None
     if all_rounds is not None and jdc:
         prepared = {d.interview_round for d in jdc}
-        held = [r for r in all_rounds if _d(r.date_of_interview) <= p.today and r.status not in CALLED_OFF and p.in_cur(_d(r.date_of_interview))]
-        soon_bare = [r for r in all_rounds if p.today <= _d(r.date_of_interview) <= add_days(p.today, 7) and r.status not in CALLED_OFF and r.name not in prepared]
+        held = [r for r in all_rounds if r.day <= p.today and r.status not in CALLED_OFF and p.in_cur(r.day)]
+        soon_bare = [r for r in all_rounds if p.today <= r.day <= add_days(p.today, 7) and r.status not in CALLED_OFF and r.name not in prepared]
         b.kpi("jdc_coverage", "Interviews with a JDC", _pct(sum(1 for r in held if r.name in prepared), len(held)), "percent", icon="shield-check", hint=f"Of {len(held)} interview round(s) held", calc="Interview rounds held in the selected period that have a JDC document ÷ rounds held × 100.")
         b.alert("interviews_no_jdc", "Interviews in the next 7 days with no JDC", len(soon_bare), "warn", _href_in("Interview", (r.parent for r in soon_bare)))
 

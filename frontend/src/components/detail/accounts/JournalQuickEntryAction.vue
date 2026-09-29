@@ -20,6 +20,7 @@
 
 <script setup>
 import AppInput from '@/components/ui/AppInput.vue'
+import { siteTodayIso } from '@/utils/common/siteTime'
 // journal_entry.js's "Quick Entry": one amount moved from a credit account to a
 // debit account. Fills the entry's two rows (and date / remark / series) and
 // saves it straight away, so a simple transfer is one dialog rather than a
@@ -58,7 +59,7 @@ watch(open, (isOpen) => {
     amount: '',
     debit_account: '',
     credit_account: '',
-    posting_date: props.detail.values.posting_date || new Date().toISOString().slice(0, 10),
+    posting_date: props.detail.values.posting_date || siteTodayIso(),
     user_remark: props.detail.values.user_remark || '',
     naming_series: props.detail.values.naming_series || seriesOptions.value[0] || '',
   })
