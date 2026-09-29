@@ -65,31 +65,51 @@
         </div>
       </div>
 
-      <!-- Timeline: each interview as a row, its rounds as bars across the month -->
-      <div v-else class="overflow-x-auto rounded-xl border border-app-border bg-app-panel shadow-sm">
+      <!-- Timeline: each interview as a row, its rounds as bars across the month. This box is the
+           one scroller (both ways), so the date header and the Interview column stay put while
+           scrolling down through the rows or across the days. -->
+      <div v-else class="max-h-full overflow-auto rounded-xl border border-app-border bg-app-panel shadow-sm">
         <div class="min-w-max">
-          <div class="sticky top-0 z-10 flex border-b border-app-border bg-app-panel-2">
-            <div class="sticky left-0 z-10 w-64 shrink-0 border-r border-app-border bg-app-panel-2 px-3 py-1.5 text-p-xs font-medium uppercase tracking-wide text-app-text-muted">Interview</div>
-            <div v-for="day in monthDays" :key="day.iso" class="w-9 shrink-0 border-r border-app-border py-1 text-center text-p-xs" :class="day.iso === todayIso ? 'bg-app-primary-tint font-semibold text-app-primary' : 'text-app-text-muted'">{{ day.n }}</div>
+          <div class="sticky top-0 z-20 flex border-b border-app-border bg-app-panel-2 shadow-sm">
+            <div class="sticky left-0 z-30 flex w-64 shrink-0 items-end border-r border-app-border bg-app-panel-2 px-3 py-2 text-p-xs font-medium uppercase tracking-wide text-app-text-muted">Interview · {{ monthLabel }}</div>
+            <div
+              v-for="day in monthDays"
+              :key="day.iso"
+              class="shrink-0 border-r border-app-border py-1 text-center"
+              :style="{ width: `${CELL}px` }"
+              :class="day.iso === todayIso ? 'bg-app-primary-tint text-app-primary' : day.weekend ? 'bg-app-panel-2 text-app-text-muted/70' : 'text-app-text-muted'"
+            >
+              <p class="text-2xs uppercase leading-4">{{ day.weekday }}</p>
+              <p class="text-p-sm leading-5" :class="day.iso === todayIso ? 'font-semibold' : 'font-medium'">{{ day.n }}</p>
+            </div>
           </div>
-          <p v-if="!timelineRows.length" class="px-4 py-10 text-center text-p-sm text-app-text-muted">No interviews scheduled this month.</p>
-          <div v-for="row in timelineRows" :key="row.interview" class="flex border-b border-app-border last:border-b-0">
-            <button type="button" class="sticky left-0 z-[5] w-64 shrink-0 truncate border-r border-app-border bg-app-panel px-3 py-2 text-left text-p-sm text-app-text hover:text-app-primary" :title="row.label" @click="router.push(`/Interview/${encodeURIComponent(row.interview)}`)">
+          <p v-if="!timelineRows.length" class="sticky left-0 px-4 py-10 text-center text-p-sm text-app-text-muted">No interviews scheduled this month.</p>
+          <div v-for="row in timelineRows" :key="row.interview" class="group flex border-b border-app-border last:border-b-0">
+            <button type="button" class="sticky left-0 z-10 w-64 shrink-0 truncate border-r border-app-border bg-app-panel px-3 py-2 text-left text-p-sm text-app-text group-hover:bg-app-panel-2 hover:text-app-primary" :title="row.label" @click="router.push(`/Interview/${encodeURIComponent(row.interview)}`)">
               {{ row.label }}
               <span v-if="row.customer" class="block truncate text-p-xs text-app-text-muted">{{ row.customer }}</span>
             </button>
-            <div class="relative flex">
-              <div v-for="day in monthDays" :key="day.iso" class="h-12 w-9 shrink-0 border-r border-app-border" :class="day.iso === todayIso ? 'bg-app-primary-tint/50' : ''" />
+            <div class="relative flex group-hover:bg-app-panel-2/40">
+              <div
+                v-for="day in monthDays"
+                :key="day.iso"
+                class="h-14 shrink-0 border-r border-app-border"
+                :style="{ width: `${CELL}px` }"
+                :class="day.iso === todayIso ? 'bg-app-primary-tint/60' : day.weekend ? 'bg-app-panel-2/60' : ''"
+              />
               <button
                 v-for="ev in row.rounds"
                 :key="ev.key"
                 type="button"
-                class="absolute top-2 h-8 w-8 rounded-md border-l-2 text-center text-p-xs font-semibold leading-8 transition-opacity hover:opacity-80"
+                class="absolute top-2 flex h-10 flex-col items-center justify-center rounded-md border-l-2 text-p-xs font-semibold leading-4 transition-opacity hover:opacity-80"
                 :class="tone(ev.status).chip"
-                :style="{ left: `${(ev.dayIndex) * 36 + 2}px` }"
+                :style="{ left: `${ev.dayIndex * CELL + 2}px`, width: `${CELL - 4}px` }"
                 :title="`${ev.subject}\n${timeText(ev)}`"
                 @click="open(ev)"
-              >R{{ ev.round }}</button>
+              >
+                R{{ ev.round }}
+                <span v-if="!ev.allDay" class="text-2xs font-normal opacity-80">{{ hhmm(ev.from_time) }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -129,6 +149,7 @@ const MODES = [
 ]
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const LIMIT = 3
+const CELL = 40 // px width of one day in the timeline
 
 const mode = ref('month')
 const monthStartOfSiteToday = () => {
@@ -146,7 +167,10 @@ const monthDays = computed(() => {
   const y = anchor.value.getFullYear()
   const m = anchor.value.getMonth()
   const count = new Date(y, m + 1, 0).getDate()
-  return Array.from({ length: count }, (_, i) => ({ n: i + 1, iso: iso(new Date(y, m, i + 1)), inMonth: true }))
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(y, m, i + 1)
+    return { n: i + 1, iso: iso(d), inMonth: true, weekday: d.toLocaleDateString(undefined, { weekday: 'short' }), weekend: [0, 6].includes(d.getDay()) }
+  })
 })
 
 // Monday-first grid covering the month, padded with the neighbouring days.
