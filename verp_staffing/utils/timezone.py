@@ -22,7 +22,19 @@ EASTERN_OFFSET_HOURS = {"EDT": -4, "EST": -5}
 
 
 def company_time_zone():
-    return get_system_timezone()
+    return _valid(get_system_timezone()) or "UTC"
+
+
+def _valid(tz):
+    """`tz` if pytz knows it, else None - a free-typed or stale Time Zone must never break a page."""
+    try:
+        return tz if tz and pytz.timezone(tz) else None
+    except pytz.UnknownTimeZoneError:
+        return None
+
+
+def _zone(tz=None):
+    return pytz.timezone(_valid(tz) or user_time_zone())
 
 
 def user_time_zone(user=None):
@@ -30,12 +42,12 @@ def user_time_zone(user=None):
     user = user or frappe.session.user
     if not user or user == "Guest":
         return company_time_zone()
-    return frappe.get_cached_value("User", user, "time_zone") or company_time_zone()
+    return _valid(frappe.get_cached_value("User", user, "time_zone")) or company_time_zone()
 
 
 def time_zone_label(tz=None):
     """The zone's short name as of now - "IST", "EDT"."""
-    zone = pytz.timezone(tz or user_time_zone())
+    zone = _zone(tz)
     return datetime.now(zone).tzname() or zone.zone
 
 
@@ -68,7 +80,7 @@ def convert_round(day, from_time, to_time, label, tz=None):
     if day is None or start is None or offset is None:
         return as_typed
 
-    zone = pytz.timezone(tz or user_time_zone())
+    zone = _zone(tz)
     origin = datetime.combine(day, time.min)
 
     def to_zone(seconds):
@@ -99,28 +111,48 @@ def get_clock():
     (or the server's own): the current wall time in the user's Time Zone, that zone, its short name
     ("EDT"), and the company zone for comparison."""
     zone = user_time_zone()
-    try:
-        now = datetime.now(pytz.timezone(zone))
-    except pytz.UnknownTimeZoneError:
-        zone = company_time_zone()
-        now = datetime.now(pytz.timezone(zone))
+    now = datetime.now(pytz.timezone(zone))
     return {"zone": zone, "company_zone": company_time_zone(), "label": now.tzname() or zone, "wall": now.strftime("%Y-%m-%dT%H:%M:%S")}
 
 
 def viewer_today():
     """Today's date on the current user's clock - what "today" means on their dashboards."""
-    return datetime.now(pytz.timezone(user_time_zone())).date()
+    return datetime.now(_zone()).date()
 
 
 def sync_users_to_company_time_zone(doc, method=None):
     """System Settings on_update: when the company time zone changes, users who were following it
-    (same zone as before, or none) move to the new one. A user who picked their own zone keeps it."""
-    before = doc.get_doc_before_save()
-    old, new = (before.time_zone if before else None), doc.time_zone
-    if not new or old == new:
-        return
-    users = frappe.db.sql_list("select name from `tabUser` where ifnull(time_zone, '') in (%s, '')", (old or "",))
-    for user in users:
-        frappe.db.set_value("User", user, "time_zone", new, update_modified=False)
-        frappe.defaults.set_default("time_zone", new, user)
-        frappe.clear_cache(user=user)
+    (same zone as before), and users with no valid zone at all, move to the new one. A user who
+    picked their own zone keeps it. Never blocks saving System Settings: a failure is logged."""
+    try:
+        before = doc.get_doc_before_save()
+        old, new = (before.time_zone if before else None), doc.time_zone
+        if not _valid(new) or old == new:
+            return
+        move_users_to(new, only_following=old)
+    except Exception:
+        frappe.log_error(title="Company time zone: could not update users", message=frappe.get_traceback())
+
+
+def move_users_to(new, only_following=None):
+    """Set users' Time Zone to `new`: those on `only_following`, plus any with an empty or unknown zone.
+    With only_following=None every user is moved (see apply_company_time_zone_to_all_users)."""
+    rows = frappe.db.sql("select name, time_zone from `tabUser` where name not in ('Guest')", as_dict=True)
+    moved = 0
+    for r in rows:
+        if only_following is not None and _valid(r.time_zone) and r.time_zone != only_following:
+            continue
+        if r.time_zone == new:
+            continue
+        frappe.db.set_value("User", r.name, "time_zone", new, update_modified=False)
+        frappe.defaults.set_default("time_zone", new, r.name)
+        frappe.clear_cache(user=r.name)
+        moved += 1
+    return moved
+
+
+@frappe.whitelist()
+def apply_company_time_zone_to_all_users():
+    """System Manager: put every user on the company time zone, discarding personal choices."""
+    frappe.only_for("System Manager")
+    return {"time_zone": company_time_zone(), "users_updated": move_users_to(company_time_zone())}
