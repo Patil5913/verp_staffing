@@ -794,7 +794,7 @@ export const salesOrderConfig = {
       key: 'details',
       label: 'Details',
       sections: [
-        fields(['customer', 'posting_date', 'conversion_rate'], 'Order'),
+        fields(['customer', 'posting_date'], 'Order'),
         auto('items', { hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange, rowLinkQueries: uniqueItemQuery }),
         grid('taxes', TAXES_GRID_COLUMNS, {
           readOnlyColumns: taxesReadOnlyColumns,

@@ -21,7 +21,9 @@ const companyInfo = (company) =>
     fieldname: ['default_currency', 'default_discount_account', 'default_income_account', 'default_expense_account'],
   }).catch(() => ({})))
 
-export function useInvoiceDynamics(detail, { expenseSide = false } = {}) {
+// followCompanyCurrency: the form has no Currency field (Sales Order), so a new doc always takes the
+// company's currency instead of the system-wide default, and Exchange Rate never comes into play.
+export function useInvoiceDynamics(detail, { expenseSide = false, followCompanyCurrency = false } = {}) {
   const company = () => detail.values.company || detail.hidden.company
 
   watch(
@@ -34,7 +36,7 @@ export function useInvoiceDynamics(detail, { expenseSide = false } = {}) {
       if (!detail.isNew.value) return
       if (info.default_currency) {
         detail.values.company_currency = info.default_currency
-        if (!detail.values.currency) detail.values.currency = info.default_currency
+        if (followCompanyCurrency || !detail.values.currency) detail.values.currency = info.default_currency
       }
       // Company switched while filling in the doc: the accounts picked for the
       // old company no longer apply.

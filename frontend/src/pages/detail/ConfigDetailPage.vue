@@ -304,7 +304,7 @@ if (props.config.companyDefaults) useCompanyDefaults(detail, props.config.compan
 // A config may register its own reactive form logic (Company: abbr, chart options).
 props.config.setup?.(detail)
 
-if (props.config.autoCalculate) useInvoiceDynamics(detail, { expenseSide: /^Purchase/.test(props.config.doctype) })
+if (props.config.autoCalculate) useInvoiceDynamics(detail, { expenseSide: /^Purchase/.test(props.config.doctype), followCompanyCurrency: props.config.doctype === 'Sales Order' })
 
 const locked = computed(() => Boolean(props.config.locked?.(detail)) || detail.docstatus.value !== 0)
 const readOnlyFields = computed(() => props.config.readOnlyFields?.(detail) || [])
