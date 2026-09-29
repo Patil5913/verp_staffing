@@ -93,6 +93,20 @@ def round_day(day, from_time, label, tz=None):
     return convert_round(day, from_time, None, label, tz or company_time_zone())["date"]
 
 
+@frappe.whitelist()
+def get_clock():
+    """What the navbar clock shows, worked out here so it never depends on the browser's zone or clock
+    (or the server's own): the current wall time in the user's Time Zone, that zone, its short name
+    ("EDT"), and the company zone for comparison."""
+    zone = user_time_zone()
+    try:
+        now = datetime.now(pytz.timezone(zone))
+    except pytz.UnknownTimeZoneError:
+        zone = company_time_zone()
+        now = datetime.now(pytz.timezone(zone))
+    return {"zone": zone, "company_zone": company_time_zone(), "label": now.tzname() or zone, "wall": now.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
 def viewer_today():
     """Today's date on the current user's clock - what "today" means on their dashboards."""
     return datetime.now(pytz.timezone(user_time_zone())).date()
