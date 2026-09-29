@@ -9,6 +9,8 @@ list of doctypes so a non-technical admin isn't shown a raw doctype picker.
 import frappe
 from frappe import _
 from frappe.core.doctype.data_import.data_import import BLOCKED_DOCTYPES
+from frappe.core.doctype.data_import.exporter import Exporter
+from frappe.model import table_fields as table_fieldtypes
 from frappe.utils import cint
 
 # Doctypes this app suggests up front, with the friendly copy a non-technical
@@ -147,6 +149,33 @@ def get_data_import_wizard_status(data_import):
 		"failed": failed,
 		"failures": failures,
 	}
+
+
+@frappe.whitelist()
+def download_template(doctype, export_records="blank_template", file_type="CSV"):
+	"""Wraps core's download_template: that one requires an explicit export_fields
+	dict (Desk's export dialog always supplies one via its field checkboxes) - a
+	non-technical wizard has no such picker, so build "every field" ourselves and
+	let Exporter's own filtering drop what can't actually be exported."""
+	frappe.has_permission(doctype, "read", throw=True)
+	if not _can_import(doctype):
+		frappe.throw(_("You cannot import {0}.").format(doctype), frappe.PermissionError)
+
+	meta = frappe.get_meta(doctype)
+	export_fields = {doctype: ["name", *[df.fieldname for df in meta.fields]]}
+	for df in meta.fields:
+		if df.fieldtype in table_fieldtypes:
+			child_meta = frappe.get_meta(df.options)
+			export_fields[df.fieldname] = [cdf.fieldname for cdf in child_meta.fields]
+
+	e = Exporter(
+		doctype,
+		export_fields=export_fields,
+		export_data=export_records != "blank_template",
+		file_type=file_type,
+		export_page_length=5 if export_records == "5_records" else None,
+	)
+	e.build_response()
 
 
 @frappe.whitelist()

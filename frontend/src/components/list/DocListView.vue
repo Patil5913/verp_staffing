@@ -100,7 +100,6 @@
           {{ action.label }} ({{ selected.size }})
         </AppButton>
         <AppButton
-          v-if="isAdmin"
           variant="surface"
           icon="settings"
           tooltip="Customize columns"
@@ -283,7 +282,6 @@
     </div>
 
     <CustomizeColumnsDialog
-      v-if="isAdmin"
       v-model="showCustomizeColumns"
       :doctype="doctype"
       :fields="docfields"
@@ -510,7 +508,6 @@ const docfields = computed(() => meta.resource.data?.fields || [])
 const listFields = computed(() => meta.resource.data?.list_fields || [])
 const fieldMap = computed(() => Object.fromEntries(docfields.value.map((f) => [f.fieldname, f])))
 
-const isAdmin = computed(() => Boolean(meta.resource.data?.is_admin))
 const columnsCustomized = computed(() => Boolean(meta.resource.data?.columns_customized))
 const showCustomizeColumns = ref(false)
 

@@ -88,6 +88,16 @@ VIRTUAL_LIST_FIELDS = {
     "Employee": [("department", "Department"), ("designation", "Designation")],
 }
 
+# Per-doctype fieldnames to drop from the Customize Columns picker entirely
+# (on top of the generic DISPLAYABLE_FIELDTYPES/hidden filtering above) —
+# fields that are technically list-viewable but not useful/relevant enough
+# to offer as a column for that particular doctype. To hide more fields for
+# a doctype, just add its fieldnames to (or add a new key with) this dict;
+# nothing else needs to change.
+HIDDEN_LIST_COLUMN_FIELDS = {
+    "Opportunity": {"source", "currency", "probability_", "referral_customer"},
+}
+
 
 def _check_read(doctype):
     if not frappe.has_permission(doctype, "read"):
@@ -119,11 +129,12 @@ def _get_custom_column_order(doctype):
 
 
 def _displayable_fieldnames(meta):
-    return {
+    hidden_for_doctype = HIDDEN_LIST_COLUMN_FIELDS.get(meta.name, set())
+    return ({
         df.fieldname
         for df in meta.fields
-        if df.fieldtype in DISPLAYABLE_FIELDTYPES and not df.hidden
-    } | {LAST_UPDATED_FIELD["fieldname"], "name", "owner"}
+        if df.fieldtype in DISPLAYABLE_FIELDTYPES and not df.hidden and df.fieldname not in hidden_for_doctype
+    } | {LAST_UPDATED_FIELD["fieldname"], "name", "owner"}) - hidden_for_doctype
 
 
 @frappe.whitelist()
@@ -138,10 +149,13 @@ def get_list_view_meta(doctype):
     _check_read(doctype)
 
     meta = frappe.get_meta(doctype)
+    hidden_for_doctype = HIDDEN_LIST_COLUMN_FIELDS.get(doctype, set())
 
     fields = []
     for df in meta.fields:
         if df.fieldtype not in DISPLAYABLE_FIELDTYPES:
+            continue
+        if df.fieldname in hidden_for_doctype:
             continue
         # in_list_view=1 shows in the list regardless of `hidden` — that's
         # an explicit opt-in to the list view; `hidden` only means "don't
@@ -268,7 +282,10 @@ def get_list_view_meta(doctype):
         # set (vs. the doctype's own in_list_view default) — drives the
         # "Reset to default" affordance in the Customize Columns dialog.
         "columns_customized": bool(custom_list_fields),
-        "is_admin": frappe.session.user == "Administrator",
+        # Column Adjustment is open to every user, not just Administrator —
+        # kept as a flag (rather than deleting the check) in case it needs to
+        # be scoped back to a role later.
+        "can_customize_columns": True,
         "perms": {
             "read": True,
             "write": bool(frappe.has_permission(doctype, "write")),
@@ -280,19 +297,15 @@ def get_list_view_meta(doctype):
 
 @frappe.whitelist()
 def set_list_view_columns(doctype, fields):
-    """Administrator-only: sets (or clears) doctype's list-view column order.
+    """Sets (or clears) doctype's list-view column order.
 
-    This is a single setting shared by every role — the whole point is that
-    the Administrator picks the columns once and everyone sees the same
-    ones, in the same order. Pass an empty `fields` list to reset the
-    doctype back to its own in_list_view defaults.
+    This is a single setting shared by every role — whoever picks the
+    columns, everyone sees the same ones, in the same order. Open to any
+    user who can read the doctype's list (same check as viewing it at all).
+    Pass an empty `fields` list to reset the doctype back to its own
+    in_list_view defaults.
     """
     _check_read(doctype)
-    if frappe.session.user != "Administrator":
-        frappe.throw(
-            _("Only the Administrator can customize list view columns."),
-            frappe.PermissionError,
-        )
 
     fields = frappe.parse_json(fields) if isinstance(fields, str) else (fields or [])
 

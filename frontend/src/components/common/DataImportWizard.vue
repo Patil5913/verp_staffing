@@ -242,7 +242,7 @@ function chooseDoctype(doctype) {
 
 function downloadTemplate() {
   window.open(
-    `/api/method/frappe.core.doctype.data_import.data_import.download_template?doctype=${encodeURIComponent(form.doctype)}&export_records=blank_template&file_type=CSV`,
+    `/api/method/verp_staffing.setup.data_import_api.download_template?doctype=${encodeURIComponent(form.doctype)}&export_records=blank_template&file_type=CSV`,
     '_blank'
   )
 }
