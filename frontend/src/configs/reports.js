@@ -5,7 +5,7 @@
 //   layout        'table' (default) | 'tree' (indented statement rows)
 //   hidden        column fieldnames that carry data but aren't shown
 //   rowClass(row) 'danger' | 'success' | 'muted' | 'strong' | 'total' - row tint
-//   chart         { mode: 'bars' | 'funnel' | 'axis', colorBy?(row), horizontal? }
+//   chart         { mode: 'bars' | 'funnel' | 'axis', colorBy?(row), horizontal?, currency? (format axis values as money) }
 //   linkRow(row)  a path a whole row opens (GL rows open their voucher)
 //   empty         a hint shown when the report returns nothing
 //   searchable    filter rows by text (flat tables)
@@ -15,12 +15,13 @@ const financial = (extra = {}) => ({
   layout: 'tree',
   hidden: ['currency', 'root_type', 'parent_account'],
   currencyFromFilter: 'currency',
-  chart: { mode: 'axis' },
+  chart: { mode: 'axis', currency: true },
   ...extra,
 })
 
 export const REPORT_CONFIGS = {
   'General Ledger': {
+    totals: false,
     hidden: ['currency', 'company_currency', 'account_currency', 'is_opening_row', 'is_closing_row', 'is_total_row', 'voucher_type', 'voucher_no'],
     rowClass: (row) => (row.is_opening_row || row.is_closing_row ? 'strong' : row.is_total_row ? 'total' : ''),
     searchable: true,

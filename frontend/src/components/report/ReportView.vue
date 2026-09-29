@@ -13,7 +13,7 @@
       </template>
     </SubNavbar>
 
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 md:px-6 py-4">
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 md:px-6 [&>*]:shrink-0">
       <StateBanner v-if="meta.hasError" icon="alert-triangle" title="Couldn't open this report" :description="meta.errorMessage" />
 
       <template v-else-if="ready">
@@ -26,14 +26,16 @@
           <div v-if="message" class="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-p-sm text-sky-800" v-html="message" />
 
           <div v-if="tiles.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <div v-for="t in tiles" :key="t.label" class="rounded-xl border border-app-border bg-app-panel px-4 py-3 shadow-sm">
+            <div v-for="t in tiles" :key="t.label" class="relative overflow-hidden rounded-xl border border-app-border bg-app-panel px-4 py-3.5 shadow-sm">
+              <span class="absolute inset-y-0 left-0 w-1" :class="t.accent" />
               <p class="text-p-xs font-medium uppercase tracking-wide text-app-text-muted">{{ t.label }}</p>
-              <p class="mt-0.5 truncate text-lg font-semibold tabular-nums" :class="t.tone">{{ t.text }}</p>
+              <p class="mt-1 truncate text-2xl font-semibold tabular-nums" :class="t.tone" :title="t.text">{{ t.text }}</p>
             </div>
           </div>
 
-          <ReportBarChart v-if="barChart" v-bind="barChart" />
-          <div v-else-if="axisConfig" class="rounded-xl border border-app-border bg-app-panel p-4 shadow-sm"><AxisChart :config="axisConfig" /></div>
+          <ReportChart v-if="toneChart" v-bind="toneChart" />
+          <ReportBarChart v-else-if="barChart" v-bind="barChart" />
+          <ReportChart v-else-if="axisChart" v-bind="axisChart" />
 
           <StateBanner
             v-if="!dataRows.length"
@@ -54,11 +56,12 @@
 // presentation config (reportConfigs.js). Financial statements, ledgers,
 // funnels and target tracking all go through here; only the config differs.
 import { computed } from 'vue'
-import { AxisChart, LoadingIndicator } from 'frappe-ui'
+import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ReportBarChart from '@/components/report/ReportBarChart.vue'
+import ReportChart from '@/components/report/ReportChart.vue'
 import ReportFilterBar from '@/components/report/ReportFilterBar.vue'
 import ReportTable from '@/components/report/ReportTable.vue'
 import { REPORT_CONFIGS } from '@/configs/reports'
@@ -87,11 +90,13 @@ const message = computed(() => {
 })
 
 const TONES = { green: 'text-green-600', red: 'text-red-600', orange: 'text-orange-600', blue: 'text-app-text' }
+const ACCENTS = { green: 'bg-green-500', red: 'bg-red-500', orange: 'bg-amber-500', blue: 'bg-app-primary' }
 const tiles = computed(() =>
   (result.value?.report_summary || []).map((s) => ({
     label: s.label,
     text: s.datatype === 'Currency' ? formatCurrency(s.value, s.currency || currency.value) : typeof s.value === 'number' ? s.value.toLocaleString() : String(s.value ?? ''),
     tone: TONES[String(s.indicator || '').toLowerCase()] || 'text-app-text',
+    accent: ACCENTS[String(s.indicator || '').toLowerCase()] || 'bg-app-primary',
   })),
 )
 
@@ -117,21 +122,32 @@ const barChart = computed(() => {
   }
 })
 
-const axisConfig = computed(() => {
+// Bars a report colours by a rule (target met / below target) read best as
+// vertical columns, each in its rule's colour, rather than a share-of-total.
+const TONE_COLORS = { danger: '#ef4444', success: '#10b981', warning: '#f59e0b' }
+const toneChart = computed(() => {
+  const b = barChart.value
+  if (!b || b.ratio || !b.tones.some(Boolean)) return null
+  return {
+    title: b.title,
+    labels: b.labels,
+    datasets: [{ name: chart.value.data.datasets[0].name || b.title, values: b.values }],
+    pointColors: b.tones.map((t) => TONE_COLORS[t] || ''),
+    legend: (b.legend || []).map(([tone, label]) => [TONE_COLORS[tone], label]),
+    type: 'bar',
+  }
+})
+
+const axisChart = computed(() => {
   const c = chart.value
   if (barChart.value || !c?.data?.labels?.length || !c.data.datasets?.length) return null
-  const type = ['bar', 'line', 'area'].includes(c.type) ? c.type : 'bar'
-  const data = c.data.labels.map((label, i) => {
-    const row = { category: label }
-    for (const ds of c.data.datasets) row[ds.name] = ds.values?.[i]
-    return row
-  })
   return {
-    data,
-    title: c.title || '',
-    xAxis: { key: 'category', type: 'category' },
-    yAxis: {},
-    series: c.data.datasets.map((ds, i) => ({ name: ds.name, type, ...(c.colors?.[i] ? { color: c.colors[i] } : {}) })),
+    title: c.title || props.reportName,
+    labels: c.data.labels,
+    datasets: c.data.datasets,
+    colors: c.colors || [],
+    type: ['bar', 'line', 'area'].includes(c.type) ? c.type : 'bar',
+    currency: config.value.chart?.currency ? currency.value : '',
   }
 })
 
