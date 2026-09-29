@@ -77,6 +77,12 @@ const routes = [
     meta: { public: true },
   },
   {
+    path: '/update-password',
+    name: 'UpdatePassword',
+    component: () => import('@/pages/auth/UpdatePassword.vue'),
+    meta: { public: true },
+  },
+  {
     // The home page is the dashboard's Overview; the other tabs live under
     // /dashboard/:section (accounts, crm, marketing, operations).
     path: '/',

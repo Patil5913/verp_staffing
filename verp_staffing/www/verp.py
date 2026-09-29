@@ -7,6 +7,7 @@ from frappe.www.login import sanitize_redirect
 no_cache = 1
 
 LOGIN_PATH = "/verp/login"
+PUBLIC_PATHS = (LOGIN_PATH, "/verp/update-password")
 
 
 def get_context(context):
@@ -18,7 +19,7 @@ def get_context(context):
 	# that session. We only branch on it here — nothing here validates
 	# credentials or manages sessions itself.
 	if frappe.session.user == "Guest":
-		if not _is_login_path():
+		if not _is_public_path():
 			frappe.local.flags.redirect_location = _login_url_with_redirect()
 			raise frappe.Redirect
 	elif _is_login_path():
@@ -41,6 +42,10 @@ def _is_chat_customer() -> bool:
 
 def _is_login_path() -> bool:
 	return frappe.local.request.path.rstrip("/") == LOGIN_PATH
+
+
+def _is_public_path() -> bool:
+	return frappe.local.request.path.rstrip("/") in PUBLIC_PATHS
 
 
 def _login_url_with_redirect() -> str:
