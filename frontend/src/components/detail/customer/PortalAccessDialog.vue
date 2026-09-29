@@ -78,7 +78,6 @@ const form = reactive({ subject: '', message: '' })
 
 const blocked = computed(() => {
   const d = draft.value
-  if (!d.chat_installed) return 'The Verp Chat app is not installed on this site.'
   if (d.ended) return "This customer's service has ended, so access can't be issued."
   if (!d.to) return "Add an email address to this customer's Lead Details first."
   return ''
@@ -96,7 +95,7 @@ watch(open, async (isOpen) => {
     form.subject = draft.value.subject
     form.message = draft.value.message
     // No email on the customer's Lead Details: collect one, then come back here.
-    if (!draft.value.to && draft.value.chat_installed && !draft.value.ended) {
+    if (!draft.value.to && !draft.value.ended) {
       open.value = false
       showMissing.value = true
     }

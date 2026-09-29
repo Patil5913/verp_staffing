@@ -342,10 +342,6 @@ function open_portal_access_dialog(frm) {
 		callback(r) {
 			const draft = r.message;
 			if (!draft) return;
-			if (!draft.chat_installed) {
-				frappe.msgprint("The Vrugle Chat app is not installed on this site.");
-				return;
-			}
 			if (draft.ended) {
 				frappe.msgprint("This customer's service has ended, so access cannot be issued.");
 				return;

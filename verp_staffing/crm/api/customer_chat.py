@@ -13,7 +13,8 @@ switched back on if the status moves away again. Independently of that, the
 `chat_external_access` hook below makes vruglechat refuse a customer whose
 service has ended even if someone re-enables the user by hand.
 
-vruglechat is required for this; nothing here does anything without it.
+vruglechat is optional. Portal access works without it (the "Chat External" role is created here if
+the chat app hasn't); the chat itself only appears when vruglechat is installed.
 """
 
 import secrets
@@ -45,6 +46,15 @@ def chat_installed() -> bool:
 def _is_ended(row) -> bool:
     """No access: the service ended (automatically) or staff revoked it."""
     return row.chat_access in ("Ended", "Revoked") or row.overall_status in ENDED_STATUSES
+
+
+def _ensure_portal_role() -> None:
+    """The portal role normally comes from vruglechat; without it, create it so portal access still works."""
+    if frappe.db.exists("Role", CHAT_ROLE):
+        return
+    role = frappe.get_doc({"doctype": "Role", "role_name": CHAT_ROLE, "desk_access": 0})
+    role.flags.ignore_permissions = True
+    role.insert()
 
 
 def _customer_email(customer: str) -> str | None:
@@ -107,8 +117,7 @@ def send_portal_access(customer: str, subject: str | None = None, message: str |
     """Create (or reuse) the customer's website user, give them a fresh password and mail the details."""
     frappe.get_doc("Customer", customer).check_permission("write")
 
-    if not chat_installed():
-        frappe.throw(_("The Vrugle Chat app is not installed on this site."))
+    _ensure_portal_role()
 
     row = frappe.db.get_value(
         "Customer", customer, ["name1", "chat_access", "overall_status"], as_dict=True
