@@ -36,9 +36,9 @@
               v-for="role in section.roles"
               :key="role"
               class="flex items-center gap-2 rounded-lg border border-app-border bg-app-panel px-3 py-2 transition-colors"
-              :class="canWrite ? 'cursor-pointer hover:border-app-primary/40' : 'opacity-70'"
+              :class="canToggle(role) ? 'cursor-pointer hover:border-app-primary/40' : 'opacity-70'"
             >
-              <AppCheckbox :model-value="checked.has(role)" :disabled="!canWrite" @update:model-value="toggle(role)" />
+              <AppCheckbox :model-value="checked.has(role)" :disabled="!canToggle(role)" @update:model-value="toggle(role)" />
               <span class="truncate text-p-sm text-app-text">{{ role }}</span>
             </label>
           </div>
@@ -63,7 +63,10 @@ import { useUserRoles } from '@/composables/detail/useUserRoles'
 const props = defineProps({
   user: { type: String, required: true },
   canWrite: { type: Boolean, default: false },
+  // Roles the signed-in user may hand out; any other role is shown but locked.
+  assignable: { type: Array, default: () => [] },
 })
+const canToggle = (role) => props.canWrite && props.assignable.includes(role)
 
 // Same tinted, colour-cycled blocks as the ERP Configuration field selector.
 const SECTION_RGB = ['37, 99, 235', '5, 150, 105', '217, 119, 6', '124, 58, 237', '225, 29, 72', '8, 145, 178']

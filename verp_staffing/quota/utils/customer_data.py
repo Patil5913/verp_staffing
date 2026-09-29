@@ -41,6 +41,10 @@ def get_data_by_customer(customer, fields):
     if not customer or not fields:
         return []
 
+    from verp_staffing.crm.api.helpers import require_customer_access
+
+    require_customer_access(customer)
+
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
 

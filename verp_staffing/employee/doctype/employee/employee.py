@@ -19,9 +19,12 @@ class Employee(Document):
 
     def clear_employee_cache(self):
         cache = frappe.cache()
-        cache.delete_key(f"lead_user::{self.user}")
-        cache.delete_key(f"opportunity_user::{self.user}")
-        cache.delete_key(f"employee_from_user::{self.user}")
+        # a user this Employee used to be linked to must lose the mapping too, not only the new one
+        before = self.get_doc_before_save()
+        for user in {self.user, before.user if before else None} - {None, ""}:
+            cache.delete_key(f"lead_user::{user}")
+            cache.delete_key(f"opportunity_user::{user}")
+            cache.delete_key(f"employee_from_user::{user}")
         cache.delete_key(f"user_departments::{self.name}")
         cache.delete_key(f"roles:{self.name}")
 

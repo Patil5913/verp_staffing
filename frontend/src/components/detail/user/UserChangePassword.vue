@@ -1,9 +1,10 @@
 <template>
   <div class="rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
     <h2 class="text-p-lg font-medium text-app-text">Change Password</h2>
-    <p class="mb-4 text-p-sm text-app-text-muted">Set a new password for this user.</p>
+    <p class="mb-4 text-p-sm text-app-text-muted">{{ isSelf ? 'Enter your current password to set a new one.' : 'Set a new password for this user.' }}</p>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <AppInput v-if="isSelf" class="sm:col-span-2" type="password" label="Current Password" v-model="oldPassword" autocomplete="current-password" />
       <AppInput type="password" label="New Password" v-model="newPassword" />
       <AppInput type="password" label="Confirm Password" v-model="confirmPassword" />
     </div>
@@ -24,8 +25,10 @@ import { notify } from '@/utils/common/notify'
 
 const props = defineProps({
   user: { type: String, required: true },
+  isSelf: { type: Boolean, default: false },
 })
 
+const oldPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 
@@ -33,7 +36,7 @@ const mismatch = computed(
   () => Boolean(newPassword.value || confirmPassword.value) && newPassword.value !== confirmPassword.value,
 )
 
-const canSubmit = computed(() => newPassword.value.length > 0 && !mismatch.value)
+const canSubmit = computed(() => newPassword.value.length > 0 && !mismatch.value && (!props.isSelf || oldPassword.value.length > 0))
 
 const changePassword = useResource({
   url: 'verp_staffing.utils.user_view.set_new_password',
@@ -42,9 +45,10 @@ const saving = computed(() => changePassword.isLoading)
 
 async function onSubmit() {
   if (!canSubmit.value) return
-  const result = await changePassword.resource.submit({ user: props.user, new_password: newPassword.value })
+  const result = await changePassword.resource.submit({ user: props.user, new_password: newPassword.value, old_password: props.isSelf ? oldPassword.value : undefined })
   if (!result?.ok) return
 
+  oldPassword.value = ''
   newPassword.value = ''
   confirmPassword.value = ''
   notify.success('Password updated.')

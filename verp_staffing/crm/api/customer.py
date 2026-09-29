@@ -135,7 +135,7 @@ def get_customer_department_panels(customer):
     return result
 
 
-@frappe.whitelist()
+# internal: called from document hooks only, never exposed as an endpoint
 def update_customer_stage(
     customer,
     service,

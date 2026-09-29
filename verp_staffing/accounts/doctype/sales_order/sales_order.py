@@ -979,6 +979,8 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
     several — the client calls this repeatedly with increasing limit_start
     for infinite scroll.
     """
+    frappe.has_permission("Sales Order", "read", doc=sales_order, throw=True)
+
     limit_start = cint(limit_start)
     limit_page_length = cint(limit_page_length) or 5
 

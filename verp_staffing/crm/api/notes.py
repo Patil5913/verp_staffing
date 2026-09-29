@@ -9,6 +9,9 @@ def get_notes(reference_doctype, reference_name, limit=20, start=0):
     if not reference_doctype or not reference_name:
         return {"notes": [], "updates": []}
 
+    # Notes follow the record they are on: no access to it, no notes.
+    frappe.has_permission(reference_doctype, "read", doc=reference_name, throw=True)
+
     records = frappe.get_all(
         "CRM Note",
         filters={

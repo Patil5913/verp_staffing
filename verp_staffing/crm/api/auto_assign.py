@@ -374,6 +374,10 @@ def get_customer_interviews(customer, service=None):
     if not customer:
         return []
 
+    from verp_staffing.crm.api.helpers import require_customer_access
+
+    require_customer_access(customer)
+
     marketing = frappe.get_cached_value("Marketing", {"customer": customer}, "name")
     if not marketing:
         return []

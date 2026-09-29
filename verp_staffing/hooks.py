@@ -29,6 +29,13 @@ add_to_apps_screen = [
 # winning). A customer who lands there is sent on to the portal by the app's own router.
 website_redirects = [
 	{"source": "/", "target": "/verp"},
+	# Frappe's reset email links to /update-password?key=...; land on the app's own page instead
+	{
+		"source": r"update-password\?(.*)",
+		"target": r"/verp/update-password?\1",
+		"match_with_query_string": True,
+		"redirect_http_status": 302,
+	},
 ]
 
 website_route_rules = [
@@ -243,6 +250,8 @@ permission_query_conditions = {
     "RUC": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Marketing": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Interview": "verp_staffing.crm.api.helpers.interview_query",
+    "Interview Support": "verp_staffing.crm.api.helpers.requester_or_assignee_query",
+    "Other Services": "verp_staffing.crm.api.helpers.requester_or_assignee_query",
     "Training": "verp_staffing.crm.api.helpers.generic_assign_query",
     "JDC": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
@@ -270,6 +279,8 @@ has_permission = {
     "Opportunity": "verp_staffing.crm.api.helpers.opportunity_has_permission",
     "Lead": "verp_staffing.crm.api.helpers.lead_has_permission",
     "Interview": "verp_staffing.crm.api.helpers.interview_has_permission",
+    "Interview Support": "verp_staffing.crm.api.helpers.requester_or_assignee_has_permission",
+    "Other Services": "verp_staffing.crm.api.helpers.requester_or_assignee_has_permission",
 }
 
 # Chat portal (vruglechat): a customer whose service has ended may no longer use the chat,
@@ -346,7 +357,10 @@ doc_events = {
         "after_insert": "verp_staffing.overrides.user.after_insert",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
         "on_update": "verp_staffing.utils.sidebar.on_user_change",
-        "validate": "verp_staffing.utils.sidebar.on_user_validate",
+        "validate": [
+            "verp_staffing.utils.sidebar.on_user_validate",
+            "verp_staffing.utils.user_security.guard_user_save",
+        ],
         "on_trash": "verp_staffing.utils.sidebar.on_user_change",
     },
     "Has Role": {

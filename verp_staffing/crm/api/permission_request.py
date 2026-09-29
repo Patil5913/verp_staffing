@@ -395,6 +395,10 @@ def get_lead_detail_field_values(customer_name):
     Fetches all fields that any department could possibly see.
     Called before opening the Update Detail dialog to show current values.
     """
+    from verp_staffing.crm.api.helpers import require_customer_access
+
+    require_customer_access(customer_name)
+
     lead_detail_name = frappe.db.get_value("Customer", customer_name, "lead_details")
     if not lead_detail_name:
         return {}

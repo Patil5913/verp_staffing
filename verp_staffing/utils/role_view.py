@@ -40,7 +40,11 @@ def remove_role_from_user(role, user):
     """Takes `role` away from `user`, leaving their other roles untouched."""
     from verp_staffing.utils.user_view import _get_user_for_write
 
+    from verp_staffing.utils.user_security import assignable_roles
+
     doc = _get_user_for_write(user)
+    if role not in assignable_roles():
+        frappe.throw(frappe._("You cannot remove the role {0}.").format(role), frappe.PermissionError)
     doc.set("roles", [r for r in doc.roles if r.role != role])
     doc.save()
     return get_role_users(role)

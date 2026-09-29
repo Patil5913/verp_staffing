@@ -1001,6 +1001,7 @@ def normalize_html(html):
 
 @frappe.whitelist()
 def get_agreement_cards(sales_order):
+    frappe.has_permission("Sales Order", "read", doc=sales_order, throw=True)
     STATUS_LABEL = {
         "Not Sent": "Pending in queue",
         "Sending": "Sending",

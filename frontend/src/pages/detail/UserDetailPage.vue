@@ -17,6 +17,7 @@
 				@delete="showDeleteDialog = true"
 			>
 				<AppButton
+					v-if="controls.can_send_reset"
 					variant="outline"
 					icon="mail"
 					:loading="sendingResetEmail"
@@ -25,7 +26,7 @@
 					Send Reset Password Email
 				</AppButton>
 				<AppButton
-					v-if="name !== 'Administrator'"
+					v-if="name !== 'Administrator' && controls.can_manage && !controls.is_self"
 					:variant="detail.values.enabled ? 'danger' : 'outline'"
 					:icon="detail.values.enabled ? 'user-x' : 'user-check'"
 					:loading="togglingEnabled"
@@ -44,7 +45,7 @@
 
 		<template #tab-roles>
 			<div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-				<UserRolesTab :user="name" :can-write="detail.canWrite.value" />
+				<UserRolesTab :user="name" :can-write="detail.canWrite.value && controls.can_manage" :assignable="controls.assignable_roles" />
 			</div>
 		</template>
 
@@ -80,7 +81,7 @@
 						Time Zone is the clock this user sees interview and other times on. It starts as the company time
 						zone (ERP Configuration &gt; Website Settings) and follows it when that changes, until you pick another.
 					</p>
-					<UserChangePassword :user="name" />
+					<UserChangePassword v-if="controls.can_manage || controls.can_change_own_password" :user="name" :is-self="controls.is_self" />
 				</div>
 			</div>
 		</template>
@@ -245,7 +246,29 @@ const TABS = [
 	{ key: "general", label: "General" },
 	{ key: "security", label: "Security" },
 ];
-const tabs = computed(() => TABS);
+// Roles & Permissions and Security are for whoever may manage this user - not the user themselves
+// (My Settings) and not users without the right; the server refuses them either way.
+const controlsResource = useResource({
+	url: "verp_staffing.utils.user_view.get_user_controls",
+	makeParams: () => ({ user: name.value }),
+	auto: true,
+});
+const controls = computed(() => ({
+	is_self: false,
+	can_manage: false,
+	can_view_roles: false,
+	can_send_reset: false,
+	can_change_own_password: false,
+	assignable_roles: [],
+	...(controlsResource.resource.data || {}),
+}));
+const tabs = computed(() =>
+	TABS.filter((t) => {
+		if (t.key === "roles") return controls.value.can_view_roles;
+		if (t.key === "security") return controls.value.can_manage;
+		return true;
+	}),
+);
 const activeTab = ref("profile");
 
 const PROFILE_FIELDS = ["full_name", "first_name", "last_name", "username", "email"];
@@ -274,7 +297,7 @@ function onToggleEnabled() {
 }
 
 const resetEmail = useResource({
-	url: "frappe.core.doctype.user.user.reset_password",
+	url: "verp_staffing.utils.user_view.send_reset_email",
 });
 const sendingResetEmail = computed(() => resetEmail.isLoading);
 
