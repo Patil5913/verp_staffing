@@ -231,6 +231,11 @@
                     :theme="statusBadgeTheme(row[column.key], { doctype, fieldname: column.key })"
                     size="md"
                   />
+                  <RecordLabel
+                    v-else-if="linkDoctype(column.key) && row[column.key]"
+                    :doctype="linkDoctype(column.key)"
+                    :id="row[column.key]"
+                  />
                   <span v-else class="truncate">{{ row[column.key] }}</span>
                 </td>
                 <td class="h-11 border-b border-app-border px-2 text-right" :class="rowActionDefs.length ? 'w-36' : 'w-12 text-center'" @click.stop>
@@ -340,6 +345,7 @@ import QuickCreateDialog from './QuickCreateDialog.vue'
 import PersonQuickCreateDialog from '@/components/common/PersonQuickCreateDialog.vue'
 import { PERSON_DOCTYPES, STATUS_COLUMN_FIELDS_TO_HIDE } from '@/configs/detail/listOptions'
 import Pagination from './Pagination.vue'
+import RecordLabel from '@/components/common/RecordLabel.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { resolveIconName } from '@/utils/layout/sidebarIcons'
 
@@ -560,6 +566,12 @@ function isSelectColumn(key) {
   // its generic keyword vocabulary), one of these fieldtype-agnostic
   // overrides only fires for the specific doctype.fieldname it targets.
   return fieldMap.value[key]?.fieldtype === 'Select' || hasStatusOverride(props.doctype, key)
+}
+
+// A Link column shows the linked record's name instead of its ID.
+function linkDoctype(key) {
+  const field = fieldMap.value[key]
+  return field?.fieldtype === 'Link' && field.options ? field.options : ''
 }
 
 function isUserStatusColumn(key) {

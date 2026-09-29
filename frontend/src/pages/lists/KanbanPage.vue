@@ -32,9 +32,9 @@
         @load-more="onLoadMore"
       >
         <template #card="{ card }">
-          <p class="truncate text-p-sm font-medium text-app-text">{{ card[config.title] || card.name }}</p>
+          <RecordLabel :doctype="doctype" :id="card.name" :title="card[config.title] || ''" title-class="text-p-sm font-medium text-app-text" />
           <p v-if="card[config.subtitle]" class="truncate text-p-xs text-app-text-muted">{{ card[config.subtitle] }}</p>
-          <p v-if="card.customer" class="mt-1 truncate text-p-xs text-app-text-muted">{{ card.customer }}</p>
+          <RecordLabel v-if="card.customer" doctype="Customer" :id="card.customer" class="mt-1 w-full" title-class="text-p-xs text-app-text-muted" />
           <ul v-if="rounds[card.name]?.length" class="mt-2 flex flex-col gap-1 border-t border-app-border pt-2">
             <li v-for="(r, i) in rounds[card.name].slice(-3)" :key="i" class="flex items-center justify-between gap-2 text-p-xs">
               <span class="truncate text-app-text-muted">Round {{ r.round }} · {{ formatDate(r.date_of_interview) || 'no date' }}</span>
@@ -63,6 +63,7 @@
 </template>
 
 <script setup>
+import RecordLabel from '@/components/common/RecordLabel.vue'
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 // Kanban view of a doctype (today: Interview, ported from interview_list.js).

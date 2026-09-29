@@ -4,6 +4,7 @@ import { useDocDetail } from '@/composables/detail/useDocDetail'
 import { useResource } from '@/composables/list/useResource'
 import { useUnsavedChangesGuard } from '@/composables/common/useUnsavedChangesGuard'
 import { useSaveShortcut } from '@/composables/common/useSaveShortcut'
+import { recordTitle as lookedUpTitle, requestTitles } from '@/composables/common/useRecordTitles'
 import { notify } from '@/utils/common/notify'
 import { isEmailMissingError, normalizeError } from '@/utils/common/errors'
 
@@ -27,7 +28,20 @@ export function useDetailPageController(doctype, name, options = {}) {
   const recordTitle = computed(() => {
     if (detail.isNew.value) return `New ${doctype.value}`
     const titleField = detail.titleField.value
-    return (titleField !== 'name' && detail.values[titleField]) || name.value
+    const own = titleField !== 'name' && detail.values[titleField]
+    if (own) {
+      // A title field that links to another record (Resume, Training, ... use `customer`)
+      // holds that record's ID: show its name instead.
+      const df = detail.fields.value.find((f) => f.fieldname === titleField)
+      if (df?.fieldtype === 'Link' && df.options) {
+        requestTitles(df.options, [own])
+        return lookedUpTitle(df.options, own) || own
+      }
+      return own
+    }
+    // No title field on the doctype (User's full_name, ...): ask the server for one.
+    requestTitles(doctype.value, [name.value])
+    return lookedUpTitle(doctype.value, name.value) || name.value
   })
 
   const isDirty = computed(() => detail.isDirty.value || extraIsDirty.value)

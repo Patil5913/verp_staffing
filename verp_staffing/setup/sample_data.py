@@ -439,7 +439,7 @@ def create_opportunities(employees, leads):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Opportunity",
-				"name1": f"Opportunity from {lead_name}",
+				"name1": frappe.db.get_value("Lead", lead_name, "name1"),
 				"opportunity_owner": sales_owner,
 				"opportunity_from_lead": lead_name,
 			}
@@ -471,7 +471,7 @@ def create_customers(employees, leads, opportunities):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Customer",
-				"name1": f"{leads[0]} (via Lead)",
+				"name1": frappe.db.get_value("Lead", leads[0], "name1"),
 				"customer_from": "Lead",
 				"party_name": leads[0],
 				"customer_owner": sales_owner,
@@ -485,7 +485,7 @@ def create_customers(employees, leads, opportunities):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Customer",
-				"name1": f"{opportunities[0]} (via Opportunity)",
+				"name1": frappe.db.get_value("Opportunity", opportunities[0], "name1"),
 				"customer_from": "Opportunity",
 				"party_name": opportunities[0],
 				"customer_owner": sales_owner,

@@ -63,6 +63,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Combobox, FeatherIcon, debounce, call } from 'frappe-ui'
 import { useResource } from '@/composables/list/useResource'
+import { recordTitle, requestTitles } from '@/composables/common/useRecordTitles'
 import QuickCreateDialog from '@/components/list/QuickCreateDialog.vue'
 import PersonQuickCreateDialog from '@/components/common/PersonQuickCreateDialog.vue'
 import { PERSON_DOCTYPES } from '@/configs/detail/listOptions'
@@ -131,7 +132,7 @@ const search = useResource({
     query: props.query || undefined,
   }),
   notifyOnError: false,
-  transform: (data) => (data || []).map((doc) => ({ label: doc.label || doc.value, value: doc.value })),
+  transform: (data) => (data || []).map((doc) => ({ label: optionLabel(doc.value, doc.label), value: doc.value })),
 })
 
 // Guards against an out-of-order response: two overlapping searches (e.g.
@@ -164,7 +165,27 @@ watch(
   { immediate: true, deep: true },
 )
 
-const comboOptions = computed(() => results.value)
+// The record's name, not its ID; a record with no name of its own shows its ID.
+function optionLabel(value, label) {
+  return (label && label !== value ? label : recordTitle(props.doctype, value)) || value
+}
+
+// The selected record may not be in the current search results (or not loaded yet) -
+// keep it in the options so the field shows its name instead of the bare ID.
+const comboOptions = computed(() => {
+  const options = results.value.map((o) => ({ ...o, label: optionLabel(o.value, o.label === o.value ? '' : o.label) }))
+  const current = model.value
+  if (current && !options.some((o) => o.value === current)) {
+    options.unshift({ label: optionLabel(current, ''), value: current })
+  }
+  return options
+})
+
+watch(
+  () => [props.doctype, model.value, results.value],
+  () => requestTitles(props.doctype, [model.value, ...results.value.map((o) => o.value)]),
+  { immediate: true },
+)
 
 async function openQuickCreate() {
   isOpen.value = false
