@@ -3,7 +3,7 @@
     <template #body-content>
       <p class="mb-4 text-p-sm text-app-text-muted">
         Pick which columns show in {{ doctype }}'s list view and drag to set their order. This
-        is a shared setting - it applies to every user and role, not just yours.
+        is saved for you only - other users keep their own columns.
       </p>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

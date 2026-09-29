@@ -1,11 +1,12 @@
 {
  "actions": [],
- "autoname": "field:document_type",
+ "autoname": "hash",
  "creation": "2026-09-17 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "document_type",
+  "user",
   "columns_json"
  ],
  "fields": [
@@ -15,8 +16,15 @@
    "in_list_view": 1,
    "label": "Document Type",
    "options": "DocType",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "User",
+   "options": "User",
+   "description": "Empty = the site-wide default; otherwise this user's own column set."
   },
   {
    "fieldname": "columns_json",
@@ -28,11 +36,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-17 00:00:00.000000",
+ "modified": "2026-09-29 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "List View Column Setting",
- "naming_rule": "By fieldname",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {

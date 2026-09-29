@@ -47,7 +47,9 @@ def ensure_email_queue_list_columns():
     """Doctype defaults would list the raw MIME `message` and `show_as_cc`; show
     what matters instead. Never overrides columns an administrator chose."""
     setting = "List View Column Setting"
-    if not frappe.db.exists("DocType", setting) or frappe.db.exists(setting, "Email Queue"):
+    if not frappe.db.exists("DocType", setting) or frappe.db.exists(
+        setting, {"document_type": "Email Queue", "user": ["is", "not set"]}
+    ):
         return
     frappe.get_doc({"doctype": setting, "document_type": "Email Queue", "columns_json": json.dumps(LIST_COLUMNS)}).insert(ignore_permissions=True)
 
@@ -69,13 +71,16 @@ def ensure_email_queue_status_visible():
     frappe.clear_cache(doctype="Email Queue")
 
     setting = "List View Column Setting"
-    if frappe.db.exists("DocType", setting) and frappe.db.exists(setting, "Email Queue"):
+    default = frappe.db.exists("DocType", setting) and frappe.db.get_value(
+        setting, {"document_type": "Email Queue", "user": ["is", "not set"]}, "name"
+    )
+    if default:
         try:
-            columns = json.loads(frappe.db.get_value(setting, "Email Queue", "columns_json") or "[]")
+            columns = json.loads(frappe.db.get_value(setting, default, "columns_json") or "[]")
         except ValueError:
             columns = []
         if columns and "status" not in columns:
-            frappe.db.set_value(setting, "Email Queue", "columns_json", json.dumps(["status", *columns]))
+            frappe.db.set_value(setting, default, "columns_json", json.dumps(["status", *columns]))
 
 
 def sidebar_item() -> dict:

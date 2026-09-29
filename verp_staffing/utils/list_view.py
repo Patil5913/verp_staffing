@@ -65,9 +65,9 @@ LAST_UPDATED_FIELD = {
 # staffing-app tables aren't expected to exceed this.
 MAX_SEARCH_MATCHES = 5000
 
-# Stores the Administrator's chosen list-view column set (fieldnames, in
-# order) per doctype — a single shared setting, not per-user, so every role
-# sees the same columns. See set_list_view_columns.
+# Stores a chosen list-view column set (fieldnames, in order) per doctype and
+# per user. A row with no user is the site-wide default (seeded, e.g. Email
+# Queue); a user's own row only ever affects that user. See set_list_view_columns.
 LIST_VIEW_COLUMN_SETTING_DOCTYPE = "List View Column Setting"
 
 # Lists that show the record's Owner column by default (it is not a doctype field, so
@@ -107,16 +107,29 @@ def _check_read(doctype):
         )
 
 
+def _setting_name(doctype, user):
+    """Name of `user`'s own column setting for doctype (user=None: the site-wide default row)."""
+    return frappe.db.get_value(
+        LIST_VIEW_COLUMN_SETTING_DOCTYPE,
+        {"document_type": doctype, "user": user or ["is", "not set"]},
+        "name",
+    )
+
+
 def _get_custom_column_order(doctype):
-    """The Administrator-configured column order for doctype's list view, or
-    None if it's never been customized (or the stored value is unusable).
+    """The current user's own column order for doctype's list view, else the site-wide
+    default, or None if neither exists (or the stored value is unusable).
 
     Read via frappe.db.get_value (bypasses the permission framework, same as
     every other raw DB read in this module) since this is view metadata, not
-    the doctype's own data — it must be visible to every role once set,
-    that's the point of the feature.
+    the doctype's own data.
     """
-    raw = frappe.db.get_value(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype, "columns_json")
+    raw = None
+    for user in (frappe.session.user, None):
+        name = _setting_name(doctype, user)
+        raw = name and frappe.db.get_value(LIST_VIEW_COLUMN_SETTING_DOCTYPE, name, "columns_json")
+        if raw:
+            break
     if not raw:
         return None
     try:
@@ -238,8 +251,8 @@ def get_list_view_meta(doctype):
             field_map[f] for f in DEFAULT_LIST_COLUMNS[doctype] if f in field_map
         ] or default_list_fields
 
-    # The Administrator can override which columns show and in what order
-    # (see set_list_view_columns) — a single setting shared by every role.
+    # Each user can override which columns show and in what order
+    # (see set_list_view_columns); it never affects anyone else.
     # Stale/renamed fieldnames from a since-changed doctype are silently
     # dropped rather than erroring the whole list view.
     custom_order = _get_custom_column_order(doctype)
@@ -278,7 +291,7 @@ def get_list_view_meta(doctype):
         # anything, whether to show the Quick Entry dialog or jump straight
         # to the full new-record form.
         "quick_entry": bool(meta.quick_entry),
-        # Whether list_fields above is the Administrator's custom column
+        # Whether list_fields above is a custom column
         # set (vs. the doctype's own in_list_view default) — drives the
         # "Reset to default" affordance in the Customize Columns dialog.
         "columns_customized": bool(custom_list_fields),
@@ -297,13 +310,12 @@ def get_list_view_meta(doctype):
 
 @frappe.whitelist()
 def set_list_view_columns(doctype, fields):
-    """Sets (or clears) doctype's list-view column order.
+    """Sets (or clears) the current user's own list-view column order for doctype.
 
-    This is a single setting shared by every role — whoever picks the
-    columns, everyone sees the same ones, in the same order. Open to any
-    user who can read the doctype's list (same check as viewing it at all).
-    Pass an empty `fields` list to reset the doctype back to its own
-    in_list_view defaults.
+    Per user: nobody else's list changes. Open to any user who can read the
+    doctype's list (same check as viewing it at all). Pass an empty `fields`
+    list to drop the user's own set, falling back to the site default / the
+    doctype's in_list_view defaults.
     """
     _check_read(doctype)
 
@@ -317,21 +329,23 @@ def set_list_view_columns(doctype, fields):
         f for f in fields if f in valid_fieldnames and not (f in seen or seen.add(f))
     ]
 
-    exists = frappe.db.exists(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype)
+    user = frappe.session.user
+    name = _setting_name(doctype, user)
 
     if not fields:
-        if exists:
-            frappe.delete_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype)
+        if name:
+            frappe.delete_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE, name, ignore_permissions=True)
         return get_list_view_meta(doctype)
 
-    if exists:
-        setting = frappe.get_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE, doctype)
+    if name:
+        setting = frappe.get_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE, name)
     else:
         setting = frappe.new_doc(LIST_VIEW_COLUMN_SETTING_DOCTYPE)
         setting.document_type = doctype
+        setting.user = user
 
     setting.columns_json = json.dumps(fields)
-    setting.save()
+    setting.save(ignore_permissions=True)
 
     return get_list_view_meta(doctype)
 
