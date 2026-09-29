@@ -35,6 +35,7 @@
           <ChildTableField
             v-if="callDetailsTable"
             :table="callDetailsTable"
+            :hidden-columns="['duration_unit']"
             :rows="detail.values.call_details || []"
             :disabled="!detail.canWrite.value"
             @update:rows="(rows) => (detail.values.call_details = rows)"

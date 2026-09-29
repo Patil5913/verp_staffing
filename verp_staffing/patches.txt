@@ -4,3 +4,5 @@ verp_staffing.patches.sync_sidebar_master_config
 verp_staffing.patches.add_email_queue_to_staffing_master
 verp_staffing.patches.show_email_queue_status
 verp_staffing.patches.link_resume_attachment_files
+verp_staffing.patches.set_call_details_duration_unit
+verp_staffing.patches.backfill_call_details_duration_unit

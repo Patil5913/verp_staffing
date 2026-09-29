@@ -86,6 +86,18 @@
 		<p v-if="error" class="text-p-xs text-red-600">{{ error }}</p>
 	</div>
 
+	<AppDurationInput
+		v-else-if="field.fieldtype === 'Duration'"
+		:label="field.label"
+		storage="seconds"
+		:unit="unit"
+		:model-value="modelValue ?? ''"
+		:disabled="disabled"
+		:error="error"
+		@update:model-value="(v) => emit('update:modelValue', v === '' ? '' : Number(v))"
+		@update:unit="(u) => emit('update:unit', u)"
+	/>
+
 	<div v-else-if="controlType === 'checkbox'" class="pt-6">
 		<AppCheckbox
 			:label="field.label"
@@ -229,6 +241,7 @@
 </template>
 
 <script setup>
+import AppDurationInput from "@/components/ui/AppDurationInput.vue";
 import AppCheckbox from "@/components/ui/AppCheckbox.vue";
 import { computed, inject, reactive, watch } from "vue";
 import { FileUploader, LoadingIndicator, call } from "frappe-ui";
@@ -261,6 +274,8 @@ import {
 const parentCurrencyDocs = inject("fieldCurrencyDocs", null);
 
 const props = defineProps({
+	// the saved unit of a Duration value (Minutes / Hours), when the record keeps one
+	unit: { type: String, default: "" },
 	currencyDocs: { type: Array, default: null },
 	// { file_url, file_name } for a Link-to-File value the caller already has (the customer
 	// portal can't look a File up itself) - skips the lookup below.
@@ -287,7 +302,7 @@ const props = defineProps({
 	// since how much room is available varies by where the field is shown.
 	maxDisplayHeight: { type: String, default: "4.5em" },
 });
-const emit = defineEmits(["update:modelValue", "file-meta"]);
+const emit = defineEmits(["update:modelValue", "file-meta", "update:unit"]);
 
 const TYPE_MAP = {
 	Data: "text",

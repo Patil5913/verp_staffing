@@ -39,8 +39,10 @@ const props = defineProps({
   error: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   muted: { type: Boolean, default: false },
+  // the unit the value was saved with, when the record keeps one; otherwise it is worked out from the value
+  unit: { type: String, default: '' },
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'update:unit'])
 
 const unitOptions = computed(() => props.units)
 
@@ -65,7 +67,7 @@ let lastEmitted = null
 
 function syncFromModel() {
   const min = toMinutes(props.modelValue)
-  unit.value = bestUnit(min)
+  unit.value = props.units.includes(props.unit) ? props.unit : bestUnit(min)
   amount.value = props.modelValue === '' || props.modelValue == null ? '' : String(min / UNIT_MINUTES[unit.value])
 }
 syncFromModel()
@@ -92,6 +94,7 @@ function onAmount(v) {
 }
 function onUnit(u) {
   unit.value = u
+  emit('update:unit', u)
   push()
 }
 </script>

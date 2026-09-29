@@ -24,10 +24,10 @@
             <p class="truncate text-p-xs text-app-text-muted">{{ col.label }}</p>
             <TruncatedText
               v-if="isWide(col)"
-              :text="formatCell(col, row[col.fieldname])"
+              :text="formatCell(col, row[col.fieldname], row)"
               class="text-p-sm text-app-text"
             />
-            <p v-else class="truncate text-p-sm text-app-text">{{ formatCell(col, row[col.fieldname]) }}</p>
+            <p v-else class="truncate text-p-sm text-app-text">{{ formatCell(col, row[col.fieldname], row) }}</p>
           </div>
         </div>
         <AppButton
@@ -62,10 +62,12 @@
               v-else
               :field="col"
               :model-value="draft[col.fieldname]"
+              :unit="col.fieldtype === 'Duration' ? draft.duration_unit : ''"
               :link-query="resolvedLinkQueries?.[col.fieldname]"
               :disabled="disabled || col.read_only"
               show-errors
               @update:model-value="(v) => onFieldInput(col.fieldname, v)"
+              @update:unit="(u) => (draft.duration_unit = u)"
               @file-meta="(f) => onFileMeta(col.fieldname, f)"
             />
             <!-- Live, per-field guidance (e.g. must be MM-YYYY) as it is typed, not only once Done is clicked. -->
@@ -192,16 +194,25 @@ async function onFileMeta(fieldname, fileMeta) {
   if (patch) Object.assign(draft.value, patch)
 }
 
-const previewColumns = computed(() => props.table.columns.slice(0, 4))
+const previewColumns = computed(() => props.table.columns.filter((c) => !props.hiddenColumns.includes(c.fieldname)).slice(0, 4))
 const descriptionCharCount = computed(() => String(draft.value.description ?? '').replace(/\s/g, '').length)
 
 function isWide(col) {
   return ['Small Text', 'Long Text', 'Text Editor'].includes(col.fieldtype)
 }
 
-function formatCell(col, value) {
+// Duration is stored in seconds; shown in the unit it was saved with.
+function formatDuration(seconds, unit) {
+  const min = Math.round(Number(seconds) / 60)
+  if (!min) return '0 min'
+  if (unit === 'Hours' || (!unit && min % 60 === 0)) return `${Math.round((min / 60) * 100) / 100} hr`
+  return `${min} min`
+}
+
+function formatCell(col, value, row) {
   if (value === null || value === undefined || value === '') return '-'
   if (col.fieldtype === 'Check') return value ? 'Yes' : 'No'
+  if (col.fieldtype === 'Duration') return formatDuration(value, row?.duration_unit)
   return String(value)
 }
 

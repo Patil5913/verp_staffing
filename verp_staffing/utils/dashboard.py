@@ -731,7 +731,7 @@ def _crm_sales_data(b, required=True):
             if required:
                 raise
             return [], []
-        b.stash["crm_sales"] = (opps, _children("Call Details", "Opportunity", [o.name for o in opps], ["parent", "date", "duration"]))
+        b.stash["crm_sales"] = (opps, _children("Call Details", "Opportunity", [o.name for o in opps], ["parent", "date", "duration", "duration_unit"]))
     return b.stash["crm_sales"]
 
 
@@ -838,6 +838,11 @@ def _crm_pipeline(b, p, company):
     calls_n, calls_prev = _sum_split(p, calls, "date")
     secs, secs_prev = _sum_split(p, calls, "date", lambda r: flt(r.duration))
     cur_calls = [c for c in calls if p.in_cur(_d(c.date))]
+    # Talk time is shown in the unit the calls were logged in (Call Details.duration_unit): minutes
+    # when every call in the period was entered in minutes, hours as soon as any was entered in hours.
+    in_hours = any(c.duration_unit == "Hours" for c in cur_calls)
+    unit_secs, unit_fmt, unit_short = (3600, "hours", "h") if in_hours else (60, "minutes", "min")
+    digits = 1 if in_hours else 0
 
     def win_rate(rows):
         won, lost = sum(1 for r in rows if r.status == "Converted"), sum(1 for r in rows if r.status == "Lost")
@@ -847,7 +852,7 @@ def _crm_pipeline(b, p, company):
     b.kpi("new_opps", "New opportunities", len(cur), "number", len(prev), icon="target", hint=f"{from_lead} from the lead team", href=_href_in("Opportunity", (o.name for o in cur)), calc="Opportunity docs created in the selected period.")
     b.kpi("open_opps", "Opportunities to work", len(open_), "number", icon="briefcase", hint=f"{len(never)} not called yet", tone="warn" if never else None, href=_href_in("Opportunity", (o.name for o in open_)), calc="Opportunities (any date) with status Open, Quotation or Replied - not yet converted or lost.")
     b.kpi("calls", "Cold calls logged", calls_n, "number", calls_prev, icon="phone", href=_href_in("Opportunity", (c.parent for c in cur_calls)), calc="Call Details rows on opportunities dated in the selected period.")
-    b.kpi("talk_time", "Talk time", round(secs / 3600, 1), "hours", round(secs_prev / 3600, 1), icon="clock", href=_href_in("Opportunity", (c.parent for c in cur_calls)), calc="Sum of call duration on Call Details rows dated in the selected period.")
+    b.kpi("talk_time", "Talk time", round(secs / unit_secs, digits), unit_fmt, round(secs_prev / unit_secs, digits), icon="clock", href=_href_in("Opportunity", (c.parent for c in cur_calls)), calc="Sum of call duration on Call Details rows dated in the selected period.")
     b.kpi("win_rate", "Win rate", win_rate(cur), "percent", win_rate(prev) or None, icon="trophy", hint="Converted / (converted + lost)", calc="Opportunities created in the selected period that are Converted ÷ (Converted + Lost) × 100. Still-open ones are not counted either way.")
     value = sum(flt(o.opportunity_amount) for o in open_)
     if value:
@@ -859,7 +864,7 @@ def _crm_pipeline(b, p, company):
     b.chart("opp_funnel", "Opportunity to customer", "funnel", [{"label": "Opportunities", "value": len(cur)}, {"label": "Called", "value": len(called)}, {"label": "Replied or quoted", "value": len(engaged)}, {"label": "Became customers", "value": len(won)}], subtitle="Opportunities created in the period")
     b.chart("pipeline_stage", "Opportunities to work, by status", "bar", [{"label": s, "Opportunities": sum(1 for o in open_ if o.status == s)} for s in OPEN_OPPORTUNITY], _series(("Opportunities", "bar", BLUE)), subtitle="Open right now")
     b.chart("opps_status", "Opportunities by status", "donut", _counts([o.status for o in cur], ["Open", "Quotation", "Replied", "Converted", "Lost"]), subtitle="Created in the period")
-    b.chart("calls_trend", "Cold calls and talk time", "bar", [{**row, "Talk time (h)": round(row["Talk time (h)"] / 3600, 2)} for row in _trend(p, {"Calls": [(_d(c.date), 1) for c in calls], "Talk time (h)": [(_d(c.date), c.duration) for c in calls]})], _series(("Calls", "bar", BLUE), ("Talk time (h)", "line", AMBER)), span=2)
+    b.chart("calls_trend", "Cold calls and talk time", "bar", [{**row, f"Talk time ({unit_short})": round(row["Talk time"] / unit_secs, 2)} for row in _trend(p, {"Calls": [(_d(c.date), 1) for c in calls], "Talk time": [(_d(c.date), c.duration) for c in calls]})], _series(("Calls", "bar", BLUE), (f"Talk time ({unit_short})", "line", AMBER)), span=2)
     b.chart("calls_owner", "Calls per salesperson", "hbar", _counts([names.get(owner.get(c.parent), owner.get(c.parent)) for c in cur_calls], n=10), subtitle="Volume of cold calls")
     b.chart("opps_owner", "Opportunities to work per salesperson", "hbar", _counts([names.get(o.opportunity_owner, o.opportunity_owner) for o in open_], n=10), subtitle="Workload right now")
 
@@ -874,11 +879,11 @@ def _crm_pipeline(b, p, company):
     for c in customers:
         if c.customer_from == "Opportunity" and p.in_cur(_d(c.creation)):
             board[c.customer_owner]["won"] += 1
-    rows = [{"who": names.get(k, k) or "Unassigned", "open": v["open"], "never": v["never"], "calls": v["calls"], "hours": round(v["secs"] / 3600, 1), "won": v["won"]} for k, v in board.items()]
+    rows = [{"who": names.get(k, k) or "Unassigned", "open": v["open"], "never": v["never"], "calls": v["calls"], "hours": round(v["secs"] / unit_secs, digits), "won": v["won"]} for k, v in board.items()]
     b.table(
         "sales_team",
         "Sales team",
-        [{"key": "who", "label": "Salesperson"}, {"key": "open", "label": "To work", "format": "number"}, {"key": "never", "label": "Not called", "format": "number"}, {"key": "calls", "label": "Calls", "format": "number"}, {"key": "hours", "label": "Talk time", "format": "hours"}, {"key": "won", "label": "Customers won", "format": "number"}],
+        [{"key": "who", "label": "Salesperson"}, {"key": "open", "label": "To work", "format": "number"}, {"key": "never", "label": "Not called", "format": "number"}, {"key": "calls", "label": "Calls", "format": "number"}, {"key": "hours", "label": "Talk time", "format": unit_fmt}, {"key": "won", "label": "Customers won", "format": "number"}],
         sorted(rows, key=lambda r: (r["won"], r["calls"]), reverse=True)[:10],
     )
 

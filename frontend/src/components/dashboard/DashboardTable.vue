@@ -37,6 +37,6 @@ const props = defineProps({
   currency: { type: String, default: '' },
 })
 
-const isNum = (c) => ['number', 'currency', 'percent', 'hours'].includes(c.format)
+const isNum = (c) => ['number', 'currency', 'percent', 'hours', 'minutes'].includes(c.format)
 const cell = (v, c) => (c.format && c.format !== 'link' && c.format !== 'status' ? formatMetric(v, c.format, props.currency) : (v ?? ''))
 </script>

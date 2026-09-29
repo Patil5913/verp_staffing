@@ -22,6 +22,8 @@ export function formatMetric(value, format = 'number', currency = '', { compact 
       return `${n.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`
     case 'hours':
       return `${n.toLocaleString(undefined, { maximumFractionDigits: 1 })} h`
+    case 'minutes':
+      return `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} min`
     case 'date':
       return formatDay(value)
     default:

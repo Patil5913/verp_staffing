@@ -73,7 +73,7 @@ const funnelConfig = computed(() => ({ data: rowsCopy.value, title: '', category
 // a real title, not just an empty string, to fix that at the source instead
 // of blanking it: derive one from the same `format` tag formatMetric already
 // keys off, so it stays in sync however many chart types get added.
-const Y_AXIS_TITLES = { currency: 'Amount', percent: 'Percent', hours: 'Hours' }
+const Y_AXIS_TITLES = { currency: 'Amount', percent: 'Percent', hours: 'Hours', minutes: 'Minutes' }
 const yAxisTitle = computed(() => Y_AXIS_TITLES[props.chart.format] || 'Count')
 
 const axisConfig = computed(() => {
