@@ -4,43 +4,7 @@
       <template #left><ViewSwitcher :doctype="doctype" current="tree" /></template>
       <AppSearchInput v-model="search" class="w-full" placeholder="Search">
         <template #suffix>
-          <Popover trigger="click" placement="bottom-end">
-            <template #target="{ togglePopover }">
-              <FeatherIcon
-                name="info"
-                class="h-4 w-4 cursor-pointer text-app-text-muted hover:text-app-primary"
-                @click="togglePopover()"
-              />
-            </template>
-            <template #body="{ close }">
-              <div
-                class="my-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
-              >
-                <div class="flex items-center gap-2 border-b border-app-border bg-app-panel-2 px-4 py-3">
-                  <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
-                  <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
-                </div>
-                <p class="border-b border-app-border px-4 py-2 text-p-xs text-app-text-muted">
-                  Click a filter below to apply it to the search bar.
-                </p>
-                <div class="flex flex-col divide-y divide-app-border">
-                  <div v-for="group in treeSearchSyntaxHelp" :key="group.title" class="flex flex-col gap-2.5 px-4 py-3">
-                    <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ group.title }}</p>
-                    <div v-for="row in group.rows" :key="row.example" class="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 text-left font-mono text-p-xs text-app-primary hover:bg-app-primary-tint"
-                        @click="search = row.example, close()"
-                      >
-                        {{ row.example }}
-                      </button>
-                      <span class="text-p-sm leading-snug text-app-text-muted">{{ row.description }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </Popover>
+          <SearchSyntaxPopover :groups="treeSearchSyntaxHelp" @select="search = $event" />
         </template>
       </AppSearchInput>
       <AppButton
@@ -72,13 +36,14 @@
 </template>
 
 <script setup>
+import SearchSyntaxPopover from '@/components/common/SearchSyntaxPopover.vue'
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 // Generic tree view for any tree doctype (Company, Item Category, ...) via
 // Frappe's stock treeview endpoint. The Account tree has its own page
 // (AccountTreePage.vue) - it needs company scoping and balances.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { call, FeatherIcon, Popover } from 'frappe-ui'
+import { call } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import SubNavbar from '@/components/common/SubNavbar.vue'
 import ViewSwitcher from '@/components/common/ViewSwitcher.vue'

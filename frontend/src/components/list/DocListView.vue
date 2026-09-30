@@ -21,50 +21,7 @@
           placeholder='Try: "status=open", "modified between 17 sept to 25 sept"'
         >
           <template #suffix>
-            <Popover trigger="click" placement="bottom-end">
-              <template #target="{ togglePopover }">
-                <FeatherIcon
-                  name="info"
-                  class="h-4 w-4 cursor-pointer text-app-text-muted hover:text-app-primary"
-                  @click="togglePopover()"
-                />
-              </template>
-              <template #body="{ close }">
-                <div
-                  class="my-2 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-app-border bg-app-panel shadow-xl"
-                >
-                  <div class="flex items-center gap-2 border-b border-app-border bg-app-panel-2 px-4 py-3">
-                    <FeatherIcon name="search" class="h-4 w-4 text-app-primary" />
-                    <h4 class="text-p-base font-semibold text-app-text">Search syntax</h4>
-                  </div>
-                  <p class="border-b border-app-border px-4 py-2 text-p-xs text-app-text-muted">
-                    Click a filter below to apply it to the search bar.
-                  </p>
-
-                  <div class="flex flex-col divide-y divide-app-border">
-                    <div
-                      v-for="group in searchSyntaxHelp"
-                      :key="group.title"
-                      class="flex flex-col gap-2.5 px-4 py-3"
-                    >
-                      <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">
-                        {{ group.title }}
-                      </p>
-                      <div v-for="row in group.rows" :key="row.example" class="flex flex-col gap-1">
-                        <button
-                          type="button"
-                          class="block w-fit max-w-full whitespace-pre-wrap break-words rounded-md bg-app-panel-2 px-2 py-1 text-left font-mono text-p-xs text-app-primary hover:bg-app-primary-tint"
-                          @click="searchText = row.example, close()"
-                        >
-                          {{ row.example }}
-                        </button>
-                        <span class="text-p-sm leading-snug text-app-text-muted">{{ row.description }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </Popover>
+            <SearchSyntaxPopover :groups="searchSyntaxHelp" @select="searchText = $event" />
           </template>
         </AppSearchInput>
 
@@ -321,6 +278,7 @@
 </template>
 
 <script setup>
+import SearchSyntaxPopover from '@/components/common/SearchSyntaxPopover.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppCheckbox from '@/components/ui/AppCheckbox.vue'
@@ -328,7 +286,7 @@ import AppCombobox from '@/components/ui/AppCombobox.vue'
 import { computed, ref, watch } from 'vue'
 import { columnWidths } from '@/composables/list/useColumnWidths'
 import { useRoute, useRouter } from 'vue-router'
-import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, Popover, call } from 'frappe-ui'
+import { Dialog, Dropdown, FeatherIcon, LoadingIndicator, call } from 'frappe-ui'
 import { useDocList } from '@/composables/list/useDocList'
 import { useResource } from '@/composables/list/useResource'
 import { useMarketingCustomerFilter } from '@/composables/list/useMarketingCustomerFilter'
