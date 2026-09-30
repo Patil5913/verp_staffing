@@ -32,7 +32,7 @@
           <template v-for="col in columns" :key="col.fieldname">
             <div v-if="showColumn(col, row)" :class="wide(col) ? 'col-span-full' : ''">
               <FieldControl
-                :field="col"
+                :field="fieldFor(col, row)"
                 :model-value="row[col.fieldname]"
                 :disabled="fieldDisabled(col, row, idx)"
                 @update:model-value="(v) => onChange(idx, col.fieldname, v)"
@@ -79,7 +79,8 @@
 //  * unless you're a superior of the Marketing assignee, only the latest
 //    round is editable;
 //  * a round whose status is Cancelled / Rescheduled / Rejected / Completed
-//    (case-insensitive) is fully locked, every field, the moment it's set -
+//    (case-insensitive) is fully locked (a saved Completed round keeps only its
+//    Status open, to record Get The Offer / Rejected), every field, the moment it's set -
 //    not just once saved;
 //  * Cancelled / Rescheduled / Rejected all go through the same
 //    confirmation dialog first, collecting who it's attributed to and a
@@ -160,10 +161,19 @@ watch(
   { immediate: true },
 )
 
+// A round that was saved as Completed is only locked until the company answers: its Status alone
+// stays open so it can move on to Get The Offer or Rejected (every other field stays locked).
+const savedRows = computed(() => table.value?.rows || [])
+const savedCompleted = (row) => !!row.name && savedRows.value.some((r) => r.name === row.name && statusOf(r) === 'completed')
+const OUTCOME_OPTIONS = 'Completed\nGet The Offer\nRejected'
+const fieldFor = (col, row) =>
+  col.fieldname === 'status' && savedCompleted(row) ? { ...col, fieldtype: 'Select', options: OUTCOME_OPTIONS } : col
+
 function fieldDisabled(col, row, idx) {
   if (!editable.value || col.read_only) return true
-  if (finalized(row)) return true
   if (!isSuperior.value && idx !== rows.value.length - 1) return true
+  if (savedCompleted(row)) return col.fieldname !== 'status'
+  if (finalized(row)) return true
   return false
 }
 const showColumn = (col, row) =>

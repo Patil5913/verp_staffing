@@ -18,8 +18,15 @@ CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
 DEFAULT_ROUND_STATUS = "Scheduled"
 TODAY_STATUS = "Today"
+# A Completed round is still waiting on the company's answer, so it may move on to one of these
+# (and only these); every other final status stays locked.
+COMPLETED_OUTCOMES = {"Get The Offer", "Rejected"}
 # An interview whose latest round is in one of these is over — never shown as "Today".
 TODAY_EXCLUDED_STATUSES = FINAL_ROUND_STATUSES | {"Rejected", "Get The Offer", TODAY_STATUS}
+
+
+def _is_outcome_of_completed(previous, new):
+    return previous == "Completed" and new in COMPLETED_OUTCOMES
 
 
 class Interview(Document):
@@ -182,6 +189,7 @@ class Interview(Document):
         if (
             previous_row.status in FINAL_ROUND_STATUSES
             and row.status != previous_row.status
+            and not _is_outcome_of_completed(previous_row.status, row.status)
         ):
             frappe.throw(
                 _(
@@ -290,7 +298,11 @@ def update_interview_status_from_kanban(
 
     last_round = max(doc.interview_rounds_table, key=lambda r: r.idx)
 
-    if last_round.status in FINAL_ROUND_STATUSES and last_round.status != status:
+    if (
+        last_round.status in FINAL_ROUND_STATUSES
+        and last_round.status != status
+        and not _is_outcome_of_completed(last_round.status, status)
+    ):
         frappe.throw(
             _(
                 "This interview round is already '{0}' and its status "
