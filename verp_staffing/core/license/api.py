@@ -53,9 +53,16 @@ def refresh_status() -> dict:
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def payment_confirmed(signed_payload: str, signature: str) -> dict:
-	"""Server-to-server: the dashboard tells us a payment went through and hands over the signed
-	entitlement. No session — the RSA-PSS signature (checked against the public key stored at
-	registration), the site/installation ids and the ever-increasing entitlement_version are
-	the authentication. Nothing is trusted or stored before that check passes."""
+	"""Webhook central calls on payment confirmation (the spec's `/update_subscription`, exposed
+	here as this whitelisted method — see also the `update_subscription` alias below for the
+	literal path the spec names). No session: the RSA-PSS signature (checked against the public
+	key stored at registration), the site/installation ids and the ever-increasing
+	entitlement_version are the authentication. Nothing is trusted or stored before that check
+	passes."""
 	service.apply_entitlement(signed_payload, signature)
 	return {"ok": True}
+
+
+# Same handler under the exact name the spec's sequence diagram posts to
+# (POST https://<site>/update_subscription -> .../api/method/....update_subscription).
+update_subscription = payment_confirmed

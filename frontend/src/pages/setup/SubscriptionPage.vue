@@ -20,13 +20,13 @@
             @click="selectedPlanId = p.id"
           >
             <div class="flex items-baseline justify-between">
-              <span class="text-p-base font-semibold text-app-text">{{ p.plan_name }}</span>
-              <span class="text-p-sm text-app-text-muted">{{ money(p.base_price, p.currency) }} / {{ p.billing_cycle.toLowerCase() }}</span>
+              <span class="text-p-base font-semibold text-app-text">{{ p.planName }}</span>
+              <span class="text-p-sm text-app-text-muted">{{ money(p.basePrice, p.currency) }} / {{ p.billingCycle.toLowerCase() }}</span>
             </div>
             <p class="mt-1 text-p-sm text-app-text-muted">{{ p.description }}</p>
             <ul class="mt-3 space-y-1 text-p-sm text-app-text">
-              <li v-for="l in p.limits" :key="l.limit_code">{{ l.value }} {{ l.unit }} <span class="text-app-text-muted">· {{ label(l.limit_code) }}</span></li>
-              <li v-for="a in p.apps" :key="a.app_id">{{ a.app_name }}</li>
+              <li v-for="l in p.limitEntries" :key="l.limitCode">{{ l.value }} {{ l.unit }} <span class="text-app-text-muted">· {{ label(l.limitCode) }}</span></li>
+              <li v-for="a in p.appEntries" :key="a.appName">{{ a.appName }}</li>
             </ul>
           </button>
         </div>
@@ -76,11 +76,11 @@ const selectedPlanId = ref('')
 const selectedAddons = ref([])
 
 const selectedPlan = computed(() => catalogue.plans.find((p) => p.id === selectedPlanId.value))
-const currency = computed(() => selectedPlan.value?.currency || catalogue.plans[0]?.currency || 'USD')
+const currency = computed(() => selectedPlan.value?.currency?.code || catalogue.plans[0]?.currency?.code || 'USD')
 const total = computed(() => {
   if (!selectedPlan.value) return 0
   const addons = catalogue.addons.filter((a) => selectedAddons.value.includes(a.id))
-  return addons.reduce((sum, a) => sum + Number(a.price), Number(selectedPlan.value.base_price))
+  return addons.reduce((sum, a) => sum + Number(a.price), Number(selectedPlan.value.basePrice))
 })
 const subtitle = computed(() =>
   window.subscription_status === 'Expired'
@@ -88,25 +88,39 @@ const subtitle = computed(() =>
     : 'A subscription is required before this site can be set up.',
 )
 
-const LIMIT_LABELS = { USERS: 'Users', STORAGE: 'Storage' }
+const LIMIT_LABELS = { User: 'Users', Storage: 'Storage' }
 const label = (code) => LIMIT_LABELS[code] || code
 const money = (v, cur) => `${cur} ${Number(v).toFixed(2)}`
-const addonLabel = (a) => (a.type === 'app' ? `${a.app_name} app` : `+${a.value} ${a.unit} ${label(a.limit_code).toLowerCase()}`)
+const addonLabel = (a) => (a.type === 'app' ? `${a.appName} app` : `+${a.value} ${label(a.limitCode).toLowerCase()}`)
 
 onMounted(async () => {
   try {
-    // Back from the dashboard (or just reloaded): let the server check for a paid, signed entitlement.
+    // Back from the dashboard: the webhook may beat us here, or may not have landed yet — poll
+    // the recovery endpoint (POST /api/client/sync) a few times before giving up on this load.
     const returning = new URLSearchParams(window.location.search).get('checkout') === 'return'
-    const status = await call(returning ? `${API}.refresh_status` : `${API}.get_status`)
+    let status = await call(returning ? `${API}.refresh_status` : `${API}.get_status`)
+    for (let attempt = 0; returning && status.status !== 'Active' && attempt < 3; attempt++) {
+      await new Promise((r) => setTimeout(r, 1500))
+      status = await call(`${API}.refresh_status`)
+    }
     if (status.status === 'Active') return enterApp()
-    if (returning) notice.value = 'Payment has not been confirmed yet. If you have paid, wait a moment and reload this page.'
+    if (status.status === 'Sync Error') errorMessage.value = status.last_sync_error || 'Could not reach the subscription dashboard.'
+    else if (returning) notice.value = 'Payment has not been confirmed yet. If you have completed payment, reload this page in a moment.'
     Object.assign(catalogue, await call(`${API}.get_plans`))
   } catch (e) {
-    errorMessage.value = normalizeError(e).message || 'Could not load subscription plans.'
+    errorMessage.value = serverMessage(e) || 'Could not load subscription plans.'
   } finally {
     loading.value = false
   }
 })
+
+// frappe.throw()'d text (e.g. "Invalid entitlement signature", "Cannot reach the subscription
+// dashboard...") lands in normalizeError(e).messages; .message is a generic fallback that
+// doesn't carry it, so prefer the first real message when there is one.
+function serverMessage(e) {
+  const err = normalizeError(e)
+  return err.messages?.[0] || err.message
+}
 
 async function pay() {
   errorMessage.value = ''
@@ -118,7 +132,7 @@ async function pay() {
     })
     window.location.href = url
   } catch (e) {
-    errorMessage.value = normalizeError(e).message || 'Could not start checkout.'
+    errorMessage.value = serverMessage(e) || 'Could not start checkout.'
     paying.value = false
   }
 }

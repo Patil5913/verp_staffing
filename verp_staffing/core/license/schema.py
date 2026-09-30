@@ -34,7 +34,14 @@ CREATE TABLE IF NOT EXISTS `{TABLE}` (
 """
 
 
+def raw_table_exists() -> bool:
+	"""frappe.db.table_exists(name) checks for a table literally named `tab<name>` (it's built
+	for DocTypes), which `site_license` never is — so it always reports False here and
+	get_license() would look like an empty site forever. Check the real table name instead."""
+	return bool(frappe.db.sql(f"SHOW TABLES LIKE '{TABLE}'"))
+
+
 def ensure_table():
 	"""Idempotent — safe from after_install, and lazily on sites that predate it."""
-	if not frappe.db.table_exists(TABLE):
+	if not raw_table_exists():
 		frappe.db.sql_ddl(CREATE_SQL)

@@ -8,7 +8,7 @@ from verp_staffing.core.license.enforcement import get_status, is_enforced
 
 # Whole prefixes that never need a licence (static files, realtime, the SPA shell itself).
 OPEN_PREFIXES = ("/assets", "/files", "/socket.io", "/verp")
-OPEN_API_PREFIXES = ("/api/method/verp_staffing.core.license.api.",)
+OPEN_API_PREFIXES = ("/api/method/verp_staffing.core.license.api.",)  # covers .payment_confirmed / .update_subscription too
 # Exact API methods the login screen and shell need.
 OPEN_API_METHODS = {"/api/method/login", "/api/method/logout", "/api/method/frappe.ping"}
 ADMIN = "Administrator"

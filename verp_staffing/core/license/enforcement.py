@@ -51,11 +51,14 @@ def is_active() -> bool:
 
 
 def get_limit(code: str):
+	"""`limits` is a flat {limit_code: value} dict, per the entitlement transport spec (3.2)."""
 	payload = get_state()["payload"]
-	for limit in (payload or {}).get("limits", []):
-		if limit["limit_code"] == code:
-			return limit["value"]
-	return None
+	return (payload or {}).get("limits", {}).get(code)
+
+
+def has_app(app_name: str) -> bool:
+	payload = get_state()["payload"]
+	return app_name in (payload or {}).get("enabled_apps", [])
 
 
 def get_quota() -> dict | None:
@@ -66,7 +69,7 @@ def get_quota() -> dict | None:
 		return None
 	payload = state["payload"]
 	return {
-		"users_limit": get_limit("USERS"),
-		"site_space_limit_gb": get_limit("STORAGE"),
+		"users_limit": get_limit("User"),
+		"site_space_limit_gb": get_limit("Storage"),
 		"expiry_date": str(get_datetime(payload["expires_at"]).date()),
 	}

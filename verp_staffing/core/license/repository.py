@@ -2,7 +2,7 @@
 
 import frappe
 
-from verp_staffing.core.license.schema import TABLE, ensure_table
+from verp_staffing.core.license.schema import TABLE, ensure_table, raw_table_exists
 
 FIELDS = (
 	"site_id", "installation_id", "subscription_id", "entitlement_version", "signed_payload",
@@ -12,7 +12,7 @@ FIELDS = (
 
 
 def get_license() -> frappe._dict | None:
-	if not frappe.db.table_exists(TABLE):
+	if not raw_table_exists():
 		return None
 	rows = frappe.db.sql(f"SELECT * FROM `{TABLE}` ORDER BY id LIMIT 1", as_dict=True)
 	return frappe._dict(rows[0]) if rows else None
