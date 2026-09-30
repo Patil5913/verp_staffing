@@ -1062,10 +1062,16 @@ def interview_has_permission(doc, ptype="read", user=None):
         return True
 
     visible_users = get_visible_user_names_cached(user=user)
-    if not visible_users:
-        return False
+    if doc.owner in visible_users:
+        return True
 
-    return doc.owner in visible_users
+    # An Interview belongs to its Marketing record: whoever that is assigned to (or their managers)
+    # works it too, even when someone else - e.g. a manager - created the Interview.
+    marketing = doc.get("marketing_link")
+    if not marketing:
+        return False
+    team = get_visible_employee_names_cached(user=user)
+    return bool(team) and frappe.db.get_value("Marketing", marketing, "assign_to") in team
 
 
 from frappe.utils import cint
@@ -1241,7 +1247,17 @@ def interview_query(user):
         return "1=0"
 
     users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
-    return f"`tabInterview`.owner IN ({users_sql})"
+    conditions = [f"`tabInterview`.owner IN ({users_sql})"]
+
+    # ...and the interviews of Marketing records assigned inside their team (see interview_has_permission)
+    team = get_visible_employee_names_cached(user=user)
+    if team:
+        team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        conditions.append(
+            f"`tabInterview`.marketing_link IN (SELECT `tabMarketing`.name FROM `tabMarketing` "
+            f"WHERE `tabMarketing`.assign_to IN ({team_sql}))"
+        )
+    return "(" + " OR ".join(conditions) + ")"
 
 
 def sales_order_query(user):

@@ -9,6 +9,7 @@ from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.utils.timezone import convert_round, round_day, user_time_zone
 from verp_staffing.crm.api.helpers import (
     get_reporting_subtree,
+    get_visible_employee_names_cached,
     get_visible_user_names_cached,
 )
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
@@ -249,7 +250,16 @@ def _owner_scoping_sql_condition():
         return " AND 1=0"
 
     users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
-    return f" AND i.owner IN ({users_sql})"
+    condition = f"i.owner IN ({users_sql})"
+
+    # Same reach as interview_query: also the interviews of Marketing records assigned inside the team
+    team = get_visible_employee_names_cached()
+    if team:
+        team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        condition += (
+            f" OR i.marketing_link IN (SELECT m.name FROM `tabMarketing` m WHERE m.assign_to IN ({team_sql}))"
+        )
+    return f" AND ({condition})"
 
 
 # ---------------------------------------------------------------------------

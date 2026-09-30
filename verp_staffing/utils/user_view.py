@@ -42,7 +42,11 @@ def send_reset_email(user):
     """Emails `user` a password reset link - for whoever may manage them (or themselves)."""
     if user != frappe.session.user:
         assert_can_manage_user(user)
-    frappe.get_doc("User", user).reset_password(send_email=True)
+    doc = frappe.get_doc("User", user)
+    if doc.name == "Administrator" or not doc.enabled:
+        frappe.throw(_("Can't send a reset email to this user."))
+    doc.validate_reset_password()
+    doc._reset_password(send_email=True)
     return {"ok": True}
 
 
