@@ -213,30 +213,6 @@ function onCreated(newName) {
 </script>
 
 <style scoped>
-.app-link-combobox :deep([data-slot='trigger']) {
-  box-sizing: border-box;
-  height: 2.25rem;
-  min-height: 0;
-  width: 100%;
-  border-radius: 0.5rem;
-  border: 1px solid var(--app-border);
-  background-color: var(--app-panel);
-  padding: 0 0.75rem;
-  box-shadow: none;
-}
-
-.app-link-combobox :deep([data-slot='trigger']:focus-within) {
-  border-color: var(--app-primary);
-  box-shadow: 0 0 0 2px var(--app-primary-tint);
-}
-
-.app-link-combobox :deep([data-slot='input']) {
-  color: var(--app-text);
-  background-color: transparent;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .app-link-add-new {
   display: flex;
   width: 100%;
@@ -258,7 +234,7 @@ function onCreated(newName) {
 .app-link-clear {
   position: absolute;
   top: 50%;
-  right: 1.75rem;
+  right: 2rem; /* just left of the chevron (0.75rem padding + 1rem icon) */
   transform: translateY(-50%);
   z-index: 1;
   display: flex;
@@ -271,6 +247,10 @@ function onCreated(newName) {
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
+.app-link-combobox--compact + .app-link-clear {
+  right: 1.75rem;
+}
+
 .app-link-clear:hover {
   color: var(--app-text);
   background-color: var(--app-panel-2);
@@ -278,6 +258,52 @@ function onCreated(newName) {
 </style>
 
 <style>
+/* The field itself: the Combobox's trigger IS its root element, so it must be styled here (a scoped
+   :deep() only reaches descendants and never matched it - the field then had no width/border of its
+   own and the clear (x) drifted away from it). */
+.app-link-combobox {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 2.25rem;
+  min-height: 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background-color: var(--app-panel);
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-link-combobox:hover {
+  border-color: color-mix(in srgb, var(--app-primary) 50%, var(--app-border));
+}
+
+.app-link-combobox:focus-within {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 2px var(--app-primary-tint);
+}
+
+.app-link-combobox [data-slot='input'] {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  padding: 0;
+  color: var(--app-text);
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.app-link-combobox [data-slot='input']:focus {
+  box-shadow: none;
+}
+
 /* Not scoped: the trigger is the Combobox's own (renderless) root, which never
    gets this component's scope attribute, and a scoped :deep() only reaches
    descendants. Without an explicit width it grows to its text and spills over
@@ -302,8 +328,8 @@ function onCreated(newName) {
 }
 
 /* Room for the clear (x) button so it never sits over the field's own text. */
-.app-link-combobox--clearable {
-  padding-right: 1.75rem;
+.app-link-combobox--clearable [data-slot='input'] {
+  padding-right: 1.5rem;
 }
 
 .app-link-combobox--compact:focus-within {

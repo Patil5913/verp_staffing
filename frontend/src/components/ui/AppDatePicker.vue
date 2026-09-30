@@ -10,9 +10,9 @@
           role="group"
           class="group flex w-full min-w-0 items-center gap-2 rounded-lg border bg-app-panel text-left text-p-sm outline-none transition-colors"
           :class="[
-            compact ? 'h-7 px-2' : 'h-8 px-3',
+            compact ? 'h-8 px-2' : 'h-9 px-3',
             disabled ? 'cursor-not-allowed opacity-60' : '',
-            error || typedError ? 'border-red-500' : isOpen ? 'border-app-primary ring-2 ring-app-primary/20' : 'border-app-border hover:border-app-primary/50',
+            error || typedError ? 'border-red-500' : isOpen ? 'ring-primary-soft border-app-primary' : 'date-trigger-hover border-app-border',
           ]"
           @click="!typable && !disabled && togglePopover()"
         >
@@ -31,11 +31,11 @@
             :value="typing ? typed : display"
             maxlength="16"
             :placeholder="placeholder || (mode === 'datetime' ? 'DD-MM-YYYY HH:mm' : 'DD-MM-YYYY')"
-            class="min-w-0 flex-1 bg-transparent text-p-sm text-app-text outline-none placeholder:text-app-text-muted disabled:cursor-not-allowed"
+            class="date-typable-input min-w-0 flex-1 appearance-none border-0 bg-transparent text-p-sm text-app-text outline-none placeholder:text-app-text-muted disabled:cursor-not-allowed"
             @focus="startTyping"
             @input="onTypedInput($event)"
-            @blur="commitTyped"
-            @keydown.enter.prevent="commitTyped"
+            @blur="commitTyped(true)"
+            @keydown.enter.prevent="commitTyped(false)"
           />
           <span v-else class="min-w-0 flex-1 truncate" :class="display ? 'text-app-text' : 'text-app-text-muted'">
             {{ display || placeholder }}
@@ -51,7 +51,7 @@
       </template>
 
       <template #body="{ close }">
-        <div class="mt-1.5 w-[19rem] select-none rounded-2xl border border-app-border bg-app-panel p-3 shadow-2xl">
+        <div class="date-popover-body mt-1.5 w-[19rem] select-none rounded-2xl border border-app-border bg-app-panel p-3 shadow-2xl">
           <!-- Header: month/year switcher -->
           <div class="mb-2 flex items-center justify-between">
             <button type="button" class="nav-btn" aria-label="Previous" @click="step(-1)"><span class="lucide-chevron-left size-4" /></button>
@@ -125,10 +125,9 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { siteTodayIso } from '@/utils/common/siteTime'
 import { Popover } from 'frappe-ui'
 
-// The app's date control - a calendar popover instead of the browser's native
+// The app's date control — a calendar popover instead of the browser's native
 // picker. Values stay plain strings, so it drops in where <input type=date>
 // was: 'YYYY-MM-DD' (date), 'YYYY-MM-DDTHH:mm' (datetime, same as
 // datetime-local) and 'from,to' (range).
@@ -150,7 +149,10 @@ const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
 const pad = (n) => String(n).padStart(2, '0')
 const toIso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
-const todayIso = () => siteTodayIso()
+const todayIso = () => {
+  const t = new Date()
+  return toIso(t.getFullYear(), t.getMonth(), t.getDate())
+}
 const parts = (iso) => {
   const [y, m, d] = iso.split('-').map(Number)
   return { year: y, month: m - 1, day: d }
@@ -248,8 +250,8 @@ function cellClasses(cell) {
 function dayClasses(cell) {
   const selected = props.mode === 'range' ? isEdge(cell.iso) : cell.iso === selectedDate.value
   if (selected) return 'bg-app-primary font-semibold text-white shadow-sm'
-  if (cell.iso === todayIso()) return 'font-semibold text-app-primary ring-1 ring-inset ring-app-primary/50 hover:bg-app-panel-2'
-  return [cell.outside ? 'text-app-text-muted/50' : 'text-app-text', 'hover:bg-app-panel-2']
+  if (cell.iso === todayIso()) return 'font-semibold text-app-primary ring-primary-today hover:bg-app-panel-2'
+  return [cell.outside ? 'text-muted-faint' : 'text-app-text', 'hover:bg-app-panel-2']
 }
 
 function pickDay(iso, close) {
@@ -295,7 +297,7 @@ function startTyping() {
   typing.value = true
   typed.value = display.value
 }
-// Digits go straight in - "-" is added for you: 26 02 2026 -> 26-02-2026 (a
+// Digits go straight in — "-" is added for you: 26 02 2026 -> 26-02-2026 (a
 // 2-digit year works too: 26-02-26). Anything that looks like a full typed
 // date (letters, other separators, ISO) is left alone for parseTyped.
 function autoFormat(raw) {
@@ -332,21 +334,38 @@ function parseTyped(text) {
   const tm = t.match(/(\d{1,2}):(\d{2})\s*$/)
   return { y, m: mo, d, h: tm ? Math.min(23, Number(tm[1])) : null, min: tm ? Math.min(59, Number(tm[2])) : null }
 }
-function commitTyped() {
+// On Enter, an invalid date stays in typing mode with the error shown next
+// to exactly what was typed, so the user can fix it in place — silently
+// snapping back to the last valid value (the old behavior) while also
+// showing an error read as "it's broken AND it fixed itself" at once. Blur
+// gets one free pass to give up quietly and revert with no error, since the
+// user is leaving the field rather than trying to fix it.
+function commitTyped(isBlur = false) {
   if (!typing.value) return
-  typing.value = false
   const text = typed.value.trim()
-  typedError.value = ''
   if (!text) {
+    typing.value = false
+    typedError.value = ''
     if (!props.required && props.modelValue) emit('update:modelValue', '')
     return
   }
-  if (text === display.value) return
-  const p = parseTyped(text)
-  if (!p) {
-    typedError.value = 'Enter a valid date, e.g. 01-01-2026'
+  if (text === display.value) {
+    typing.value = false
+    typedError.value = ''
     return
   }
+  const p = parseTyped(text)
+  if (!p) {
+    if (isBlur) {
+      typing.value = false
+      typedError.value = ''
+    } else {
+      typedError.value = 'Enter a valid date, e.g. 01-01-2026'
+    }
+    return
+  }
+  typing.value = false
+  typedError.value = ''
   const iso = toIso(p.y, p.m, p.d)
   if (props.mode === 'datetime') {
     if (p.h !== null) [time.h, time.m] = [p.h, p.min]
@@ -362,7 +381,62 @@ function clear() {
 }
 </script>
 
+<style>
+/* Not scoped: reka-ui's PopoverContent (the calendar dropdown panel) is a
+   focus-trapped dialog. On open, its FocusScope auto-focuses the first
+   focusable element inside it (a nav/day/month button below) rather than
+   the panel itself — none of those buttons had any focus styling, so
+   whichever one got auto-focused showed the browser's raw default outline
+   (a heavy black ring). Reset it everywhere in the popover and give
+   focused buttons a themed ring instead. */
+.PopoverContent:focus,
+.PopoverContent:focus-visible {
+  outline: none;
+}
+.date-popover-body button:focus {
+  outline: none;
+}
+.date-popover-body button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--app-primary-tint), 0 0 0 1px var(--app-primary) inset;
+}
+</style>
+
 <style scoped>
+/* Tailwind can't generate an opacity-modified utility (e.g. ring-app-primary/20)
+   for a custom color whose CSS variable holds a full color value (var(--app-primary)
+   resolves to a hex string, not the "R G B" channel triplet the opacity syntax
+   needs) — it silently emits no rule at all. `ring-2 ring-app-primary/20` was
+   therefore a 2px ring with no color, which the browser fills with its default
+   (a heavy black outline) — this is the "black border" around the open date
+   field. color-mix() computes the tint at paint time instead, sidestepping
+   Tailwind's opacity generation entirely. */
+.ring-primary-soft {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-primary) 20%, transparent);
+}
+.ring-primary-today {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-primary) 50%, transparent);
+}
+.text-muted-faint {
+  color: color-mix(in srgb, var(--app-text-muted) 50%, transparent);
+}
+.date-trigger-hover:hover {
+  border-color: color-mix(in srgb, var(--app-primary) 50%, var(--app-border));
+}
+/* The typable input still picked up the browser/OS's native focus ring on
+   click (independent of the `outline-none`/`border-0` utility classes,
+   which only cover the resting state) — this kills it explicitly for every
+   focus-related pseudo-class so the surrounding trigger's own border stays
+   the only visible outline. */
+.date-typable-input,
+.date-typable-input:focus,
+.date-typable-input:focus-visible,
+.date-typable-input:-moz-focusring {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .nav-btn {
   display: inline-flex;
   height: 2rem;
