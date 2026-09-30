@@ -45,7 +45,7 @@
 
 		<template #tab-roles>
 			<div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-				<UserRolesTab :user="name" :can-write="detail.canWrite.value && controls.can_manage" :assignable="controls.assignable_roles" />
+				<UserRolesTab :roles="roles" :can-write="detail.canWrite.value && controls.can_manage" :assignable="controls.assignable_roles" />
 			</div>
 		</template>
 
@@ -143,6 +143,7 @@ import RecordActionBar from "@/components/common/RecordActionBar.vue";
 import DetailPageLayout from "@/components/detail/DetailPageLayout.vue";
 import DocDetailView from "@/components/detail/DocDetailView.vue";
 import ChildTableField from "@/components/detail/ChildTableField.vue";
+import { useUserRoles } from "@/composables/detail/useUserRoles";
 import UserRolesTab from "@/components/detail/user/UserRolesTab.vue";
 import UserChangePassword from "@/components/detail/user/UserChangePassword.vue";
 import { useDetailPageController } from "@/composables/detail/useDetailPageController";
@@ -160,6 +161,28 @@ const timeZoneOptions = computed(() => (timeZones.resource.data?.timezones || []
 const doctype = computed(() => "User");
 const name = computed(() => route.params.name);
 
+// Roles & Permissions and Security are for whoever may manage this user - not the user themselves
+// (My Settings) and not users without the right; the server refuses them either way.
+const controlsResource = useResource({
+	url: "verp_staffing.utils.user_view.get_user_controls",
+	makeParams: () => ({ user: name.value }),
+	auto: true,
+});
+const controls = computed(() => ({
+	is_self: false,
+	can_manage: false,
+	can_view_roles: false,
+	can_send_reset: false,
+	can_change_own_password: false,
+	assignable_roles: [],
+	...(controlsResource.resource.data || {}),
+}));
+// Role ticks are edited on the Roles tab but saved by the page's one Save button.
+const roles = useUserRoles(
+	name,
+	computed(() => controls.value.can_view_roles),
+);
+
 const {
 	detail,
 	recordTitle,
@@ -169,7 +192,10 @@ const {
 	showDeleteDialog,
 	deleting,
 	onDelete,
-} = useDetailPageController(doctype, name);
+} = useDetailPageController(doctype, name, {
+	extraIsDirty: roles.isDirty,
+	extraSave: () => roles.submit(),
+});
 
 // warn_if_employee_missing (overrides/user.py) flags a just-created User
 // that has no linked Employee yet - check once, right after a create,
@@ -246,22 +272,6 @@ const TABS = [
 	{ key: "general", label: "General" },
 	{ key: "security", label: "Security" },
 ];
-// Roles & Permissions and Security are for whoever may manage this user - not the user themselves
-// (My Settings) and not users without the right; the server refuses them either way.
-const controlsResource = useResource({
-	url: "verp_staffing.utils.user_view.get_user_controls",
-	makeParams: () => ({ user: name.value }),
-	auto: true,
-});
-const controls = computed(() => ({
-	is_self: false,
-	can_manage: false,
-	can_view_roles: false,
-	can_send_reset: false,
-	can_change_own_password: false,
-	assignable_roles: [],
-	...(controlsResource.resource.data || {}),
-}));
 const tabs = computed(() =>
 	TABS.filter((t) => {
 		if (t.key === "roles") return controls.value.can_view_roles;

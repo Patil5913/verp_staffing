@@ -11,12 +11,9 @@
     </div>
 
     <div v-else class="rounded-xl border border-app-border bg-app-panel p-6 shadow-sm">
-      <div class="mb-4 flex items-center justify-between">
-        <div>
-          <h2 class="text-p-lg font-medium text-app-text">Roles & Permissions</h2>
-          <p class="text-p-sm text-app-text-muted">Every role this user should have access as.</p>
-        </div>
-        <AppButton v-if="canWrite" size="sm" icon="save" :loading="saving" @click="submit">Save Roles</AppButton>
+      <div class="mb-4">
+        <h2 class="text-p-lg font-medium text-app-text">Roles & Permissions</h2>
+        <p class="text-p-sm text-app-text-muted">Every role this user should have access as. Saved with the Save button above.</p>
       </div>
 
       <div class="flex flex-col gap-4">
@@ -56,12 +53,11 @@ import { computed, ref } from 'vue'
 import { LoadingIndicator, FeatherIcon } from 'frappe-ui'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import { groupRolesByModule } from '@/configs/detail/roleModules'
-import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
-import { useUserRoles } from '@/composables/detail/useUserRoles'
 
 const props = defineProps({
-  user: { type: String, required: true },
+  // Role state lives on the page (useUserRoles) so the main Save can save it.
+  roles: { type: Object, required: true },
   canWrite: { type: Boolean, default: false },
   // Roles the signed-in user may hand out; any other role is shown but locked.
   assignable: { type: Array, default: () => [] },
@@ -79,9 +75,7 @@ const sectionStyle = (i) => {
   }
 }
 
-const { matrix, allRoles, checked, toggle, submit, saving } = useUserRoles(
-  computed(() => props.user),
-)
+const { matrix, allRoles, checked, toggle } = props.roles
 
 const sections = computed(() => groupRolesByModule(allRoles.value))
 // Collapsed by default - only the sections the user is opening are expanded.
