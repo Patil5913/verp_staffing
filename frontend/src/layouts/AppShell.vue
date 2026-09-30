@@ -8,7 +8,7 @@
     </div>
     <div class="flex min-h-0 flex-1">
       <AppSidebar />
-      <main class="min-w-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <main class="min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)]">
         <slot />
       </main>
     </div>
