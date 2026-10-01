@@ -10,7 +10,7 @@
         @save="onSave"
         @delete="showDeleteDialog = true"
       >
-        <Dropdown v-if="!detail.isNew.value && actionMenu.length" :options="actionMenu" placement="right">
+        <Dropdown v-if="!detail.isNew.value && canAct && actionMenu.length" :options="actionMenu" placement="right">
           <template #default="{ open }">
             <AppButton variant="outline" icon="zap" :class="open ? 'bg-app-panel-2' : ''">Actions</AppButton>
           </template>
@@ -172,6 +172,19 @@ async function checkSalesOrders() {
   }
 }
 watch(name, checkSalesOrders, { immediate: true })
+
+// Owner (or a Sales manager above them) only - anyone else who can open the customer via another
+// department's service gets view-only: no Actions menu, no Save.
+const canAct = ref(false)
+async function checkCanAct() {
+  if (!name.value || name.value === 'new') return (canAct.value = false)
+  try {
+    canAct.value = !!(await call('verp_staffing.crm.api.helpers.can_act_on_customer', { customer: name.value }))
+  } catch {
+    canAct.value = false
+  }
+}
+watch(name, checkCanAct, { immediate: true })
 
 // The Sales Order (if any) whose services need the candidate details form - "Send Details Form".
 const detailsFormOrder = ref('')

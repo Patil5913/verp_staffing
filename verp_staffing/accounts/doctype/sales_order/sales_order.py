@@ -67,6 +67,8 @@ class SalesOrder(Document):
         self.validate_payment_terms_fields()
 
     def validate(self):
+        if self.is_new():
+            self.validate_customer_sales_owner()
         self.validate_payment_terms_deletion()
         self.validate_invoiced_terms_unchanged()
         self.validate_payment_terms_total()
@@ -82,6 +84,13 @@ class SalesOrder(Document):
         self.handle_currency_logic()
         run_calculation(self)
         self.set_in_words()
+
+    def validate_customer_sales_owner(self):
+        from verp_staffing.crm.api.helpers import is_customer_sales_owner
+
+        owner = frappe.db.get_value("Customer", self.customer, "customer_owner")
+        if not is_customer_sales_owner(owner):
+            frappe.throw(_("Only the customer's owner or their Sales managers can create a Sales Order for this customer."), frappe.PermissionError)
 
     def validate_payment_terms_deletion(self):
         if self.is_new():

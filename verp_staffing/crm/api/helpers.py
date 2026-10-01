@@ -918,6 +918,23 @@ def _customer_via_service(customer, team, creators) -> bool:
     return False
 
 
+def is_customer_sales_owner(customer_owner, user=None):
+    """Only the customer's owner or someone above them in the Sales hierarchy may act on the
+    customer (edit it, create Sales Orders, portal access). Other departments' roles that can
+    merely see the customer (e.g. Marketing, via a service) get view-only."""
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+    if not customer_owner:
+        return False
+    return customer_owner in get_visible_employee_names_cached(department="Sales", user=user)
+
+
+@frappe.whitelist()
+def can_act_on_customer(customer):
+    return is_customer_sales_owner(frappe.db.get_value("Customer", customer, "customer_owner"))
+
+
 def customer_has_permission(doc, ptype="read", user=None):
     user = user or frappe.session.user
     if user == "Administrator":
@@ -932,7 +949,7 @@ def customer_has_permission(doc, ptype="read", user=None):
     if not team:
         return False
 
-    if doc.customer_owner in team:
+    if is_customer_sales_owner(doc.customer_owner, user):
         return True
 
     # Read only: a department working on the candidate may open the record, not edit it
