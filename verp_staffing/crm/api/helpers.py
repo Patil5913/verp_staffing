@@ -528,16 +528,19 @@ def get_visible_employee_names(user, department=None):
     return list(users)
 
 
-def get_visible_employee_names_cached(department=None):
+def get_visible_employee_names_cached(department=None, user=None):
+    # `user` matters for has_permission checks made on someone else's behalf (frappe.has_permission(
+    # ..., user=x), notifications, shares); it defaults to the session user like every other caller.
+    user = user or frappe.session.user
     cache = frappe.cache()
-    cache_key = f"Visible_Employee_Names:{frappe.session.user}:{department or 'all'}"
+    cache_key = f"Visible_Employee_Names:{user}:{department or 'all'}"
 
     cached = cache.get_value(cache_key)
     if cached:
         return set(cached)
 
     employees = get_visible_employee_names(
-        user=frappe.session.user,
+        user=user,
         department=department,
     )
 
@@ -545,20 +548,21 @@ def get_visible_employee_names_cached(department=None):
     return employees
 
 
-def get_visible_user_names_cached(department=None):
+def get_visible_user_names_cached(department=None, user=None):
     """Same visibility rule as get_visible_employee_names_cached, but
     resolves to User login ids instead of Employee names — Interview has
     no assign_to field to compare Employee names against; it only has the
     framework `owner` field, which stores a User.
     """
+    user = user or frappe.session.user
     cache = frappe.cache()
-    cache_key = f"Visible_User_Names:{frappe.session.user}:{department or 'all'}"
+    cache_key = f"Visible_User_Names:{user}:{department or 'all'}"
 
     cached = cache.get_value(cache_key)
     if cached:
         return set(cached)
 
-    employee_names = get_visible_employee_names_cached(department=department)
+    employee_names = get_visible_employee_names_cached(department=department, user=user)
 
     users = set()
     for emp in employee_names:
@@ -566,7 +570,7 @@ def get_visible_user_names_cached(department=None):
         if user:
             users.add(user)
 
-    users.add(frappe.session.user)  # always see your own docs
+    users.add(user)  # always see your own docs
 
     cache.set_value(cache_key, list(users), expires_in_sec=600)
     return users
@@ -697,8 +701,9 @@ def send_email(
         subject=subject,
         message=message,
         attachments=attachments,
-        delayed=(not now) if now is not None else True,
+        delayed=False,
         retry=3,
+        send_priority=5,
         reference_doctype=reference_doctype,
         reference_name=reference_name,
     )
@@ -804,9 +809,12 @@ def send_notification(**kwargs):
 
 
 # permission query
-def generic_assign_query(user):
+def generic_assign_query(user, doctype=None):
 
-    doctype = frappe.local.form_dict.get("doctype")
+    # Frappe passes the doctype being queried; the request's own `doctype` parameter is only a
+    # fallback (it is missing when the query runs inside another API, e.g. the dashboard, and
+    # the condition then read `tabNone`.assign_to).
+    doctype = doctype or frappe.local.form_dict.get("doctype")
 
     if user == "Administrator":
         return ""
@@ -815,7 +823,7 @@ def generic_assign_query(user):
     if not employee:
         return "1=0"
 
-    team = get_visible_employee_names_cached()
+    team = get_visible_employee_names_cached(user=user)
 
     if not team:
         return "1=0"
@@ -830,11 +838,101 @@ def generic_assign_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
-    team = get_visible_employee_names_cached()
+    # Same class of bug fixed in lead_has_permission below: this hook only
+    # narrows access to an *existing* record down to its assignee — a
+    # brand-new, unsaved doc has no assign_to yet, so the check always fell
+    # through to False and blocked "create" for every non-admin user
+    # regardless of their actual role-based create permission.
+    if ptype == "create":
+        return True
+
+    team = get_visible_employee_names_cached(user=user)
     if not team:
         return False
 
     return doc.assign_to in team
+
+
+RESUME_VIEWER_DOCTYPES = (
+    "Marketing",
+    "Interview Support",
+    "RUC",
+    "Training",
+    "JDC",
+    "Cover Letter",
+    "Technical Other Services",
+    "Marketing Other Services",
+)
+
+
+def resume_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    if ptype == "create":
+        return True
+
+    team = get_visible_employee_names_cached(user=user)
+    if not team:
+        return False
+
+    if doc.assign_to in team:
+        return True
+
+    # The Resume is auto-assigned to whoever is next in the Technical
+    # department's rotation when it's created, independently of who the
+    # same customer's profile is later assigned to in Marketing/Interview
+    # Support/etc. Those are separate, never-synced `assign_to` fields —
+    # so a Marketing-stage recruiter viewing "their" candidate's resume
+    # must also be let in via the assignment on their own department's
+    # record for this customer, not just via Resume.assign_to.
+    if not doc.customer:
+        return False
+
+    for viewer_doctype in RESUME_VIEWER_DOCTYPES:
+        if frappe.db.exists(
+            viewer_doctype,
+            {"customer": doc.customer, "assign_to": ["in", team]},
+        ):
+            return True
+
+    return False
+
+
+# Services a department holds for a candidate; whoever they are assigned to (or, for the last two,
+# who forwarded them) can see that candidate's Customer record too.
+CUSTOMER_SERVICE_DOCTYPES = ("Resume", "CR", "Onboardings", *(d for d in RESUME_VIEWER_DOCTYPES if d != "Interview Support"))
+CUSTOMER_REQUESTER_DOCTYPES = ("Interview Support", "Other Services")
+
+
+def _customer_via_service(customer, team, creators) -> bool:
+    for doctype in CUSTOMER_SERVICE_DOCTYPES:
+        if team and frappe.db.exists(doctype, {"customer": customer, "assign_to": ["in", list(team)]}):
+            return True
+    for doctype in CUSTOMER_REQUESTER_DOCTYPES:
+        if team and frappe.db.exists(doctype, {"customer": customer, "assign_to": ["in", list(team)]}):
+            return True
+        if creators and frappe.db.exists(doctype, {"customer": customer, "owner": ["in", list(creators)]}):
+            return True
+    return False
+
+
+def is_customer_sales_owner(customer_owner, user=None):
+    """Only the customer's owner or someone above them in the Sales hierarchy may act on the
+    customer (edit it, create Sales Orders, portal access). Other departments' roles that can
+    merely see the customer (e.g. Marketing, via a service) get view-only."""
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+    if not customer_owner:
+        return False
+    return customer_owner in get_visible_employee_names_cached(department="Sales", user=user)
+
+
+@frappe.whitelist()
+def can_act_on_customer(customer):
+    return is_customer_sales_owner(frappe.db.get_value("Customer", customer, "customer_owner"))
 
 
 def customer_has_permission(doc, ptype="read", user=None):
@@ -842,11 +940,22 @@ def customer_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
-    team = get_visible_employee_names_cached()
+    # See generic_assign_has_permission — a new Customer has no
+    # customer_owner yet, so this must not gate "create".
+    if ptype == "create":
+        return True
+
+    team = get_visible_employee_names_cached(user=user)
     if not team:
         return False
 
-    return doc.customer_owner in team
+    if is_customer_sales_owner(doc.customer_owner, user):
+        return True
+
+    # Read only: a department working on the candidate may open the record, not edit it
+    if ptype in ("read", "select", "print", "email", "report", "export", "share"):
+        return _customer_via_service(doc.name, team, get_visible_user_names_cached(user=user))
+    return False
 
 
 def opportunity_has_permission(doc, ptype="read", user=None):
@@ -854,7 +963,13 @@ def opportunity_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
-    team = get_visible_employee_names_cached()
+    # See generic_assign_has_permission — a new Opportunity has no
+    # opportunity_owner yet (and no name for the Customer lookup below to
+    # match against), so this must not gate "create".
+    if ptype == "create":
+        return True
+
+    team = get_visible_employee_names_cached(user=user)
     if not team:
         return False
 
@@ -877,7 +992,18 @@ def lead_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
-    team = get_visible_employee_names_cached()
+    # This hook only narrows access to an *existing* Lead down to its team
+    # (owner, or Sales users with a linked Opportunity) — it has nothing
+    # meaningful to check on a brand-new, unsaved Lead (no owner set yet, no
+    # Opportunity can reference a name that doesn't exist yet), so it always
+    # fell through to False and blocked every "create" check regardless of
+    # the user's actual Lead create permission (role-based DocPerms already
+    # gate that separately). Blocked a Sales Master Manager who otherwise had
+    # permission from ever creating a Lead.
+    if ptype == "create":
+        return True
+
+    team = get_visible_employee_names_cached(user=user)
     if not team:
         return False
 
@@ -900,13 +1026,19 @@ def sales_order_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
+    # See generic_assign_has_permission — a new Sales Order has no `customer`
+    # linked yet to resolve an owner/assignment through, so this must not
+    # gate "create".
+    if ptype == "create":
+        return True
+
     departments = get_user_departments(user)
 
     # Accounting sees everything
     if "Accounting" in departments:
         return True
 
-    team = get_visible_employee_names_cached()
+    team = get_visible_employee_names_cached(user=user)
     if not team:
         return False
 
@@ -941,11 +1073,22 @@ def interview_has_permission(doc, ptype="read", user=None):
     if user == "Administrator":
         return True
 
-    visible_users = get_visible_user_names_cached()
-    if not visible_users:
-        return False
+    # See generic_assign_has_permission — a new Interview has no owner yet
+    # (`doc.owner` only gets set on insert), so this must not gate "create".
+    if ptype == "create":
+        return True
 
-    return doc.owner in visible_users
+    visible_users = get_visible_user_names_cached(user=user)
+    if doc.owner in visible_users:
+        return True
+
+    # An Interview belongs to its Marketing record: whoever that is assigned to (or their managers)
+    # works it too, even when someone else - e.g. a manager - created the Interview.
+    marketing = doc.get("marketing_link")
+    if not marketing:
+        return False
+    team = get_visible_employee_names_cached(user=user)
+    return bool(team) and frappe.db.get_value("Marketing", marketing, "assign_to") in team
 
 
 from frappe.utils import cint
@@ -995,7 +1138,7 @@ def lead_query(user):
     if user == "Administrator":
         return ""
 
-    team = get_visible_employee_names_cached()
+    team = get_visible_employee_names_cached(user=user)
 
     if not team:
         return "1=0"
@@ -1031,7 +1174,7 @@ def opportunity_query(user):
     if user == "Administrator":
         return ""
 
-    team = get_visible_employee_names_cached()
+    team = get_visible_employee_names_cached(user=user)
 
     if not team:
         return "1=0"
@@ -1078,7 +1221,7 @@ def customer_query(user):
         return "1=0"
 
     # 3. get team
-    team = get_visible_employee_names_cached()
+    team = get_visible_employee_names_cached(user=user)
 
     if not team:
         return "1=0"
@@ -1093,6 +1236,16 @@ def customer_query(user):
         """
     )
 
+    # ...and the candidates their department holds a service for
+    users_sql = ",".join([frappe.db.escape(x) for x in get_visible_user_names_cached(user=user)])
+    for doctype in CUSTOMER_SERVICE_DOCTYPES:
+        conditions.append(f"`tabCustomer`.name IN (SELECT `tab{doctype}`.customer FROM `tab{doctype}` WHERE `tab{doctype}`.assign_to IN ({team_sql}))")
+    for doctype in CUSTOMER_REQUESTER_DOCTYPES:
+        conditions.append(
+            f"`tabCustomer`.name IN (SELECT `tab{doctype}`.customer FROM `tab{doctype}` "
+            f"WHERE `tab{doctype}`.assign_to IN ({team_sql}) OR `tab{doctype}`.owner IN ({users_sql}))"
+        )
+
     # -------------------------
     # FINAL CONDITION
     # -------------------------
@@ -1106,12 +1259,22 @@ def interview_query(user):
     if user == "Administrator":
         return ""
 
-    visible_users = get_visible_user_names_cached()
+    visible_users = get_visible_user_names_cached(user=user)
     if not visible_users:
         return "1=0"
 
     users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
-    return f"`tabInterview`.owner IN ({users_sql})"
+    conditions = [f"`tabInterview`.owner IN ({users_sql})"]
+
+    # ...and the interviews of Marketing records assigned inside their team (see interview_has_permission)
+    team = get_visible_employee_names_cached(user=user)
+    if team:
+        team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        conditions.append(
+            f"`tabInterview`.marketing_link IN (SELECT `tabMarketing`.name FROM `tabMarketing` "
+            f"WHERE `tabMarketing`.assign_to IN ({team_sql}))"
+        )
+    return "(" + " OR ".join(conditions) + ")"
 
 
 def sales_order_query(user):
@@ -1124,7 +1287,7 @@ def sales_order_query(user):
     if "Accounting" in departments:
         return ""
 
-    team = get_visible_employee_names_cached()
+    team = get_visible_employee_names_cached(user=user)
 
     if not team:
         return "1=0"
@@ -1234,3 +1397,71 @@ def _is_superior_in_department(
         current = manager_emp
 
     return {"is_superior": False}
+
+
+def requester_or_assignee_query(user, doctype=None):
+    """Interview Support / Other Services: the assignee's team sees them, and so does the side that
+    forwarded them (their creator, and that person's managers) - a recruiter keeps seeing the
+    support they asked for."""
+    doctype = doctype or frappe.local.form_dict.get("doctype")
+    if user == "Administrator":
+        return ""
+
+    team = get_visible_employee_names_cached(user=user)
+    creators = get_visible_user_names_cached(user=user)
+    conditions = []
+    if team:
+        team_sql = ",".join(frappe.db.escape(x) for x in team)
+        conditions.append(f"`tab{doctype}`.assign_to IN ({team_sql})")
+    if creators:
+        users_sql = ",".join(frappe.db.escape(x) for x in creators)
+        conditions.append(f"`tab{doctype}`.owner IN ({users_sql})")
+    return "(" + " OR ".join(conditions) + ")" if conditions else "1=0"
+
+
+def requester_or_assignee_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator" or ptype == "create":
+        return True
+
+    if doc.assign_to and doc.assign_to in get_visible_employee_names_cached(user=user):
+        return True
+    return doc.owner in get_visible_user_names_cached(user=user)
+
+
+def user_can_see_customer(customer, user=None) -> bool:
+    """Whether `user` may see this candidate's data: the owner side (Customer's own permission),
+    accounting, or a department that holds a service record for the customer assigned inside their
+    visible team - the same reach the service pages already give them. Guards the whitelisted
+    endpoints that read a customer's details by name."""
+    user = user or frappe.session.user
+    if not customer:
+        return False
+    if user == "Administrator" or "System Manager" in frappe.get_roles(user):
+        return True
+    if not frappe.db.exists("Customer", customer):
+        return False
+    if frappe.has_permission("Customer", "read", doc=customer, user=user):
+        return True
+    if "Accounting" in get_user_departments(user):
+        return True
+
+    team = get_visible_employee_names_cached(user=user)
+    if team:
+        for doctype in ("Resume", "CR", "Onboardings", *(d for d in RESUME_VIEWER_DOCTYPES if d != "Interview Support")):
+            if frappe.db.exists(doctype, {"customer": customer, "assign_to": ["in", list(team)]}):
+                return True
+
+    # Interview Support / Other Services: assigned to the team, or forwarded by it
+    creators = get_visible_user_names_cached(user=user)
+    for doctype in ("Interview Support", "Other Services"):
+        if team and frappe.db.exists(doctype, {"customer": customer, "assign_to": ["in", list(team)]}):
+            return True
+        if creators and frappe.db.exists(doctype, {"customer": customer, "owner": ["in", list(creators)]}):
+            return True
+    return False
+
+
+def require_customer_access(customer, user=None):
+    if not user_can_see_customer(customer, user):
+        frappe.throw(frappe._("You do not have permission to view this candidate."), frappe.PermissionError)

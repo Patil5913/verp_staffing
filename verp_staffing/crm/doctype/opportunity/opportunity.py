@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 
-from verp_staffing.crm.api.lead_details import create_lead_details
+from verp_staffing.crm.api.lead_details import create_lead_details, get_or_create_lead_detail
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
@@ -64,14 +64,9 @@ class Opportunity(Document):
         # =========================
         if self.opportunity_from_lead:
 
-            lead_detail_name = frappe.db.get_value(
-                "Doctype Reference",
-                {
-                    "reference_doctype": "Lead",
-                    "reference_person": self.opportunity_from_lead,
-                },
-                "parent",
-            )
+            # Normally the Lead's form already exists; a Lead that never got
+            # one is given it now rather than blocking the conversion.
+            lead_detail_name = get_or_create_lead_detail("Lead", self.opportunity_from_lead)
 
             if not lead_detail_name:
                 frappe.throw("Lead Details not found for selected party.")
@@ -98,10 +93,20 @@ class Opportunity(Document):
         # CASE 2: Standalone
         # =========================
         else:
+            # The quick-create dialog collects phone/email alongside the
+            # name but they don't live on Opportunity itself — same
+            # `_<fieldname>` convention as Lead.create_lead_detail, carried
+            # straight into the new Lead Detail Form.
+            custom_values = {
+                field: value
+                for field in ("personal_phone_number", "email")
+                if (value := getattr(self, f"_{field}", None))
+            }
             lead_detail_name = create_lead_details(
                 "Opportunity",
                 self.name,
                 self.name1,
+                custom_values=custom_values or None,
             )
 
         # =========================

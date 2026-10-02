@@ -1,10 +1,92 @@
 import json
+from urllib.parse import quote
+
 import frappe
+
+from verp_staffing.utils.access import list_blocked
 
 CACHE_KEY_PREFIX = "verp_staffing:sidebar_permissions:"
 CACHE_TTL_SECONDS = 24 * 60 * 60
 
 MANDATORY_ROLES_WHILE_ACTIVE = ("_show_sidebar_master", "Inbox User")
+
+# Doctypes that are Frappe "Single" doctypes (exactly one record, no list) —
+# old desk UI jumps straight to the record's edit form, so these route to
+# the generic settings-form page instead of the generic list page.
+SINGLE_DOCTYPES = {"ERP Configuration", "Accounts Settings"}
+
+# Bespoke desk pages ported into the new frontend, keyed by the classic desk
+# route stored in get_default_sidebar_config. Anything not listed here (there
+# is currently nothing left unlisted) is left pointing at the classic route,
+# e.g. because it hasn't been ported yet.
+PAGE_ROUTE_OVERRIDES = {
+    "/app/email-inbox": "/verp/email-inbox",
+    "/app/permission-manager": "/verp/permission-manager",
+    "/app/pending-pe-requests": "/verp/pending-pe-requests",
+    "/app/account/view/tree": "/verp/Account/view/tree",
+    "/app/setup": "/verp/setup",
+}
+
+
+def _frontend_route(item: dict, item_kind: str) -> str:
+    """Rewrites a sidebar item's classic-desk `route` into its new-frontend
+    equivalent, purely from data already on the item — no stored config
+    needs to change, so any doctype/report added to
+    get_default_sidebar_config later gets a working route automatically.
+    """
+    route = item.get("route")
+
+    if item_kind == "doctype" and item.get("doctype"):
+        doctype = item["doctype"]
+        if doctype in SINGLE_DOCTYPES:
+            return f"/verp/settings/{quote(doctype)}"
+        # List is the default view for a doctype, so it gets the bare route.
+        return f"/verp/{quote(doctype)}"
+
+    if item_kind == "report":
+        report_name = item.get("name") or item.get("report_name")
+        if report_name:
+            return f"/verp/report/{quote(report_name)}"
+        return route
+
+    if item_kind == "page":
+        route = PAGE_ROUTE_OVERRIDES.get(route, route)
+
+    # Whatever is still a classic-desk route (old stored config, a kind not
+    # handled above) opens its /verp counterpart; E Sign stays on the desk.
+    if route and route.startswith("/app"):
+        from verp_staffing.utils.desk_routes import desk_path_to_spa
+
+        return desk_path_to_spa(route) or route
+
+    return route
+
+
+# The chat lives in its own app (vruglechat) and is embedded at /verp/chat.
+# Its sidebar entry is added here, not stored in Sidebar Master, so it appears
+# the moment the app is installed and vanishes when it is not.
+CHAT_APP = "vruglechat"
+CHAT_ROLES = {"Chat User", "Chat Manager", "Chat Admin", "Chat External"}
+CHAT_ITEM = {
+    "key": "chat",
+    "label": "Chat",
+    "icon": "icon-setting-gear",  # drawn from KEY_ICON_OVERRIDES['chat'] on the frontend
+    "parent_type": "type_3",
+    "shortcut": "",
+    "roles": [],
+    "route": "/verp/chat",
+    "link_type": "page",
+}
+
+
+def _add_chat_item(filtered: list, is_admin: bool, user_roles: set) -> None:
+    if CHAT_APP not in frappe.get_installed_apps():
+        return
+    if not (is_admin or user_roles & CHAT_ROLES):
+        return
+    # right after the Email Inbox, the other communication entry; else last
+    at = next((i + 1 for i, cfg in enumerate(filtered) if cfg.get("key") == "email-inbox"), len(filtered))
+    filtered.insert(at, dict(CHAT_ITEM))
 
 
 def _cache_key(user: str) -> str:
@@ -37,6 +119,7 @@ def _build_sidebar_payload(user: str) -> dict:
         if item is not None:
             filtered.append(item)
 
+    _add_chat_item(filtered, is_admin, user_roles)
     return {"config": filtered, "generated_for": user}
 
 
@@ -44,15 +127,22 @@ def _filter_parent(cfg: dict, is_admin: bool, user_roles: set):
     parent_type = cfg.get("parent_type")
 
     if parent_type == "type_3":
-        if not _accessible(cfg, is_admin, user_roles, link_field="link_type"):
+        item_kind = cfg.get("link_type") or "doctype"
+        if not _accessible(cfg, is_admin, user_roles, item_kind):
             return None
-        return cfg
+        routed = dict(cfg)
+        routed["route"] = _frontend_route(cfg, item_kind)
+        return routed
 
-    kept_children = [
-        child
-        for child in (cfg.get("children") or [])
-        if _accessible(child, is_admin, user_roles, link_field="type")
-    ]
+    kept_children = []
+    for child in cfg.get("children") or []:
+        item_kind = child.get("type") or "doctype"
+        if not _accessible(child, is_admin, user_roles, item_kind):
+            continue
+        routed_child = dict(child)
+        routed_child["route"] = _frontend_route(child, item_kind)
+        kept_children.append(routed_child)
+
     if not kept_children:
         return None
 
@@ -61,11 +151,9 @@ def _filter_parent(cfg: dict, is_admin: bool, user_roles: set):
     return trimmed
 
 
-def _accessible(item: dict, is_admin: bool, user_roles: set, link_field: str) -> bool:
+def _accessible(item: dict, is_admin: bool, user_roles: set, item_kind: str) -> bool:
     if is_admin:
         return True
-
-    item_kind = item.get(link_field) or "doctype"
 
     if item_kind == "doctype" and item.get("doctype"):
         try:
@@ -73,7 +161,7 @@ def _accessible(item: dict, is_admin: bool, user_roles: set, link_field: str) ->
                 frappe.has_permission(
                     item["doctype"], ptype="write", ignore_share_permissions=True
                 )
-            )
+            ) and not list_blocked(item["doctype"])
         except Exception:
             return False
 
@@ -133,6 +221,15 @@ def clear_sidebar_cache_for_user(user: str):
 def clear_sidebar_cache_for_users(users) -> None:
     for user in set(filter(None, users)):
         clear_sidebar_cache_for_user(user)
+
+
+def clear_all_sidebar_cache() -> None:
+    # Every cached payload is a snapshot of _frontend_route()'s output at
+    # cache time — bumping the route-rewrite logic itself (this function's
+    # own deploys) doesn't invalidate anything by itself, so call this once
+    # after changing _frontend_route/PAGE_ROUTE_OVERRIDES/SINGLE_DOCTYPES,
+    # the same as after a Sidebar Master config edit.
+    frappe.cache().delete_keys(CACHE_KEY_PREFIX)
 
 
 def _users_with_role(role: str):

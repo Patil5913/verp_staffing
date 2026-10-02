@@ -101,7 +101,7 @@
   },
   {
    "fieldname": "field_value",
-   "fieldtype": "Data",
+   "fieldtype": "Long Text",
    "label": "Field Value"
   },
   {

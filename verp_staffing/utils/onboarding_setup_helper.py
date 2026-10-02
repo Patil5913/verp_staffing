@@ -119,21 +119,21 @@ def get_setup_progress():
         "employee": {
             "label": "Create First Employee",
             "doctype": "Employee",
-            "route": "/app/employee/new",
+            "route": "/verp/Employee",
         },
         "erp_configuration": {
             "label": "Configure ERP Settings",
             "doctype": "ERP Configuration",
-            "route": "/app/erp-configuration",
+            "route": "/verp/settings/ERP%20Configuration",
         },
         "pdf_agreement_template": {
             "label": "Create Agreement Template",
             "doctype": "Pdf Agreement Template",
-            "route": "/app/pdf-agreement-template/new",
+            "route": "/verp/Pdf%20Agreement%20Template",
         },
         "completed": {
             "label": "Go To Dashboard",
-            "route": "/app",
+            "route": "/verp",
         },
     }
 

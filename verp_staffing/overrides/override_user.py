@@ -15,6 +15,8 @@ class CustomUser(User):
 
     def on_update(self):
         super().on_update()
+        if self.user_type == "Website User":
+            return  # customers are not employees
         if not getattr(self.flags, "in_insert", False):
             return
         if self.name == "Administrator":
@@ -46,6 +48,10 @@ class CustomUser(User):
 
         # adding role Inbox User to all users except Administrator and Guest
         if self.name in ("Administrator", "Guest"):
+            return
+
+        # Customers (website users) get no staff roles; Inbox User would also make them a System User
+        if self.user_type == "Website User":
             return
 
         if frappe.db.exists("Has Role", {"parent": self.name, "role": "Inbox User"}):

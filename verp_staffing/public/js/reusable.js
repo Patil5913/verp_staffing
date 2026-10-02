@@ -245,7 +245,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 						if (!f.value) return;
 						const value = frappe.utils.escape_html(String(f.value));
 						let current_display_html = value
-							? `<a href="${f.fieldtype == "Link" ? `/app/file/${value}` : value.startsWith("http") ? value : `https://${value}`}" target="_blank"
+							? `<a href="${f.fieldtype == "Link" ? `/verp/File/${value}` : value.startsWith("http") ? value : `https://${value}`}" target="_blank"
         style="color:var(--primary, var(--text-color));font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin" ? value : "📎 View Current File"}</a>`
 							: `<span style="color:var(--text-muted);font-style:italic;">No file</span>`;
 

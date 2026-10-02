@@ -4,6 +4,23 @@ def after_insert(doc, method=None):
     warn_if_employee_missing(doc)
 
 
+@frappe.whitelist()
+def check_employee_missing(user):
+    """Whether `user` was just created without a linked Employee — reads and
+    clears the flag warn_if_employee_missing set on User.after_insert.
+    Consumed once by UserDetailPage right after a successful create, so the
+    "Create an Employee for this user?" prompt only shows the one time.
+    """
+    if not frappe.has_permission("User", "read", user):
+        frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
+
+    cache_key = f"employee_missing::{user}"
+    flagged = frappe.cache().get_value(cache_key)
+    if flagged:
+        frappe.cache().delete_value(cache_key)
+    return bool(flagged)
+
+
 def warn_if_employee_missing(user_doc):
     # Skip Administrator
     if user_doc.name == "Administrator":

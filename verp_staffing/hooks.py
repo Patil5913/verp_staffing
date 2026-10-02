@@ -14,11 +14,41 @@ app_license = "mit"
 add_to_apps_screen = [
 	{
 		"name": "verp_staffing",
-		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png",
+		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-trimmed.png",
 		"title": "Vrugle Staffing ERP",
-		"route": "/app",
+		"route": "/verp",
 		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"
 	}
+]
+
+# frappe-ui frontend (Vue3 + Tailwind), served at /verp.
+# Client-side (vue-router) routes under /verp/* need to resolve to the same
+# SPA shell so deep links and page refreshes don't 404.
+# verp_staffing is the site's front door: "/" always opens /verp, whatever a role's own home page
+# says (vruglechat sets Chat External's to /chat, and Administrator has every role, so it was
+# winning). A customer who lands there is sent on to the portal by the app's own router.
+website_redirects = [
+	{"source": "/", "target": "/verp"},
+	# Frappe's reset email links to /update-password?key=...; land on the app's own page instead
+	{
+		"source": r"update-password\?(.*)",
+		"target": r"/verp/update-password?\1",
+		"match_with_query_string": True,
+		"redirect_http_status": 302,
+	},
+]
+
+website_route_rules = [
+	{"from_route": "/verp/<path:app_path>", "to_route": "verp"},
+	# old /customer links go on to the portal in the app (/verp/portal/...)
+	{"from_route": "/customer/<path:app_path>", "to_route": "customer"},
+]
+
+# Serves the PWA service worker at /verp-sw.js (see utils/pwa.py).
+page_renderer = [
+	"verp_staffing.utils.pwa.ServiceWorkerRenderer",
+	# /verp/portal/invoices/<x>/print and the other customer downloads (see utils/portal_downloads.py)
+	"verp_staffing.utils.portal_downloads.PortalDownloadRenderer",
 ]
 
 website_context = {
@@ -124,8 +154,9 @@ treeviews = [
 # Home Pages
 # ----------
 
-# application home page (will override Website Settings)
-# home_page = "login"
+# application home page (will override Website Settings): the site root opens
+# the app; www/verp.py sends a signed-out visitor on to /verp/login.
+home_page = "verp"
 
 # website user home page (by Role)
 # role_home_page = {
@@ -158,8 +189,17 @@ after_install = [
 after_migrate = [
     # "verp_staffing.install.remove_default_workspaces",
     # "verp_staffing.install.after_install",
-    "verp_staffing.overrides.email_template.patch",
+    # "verp_staffing.overrides.email_template.patch",
+    # "verp_staffing.crm.api.customer_chat.set_portal_home_page",
     # "verp_staffing.utils.email_template.trigger_email_template_refresh",
+    # Demo data for a production site, once — guarded; see the file's docstring.
+    # "verp_staffing.utils.seed_production.after_migrate",
+    # ...and then its customers get their portal logins (own marker, so already-seeded sites get it too)
+    # "verp_staffing.utils.seed_production.portal_access_after_migrate",
+    # ...and they get services, interviews, orders/payments, agreements and chats to test with
+    # "verp_staffing.utils.seed_demo_journeys.demo_journeys_after_migrate",
+    # Realistic data for documentation screenshots — does nothing unless site_config has "seed_documentation_data": 1
+    "verp_staffing.utils.seed_documentation_data.after_migrate",
 ]
 
 # Uninstallation
@@ -195,6 +235,13 @@ after_migrate = [
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
+    **{
+        dt: "verp_staffing.utils.portal_guard.portal_query_conditions"
+        for dt in (
+            "CRM Task", "CRM Event", "CRM Note", "ToDo", "Event", "Contact", "Address",
+            "Communication", "Notification Log", "Tag Link", "Tag", "Personal Data Download Request",
+        )
+    },
     "Customer": "verp_staffing.crm.api.helpers.customer_query",
     "Sales Order": "verp_staffing.crm.api.helpers.sales_order_query",
     "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
@@ -203,6 +250,8 @@ permission_query_conditions = {
     "RUC": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Marketing": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Interview": "verp_staffing.crm.api.helpers.interview_query",
+    "Interview Support": "verp_staffing.crm.api.helpers.requester_or_assignee_query",
+    "Other Services": "verp_staffing.crm.api.helpers.requester_or_assignee_query",
     "Training": "verp_staffing.crm.api.helpers.generic_assign_query",
     "JDC": "verp_staffing.crm.api.helpers.generic_assign_query",
     "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
@@ -213,7 +262,9 @@ permission_query_conditions = {
 }
 
 has_permission = {
-    "Resume": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    # customers stay inside the portal (see utils/portal_guard.py); a no-op for everyone else
+    "*": "verp_staffing.utils.portal_guard.portal_has_permission",
+    "Resume": "verp_staffing.crm.api.helpers.resume_has_permission",
     "RUC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "Marketing": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
     "Training": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
@@ -228,7 +279,13 @@ has_permission = {
     "Opportunity": "verp_staffing.crm.api.helpers.opportunity_has_permission",
     "Lead": "verp_staffing.crm.api.helpers.lead_has_permission",
     "Interview": "verp_staffing.crm.api.helpers.interview_has_permission",
+    "Interview Support": "verp_staffing.crm.api.helpers.requester_or_assignee_has_permission",
+    "Other Services": "verp_staffing.crm.api.helpers.requester_or_assignee_has_permission",
 }
+
+# Chat portal (vruglechat): a customer whose service has ended may no longer use the chat,
+# even if their user is still enabled. Each function gets the user id; False denies.
+chat_external_access = ["verp_staffing.crm.api.customer_chat.is_chat_access_active"]
 
 # DocType Class
 # ---------------
@@ -245,6 +302,8 @@ override_doctype_class = {
 # Hook on document methods and events
 
 doc_events = {
+    "Communication": {"after_insert": "verp_staffing.utils.mailbox.on_new_communication"},
+    "System Settings": {"on_update": "verp_staffing.utils.timezone.sync_users_to_company_time_zone"},
     "Resume": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },
@@ -289,11 +348,19 @@ doc_events = {
     "Sales Order": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_sales_order_update_hook"
     },
+    "Email Account": {
+        "before_validate": "verp_staffing.overrides.email_account.before_validate",
+    },
     "User": {
         "before_insert": "verp_staffing.quota.utils.quota.user_limit",
+        # sets the flag the new frontend reads to offer "Create Employee" after a User is created
+        "after_insert": "verp_staffing.overrides.user.after_insert",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
         "on_update": "verp_staffing.utils.sidebar.on_user_change",
-        "validate": "verp_staffing.utils.sidebar.on_user_validate",
+        "validate": [
+            "verp_staffing.utils.sidebar.on_user_validate",
+            "verp_staffing.utils.user_security.guard_user_save",
+        ],
         "on_trash": "verp_staffing.utils.sidebar.on_user_change",
     },
     "Has Role": {
@@ -371,6 +438,7 @@ scheduler_events = {
         "verp_staffing.quota.utils.quota.nightly_reconcile",
     ],
     "cron": {
+        "0/10 * * * *": ["verp_staffing.utils.mailbox.sync_extra_all"],
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
@@ -430,6 +498,9 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = [
+    "verp_staffing.utils.portal_guard.restrict_portal_api",
+    "verp_staffing.utils.desk_routes.redirect_desk_to_spa",
+    "verp_staffing.utils.desk_routes.redirect_bare_spa_paths",
     "verp_staffing.quota.utils.quota.site_expiry_check",
     "verp_staffing.quota.utils.quota.block_non_admin",
     "verp_staffing.overrides.email_template.patch",

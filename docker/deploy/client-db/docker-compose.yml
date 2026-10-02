@@ -1,0 +1,36 @@
+# Runs on the CLIENT's server: MariaDB only. The app stack (backend, frontend,
+# workers) stays on our server and connects here (see ../README / create-site.sh
+# --db-host). Start with:  cp .env.example .env && docker compose up -d
+name: verp-client-db
+
+services:
+  db:
+    image: mariadb:10.6
+    restart: unless-stopped
+    # Publish ONLY on the private/VPN address of this server (never 0.0.0.0 on a
+    # public interface), then firewall the port to our app server's IP.
+    ports:
+      - "${BIND_ADDRESS:?set BIND_ADDRESS (VPN/private IP) in .env}:${DB_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --password=$$MARIADB_ROOT_PASSWORD"]
+      interval: 5s
+      retries: 30
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+      - --max-connections=500
+      # Optional TLS (recommended when the link is not a private VPN): put
+      # ca.pem, server-cert.pem, server-key.pem in ./certs and uncomment.
+      # - --ssl-ca=/certs/ca.pem
+      # - --ssl-cert=/certs/server-cert.pem
+      # - --ssl-key=/certs/server-key.pem
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/mysql
+      # - ./certs:/certs:ro
+
+volumes:
+  db-data: { name: verp_client_db-data }

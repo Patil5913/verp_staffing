@@ -23,6 +23,7 @@ def calculate_totals(doc):
     total = sum(flt(item.amount) for item in doc.items)
     doc.total = total
     doc.net_total = total
+    doc.total_qty = sum(flt(item.qty) for item in doc.items)
 
 
 # Taxes and charges
@@ -64,7 +65,7 @@ def apply_discount(doc):
 
     # Calculate based on percentage
     if doc.additional_discount_percentage:
-        doc.discount_amount = flt(total * doc.additional_discount_percentage / 100)
+        doc.discount_amount = flt(total * flt(doc.additional_discount_percentage) / 100)
 
     discount = flt(doc.discount_amount or 0)
 
@@ -93,14 +94,16 @@ def calculate_rounding(doc):
 			doc.rounded_total = doc.grand_total
 			doc.rounding_adjustment = 0
 			doc.base_rounded_total = doc.base_grand_total
-			doc.outstanding_amount = doc.rounded_total
+			if doc.docstatus == 0:  # once submitted, Payment Entries own it
+				doc.outstanding_amount = doc.rounded_total
 			return
 
 		rounded = round(flt(doc.grand_total))
 
 		doc.rounded_total = rounded
 		doc.rounding_adjustment = flt(rounded - doc.grand_total)
-		doc.outstanding_amount = rounded
+		if doc.docstatus == 0:
+			doc.outstanding_amount = rounded
 
 		# base currency
 		if doc.conversion_rate:

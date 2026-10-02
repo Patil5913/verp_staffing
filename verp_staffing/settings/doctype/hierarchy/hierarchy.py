@@ -4,6 +4,7 @@
 import json
 
 import frappe
+from verp_staffing.utils.desk_routes import link_to_form
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.utils.hierarchy_roles import (
@@ -63,7 +64,7 @@ class Hierarchy(Document):
             for row in auto_cleared:
 
                 employees.append(
-					frappe.utils.get_link_to_form(
+					link_to_form(
 						"Employee",
 						row["employee"],
 					)
@@ -310,6 +311,121 @@ class Hierarchy(Document):
                 frappe.ValidationError,
                 title=_("Invalid JSON"),
             )
+
+
+def _department_hierarchy_roles(department) -> set:
+    """Every role configured in `department`'s Hierarchy (role_hierarchy_json):
+    each row's parent_role plus all of its child_roles, flattened. Ported
+    from the old desk employee.js filter (`frm._department_hierarchy[row.department]`)
+    — the roles a department's hierarchy actually defines, not the raw
+    Department Role rows (see get_department_role_query in department.py,
+    which is a different, narrower "not used anywhere yet" filter).
+    """
+    if not department:
+        return set()
+
+    raw = frappe.get_cached_value("Hierarchy", department, "role_hierarchy_json")
+    if not raw:
+        return set()
+
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return set()
+
+    roles = set()
+    for row in data or []:
+        if row.get("parent_role"):
+            roles.add(row["parent_role"])
+        roles.update(row.get("child_roles") or [])
+    return roles
+
+
+@frappe.whitelist()
+def get_assign_to_query(doctype, txt, searchfield, start, page_len, filters):
+    """Standard Link-field query for an Employee Assignment Details row's
+    Assigned To: employees holding the *parent* role(s) of the row's own
+    designation in its department's hierarchy — who that designation
+    reports to. `filters` carries department/designation/current_emp;
+    resolves the parent roles here, then delegates the actual employee
+    lookup to employee.get_employees_by_assignment (unchanged, reused as-is).
+    """
+    filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
+    department = filters.get("department")
+    designation = filters.get("designation")
+    if not (department and designation):
+        return []
+
+    roles = set()
+    for row in json.loads(frappe.get_cached_value("Hierarchy", department, "role_hierarchy_json") or "[]") or []:
+        if row.get("parent_role") and designation in (row.get("child_roles") or []):
+            roles.add(row["parent_role"])
+    if not roles:
+        return []
+
+    from verp_staffing.employee.doctype.employee.employee import get_employees_by_assignment
+
+    return get_employees_by_assignment(
+        doctype,
+        txt,
+        searchfield,
+        start,
+        page_len,
+        {"department": department, "designation": sorted(roles), "current_emp": filters.get("current_emp")},
+    )
+
+
+@frappe.whitelist()
+def is_role_top_level(department, role):
+    """Whether `role` never appears as anyone's child_roles in `department`'s
+    hierarchy — ported from the old desk employee.js validate(frm)'s
+    `is_top_role = !all_child_roles.has(row.designation)` (that check was
+    written but its frappe.throw was left commented out, so it never
+    actually ran; the frontend's Employee Assignment Details dialog now
+    calls this to require Assigned To for a non-top role).
+    """
+    if not (department and role):
+        return False
+
+    raw = frappe.get_cached_value("Hierarchy", department, "role_hierarchy_json")
+    if not raw:
+        return False
+
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return False
+
+    child_roles = set()
+    for row in data or []:
+        child_roles.update(row.get("child_roles") or [])
+    return role not in child_roles
+
+
+@frappe.whitelist()
+def get_department_hierarchy_roles_query(doctype, txt, searchfield, start, page_len, filters):
+    """Standard Link-field query (see AppLinkField's `query` prop /
+    frappe.desk.search.search_link): the roles configured in a department's
+    hierarchy, minus whichever ones the caller says are already picked
+    elsewhere (a sibling row in the same child table). Two different
+    frontend spots need this with two different "already picked" sets —
+    ERP Configuration's Permission Request Configuration table (other rows
+    of that table) and Employee's Assignment Details table (other rows of
+    that employee's own assignment table) — both just pass their own
+    `exclude` list through `filters`.
+    """
+    filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
+    department = filters.get("department")
+    exclude = set(filters.get("exclude") or [])
+
+    roles = sorted(_department_hierarchy_roles(department) - exclude)
+    needle = (txt or "").strip().lower()
+    if needle:
+        roles = [r for r in roles if needle in r.lower()]
+
+    start = int(start or 0)
+    page_len = int(page_len or 20)
+    return [[r] for r in roles[start : start + page_len]]
 
 
 # Precheck before save.

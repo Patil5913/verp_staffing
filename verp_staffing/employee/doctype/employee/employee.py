@@ -19,9 +19,12 @@ class Employee(Document):
 
     def clear_employee_cache(self):
         cache = frappe.cache()
-        cache.delete_key(f"lead_user::{self.user}")
-        cache.delete_key(f"opportunity_user::{self.user}")
-        cache.delete_key(f"employee_from_user::{self.user}")
+        # a user this Employee used to be linked to must lose the mapping too, not only the new one
+        before = self.get_doc_before_save()
+        for user in {self.user, before.user if before else None} - {None, ""}:
+            cache.delete_key(f"lead_user::{user}")
+            cache.delete_key(f"opportunity_user::{user}")
+            cache.delete_key(f"employee_from_user::{user}")
         cache.delete_key(f"user_departments::{self.name}")
         cache.delete_key(f"roles:{self.name}")
 
@@ -40,6 +43,7 @@ class Employee(Document):
 
     def validate(self):
         # self.validate_employee_edit_permission()
+        self._validate_user_not_already_linked()
 
         rows = self.employee_assignment_details_table or []
 
@@ -48,6 +52,20 @@ class Employee(Document):
 
         self._validate_assignment_rows(rows)
         validate_employee_assignment_hierarchy(self)
+
+    def _validate_user_not_already_linked(self):
+        # get_users_not_linked_to_employee already filters the User Link
+        # field's own options client-side; this is the same "one Employee
+        # per User" rule enforced server-side, since a hidden/disabled
+        # client-side filter is never the security boundary.
+        if not self.user:
+            return
+        existing = frappe.db.get_value("Employee", {"user": self.user, "name": ["!=", self.name or ""]}, "name")
+        if existing:
+            frappe.throw(
+                _("User {0} is already linked to Employee {1}.").format(self.user, existing),
+                frappe.ValidationError,
+            )
 
     def _validate_assignment_rows(self, rows):
         seen_departments = set()
@@ -197,6 +215,54 @@ def get_users_not_linked_to_employee(
             int(start),
         ]
     )
+
+    return list(frappe.db.sql(query, values))
+
+
+@frappe.whitelist()
+def get_employees_by_department(doctype, txt, searchfield, start, page_len, filters):
+    """Employees who have an Employee Assignment Details row for `department`
+    (one name, or a list of names) — Employee has no plain `department`
+    column of its own, so a field like Lead's Lead Owner (or Customer's
+    Customer Owner) that needs "employees in Sales" can't filter on Employee
+    directly and needs this join, same shape as get_employees_by_assignment
+    above.
+    """
+    department = filters.get("department")
+    if not department:
+        return []
+    departments = department if isinstance(department, (list, tuple)) else [department]
+
+    txt = (txt or "").strip()
+    values = [departments]
+
+    query = """
+        SELECT
+            e.name,
+            e.employee_name
+        FROM `tabEmployee Assignment Detail` d
+        INNER JOIN `tabEmployee` e
+            ON e.name = d.parent
+        WHERE
+            d.department in %s
+    """
+
+    if txt:
+        query += """
+            AND (
+                e.name LIKE %s
+                OR e.employee_name LIKE %s
+            )
+        """
+        like_txt = f"%{txt}%"
+        values.extend([like_txt, like_txt])
+
+    query += """
+        GROUP BY e.name
+        ORDER BY e.employee_name ASC
+        LIMIT %s OFFSET %s
+    """
+    values.extend([int(page_len), int(start)])
 
     return list(frappe.db.sql(query, values))
 
@@ -590,3 +656,34 @@ def validate_employee_delete(doc):
                 "Other employees are assigned to this employee."
             ).format(doc.name)
         )
+
+
+@frappe.whitelist()
+def get_employee_list(fields=None, filters=None, order_by=None, limit_start=0, limit_page_length=20):
+    """get_list for the Employee list view, plus the derived `department` /
+    `designation` columns (taken from the top Employee Role Assignment row)."""
+    fields = frappe.parse_json(fields) if isinstance(fields, str) else (fields or [])
+    virtual = {"department", "designation"}
+    rows = frappe.get_list(
+        "Employee",
+        fields=[f for f in fields if f not in virtual] or ["name"],
+        filters=frappe.parse_json(filters) if isinstance(filters, str) else filters,
+        order_by=None if (order_by or "").split(" ")[0] in virtual else order_by,
+        limit_start=limit_start,
+        limit_page_length=limit_page_length,
+    )
+    if rows and virtual & set(fields):
+        details = frappe.get_all(
+            "Employee Assignment Detail",
+            filters={"parent": ["in", [r.name for r in rows]], "parenttype": "Employee"},
+            fields=["parent", "department", "designation"],
+            order_by="idx asc",
+        )
+        top = {}
+        for d in details:  # idx asc: the first row per employee is the top one
+            top.setdefault(d.parent, d)
+        for r in rows:
+            row = top.get(r.name)
+            r["department"] = (row.department if row else "") or ""
+            r["designation"] = (row.designation if row else "") or ""
+    return rows

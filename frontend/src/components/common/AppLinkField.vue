@@ -1,0 +1,339 @@
+<template>
+  <div class="flex flex-col gap-1.5">
+    <label v-if="label" class="text-p-sm font-medium text-app-text-muted">
+      {{ label }}<span v-if="required" class="text-red-600"> *</span>
+    </label>
+
+    <div class="relative">
+      <Combobox
+        v-model="model"
+        v-model:open="isOpen"
+        class="app-link-combobox"
+        :class="{ 'app-link-combobox--compact': compact, 'app-link-combobox--clearable': showClear }"
+        :options="comboOptions"
+        :placeholder="placeholder || `Select ${doctype}`"
+        :disabled="disabled"
+        :loading="search.isLoading"
+        open-on-focus
+        @input="handleInput"
+        @focus="loadOptions('')"
+      >
+        <template v-if="!hideAddNew" #footer>
+          <button type="button" class="app-link-add-new" @click="openQuickCreate">
+            <FeatherIcon name="plus" class="h-3.5 w-3.5 shrink-0" />
+            <span class="truncate">Add New {{ doctype }}</span>
+          </button>
+        </template>
+      </Combobox>
+      <!-- Clears the field without opening the dropdown - only ever shown while the field is
+           actually editable (not disabled/read-only), and only once there's something to clear. -->
+      <button
+        v-if="showClear"
+        type="button"
+        class="app-link-clear"
+        tabindex="-1"
+        title="Clear"
+        @mousedown.stop.prevent="model = ''"
+      >
+        <FeatherIcon name="x" class="h-3.5 w-3.5" />
+      </button>
+    </div>
+
+    <PersonQuickCreateDialog
+      v-if="!hideAddNew && showQuickCreate && isPersonDoctype"
+      v-model="showQuickCreate"
+      :doctype="doctype"
+      :initial-value="query"
+      :navigate-on-create="false"
+      @created="onCreated"
+    />
+    <QuickCreateDialog
+      v-else-if="!hideAddNew && showQuickCreate"
+      v-model="showQuickCreate"
+      :doctype="doctype"
+      :initial-value="query"
+      :navigate-on-create="false"
+      @created="onCreated"
+    />
+  </div>
+</template>
+
+<script setup>
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { Combobox, FeatherIcon, debounce, call } from 'frappe-ui'
+import { useResource } from '@/composables/list/useResource'
+import { recordTitle, requestTitles } from '@/composables/common/useRecordTitles'
+import QuickCreateDialog from '@/components/list/QuickCreateDialog.vue'
+import PersonQuickCreateDialog from '@/components/common/PersonQuickCreateDialog.vue'
+import { PERSON_DOCTYPES } from '@/configs/detail/listOptions'
+
+const props = defineProps({
+  doctype: { type: String, required: true },
+  modelValue: { default: '' },
+  label: { type: String, default: '' },
+  required: { type: Boolean, default: false },
+  placeholder: { type: String, default: '' },
+  disabled: { type: Boolean, default: false },
+  // The 28px toolbar-height control instead of the 36px form field.
+  compact: { type: Boolean, default: false },
+  filters: { type: Object, default: () => ({}) },
+  // How many matches search_link returns - its own default is 10, too few
+  // once a doctype has more matches than fit on one screen (e.g. picking a
+  // DocType out of the few hundred this app defines).
+  pageLength: { type: Number, default: 20 },
+  // Hides the "Add New <doctype>" footer/quick-create flow - for fields
+  // that link to something this page has no business creating on the fly
+  // (e.g. picking an existing DocType in the Permission Manager).
+  hideAddNew: { type: Boolean, default: false },
+  // A whitelisted "standard query" method (e.g.
+  // verp_staffing.crm.api.helpers.get_assign_to_by_service) that filters/
+  // sorts results server-side beyond a plain `filters` dict - same `query`
+  // param the classic desk Link field's set_query() passes through to
+  // search_link.
+  query: { type: String, default: '' },
+})
+const emit = defineEmits(['update:modelValue'])
+
+const model = computed({
+  get: () => props.modelValue || '',
+  set: (value) => emit('update:modelValue', value),
+})
+// Only while the field can actually be changed - never on a disabled/read-only field - and
+// only once there's a value worth clearing.
+const showClear = computed(() => !props.disabled && !props.required && Boolean(model.value))
+
+const router = useRouter()
+
+const isOpen = ref(false)
+const query = ref('')
+const showQuickCreate = ref(false)
+const isPersonDoctype = computed(() => PERSON_DOCTYPES.has(props.doctype))
+
+// frappe-ui's resource.fetch(params) falls back to its *previous* params
+// object whenever the new params are falsy ("params = params || out.params"
+// in resources.js) - an empty search string is falsy, so re-searching with
+// txt="" (clearing the box, refocusing, or a filters/query change
+// retriggering the watch below) would otherwise hand that whole leftover
+// params object back into makeParams as if it were the new `txt`, sending
+// the server e.g. `{doctype: "Employee", filters: {...}, ...}` as the txt
+// argument itself. Reading the current search text from a ref instead of
+// makeParams' own argument sidesteps that fallback entirely - the fetch
+// call's argument is never used for anything but a truthy "go" signal.
+const searchText = ref('')
+const search = useResource({
+  url: 'frappe.desk.search.search_link',
+  method: 'POST',
+  makeParams: () => ({
+    doctype: props.doctype,
+    txt: searchText.value || '',
+    filters: props.filters,
+    page_length: props.pageLength,
+    query: props.query || undefined,
+  }),
+  notifyOnError: false,
+  transform: (data) => (data || []).map((doc) => ({ label: optionLabel(doc.value, doc.label), value: doc.value })),
+})
+
+// Guards against an out-of-order response: two overlapping searches (e.g.
+// typing a term, then clearing it right after) can resolve in either
+// order - without this, a slower earlier request finishing after a faster
+// later one silently overwrites the fresher results, leaving the dropdown
+// stuck showing the stale filtered list even once the search box is empty.
+// `results` only accepts a response whose request is still the latest one
+// issued, so `comboOptions` never regresses to a superseded search.
+let requestSeq = 0
+const results = ref([])
+
+async function loadOptions(txt) {
+  searchText.value = txt || ''
+  const seq = ++requestSeq
+  await search.resource.fetch(true)
+  if (seq === requestSeq) results.value = search.resource.data || []
+}
+
+const debouncedLoad = debounce((txt) => loadOptions(txt), 300)
+
+function handleInput(txt) {
+  query.value = txt
+  debouncedLoad(txt)
+}
+
+watch(
+  () => [props.doctype, props.filters, props.query],
+  () => loadOptions(''),
+  { immediate: true, deep: true },
+)
+
+// The record's name, not its ID; a record with no name of its own shows its ID.
+function optionLabel(value, label) {
+  return (label && label !== value ? label : recordTitle(props.doctype, value)) || value
+}
+
+// The selected record may not be in the current search results (or not loaded yet) -
+// keep it in the options so the field shows its name instead of the bare ID.
+const comboOptions = computed(() => {
+  const options = results.value.map((o) => ({ ...o, label: optionLabel(o.value, o.label === o.value ? '' : o.label) }))
+  const current = model.value
+  if (current && !options.some((o) => o.value === current)) {
+    options.unshift({ label: optionLabel(current, ''), value: current })
+  }
+  return options
+})
+
+watch(
+  () => [props.doctype, model.value, results.value],
+  () => requestTitles(props.doctype, [model.value, ...results.value.map((o) => o.value)]),
+  { immediate: true },
+)
+
+async function openQuickCreate() {
+  isOpen.value = false
+  if (isPersonDoctype.value) {
+    showQuickCreate.value = true
+    return
+  }
+  // Checked up front, same reason as DocListView's onAddNew - no meta for
+  // this doctype is preloaded here (unlike a list page), so this one extra
+  // round trip replaces the generic QuickCreateDialog's own after-the-fact
+  // check, which used to flash the dialog open before redirecting.
+  const quickEntry = await call('verp_staffing.utils.detail_view.get_quick_entry_flag', { doctype: props.doctype }).catch(() => false)
+  if (quickEntry) {
+    showQuickCreate.value = true
+  } else {
+    router.push(`/${encodeURIComponent(props.doctype)}/new`)
+  }
+}
+
+function onCreated(newName) {
+  if (!newName) return
+  model.value = newName
+  loadOptions('')
+}
+</script>
+
+<style scoped>
+.app-link-add-new {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid var(--app-border);
+  padding: 0.5rem 0.75rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-primary);
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.app-link-add-new:hover {
+  background-color: var(--app-panel-2);
+}
+
+.app-link-clear {
+  position: absolute;
+  top: 50%;
+  right: 2rem; /* just left of the chevron (0.75rem padding + 1rem icon) */
+  transform: translateY(-50%);
+  z-index: 1;
+  display: flex;
+  height: 1.125rem;
+  width: 1.125rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: var(--app-text-muted);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.app-link-combobox--compact + .app-link-clear {
+  right: 1.75rem;
+}
+
+.app-link-clear:hover {
+  color: var(--app-text);
+  background-color: var(--app-panel-2);
+}
+</style>
+
+<style>
+/* The field itself: the Combobox's trigger IS its root element, so it must be styled here (a scoped
+   :deep() only reaches descendants and never matched it - the field then had no width/border of its
+   own and the clear (x) drifted away from it). */
+.app-link-combobox {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 2.25rem;
+  min-height: 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background-color: var(--app-panel);
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-link-combobox:hover {
+  border-color: color-mix(in srgb, var(--app-primary) 50%, var(--app-border));
+}
+
+.app-link-combobox:focus-within {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 2px var(--app-primary-tint);
+}
+
+.app-link-combobox [data-slot='input'] {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  padding: 0;
+  color: var(--app-text);
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.app-link-combobox [data-slot='input']:focus {
+  box-shadow: none;
+}
+
+/* Not scoped: the trigger is the Combobox's own (renderless) root, which never
+   gets this component's scope attribute, and a scoped :deep() only reaches
+   descendants. Without an explicit width it grows to its text and spills over
+   whatever sits beside it. */
+.app-link-combobox--compact {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 1.75rem;
+  min-height: 0;
+  padding: 0 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background-color: var(--app-panel);
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.app-link-combobox--compact input {
+  font-size: 13px;
+}
+
+/* Room for the clear (x) button so it never sits over the field's own text. */
+.app-link-combobox--clearable [data-slot='input'] {
+  padding-right: 1.5rem;
+}
+
+.app-link-combobox--compact:focus-within {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 2px var(--app-primary-tint);
+}
+</style>

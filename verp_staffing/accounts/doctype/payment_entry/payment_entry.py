@@ -25,6 +25,22 @@ class PaymentEntry(Document):
                     "Re-request verification from the Sales Order to reactivate it.",
                     title="Action Blocked",
                 )
+        # Was previously done in on_submit — too late to ever persist:
+        # on_submit runs *after* the row is already written to the
+        # database, so setting these there only ever changed the in-memory
+        # doc for the rest of that request, never the saved record. Moved
+        # here so it actually sticks, and runs on every save (not only
+        # submit) — e.g. the Payment Verification queue's Verify dialog can
+        # now set paid_from/paid_to and have their currencies land in the
+        # same save.
+        if not self.paid_from_account_currency and self.paid_from:
+            self.paid_from_account_currency = frappe.get_cached_value(
+                "Account", self.paid_from, "account_currency"
+            )
+        if not self.paid_to_account_currency and self.paid_to:
+            self.paid_to_account_currency = frappe.get_cached_value(
+                "Account", self.paid_to, "account_currency"
+            )
         validate_party_type_in_master(self)
         self.validate_references_not_tampered()
         validate_party_type_matches_payment_direction(self)
@@ -47,6 +63,12 @@ class PaymentEntry(Document):
                 "Please re-request verification from the Sales Order payment terms.",
                 title="Action Blocked",
             )
+
+        if flt(self.difference_amount):
+            frappe.throw(_("Difference Amount must be zero before submitting."))
+
+        # currencies are fetched in validate() now, which already ran as
+        # part of this same submit — just enforce they actually landed.
         # Enforce account fields before submit
         mandatory_on_submit = {
             "paid_from": "Account Paid From",
@@ -63,18 +85,6 @@ class PaymentEntry(Document):
                     ", ".join(f"<b>{m}</b>" for m in missing)
                 ),
                 title=_("Missing Account Details"),
-            )
-
-        if flt(self.difference_amount):
-            frappe.throw(_("Difference Amount must be zero before submitting."))
-
-        if not self.paid_from_account_currency and self.paid_from:
-            self.paid_from_account_currency = frappe.get_cached_value(
-                "Account", self.paid_from, "account_currency"
-            )
-        if not self.paid_to_account_currency and self.paid_to:
-            self.paid_to_account_currency = frappe.get_cached_value(
-                "Account", self.paid_to, "account_currency"
             )
 
         # Any submit = approved — sync verification status and term row
@@ -219,11 +229,9 @@ class PaymentEntry(Document):
         self.total_allocated_amount = abs(total_allocated)
         self.base_total_allocated_amount = abs(total_allocated) * rate
 
-        deductions = sum(flt(d.amount) for d in (self.deductions or []))
-
         unallocated = max(
             0.0,
-            flt(self.paid_amount) - self.total_allocated_amount - deductions,
+            flt(self.paid_amount) - self.total_allocated_amount,
         )
 
         self.unallocated_amount = unallocated
@@ -233,11 +241,10 @@ class PaymentEntry(Document):
         rate = flt(self.conversion_rate) or 1.0
         total_allocated = flt(self.total_allocated_amount)
         paid = flt(self.paid_amount)
-        total_deductions = sum(flt(d.amount) for d in (self.deductions or []))
         included_taxes = self._get_included_taxes()
 
         difference = total_allocated - paid if total_allocated > paid else 0.0
-        net_diff = difference - total_deductions + included_taxes
+        net_diff = difference + included_taxes
 
         self.difference_amount = flt(net_diff)
         self.base_difference_amount = flt(net_diff) * rate
@@ -387,7 +394,6 @@ class PaymentEntry(Document):
         gl_entries = []
         self._add_party_gl_entries(gl_entries)
         self._add_bank_gl_entries(gl_entries)
-        self._add_deduction_gl_entries(gl_entries)
         self._add_tax_gl_entries(gl_entries)
         return merge_gl_entries(gl_entries)
 
@@ -472,33 +478,6 @@ class PaymentEntry(Document):
                         self.party if self.payment_type == "Receive" else self.paid_from
                     ),
                     debit=flt(self.paid_amount),
-                    **base,
-                )
-            )
-
-    def _add_deduction_gl_entries(self, gl_entries):
-        company_currency = get_company_currency(self.company)
-        base = self._base_gl_args()
-
-        for d in self.get("deductions") or []:
-            if not flt(d.amount):
-                continue
-
-            account_currency = frappe.get_cached_value(
-                "Account", d.account, "account_currency"
-            )
-            if account_currency and account_currency != company_currency:
-                frappe.throw(
-                    _(
-                        "Deduction account {0} currency ({1}) must match company currency ({2})."
-                    ).format(d.account, account_currency, company_currency)
-                )
-
-            gl_entries.append(
-                build_gl_entry(
-                    account=d.account,
-                    against=self.party or self.paid_from,
-                    debit=flt(d.amount),
                     **base,
                 )
             )
@@ -693,7 +672,7 @@ def validate_party_type_in_master(doc):
     if not frappe.db.exists("Party Type", doc.party_type):
         valid_types = frappe.db.get_all("Party Type", pluck="name")
         valid_str = ", ".join(valid_types) if valid_types else _("(none configured)")
-        create_link = frappe.utils.get_url("/app/party-type/new-party-type-1")
+        create_link = frappe.utils.get_url("/verp/Party%20Type")
         frappe.throw(
             _(
                 "Party Type '{0}' is not configured in the Party Type master. "

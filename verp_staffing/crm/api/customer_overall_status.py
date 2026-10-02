@@ -61,7 +61,7 @@ def compute_customer_status(customer):
         if status == "Started":
             return "Marketing In Progress"
         if status == "Hold":
-                return "Marketing In Hold"
+            return "Marketing On Hold"
         if status == "Completed":
             marketing_completed = True  # fall through to other services
 

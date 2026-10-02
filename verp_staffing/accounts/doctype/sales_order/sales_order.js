@@ -400,7 +400,7 @@ async function is_sales_user() {
 	return _isSalesUser;
 }
 
-async function get_document_link(doctype_route, name) {
+async function get_document_link(doctype, name) {
 	if (!name) return "";
 
 	const sales_user = await is_sales_user();
@@ -410,7 +410,7 @@ async function get_document_link(doctype_route, name) {
 	}
 
 	return `
-		<a href="/app/${doctype_route}/${name}" target="_blank">
+		<a href="/verp/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}" target="_blank">
 			${name}
 		</a>
 	`;
@@ -539,7 +539,7 @@ async function render_payment_term_actions(frm) {
 
 		if (row.payment_status === "Pending Verification") {
 			const paymentEntryLink = row.payment_entry
-				? `— ${await get_document_link("payment-entry", row.payment_entry)}`
+				? `— ${await get_document_link("Payment Entry", row.payment_entry)}`
 				: "";
 
 			const $info = $(`
@@ -633,7 +633,7 @@ function open_mark_as_paid_dialog(frm, term_row, is_rerequest = false) {
 					${
 						is_rerequest && term_row.payment_entry
 							? `<br><b>Payment Entry:</b> 
-							   <a href="/app/payment-entry/${term_row.payment_entry}" target="_blank">
+							   <a href="/verp/Payment%20Entry/${term_row.payment_entry}" target="_blank">
 							       ${term_row.payment_entry}
 							   </a>`
 							: ""
@@ -765,7 +765,7 @@ function open_mark_as_paid_dialog(frm, term_row, is_rerequest = false) {
 						message: `Payment Entry <b>${r.message.payment_entry}</b> 
                                     ${is_rerequest ? "re-submitted" : "submitted"} for verification.<br>
                                     Invoice: <b>${r.message.invoice}</b><br><br>
-                                    <a href="/app/payment-entry/${r.message.payment_entry}" target="_blank">
+                                    <a href="/verp/Payment%20Entry/${r.message.payment_entry}" target="_blank">
                                         Open Payment Entry →
                                     </a>`,
 						indicator: "blue",
@@ -902,7 +902,7 @@ async function send_details_form(frm) {
 
 		frappe.throw(`
 					Email is required to send agreement.<br><br>
-					<a href="/app/lead-detail-form/${lead_name}" target="_blank">
+					<a href="/verp/Lead%20Detail%20Form/${lead_name}" target="_blank">
 						➜ Open Lead Detail Form
 					</a>
 				`);
@@ -1171,7 +1171,7 @@ async function load_invoice_page(frm) {
 		const $tbody = wrapper.find(".invoices-tbody");
 
 		for (const inv of invoices) {
-			const invoiceLink = await get_document_link("sales-invoice", inv.name);
+			const invoiceLink = await get_document_link("Sales Invoice", inv.name);
 			const draftBadge =
 				inv.docstatus === 0
 					? `<span class="indicator-pill orange" style="margin-left:6px;">Draft</span>`

@@ -355,19 +355,19 @@ frappe.ui.form.on("Pdf Agreement Template", {
 						</div>
 
 						<div class="builder-tool add-field" data-type="Text">
-							📝 Text
+							${builder_icon("type")} Text
 						</div>
 
 						<div class="builder-tool add-field" data-type="Number">
-							🔢 Number
+							${builder_icon("hash")} Number
 						</div>
 
 						<div class="builder-tool add-field" data-type="Date">
-							📅 Date
+							${builder_icon("calendar")} Date
 						</div>
 
 						<div class="builder-tool add-field" data-type="Rich_Text">
-							📄 Text Editor
+							${builder_icon("file-text")} Text Editor
 						</div>
 
 					</div>
@@ -379,11 +379,24 @@ frappe.ui.form.on("Pdf Agreement Template", {
 							Customer Fields
 						</div>
 
-						<div class="builder-tool add-field"
-							data-type="Signature">
+						<div class="builder-tool add-field" data-type="Signature">
+							${builder_icon("edit-3")} Signature
+						</div>
 
-							✍ Signature
+						<div class="builder-tool add-field" data-type="Customer_Text">
+							${builder_icon("type")} Text
+						</div>
 
+						<div class="builder-tool add-field" data-type="Customer_Rich_Text">
+							${builder_icon("file-text")} Text Editor
+						</div>
+
+						<div class="builder-tool add-field" data-type="Customer_Number">
+							${builder_icon("hash")} Number
+						</div>
+
+						<div class="builder-tool add-field" data-type="Customer_Date">
+							${builder_icon("calendar")} Date
 						</div>
 
 					</div>
@@ -459,7 +472,7 @@ frappe.ui.form.on("Pdf Agreement Template", {
 							id="close-properties"
 							class="btn btn-xs">
 
-							✕
+							${builder_icon("x")}
 
 						</button>
 
@@ -779,12 +792,30 @@ function load_existing_fields(frm) {
 // Place holders for each field type
 const PREVIEW_VALUES = {
 	Text: "Acme Corporation Private Limited",
-	Number: "₹ 12,45,000",
+	Number: "1,245,000",
 	Rich_Text: "Net 30 days from invoice date",
 	Date: "31 March 2026",
 	Checkbox: "☑",
 	Signature: "Johnathan Smith",
+	Customer_Text: "Customer enters text",
+	Customer_Rich_Text: "Customer enters details",
+	Customer_Number: "0",
+	Customer_Date: "Customer picks a date",
 };
+
+// Inline Feather-style SVG icons (no emoji).
+const BUILDER_ICON_PATHS = {
+	type: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>',
+	hash: '<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>',
+	calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+	"file-text": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+	"edit-3": '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+	x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+	info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+};
+function builder_icon(name) {
+	return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px">${BUILDER_ICON_PATHS[name]}</svg>`;
+}
 
 // central renderer for a single field object { field_id, name, type, page, x, y, width, height }
 function render_field_on_canvas(frm, field) {
@@ -903,7 +934,7 @@ function render_field_on_canvas(frm, field) {
   ${escape_html(previewText)}
 	</div>
         <div class="field-close">
-			✕
+			${builder_icon("x")}
 		</div>
 
         <!-- RESIZE HANDLES -->
@@ -1115,7 +1146,7 @@ function open_property_sidebar(frm, field) {
 		<div id="line-height-warn" class="prop-warning"></div>
 
 		<div id="property-guide">
-			💡 <b>${__("Quick tips")}</b><br>
+			${builder_icon("info")} <b>${__("Quick tips")}</b><br>
 			• ${__("Reuse the same Name on multiple fields to auto-fill the same value in all of them.")}<br>
 			• ${__("Preview Text is only shown here in the builder, not in the final document.")}<br>
 			• ${__("Drag a field's blue corner handle to resize it, or drag its body to move it.")}

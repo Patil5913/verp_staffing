@@ -6,36 +6,27 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.utils.timezone import convert_round, round_day, user_time_zone
 from verp_staffing.crm.api.helpers import (
     get_reporting_subtree,
+    get_visible_employee_names_cached,
     get_visible_user_names_cached,
 )
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 
-LOCKED_STATUS_KEYWORDS = (
-    "cancelled",
-    "canceled",
-    "completed",
-    "rescheduled",
-    "rejected",
-)
-CANCELLED_LIKE_KEYWORDS = ("cancelled", "canceled", "rescheduled")
-DEFAULT_ROUND_STATUS = "Scheduled"
 CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
+DEFAULT_ROUND_STATUS = "Scheduled"
+TODAY_STATUS = "Today"
+# A Completed round is still waiting on the company's answer, so it may move on to one of these
+# (and only these); every other final status stays locked.
+COMPLETED_OUTCOMES = {"Get The Offer", "Rejected"}
+# An interview whose latest round is in one of these is over — never shown as "Today".
+TODAY_EXCLUDED_STATUSES = FINAL_ROUND_STATUSES | {"Rejected", "Get The Offer", TODAY_STATUS}
 
-def is_status_locked(status):
-    if not status or not isinstance(status, str):
-        return False
-    lower = status.lower()
-    return any(keyword in lower for keyword in LOCKED_STATUS_KEYWORDS)
 
-
-def is_cancelled_like_status(status):
-    if not status or not isinstance(status, str):
-        return False
-    lower = status.lower()
-    return any(keyword in lower for keyword in CANCELLED_LIKE_KEYWORDS)
+def _is_outcome_of_completed(previous, new):
+    return previous == "Completed" and new in COMPLETED_OUTCOMES
 
 
 class Interview(Document):
@@ -60,11 +51,18 @@ class Interview(Document):
         self.name = generate_name_series("Interview", customer_name)
 
     def validate(self):
+        self._set_default_status()
         self.set_customer_from_marketing()
         self._validate_marketing_link()
         self._validate_required_fields()
         self._validate_interview_rounds()
         self._sync_status_from_last_round()
+
+    def _set_default_status(self):
+        """A new Interview with no status gets ERP Configuration's Default Interview Status
+        (the form fills it in too; this covers every other way of creating one)."""
+        if self.is_new() and not self.status:
+            self.status = frappe.db.get_single_value("ERP Configuration", "default_interview_status") or None
 
     def set_customer_from_marketing(self):
         """Interview.customer is a cached, denormalized copy of
@@ -79,9 +77,7 @@ class Interview(Document):
             self.customer = None
             return
 
-        customer_name = frappe.db.get_value(
-            "Marketing", self.marketing_link, "customer"
-        )
+        customer_name = frappe.db.get_value("Marketing", self.marketing_link, "customer")
         if not customer_name:
             self.customer = None
             return
@@ -128,7 +124,7 @@ class Interview(Document):
 
             self._validate_round_status_not_locked(row, i)
 
-            if is_cancelled_like_status(row.status) and (
+            if row.status in CANCELLED_LIKE_STATUSES and (
                 not row.cancelled_by or not row.reason_of_cancel
             ):
                 frappe.throw(
@@ -190,7 +186,11 @@ class Interview(Document):
         if not previous_row:
             return
 
-        if is_status_locked(previous_row.status) and row.status != previous_row.status:
+        if (
+            previous_row.status in FINAL_ROUND_STATUSES
+            and row.status != previous_row.status
+            and not _is_outcome_of_completed(previous_row.status, row.status)
+        ):
             frappe.throw(
                 _(
                     "Row #{0}: This interview round is already '{1}' and its "
@@ -258,7 +258,16 @@ def _owner_scoping_sql_condition():
         return " AND 1=0"
 
     users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
-    return f" AND i.owner IN ({users_sql})"
+    condition = f"i.owner IN ({users_sql})"
+
+    # Same reach as interview_query: also the interviews of Marketing records assigned inside the team
+    team = get_visible_employee_names_cached()
+    if team:
+        team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        condition += (
+            f" OR i.marketing_link IN (SELECT m.name FROM `tabMarketing` m WHERE m.assign_to IN ({team_sql}))"
+        )
+    return f" AND ({condition})"
 
 
 # ---------------------------------------------------------------------------
@@ -282,9 +291,18 @@ def update_interview_status_from_kanban(
             )
         )
 
+    if status == TODAY_STATUS:
+        frappe.throw(
+            _("'Today' is worked out automatically from the round's date and can't be set by hand.")
+        )
+
     last_round = max(doc.interview_rounds_table, key=lambda r: r.idx)
 
-    if last_round.status in FINAL_ROUND_STATUSES and last_round.status != status:
+    if (
+        last_round.status in FINAL_ROUND_STATUSES
+        and last_round.status != status
+        and not _is_outcome_of_completed(last_round.status, status)
+    ):
         frappe.throw(
             _(
                 "This interview round is already '{0}' and its status "
@@ -306,6 +324,138 @@ def update_interview_status_from_kanban(
     return {"name": doc.name, "status": doc.status}
 
 
+# ---------------------------------------------------------------------------
+# "Today" — derived, never stored
+# ---------------------------------------------------------------------------
+# An interview with a round dated today (that isn't over) shows as
+# "Today" in the list and on the Kanban. Nothing is written back: the stored
+# status stays what the round says, so there's no "Today" to un-set later.
+# One indexed query over just today's rounds (bounded by a day's interviews),
+# rather than touching every interview.
+
+
+def _todays_interview_names(names=None):
+    """Interviews with a still-open round dated today (any round — an earlier
+    one can be today while a later one is already booked). "Today" is the
+    company's day: a round typed in Eastern time is moved to the company zone
+    first, so 9 pm EST on the 4th is already the 5th for an India-based team."""
+    today = frappe.utils.getdate(frappe.utils.today())
+    query = """
+        SELECT r.parent, r.date_of_interview, r.from_time, r.edt_est
+        FROM `tabInterview Round` r
+        INNER JOIN `tabInterview` i ON i.name = r.parent
+        WHERE r.parenttype = 'Interview'
+          AND r.date_of_interview BETWEEN %(day_before)s AND %(day_after)s
+          AND IFNULL(r.status, '') NOT IN %(excluded)s
+          AND IFNULL(i.status, '') NOT IN %(excluded)s
+    """
+    values = {"day_before": frappe.utils.add_days(today, -1), "day_after": frappe.utils.add_days(today, 1), "excluded": tuple(TODAY_EXCLUDED_STATUSES)}
+    if names:
+        query += " AND r.parent IN %(names)s"
+        values["names"] = tuple(names)
+    rows = frappe.db.sql(query, values, as_dict=True)
+    return {r.parent for r in rows if round_day(r.date_of_interview, r.from_time, r.edt_est) == today}
+
+
+def _status_wanted(filters):
+    """Pulls plain `status = x` / `status in [...]` conditions out of `filters`
+    (dict, or [field, op, value] / [doctype, field, op, value] lists).
+    Returns (remaining filters as a list, wanted status set or None)."""
+    filters = frappe.parse_json(filters) if isinstance(filters, str) else filters
+    rest, wanted = [], None
+
+    def take(values):
+        nonlocal wanted
+        values = set(values)
+        wanted = values if wanted is None else wanted & values
+
+    if isinstance(filters, dict):
+        items = []
+        for field, cond in filters.items():
+            if isinstance(cond, (list, tuple)) and len(cond) == 2:
+                items.append([field, cond[0], cond[1]])
+            else:
+                items.append([field, "=", cond])
+    else:
+        items = list(filters or [])
+
+    for item in items:
+        field, op, value = (item[1], item[2], item[3]) if len(item) == 4 else (item[0], item[1], item[2])
+        op = str(op).lower()
+        if field == "status" and op == "=":
+            take([value])
+        elif field == "status" and op == "in":
+            take(value if isinstance(value, (list, tuple)) else str(value).split(","))
+        else:
+            rest.append(item)
+    return rest, wanted
+
+
+def _interview_query_args(filters):
+    """(filters, or_filters, empty) for get_list, with the status filters
+    translated to the derived "Today" status."""
+    rest, wanted = _status_wanted(filters)
+    if wanted is None:
+        return rest, None, False, set()
+
+    today = _todays_interview_names()
+    if TODAY_STATUS in wanted:
+        others = wanted - {TODAY_STATUS}
+        if others:
+            or_filters = [["name", "in", list(today) or [""]], ["status", "in", list(others)]]
+            return rest, or_filters, False, today
+        if not today:
+            return rest, None, True, today
+        return rest + [["name", "in", list(today)]], None, False, today
+
+    out = rest + [["status", "in", list(wanted)]]
+    if today:
+        out.append(["name", "not in", list(today)])
+    return out, None, False, today
+
+
+@frappe.whitelist()
+def get_interview_list(
+    fields=None, filters=None, order_by=None, limit_start=0, limit_page_length=20
+):
+    """frappe.client.get_list for Interview, with status = "Today" derived."""
+    fields = frappe.parse_json(fields) if isinstance(fields, str) else fields
+    filters, or_filters, empty, _today = _interview_query_args(filters)
+    if empty:
+        return []
+
+    rows = frappe.get_list(
+        "Interview",
+        fields=fields or ["name"],
+        filters=filters,
+        or_filters=or_filters,
+        order_by=order_by,
+        limit_start=frappe.utils.cint(limit_start),
+        limit_page_length=frappe.utils.cint(limit_page_length),
+    )
+    if rows and any("status" in r for r in rows):
+        today = _todays_interview_names([r["name"] for r in rows if r.get("name")])
+        for r in rows:
+            if r.get("name") in today:
+                r["status"] = TODAY_STATUS
+    return rows
+
+
+@frappe.whitelist()
+def get_interview_count(filters=None):
+    filters, or_filters, empty, _today = _interview_query_args(filters)
+    if empty:
+        return 0
+    rows = frappe.get_list(
+        "Interview",
+        fields=["count(name) as total"],
+        filters=filters,
+        or_filters=or_filters,
+        limit_page_length=0,
+    )
+    return rows[0].total if rows else 0
+
+
 @frappe.whitelist()
 def get_round_summary_for_kanban(names):
     try:
@@ -319,16 +469,18 @@ def get_round_summary_for_kanban(names):
     rounds = frappe.get_all(
         "Interview Round",
         filters={"parenttype": "Interview", "parent": ["in", names]},
-        fields=["parent", "round", "date_of_interview", "status"],
+        fields=["parent", "round", "date_of_interview", "from_time", "edt_est", "status"],
         order_by="parent asc, idx asc",
     )
 
+    tz = user_time_zone()
     grouped = {name: [] for name in names}
     for row in rounds:
+        local = convert_round(row["date_of_interview"], row["from_time"], None, row["edt_est"], tz)
         grouped[row["parent"]].append(
             {
                 "round": row["round"],
-                "date_of_interview": row["date_of_interview"],
+                "date_of_interview": local["date"] or row["date_of_interview"],
                 "status": row["status"],
             }
         )
@@ -523,13 +675,8 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
         try:
             links = (
                 json.loads(marketing_link)
-                if isinstance(marketing_link, str)
-                and marketing_link.strip().startswith("[")
-                else (
-                    marketing_link
-                    if isinstance(marketing_link, list)
-                    else [marketing_link]
-                )
+                if isinstance(marketing_link, str) and marketing_link.strip().startswith("[")
+                else (marketing_link if isinstance(marketing_link, list) else [marketing_link])
             )
         except (ValueError, TypeError):
             links = [marketing_link]
@@ -540,10 +687,12 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
 
     conditions += _owner_scoping_sql_condition()
 
-    values.update({"start": start, "end": end})
+    # Rounds are typed in Eastern time; the viewer sees them in their own zone, where a round can land
+    # on the neighbouring day - so fetch a day either side and keep what falls in the range afterwards.
+    first, last = frappe.utils.getdate(start), frappe.utils.getdate(end)
+    values.update({"start": frappe.utils.add_days(first, -1), "end": frappe.utils.add_days(last, 1)})
 
-    rounds = frappe.db.sql(
-        f"""
+    rounds = frappe.db.sql(f"""
         SELECT ir.name AS round_name, ir.parent AS interview, ir.round,
             ir.date_of_interview, ir.from_time, ir.to_time, ir.edt_est,
             ir.status AS round_status, i.company, i.role, i.status AS interview_status,
@@ -553,32 +702,37 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
         WHERE ir.date_of_interview BETWEEN %(start)s AND %(end)s
         {conditions}
         ORDER BY ir.date_of_interview, ir.from_time
-    """,
-        values,
-        as_dict=True,
-    )
+    """, values, as_dict=True)
 
+    tz = user_time_zone()
     events = []
     for r in rounds:
         has_time = bool(r.from_time is not None and r.to_time is not None)
+        local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.edt_est, tz)
+        if not first <= local["date"] <= last:
+            continue
         status = r.round_status or r.interview_status or ""
-        events.append(
-            {
-                "name": r.interview,
-                "subject": f"{r.company} — {r.role} (Round {r.round})",
-                "start": f"{r.date_of_interview} {r.from_time or '09:00:00'}",
-                "end": f"{r.date_of_interview} {r.to_time or '10:00:00'}",
-                "allDay": 0 if has_time else 1,
-                "status": status,
-                "company": r.company,
-                "role": r.role,
-                "round": r.round,
-                "from_time": r.from_time,
-                "to_time": r.to_time,
-                "edt_est": r.edt_est,
-                "customer": r.customer_name or r.marketing_link,
-            }
-        )
+        start_time = local["from_time"] or "09:00:00"
+        end_time = local["to_time"] or "10:00:00"
+        end_day = local["date"] if end_time >= start_time else frappe.utils.add_days(local["date"], 1)
+        events.append({
+            "name": r.interview,
+            "subject": f"{r.company} — {r.role} (Round {r.round})",
+            "start": f"{local['date']} {start_time}",
+            "end": f"{end_day} {end_time}",
+            "allDay": 0 if has_time else 1,
+            "status": status,
+            "company": r.company,
+            "role": r.role,
+            "round": r.round,
+            "from_time": local["from_time"],
+            "to_time": local["to_time"],
+            "edt_est": r.edt_est,
+            "tz_label": local["tz_label"],
+            "entered": local["entered"],
+            "customer": r.customer_name or r.marketing_link,
+        })
+    events.sort(key=lambda e: e["start"])
     return events
 
 
@@ -606,36 +760,37 @@ def get_interview_gantt_rows(filters=None):
         as_dict=True,
     )
 
+    tz = user_time_zone()
     out = []
     for r in rows:
         status = r.round_status or r.interview_status or ""
-        start_dt = f"{r.date_of_interview} {r.from_time or '09:00:00'}"
-        end_dt = f"{r.date_of_interview} {r.to_time or '10:00:00'}"
+        local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.edt_est, tz)
+        start_dt = f"{local['date']} {local['from_time'] or '09:00:00'}"
+        end_dt = f"{local['date']} {local['to_time'] or '10:00:00'}"
         if end_dt <= start_dt:
-            end_dt = f"{r.date_of_interview} 23:59:00"
+            end_dt = f"{local['date']} 23:59:00"
 
-        out.append(
-            {
-                "name": r.round_id,
-                "interview": r.interview,
-                "owner": r.owner,
-                "docstatus": r.docstatus or 0,
-                "status": status,
-                "company": r.company,
-                "role": r.role,
-                "round": r.round,
-                "date_of_interview": str(r.date_of_interview),
-                "subject": f"{r.company} — {r.role} · Round {r.round} · {status}",
-                "from_time": r.from_time,
-                "to_time": r.to_time,
-                "edt_est": r.edt_est,
-                "start": start_dt,
-                "end": end_dt,
-                "customer": r.customer_name or r.marketing_link,
-                "_assign": "[]",
-                "_liked_by": "[]",
-                "_comments": "[]",
-                "_user_tags": "",
-            }
-        )
+        out.append({
+            "name": r.round_id,
+            "interview": r.interview,
+            "owner": r.owner,
+            "docstatus": r.docstatus or 0,
+            "status": status,
+            "company": r.company,
+            "role": r.role,
+            "round": r.round,
+            "date_of_interview": str(local["date"]),
+            "subject": f"{r.company} — {r.role} · Round {r.round} · {status}",
+            "from_time": local["from_time"],
+            "to_time": local["to_time"],
+            "edt_est": r.edt_est,
+            "tz_label": local["tz_label"],
+            "start": start_dt,
+            "end": end_dt,
+            "customer": r.customer_name or r.marketing_link,
+            "_assign": "[]",
+            "_liked_by": "[]",
+            "_comments": "[]",
+            "_user_tags": "",
+        })
     return out

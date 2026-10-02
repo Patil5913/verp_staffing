@@ -57,7 +57,7 @@ def get_auto_assign_employee(
             2. Assign the department to an employee.<br>
             3. Create a new employee and configure the assignment.<br><br>
 
-            <a href="/app/employee"
+            <a href="/verp/Employee"
             class="btn btn-primary btn-sm">
             Open Employee List
             </a>
@@ -374,6 +374,10 @@ def get_customer_interviews(customer, service=None):
     if not customer:
         return []
 
+    from verp_staffing.crm.api.helpers import require_customer_access
+
+    require_customer_access(customer)
+
     marketing = frappe.get_cached_value("Marketing", {"customer": customer}, "name")
     if not marketing:
         return []
@@ -480,7 +484,9 @@ def _resolve_forwarded_from_department(from_service_name):
     if not from_service_name:
         frappe.throw("Source service is required to forward to CR")
 
-    if from_service_name.strip().lower() == "sales":
+    # Forwarding straight from a Customer record (its own Forward button) comes from the Sales
+    # department, same as forwarding from "Sales" itself.
+    if from_service_name.strip().lower() in ("sales", "customer"):
         return "Sales"
 
     department = _get_department_map().get(from_service_name)

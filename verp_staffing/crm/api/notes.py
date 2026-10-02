@@ -1,5 +1,6 @@
 from __future__ import annotations
 import frappe
+from frappe import _
 from frappe.utils import now_datetime
 
 
@@ -7,6 +8,9 @@ from frappe.utils import now_datetime
 def get_notes(reference_doctype, reference_name, limit=20, start=0):
     if not reference_doctype or not reference_name:
         return {"notes": [], "updates": []}
+
+    # Notes follow the record they are on: no access to it, no notes.
+    frappe.has_permission(reference_doctype, "read", doc=reference_name, throw=True)
 
     records = frappe.get_all(
         "CRM Note",
@@ -67,9 +71,25 @@ def add_note(reference_doctype, reference_name, note , current_doctype=None):
     }
 
 
+def _is_privileged(user=None):
+    user = user or frappe.session.user
+    return user == "Administrator" or "System Manager" in frappe.get_roles(user)
+
+
+def _check_note_access(doc):
+    """A note is edited or deleted by whoever wrote it (or an admin), and only
+    by someone who can still open the record it hangs off."""
+    if doc.reference_doctype and frappe.db.exists(doc.reference_doctype, doc.reference_name):
+        if not frappe.has_permission(doc.reference_doctype, "read", doc=doc.reference_name):
+            frappe.throw(_("You do not have permission to change this note."), frappe.PermissionError)
+    if not _is_privileged() and doc.added_by != frappe.session.user:
+        frappe.throw(_("Only the author of a note can change it."), frappe.PermissionError)
+
+
 @frappe.whitelist()
 def update_note(note_id, note):
     doc = frappe.get_doc("CRM Note", note_id)
+    _check_note_access(doc)
     doc.note = note
     doc.save(ignore_permissions=True)
     return doc
@@ -77,5 +97,7 @@ def update_note(note_id, note):
 
 @frappe.whitelist()
 def delete_note(note_id):
+    doc = frappe.get_doc("CRM Note", note_id)
+    _check_note_access(doc)
     frappe.delete_doc("CRM Note", note_id, ignore_permissions=True)
     return True

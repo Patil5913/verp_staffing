@@ -1,0 +1,94 @@
+# Lean per-client stack: its own code image + sites, but the MariaDB is the
+# shared one (../shared/). Use one compose project per client:
+#   docker compose -p acme --env-file clients/acme.env -f docker-compose.client.yml up -d
+# Volumes/containers are namespaced by -p, so clients never share state.
+# Memory-saving choices: 2 gunicorn workers, 1 combined queue worker,
+# a single tiny redis for cache+queue.
+x-app: &app
+  image: ${IMAGE:?set IMAGE in the client env file}
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp, /home/frappe/.cache]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  environment: &app-env
+    PYTHONDONTWRITEBYTECODE: "1"
+  networks: [default, shared]
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+    - config:/home/frappe/frappe-bench/config
+
+services:
+  configurator:
+    <<: *app
+    restart: "no"
+    entrypoint: ["bash", "-c"]
+    command: ["bash /usr/local/bin/configure.sh"]
+    environment:
+      <<: *app-env
+      DB_HOST: verp-shared-db
+      DB_PORT: "3306"
+      REDIS_CACHE: redis:6379/0
+      REDIS_QUEUE: redis:6379/1
+      SOCKETIO_PORT: "9000"
+
+  backend:
+    <<: *app
+    command: ["/home/frappe/frappe-bench/env/bin/gunicorn",
+      "--chdir=/home/frappe/frappe-bench/sites", "--bind=0.0.0.0:8000",
+      "--threads=4", "--workers=${GUNICORN_WORKERS:-2}", "--worker-class=gthread",
+      "--worker-tmp-dir=/dev/shm", "--timeout=120", "--preload", "frappe.app:application"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  frontend:
+    <<: *app
+    command: ["nginx-entrypoint.sh"]
+    depends_on: [backend, websocket]
+    ports:
+      - "${HTTP_PORT:?set a unique HTTP_PORT per client}:8080"
+    read_only: false
+    environment:
+      <<: *app-env
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: $$host
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: 120
+      CLIENT_MAX_BODY_SIZE: 50m
+
+  websocket:
+    <<: *app
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  scheduler:
+    <<: *app
+    command: ["bench", "schedule"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  # One worker for all queues instead of separate short/long containers.
+  worker:
+    <<: *app
+    command: ["bench", "worker", "--queue", "short,default,long"]
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+
+  redis:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+
+volumes:
+  sites:
+  logs:
+  config:
+
+networks:
+  default:
+  shared: { name: verp_shared, external: true }

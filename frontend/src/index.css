@@ -1,0 +1,229 @@
+@import 'frappe-ui/style.css';
+
+:root {
+  color-scheme: light;
+  --app-bg: #f6f8fb;
+  --app-panel: #ffffff;
+  --app-panel-2: #f0f3f8;
+  --app-border: #dee4ed;
+  --app-text: #0b1220;
+  --app-text-muted: #5b6474;
+  --app-primary: #0057e5;
+  --app-primary-hover: #0051d6;
+  --app-primary-tint: rgba(0, 87, 229, 0.08);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --app-bg: #0a0e16;
+  --app-panel: #131a26;
+  --app-panel-2: #1a2230;
+  --app-border: #2b3648;
+  --app-text: #eaf0fb;
+  --app-text-muted: #96a5c0;
+  --app-primary: #4c8fff;
+  --app-primary-hover: #7aadff;
+  --app-primary-tint: rgba(76, 143, 255, 0.16);
+}
+
+/* Without an explicit color-scheme, browsers render native scrollbars
+   (and other UA widgets) in their light-mode style even on a dark
+   background, so every plain `overflow: auto` element showed a
+   white-track scrollbar in dark mode. Setting color-scheme above fixes
+   Firefox's `scrollbar-color: auto` and Chromium's default scrollbar
+   automatically; these rules give every scrollable element the same
+   themed thin scrollbar that ScrollArea.vue already opts into, instead
+   of only fixing the color-scheme mismatch. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--app-border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-text-muted);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Tailwind's default shadow-* utilities use a black-based rgba shadow -
+   nearly invisible against a dark panel on a dark background. Give panels
+   a touch of contrast (a top highlight + a slightly stronger drop shadow)
+   in dark mode so cards still read as elevated. */
+[data-theme='dark'] .shadow-sm {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 1px 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .shadow-xl {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+    0 12px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* frappe-ui's Dialog (DialogPortal, portalled to <body> like Combobox
+   below) never sets its own z-index - its overlay/content just relies on
+   DOM order within whatever stacking context they land in. That put a
+   Dialog with z-index:auto behind this app's own fixed/sticky chrome that
+   *does* set one (the sidebar is z-40; a detail page's sticky in-page nav,
+   e.g. LeadProfilePanel's completeness bar, is z-10) - most visibly, a
+   ChildTableField "Add Row" dialog opened from a page with such a sticky
+   bar rendered underneath it instead of on top. Global, not scoped: the
+   portal target means no component's own <style> can reach it, and every
+   dialog in the app needs to always win this stack regardless of what
+   sticky chrome happens to be on the page underneath it. */
+.dialog-overlay {
+  z-index: 100;
+}
+
+/* App-wide Combobox/Link popover theming.
+   frappe-ui's Combobox portals its dropdown to <body> (ComboboxPortal),
+   so a component's own `<style scoped> :deep(...)` rules never match it -
+   the portalled content isn't a DOM descendant of the component that
+   rendered it, even though it looks nested in the template. These rules
+   are intentionally global so every combobox popover in the app (detail
+   page fields, dialogs, list filters) gets one consistent look instead of
+   each usage silently falling back to the library's default styling. */
+[data-slot='content-body'] {
+  background-color: var(--app-panel);
+  border: 1px solid var(--app-border);
+}
+
+[data-slot='item'] {
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+[data-slot='item'][data-highlighted] {
+  background-color: var(--app-panel-2) !important;
+}
+
+[data-slot='item'][data-state='checked'] {
+  background-color: var(--app-primary-tint) !important;
+}
+
+/* ---- Mobile / PWA ------------------------------------------------------ */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* no pull-to-refresh / rubber-banding of the whole app shell */
+  overscroll-behavior-y: none;
+}
+
+@media (max-width: 767px) {
+  /* iOS Safari zooms the page when a focused field is under 16px */
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Dialogs from frappe-ui: keep them inside the viewport on phones */
+@media (max-width: 639px) {
+  [role='dialog'] {
+    max-width: calc(100vw - 1rem);
+  }
+}
+
+/* Phone-sized touch targets for icon-only buttons */
+@media (pointer: coarse) {
+  button {
+    touch-action: manipulation;
+  }
+}
+
+/* Dropdown menus are portaled to <body>; without a z-index they render
+   behind the fixed mobile sidebar drawer (z-40), so the profile menu in
+   the drawer looked unclickable. reka copies this onto its popper wrapper. */
+.dropdown-content {
+  z-index: 60;
+}
+
+/* Same underlying issue as .dialog-overlay above, the other direction: every
+   reka-ui Popper-based popover (AppDatePicker's calendar, Combobox dropdowns,
+   ...) portals to <body> with a position:fixed wrapper that never sets its
+   own z-index either. Opened from *inside* a Dialog (e.g. a date field in a
+   ChildTableField "Add Row" dialog), that wrapper's implicit z-index:auto
+   loses to the dialog's explicit z-index:100, so the calendar rendered
+   underneath the dialog it belongs to. Global, not scoped, for the same
+   reason .dialog-overlay is: the portal target means no component's own
+   <style> can reach it, and it must win regardless of which dialog (if any)
+   it was opened inside. */
+/* !important: reka-ui writes an inline z-index on this wrapper (copied from the
+   content's computed value - "auto"), which beats any normal stylesheet rule. */
+[data-reka-popper-content-wrapper] {
+  z-index: 110 !important;
+}
+
+/* Mail editor: one rounded card, quiet toolbar, themed for light and dark. */
+.mail-editor {
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+.mail-editor:focus-within {
+  border-color: var(--app-primary);
+}
+.mail-editor > .overflow-x-auto {
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
+  border-radius: 0;
+  background: var(--app-panel-2);
+  padding: 0.25rem 0.5rem;
+}
+.mail-editor > .overflow-x-auto button {
+  color: var(--app-text-muted);
+  border-radius: 0.375rem;
+}
+.mail-editor > .overflow-x-auto button:hover {
+  background: var(--app-border);
+  color: var(--app-text);
+}
+.mail-editor .ProseMirror {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--app-text);
+  padding: 0.75rem 1rem !important;
+  outline: none;
+}
+.mail-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--app-text-muted);
+}

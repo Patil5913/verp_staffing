@@ -12,6 +12,7 @@
   "column_break_lhqw",
   "disabled",
   "is_company_account",
+  "is_default",
   "company",
   "section_break_11",
   "party_type",
@@ -70,6 +71,14 @@
    "fieldtype": "Check",
    "label": "Is Company Account",
    "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "is_company_account",
+   "description": "The default company account payments are received into / made from.",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Is Default Account"
   },
   {
    "depends_on": "is_company_account",

@@ -122,6 +122,15 @@ def update_system_settings_fields(values):
 		if fieldname not in MANAGED_SYSTEM_SETTINGS_FIELDS:
 			frappe.throw(_("Field '{0}' is not managed here.").format(fieldname))
 
+	if "allowed_file_extensions" in values:
+		extensions = [e.strip() for e in re.split(r"[\n,]+", values["allowed_file_extensions"] or "") if e.strip()]
+		for ext in extensions:
+			if not re.match(r"^[A-Za-z0-9]{1,6}$", ext):
+				frappe.throw(_("Invalid file extension '{0}': use 1-6 letters or numbers only.").format(ext))
+		if len({e.lower() for e in extensions}) != len(extensions):
+			frappe.throw(_("Duplicate file extensions are not allowed."))
+		values["allowed_file_extensions"] = "\n".join(extensions)
+
 	doc = frappe.get_single("System Settings")
 	for fieldname, value in values.items():
 		doc.set(fieldname, value)
@@ -140,7 +149,7 @@ def get_services():
     )
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_website_app_settings():
     """Read app_name/app_logo via Frappe's built-in single-doc cache."""
     doc = frappe.get_cached_doc("Website Settings")
@@ -199,3 +208,47 @@ def remove_sample_data(delete_conflicts=0):
 	if isinstance(delete_conflicts, str):
 		delete_conflicts = frappe.parse_json(delete_conflicts)
 	return sample_data_removal.execute_removal(bool(delete_conflicts))
+
+
+CANDIDATE_FORM_FIELD_TYPES = ["Data", "Small Text", "Long Text", "Int", "Float", "Date", "Select", "Check", "Phone"]
+
+
+@frappe.whitelist()
+def add_candidate_form_field(label, fieldtype, options=None, insert_after=None):
+	"""Adds a real Custom Field to Lead Detail Form so it shows up in the
+	Candidate Form / Department Display / Department Access field pickers."""
+	frappe.only_for("System Manager")
+
+	label = (label or "").strip()
+	if not label:
+		frappe.throw(_("Field label is required."))
+	if fieldtype not in CANDIDATE_FORM_FIELD_TYPES:
+		frappe.throw(_("Unsupported field type: {0}").format(fieldtype))
+
+	options = "\n".join(o.strip() for o in (options or "").splitlines() if o.strip())
+	if fieldtype == "Select" and not options:
+		frappe.throw(_("Add at least one option for a Select field."))
+	if fieldtype != "Select":
+		options = "Phone" if fieldtype == "Phone" else None
+		fieldtype = "Data" if fieldtype == "Phone" else fieldtype
+
+	fieldname = frappe.scrub(label)
+	meta = frappe.get_meta("Lead Detail Form")
+	if meta.get_field(fieldname):
+		frappe.throw(_("A field named '{0}' already exists on the form.").format(fieldname))
+	if insert_after and not meta.get_field(insert_after):
+		frappe.throw(_("Unknown field to insert after: {0}").format(insert_after))
+
+	frappe.get_doc(
+		{
+			"doctype": "Custom Field",
+			"dt": "Lead Detail Form",
+			"fieldname": fieldname,
+			"label": label,
+			"fieldtype": fieldtype,
+			"options": options,
+			"insert_after": insert_after or None,
+		}
+	).insert()
+
+	return {"fieldname": fieldname, "label": label}

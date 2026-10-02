@@ -16,6 +16,7 @@ from verp_staffing.accounts.api.get_defaults import validate_account
 from verp_staffing.accounts.engine.calculator import run_calculation
 from verp_staffing.crm.doctype.customer.customer import get_customer_email
 from verp_staffing.crm.api.agreement import send_existing_agreement, generate_form_url
+from verp_staffing.esign.doctype.e_sign.e_sign import send_all_signers
 from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
 
 
@@ -60,13 +61,17 @@ class SalesOrder(Document):
     def before_update_after_submit(self):
         # Same validations must run post-submit too
         self.validate_payment_terms_deletion()
-        # self.validate_payment_terms_total()
+        self.validate_invoiced_terms_unchanged()
+        self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
 
     def validate(self):
+        if self.is_new():
+            self.validate_customer_sales_owner()
         self.validate_payment_terms_deletion()
-        # self.validate_payment_terms_total()
+        self.validate_invoiced_terms_unchanged()
+        self.validate_payment_terms_total()
         self.validate_payment_terms_dates()
         self.validate_payment_terms_fields()
         self.validate_mandatory()
@@ -80,6 +85,13 @@ class SalesOrder(Document):
         run_calculation(self)
         self.set_in_words()
 
+    def validate_customer_sales_owner(self):
+        from verp_staffing.crm.api.helpers import is_customer_sales_owner
+
+        owner = frappe.db.get_value("Customer", self.customer, "customer_owner")
+        if not is_customer_sales_owner(owner):
+            frappe.throw(_("Only the customer's owner or their Sales managers can create a Sales Order for this customer."), frappe.PermissionError)
+
     def validate_payment_terms_deletion(self):
         if self.is_new():
             return
@@ -88,7 +100,7 @@ class SalesOrder(Document):
         old_term_names = frappe.get_all(
             "Customer Payment Terms",
             filters={"parent": self.name, "parenttype": "Sales Order"},
-            fields=["name", "payment_status", "payment_entry"],
+            fields=["name", "payment_status", "payment_entry", "sales_invoice"],
         )
         old_map = {t["name"]: t for t in old_term_names}
 
@@ -98,6 +110,15 @@ class SalesOrder(Document):
         # Find deleted rows
         for term_name, term_data in old_map.items():
             if term_name not in current_names:
+                # A Sales Invoice was already raised for this term: removing it would leave
+                # the invoice without its schedule.
+                if term_data["sales_invoice"]:
+                    frappe.throw(
+                        f"Cannot delete payment term <b>{term_name}</b> — "
+                        f"Sales Invoice <b>{term_data['sales_invoice']}</b> was already created for it.",
+                        title="Deletion Blocked",
+                    )
+
                 # Block deletion of Verified terms
                 if term_data["payment_status"] == "Verified":
                     frappe.throw(
@@ -120,6 +141,36 @@ class SalesOrder(Document):
                         )
                     # Delete draft PE
                     frappe.delete_doc("Payment Entry", pe_name, force=True)
+
+    INVOICED_TERM_LOCKED_FIELDS = ("payment_condition", "counter", "amount", "start_date", "due_date")
+
+    def validate_invoiced_terms_unchanged(self):
+        """A term with a Sales Invoice is settled business: its condition, count, dates and
+        amount can't change (the invoice was raised for exactly that), only its payment status
+        moves (Mark as Paid / Re-request)."""
+        if self.is_new():
+            return
+        old_rows = {
+            r.name: r
+            for r in frappe.get_all(
+                "Customer Payment Terms",
+                filters={"parent": self.name, "parenttype": "Sales Order", "sales_invoice": ["is", "set"]},
+                fields=["name", *self.INVOICED_TERM_LOCKED_FIELDS],
+            )
+        }
+        for row in self.payment_terms or []:
+            old = old_rows.get(row.name)
+            if not old:
+                continue
+            for field in self.INVOICED_TERM_LOCKED_FIELDS:
+                before, after = old.get(field), row.get(field)
+                changed = flt(before) != flt(after) if field in ("amount", "counter") else str(before or "") != str(after or "")
+                if changed:
+                    frappe.throw(
+                        f"Payment term <b>{row.idx}</b> already has Sales Invoice <b>{row.sales_invoice}</b>, "
+                        f"so its {frappe.unscrub(field)} can't be changed.",
+                        title="Payment Term Locked",
+                    )
 
     def validate_payment_terms_total(self):
         if not self.payment_terms:
@@ -356,21 +407,15 @@ class SalesOrder(Document):
                 title="Email Missing",
                 msg=(
                     "Email is required to send Lead Detail Form.<br><br>"
-                    f'<a href="/app/lead-detail-form/{customer_lead_details}" target="_blank">'
+                    f'<a href="/verp/Lead%20Detail%20Form/{customer_lead_details}" target="_blank">'
                     "➜ Open Lead Detail Form</a>"
                 ),
             )
 
     def validate_agreement_requirements(self):
-
-        has_agreement = frappe.db.exists(
-            "Agreement",
-            {"sales_order": self.name},
-        )
-
-        if not has_agreement:
-            frappe.throw(_("No agreement found for this Sales Order"))
-
+        # Agreements are raised from the Customer (Agreements tab) once the Sales Order exists,
+        # so an order can no longer be required to have one at submit. Only legacy Agreements
+        # that were created without a PDF still block.
         missing_pdf = frappe.db.exists(
             "Agreement",
             {
@@ -428,6 +473,11 @@ def send_agreement_job(sales_order):
 
         for agreement in agreements:
             send_existing_agreement(agreement.name)
+
+        for esign in frappe.get_all(
+            "E Sign", filters={"sales_order": sales_order, "status": "Draft"}, pluck="name"
+        ):
+            send_all_signers(esign)
 
     except Exception:
         handle_background_failure(
@@ -528,13 +578,72 @@ def get_requirements_from_config(doc, config):
 
 
 @frappe.whitelist()
+def get_forward_gate(customer):
+    """Whether Forward Candidate is available for this customer.
+
+    If any of their (non-cancelled) Sales Orders has a service that ERP Configuration marks as needing the
+    candidate details form and/or an agreement, forwarding waits until those are done: the form submitted
+    (the customer's form is locked once they submit it) and each such order has a signed agreement.
+    Services that need neither never block it.
+    """
+    frappe.has_permission("Customer", "read", customer, throw=True)
+    config = get_erp_config()
+    form_needed = agreement_needed = False
+    unsigned = []
+    for so in frappe.get_all("Sales Order", filters={"customer": customer, "docstatus": ["<", 2]}, pluck="name"):
+        req = get_requirements_from_config(frappe.get_doc("Sales Order", so), config)
+        form_needed = form_needed or req["candidate_required"]
+        if req["agreement_required"]:
+            agreement_needed = True
+            signed = frappe.db.exists("E Sign", {"sales_order": so, "status": "Fully Signed"}) or frappe.db.exists(
+                "Agreement", {"sales_order": so, "status": "Agreement signed"}
+            )
+            if not signed:
+                unsigned.append(so)
+
+    reasons = []
+    if form_needed and not int(frappe.db.get_value("Customer", customer, "lock_form") or 0):
+        reasons.append("The candidate details form hasn't been submitted yet.")
+    if unsigned:
+        reasons.append("Agreement not signed yet for " + ", ".join(unsigned) + ".")
+    return {
+        "blocked": bool(reasons),
+        "reasons": reasons,
+        "form_required": form_needed,
+        "agreement_required": agreement_needed,
+    }
+
+
+@frappe.whitelist()
+def get_candidate_form_order(customer):
+    """The customer's latest Sales Order (not cancelled) with a service that needs the candidate
+    details form, or None - the Customer page offers "Send Details Form" only when there is one."""
+    frappe.has_permission("Customer", "read", customer, throw=True)
+    config = get_erp_config()
+    for so in frappe.get_all(
+        "Sales Order", filters={"customer": customer, "docstatus": ["<", 2]}, pluck="name", order_by="creation desc"
+    ):
+        if get_requirements_from_config(frappe.get_doc("Sales Order", so), config)["candidate_required"]:
+            return so
+    return None
+
+
+@frappe.whitelist()
 def send_details_form_notification(recipient, sales_order, customer):
 
     try:
-        # Generate form URL
-        form_url = generate_form_url(
-            recipient, sales_order, customer, agreement=None, p=None, ia=False
-        )
+        # The candidate details form is filled from the customer's portal (signed
+        # in, no token) - same as the E Sign agreement flow, give them portal
+        # access here if they don't have it yet rather than sending a link they
+        # can't use. Never blocks the email: falls back silently if it fails.
+        from verp_staffing.esign.template_flow import _ensure_portal_access
+
+        access, access_error = _ensure_portal_access(customer)
+
+        # The customer now fills details from their portal (signed in, no
+        # token) — the link goes to that page, and sending it reopens the form.
+        form_url = f"{frappe.utils.get_url()}/verp/portal/candidate-details"
+        frappe.db.set_value("Customer", customer, "lock_form", 0, update_modified=False)
         # Try Email Template
         template = frappe.db.get_value(
             "Email Template",
@@ -584,7 +693,10 @@ def send_details_form_notification(recipient, sales_order, customer):
             send_system=0,
         )
 
-        return {"success": "Details form sent"}
+        # Shown on the customer's History timeline (crm/api/customer_timeline.py).
+        frappe.get_doc("Customer", customer).add_comment("Info", f"Candidate details form sent to {recipient}")
+
+        return {"success": "Details form sent", "portal_access": access, "portal_access_error": access_error}
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Details Form Notification Error")
@@ -779,7 +891,7 @@ def _create_invoice_for_term(so, payment_term, payment_term_row):
     si.conversion_rate = 1
     si.sales_order = so.name
     si.payment_term_row = payment_term_row
-    si.disable_rounded_total = so.disable_rounded_total
+    si.disable_rounded_total = 1
 
     _append_prorated_items(si, so, payment_term)
 
@@ -876,6 +988,8 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
     several — the client calls this repeatedly with increasing limit_start
     for infinite scroll.
     """
+    frappe.has_permission("Sales Order", "read", doc=sales_order, throw=True)
+
     limit_start = cint(limit_start)
     limit_page_length = cint(limit_page_length) or 5
 
@@ -887,6 +1001,8 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
             "company",
             "posting_date",
             "grand_total",
+            "rounded_total",
+            "disable_rounded_total",
             "outstanding_amount",
             "currency",
             "docstatus",
@@ -921,8 +1037,50 @@ def get_linked_invoices(sales_order, limit_start=0, limit_page_length=5):
     }
 
 
+PLATFORM_CHARGES_LABEL = "Platform / Other Charges"
+CHARGE_ACCOUNT_TYPES = ["Tax", "Chargeable", "Indirect Expense", "Direct Expense", "Expense Account", "Income Account"]
+
+
+def _apply_platform_charges(pe, charges, charges_account):
+    """Records what the platform/bank kept (or added) as one 'Actual' row in the
+    Payment Entry's taxes: the entered amount as-is (negative = deducted from
+    what we received, positive = extra received), so the Payment Entry's own tax
+    totals give the net. Replaces a row from an earlier verification attempt."""
+    charges = flt(charges)
+    pe.set("taxes", [row for row in pe.get("taxes") if row.description != PLATFORM_CHARGES_LABEL])
+    if not charges:
+        return
+
+    if not charges_account:
+        frappe.throw(_("Select the expense account for the charges."))
+    account = frappe.db.get_value(
+        "Account", charges_account, ["company", "is_group", "disabled", "account_type"], as_dict=True
+    )
+    if (
+        not account
+        or account.company != pe.company
+        or account.is_group
+        or account.disabled
+        or account.account_type not in CHARGE_ACCOUNT_TYPES
+    ):
+        frappe.throw(_("{0} is not a valid expense account for this company.").format(charges_account))
+    if flt(pe.paid_amount) + charges <= 0:
+        frappe.throw(_("Charges cannot be larger than the amount paid."))
+
+    pe.append(
+        "taxes",
+        {
+            "charge_type": "Actual",
+            "account_head": charges_account,
+            "description": PLATFORM_CHARGES_LABEL,
+            "tax_amount": charges,
+            "add_deduct_tax": "Add",
+        },
+    )
+
+
 @frappe.whitelist()
-def verify_payment_entry(payment_entry):
+def verify_payment_entry(payment_entry, paid_from=None, paid_to=None, charges=None, charges_account=None):
     pe = frappe.get_doc("Payment Entry", payment_entry)
 
     if pe.verification_status == "Verified":
@@ -932,6 +1090,16 @@ def verify_payment_entry(payment_entry):
         frappe.throw(
             _("Only Pending Verification or Rejected entries can be approved.")
         )
+
+    # Let the verifier confirm/correct which accounts this was actually paid
+    # from/to right here, same as the Payment Entry form's own Paid From/
+    # Paid To — only ever overwrites when a value is actually sent.
+    if paid_from:
+        pe.paid_from = paid_from
+    if paid_to:
+        pe.paid_to = paid_to
+
+    _apply_platform_charges(pe, charges, charges_account)
 
     now = frappe.utils.now_datetime()
     now_str = frappe.utils.format_datetime(now)
@@ -1012,7 +1180,7 @@ def handle_background_failure(title, sales_order, error, message):
     frappe.log_error(error, title)
     # Notification Message
     sales_order_link = (
-        f'<a href="/app/sales-order/{sales_order}" target="_blank">{sales_order}</a>'
+        f'<a href="/verp/Sales%20Order/{sales_order}" target="_blank">{sales_order}</a>'
     )
 
     full_message = f"{message}<br><br>Sales Order: {sales_order_link}"

@@ -73,10 +73,8 @@
   "payments_tab",
   "payments_section",
   "mode_of_payment",
-  "base_paid_amount",
   "clearance_date",
   "column_break_oxyx",
-  "paid_amount",
   "more_info_tab",
   "status_section",
   "status",
@@ -457,19 +455,10 @@
   },
   {
    "collapsible": 1,
-   "collapsible_depends_on": "paid_amount",
    "depends_on": "eval:doc.is_paid===1||(doc.advances && doc.advances.length>0)",
    "fieldname": "payments_section",
    "fieldtype": "Section Break",
    "label": "Payments"
-  },
-  {
-   "fieldname": "base_paid_amount",
-   "fieldtype": "Currency",
-   "label": "Paid Amount (Company Currency)",
-   "no_copy": 1,
-   "options": "company_currency",
-   "read_only": 1
   },
   {
    "fieldname": "mode_of_payment",
@@ -487,13 +476,6 @@
   {
    "fieldname": "column_break_oxyx",
    "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "is_paid",
-   "fieldname": "paid_amount",
-   "fieldtype": "Currency",
-   "label": "Paid Amount",
-   "options": "currency"
   },
   {
    "fieldname": "more_info_tab",

@@ -132,6 +132,11 @@ def create_opportunity_from_lead(lead, owner):
 @frappe.whitelist()
 def remove_attachment(docname, fieldname):
     doc = frappe.get_doc("Lead Detail Form", docname)
+    doc.check_permission("write")
+
+    df = doc.meta.get_field(fieldname)
+    if not df or df.fieldtype not in ("Attach", "Attach Image"):
+        frappe.throw(_("{0} is not a file field.").format(fieldname))
 
     file_name = doc.get(fieldname)
 
@@ -141,9 +146,14 @@ def remove_attachment(docname, fieldname):
     # 1. Remove the reference from the Upload field
     doc.db_set(fieldname, None, update_modified=False)
 
-    # 2. Delete the File document
-    if frappe.db.exists("File", file_name):
-        frappe.delete_doc("File", file_name)
+    # 2. Delete the File document — the field holds its URL (or, on older
+    # records, its name), and only a file attached to this very form goes.
+    file_doc = frappe.db.get_value(
+        "File",
+        {"file_url": file_name, "attached_to_doctype": "Lead Detail Form", "attached_to_name": docname},
+    ) or (file_name if frappe.db.exists("File", file_name) else None)
+    if file_doc:
+        frappe.delete_doc("File", file_doc)
 
     frappe.db.commit()
 

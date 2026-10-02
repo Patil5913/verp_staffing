@@ -1,7 +1,7 @@
 import frappe
 
 
-@frappe.whitelist()
+# internal: called from document hooks only, never exposed as an endpoint
 def unlink_and_clean_lead_detail(
     doctype,
     docname,

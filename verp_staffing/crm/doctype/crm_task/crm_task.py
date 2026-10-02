@@ -52,7 +52,7 @@ def send_assignment_notification(doc):
         # Notification Message
     message = f"""
     ⏰ Task Assigned: <b>{doc.description}</b> on {doc.date}<br><br>
-    <a href="/app/crm-task/{doc.name}" target="_blank">
+    <a href="/verp/CRM%20Task/{doc.name}" target="_blank">
     👉 Open Task!!
     </a>
     """

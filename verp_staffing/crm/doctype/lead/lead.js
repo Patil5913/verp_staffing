@@ -668,7 +668,7 @@ function setupLeadDetailForm(frm) {
 			if (fieldtype === "Link") {
 				return `
 <div style="${roBox}">
-    <a href="/app/file/${value}" target="_blank"
+    <a href="/verp/File/${value}" target="_blank"
         style="color: var(--color-text-info, #1a73e8); text-decoration: none; font-size: 13px;">
         📎 View File
     </a>
@@ -838,7 +838,7 @@ function setupLeadDetailForm(frm) {
 			let current_display_html = value
 				? `
 		<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-			<a href="/app/file/${value}" target="_blank"
+			<a href="/verp/File/${value}" target="_blank"
 				style="color:#260fea;font-weight:500;text-decoration:none;">
 				📎 View Current File
 			</a>

@@ -101,7 +101,7 @@ class GLEntry(Document):
             frappe.throw(
                 _(
                     "No Fiscal Year found for date {0}. <br><br>"
-                    '<a href="/app/fiscal-year/new-fiscal-year" target="_blank">'
+                    '<a href="/verp/Fiscal%20Year" target="_blank">'
                     "Create Fiscal Year</a>"
                 ).format(self.posting_date),
                 title=_("Fiscal Year Missing"),
@@ -326,7 +326,7 @@ def get_fiscal_year(posting_date, company=None):
         frappe.throw(
             _(
                 "No Fiscal Year found for date {0}. <br><br>"
-                '<a href="/app/fiscal-year/new-fiscal-year" target="_blank">'
+                '<a href="/verp/Fiscal%20Year" target="_blank">'
                 "Create Fiscal Year</a>"
             ).format(posting_date)
         )
@@ -346,7 +346,7 @@ def get_fiscal_year(posting_date, company=None):
             frappe.throw(
                 _(
                     "No Fiscal Year found for company {0} for date {1}. <br><br>"
-                    '<a href="/app/fiscal-year/new-fiscal-year" target="_blank">'
+                    '<a href="/verp/Fiscal%20Year" target="_blank">'
                     "Create Fiscal Year</a>"
                 ).format(company, posting_date)
             )

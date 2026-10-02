@@ -158,7 +158,9 @@ def create_and_send(sales_order, template, data):
             recipients=[recipient],
             subject=f"Agreement for {sales_order}",
             message="Please find attached agreement.",
-            attachments=[{"fname": fname, "fcontent": pdf}]
+            attachments=[{"fname": fname, "fcontent": pdf}],
+            send_priority=5,
+            now=True,
         )
 
     return {"agreement": agreement.name, "file_url": filedoc.file_url}

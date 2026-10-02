@@ -2,6 +2,10 @@ import frappe
 from collections import defaultdict
 
 
+def _prettify(fieldname):
+    return (fieldname or "").replace("_", " ").strip().title()
+
+
 def get_cached_table_columns(child_doctype):
     cache = frappe.cache()
     cache_key = f"table_schema:{child_doctype}"
@@ -15,7 +19,7 @@ def get_cached_table_columns(child_doctype):
     columns = [
         {
             "fieldname": df.fieldname,
-            "label": df.label,
+            "label": df.label or _prettify(df.fieldname),
             "fieldtype": df.fieldtype,
         }
         for df in child_meta.fields
@@ -36,6 +40,10 @@ def get_cached_table_columns(child_doctype):
 def get_data_by_customer(customer, fields):
     if not customer or not fields:
         return []
+
+    from verp_staffing.crm.api.helpers import require_customer_access
+
+    require_customer_access(customer)
 
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
@@ -88,7 +96,7 @@ def get_data_by_customer(customer, fields):
         df = meta.get_field(fieldname)
 
         field_meta[fieldname] = {
-            "label": df.label if df else fieldname,
+            "label": (df.label if df else None) or _prettify(fieldname),
             "fieldtype": df.fieldtype if df else None,
             "options": df.options if df else None,
         }
@@ -126,7 +134,7 @@ def get_data_by_customer(customer, fields):
             grouped_rows[child_row.parent].append(child_row)
 
         table_data_map[df.fieldname] = {
-            "label": df.label,
+            "label": df.label or _prettify(df.fieldname),
             "doctype": child_doctype,
             "columns": columns,
             "rows_by_parent": grouped_rows,

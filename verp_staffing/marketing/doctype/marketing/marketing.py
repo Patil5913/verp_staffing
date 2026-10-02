@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 from frappe.model.document import Document
 from verp_staffing.crm.api.customer import update_customer_stage
 from verp_staffing.crm.api.naming import generate_name_series
@@ -18,8 +19,16 @@ class Marketing(Document):
         self.name = generate_name_series("Marketing", customer_name)
 
     def validate(self):
-        if self.target is not None and self.target != int(self.target):
-            frappe.throw(_("Target must be a whole number"))
+        # validate() runs before Frappe casts Int fields, so `target` can still
+        # be the raw string the client sent ("5", "5.0") — compare as a number.
+        if self.target not in (None, ""):
+            try:
+                target = flt(self.target)
+            except (TypeError, ValueError):
+                frappe.throw(_("Target must be a number"))
+            if target != int(target):
+                frappe.throw(_("Target must be a whole number"))
+            self.target = int(target)
         if self.start_date and (not self.target or self.target <= 0):
             frappe.throw(_("Target must be greater than 0 when Start Date is set"))
 
@@ -37,9 +46,19 @@ def get_interviews_by_marketing(marketing):
     interviews = frappe.get_all(
         "Interview",
         filters={"marketing_link": marketing},
-        fields=["company", "name", "owner"],
+        fields=["company", "name", "role", "status"],
+        order_by="creation desc",
     )
 
+    # `can_open` = whether the current user may read it (their own, or a visible team member's -
+    # Interview's permission hook); every interview is still listed, the rest are just not linked
     return [
-        {"name": i.name, "company": i.company, "owner": i.owner == frappe.session.user} for i in interviews
+        {
+            "name": i.name,
+            "company": i.company,
+            "role": i.role,
+            "status": i.status,
+            "can_open": bool(frappe.has_permission("Interview", "read", doc=i.name)),
+        }
+        for i in interviews
     ]

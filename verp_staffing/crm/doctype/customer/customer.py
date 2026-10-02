@@ -2,15 +2,39 @@
 # For license information, please see license.txt
 
 import frappe, json
+from frappe import _
 from frappe.model.document import Document
-from verp_staffing.crm.api.lead_details import create_lead_details
+from verp_staffing.crm.api.lead_details import create_lead_details, get_or_create_lead_detail
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.customer_chat import revoke_chat_access
 
 
 class Customer(Document):
     def on_trash(self):
         unlink_and_clean_lead_detail("Customer", self.name, self.lead_details)
+        revoke_chat_access(self.name)
+
+    def before_insert(self):
+        self._set_default_customer_owner()
+
+    def _set_default_customer_owner(self):
+        # Ported from the old desk customer.js's set_customer_owner(frm) —
+        # enforced here (not just client-side) so it applies no matter which
+        # UI created the Customer (the full form, or the quick-create
+        # dialog, which has no equivalent of that client script at all).
+        if self.customer_owner:
+            return
+
+        if self.customer_from == "Opportunity" and self.party_name:
+            owner = frappe.db.get_value("Opportunity", self.party_name, "opportunity_owner")
+            if owner:
+                self.customer_owner = owner
+                return
+
+        employee = frappe.db.get_value("Employee", {"user": frappe.session.user}, "name")
+        if employee:
+            self.customer_owner = employee
 
     def autoname(self):
         name = self.name1
@@ -25,14 +49,7 @@ class Customer(Document):
 
         # CASE 1: Party selected → attach to existing Lead Details
         if self.party_name and self.customer_from:
-            lead_detail_name = frappe.db.get_value(
-                "Doctype Reference",
-                {
-                    "reference_doctype": self.customer_from,
-                    "reference_person": self.party_name,
-                },
-                "parent",
-            )
+            lead_detail_name = get_or_create_lead_detail(self.customer_from, self.party_name)
 
             if not lead_detail_name:
                 frappe.throw("Lead Details not found for selected party.")
@@ -53,7 +70,17 @@ class Customer(Document):
 
         # CASE 2: No party selected → create standalone Lead Details
         else:
-            lead_detail_name = create_lead_details("Customer", self.name, self.name1)
+            # Same `_<fieldname>` convention as Lead.create_lead_detail /
+            # Opportunity.after_insert — the quick-create dialog's
+            # phone/email inputs, carried into the new Lead Detail Form.
+            custom_values = {
+                field: value
+                for field in ("personal_phone_number", "email")
+                if (value := getattr(self, f"_{field}", None))
+            }
+            lead_detail_name = create_lead_details(
+                "Customer", self.name, self.name1, custom_values=custom_values or None
+            )
 
         # Link Customer → Lead Details in BOTH cases
         if lead_detail_name:
@@ -77,7 +104,7 @@ def get_forwardable_departments(customer):
 
     active_in = []
 
-    if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
+    if frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]}):
         active_in.append("CR")
 
     if frappe.db.exists("Onboardings", {"customer": customer,  "status": ["in", ["Active","Completed"]]}):
@@ -210,7 +237,7 @@ def is_service_completed(service, customer):
 
 def check_CR_Onboarding_departments_active(customer):
     active = []
-    if frappe.db.exists("CR", {"customer": customer, "status": "Active"}):
+    if frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]}):
         active.append("CR")
     if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
         active.append("Onboarding")
@@ -241,19 +268,19 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
-    cr_active = frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"})
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]})
     onboarding_active = frappe.db.exists(
         "Onboardings", {"customer": customer, "status": ["in", ["Active","Completed"]]}
     )
-    if doctype not in ["CR", "Onboardings"]:
-        if cr_active or onboarding_active:
-            active_in = []
-            if cr_active:
-                active_in.append("CR")
-            if onboarding_active:
-                active_in.append("Onboarding")
-            # Return a special response instead of a plain list
-            return {"blocked": True, "active_in": active_in}
+
+    if cr_active or onboarding_active:
+        active_in = []
+        if cr_active:
+            active_in.append("CR")
+        if onboarding_active:
+            active_in.append("Onboarding")
+        # Return a special response instead of a plain list
+        return {"blocked": True, "active_in": active_in}
 
     services = get_services_for_customer(customer)
     if not services:
@@ -314,65 +341,6 @@ def generate_token(email: str):
 
 
 @frappe.whitelist()
-def send_portal_link(customer, customer_name):
-    if not customer:
-        frappe.throw("Customer is required")
-
-    # STEP 1: find Doctype Reference row
-    ref = frappe.get_all(
-        "Doctype Reference",
-        filters={
-            "reference_doctype": "Customer",
-            "reference_person": customer,
-        },
-        fields=["parent"],
-        limit=1,
-    )
-
-    if not ref:
-        frappe.throw("No reference found for this customer")
-
-    lead_name = ref[0].parent
-
-    # STEP 2: get email from Lead Detail Form
-    email = frappe.db.get_value("Lead Detail Form", lead_name, "email")
-
-    if not email:
-        frappe.throw(
-            title="Email Missing",
-            msg=f"Email is required to send agreement.<br><br>"
-            f'<a href="/app/lead-detail-form/{lead_name}" target="_blank">'
-            f"➜ Open Lead Detail Form</a>",
-        )
-
-    # STEP 3: generate token
-    token = generate_token(email)
-
-    # STEP 4: build link
-    base_url = frappe.utils.get_url()
-    portal_link = f"{base_url}/customer?t={token}"
-
-    # STEP 5: send email
-    email_template = frappe.get_doc("Email Template", "Customer Portal Link")
-
-    message = frappe.render_template(
-        email_template.response_html,
-        {
-            "customer_name": customer_name,
-            "portal_link": portal_link,
-        },
-    )
-
-    frappe.sendmail(
-        recipients=[email],
-        subject=email_template.subject,
-        message=message,
-    )
-
-    return True
-
-
-@frappe.whitelist()
 def get_customer_email(customer, return_ldf=False):
     """
     Fetch email for a Customer from Lead Detail Form using raw SQL.
@@ -404,3 +372,31 @@ def get_customer_email(customer, return_ldf=False):
         return None
 
     return email_value
+
+
+@frappe.whitelist()
+def save_customer_email(customer, email):
+    """Sets the email on a Customer's linked Lead Detail Form — the recovery
+    step for the "Email is required to send ..." errors raised by Sales
+    Order's pre-submit checks and agreement.py's send_existing_agreement:
+    rather than dead-ending there, the caller collects an email and retries
+    through this, so the original submit/send can then proceed.
+    """
+    email = (email or "").strip()
+    if not email:
+        frappe.throw(_("Email is required."))
+    frappe.utils.validate_email_address(email, throw=True)
+
+    # The Customer's own lead_details link first, else the Doctype Reference lookup.
+    lead_detail_name = frappe.db.get_value("Customer", customer, "lead_details")
+    if not lead_detail_name or not frappe.db.exists("Lead Detail Form", lead_detail_name):
+        lead_detail_name = get_customer_email(customer, return_ldf=True)[1]
+
+    doc = frappe.get_doc("Lead Detail Form", lead_detail_name)
+    if not doc.has_permission("write"):
+        frappe.throw(_("You do not have permission to edit this Lead Detail Form."), frappe.PermissionError)
+
+    doc.email = email
+    doc.save(ignore_permissions=True)
+
+    return email

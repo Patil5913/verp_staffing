@@ -7,7 +7,8 @@
  "field_order": [
   "date",
   "column_break_rxwn",
-  "duration"
+  "duration",
+  "duration_unit"
  ],
  "fields": [
   {
@@ -28,6 +29,14 @@
   {
    "fieldname": "column_break_rxwn",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "Minutes",
+   "fieldname": "duration_unit",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Duration Unit",
+   "options": "Minutes\nHours"
   }
  ],
  "grid_page_length": 50,

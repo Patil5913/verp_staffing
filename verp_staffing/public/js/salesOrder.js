@@ -230,7 +230,7 @@ function render_agreement_cards(wrapper, agreements, sales_order) {
         <div class="d-flex justify-content-between align-items-start">
           <div style="flex:1; min-width:0;">
             <div style="font-weight:600; font-size:13px; margin-bottom:2px;">
-  <a href="/app/agreement/${ag.name}"
+  <a href="/verp/Agreement/${ag.name}"
      style="color:#260fea; text-decoration:none;"
      onmouseenter="this.style.color='#1d0ed6'"
      onmouseleave="this.style.color='#260fea'"
@@ -282,7 +282,7 @@ function render_agreement_cards(wrapper, agreements, sales_order) {
         </div>
 
         <div class="mt-2 d-flex flex-wrap" style="gap:6px; margin-top:10px !important;">
-          <a href="/app/agreement/${ag.name}" class="btn btn-xs btn-default">
+          <a href="/verp/Agreement/${ag.name}" class="btn btn-xs btn-default">
             View
           </a>
           ${
@@ -815,7 +815,7 @@ window.render_owned_sales_orders = function (frm, html_field, customer) {
                         >
                             <div>
                                 <a
-                                    href="/app/sales-order/${so.name}"
+                                    href="/verp/Sales%20Order/${so.name}"
                                     target="_blank"
                                     style="
                                         font-size:15px;
@@ -984,7 +984,7 @@ function render_payment_terms_html(so) {
 							row.payment_entry
 								? `
                                     <a
-                                        href="/app/payment-entry/${row.payment_entry}"
+                                        href="/verp/Payment%20Entry/${row.payment_entry}"
                                         target="_blank"
                                         style="font-size:11px;"
                                     >
