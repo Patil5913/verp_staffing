@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "allow_import": 1,
  "autoname": "field:department_name",
  "creation": "2025-11-14 15:11:57.541600",
  "doctype": "DocType",
@@ -10,8 +10,7 @@
   "department_name",
   "section_break_cbtl",
   "column_break_xwuo",
-  "roles_html",
-  "roles_json",
+  "role",
   "column_break_zerj",
   "head_of_department",
   "services"
@@ -38,17 +37,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "roles_html",
-   "fieldtype": "HTML",
-   "label": "Roles"
-  },
-  {
-   "fieldname": "roles_json",
-   "fieldtype": "Small Text",
-   "hidden": 1,
-   "label": "Roles JSON"
-  },
-  {
    "fieldname": "column_break_zerj",
    "fieldtype": "Column Break"
   },
@@ -63,12 +51,18 @@
    "fieldtype": "Table MultiSelect",
    "label": "Services",
    "options": "Department Service"
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Table MultiSelect",
+   "label": "Role",
+   "options": "Department Role"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-09 16:12:29.932249",
+ "modified": "2026-07-02 17:41:11.905522",
  "modified_by": "Administrator",
  "module": "Settings",
  "name": "Department",
@@ -85,6 +79,135 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Account Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "select": 1,
    "write": 1
   }
  ],

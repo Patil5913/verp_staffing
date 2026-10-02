@@ -1,97 +1,567 @@
 // Copyright (c) 2025, Vrugle and contributors
 // For license information, please see license.txt
 
+const LOCKED_STATUS_KEYWORDS = ["cancelled", "canceled", "completed", "rescheduled", "rejected"];
+const CANCELLED_LIKE_KEYWORDS = ["cancelled", "canceled", "rescheduled"];
+
+function is_status_locked(status) {
+	if (!status || typeof status !== "string") return false;
+	const lower = status.toLowerCase();
+	return LOCKED_STATUS_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
+
+function is_cancelled_like_status(status) {
+	if (!status || typeof status !== "string") return false;
+	const lower = status.toLowerCase();
+	return CANCELLED_LIKE_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
+
 frappe.ui.form.on("Interview", {
-    refresh(frm) {
-        frm.add_custom_button("Show Form Tour", () => {
-            const tour_name = 'Interview Form';
+	onload(frm) {
+		initialize_default_interview_status(frm);
+	},
 
-            frm.tour.init({ tour_name })
-                .then(() => frm.tour.start());
-        });
+	onload_post_render(frm) {
+		initialize_default_interview_status(frm);
+	},
 
-        set_round_numbers(frm);
+	refresh(frm) {
+		frappe.breadcrumbs.clear();
 
-        const grid = frm.fields_dict.interview_rounds_table?.grid;
-        if (!grid) return;
+		frappe.breadcrumbs.all[frappe.get_route_str()] = {
+			workspace: "Interviews",
+			doctype: frm.doctype,
+			type: "Form",
+		};
 
-        grid.update_docfield_property("date", "read_only", 1);
-        grid.update_docfield_property("round", "read_only", 1);
+		frappe.breadcrumbs.update();
 
-        if (!frm.is_new()) {
-            frm.set_df_property("marketing_link", "read_only", 1);
-            frm.set_df_property("role", "read_only", 1);
-        }
-    },
+		frm.add_custom_button("Show Form Tour", () => {
+			frm.tour.init({ tour_name: "Interview" }).then(() => frm.tour.start());
+		});
 
-    validate(frm) {
-        validate_interview_times(frm);
-    }
+		initialize_default_interview_status(frm);
+		hide_interview_round_no_column(frm);
+		apply_round_delete_restriction(frm);
+		check_marketing_superiority(frm);
+		capture_status_snapshots(frm);
+		apply_round_row_lock(frm);
+		block_round_reorder(frm);
+		block_round_tab_new_row(frm);
+
+		if (!frm.is_new()) {
+			frm.set_df_property("marketing_link", "hidden", 1);
+			frm.set_df_property("customer", "hidden", 0);
+			frm.set_df_property("customer", "read_only", 1);
+			frm.set_df_property("role", "read_only", 1);
+			frm.set_df_property("company", "read_only", 1);
+			frm.set_df_property("status", "read_only", 1);
+
+			fetch_and_render_resume(frm);
+		} else {
+			frm.set_df_property("customer", "hidden", 1);
+		}
+	},
+
+	validate(frm) {
+		const invalid_row = (frm.doc.interview_rounds_table || []).find(
+			(row) =>
+				is_cancelled_like_status(row.status) &&
+				(!row.cancelled_by || !row.reason_of_cancel),
+		);
+
+		if (invalid_row) {
+			frappe.msgprint({
+				title: __("Missing Information"),
+				indicator: "red",
+				message: __(
+					"Round #{0}: 'Cancelled By' and 'Reason of Cancel' are required when status is '{1}'.",
+					[invalid_row.round || invalid_row.idx, invalid_row.status],
+				),
+			});
+
+			frappe.validated = false;
+		}
+	},
 });
 
 frappe.ui.form.on("Interview Round", {
-    interview_rounds_table_add(frm, cdt, cdn) {
+	interview_rounds_table_add(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		row.__prev_follow_up = row.follow_up || 0;
 
-        set_round_numbers(frm);
+		if (!row.round) {
+			frappe.model.set_value(cdt, cdn, "round", String(row.idx));
+		}
 
-        const row = locals[cdt][cdn];
+		// Always use the same cached default-status request.
+		if (!row.status) {
+			get_default_interview_status(frm).then((default_status) => {
+				if (!default_status || row.status) return;
+				frappe.model.set_value(cdt, cdn, "status", default_status);
+			});
+		}
 
-        // set default today's date
-        if (!row.date) {
-            row.date = frappe.datetime.get_today();
-        }
+		apply_round_row_lock(frm);
+		block_round_reorder(frm);
+		block_round_tab_new_row(frm);
+	},
 
-        // adding previos follow up value in state
-        row.__prev_follow_up = row.follow_up || 0;
-    },
+	interview_rounds_table_remove(frm) {
+		apply_round_row_lock(frm);
+		block_round_reorder(frm);
+		block_round_tab_new_row(frm);
+	},
 
-    interview_rounds_table_remove(frm) {
-        set_round_numbers(frm);
-    },
+	form_render(frm, cdt, cdn) {
+		apply_round_row_lock(frm);
+		toggle_cancellation_fields(frm, cdt, cdn);
+		block_round_tab_new_row(frm);
+	},
 
-    follow_up(frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
+	status(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row || row.__reverting_status) return;
 
-        const prev = row.__prev_follow_up ?? 0;
-        const curr = row.follow_up;
+		if (is_round_finalized(row)) {
+			row.__reverting_status = true;
 
-        if (curr !== prev + 1) {
-            frappe.msgprint(
-                `Invalid Follow Up value. Only allowed value is ${prev + 1}`
-            );
+			frappe.msgprint({
+				title: __("Status Locked"),
+				indicator: "red",
+				message: __(
+					"This round was already marked '{0}' and its status can no longer be changed.",
+					[row.__status_snapshot],
+				),
+			});
 
-            row.follow_up = prev;
-            frm.refresh_field("interview_rounds_table");
-            return;
-        }
+			frappe.model.set_value(cdt, cdn, "status", row.__status_snapshot).then(() => {
+				row.__reverting_status = false;
+			});
+			return;
+		}
 
-        row.__prev_follow_up = curr;
-    }
+		if (is_status_locked(row.status)) {
+			frappe.confirm(
+				__(
+					"Once this round's status is set to '{0}', it cannot be changed again. Continue?",
+					[row.status],
+				),
+				() => {
+					toggle_cancellation_fields(frm, cdt, cdn);
+				},
+				() => {
+					row.__reverting_status = true;
+
+					get_default_interview_status(frm).then((default_status) => {
+						const fallback = row.__status_snapshot || default_status || "";
+
+						frappe.model.set_value(cdt, cdn, "status", fallback).then(() => {
+							row.__reverting_status = false;
+						});
+					});
+				},
+			);
+			return;
+		}
+
+		toggle_cancellation_fields(frm, cdt, cdn);
+	},
+
+	follow_up(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+
+		if (row.__reverting_follow_up) return;
+
+		const prev = row.__prev_follow_up ?? 0;
+		const curr = row.follow_up;
+
+		if (curr === prev) return;
+
+		if (curr !== prev + 1) {
+			frappe.show_alert(
+				{
+					message: __("Invalid Follow Up value. Only allowed value is {0}", [prev + 1]),
+					indicator: "red",
+				},
+				5,
+			);
+
+			row.__reverting_follow_up = true;
+			frappe.model.set_value(cdt, cdn, "follow_up", prev).then(() => {
+				row.__reverting_follow_up = false;
+			});
+			return;
+		}
+
+		row.__prev_follow_up = curr;
+	},
 });
 
-function set_round_numbers(frm) {
-    (frm.doc.interview_rounds_table || []).forEach(row => {
-        row.round = row.idx;
-    });
-    frm.refresh_field("interview_rounds_table");
+async function initialize_default_interview_status(frm) {
+	if (!frm || !frm.doc || !frm.is_new()) {
+		return;
+	}
+
+	// If already assigned, don't overwrite it.
+	if (frm.doc.status) {
+		return;
+	}
+
+	const default_status = await get_default_interview_status(frm);
+
+	if (!default_status) {
+		return;
+	}
+
+	// The document may have changed while the async request was running.
+	if (!frm.is_new() || frm.doc.status) {
+		return;
+	}
+
+	await frm.set_value("status", default_status);
 }
 
-function validate_interview_times(frm) {
-    const rows = frm.doc.interview_rounds_table || [];
+function get_default_interview_status(frm) {
+	if (!frm.__default_interview_status_promise) {
+		frm.__default_interview_status_promise = frappe.db
+			.get_single_value("ERP Configuration", "default_interview_status")
+			.then((value) => {
+				if (!value) {
+					frappe.throw(
+						__(
+							"Default Interview Status is not set in 'ERP Configuration', please contact admin.",
+						),
+					);
+				}
 
-    const timeRegex = /^(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s-\s(0[1-9]|1[0-2]):[0-5][0-9]\s(AM|PM)\s\((EDT|EST)\)$/;
+				frm.__default_interview_status = value;
 
-    rows.forEach((row, index) => {
-        if (!row.time_of_interview) {
-            frappe.throw(`Row ${index + 1}: Time of Interview is required`);
-        }
+				return value;
+			})
+			.catch((err) => {
+				console.error("Failed to fetch default interview status", err);
 
-        if (!timeRegex.test(row.time_of_interview)) {
-            frappe.throw(
-                `Row ${index + 1}: Invalid Time of Interview format.\n` +
-                `Expected: HH:MM (AM/PM) - HH:MM (AM/PM) (EDT/EST)\n` +
-                `Example: 01:00 PM - 03:00 PM (EST)`
-            );
-        }
-    });
+				frm.__default_interview_status = "";
+
+				return "";
+			});
+	}
+
+	return frm.__default_interview_status_promise;
+}
+
+function hide_interview_round_no_column() {
+	if ($("#interview-round-no-column-style").length) return;
+
+	$("head").append(`
+		<style id="interview-round-no-column-style">
+			[data-fieldname="interview_rounds_table"] .row-index,
+			[data-fieldname="interview_rounds_table"] .grid-row-index {
+				display: none !important;
+			}
+		</style>
+	`);
+}
+
+function inject_round_lock_style() {
+	if ($("#interview-round-lock-style").length) return;
+
+	// button classes come from grid_row_form.js's set_form_events bindings
+	$("head").append(`
+		<style id="interview-round-lock-style">
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-insert-row,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-insert-row-below,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-duplicate-row,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-move-row,
+			[data-fieldname="interview_rounds_table"].round-reorder-locked .grid-append-row {
+				display: none !important;
+			}
+		</style>
+	`);
+}
+
+function capture_status_snapshots(frm) {
+	(frm.doc.interview_rounds_table || []).forEach((row) => {
+		row.__status_snapshot = row.status;
+	});
+}
+
+function is_round_finalized(row) {
+	return !!row && is_status_locked(row.__status_snapshot);
+}
+
+function is_row_locked(frm, row) {
+	if (!frm || !row) return false;
+	const snapshot = row.__status_snapshot ?? row.status;
+	return is_status_locked(snapshot);
+}
+
+function is_drag_locked(frm) {
+	return !frm?.__is_superior;
+}
+
+function check_marketing_superiority(frm) {
+	if (!frm.doc.marketing_link) {
+		frm.__is_superior = false;
+		apply_round_row_lock(frm);
+		block_round_reorder(frm);
+		return;
+	}
+
+	frappe.db
+		.get_value("Marketing", frm.doc.marketing_link, "assign_to")
+		.then(({ message }) => {
+			const assign_to = message?.assign_to;
+			if (!assign_to) {
+				frm.__is_superior = false;
+				apply_round_row_lock(frm);
+				block_round_reorder(frm);
+				return;
+			}
+
+			frappe.call({
+				method: "verp_staffing.crm.api.helpers._is_superior_in_department",
+				args: {
+					assign_to,
+					current_user: frappe.session.user,
+					department: "Marketing",
+				},
+				callback(r) {
+					frm.__is_superior = !!(r.message && r.message.is_superior);
+					apply_round_row_lock(frm);
+					block_round_reorder(frm);
+				},
+				error(err) {
+					console.error("Permission check failed", err);
+					frm.__is_superior = false; // fail closed
+					apply_round_row_lock(frm);
+					block_round_reorder(frm);
+				},
+			});
+		})
+		.catch((err) => {
+			console.error("Failed to fetch Marketing's assign_to", err);
+			frm.__is_superior = false; // fail closed
+			apply_round_row_lock(frm);
+			block_round_reorder(frm);
+		});
+}
+
+function apply_round_row_lock(frm) {
+	if (!frm || !frm.doc || !frm.fields_dict?.interview_rounds_table) return;
+	const rows = frm.doc.interview_rounds_table || [];
+	if (!rows.length) return;
+
+	const grid = frm.fields_dict.interview_rounds_table.grid;
+	const drag_locked = is_drag_locked(frm);
+
+	rows.forEach((row) => {
+		const grid_row = grid.grid_rows_by_docname[row.name];
+		if (!grid_row) return;
+
+		const locked = is_row_locked(frm, row);
+		row._sortable = !drag_locked;
+
+		if (grid_row.docfields === grid.docfields) {
+			grid_row.docfields = grid.docfields.map((df) => ({ ...df }));
+		}
+		grid_row.docfields.forEach((df) => {
+			df.__base_read_only = df.__base_read_only ?? df.read_only ?? 0;
+			df.read_only = locked ? 1 : df.__base_read_only;
+		});
+		grid_row.refresh();
+
+		if (grid_row.grid_form && grid_row.grid_form.fields_dict) {
+			Object.values(grid_row.grid_form.fields_dict).forEach((field) => {
+				field.df.__base_read_only = field.df.__base_read_only ?? field.df.read_only ?? 0;
+				field.df.read_only = locked ? 1 : field.df.__base_read_only;
+				field.refresh();
+			});
+		}
+	});
+
+	grid.refresh();
+}
+
+function apply_round_delete_restriction(frm) {
+	const restrict = frappe.session.user !== "Administrator";
+	frm.set_df_property("interview_rounds_table", "cannot_delete_rows", restrict);
+	frm.fields_dict.interview_rounds_table.grid.refresh();
+}
+
+function block_round_reorder(frm) {
+	if (!frm || !frm.fields_dict?.interview_rounds_table) return;
+
+	inject_round_lock_style();
+
+	const grid = frm.fields_dict.interview_rounds_table.grid;
+	const drag_locked = is_drag_locked(frm);
+
+	frm.fields_dict.interview_rounds_table.$wrapper?.toggleClass(
+		"round-reorder-locked",
+		drag_locked,
+	);
+
+	const wrapper_el = grid.wrapper[0];
+	if (wrapper_el) {
+		if (wrapper_el.__round_lock_handle_guard) {
+			wrapper_el.removeEventListener(
+				"mousedown",
+				wrapper_el.__round_lock_handle_guard,
+				true,
+			);
+			wrapper_el.removeEventListener(
+				"touchstart",
+				wrapper_el.__round_lock_handle_guard,
+				true,
+			);
+		}
+		const guard = function (e) {
+			if (is_drag_locked(frm) && e.target.closest(".sortable-handle")) {
+				e.stopPropagation();
+				e.preventDefault();
+			}
+		};
+		wrapper_el.__round_lock_handle_guard = guard;
+		wrapper_el.addEventListener("mousedown", guard, true);
+		wrapper_el.addEventListener("touchstart", guard, true);
+	}
+
+	patch_grid_row_actions(frm);
+}
+
+function block_round_tab_new_row(frm) {
+	if (!frm || !frm.fields_dict?.interview_rounds_table) return;
+
+	const grid = frm.fields_dict.interview_rounds_table.grid;
+	const wrapper_el = grid.wrapper[0];
+	if (!wrapper_el) return;
+
+	if (wrapper_el.__round_tab_new_row_guard) {
+		wrapper_el.removeEventListener("keydown", wrapper_el.__round_tab_new_row_guard, true);
+	}
+
+	const guard = function (e) {
+		if (e.key !== "Tab" || e.shiftKey) return;
+
+		const row_el = e.target.closest(".grid-row");
+		if (!row_el) return;
+
+		const focusable = Array.from(
+			row_el.querySelectorAll(
+				'input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), [contenteditable="true"]',
+			),
+		).filter((el) => el.offsetParent !== null);
+
+		if (!focusable.length) return;
+
+		const current_index = focusable.indexOf(e.target);
+		if (current_index === -1) return;
+
+		// Only the row's last focusable field is where Frappe would
+		// otherwise create a new row on Tab — swallow it entirely here
+		// (no row creation, no focus shift anywhere). Any earlier field
+		// falls through untouched, so Tab keeps moving to the next
+		// field in the same row as normal.
+		if (current_index === focusable.length - 1) {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		}
+	};
+
+	wrapper_el.__round_tab_new_row_guard = guard;
+	wrapper_el.addEventListener("keydown", guard, true);
+}
+
+function patch_grid_row_actions(frm) {
+	const sample_row = frm.fields_dict.interview_rounds_table.grid.grid_rows?.[0];
+	if (!sample_row) return;
+
+	const grid_row_proto = Object.getPrototypeOf(sample_row);
+	if (grid_row_proto.__round_lock_patched) return;
+	grid_row_proto.__round_lock_patched = true;
+
+	const original_insert = grid_row_proto.insert;
+	const original_move = grid_row_proto.move;
+
+	grid_row_proto.insert = function (...args) {
+		if (this.doc.doctype === "Interview Round" && is_drag_locked(this.frm)) return;
+		return original_insert.apply(this, args);
+	};
+
+	grid_row_proto.move = function (...args) {
+		if (this.doc.doctype === "Interview Round" && is_drag_locked(this.frm)) return;
+		return original_move.apply(this, args);
+	};
+}
+
+function toggle_cancellation_fields(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row) return;
+
+	const grid_row = frm.fields_dict.interview_rounds_table.grid.grid_rows_by_docname[cdn];
+	if (!grid_row || !grid_row.grid_form || !grid_row.grid_form.fields_dict) return;
+
+	const is_cancel_like = is_cancelled_like_status(row.status);
+	const by_field = grid_row.grid_form.fields_dict.cancelled_by;
+	const reason_field = grid_row.grid_form.fields_dict.reason_of_cancel;
+	if (!by_field || !reason_field) return;
+
+	let labels = ["Cancelled By", "Reason of cancel"];
+	if (row.status) {
+		const lower = row.status.toLowerCase();
+		if (lower.includes("rescheduled")) {
+			labels = ["Rescheduled By", "Reason For Reschedule"];
+		} else if (lower.includes("cancel")) {
+			labels = ["Cancelled By", "Reason For Cancellation"];
+		}
+	}
+
+	[by_field, reason_field].forEach((field) => {
+		field.df.hidden = is_cancel_like ? 0 : 1;
+		field.df.reqd = is_cancel_like ? 1 : 0;
+	});
+	by_field.df.label = labels[0];
+	reason_field.df.label = labels[1];
+
+	by_field.refresh();
+	reason_field.refresh();
+}
+
+function fetch_and_render_resume(frm) {
+	const set_html = (html) => frm.set_df_property("resume", "options", html);
+	const clear_resume = () => set_html("");
+
+	const customer = frm.doc.customer;
+	if (!customer) {
+		clear_resume();
+		return;
+	}
+	frappe.call({
+		method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
+		args: { customer: customer },
+		callback(r) {
+			const resume = r.message;
+			if (!resume?.document) {
+				clear_resume();
+				return;
+			}
+			set_html(`
+				<div style="padding:8px">
+					<a
+						href="${resume.document}"
+						target="_blank"
+						style="color:#1a73e8;font-weight:600;text-decoration:none;"
+					>
+						📄 View Resume
+					</a>
+				</div>
+			`);
+		},
+		error() {
+			clear_resume();
+		},
+	});
 }

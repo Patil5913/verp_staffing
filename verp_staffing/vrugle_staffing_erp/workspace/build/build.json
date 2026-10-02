@@ -323,7 +323,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-12-26 18:09:16.970352",
+ "modified": "2026-06-17 14:59:35.680147",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
  "name": "Build",
@@ -334,7 +334,7 @@
  "quick_lists": [],
  "restrict_to_domain": "",
  "roles": [],
- "sequence_id": 6.0,
+ "sequence_id": 5.0,
  "shortcuts": [
   {
    "color": "Grey",

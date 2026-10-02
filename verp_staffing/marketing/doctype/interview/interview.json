@@ -1,30 +1,35 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "allow_import": 1,
  "creation": "2025-12-17 12:10:25.512845",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "marketing_link",
-  "company",
-  "column_break_iehb",
-  "role",
-  "column_break_ljfz",
+  "customer",
   "status",
-  "section_break_mfnk",
+  "column_break_iehb",
+  "company",
+  "resume",
+  "column_break_ljfz",
+  "role",
+  "section_break_ryvp",
   "interview_rounds_table"
  ],
  "fields": [
   {
    "fieldname": "marketing_link",
    "fieldtype": "Link",
-   "label": "Marketing",
-   "options": "Marketing"
+   "label": "Customer",
+   "options": "Marketing",
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "company",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Company",
    "reqd": 1
   },
@@ -36,6 +41,7 @@
    "fieldname": "role",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Role",
    "reqd": 1
   },
@@ -49,34 +55,49 @@
    "in_list_view": 1,
    "label": "Status",
    "options": "Interview Status",
+   "read_only": 1,
    "reqd": 1
   },
   {
-   "fieldname": "section_break_mfnk",
+   "fieldname": "resume",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_ryvp",
    "fieldtype": "Section Break"
   },
   {
    "fieldname": "interview_rounds_table",
    "fieldtype": "Table",
+   "label": "Interview Rounds",
    "options": "Interview Round"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer",
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2026-01-28 17:55:32.438272",
+ "modified": "2026-08-27 10:21:48.250379",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Interview",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "CR"
   },
   {
    "read": 1,
-   "role": "Sales Manager"
+   "role": "OnBoarding Person"
   },
   {
    "create": 1,
@@ -87,46 +108,66 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
   {
    "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Sales Person"
+   "role": "Sales Master Manager",
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
    "role": "Marketing Team Lead",
    "select": 1,
    "write": 1
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "report": 1,
-   "role": "marketing Master Manager",
-   "select": 1,
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "marketing Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
    "role": "Marketing Mentor",
    "select": 1,
    "write": 1
@@ -134,16 +175,26 @@
   {
    "create": 1,
    "read": 1,
-   "role": "Senior Recruiter",
+   "report": 1,
+   "role": "Recruiter",
    "select": 1,
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "Recruiter",
-   "select": 1,
-   "write": 1
+   "role": "Technical Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
   }
  ],
  "row_format": "Dynamic",
@@ -152,5 +203,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "company"
+ "title_field": "company",
+ "track_changes": 1
 }

@@ -5,7 +5,10 @@ Technical
 Accounts
 Marketing
 Settings
-User
 Services
-Vrugle Staffing ERP
-E-Sign
+CR
+Onboarding
+ESign
+Stock
+Buying
+Quota

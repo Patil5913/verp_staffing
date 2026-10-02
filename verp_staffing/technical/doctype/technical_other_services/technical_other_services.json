@@ -1,17 +1,20 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-01-27 14:20:31.463104",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "customer",
   "service",
+  "resume",
   "column_break_cyyx",
   "assign_to",
   "status",
   "section_break_zoqd",
-  "proof_or_work",
+  "proof_of_work",
+  "proof_of_work_html",
+  "section_break_gqmv",
+  "lead_details",
   "notes_section",
   "notes_html",
   "updates_section",
@@ -28,6 +31,7 @@
    "label": "Customer",
    "options": "Customer",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -36,8 +40,10 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Service",
-   "options": "Service",
+   "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
+   "options": "Item",
    "reqd": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -67,12 +73,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "proof_or_work",
-   "fieldtype": "Table",
-   "label": "Proof Or Work",
-   "options": "Proof Of Work"
-  },
-  {
    "fieldname": "notes_section",
    "fieldtype": "Tab Break",
    "label": "Notes"
@@ -100,17 +100,72 @@
   {
    "fieldname": "open_activities_html",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work",
+   "fieldtype": "Table",
+   "label": "Proof Of Work",
+   "options": "Document References"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_gqmv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-03 15:39:14.405927",
+ "modified": "2026-08-27 10:08:28.021656",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Technical Other Services",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -120,8 +175,90 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "CR",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",
@@ -130,5 +267,7 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "customer"
+ "title_field": "customer",
+ "track_changes": 1,
+ "translated_doctype": 1
 }

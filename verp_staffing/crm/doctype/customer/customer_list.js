@@ -1,15 +1,11 @@
 frappe.listview_settings["Customer"] = {
+	add_fields: ["overall_status"],
+	get_indicator: function (doc) {
+		const color = get_status_color(doc.overall_status);
+
+		return [doc.overall_status || "Unknown", color, "overall_status,=," + doc.overall_status];
+	},
 	refresh: function (listview) {
-		let sidebar = $("body .layout-side-section");
-		if (!sidebar.length) {
-			return;
-		}
-
-		// HIDE ALL ITEMS FIRST
-		sidebar.find(".group-by-field").hide();
-		sidebar.find(".add-group-by").hide();
-		sidebar.find(".save-filter-section").hide();
-
 		setTimeout(() => {
 			let primary_btn = listview.page.wrapper.find(".page-actions .btn-primary");
 
@@ -26,6 +22,26 @@ frappe.listview_settings["Customer"] = {
 		}, 50);
 	},
 };
+
+function get_status_color(status) {
+	if (!status) return "gray";
+
+	if (status.includes("Pending")) return "red";
+	if (status.includes("Rework")) return "orange";
+	if (status.includes("In Progress")) return "blue";
+
+	if (
+		status.includes("Completed") ||
+		status.includes("Placed") ||
+		status.includes("Moved To Onboarding") ||
+		status.includes("Moved To CR")
+	)
+		return "green";
+
+	if (status === "Ready") return "gray";
+
+	return "gray";
+}
 
 function open_custom_dialog() {
 	let dialog = new frappe.ui.Dialog({
@@ -56,9 +72,6 @@ function open_custom_dialog() {
 					if (source) {
 						// 🔥 Update Party label dynamically
 						dialog.set_df_property("party_name", "label", source);
-
-						// Refresh field UI
-						dialog.refresh_field("party_name");
 
 						// Clear party_name when source changes
 						dialog.set_value("party_name", "");

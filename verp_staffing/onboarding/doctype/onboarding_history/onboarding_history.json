@@ -1,0 +1,144 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-09-01 15:59:39.400886",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "column_break_zjpf",
+  "role",
+  "column_break_bvid",
+  "assign_to",
+  "column_break_ziiu",
+  "status",
+  "section_break_ecpg",
+  "forwarded_by",
+  "column_break_iyip",
+  "forwarded_from",
+  "column_break_ihkh",
+  "forwarded_on",
+  "section_break_mshy",
+  "action_on",
+  "column_break_wfwv",
+  "action_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_zjpf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Role",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_bvid",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assign To",
+   "no_copy": 1,
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_ecpg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "forwarded_by",
+   "fieldtype": "Data",
+   "label": "Forwarded By",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iyip",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "forwarded_from",
+   "fieldtype": "Data",
+   "label": "Forwarded From",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ihkh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "now",
+   "fieldname": "forwarded_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Forwarded On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ziiu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nCompleted\nReturned",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_mshy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "action_on",
+   "fieldtype": "Datetime",
+   "label": "Completed/Returned On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_wfwv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_by",
+   "fieldtype": "Link",
+   "label": "Action By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-02 02:24:15.721405",
+ "modified_by": "Administrator",
+ "module": "Onboarding",
+ "name": "Onboarding History",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

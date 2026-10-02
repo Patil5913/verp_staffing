@@ -1,36 +1,24 @@
 # Copyright (c) 2025, Vrugle and contributors
 # For license information, please see license.txt
 
-import frappe,json
-from frappe.utils import now_datetime
+import frappe
 from frappe.model.document import Document
-
+from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.customer import update_customer_stage
 
 class RUC(Document):
+    
+    def autoname(self):
+        if not self.customer:
+            frappe.throw("Customer is required")
+
+        customer_name = frappe.db.get_value("Customer", self.customer, "name1")
+
+        self.name = generate_name_series("RUC", customer_name)
+            
+            
     def after_insert(self):
-        self.create_customer()
-    def create_customer(self):
-        service = "ruc"
-        parents = frappe.db.sql("""
-        SELECT parent FROM `tabDepartment Service`
-        WHERE service_name=%s
-        """, (service), as_dict=True)
-
-        customer = frappe.get_doc({
-            "doctype":  "Customer",
-            "name": self.customer
-        })
-        stage = json.loads(customer.stage) if customer.stage else {}
-
-        department = parents[0].parent
-        stage["ruc"] = {
-            "department": department,
-            "timestamp": str(now_datetime()),
-            "count": 1
-        }
-        frappe.db.set_value(
-            "Customer",
-            customer,
-            "stage",
-            json.dumps(stage)
+        update_customer_stage(
+            customer=self.customer,
+            service="ruc",
         )

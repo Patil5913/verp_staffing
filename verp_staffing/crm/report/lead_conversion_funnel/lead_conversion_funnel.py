@@ -1,172 +1,15 @@
-# # # Copyright (c) 2026, Vrugle and contributors
-# # # For license information, please see license.txt
-
-# # import frappe
-
-# # def execute(filters=None):
-# #     columns = get_columns()
-# #     data = get_data()
-# #     chart = get_chart(data)
-
-# #     return columns, data, None, chart
-
-
-# # def get_columns():
-# #     return [
-# #         {
-# #             "label": "Stage",
-# #             "fieldname": "stage",
-# #             "fieldtype": "Data",
-# #             "width": 200,
-# #         },
-# #         {
-# #             "label": "Count",
-# #             "fieldname": "count",
-# #             "fieldtype": "Int",
-# #             "width": 120,
-# #         },
-# #     ]
-
-
-# # def get_data():
-# #     total_leads = frappe.db.count("Lead")
-
-# #     leads_with_opportunity = frappe.db.sql("""
-# #         SELECT COUNT(DISTINCT l.name)
-# #         FROM `tabLead` l
-# #         INNER JOIN `tabOpportunity` o
-# #           ON o.opportunity_from = 'Lead'
-# #          AND o.party_name = l.name
-# #     """)[0][0]
-
-# #     lost_leads =frappe.db.count(
-# #         "Opportunity",
-# #         {
-# #             "opportunity_from": "Lead",
-# #             "status": "Lost"
-# #         }
-# #     )
-
-# #     converted_opportunities = frappe.db.count(
-# #         "Opportunity",
-# #         {
-# #             "opportunity_from": "Lead",
-# #             "status": "Converted"
-# #         }
-# #     )
-
-# #     return [
-# #         {"stage": "Total Leads", "count": total_leads},
-# #         {"stage": "Leads with Opportunity", "count": leads_with_opportunity},
-# #         {"stage": "Lost Leads", "count": lost_leads},
-# #         {"stage": "Converted Opportunities", "count": converted_opportunities},
-# #     ]
-
-
-# # def get_chart(data):
-# #     return {
-# #         "data": {
-# #             "labels": [row["stage"] for row in data],
-# #             "datasets": [
-# #                 {
-# #                     "name": "Lead Funnel",
-# #                     "values": [row["count"] for row in data],
-# #                 }
-# #             ],
-# #         },
-# #         "type": "bar",
-# #     }
-
-
-# import frappe
-
-
-# def execute(filters=None):
-#     columns = get_columns()
-#     data = get_data()
-#     chart = get_chart(data)
-
-#     return columns, data, None, chart
-
-
-# def get_columns():
-#     return [
-#         {
-#             "label": "Stage",
-#             "fieldname": "stage",
-#             "fieldtype": "Data",
-#             "width": 220,
-#         },
-#         {
-#             "label": "Count",
-#             "fieldname": "count",
-#             "fieldtype": "Int",
-#             "width": 120,
-#         },
-#     ]
-
-
-# def get_data():
-#     total_leads = frappe.db.count("Lead")
-
-#     leads_with_opportunity = frappe.db.sql(
-#         """
-#         SELECT COUNT(DISTINCT l.name)
-#         FROM `tabLead` l
-#         INNER JOIN `tabOpportunity` o
-#           ON o.opportunity_from = 'Lead'
-#          AND o.party_name = l.name
-#     """
-#     )[0][0]
-
-#     converted_opportunities = frappe.db.count(
-#         "Opportunity", {"opportunity_from": "Lead", "status": "Converted"}
-#     )
-
-#     lost_opportunities = frappe.db.count(
-#         "Opportunity", {"opportunity_from": "Lead", "status": "Lost"}
-#     )
-
-#     return [
-#         {"stage": "Total Leads", "count": total_leads},
-#         {"stage": "Leads with Opportunity", "count": leads_with_opportunity},
-#         {"stage": "Converted Opportunities", "count": converted_opportunities},
-#         {"stage": "Lost Opportunities", "count": lost_opportunities},
-#     ]
-
-
-# def get_chart(data):
-#     return {
-#         "data": {
-#             "labels": [row["stage"] for row in data],
-#             "datasets": [
-#                 {
-#                     "name": "Lead Conversion Funnel",
-#                     "values": [row["count"] for row in data],
-                    
-#                 },
-#             ],
-#             "colors": [
-#                         "#4F46E5",  # Total Leads - Indigo
-#                         "#0284C7",  # Leads with Opportunity - Blue
-#                         "#16A34A",  # Converted - Green
-#                         "#DC2626",  # Lost - Red
-#                     ],
-#         },
-#         "type": "bar",
-#     }
+# Copyright (c) 2026, Vrugle and contributors
+# For license information, please see license.txt
 
 import frappe
-from verp_staffing.marketing.api.utils import get_visible_employee_names
-
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
+from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart(data)
-
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -184,95 +27,99 @@ def get_columns():
         },
     ]
 
-
 def get_data(filters=None):
+    """
+    All four funnel counts are computed in a single SQL query using
+    conditional aggregation (SUM + CASE WHEN).  This replaces four
+    sequential round-trips to the DB with one.
+
+    Query shape:
+        COUNT(*)                                    → total leads
+        COUNT(DISTINCT CASE WHEN o.name IS NOT NULL)→ leads with any opportunity
+        SUM(CASE WHEN o.status = 'Converted')       → converted opps
+        SUM(CASE WHEN o.status = 'Lost')            → lost opps
+
+    The Lead table is the driving table; Opportunity is LEFT JOINed so leads
+    with no opportunity still count in the first stage.
+
+    The lead-owner filter and date filter are applied in ONE WHERE clause —
+    no string.replace() hacks needed because both tables are always present.
+    """
+    filters = filters or {}
     user = frappe.session.user
     conditions = []
     values = {}
 
+    # -- Date range on lead creation ----------------------------------------
     if filters.get("from_date"):
         conditions.append("l.creation >= %(from_date)s")
         values["from_date"] = filters["from_date"]
 
     if filters.get("to_date"):
-        conditions.append("l.creation <= %(to_date)s")
+        # Inclusive upper bound: add one day so "to_date = today" includes
+        # records created at any time today, since creation is a DATETIME.
+        conditions.append("l.creation < DATE_ADD(%(to_date)s, INTERVAL 1 DAY)")
         values["to_date"] = filters["to_date"]
 
-    if user != "Administrator":
-        allowed_employees = get_visible_employee_names(user)
-
-        if not allowed_employees:
-            return []
-
-        conditions.append("l.lead_owner IN %(employees)s")
-        values["employees"] = tuple(allowed_employees)
-
-    if filters and filters.get("employee"):
+    # -- Employee / hierarchy filter ----------------------------------------
+    # Explicit filter takes priority; otherwise scope to visible hierarchy.
+    if filters.get("employee"):
+        # Validate: non-admin cannot request an employee outside their scope.
+        if user != "Administrator":
+            allowed = get_visible_employee_names_cached()
+            if filters["employee"] not in allowed:
+                return _empty_funnel()
         conditions.append("l.lead_owner = %(employee)s")
-        values["employee"] = filters.get("employee")
+        values["employee"] = filters["employee"]
 
-    where_clause = ""
+    elif user != "Administrator":
+        allowed = get_visible_employee_names_cached()
+        if not allowed:
+            return _empty_funnel()
+        placeholders = _build_in_placeholders("emp", allowed, values)
+        conditions.append(f"l.lead_owner IN ({placeholders})")
+
+    query = (
+        "SELECT "
+        "COUNT(l.name) AS total_leads, "
+        "COUNT(DISTINCT CASE WHEN o.name IS NOT NULL THEN l.name END) "
+        "AS leads_with_opportunity, "
+        "SUM(CASE WHEN o.status = 'Converted' THEN 1 ELSE 0 END) "
+        "AS converted, "
+        "SUM(CASE WHEN o.status = 'Lost' THEN 1 ELSE 0 END) "
+        "AS lost "
+        "FROM `tabLead` l "
+        "LEFT JOIN `tabOpportunity` o "
+        "ON o.opportunity_from_lead = l.name "
+    )
+
     if conditions:
-        where_clause = " AND " + " AND ".join(conditions)
-        
-    total_leads = frappe.db.sql(
-        f"""
-        SELECT COUNT(l.name)
-        FROM `tabLead` l
-        WHERE 1=1
-        {where_clause}
-        """,
-        values,
-    )[0][0]
+        query += " WHERE " + " AND ".join(conditions)
 
-    leads_with_opportunity = frappe.db.sql(
-        f"""
-        SELECT COUNT(DISTINCT l.name)
-        FROM `tabLead` l
-        INNER JOIN `tabOpportunity` o
-            ON o.opportunity_from = 'Lead'
-           AND o.party_name = l.name
-        WHERE 1=1
-        {where_clause}
-        """,
-        values,
-    )[0][0]
+    row = frappe.db.sql(query, values, as_dict=True)
 
-    converted_opportunities = frappe.db.sql(
-        f"""
-        SELECT COUNT(o.name)
-        FROM `tabOpportunity` o
-        INNER JOIN `tabLead` l
-            ON o.party_name = l.name
-        WHERE o.opportunity_from = 'Lead'
-          AND o.status = 'Converted'
-        {where_clause.replace("l.", "l.")}
-        """,
-        values,
-    )[0][0]
+    if not row:
+        return _empty_funnel()
 
-    lost_opportunities = frappe.db.sql(
-        f"""
-        SELECT COUNT(o.name)
-        FROM `tabOpportunity` o
-        INNER JOIN `tabLead` l
-            ON o.party_name = l.name
-        WHERE o.opportunity_from = 'Lead'
-          AND o.status = 'Lost'
-        {where_clause.replace("l.", "l.")}
-        """,
-        values,
-    )[0][0]
-
+    r = row[0]
     return [
-        {"stage": "Total Leads", "count": total_leads},
-        {"stage": "Leads with Opportunity", "count": leads_with_opportunity},
-        {"stage": "Converted Opportunities", "count": converted_opportunities},
-        {"stage": "Lost Opportunities", "count": lost_opportunities},
+        {"stage": "Total Leads",              "count": r.total_leads or 0},
+        {"stage": "Leads with Opportunity",   "count": r.leads_with_opportunity or 0},
+        {"stage": "Converted Opportunities",  "count": r.converted or 0},
+        {"stage": "Lost Opportunities",       "count": r.lost or 0},
     ]
 
+def _empty_funnel():
+    return [
+        {"stage": "Total Leads",             "count": 0},
+        {"stage": "Leads with Opportunity",  "count": 0},
+        {"stage": "Converted Opportunities", "count": 0},
+        {"stage": "Lost Opportunities",      "count": 0},
+    ]
 
 def get_chart(data):
+    if not data:
+        return {}
     return {
         "data": {
             "labels": [row["stage"] for row in data],
@@ -284,21 +131,5 @@ def get_chart(data):
             ],
         },
         "type": "bar",
-        "colors": ["#8494FF"]
+        "colors": ["#8494FF"],
     }
-
-@frappe.whitelist()
-def get_lead_hierarchy_employees(doctype, txt, searchfield, start, page_len, filters):
-    return frappe.db.sql(
-        """
-        SELECT name, employee_name
-        FROM `tabEmployee`
-        WHERE (name LIKE %(txt)s OR employee_name LIKE %(txt)s)
-        LIMIT %(start)s, %(page_len)s
-        """,
-        {
-            "txt": f"%{txt}%",
-            "start": start,
-            "page_len": page_len,
-        },
-    )

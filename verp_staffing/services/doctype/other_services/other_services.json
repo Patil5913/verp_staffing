@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2026-01-09 17:03:13.883790",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -8,6 +7,7 @@
   "customer",
   "department",
   "service",
+  "resume",
   "column_break_xbfz",
   "assign_to",
   "status",
@@ -15,6 +15,9 @@
   "completed_on",
   "section_break_bvrs",
   "proof_of_work",
+  "proof_of_work_html",
+  "section_break_krnv",
+  "lead_details",
   "notes_tab",
   "notes_html",
   "updates_section",
@@ -29,7 +32,9 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "department",
@@ -37,15 +42,19 @@
    "in_list_view": 1,
    "label": "Department",
    "options": "Department",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "service",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Service",
-   "options": "Service",
-   "reqd": 1
+   "link_filters": "[[\"Item\",\"is_service\",\"=\",1]]",
+   "options": "Item",
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_xbfz",
@@ -86,7 +95,7 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "notes_tab",
@@ -116,17 +125,51 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "lead_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_krnv",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 16:23:06.096286",
+ "modified": "2026-08-13 18:06:17.511580",
  "modified_by": "Administrator",
  "module": "Services",
  "name": "Other Services",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Team Lead",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -138,6 +181,94 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Senior Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketing Mentor",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Recruiter",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

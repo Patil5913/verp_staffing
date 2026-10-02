@@ -2,39 +2,40 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Cover Letter", {
-	refresh(frm) {
+	async refresh(frm) {
 		window.render_notes(frm);
-		window.add_forward_button(frm);
+		window.add_forward_button(frm, (service_name = "Cover Letter"));
 		window.render_activity_section(frm);
+		window.fetch_and_render_resume(frm);
+		const display_fields = await window.get_display_fields(frm.doctype);
+
+		if (frm.doc.status === "Completed") {
+			frm.set_df_property("status", "read_only", 1);
+		}
+
+		window.verp_staffing.render_document_references_table(frm, {
+			fieldname: "proof_of_work",
+			wrapper_field: "proof_of_work_html",
+			show_fields: ["document", "document_title", "description", "date", "owner"],
+			locked_statuses: ["Completed"],
+		});
+
 		window.render_customer_related_html({
 			frm: frm,
 			html_field: "lead_details",
 			customer: frm.doc.customer,
-			fields: [
-				"surname",
-				"first_name",
-				"father_name",
-				"personal_phone_number",
-				"email",
-				"personal_linkedin",
-				"date_of_birth",
-				"educational_details",
-				"past_experience_table",
-				"technologies",
-				"additional_skills",
-				"entry_date",
-				"current_address",
-				"address_history",
-				"certificate_or_completed_course",
-				"current_visa_status",
-				"experience",
-				"passport_number",
-				"ssn_digit",
-				"availability_for_interview",
-				"remarks",
-				"ead_card",
-				"old_resume",
-			],
+			fields: display_fields,
 		});
+
+		frm.set_query("assign_to", () => {
+			return {
+				query: "verp_staffing.crm.api.helpers.get_assign_to_by_service",
+				filters: {
+					service: "Cover Letter",
+					customer: frm.doc.customer,
+				},
+			};
+		});
+		window.setup_service_permission_button(frm);
 	},
 });

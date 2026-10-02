@@ -1,0 +1,177 @@
+{
+ "actions": [],
+ "autoname": "field:year",
+ "creation": "2026-04-05 18:02:03.467539",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "year",
+  "disabled",
+  "is_short_year",
+  "year_start_date",
+  "year_end_date",
+  "included_companies",
+  "opening_balances",
+  "opening_balance_status",
+  "opening_balance_calculated_at",
+  "opening_balance_dirty"
+ ],
+ "fields": [
+  {
+   "description": "For e.g. 2012, 2012-13",
+   "fieldname": "year",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Year Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "default": "0",
+   "description": "More/Less than 12 months.",
+   "fieldname": "is_short_year",
+   "fieldtype": "Check",
+   "label": "Is Short/Long Year",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "year_start_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Year Start Date",
+   "no_copy": 1,
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "year_end_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Year End Date",
+   "no_copy": 1,
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "included_companies",
+   "fieldtype": "Table MultiSelect",
+   "label": "Included Companies",
+   "options": "Fiscal Year Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "opening_balances",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Opening balances",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "opening_balance_status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Opening Balance Status",
+   "options": "Pending Not Due\nPending\nCompleted\nFailed",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "opening_balance_calculated_at",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Opening Balance Calculated At",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "opening_balance_dirty",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Opening Balance Dirty",
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-26 17:43:57.563114",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Fiscal Year",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "year"
+}

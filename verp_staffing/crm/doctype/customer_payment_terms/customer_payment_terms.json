@@ -3,59 +3,221 @@
  "allow_rename": 1,
  "creation": "2025-11-14 20:56:17.229547",
  "doctype": "DocType",
+ "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "date",
-  "amount",
   "payment_condition",
   "counter",
-  "is_received"
+  "column_break_1",
+  "start_date",
+  "due_date",
+  "last_reminder_date",
+  "section_break_amount",
+  "amount",
+  "received_amount",
+  "column_break_2",
+  "payment_status",
+  "section_break_info",
+  "current_interview_count",
+  "description",
+  "verification_log",
+  "section_break_tugs",
+  "payment_entry",
+  "so_currency",
+  "column_break_sgjb",
+  "sales_invoice",
+  "conversion_rate",
+  "column_break_fuhi",
+  "company",
+  "currency"
  ],
  "fields": [
   {
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date",
-   "reqd": 1
-  },
-  {
-   "fieldname": "amount",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Amount",
-   "non_negative": 1,
-   "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "is_received",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Is Received"
-  },
-  {
+   "allow_on_submit": 1,
+   "columns": 2,
    "default": "Number of Days",
    "fieldname": "payment_condition",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Payment Condition",
-   "options": "Number of Interviews\nNumber of Days"
+   "label": "Condition",
+   "options": "Number of Interviews\nNumber of Days\nNot Applied",
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
+   "reqd": 1
   },
   {
+   "allow_on_submit": 1,
+   "columns": 1,
    "default": "1",
    "fieldname": "counter",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Counter",
-   "non_negative": 1
+   "label": "Count",
+   "non_negative": 1,
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
+   "width": "1"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_amount",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Decided Amount",
+   "non_negative": 1,
+   "options": "so_currency",
+   "read_only_depends_on": "eval: in_list(['Pending Verification', 'Verified'], doc.payment_status)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "default": "Unpaid",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Unpaid\nPending Verification\nVerified\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_info",
+   "fieldtype": "Section Break",
+   "label": "Info"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval: doc.payment_condition === 'Number of Interviews'",
+   "description": "Live count of interviews for this customer",
+   "fieldname": "current_interview_count",
+   "fieldtype": "Int",
+   "label": "Current Interview Count",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "payment_entry",
+   "fieldtype": "Data",
+   "label": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Auto-generated log of all verification actions",
+   "fieldname": "verification_log",
+   "fieldtype": "Small Text",
+   "label": "Verification Log",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Start Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Due Date",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "last_reminder_date",
+   "fieldtype": "Date",
+   "label": "Last Remainder Sent On",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1,
+   "report_hide": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sales_invoice",
+   "fieldtype": "Data",
+   "label": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_tugs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_sgjb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_fuhi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "company",
+   "fieldtype": "Data",
+   "label": "Company",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "currency",
+   "fieldtype": "Data",
+   "label": "Invoice Currency",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "conversion_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "fieldname": "received_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Received Amount",
+   "non_negative": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "so_currency",
+   "fieldtype": "Data",
+   "label": "So Currency",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-29 17:51:35.286479",
+ "modified": "2026-08-27 16:52:07.612720",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Customer Payment Terms",

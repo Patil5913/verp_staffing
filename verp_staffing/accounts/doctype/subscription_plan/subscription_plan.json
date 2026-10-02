@@ -1,0 +1,163 @@
+{
+ "actions": [],
+ "autoname": "field:plan_name",
+ "creation": "2026-04-28 11:22:55.174910",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_plan_details_section",
+  "item",
+  "plan_name",
+  "column_break_1",
+  "rate",
+  "currency",
+  "column_break_tsga",
+  "is_active",
+  "billing_interval_settings_section",
+  "billing_interval",
+  "column_break_mzno",
+  "billing_interval_count",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fetch_from": "item.item_name",
+   "fetch_if_empty": 1,
+   "fieldname": "plan_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Plan Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "description": "Inactive plans cannot be added to new subscriptions",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_tsga",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Month",
+   "fieldname": "billing_interval",
+   "fieldtype": "Select",
+   "label": "Billing Interval",
+   "options": "Day\nWeek\nMonth\nYear",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "description": "e.g. interval=Month, count=3 \u2192 invoice every 3 months",
+   "fieldname": "billing_interval_count",
+   "fieldtype": "Int",
+   "label": "Billing Interval Count",
+   "reqd": 1
+  },
+  {
+   "fieldname": "billing_interval_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Billing Interval Settings"
+  },
+  {
+   "fieldname": "column_break_mzno",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "basic_plan_details_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Plan Details"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Subscription Plan",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate",
+   "options": "currency",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-27 10:12:08.390101",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Subscription Plan",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "plan_name",
+ "translated_doctype": 1
+}

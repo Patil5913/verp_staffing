@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "allow_import": 1,
  "creation": "2025-12-15 10:54:22.302861",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -10,7 +10,9 @@
   "assign_to",
   "column_break_gfsq",
   "status",
-  "resume",
+  "section_break_uiue",
+  "resume_table",
+  "resume_html",
   "customer_details_section",
   "lead_details",
   "notes_tab",
@@ -29,9 +31,12 @@
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "hidden": 1,
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
+   "read_only": 1,
+   "set_only_once": 1,
    "unique": 1
   },
   {
@@ -51,13 +56,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending\nCompleted\nRequest for Update"
-  },
-  {
-   "description": "upload new resume here",
-   "fieldname": "resume",
-   "fieldtype": "Attach",
-   "label": "Upload Resume"
+   "options": "Pending\nCompleted\nRequest for Update",
+   "read_only": 1
   },
   {
    "fieldname": "customer_details_section",
@@ -95,24 +95,50 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "section_break_uiue",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resume_table",
+   "fieldtype": "Table",
+   "label": "Attach Resume",
+   "options": "Document References"
+  },
+  {
+   "fieldname": "resume_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-03 18:06:15.063363",
+ "modified": "2026-08-27 10:04:59.646532",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Resume",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Manager"
+   "role": "Sales Manager",
+   "select": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Master Manager"
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
   },
   {
    "create": 1,
@@ -123,36 +149,116 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
-   "role": "Resume Person",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
+   "role": "Sales Person",
+   "select": 1
   },
   {
    "create": 1,
    "read": 1,
+   "report": 1,
    "role": "Senior Resume Person",
    "select": 1,
    "write": 1
   },
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Person"
+   "report": 1,
+   "role": "Resume Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Technical Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "customer"
+ "title_field": "customer",
+ "track_changes": 1,
+ "translated_doctype": 1
 }

@@ -3,244 +3,261 @@ import io
 import json
 import frappe
 from PIL import Image
-from datetime import datetime, timezone
+from datetime import datetime
+import hmac
+import hashlib
+from frappe import _
+import base64
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
+from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.helpers import _validate_site_file_path
+import re
+from frappe.utils.file_manager import get_content_hash
 
 
 class LeadDetailForm(Document):
-
-    def before_insert(self):
-        if not self.customer:
-            return
-
-        existing_name = frappe.db.sql(
-            """
-            SELECT parent FROM `tabDoctype Reference`
-            WHERE reference_doctype = 'Customer' AND reference_person = %s
-            LIMIT 1
-            """,
-            (self.customer,),
-            as_dict=True,
-        )
-
-        if not existing_name:
-            return
-
-        existing_doc = frappe.get_doc(self.doctype, existing_name[0].parent)
-
-        for field in self.meta.fields:
-            fieldname = field.fieldname
-
-            if not fieldname:
-                continue
-
-            # Skip system fields
-            if fieldname in (
-                "name",
-                "owner",
-                "creation",
-                "modified",
-                "modified_by",
-                "docstatus",
-            ):
-                continue
-
-            if fieldname == "reference_table":
-                continue
-
-            if field.fieldtype == "Table":
-                existing_doc.set(fieldname, [])  # clear old rows
-
-                for row in self.get(fieldname) or []:
-                    row_data = row.as_dict()
-
-                    row_data.pop("name", None)
-                    row_data.pop("parent", None)
-                    row_data.pop("parenttype", None)
-                    row_data.pop("parentfield", None)
-                    row_data.pop("idx", None)
-
-                    existing_doc.append(fieldname, row_data)
-
-            else:
-                existing_doc.set(fieldname, self.get(fieldname))
-
-        existing_doc.save(ignore_permissions=True)
-        frappe.db.commit()
-
-        # ✅ Run PDF signature on existing_doc BEFORE throwing
-        try:
-            if self.signature_method == "Upload":
-                existing_doc.apply_pdf_signature(self.signature_image)
-
-            elif self.signature_method == "Text":
-                existing_doc.apply_pdf_signature(self.signature_image)
-
-            elif self.signature_method == "Draw":
-                existing_doc._process_drawn_signature_and_apply()
-
-        except Exception as e:
-            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed on Update")
-            frappe.errprint(f"PDF processing error on update: {e}")
-
-        # ✅ Signal JS AFTER pdf processing done
-        frappe.throw("LEAD_UPDATED_SUCCESS", frappe.exceptions.ValidationError)
-
     def autoname(self):
-        import re
+        name = self.first_name
 
-        if not self.first_name:
-            self.name = frappe.generate_hash(length=10)
+        if not name:
+            frappe.throw("Lead Name is required")
+
+        self.name = generate_name_series("Lead Detail Form", name)
+
+    def validate(self):
+        if self.personal_phone_number:
+            self.personal_phone_number = re.sub(
+                r"[()\s-]", "", self.personal_phone_number
+            )
+        if self.number_for_marketing:
+            self.number_for_marketing = re.sub(
+                r"[()\s-]", "", self.number_for_marketing
+            )
+        if self.personal_linkedin:
+            pattern = re.compile(
+                r"^https?://(www\.)?linkedin\.com/.+$",
+                re.IGNORECASE,
+            )
+            if not pattern.match(self.personal_linkedin):
+                frappe.throw(_("Please enter a valid LinkedIn profile URL."))
+
+        # Validate per-service required candidate fields if form_token is provided
+        # if self.form_token:
+        #     token_data = verify_token(self.form_token)
+        #     frappe.errprint(f"token_data {token_data}")
+        #     if token_data and token_data.get("so"):
+        #         so_name = token_data.get("so")
+        #         res = get_candidate_fields_from_sales_order(so_name)
+        #         req_fields = res.get("required_fields", [])
+        #         missing = []
+        #         for fname in req_fields:
+        #             val = self.get(fname)
+        #             if (
+        #                 val is None
+        #                 or val == ""
+        #                 or (isinstance(val, list) and len(val) == 0)
+        #             ):
+        #                 lbl = self.meta.get_label(fname) or fname
+        #                 missing.append(lbl)
+        #         if missing:
+        #             frappe.throw(
+        #                 _("The following required fields are missing: {0}").format(
+        #                     ", ".join(missing)
+        #                 )
+        #             )
+
+
+def process_drawn_signature_and_apply(doc, token):
+    import time
+
+    token_data = verify_token(token)
+    if not token_data:
+        frappe.throw("Invalid token")
+    agr = token_data.get("agr")
+
+    def sql_with_retry(query, values, label="SQL"):
+        """Execute a SQL update with retry on 1020 conflict."""
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    time.sleep(0.2 * attempt)
+                frappe.db.sql(query, values)
+                frappe.db.commit()
+                return
+            except Exception as e:
+                if "1020" in str(e) and attempt < max_retries - 1:
+                    frappe.db.rollback()
+                    continue
+                else:
+                    raise
+
+    signature_image = frappe.db.get_value("Agreement", agr, "signature_image")
+
+    if signature_image:
+        file_exists = frappe.db.exists("File", signature_image)
+        if file_exists:
+            apply_pdf_signature(doc, signature_image_file=signature_image)
             return
-
-        base_name = self.first_name.strip()
-        if not base_name:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        self.title = base_name
-
-        # ✅ Query THIS doctype only, not "Customer"
-        existing_names = frappe.get_all(
-            self.doctype,  # was hardcoded "Customer" — that was the bug
-            filters={"name": ["like", f"{base_name}%"]},
-            pluck="name",
-        )
-
-        # Build a set of used number slots
-        used_numbers = set()
-
-        for name in existing_names:
-            if name == base_name:
-                used_numbers.add(0)
-            else:
-                match = re.match(rf"^{re.escape(base_name)}-(\d+)$", name)
-                if match:
-                    used_numbers.add(int(match.group(1)))
-
-        # Find the first unused number
-        next_number = 0
-        while next_number in used_numbers:
-            next_number += 1
-
-        # Assign name
-        if next_number == 0:
-            self.name = base_name
         else:
-            self.name = f"{base_name}-{next_number}"
-
-    def after_insert(self):
-        try:
-            if self.signature_method == "Upload":
-                if not self.signature_image:
-                    frappe.throw("Signature image missing for Upload method")
-                self.apply_pdf_signature(self.signature_image)
-
-            elif self.signature_method == "Text":
-                if not self.signature_image:
-                    frappe.throw("Text Signature image missing for Text method")
-                self.apply_pdf_signature(self.signature_image)
-
-            elif self.signature_method == "Draw":
-                self._process_drawn_signature_and_apply()
-
-        except Exception as e:
-            # ✅ Log error but don't throw — so webform sees success
-            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
-            frappe.errprint(f"PDF processing error: {e}")
-            # Don't re-raise — webform must get success response
-
-    def _process_drawn_signature_and_apply(self):
-        import base64
-
-        # ✅ Correct use — if signature_image already uploaded via JS, just apply it
-        if self.signature_image:
-            self.apply_pdf_signature(self.signature_image)
-            return
-
-        if not self.signature:
-            return  # No signature data to process
-
-        try:
-            img_base64 = self.signature.split(",")[-1]
-            img_bytes = base64.b64decode(img_base64)
-
-            file_doc = frappe.get_doc(
-                {
-                    "doctype": "File",
-                    "file_name": "Signature.png",
-                    "is_private": 0,
-                    "content": img_bytes,
-                    "attached_to_doctype": self.doctype,
-                    "attached_to_name": self.name,
-                }
-            ).insert(ignore_permissions=True)
-
-            frappe.db.set_value(
-                self.doctype, self.name, "signature_image", file_doc.name
+            sql_with_retry(
+                "UPDATE `tabAgreement` SET signature_image = NULL WHERE name = %s",
+                (agr,),
+                label="clear stale signature_image",
             )
 
-            self.apply_pdf_signature(file_doc.name)
+    if not doc.signature:
+        frappe.throw("Drawn signature data missing")
+
+    try:
+        img_base64 = doc.signature.split(",")[-1]
+        img_bytes = base64.b64decode(img_base64)
+
+        file_doc = frappe.get_doc(
+            {
+                "doctype": "File",
+                "file_name": "Signature.png",
+                "is_private": 0,
+                "content": img_bytes,
+            }
+        ).insert(ignore_permissions=True)
+        frappe.db.commit()
+
+        sql_with_retry(
+            "UPDATE `tabAgreement` SET signature_image = %s WHERE name = %s",
+            (file_doc.name, agr),
+            label="set signature_image",
+        )
+
+        apply_pdf_signature(doc, signature_image_file=file_doc.name)
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
+        frappe.throw("Failed to process drawn signature")
+
+
+def apply_pdf_signature(doc, signature_image_file):
+    if not signature_image_file:
+        frappe.throw("Signature file missing")
+
+    if doc.signature_method in ("Upload", "Text", "Draw"):
+        file_doc = frappe.get_doc("File", signature_image_file)
+        if not file_doc.file_url:
+            frappe.throw("Signature file URL missing")
+        signature_image_path = file_doc.file_url
+    else:
+        signature_image_path = signature_image_file
+
+    data = verify_token(doc.form_token)
+    if not data:
+        frappe.throw("Invalid or tampered token")
+
+    agr = data.get("agr")
+    if not agr:
+        frappe.throw("Agreement link missing")
+
+    template = frappe.get_doc(
+        "Pdf Agreement Template", frappe.db.get_value("Agreement", agr, "template")
+    )
+    if not template.fields_json:
+        frappe.throw("Template fields JSON missing")
+    try:
+        fields = json.loads(template.fields_json)
+    except Exception:
+        frappe.throw("Invalid fields_json in template")
+
+    # Retry loop — handles any parallel 1020 conflict
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            import time
+
+            if attempt > 0:
+                time.sleep(0.2 * attempt)  # 0.2s, 0.4s, 0.6s backoff
+
+            # Always read fresh on every attempt
+            agr_data = frappe.db.get_value(
+                "Agreement", agr, ["pdf", "audit_trail", "certificate_id"], as_dict=True
+            )
+
+            audit_json = {}
+            if agr_data.audit_trail:
+                try:
+                    audit_json = json.loads(agr_data.audit_trail)
+                except Exception:
+                    audit_json = {}
+            audit_text = json.dumps(audit_json, indent=2)
+
+            input_pdf_path = resolve_file_path(agr_data.pdf)
+            if not input_pdf_path:
+                frappe.throw("Unable to resolve agreement PDF path")
+
+            certificate_id = agr_data.certificate_id
+            if not certificate_id:
+                certificate_id = generate_certificate_id(agr)
+                frappe.db.sql(
+                    "UPDATE `tabAgreement` SET certificate_id = %s WHERE name = %s",
+                    (certificate_id, agr),
+                )
+                frappe.db.commit()
+
+            # Load fresh agreement doc LAST — right before passing it in
+            agreement = frappe.get_doc("Agreement", agr)
+
+            signer_name = " ".join(
+                [
+                    part
+                    for part in (doc.surname, doc.first_name, doc.father_name)
+                    if part
+                ]
+            )
+
+            apply_signature_and_audit_to_pdf(
+                input_pdf_path=input_pdf_path,
+                fields=fields,
+                signature_image_path=signature_image_path,
+                audit_trail_text=audit_text,
+                signer_name=signer_name,
+                signer_email=f"{doc.email}",
+                agreement=agreement,
+                certificate_id=certificate_id,
+            )
+            return  #  success — exit retry loop
 
         except Exception as e:
-            frappe.errprint(f"Error processing drawn signature: {e}")
-            frappe.log_error(frappe.get_traceback(), "Signature Processing Failed")
-            frappe.throw("Failed to process drawn signature")
+            error_str = str(e)
+            if "1020" in error_str and attempt < max_retries - 1:
+                frappe.db.rollback()
+                continue  # retry
+            else:
+                # Not a 1020 error, or out of retries — re-raise
+                raise
 
-    def apply_pdf_signature(self, signature_image_file):
-        if not signature_image_file:
-            frappe.throw("Signature file missing")
 
-        # Resolve file URL based on method
-        if self.signature_method in ("Upload", "Text", "Draw"):
-            file_doc = frappe.get_doc("File", signature_image_file)
-            if not file_doc.file_url:
-                frappe.throw("Signature file URL missing")
-            signature_image_path = file_doc.file_url
-        else:
-            signature_image_path = signature_image_file
+def verify_token(token):
+    try:
+        decoded = base64.urlsafe_b64decode(token).decode()
+        payload, signature = decoded.rsplit("|", 1)
 
-        if not self.agreement_link:
-            frappe.throw("Agreement link missing")
+        expected_signature = hmac.new(
+            frappe.conf.get("encryption_key").encode(), payload.encode(), hashlib.sha256
+        ).hexdigest()
 
-        agreement = frappe.get_doc("Agreement", self.agreement_link)
+        if not hmac.compare_digest(signature, expected_signature):
+            return None
 
-        if not agreement.pdf:
-            frappe.throw("Agreement PDF missing")
+        data = json.loads(payload)
 
-        if not agreement.template:
-            frappe.throw("PDF Agreement Template missing on Agreement")
+        # EXPIRY CHECK
+        if data.get("exp"):
+            if datetime.utcnow().timestamp() > data["exp"]:
+                return None
 
-        template = frappe.get_doc("Pdf Agreement Template", agreement.template)
+        return data
 
-        if not template.fields_json:
-            frappe.throw("Template fields JSON missing")
-
-        try:
-            fields = json.loads(template.fields_json)
-        except Exception:
-            frappe.throw("Invalid fields_json in template")
-
-        audit_text = json.dumps(json.loads(self.audit_trail), indent=2)
-
-        input_pdf_path = resolve_file_path(agreement.pdf)
-        if not input_pdf_path:
-            frappe.throw("Unable to resolve agreement PDF path")
-
-        if not self.certificate_id:
-            self.db_set("certificate_id", generate_certificate_id(self.name))
-
-        apply_signature_and_audit_to_pdf(
-            input_pdf_path=input_pdf_path,
-            fields=fields,
-            signature_image_path=signature_image_path,
-            audit_trail_text=audit_text,
-            signer_name=f"{self.surname} {self.first_name} {self.father_name}",
-            signer_email=f"{self.email}",
-            agreement=agreement,
-            certificate_id=self.certificate_id,  # ✅ use self.certificate_id directly
-        )
+    except Exception:
+        return None
 
 
 def load_signature_clean(img_path):
@@ -261,11 +278,11 @@ def generate_certificate_id(agreement_name):
 
 
 def calculate_file_hash(file_path):
-    import hashlib
+    validated_path = _validate_site_file_path(file_path)
 
     sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
+    with validated_path.open("rb") as file:
+        for chunk in iter(lambda: file.read(8192), b""):
             sha256.update(chunk)
     return sha256.hexdigest()
 
@@ -297,7 +314,38 @@ def apply_signature_and_audit_to_pdf(
             audit_trail_text = json.loads(audit_trail_text)
         except Exception:
             audit_trail_text = {}
-    frappe.errprint(f"Normalized audit trail:")
+
+    if not audit_trail_text:
+        # 1. Fall back to whatever audit_trail is already on the in-memory agreement doc
+        if agreement and getattr(agreement, "audit_trail", None):
+            raw = agreement.audit_trail
+            if isinstance(raw, str):
+                try:
+                    audit_trail_text = json.loads(raw)
+                except Exception:
+                    audit_trail_text = {}
+            elif isinstance(raw, (dict, list)):
+                audit_trail_text = raw
+
+        # 2. Still nothing — re-fetch fresh from the DB once (covers stale in-memory doc)
+        if not audit_trail_text and agreement:
+            fetched_audit_trail = frappe.db.get_value(
+                "Agreement", agreement.name, "audit_trail"
+            )
+            if fetched_audit_trail:
+                if isinstance(fetched_audit_trail, str):
+                    try:
+                        audit_trail_text = json.loads(fetched_audit_trail)
+                    except Exception:
+                        audit_trail_text = {}
+                elif isinstance(fetched_audit_trail, (dict, list)):
+                    audit_trail_text = fetched_audit_trail
+
+        # 3. Truly unrecoverable — fail loudly instead of silently skipping the certificate
+        if not audit_trail_text:
+            frappe.throw(
+                "Internal Server Error while Generating Certificate Please try again"
+            )
     # ---------------------------------------------------------
     # STEP 1: APPLY SIGNATURES
     # ---------------------------------------------------------
@@ -305,29 +353,39 @@ def apply_signature_and_audit_to_pdf(
     writer = PdfWriter()
 
     sig_reader = None
+
     if signature_image_path:
         img_path = resolve_file_path(signature_image_path)
+
         if not img_path or not os.path.exists(img_path):
             raise FileNotFoundError("Signature image not found")
 
         sig_img = Image.open(img_path).convert("RGBA")
+
         img_buf = io.BytesIO()
         sig_img.save(img_buf, format="PNG")
         img_buf.seek(0)
+
         sig_reader = ImageReader(img_buf)
 
     for page_index, page in enumerate(reader.pages):
         packet = io.BytesIO()
+
         page_w = float(page.MediaBox[2])
         page_h = float(page.MediaBox[3])
 
-        c = canvas.Canvas(packet, pagesize=(page_w, page_h))
+        c = canvas.Canvas(
+            packet,
+            pagesize=(page_w, page_h),
+        )
+
         drew = False
 
         if sig_reader:
             for f in fields:
                 if f.get("type") != "Signature":
                     continue
+
                 if int(f["page"]) - 1 != page_index:
                     continue
 
@@ -336,22 +394,26 @@ def apply_signature_and_audit_to_pdf(
 
                 x = float(f["x"]) * sx
                 y = page_h - ((float(f["y"]) + float(f["height"])) * sy)
+
                 w = float(f["width"]) * sx
                 h = float(f["height"]) * sy
 
-                c.drawImage(
+                render_signature_box(
+                    c,
                     sig_reader,
                     x,
                     y,
-                    width=w,
-                    height=h,
-                    preserveAspectRatio=True,
-                    mask="auto",
+                    w,
+                    h,
+                    padding_x=2 * sx,
+                    padding_y=2 * sy,
                 )
+
                 drew = True
 
         c.showPage()
         c.save()
+
         packet.seek(0)
 
         if drew:
@@ -361,21 +423,24 @@ def apply_signature_and_audit_to_pdf(
         writer.addpage(page)
 
     # ---------------------------------------------------------
-    # STEP 2: BUILD AUDIT PAGES (REPORTLAB ONLY)
+    # STEP 2: BUILD AUDIT / CERTIFICATE PAGES
     # ---------------------------------------------------------
     def parse_user_agent(ua):
         browser = "Unknown"
         os_name = "Unknown"
         device = "Desktop"
 
-        if "Firefox/" in ua:
+        if not ua:
+            return browser, os_name, device
+
+        if "Edg/" in ua:
+            browser = "Edge"
+        elif "Firefox/" in ua:
             browser = "Firefox"
         elif "Chrome/" in ua and "Safari/" in ua:
             browser = "Chrome"
         elif "Safari/" in ua and "Chrome/" not in ua:
             browser = "Safari"
-        elif "Edg/" in ua:
-            browser = "Edge"
 
         if "Windows" in ua:
             os_name = "Windows"
@@ -392,157 +457,1167 @@ def apply_signature_and_audit_to_pdf(
 
         return browser, os_name, device
 
+    def fmt_ts(ts):
+        try:
+            dt = datetime.strptime(
+                ts,
+                "%d-%m-%Y, %H:%M:%S UTC",
+            )
+            return dt.strftime("%d %b %Y, %H:%M:%S UTC")
+        except Exception:
+            return ts
+
     if audit_trail_text:
+        # =====================================================
+        # E-SIGN CERTIFICATE VISUAL SYSTEM
+        # =====================================================
+
+        DARK = (0.12, 0.12, 0.12)
+        SUBTEXT = (0.45, 0.45, 0.45)
+        BORDER = (0.88, 0.88, 0.88)
+
+        CERT_BLUE = (0.97, 0.98, 1.00)
+        CERT_ACCENT = (0.30, 0.55, 0.95)
+        CERT_LINE = (0.85, 0.90, 0.98)
+
+        W, H = A4
+
+        MARGIN = 40
+        COL_W = W - (2 * MARGIN)
+
+        FOOTER_H = 36
+        HEADER_H = 90
+
+        # =====================================================
+        # EXISTING AGREEMENT CERTIFICATE COLORS
+        # =====================================================
+
+        ACCENT = (0.13, 0.43, 0.72)
+        LABEL_CLR = (0.30, 0.30, 0.30)
+        VALUE_CLR = (0.08, 0.08, 0.08)
+
+        RULE_CLR = (0.82, 0.86, 0.92)
+
+        CHIP_BG = (0.93, 0.96, 1.00)
+        CHIP_TXT = (0.08, 0.28, 0.56)
+
+        FOOTER_CLR = (0.55, 0.55, 0.55)
+
+        WHITE = (1, 1, 1)
+        SUCCESS = (0.07, 0.53, 0.35)
+
         packet = io.BytesIO()
-        c = canvas.Canvas(packet, pagesize=A4)
-        width, height = A4
-        margin = 50
-        y = height - margin
+
+        c = canvas.Canvas(
+            packet,
+            pagesize=A4,
+        )
+
+        ML = 45
+        MR = W - 45
+        COL2 = ML + 195
+
+        y = H
+
+        # =====================================================
+        # BASIC COLOR HELPERS
+        # =====================================================
+
+        def rgb(t):
+            c.setFillColorRGB(*t)
+
+        def srgb(t):
+            c.setStrokeColorRGB(*t)
+
+        # =====================================================
+        # E-SIGN CERTIFICATE BACKGROUND
+        # =====================================================
+
+        def draw_certificate_background():
+            """
+            Same visual background used by the E-Sign
+            certificate.
+            """
+
+            # -------------------------------------------------
+            # Soft blue page background
+            # -------------------------------------------------
+            c.setFillColorRGB(*CERT_BLUE)
+
+            c.rect(
+                0,
+                0,
+                W,
+                H,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Bottom decorative banner
+            # -------------------------------------------------
+            c.setFillColorRGB(*CERT_BLUE)
+
+            c.roundRect(
+                -50,
+                -40,
+                W + 100,
+                90,
+                30,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Left accent strip
+            # -------------------------------------------------
+            c.setFillColorRGB(*CERT_ACCENT)
+
+            c.rect(
+                0,
+                0,
+                8,
+                H,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Right accent strip
+            # -------------------------------------------------
+            c.rect(
+                W - 8,
+                0,
+                8,
+                H,
+                fill=1,
+                stroke=0,
+            )
+
+            # -------------------------------------------------
+            # Top-right geometric decoration
+            # -------------------------------------------------
+            c.setStrokeColorRGB(*CERT_LINE)
+            c.setLineWidth(1)
+
+            for i in range(8):
+                offset = i * 10
+
+                c.line(
+                    W - 180 + offset,
+                    H - 25,
+                    W - 25,
+                    H - 180 + offset,
+                )
+
+            # -------------------------------------------------
+            # Bottom-left geometric decoration
+            # -------------------------------------------------
+            for i in range(8):
+                offset = i * 10
+
+                c.line(
+                    25,
+                    180 - offset,
+                    180 - offset,
+                    25,
+                )
+
+            # -------------------------------------------------
+            # Double certificate frame
+            # -------------------------------------------------
+            c.setStrokeColorRGB(*CERT_LINE)
+            c.setLineWidth(1.2)
+
+            c.roundRect(
+                18,
+                18,
+                W - 36,
+                H - 36,
+                10,
+                fill=0,
+                stroke=1,
+            )
+
+            c.roundRect(
+                24,
+                24,
+                W - 48,
+                H - 48,
+                8,
+                fill=0,
+                stroke=1,
+            )
+
+        # =====================================================
+        # E-SIGN HEADER
+        # =====================================================
+
+        def draw_page_header():
+            """
+            Header copied from E-Sign certificate.
+            """
+
+            c.setFont(
+                "Helvetica-Bold",
+                20,
+            )
+
+            set_fill = c.setFillColorRGB
+
+            set_fill(
+                DARK[0],
+                DARK[1],
+                DARK[2],
+            )
+
+            c.drawString(
+                MARGIN,
+                H - 55,
+                "Signature Certificate",
+            )
+
+            c.setFont(
+                "Helvetica",
+                9,
+            )
+
+            set_fill(
+                SUBTEXT[0],
+                SUBTEXT[1],
+                SUBTEXT[2],
+            )
+
+            c.drawString(
+                MARGIN,
+                H - 72,
+                "Electronic Signature Completion Certificate",
+            )
+
+            c.setStrokeColorRGB(
+                BORDER[0],
+                BORDER[1],
+                BORDER[2],
+            )
+
+            c.setLineWidth(0.4)
+
+            c.line(
+                MARGIN,
+                H - 82,
+                MARGIN + COL_W,
+                H - 82,
+            )
+
+        # =====================================================
+        # E-SIGN FOOTER
+        # =====================================================
+
+        def draw_page_footer(page_num):
+            """
+            Footer copied from E-Sign certificate.
+            """
+
+            c.setStrokeColorRGB(
+                BORDER[0],
+                BORDER[1],
+                BORDER[2],
+            )
+
+            c.setLineWidth(0.4)
+
+            c.line(
+                MARGIN,
+                FOOTER_H + 14,
+                MARGIN + COL_W,
+                FOOTER_H + 14,
+            )
+
+            c.setFont(
+                "Helvetica",
+                7,
+            )
+
+            c.setFillColorRGB(
+                SUBTEXT[0],
+                SUBTEXT[1],
+                SUBTEXT[2],
+            )
+
+            c.drawString(
+                MARGIN,
+                FOOTER_H,
+                "Powered By Vrugle.",
+            )
+
+            c.drawRightString(
+                W - MARGIN,
+                FOOTER_H,
+                f"Page {page_num}",
+            )
+
+        # =====================================================
+        # START CERTIFICATE PAGE
+        # =====================================================
+
+        def start_certificate_page(page_num):
+            """
+            Creates the E-Sign visual shell and returns the
+            usable content cursor.
+            """
+
+            draw_certificate_background()
+
+            draw_page_header()
+
+            draw_page_footer(page_num)
+
+            return H - HEADER_H - 16
+
+        # =====================================================
+        # PAGE MANAGEMENT
+        # =====================================================
+
+        def ensure_space(needed=40):
+            nonlocal y
+
+            content_bottom = FOOTER_H + 24
+
+            if y < content_bottom + needed:
+                new_page()
 
         def new_page():
             nonlocal y
+            nonlocal page_num
+
             c.showPage()
-            y = height - margin
 
-        def draw_section_line(y_pos):
-            """Draw a line under section headers"""
-            c.setStrokeColorRGB(0.85, 0.85, 0.85)
-            c.setLineWidth(1)
-            c.line(margin, y_pos - 5, width - margin, y_pos - 5)
+            page_num += 1
 
-        def row(label, value, is_bold=False):
+            y = start_certificate_page(page_num)
+
+        # =====================================================
+        # SECTION TITLE
+        # =====================================================
+
+        def section_title(title):
             nonlocal y
-            if y < margin + 50:
-                new_page()
 
-            # Label
-            c.setFillColorRGB(0.3, 0.3, 0.3)
-            c.setFont("Helvetica-Bold" if is_bold else "Helvetica", 9)
-            c.drawString(margin + 10, y, label + ":")
+            ensure_space(38)
 
-            # Value
-            c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.setFont("Helvetica-Bold" if is_bold else "Helvetica", 9)
-            c.drawString(margin + 220, y, str(value)[:100])
-            y -= 16
+            y -= 18
 
-        # PAGE HEADER
-        c.setFillColorRGB(0.2, 0.4, 0.6)
-        c.setFont("Helvetica-Bold", 22)
-        c.drawString(margin, y, "CERTIFICATE")
-        y -= 30
+            c.saveState()
 
-        # SIGNER INFORMATION SECTION
-        c.setFillColorRGB(0.2, 0.4, 0.6)
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(margin, y, "SIGNER INFORMATION")
-        y -= 8
-        draw_section_line(y)
-        y -= 15
+            # Existing Agreement section styling
+            c.setFillColorRGB(
+                ACCENT[0],
+                ACCENT[1],
+                ACCENT[2],
+            )
 
-        row("Full Name", signer_name, is_bold=True)
-        row("Email Address", signer_email)
-        y -= 5
+            c.rect(
+                ML,
+                y - 3,
+                3,
+                14,
+                fill=1,
+                stroke=0,
+            )
 
-        # DEVICE & LOCATION SECTION
-        c.setFillColorRGB(0.2, 0.4, 0.6)
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(margin, y, "DEVICE & LOCATION INFORMATION")
-        y -= 8
-        draw_section_line(y)
-        y -= 15
+            c.setFont(
+                "Helvetica-Bold",
+                10.5,
+            )
 
-        loc = audit_trail_text.get("signer location", {})
-        browser, os_name, device = parse_user_agent(loc.get("user_agent", ""))
+            c.setFillColorRGB(
+                VALUE_CLR[0],
+                VALUE_CLR[1],
+                VALUE_CLR[2],
+            )
 
-        row("IP Address", loc.get("ip", "N/A"))
-        row("Browser", browser)
-        row("Operating System", os_name)
-        row("Device Type", device)
-        row("Certificate ID", certificate_id, is_bold=True)
-        row("Agreement ID", agreement.name if agreement else "N/A")
-        y -= 5
+            c.drawString(
+                ML + 9,
+                y,
+                title,
+            )
 
-        # SIGNATURE ACTIVITY SECTION
-        logs = audit_trail_text.get("signature update logs", [])
-        if logs:
-            c.setFillColorRGB(0.2, 0.4, 0.6)
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(margin, y, "SIGNATURE ACTIVITY LOG")
-            y -= 8
-            draw_section_line(y)
+            c.setStrokeColorRGB(
+                RULE_CLR[0],
+                RULE_CLR[1],
+                RULE_CLR[2],
+            )
+
+            c.setLineWidth(0.5)
+
+            c.line(
+                ML + 9,
+                y - 5,
+                MR,
+                y - 5,
+            )
+
+            c.restoreState()
+
+            y -= 18
+
+        # =====================================================
+        # NORMAL ROW
+        # =====================================================
+
+        def row(
+            label,
+            value,
+            bold_value=False,
+        ):
+            nonlocal y
+
+            ensure_space(20)
+
+            c.saveState()
+
+            c.setFillColorRGB(
+                LABEL_CLR[0],
+                LABEL_CLR[1],
+                LABEL_CLR[2],
+            )
+
+            c.setFont(
+                "Helvetica",
+                8.5,
+            )
+
+            c.drawString(
+                ML + 8,
+                y,
+                label,
+            )
+
+            c.setFillColorRGB(
+                VALUE_CLR[0],
+                VALUE_CLR[1],
+                VALUE_CLR[2],
+            )
+
+            c.setFont(
+                "Helvetica-Bold" if bold_value else "Helvetica",
+                8.5,
+            )
+
+            c.drawString(
+                COL2,
+                y,
+                str(value)[:110],
+            )
+
+            c.restoreState()
+
             y -= 15
 
-            for log in sorted(
-                logs,
-                key=lambda x: datetime.strptime(
-                    x["timestamp"], "%d-%m-%Y, %H:%M:%S UTC"
-                ),
-                reverse=True,
-            ):
-                row("Signature Applied", log["timestamp"])
-            y -= 5
+        # =====================================================
+        # DEVICE CHIP ROW
+        # =====================================================
 
-        # DOCUMENT ACTIVITY SECTION
-        visits = audit_trail_text.get("form visit logs", [])
-        if visits:
-            c.setFillColorRGB(0.2, 0.4, 0.6)
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(margin, y, "DOCUMENT ACCESS LOG")
-            y -= 8
-            draw_section_line(y)
-            y -= 15
+        def device_chip_row(
+            label,
+            ua,
+            ip,
+        ):
+            nonlocal y
 
-            for log in visits:
-                event_name = log["event"].replace("_", " ").title()
-                row(event_name, log["timestamp"])
-            y -= 10
+            ensure_space(22)
 
-        # FOOTER
-        if y > margin + 100:
-            y = margin + 80
-        else:
-            new_page()
-            y = margin + 80
+            browser, os_name, device = parse_user_agent(ua)
 
-        c.setStrokeColorRGB(0.85, 0.85, 0.85)
-        c.setLineWidth(1)
-        c.line(margin, y, width - margin, y)
-        y -= 18
+            c.saveState()
 
-        c.setFillColorRGB(0.5, 0.5, 0.5)
-        c.setFont("Helvetica-Oblique", 8)
-        disclaimer = "This audit trail certificate is an electronically generated record of all activities related to this document."
-        c.drawString(margin, y, disclaimer)
-        y -= 12
-        c.drawString(
-            margin,
-            y,
-            "It serves as proof of the signing process and should be retained with the signed document.",
+            c.setFillColorRGB(
+                LABEL_CLR[0],
+                LABEL_CLR[1],
+                LABEL_CLR[2],
+            )
+
+            c.setFont(
+                "Helvetica",
+                8.5,
+            )
+
+            c.drawString(
+                ML + 8,
+                y,
+                label,
+            )
+
+            chips = [
+                ip or "N/A",
+                browser,
+                os_name,
+                device,
+            ]
+
+            cx = COL2
+
+            for chip in chips:
+                cw = (
+                    c.stringWidth(
+                        chip,
+                        "Helvetica",
+                        7.5,
+                    )
+                    + 10
+                )
+
+                c.setFillColorRGB(
+                    CHIP_BG[0],
+                    CHIP_BG[1],
+                    CHIP_BG[2],
+                )
+
+                c.roundRect(
+                    cx,
+                    y - 3,
+                    cw,
+                    13,
+                    3,
+                    fill=1,
+                    stroke=0,
+                )
+
+                c.setFillColorRGB(
+                    CHIP_TXT[0],
+                    CHIP_TXT[1],
+                    CHIP_TXT[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    7.5,
+                )
+
+                c.drawString(
+                    cx + 5,
+                    y + 1,
+                    chip,
+                )
+
+                cx += cw + 5
+
+            c.restoreState()
+
+            y -= 17
+
+        # =====================================================
+        # DIVIDER
+        # =====================================================
+
+        def mini_divider():
+            nonlocal y
+
+            c.saveState()
+
+            c.setStrokeColorRGB(
+                0.90,
+                0.92,
+                0.95,
+            )
+
+            c.setLineWidth(0.3)
+
+            c.line(
+                ML + 8,
+                y + 4,
+                MR,
+                y + 4,
+            )
+
+            c.restoreState()
+
+        # =====================================================
+        # FIRST CERTIFICATE PAGE
+        # =====================================================
+
+        page_num = 1
+
+        y = start_certificate_page(page_num)
+
+        y -= 20
+
+        # =====================================================
+        # CERTIFICATE ID
+        # =====================================================
+
+        badge_text = f"Cert ID: {certificate_id}"
+
+        bw = (
+            c.stringWidth(
+                badge_text,
+                "Helvetica-Bold",
+                8,
+            )
+            + 20
         )
+
+        bx = MR - bw
+
+        c.saveState()
+
+        c.setFillColorRGB(
+            CHIP_BG[0],
+            CHIP_BG[1],
+            CHIP_BG[2],
+        )
+
+        c.roundRect(
+            bx,
+            y + 10,
+            bw,
+            18,
+            4,
+            fill=1,
+            stroke=0,
+        )
+
+        c.setStrokeColorRGB(
+            ACCENT[0],
+            ACCENT[1],
+            ACCENT[2],
+        )
+
+        c.setLineWidth(0.5)
+
+        c.roundRect(
+            bx,
+            y + 10,
+            bw,
+            18,
+            4,
+            fill=0,
+            stroke=1,
+        )
+
+        c.setFillColorRGB(
+            CHIP_TXT[0],
+            CHIP_TXT[1],
+            CHIP_TXT[2],
+        )
+
+        c.setFont(
+            "Helvetica-Bold",
+            8,
+        )
+
+        c.drawString(
+            bx + 10,
+            y + 16,
+            badge_text,
+        )
+
+        c.restoreState()
+
+        # =====================================================
+        # SIGNER INFORMATION
+        # =====================================================
+
+        section_title("SIGNER INFORMATION")
+
+        row(
+            "Full Name",
+            signer_name,
+            bold_value=True,
+        )
+
+        row(
+            "Email Address",
+            signer_email,
+        )
+
+        row(
+            "Agreement ID",
+            agreement.name if agreement else "N/A",
+        )
+
+        # =====================================================
+        # USER VERIFICATION
+        # =====================================================
+
+        auth_logs = audit_trail_text.get(
+            "authentication logs",
+            [],
+        )
+
+        otp_logs = [l for l in auth_logs if l.get("event") == "otp_verified"]
+
+        if otp_logs:
+            section_title("EMAIL OTP VERIFICATION")
+
+            for log in otp_logs:
+                ts = fmt_ts(
+                    log.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
+                row(
+                    "Verified At",
+                    ts,
+                )
+
+                device_chip_row(
+                    "  ↳ Device",
+                    log.get(
+                        "user_agent",
+                        "",
+                    ),
+                    log.get("ip_address")
+                    or log.get(
+                        "ip",
+                        "",
+                    ),
+                )
+
+        # =====================================================
+        # CONSENTS
+        # =====================================================
+
+        concern_logs = audit_trail_text.get(
+            "concern accepted",
+            [],
+        )
+
+        seen_fields = {}
+
+        for cl in sorted(
+            concern_logs,
+            key=lambda x: x.get(
+                "timestamp",
+                "",
+            ),
+        ):
+            fn = cl.get("fieldname")
+
+            if fn and fn not in seen_fields:
+                seen_fields[fn] = cl
+
+        if seen_fields:
+            section_title("CONSENT DECLARATIONS")
+
+            for fn, cl in seen_fields.items():
+                label_text = cl.get(
+                    "label",
+                    fn,
+                )
+
+                ts = fmt_ts(
+                    cl.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
+                ensure_space(32)
+
+                c.saveState()
+
+                c.setFillColorRGB(
+                    SUCCESS[0],
+                    SUCCESS[1],
+                    SUCCESS[2],
+                )
+
+                c.setFont(
+                    "Helvetica-Bold",
+                    9,
+                )
+
+                c.drawString(
+                    ML + 8,
+                    y,
+                    "✓",
+                )
+
+                c.setFillColorRGB(
+                    VALUE_CLR[0],
+                    VALUE_CLR[1],
+                    VALUE_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    8.5,
+                )
+
+                max_w = MR - ML - 30
+
+                if (
+                    c.stringWidth(
+                        label_text,
+                        "Helvetica",
+                        8.5,
+                    )
+                    > max_w
+                ):
+                    label_text = label_text[:90] + "…"
+
+                c.drawString(
+                    ML + 20,
+                    y,
+                    label_text,
+                )
+
+                c.setFillColorRGB(
+                    LABEL_CLR[0],
+                    LABEL_CLR[1],
+                    LABEL_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    7.5,
+                )
+
+                c.drawString(
+                    ML + 20,
+                    y - 11,
+                    f"Accepted: {ts}",
+                )
+
+                c.restoreState()
+
+                y -= 24
+
+                mini_divider()
+
+                y -= 4
+
+        # =====================================================
+        # SIGNATURE ACTIVITY
+        # =====================================================
+
+        sig_logs = audit_trail_text.get(
+            "signature update logs",
+            [],
+        )
+
+        if sig_logs:
+            section_title("SIGNATURE ACTIVITY")
+
+            sorted_sigs = sorted(
+                sig_logs,
+                key=lambda x: datetime.strptime(
+                    x["timestamp"],
+                    "%d-%m-%Y, %H:%M:%S UTC",
+                ),
+            )
+
+            for i, log in enumerate(
+                sorted_sigs,
+                1,
+            ):
+                ensure_space(80)
+
+                ts = fmt_ts(
+                    log.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
+                method = log.get(
+                    "method",
+                    "N/A",
+                )
+
+                event_label = (
+                    log.get(
+                        "event",
+                        "signature_added",
+                    )
+                    .replace(
+                        "_",
+                        " ",
+                    )
+                    .title()
+                )
+
+                c.saveState()
+
+                # Number bubble
+                c.setFillColorRGB(
+                    ACCENT[0],
+                    ACCENT[1],
+                    ACCENT[2],
+                )
+
+                c.circle(
+                    ML + 13,
+                    y + 1,
+                    8,
+                    fill=1,
+                    stroke=0,
+                )
+
+                c.setFillColorRGB(
+                    WHITE[0],
+                    WHITE[1],
+                    WHITE[2],
+                )
+
+                c.setFont(
+                    "Helvetica-Bold",
+                    8,
+                )
+
+                c.drawCentredString(
+                    ML + 13,
+                    y - 2,
+                    str(i),
+                )
+
+                c.setFillColorRGB(
+                    VALUE_CLR[0],
+                    VALUE_CLR[1],
+                    VALUE_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica-Bold",
+                    8.5,
+                )
+
+                c.drawString(
+                    ML + 28,
+                    y,
+                    f"{event_label}  —  {ts}",
+                )
+
+                y -= 14
+
+                c.setFillColorRGB(
+                    LABEL_CLR[0],
+                    LABEL_CLR[1],
+                    LABEL_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    8,
+                )
+
+                c.drawString(
+                    ML + 28,
+                    y,
+                    f"Method: {method}",
+                )
+
+                c.restoreState()
+
+                y -= 16
+
+                ensure_space(22)
+
+                browser, os_name, device = parse_user_agent(
+                    log.get(
+                        "user_agent",
+                        "",
+                    )
+                )
+
+                ip = log.get("ip_address") or log.get(
+                    "ip",
+                    "",
+                )
+
+                c.saveState()
+
+                c.setFillColorRGB(
+                    LABEL_CLR[0],
+                    LABEL_CLR[1],
+                    LABEL_CLR[2],
+                )
+
+                c.setFont(
+                    "Helvetica",
+                    8.5,
+                )
+
+                c.drawString(
+                    ML + 28,
+                    y,
+                    "Device",
+                )
+
+                chips = [
+                    ip or "N/A",
+                    browser,
+                    os_name,
+                    device,
+                ]
+
+                cx = ML + 28 + 50
+
+                for chip in chips:
+                    cw = (
+                        c.stringWidth(
+                            chip,
+                            "Helvetica",
+                            7.5,
+                        )
+                        + 10
+                    )
+
+                    c.setFillColorRGB(
+                        CHIP_BG[0],
+                        CHIP_BG[1],
+                        CHIP_BG[2],
+                    )
+
+                    c.roundRect(
+                        cx,
+                        y - 3,
+                        cw,
+                        13,
+                        3,
+                        fill=1,
+                        stroke=0,
+                    )
+
+                    c.setFillColorRGB(
+                        CHIP_TXT[0],
+                        CHIP_TXT[1],
+                        CHIP_TXT[2],
+                    )
+
+                    c.setFont(
+                        "Helvetica",
+                        7.5,
+                    )
+
+                    c.drawString(
+                        cx + 5,
+                        y + 1,
+                        chip,
+                    )
+
+                    cx += cw + 5
+
+                c.restoreState()
+
+                y -= 12
+
+                mini_divider()
+
+                y -= 12
+
+        # =====================================================
+        # FORM SUBMISSION LOG
+        # =====================================================
+
+        visit_logs = audit_trail_text.get(
+            "form visit logs",
+            [],
+        )
+
+        submit_logs = [l for l in visit_logs if l.get("event") == "form_submit"]
+
+        if submit_logs:
+            section_title("FORM SUBMISSION LOG")
+
+            for log in submit_logs:
+                ts = fmt_ts(
+                    log.get(
+                        "timestamp",
+                        "",
+                    )
+                )
+
+                row(
+                    "Submitted At",
+                    ts,
+                )
+
+                device_chip_row(
+                    "  ↳ Device",
+                    log.get(
+                        "user_agent",
+                        "",
+                    ),
+                    log.get("ip")
+                    or log.get(
+                        "ip_address",
+                        "",
+                    ),
+                )
+
+        # =====================================================
+        # HASH / DOCUMENT INTEGRITY BLOCK
+        # =====================================================
+
+        hash_block_height = 55
+
+        footer_zone = FOOTER_H + 24
+
+        if y > footer_zone + hash_block_height + 10:
+            y = footer_zone + hash_block_height + 10
+
+        c.saveState()
+
+        c.setStrokeColorRGB(
+            RULE_CLR[0],
+            RULE_CLR[1],
+            RULE_CLR[2],
+        )
+
+        c.setLineWidth(0.5)
+
+        c.line(
+            ML,
+            y,
+            MR,
+            y,
+        )
+
+        y -= 14
+
+        c.restoreState()
+
+        # The first page footer was already drawn by
+        # start_certificate_page().
+        #
+        # We intentionally do NOT draw it again here.
 
         c.showPage()
         c.save()
+
+        # =====================================================
+        # APPEND CERTIFICATE PAGES TO WRITER
+        # =====================================================
+
         packet.seek(0)
+
         audit_pdf = PdfReader(packet)
 
         for p in audit_pdf.pages:
             writer.addpage(p)
 
-    # ---------------------------------------------------------
-    # STEP 3: WRITE ONCE (CRITICAL)
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 3: WRITE SIGNED PDF + CERTIFICATE
+    # =========================================================
+
     writer.write(output_path)
 
-    # ---------------------------------------------------------
-    # STEP 4: HASH FINAL DOCUMENT
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 4: CALCULATE DOCUMENT SHA-256
+    # =========================================================
+
     document_hash = calculate_file_hash(output_path)
 
-    # ---------------------------------------------------------
-    # STEP 5: STAMP HASH INTO CERTIFICATE PAGE (SECOND PASS)
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 5: STAMP DOCUMENT SHA-256
+    # =========================================================
+
     reader = PdfReader(output_path)
+
     writer = PdfWriter()
 
     last_page_index = len(reader.pages) - 1
@@ -550,67 +1625,226 @@ def apply_signature_and_audit_to_pdf(
     for i, page in enumerate(reader.pages):
         if i == last_page_index:
             packet = io.BytesIO()
+
             page_w = float(page.MediaBox[2])
+
             page_h = float(page.MediaBox[3])
 
-            c = canvas.Canvas(packet, pagesize=(page_w, page_h))
-            c.setFont("Helvetica", 9)
-            c.drawString(50, 140, f"Document Hash (SHA-256): {document_hash}")
+            c = canvas.Canvas(
+                packet,
+                pagesize=(
+                    page_w,
+                    page_h,
+                ),
+            )
+
+            c.setFont(
+                "Helvetica",
+                9,
+            )
+
+            c.drawString(
+                50,
+                140,
+                f"Document Hash (SHA-256): {document_hash}",
+            )
+
             c.showPage()
             c.save()
+
             packet.seek(0)
 
             overlay = PdfReader(packet).pages[0]
+
             PageMerge(page).add(overlay).render()
 
         writer.addpage(page)
 
+    # Final physical write
     writer.write(output_path)
 
-    # ---------------------------------------------------------
-    # STEP 6: NOTIFICATIONS
-    # ---------------------------------------------------------
+    # =========================================================
+    # STEP 6: READ FINAL PDF
+    # =========================================================
+
+    with open(
+        output_path,
+        "rb",
+    ) as f:
+        final_bytes = f.read()
+
+    # =========================================================
+    # STEP 7: SYNC FRAPPE FILE RECORD
+    # =========================================================
+
+    if agreement:
+        agreement_pdf_url = frappe.db.get_value(
+            "Agreement",
+            agreement.name,
+            "pdf",
+        )
+
+        if agreement_pdf_url:
+            file_name = frappe.db.get_value(
+                "File",
+                {
+                    "file_url": agreement_pdf_url,
+                    "attached_to_doctype": "Agreement",
+                    "attached_to_name": agreement.name,
+                },
+                "name",
+            )
+
+            if file_name:
+                frappe.db.set_value(
+                    "File",
+                    file_name,
+                    {
+                        "content_hash": get_content_hash(final_bytes),
+                        "file_size": len(final_bytes),
+                    },
+                    update_modified=False,
+                )
+
+    # =========================================================
+    # STEP 8: NOTIFICATIONS
+    # =========================================================
+
+    agreement = frappe.get_doc(
+        "Agreement",
+        agreement.name,
+    )
+
     if not agreement or not agreement.sales_order:
         return output_path
 
-    sales_order = frappe.get_doc("Sales Order", agreement.sales_order)
-    if not sales_order.opportunity:
-        return output_path
-
-    opportunity = frappe.get_doc("Opportunity", sales_order.opportunity)
-    if not opportunity.opportunity_owner:
-        return output_path
-
-    opp_owner_user = frappe.db.get_value(
-        "Employee", opportunity.opportunity_owner, "user"
+    sales_order = frappe.get_doc(
+        "Sales Order",
+        agreement.sales_order,
     )
-    if not opp_owner_user:
+
+    if not sales_order.customer:
         return output_path
 
-    with open(output_path, "rb") as f:
+    validated_output_path = _validate_site_file_path(output_path)
+
+    with validated_output_path.open("rb") as f:
         content = f.read()
-    frappe.errprint(f"Final PDF generated at {output_path} with hash {document_hash}")
+
+    # =====================================================
+    # CUSTOMER EMAIL
+    # =====================================================
+
+    subject = "Agreement signed successfully"
+
+    message = (
+        "Dear Customer,\n\n"
+        "Thank you for signing the agreement. "
+        "We have successfully received your signed document.\n\n"
+        "Please find the signed agreement attached "
+        "along with the signing certificate for your records.\n\n"
+        "Best regards,\n"
+        "Team"
+    )
+
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Signed - Customer",
+        [
+            "subject",
+            "response_html",
+            "response",
+        ],
+        as_dict=True,
+    )
+    customer = frappe.get_doc(
+        "Customer",
+        sales_order.customer,
+    )
+
+    if template:
+        context = {
+            "customer": customer,
+            "sales_order": sales_order.name,
+        }
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
+        )
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
+
     send_notification(
         recipients=[signer_email],
-        subject="Agreement signed successfully",
-        message=(
-            "Dear Customer,\n\n"
-            "Thank you for signing the agreement. We have successfully received your signed document.\n\n"
-            "Please find the signed agreement attached along with the signing certificate for your records.\n\n"
-            "Best regards,\n"
-            "Team"
-        ),
+        subject=subject,
+        message=message,
         reference_doctype="Agreement",
         reference_name=agreement.name,
-        attachments=[{"fname": os.path.basename(output_path), "fcontent": content}],
+        attachments=[
+            {
+                "fname": os.path.basename(output_path),
+                "fcontent": content,
+            }
+        ],
         send_email=1,
         send_system=0,
     )
 
+    # =====================================================
+    # INTERNAL NOTIFICATION
+    # =====================================================
+    if not customer.customer_owner:
+        return output_path
+    opp_owner_user = frappe.db.get_value(
+        "Employee",
+        customer.customer_owner,
+        "user",
+    )
+
+    if not opp_owner_user:
+        return output_path
+    subject = "Agreement Signed by Customer"
+
+    message = (
+        f"The customer has signed the agreement.\n\nSales Order: {sales_order.name}"
+    )
+
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Signed - Internal",
+        [
+            "subject",
+            "response_html",
+            "response",
+        ],
+        as_dict=True,
+    )
+
+    if template:
+        context = {
+            "sales_order": sales_order.name,
+            "customer": sales_order.customer,
+            "agreement_owner": opp_owner_user,
+        }
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
+        )
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
+
     send_notification(
         recipients=[opp_owner_user],
-        subject="Agreement Signed by Customer",
-        message=f"The customer has signed the agreement.\n\nSales Order: {sales_order.name}",
+        subject=subject,
+        message=message,
         reference_doctype="Agreement",
         reference_name=agreement.name,
         send_email=0,
@@ -618,6 +1852,36 @@ def apply_signature_and_audit_to_pdf(
     )
 
     return output_path
+
+
+def render_signature_box(
+    canvas,
+    image_reader,
+    x,
+    y,
+    width,
+    height,
+    padding_x=2,
+    padding_y=2,
+):
+    if not image_reader:
+        return
+
+    draw_x = x + padding_x
+    draw_y = y + padding_y
+
+    draw_w = max(0, width - padding_x * 2)
+    draw_h = max(0, height - padding_y * 2)
+    canvas.drawImage(
+        image_reader,
+        draw_x,
+        draw_y,
+        width=draw_w,
+        height=draw_h,
+        preserveAspectRatio=True,
+        anchor="sw",
+        mask="auto",
+    )
 
 
 def resolve_file_path(file_url):
@@ -646,72 +1910,360 @@ def get_ip_and_device():
     }
 
 
-import random
+@frappe.whitelist(allow_guest=True)
+def add_audit_log(token, audit):
 
-OTP_TTL = 300  # 5 minutes
+    # ─── Validate token ─────────────────────────────
+    data = verify_token(token)
+    if not data:
+        return {"status": "error", "message": "Invalid token"}
+
+    agr = data.get("agr")
+    if not agr:
+        return {"status": "error", "message": "Agreement not found"}
+
+    # ─── Ensure audit is dict ───────────────────────
+    if isinstance(audit, str):
+        try:
+            audit = json.loads(audit)
+        except Exception:
+            return {"status": "error", "message": "Invalid audit JSON"}
+
+    if not isinstance(audit, dict):
+        return {"status": "error", "message": "Audit must be object"}
+
+    # ─── Load existing ─────────────────────────────
+    existing_audit_raw = frappe.db.get_value("Agreement", agr, "audit_trail")
+    existing_audit = {}
+    if existing_audit_raw:
+        try:
+            existing_audit = json.loads(existing_audit_raw)
+        except Exception:
+            existing_audit = {}
+
+    # ─── Normalize ─────────────────────────────
+    keys = [
+        "form visit logs",
+        "signature update logs",
+        "authentication logs",
+        "concern accepted",
+    ]
+
+    for k in keys:
+        existing_audit.setdefault(k, [])
+
+    # ─── Merge ─────────────────────────────
+    for k in keys:
+        incoming = audit.get(k, [])
+        if isinstance(incoming, list):
+            existing_audit[k].extend(incoming)
+
+    # ─── Save ─────────────────────────────
+    frappe.db.sql(
+        "UPDATE `tabAgreement` SET audit_trail = %s WHERE name = %s",
+        (json.dumps(existing_audit, indent=2), agr),
+    )
+
+    doc = frappe.get_doc("Agreement", agr)
+    doc.db_set("status", "Agreement signed")
+    return {"status": "success"}
 
 
 @frappe.whitelist(allow_guest=True)
-def send_otp(customer, email):
-    frappe.logger().info(f"OTP for customer: {customer}")
-    print(f"OTP for customer: {customer}")
+def request_new_agreement_link(sales_order, signer_email, agreementValue):
+    customer_name = frappe.db.get_value("Sales Order", sales_order, "customer")
+    if not customer_name:
+        frappe.throw(f"Sales Order '{sales_order}' not found.")
 
-    if not customer or not email:
-        frappe.throw("Missing customer or email")
+    customer_owner = frappe.db.get_value("Customer", customer_name, "customer_owner")
+    if not customer_owner:
+        frappe.throw("No customer owner assigned.")
 
-    otp = random.randint(100000, 999999)
-    cache_key = f"otp:{customer}"
+    opp_owner_user = frappe.db.get_value("Employee", customer_owner, "user")
 
-    if frappe.cache().get_value(cache_key):
-        frappe.msgprint("OTP already sent. Please wait.")
-        return
-
-    frappe.cache().set_value(
-        cache_key, {"otp": otp, "email": email}, expires_in_sec=OTP_TTL
+    subject = "Agreement Link Request Received"
+    message = (
+        "<p>Dear Customer,</p>"
+        "<p>We have received your request for a new agreement link.</p>"
+        "<p>Our team will review and send you a fresh link shortly.</p>"
+        "<p>Best regards,<br>Team</p>"
     )
+
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Link Request - Customer",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+
+    if template:
+        context = {}
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
+        )
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
+
+    frappe.sendmail(
+        recipients=[signer_email], subject=subject, message=message, now=True
+    )
+
+    subject = "Customer Requested a New Agreement Link"
+    message = (
+        f"The customer has requested a new agreement link.\n\n"
+        f"Agreement: {agreementValue}\n"
+        f"Sales Order: {sales_order}\n\n"
+        f"Please generate and send a new link at the earliest."
+    )
+
+    template = frappe.db.get_value(
+        "Email Template",
+        "Agreement Link Request - Internal",
+        ["subject", "response_html", "response"],
+        as_dict=True,
+    )
+
+    if template:
+        context = {
+            "agreementValue": agreementValue,
+            "sales_order": sales_order,
+            "customer_name": customer_name,
+        }
+
+        subject = frappe.render_template(
+            template.subject,
+            context,
+        )
+
+        message = frappe.render_template(
+            template.response_html or template.response,
+            context,
+        )
 
     send_notification(
-        recipients=[email],
-        subject="Your verification OTP",
-        message=f"""
-            Dear Customer,
-
-
-            Your OTP is: {otp}
-
-
-            This OTP is valid for 5 minutes.
-            """,
+        recipients=[opp_owner_user],
+        subject=subject,
+        message=message,
+        reference_doctype="Sales Order",
+        reference_name=sales_order,
         send_email=1,
-        send_system=0,
+        send_system=1,
     )
+
+    return {"status": "ok"}
+
+
+import random
+
+OTP_TTL = 300  # seconds — OTP validity window (5 minutes)
+VERIFIED_TTL = 86400  # seconds — how long "verified" state persists (1 day)
+
+
+def _get_ttl(cache_key):
+    """
+    frappe.cache() wraps Redis but does NOT expose .ttl() directly.
+    We work around this by storing the expiry timestamp alongside the value,
+    then computing the remaining TTL ourselves. This is the only reliable way.
+    """
+    data = frappe.cache().get_value(cache_key)
+    if not data:
+        return 0
+    expires_at = data.get("_expires_at") if isinstance(data, dict) else None
+    if not expires_at:
+        return 0
+    remaining = int(expires_at - frappe.utils.now_datetime().timestamp())
+    return max(remaining, 0)
+
+
+@frappe.whitelist(allow_guest=True)
+def get_otp_status(token):
+    """
+    Returns the current authentication state for a session token.
+    Called on every page load to restore UI state without re-sending OTP.
+
+    Returns:
+        { state: "verified" }
+        { state: "otp_sent", expires_in: <seconds> }
+        { state: "idle" }
+    """
+    if not token:
+        return {"state": "idle"}
+
+    # Sanitise token — alphanumeric + _ only
+    token = str(token)
+
+    verified_key = f"otp_verified:{token}"
+    cache_key = f"otp:{token}"
+
+    # 1. Verified state has highest priority
+    if frappe.cache().get_value(verified_key):
+        return {"state": "verified"}
+
+    # 2. OTP exists — compute remaining TTL from our stored timestamp
+    data = frappe.cache().get_value(cache_key)
+    if data and isinstance(data, dict):
+        ttl = _get_ttl(cache_key)
+        if ttl > 0:
+            return {"state": "otp_sent", "expires_in": ttl}
+        else:
+            # OTP key exists but has expired — clean it up
+            frappe.cache().delete_value(cache_key)
+
+    return {"state": "idle"}
+
+
+@frappe.whitelist(allow_guest=True)
+def send_otp(token, email):
+    """
+    Sends an OTP to the given email and stores it in cache keyed by token.
+    If an OTP already exists for this token, returns the remaining TTL instead
+    of sending a new one (prevents OTP spam).
+
+    Returns:
+        { status: "sent",         expires_in: 300 }
+        { status: "already_sent", expires_in: <remaining> }
+    """
+    if not token:
+        frappe.throw("Missing token")
+    if not email:
+        frappe.throw("Missing email")
+
+    # Basic email format check
+    if "@" not in str(email):
+        frappe.throw("Invalid email address")
+
+    token = str(token)
+    cache_key = f"otp:{token}"
+
+    # Check if an OTP already exists and is still valid
+    existing = frappe.cache().get_value(cache_key)
+    if existing and isinstance(existing, dict):
+        ttl = _get_ttl(cache_key)
+        if ttl > 0:
+            return {"status": "already_sent", "expires_in": ttl}
+        else:
+            # Stale entry — remove it and send fresh
+            frappe.cache().delete_value(cache_key)
+
+    # Generate a new 6-digit OTP
+    otp = random.randint(100000, 999999)
+    expires_at = frappe.utils.now_datetime().timestamp() + OTP_TTL
+
+    frappe.cache().set_value(
+        cache_key,
+        {"otp": str(otp), "email": str(email), "_expires_at": expires_at},
+        expires_in_sec=OTP_TTL,
+    )
+
+    # ─── Send the email ──────────────────────────────────────────────────────────
+    try:
+        subject = "Your Verification Code"
+        message = (
+            "<p>Dear Customer,</p>"
+            f"<p>Your verification code is: <strong style='font-size:24px'>{otp}</strong></p>"
+            "<p>This code is valid for 5 minutes. Do not share it with anyone.</p>"
+        )
+
+        template = frappe.db.get_value(
+            "Email Template",
+            "OTP Verification Email",
+            ["subject", "response_html", "response"],
+            as_dict=True,
+        )
+
+        if template:
+            context = {"otp": otp}
+
+            subject = frappe.render_template(
+                template.subject,
+                context,
+            )
+
+            message = frappe.render_template(
+                template.response_html or template.response,
+                context,
+            )
+
+        frappe.sendmail(recipients=[email], subject=subject, message=message, now=True)
+    except frappe.OutgoingEmailError as e:
+        # SMTP connection failed — email was never sent. Clean up and report.
+        frappe.cache().delete_value(cache_key)
+        frappe.log_error(title="OTP OutgoingEmailError", message=str(e))
+        frappe.throw("Failed to send OTP email. Please check your email settings.")
+    except Exception as e:
+        # Post-send or internal Frappe exception — email very likely already sent.
+        # Log for visibility but DO NOT delete cache or throw.
+        # Returning success here is intentional and correct.
+        frappe.log_error(title="OTP sendmail non-fatal exception", message=str(e))
 
     return {"status": "sent", "expires_in": OTP_TTL}
 
 
+# ─── verify_otp ───────────────────────────────────────────────────────────────
 @frappe.whitelist(allow_guest=True)
-def verify_otp(customer, otp):
-    if not customer or not otp:
-        frappe.throw("Missing parameters")
+def verify_otp(token, otp):
+    """
+    Verifies the submitted OTP against the cached value.
+    On success: deletes the OTP, stores a verified flag, returns details.
+    On failure: raises with a user-facing message (caught by safe_frappe_call).
 
-    cache_key = f"otp:{customer}"
+    Returns:
+        { status: "verified", verified_at: "...", ip: "...", user_agent: "..." }
+    Throws:
+        "OTP expired."   — if cache entry is missing or TTL elapsed
+        "Invalid OTP"    — if the code doesn't match
+    """
+    if not token:
+        frappe.throw("Missing token")
+    if not otp:
+        frappe.throw("Missing OTP")
+
+    token = str(token)
+    otp = str(otp).strip()
+    cache_key = f"otp:{token}"
+    verified_key = f"otp_verified:{token}"
+
+    # Already verified? Accept immediately (idempotent)
+    if frappe.cache().get_value(verified_key):
+        return {
+            "status": "verified",
+            "verified_at": frappe.utils.now(),
+        }
+
     data = frappe.cache().get_value(cache_key)
 
-    if not data:
-        frappe.throw("OTP expired or not requested")
+    if not data or not isinstance(data, dict):
+        frappe.throw("OTP expired.")
 
-    if str(data.get("otp")) != str(otp):
+    # Check TTL ourselves (belt-and-suspenders alongside Redis TTL)
+    if _get_ttl(cache_key) <= 0:
+        frappe.cache().delete_value(cache_key)
+        frappe.throw("OTP expired.")
+
+    if data.get("otp") != otp:
         frappe.throw("Invalid OTP")
 
-    # single-use OTP
+    # OTP is correct — single-use: delete immediately
     frappe.cache().delete_value(cache_key)
 
-    # NETWORK CONTEXT (SERVER TRUSTED)
-    ip = (
-        frappe.get_request_header("X-Forwarded-For") or frappe.local.request.remote_addr
+    # Store verified flag for VERIFIED_TTL seconds (1 day by default)
+    frappe.cache().set_value(
+        verified_key,
+        True,
+        expires_in_sec=VERIFIED_TTL,
     )
 
-    user_agent = frappe.get_request_header("User-Agent")
+    ip = (
+        frappe.get_request_header("X-Forwarded-For")
+        or frappe.local.request.remote_addr
+        or "unknown"
+    )
+    user_agent = frappe.get_request_header("User-Agent") or "unknown"
 
     return {
         "status": "verified",
@@ -719,3 +2271,233 @@ def verify_otp(customer, otp):
         "ip": ip,
         "user_agent": user_agent,
     }
+
+
+@frappe.whitelist(allow_guest=True)
+def get_candidate_fields_from_sales_order(name, customer=None):
+    if not name:
+        return {"fields": [], "required_fields": [], "values": {}, "table_columns": {}}
+
+    services = frappe.db.get_all(
+        "Items Table",
+        filters={"parent": name, "parenttype": "Sales Order"},
+        pluck="item",
+    )
+
+    raw_config = frappe.db.get_single_value(
+        "ERP Configuration", "candidate_details_form_fields"
+    )
+    try:
+        config = json.loads(raw_config) if raw_config else {}
+    except Exception:
+        config = {}
+
+    fields = []
+    required_fields = set()
+    table_columns = {}  # fieldname -> [allowed child columns]
+
+    for service in services:
+        cfg = config.get(service)
+        if not cfg:
+            continue
+        field_entries = (
+            cfg.get("fields", [])
+            if isinstance(cfg, dict)
+            else (cfg if isinstance(cfg, list) else [])
+        )
+        for field_entry in field_entries:
+            # Support plain string, dict with field_name/field, and columns
+            if isinstance(field_entry, dict):
+                fname = (
+                    field_entry.get("field_name")
+                    or field_entry.get("field")
+                    or field_entry.get("fieldname")
+                )
+                cols = field_entry.get("columns", [])
+                is_req = bool(field_entry.get("is_required"))
+                if fname:
+                    if fname not in fields:
+                        fields.append(fname)
+                    if is_req:
+                        required_fields.add(fname)
+                    if cols:
+                        table_columns[fname] = cols
+            elif isinstance(field_entry, str):
+                if field_entry not in fields:
+                    fields.append(field_entry)
+
+    values = {}
+    if customer:
+        ref = frappe.db.sql(
+            """
+            SELECT parent FROM `tabDoctype Reference`
+            WHERE reference_doctype = 'Customer' AND reference_person = %s
+            LIMIT 1
+            """,
+            (customer,),
+            as_dict=True,
+        )
+        if ref:
+            doc = frappe.get_doc("Lead Detail Form", ref[0].parent)
+            for f in fields:
+                val = doc.get(f)
+                if val is None:
+                    continue
+                if isinstance(val, list):
+                    allowed_cols = table_columns.get(f)
+                    rows = []
+                    for row in val:
+                        row_dict = row.as_dict()
+                        if allowed_cols:
+                            # Strip non-allowed columns from each row
+                            row_dict = {
+                                k: v for k, v in row_dict.items() if k in allowed_cols
+                            }
+                        rows.append(row_dict)
+                    values[f] = rows
+                else:
+                    values[f] = val
+
+    return {
+        "fields": fields,
+        "required_fields": list(required_fields),
+        "values": values,
+        "table_columns": table_columns,  # Pass to frontend
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def get_erp_config_safe():
+    return {
+        "driving_licence": frappe.db.get_single_value(
+            "ERP Configuration", "driving_licence"
+        ),
+        "ead_card": frappe.db.get_single_value("ERP Configuration", "ead_card"),
+        "old_resume": frappe.db.get_single_value("ERP Configuration", "old_resume"),
+        "visa_copy": frappe.db.get_single_value("ERP Configuration", "visa_copy"),
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def attach_signature(token, file_name):
+    token_data = verify_token(token)
+
+    if not token_data:
+        frappe.throw("Invalid token")
+
+    agr = token_data.get("agr")
+
+    if not agr:
+        frappe.throw("Agreement not found")
+
+    frappe.db.sql(
+        "UPDATE `tabAgreement` SET signature_image = %s WHERE name = %s",
+        (file_name, agr),
+    )
+
+    return {"status": "ok"}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_signature(token):
+    token_data = verify_token(token)
+
+    if not token_data:
+        frappe.throw("Invalid token")
+
+    agr = token_data.get("agr")
+
+    signature_image = frappe.db.get_value("Agreement", agr, "signature_image")
+    return signature_image
+
+
+@frappe.whitelist(allow_guest=True)
+def upsert_lead_detail_form(data, token, signature_method=None):
+
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    token_data = verify_token(token)
+
+    if not token_data:
+        frappe.throw("Invalid or tampered token")
+
+    customer = token_data.get("customer")
+    ia = token_data.get("ia")
+
+    # 🔍 Check existing
+    existing_name = frappe.db.sql(
+        """
+        SELECT parent FROM `tabDoctype Reference`
+        WHERE reference_doctype = 'Customer' AND reference_person = %s
+        LIMIT 1
+        """,
+        (customer,),
+        as_dict=True,
+    )
+
+    if existing_name:
+        doc = frappe.get_doc("Lead Detail Form", existing_name[0].parent)
+        is_update = True
+    else:
+        doc = frappe.new_doc("Lead Detail Form")
+        is_update = False
+
+    # 🔹 Apply incoming data safely
+    meta = frappe.get_meta("Lead Detail Form")
+
+    for field in meta.fields:
+        fieldname = field.fieldname
+        if not fieldname:
+            continue
+
+        if fieldname in (
+            "name",
+            "owner",
+            "creation",
+            "modified",
+            "modified_by",
+            "docstatus",
+        ):
+            continue
+
+        if fieldname == "reference_table":
+            continue
+
+        value = data.get(fieldname)
+
+        if field.fieldtype == "Table":
+            doc.set(fieldname, [])  # reset table
+
+            if value:
+                for row in value:
+                    row.pop("name", None)  # remove primary key
+                    doc.append(fieldname, row)
+
+        # NORMAL
+        else:
+            if value not in (None, "", []):
+                if fieldname in {
+                    "personal_phone_number",
+                    "number_for_marketing",
+                } and isinstance(value, str):
+                    value = re.sub(r"[()\s-]", "", value)
+                doc.set(fieldname, value)
+
+    # 🔹 Save
+    doc.save(ignore_permissions=True)
+
+    # newDoc =
+
+    signature_image = get_signature(token)
+
+    if ia:
+        try:
+            if signature_method in ("Upload", "Text"):
+                apply_pdf_signature(doc, signature_image_file=signature_image)
+            elif signature_method == "Draw":
+                process_drawn_signature_and_apply(doc, token)
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), "PDF Signature Failed")
+
+    return {"status": "updated" if is_update else "created", "name": doc.name}

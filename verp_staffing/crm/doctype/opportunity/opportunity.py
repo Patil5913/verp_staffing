@@ -3,132 +3,172 @@
 
 import frappe
 from frappe.model.document import Document
-from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
+
 from verp_staffing.crm.api.lead_details import create_lead_details
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
+from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
 
 
 class Opportunity(Document):
-    def before_save(self):
-        pass
+
+    def autoname(self):
+        if not self.name1:
+            frappe.throw("Opportunity Name is required")
+
+        self.name = generate_name_series(
+            "Opportunity",
+            self.name1,
+        )
+        
+    def before_insert(self):
+        if frappe.session.user != "Administrator":
+            self.set_opportunity_owner()
+
+    def set_opportunity_owner(self):
+        """Assign logged-in employee as opportunity owner."""
+
+        if self.opportunity_owner:
+            return
+
+        cache_key = f"opportunity_user::{frappe.session.user}"
+
+        employee = frappe.cache().get_value(cache_key)
+
+        if employee is None:
+            employee = frappe.db.get_value(
+                "Employee",
+                {"user": frappe.session.user},
+                "name",
+            )
+
+            frappe.cache().set_value(cache_key, employee)
+
+        if employee:
+            self.opportunity_owner = employee
 
     def on_trash(self):
-        unlink_and_clean_lead_detail("Opportunity" , self.name)
-        
+        unlink_and_clean_lead_detail(
+            "Opportunity",
+            self.name,
+            self.lead_details,
+        )
 
     def after_insert(self):
+
         lead_detail_name = None
 
-        # CASE 1: Party selected → attach to existing Lead Details
-        if self.party_name and self.opportunity_from:
+        # =========================
+        # CASE 1: Linked from Lead
+        # (NO existence check, first insert assumption)
+        # =========================
+        if self.opportunity_from_lead:
 
             lead_detail_name = frappe.db.get_value(
                 "Doctype Reference",
                 {
-                    "reference_doctype": self.opportunity_from,
-                    "reference_person": self.party_name
+                    "reference_doctype": "Lead",
+                    "reference_person": self.opportunity_from_lead,
                 },
-                "parent"
+                "parent",
             )
 
             if not lead_detail_name:
                 frappe.throw("Lead Details not found for selected party.")
 
-            lead_detail = frappe.get_doc("Lead Detail Form", lead_detail_name)
+            # Direct insert (no exists check, no ORM)
+            frappe.db.sql(
+                """
+                INSERT INTO `tabDoctype Reference`
+                    (name, parent, parenttype, parentfield,
+                    reference_doctype, reference_person)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    frappe.generate_hash(self.name + lead_detail_name, 20),
+                    lead_detail_name,
+                    "Lead Detail Form",
+                    "reference_table",
+                    "Opportunity",
+                    self.name,
+                ),
+            )
 
-            # Prevent duplicate link
-            if not any(
-                row.reference_doctype == "Opportunity" and
-                row.reference_person == self.name
-                for row in lead_detail.reference_table
-            ):
-                lead_detail.append("reference_table", {
-                    "reference_doctype": "Opportunity",
-                    "reference_person": self.name
-                })
-
-                lead_detail.save(ignore_permissions=True)
-
-        # CASE 2: No party selected → create standalone Lead Details
+        # =========================
+        # CASE 2: Standalone
+        # =========================
         else:
-
             lead_detail_name = create_lead_details(
                 "Opportunity",
                 self.name,
-                self.name1
+                self.name1,
             )
 
-        # 🔥 Link Opportunity → Lead Details in BOTH cases
+        # =========================
+        # Single update (cheap)
+        # =========================
         if lead_detail_name:
-            # self.lead_details = lead_detail_name
-            self.lead_details = lead_detail_name
-            self.db_update()
-
-    def autoname(self):
-        import re
-
-        if not self.name1:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        base_name = self.name1.strip()
-
-        if not base_name:
-            self.name = frappe.generate_hash(length=10)
-            return
-
-        self.title = base_name
-
-        # Get all titles starting with base_name
-        existing_titles = frappe.get_all(
-            "Opportunity",
-            filters={"title": ["like", f"{base_name}%"]},
-            pluck="name"
-        )
-
-        if not existing_titles:
-            # First record → just base name
-            self.name = base_name
-            return
-
-        max_count = 0
-
-        for existing_name in existing_titles:
-
-            # Exact match → rahi
-            if existing_name == base_name:
-                max_count = max(max_count, 0)
-                continue
-
-            # Match rahi-1, rahi-2 etc
-            match = re.match(rf"^{re.escape(base_name)}-(\d+)$", existing_name)
-            if match:
-                count = int(match.group(1))
-                max_count = max(max_count, count)
-
-        # Generate next number
-        self.name = f"{base_name}-{max_count + 1}"
-
-    # def validate(self):
-    #     if self.opportunity_from == "Customer":
-    #         if not frappe.db.exists("Customer", self.party_name):
-    #             frappe.msgprint(f"Customer {self.party_name} does not exist.")
+            self.db_set(
+                "lead_details",
+                lead_detail_name,
+                update_modified=False,
+            )
 
     def on_update(self):
-        if self.party_name:
-            update_status_based_on_opportunity(self.party_name, self.status)
 
-    def block_manual_conversion(self):
-        """Prevent users from manually changing status to Converted."""
-        # old doc = previous DB version
-        old_status = self.get_db_value("status")
-        if not old_status:
-            return  # first save, skip
+        if not self.opportunity_from_lead:
+            return
 
-        # User tries to manually change to Converted
-        if old_status != "Converted" and self.status == "Converted":
-            # Allow only if your backend logic sets a special flag
-            if not getattr(self, "_auto_converted", False):
-                frappe.throw(
-                    "You cannot manually mark this Opportunity as Converted. This happens automatically after meeting payment conditions."
-                )
+        update_status_based_on_opportunity(
+            self.opportunity_from_lead,
+            self.status,
+        )
+
+    @frappe.whitelist()
+    def create_customer(self):
+
+        customer = frappe.get_doc(
+            {
+                "doctype": "Customer",
+                "name1": self.name1,
+                "customer_from": "Opportunity",
+                "party_name": self.name,
+                "customer_owner": self.opportunity_owner,
+            }
+        )
+
+        customer.insert(ignore_permissions=True)
+
+        self.db_set("status", "Converted")
+
+        if self.opportunity_from_lead:
+            frappe.db.set_value(
+                "Lead",
+                self.opportunity_from_lead,
+                "status",
+                "Won",
+                update_modified=False,
+            )
+
+        return {"customer": customer.name}
+    
+@frappe.whitelist()
+def get_lead_department_roles():
+    """
+    Return all roles configured under Department = Lead
+    """
+
+    department = frappe.db.get_value(
+        "Department",
+        {"department_name": ["in", ["Lead", "lead"]]},
+        "name",
+    )
+
+    if not department:
+        return []
+
+    return frappe.get_all(
+        "Department Role",
+        filters={"parent": department},
+        pluck="role",
+    )

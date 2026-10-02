@@ -1,0 +1,388 @@
+{
+ "actions": [],
+ "autoname": "ACC-SUB-.YYYY.-.#####",
+ "creation": "2017-07-18 17:50:43.967266",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_basic",
+  "subscription_type",
+  "company",
+  "status",
+  "column_basic",
+  "party_type",
+  "party",
+  "billing_currency",
+  "plan_details_section",
+  "plan",
+  "column_break_wlah",
+  "qty",
+  "column_break_wkmq",
+  "net_total",
+  "section_period",
+  "start_date",
+  "end_date",
+  "column_period",
+  "trial_period_end",
+  "last_invoice_date",
+  "section_settings",
+  "generate_invoice_at",
+  "days_until_due",
+  "column_settings",
+  "number_of_days",
+  "auto_submit_invoice_check",
+  "section_one_time",
+  "one_time_charges",
+  "section_taxes",
+  "taxes",
+  "section_discount",
+  "discount_schedule",
+  "additional_discount_account",
+  "section_totals",
+  "total_html",
+  "section_cancel_pause",
+  "cancel_at_period_end",
+  "cancelation_date",
+  "column_break_dlwz",
+  "is_paused",
+  "pause_resume_date",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_basic",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "subscription_type",
+   "fieldtype": "Select",
+   "label": "Subscription Type",
+   "options": "\nSales\nPurchase",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Customer\",\"Supplier\"]]]",
+   "options": "DocType",
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Party",
+   "options": "party_type",
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "in_list_view": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "\nTrialing\nActive\nPaused\nCancelled\nCompleted",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "cancelation_date",
+   "fieldtype": "Date",
+   "label": "Cancellation Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_period",
+   "fieldtype": "Section Break",
+   "label": "Period & Billing Cycle"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Subscription Start Date",
+   "reqd": 1
+  },
+  {
+   "description": "Leave blank for open-ended subscriptions",
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "Subscription End Date",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_period",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Leave blank for no trial period",
+   "fieldname": "trial_period_end",
+   "fieldtype": "Date",
+   "label": "Trial Period End",
+   "search_index": 1
+  },
+  {
+   "fieldname": "plan",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Plan",
+   "options": "Subscription Plan",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "label": "Qty",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "description": "Setup fees, deposits, activation charges. Applied to a specific invoice (default: the first one).",
+   "fieldname": "section_one_time",
+   "fieldtype": "Section Break",
+   "label": "One-Time Charges"
+  },
+  {
+   "fieldname": "one_time_charges",
+   "fieldtype": "Table",
+   "options": "Subscription One Time Charge"
+  },
+  {
+   "collapsible": 1,
+   "description": "Define discounts per invoice number. Example: 50% off invoices 1-3, then full price. Discount is applied on net total (before tax). If empty, no recurring discount.",
+   "fieldname": "section_discount",
+   "fieldtype": "Section Break",
+   "label": "Discount Schedule"
+  },
+  {
+   "fieldname": "discount_schedule",
+   "fieldtype": "Table",
+   "options": "Subscription Discount Schedule"
+  },
+  {
+   "depends_on": "eval:doc.discount_schedule && doc.discount_schedule.length",
+   "fieldname": "additional_discount_account",
+   "fieldtype": "Link",
+   "label": "Discount Account",
+   "mandatory_depends_on": "eval:doc.discount_schedule && doc.discount_schedule.length",
+   "options": "Account"
+  },
+  {
+   "collapsible": 1,
+   "description": "Taxes here are copied to every recurring invoice (and to the first invoice for one-time charges). Editing this table doesn't affect already-generated invoices.",
+   "fieldname": "section_taxes",
+   "fieldtype": "Section Break",
+   "label": "Taxes & Charges"
+  },
+  {
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "options": "Taxes and Charges"
+  },
+  {
+   "fieldname": "section_totals",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_settings",
+   "fieldtype": "Section Break",
+   "label": "Invoice Generation Settings"
+  },
+  {
+   "default": "0",
+   "description": "Number of days until the generated invoice is due",
+   "fieldname": "days_until_due",
+   "fieldtype": "Int",
+   "label": "Days Until Due"
+  },
+  {
+   "default": "End of the current subscription period",
+   "fieldname": "generate_invoice_at",
+   "fieldtype": "Select",
+   "label": "Generate Invoice At",
+   "options": "End of the current subscription period\nBeginning of the current subscription period\nDays before the current subscription period",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.generate_invoice_at === \"Days before the current subscription period\"",
+   "fieldname": "number_of_days",
+   "fieldtype": "Int",
+   "label": "Number of Days",
+   "mandatory_depends_on": "eval:doc.generate_invoice_at === \"Days before the current subscription period\""
+  },
+  {
+   "fieldname": "column_settings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "collapsible": 1,
+   "description": "Can update after submit subscription.",
+   "fieldname": "section_cancel_pause",
+   "fieldtype": "Section Break",
+   "label": "Cancellation & Pause"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "cancel_at_period_end",
+   "fieldtype": "Check",
+   "label": "Cancel At End Of Current Period"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "description": "When checked, no invoices are generated until the resume date",
+   "fieldname": "is_paused",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Paused",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.is_paused",
+   "fieldname": "pause_resume_date",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Resume On"
+  },
+  {
+   "fieldname": "column_break_dlwz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "plan_details_section",
+   "fieldtype": "Section Break",
+   "label": "Plan Details"
+  },
+  {
+   "fieldname": "column_break_wlah",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_wkmq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Subscription",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "plan.currency",
+   "fetch_if_empty": 1,
+   "fieldname": "billing_currency",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Billing Currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "net_total",
+   "fieldtype": "Currency",
+   "label": "Net Total",
+   "options": "billing_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_html",
+   "fieldtype": "HTML",
+   "label": "Total HTML"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "description": "Can update after submit subscription.",
+   "fieldname": "auto_submit_invoice_check",
+   "fieldtype": "Check",
+   "label": "Submit Generated Invoices Automatically"
+  },
+  {
+   "fieldname": "last_invoice_date",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Last Invoice Date",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-27 10:10:53.152905",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Subscription",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "party_type",
+ "track_changes": 1,
+ "translated_doctype": 1
+}

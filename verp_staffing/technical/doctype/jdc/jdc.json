@@ -1,16 +1,28 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "allow_import": 1,
  "creation": "2026-01-27 14:57:16.567128",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "assign_to",
   "customer",
+  "interview_round",
+  "interview_details",
+  "column_break_tgje",
+  "assign_to",
   "status",
-  "interview",
+  "session_details_section",
+  "scheduled_on",
+  "column_break_kmnb",
+  "from_time",
+  "column_break_zjuc",
+  "to_time",
   "section_break_mtyr",
+  "resume",
   "proof_of_work",
+  "proof_of_work_html",
+  "customer_feedback",
+  "section_break_trra",
   "lead_details",
   "notes_section",
   "notes_html",
@@ -23,10 +35,12 @@
   {
    "fieldname": "customer",
    "fieldtype": "Link",
+   "hidden": 1,
    "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
    "read_only": 1,
+   "search_index": 1,
    "set_only_once": 1
   },
   {
@@ -37,14 +51,14 @@
    "fieldname": "proof_of_work",
    "fieldtype": "Table",
    "label": "Proof Of Work",
-   "options": "Proof Of Work"
+   "options": "Document References"
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nComplered\nRequest for Update"
+   "options": "Pending\nCompleted\nRequest for Update"
   },
   {
    "fieldname": "lead_details",
@@ -54,7 +68,7 @@
    "fieldname": "assign_to",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Employee",
+   "label": "Assign To",
    "options": "Employee"
   },
   {
@@ -66,12 +80,6 @@
    "fieldname": "notes_section",
    "fieldtype": "Tab Break",
    "label": "Notes"
-  },
-  {
-   "fieldname": "interview",
-   "fieldtype": "Link",
-   "label": "Interview",
-   "options": "Interview"
   },
   {
    "fieldname": "activites_tab",
@@ -92,17 +100,116 @@
    "fieldname": "updates_html",
    "fieldtype": "HTML",
    "label": "Update"
+  },
+  {
+   "fieldname": "resume",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "proof_of_work_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_trra",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "interview_round",
+   "fieldtype": "Link",
+   "label": "Interview Round",
+   "options": "Interview Round",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_feedback",
+   "fieldtype": "Table",
+   "label": "Customer Feedback",
+   "no_copy": 1,
+   "options": "Customer Feedback",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_tgje",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interview_details",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "session_details_section",
+   "fieldtype": "Section Break",
+   "label": "Session Details"
+  },
+  {
+   "fieldname": "scheduled_on",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Schedule On"
+  },
+  {
+   "fieldname": "column_break_kmnb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "label": "From",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_zjuc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_time",
+   "fieldtype": "Time",
+   "label": "To"
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-05 14:12:09.541665",
+ "modified": "2026-08-27 10:07:05.687447",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "JDC",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1,
+   "write": 1
+  },
   {
    "create": 1,
    "delete": 1,
@@ -112,8 +219,90 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "CR",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",
@@ -122,5 +311,7 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "customer"
+ "title_field": "customer",
+ "track_changes": 1,
+ "translated_doctype": 1
 }

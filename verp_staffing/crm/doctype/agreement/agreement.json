@@ -6,50 +6,147 @@
  "engine": "InnoDB",
  "field_order": [
   "sales_order",
+  "pdf",
+  "column_break_whbw",
   "template",
-  "data",
-  "pdf"
+  "certificate_id",
+  "signature_image",
+  "section_break_fnhs",
+  "template_data_fill_html",
+  "column_break_vrre",
+  "audit_trail",
+  "status",
+  "sent_on",
+  "last_reminder_sent",
+  "section_break_yapn",
+  "data"
  ],
  "fields": [
   {
    "fieldname": "sales_order",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Sales Order",
-   "options": "Sales Order"
+   "options": "Sales Order",
+   "read_only": 1
   },
   {
    "fieldname": "template",
    "fieldtype": "Link",
    "label": "Template",
-   "options": "Pdf Agreement Template"
+   "options": "Pdf Agreement Template",
+   "read_only": 1
   },
   {
    "fieldname": "data",
    "fieldtype": "JSON",
    "hidden": 1,
-   "label": "Data"
+   "label": "Data",
+   "print_hide": 1,
+   "report_hide": 1
   },
   {
    "fieldname": "pdf",
    "fieldtype": "Attach",
    "label": "PDF"
+  },
+  {
+   "fieldname": "template_data_fill_html",
+   "fieldtype": "HTML",
+   "label": "Template Data"
+  },
+  {
+   "fieldname": "column_break_vrre",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Ready To Send",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Ready To Send\nSent\nAgreement signed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_yapn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_whbw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "certificate_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Certificate ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_fnhs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "audit_trail",
+   "fieldtype": "Text",
+   "hidden": 1,
+   "label": "Audit Trail",
+   "print_hide": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "signature_image",
+   "fieldtype": "Link",
+   "label": "Signature Image",
+   "options": "File",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sent_on",
+   "fieldtype": "Datetime",
+   "label": "Sent on",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_reminder_sent",
+   "fieldtype": "Datetime",
+   "label": "Last Reminder Sent",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-26 10:10:52.076807",
+ "modified": "2026-08-11 15:51:20.681943",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Agreement",
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
    "read": 1,
-   "role": "Sales Employee",
-   "select": 1,
-   "write": 1
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
   },
   {
    "create": 1,
@@ -58,38 +155,19 @@
    "export": 1,
    "print": 1,
    "read": 1,
-   "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   },
   {
-   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Master Manager",
+   "role": "Account Person",
    "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Manager",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Team Lead",
-   "select": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "read": 1,
-   "role": "Sales Person",
-   "select": 1,
-   "write": 1
+   "share": 1
   }
  ],
  "row_format": "Dynamic",

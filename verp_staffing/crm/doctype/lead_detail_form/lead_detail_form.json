@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "creation": "2025-11-25 09:33:40.314531",
  "doctype": "DocType",
@@ -7,20 +8,17 @@
  "field_order": [
   "authentication_section",
   "authentication_html",
+  "form_token",
   "agreement_section",
   "agreement_html",
-  "agreement_link",
   "consent_and_electronic_signature_confirmation_section",
   "signature_method",
   "signature",
   "signature_custom_html",
-  "signature_image",
   "column_break_reui",
   "my_electronic_signature_has_same_effect_as_handwritten",
   "i_consent_to_receive_sign_and_store_documents_electronically",
   "i_confirm_my_identity_and_signing_this_document_intentionally",
-  "audit_trail",
-  "certificate_id",
   "personal_information_section",
   "surname",
   "first_name",
@@ -30,10 +28,10 @@
   "email",
   "personal_linkedin",
   "date_of_birth",
-  "customer",
   "educational_details_section",
   "educational_details",
   "past_experience_details_section",
+  "experience",
   "past_experience_table",
   "technical_information_section",
   "technologies",
@@ -44,14 +42,15 @@
   "current_address",
   "address_history_section",
   "address_history",
-  "section_break_bxyq",
+  "other_information_section",
   "certificate_or_completed_course",
   "column_break_ylcw",
   "current_visa_status",
-  "experience",
   "details_for_marketing_purpose_section",
   "number_for_marketing",
   "google_voice_number",
+  "marketing_email_id",
+  "marketing_email_password",
   "column_break_uksq",
   "marketing_linkedin",
   "linkedin_password",
@@ -59,7 +58,7 @@
   "column_break_mffv",
   "ssn_digit",
   "availability_for_interview",
-  "section_break_xllz",
+  "files_upload_section",
   "remarks",
   "column_break_vext",
   "files_custom_html",
@@ -89,8 +88,8 @@
   },
   {
    "fieldname": "technologies",
-   "fieldtype": "Small Text",
-   "label": "Technology In which You are looking make your resume"
+   "fieldtype": "Data",
+   "label": "Technology "
   },
   {
    "fieldname": "entry_date",
@@ -118,13 +117,13 @@
    "description": "\n",
    "fieldname": "experience",
    "fieldtype": "Check",
-   "label": "Experience (Only if worked genuinely and related field and want to keep exp as it is.)"
+   "label": "Experience (Only if worked genuinely)"
   },
   {
    "fieldname": "number_for_marketing",
    "fieldtype": "Data",
    "label": "Phone Number for marketing (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx"
+   "placeholder": "Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx"
   },
   {
    "fieldname": "marketing_linkedin",
@@ -132,9 +131,10 @@
    "label": "LinkedIn ID"
   },
   {
+   "description": "please paste full linkedin link starting with https://",
    "fieldname": "personal_linkedin",
    "fieldtype": "Data",
-   "label": "LinkedIn ID"
+   "label": "LinkedIn Profile link"
   },
   {
    "fieldname": "passport_number",
@@ -144,7 +144,7 @@
   {
    "description": " ",
    "fieldname": "ssn_digit",
-   "fieldtype": "Int",
+   "fieldtype": "Data",
    "label": "SSN (Only Last 4-Digits)",
    "length": 4,
    "non_negative": 1
@@ -153,7 +153,7 @@
    "description": " ",
    "fieldname": "availability_for_interview",
    "fieldtype": "Data",
-   "label": "Availability for Interview (Please enter the availability hours in the following format only)",
+   "label": "Availability for Interview (Please enter the availability hours in the following format Exp: Mon - Fri, 9:30 AM - 10:00 PM only)",
    "placeholder": "Exp: Mon \u2013 Fri, 9:30 AM \u2013 10:00 PM."
   },
   {
@@ -191,10 +191,6 @@
    "label": "Address History"
   },
   {
-   "fieldname": "section_break_bxyq",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "column_break_ylcw",
    "fieldtype": "Column Break"
   },
@@ -210,10 +206,6 @@
   {
    "fieldname": "column_break_mffv",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_xllz",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_vext",
@@ -282,7 +274,7 @@
   },
   {
    "fieldname": "current_address",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Current Address (Street Address, City, State, Country, Zip code)."
   },
   {
@@ -321,12 +313,8 @@
   {
    "fieldname": "consent_and_electronic_signature_confirmation_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Consent and Electronic Signature Confirmation"
-  },
-  {
-   "fieldname": "audit_trail",
-   "fieldtype": "Small Text",
-   "label": "Audit Trail"
   },
   {
    "default": "Draw",
@@ -341,19 +329,15 @@
    "label": "Signature Upload HTML"
   },
   {
-   "fieldname": "signature_image",
-   "fieldtype": "Link",
-   "label": "Signature Image",
-   "options": "File"
-  },
-  {
    "fieldname": "files_custom_html",
    "fieldtype": "Data",
-   "label": "Files Upload HTML"
+   "label": "Files Upload HTML",
+   "read_only": 1
   },
   {
    "fieldname": "agreement_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Agreement"
   },
   {
@@ -367,39 +351,22 @@
    "fieldtype": "Data"
   },
   {
-   "fieldname": "agreement_link",
-   "fieldtype": "Link",
-   "label": "Agreement Link",
-   "options": "Agreement"
-  },
-  {
-   "fieldname": "customer",
-   "fieldtype": "Link",
-   "label": "Customer",
-   "options": "Customer"
-  },
-  {
+   "default": "+1",
    "description": "NOTE: Provide country code with number.",
    "fieldname": "personal_phone_number",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Phone Number (Provide country code with number)",
-   "placeholder": "Exp: +1 xxx xxx xxxx"
+   "placeholder": "Exp: +1xxxxxxxxxx Or +91xxxxxxxxxx"
   },
   {
    "fieldname": "authentication_section",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "hidden": 1
   },
   {
    "fieldname": "authentication_html",
    "fieldtype": "Data"
-  },
-  {
-   "fieldname": "certificate_id",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Certificate ID",
-   "read_only": 1
   },
   {
    "fieldname": "section_break_odpr",
@@ -410,12 +377,36 @@
    "fieldtype": "Table",
    "label": "Reference Table",
    "options": "Doctype Reference"
+  },
+  {
+   "fieldname": "form_token",
+   "fieldtype": "Small Text",
+   "label": "Form Token"
+  },
+  {
+   "fieldname": "other_information_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "files_upload_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "marketing_email_id",
+   "fieldtype": "Data",
+   "label": "Marketing Email Id",
+   "options": "Email"
+  },
+  {
+   "fieldname": "marketing_email_password",
+   "fieldtype": "Data",
+   "label": "Marketing Email Password"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-21 15:24:01.479903",
+ "modified": "2026-09-15 21:19:47.578110",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "Lead Detail Form",
@@ -423,32 +414,48 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "create": 1,
    "read": 1,
-   "role": "Sales Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Sales Manager"
-  },
-  {
-   "read": 1,
-   "role": "Senior Resume Person"
+   "role": "Sales Manager",
+   "select": 1,
+   "write": 1
   },
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
    "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
+   "role": "Sales Master Manager",
+   "select": 1,
    "write": 1
   },
   {
    "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager"
+  },
+  {
+   "read": 1,
    "role": "Marketing Manager"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
   },
   {
    "read": 1,
@@ -459,40 +466,18 @@
    "role": "Marketing Mentor"
   },
   {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
    "read": 1,
-   "role": "Sales Person"
-  },
-  {
-   "read": 1,
-   "role": "Sales Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Resume Person"
-  },
-  {
-   "read": 1,
-   "role": "marketing Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "Marketing Team Lead"
-  },
-  {
-   "read": 1,
-   "role": "Recruiter"
-  },
-  {
-   "read": 1,
-   "role": "Training Person"
-  },
-  {
-   "read": 1,
-   "role": "Technical Master Manager"
-  },
-  {
-   "read": 1,
-   "role": "JDC"
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
   },
   {
    "read": 1,
@@ -500,28 +485,81 @@
   },
   {
    "read": 1,
-   "role": "Support Person"
-  },
-  {
-   "read": 1,
    "role": "Technical Coordinator"
   },
   {
    "read": 1,
-   "role": "RUC Person"
+   "role": "CR"
   },
   {
    "read": 1,
-   "role": "Sales Employee"
+   "role": "Resume Person"
   },
   {
    "read": 1,
-   "role": "JD"
+   "role": "OnBoarding Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Lead Person",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Lead Master Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Lead Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Lead Team Lead",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Technical Person",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Recruiter",
+   "share": 1
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

@@ -1,15 +1,20 @@
-// Unique storage key per form
-const AUDIT_KEY = "audit_trail_storage";
-const AUTH_KEY = "auth_state";
-// unique key for this webform
-let storage_key = "webform_filled_lead_details_form";
+let AUDIT_KEY = null;
 // max file size
 const MAX_PDF_SIZE = 1 * 1024 * 1024; // 1 MB in bytes
 
-let REQUIRED_LEAD_DOCS_CONFIG = null;
+let REQUIRED_LEAD_DOCS_CONFIG = {};
+let SIGNATURE_CACHE = null;
+
 let customerEmail = null;
-let otpRequestInFlight = false;
-let otpTimer = null;
+let customerValue = null;
+let salesOrder = null;
+let agreementValue = null;
+let isAgreement = null;
+let pdfValue = null;
+let token = null;
+let candidateFields = [];
+let Agreement_signed = false;
+const DOC_FIELDS = new Set(["visa_copy", "ead_card", "driving_licence", "old_resume"]);
 
 const CONCERN_FIELDS = [
 	{
@@ -26,106 +31,333 @@ const CONCERN_FIELDS = [
 	},
 ];
 
-frappe.ready(async function () {
-	// Monkey-patch frappe.msgprint to intercept our signal
-	const _orig_msgprint = frappe.msgprint.bind(frappe);
-	frappe.msgprint = function (msg, title) {
-		const text = typeof msg === "string" ? msg : msg?.message || "";
-		if (text.includes("LEAD_UPDATED_SUCCESS")) {
-			handle_form_success();
-			return;
+let _otp_state = "idle"; // idle | sending | otp_sent | verified | expired
+let _timer_iv = null;
+let _events_bound = false;
+
+document.addEventListener(
+	"click",
+	async function (e) {
+		if (e.target && e.target.classList.contains("submit-btn")) {
+			e.preventDefault();
+			e.stopImmediatePropagation();
+
+			await custom_submit_handler();
 		}
-		return _orig_msgprint(msg, title);
-	};
-	// Wait until Web Form UI loads
-	fetch_server_fingerprint(function (fp) {
-		add_audit_event("form", {
-			event: "form_opened",
-			ip: fp.ip,
-			user_agent: fp.user_agent,
-		});
-	});
+	},
+	true,
+); // capture phase (important)
 
+frappe.ready(async function () {
+	$(".navbar").hide();
 	disable_next_button();
-
-	if (is_email_verified()) {
-		enable_next_button();
-	}
-
-	// remove discard button
 	document.querySelector(".discard-btn")?.remove();
 
-	await initRequiredLeadDocsConfig();
+	function decodeToken(token) {
+		try {
+			const decoded = atob(token);
+			const [payload] = decoded.split("|");
 
-	init_authentication_html();
-
-	const auth = get_auth_state();
-	apply_auth_ui(auth);
-
-	if (auth && auth.state === "otp_sent" && auth.expires_at) {
-		const remaining = Math.floor((auth.expires_at - Date.now()) / 1000);
-
-		if (remaining > 0) {
-			start_otp_timer(remaining);
-		} else {
-			set_auth_state("otp_expired");
+			return JSON.parse(payload);
+		} catch (e) {
+			return null;
 		}
 	}
 
-	const fields_to_hide = [
-		"agreement_link",
-		"signature_image",
-		"audit_trail",
-		"customer",
-		"visa_copy",
-		"ead_card",
-		"driving_licence",
-		"old_resume",
-		"certificate_id",
-	];
+	// usage
+	token = new URLSearchParams(window.location.search).get("t");
 
-	fields_to_hide.forEach((fieldname) => {
-		frappe.web_form.set_df_property(fieldname, "hidden", 1);
-	});
+	const data = decodeToken(token);
 
-	// 1. Get PDF path from URL (?file=path/to.pdf)
-	const urlParams = new URLSearchParams(window.location.search);
-
-	// Supported key names
-	const salesOrder = urlParams.get("so");
-	const customerValue = urlParams.get("c");
-	const agreementValue = urlParams.get("agr");
-	const pdfValue = urlParams.get("p");
-	customerEmail = urlParams.get("e");
-
-	// 2. If lead exists → store in webform field "lead"
-	if (customerValue) {
-		frappe.web_form.set_value("customer", customerValue);
+	if (!data) {
+		frappe.msgprint("Invalid link");
+		throw new Error("Invalid token");
+	} else {
+		frappe.web_form.set_value("form_token", token);
+		AUDIT_KEY = `audit_${token}`;
 	}
 
-	if (agreementValue) {
-		frappe.web_form.set_value("agreement_link", agreementValue);
+	// Extract values
+	salesOrder = data.so;
+	agreementValue = data.agr;
+	pdfValue = data.p;
+	isAgreement = data.ia;
+	customerEmail = data.e;
+	customerValue = data.customer;
+
+	// 🔥 EXPIRY CHECK (initial)
+	if (data.exp && isExpired(data.exp)) {
+		blockExpiredUI();
+		throw new Error("Link expired");
+	}
+
+	if (data.exp) {
+		setInterval(() => {
+			if (isExpired(data.exp)) {
+				blockExpiredUI();
+			}
+		}, 60000); // every 1 minute
+	}
+
+	// Wait until Web Form UI loads
+	if (isAgreement) {
+		fetch_server_fingerprint(function (fp) {
+			add_audit_event("form", {
+				event: "form_opened",
+				ip: fp.ip,
+				user_agent: fp.user_agent,
+			});
+		});
 	}
 
 	// sales order is mandatory now
 	if (!salesOrder) {
 		console.error("Sales Order missing in URL");
+
+		if (isAgreement && !agreementValue) {
+			console.error("Agreement missing in URL");
+		}
+
 		return;
 	}
 
-	if (pdfValue) {
+	const fields_to_hide = [
+		"form_token",
+		"visa_copy",
+		"ead_card",
+		"driving_licence",
+		"old_resume",
+	];
+	fields_to_hide.forEach((fieldname) => {
+		frappe.web_form.set_df_property(fieldname, "hidden", 1);
+	});
+
+	// wait until web form fully renders
+	function waitForWebFormRender(callback) {
+		const interval = setInterval(() => {
+			if (
+				frappe.web_form &&
+				frappe.web_form.fields_dict &&
+				Object.keys(frappe.web_form.fields_dict).length > 0
+			) {
+				clearInterval(interval);
+				callback();
+			}
+		}, 100);
+	}
+
+	waitForWebFormRender(async () => {
+		inject_otp_html();
+
+		// [2] Block until our button is actually in the DOM (poll 50 ms)
+		await poll_until(
+			function () {
+				return !!document.getElementById("send-otp-btn");
+			},
+			6000,
+			"[OTP] send-otp-btn never appeared",
+		);
+
+		// [3] Bind all interaction — exactly once, via event delegation
+		bind_otp_events();
+
+		// [4] Ask server what state we're in and render it
+		await restore_otp_state();
+
+		applyCandidateFieldVisibility(salesOrder, isAgreement);
+
+		// SET DEFAULT HERE
+		if (isAgreement && !frappe.web_form.get_value("signature_method")) {
+			frappe.web_form.set_value("signature_method", "Draw");
+		}
+
+		if (_otp_state !== "verified") {
+			if (typeof disable_next_button === "function") disable_next_button();
+		}
+	});
+
+	async function applyCandidateFieldVisibility(salesOrder, isAgreement) {
+		const ALWAYS_VISIBLE_FIELDS = ["authentication_html"];
+
+		const AGREEMENT_FIELDS = [
+			"agreement_html",
+			"signature_method",
+			"signature",
+			"signature_custom_html",
+			"my_electronic_signature_has_same_effect_as_handwritten",
+			"i_consent_to_receive_sign_and_store_documents_electronically",
+			"i_confirm_my_identity_and_signing_this_document_intentionally",
+		];
+		const LDF_FIELDS = ["files_custom_html"];
+		let requiredFields = [];
+		if (!isAgreement) {
+			const res = await getCandidateFieldsFromSalesOrder(salesOrder);
+			candidateFields = res.fields || [];
+			requiredFields = res.required_fields || [];
+			const values = res.values || {};
+			const tableColumns = res.table_columns || {}; // 🔥
+
+			REQUIRED_LEAD_DOCS_CONFIG = {};
+			DOC_FIELDS.forEach((doc_fn) => {
+				if (candidateFields.includes(doc_fn)) {
+					REQUIRED_LEAD_DOCS_CONFIG[doc_fn] = requiredFields.includes(doc_fn) ? 1 : 0;
+				}
+			});
+
+			render_file_upload_buttons();
+
+			apply_prefill(values, tableColumns); // 🔥 pass tableColumns
+		}
+
+		const allowed = new Set(candidateFields.filter((f) => !DOC_FIELDS.has(f)) || []);
+		const visibleFields = new Set();
+		// build section map
+		let sectionMap = {};
+		let currentSection = null;
+
+		frappe.web_form.fields.forEach((field) => {
+			if (!field) return;
+
+			if (field.fieldtype === "Section Break") {
+				currentSection = field.fieldname;
+				sectionMap[currentSection] = [];
+			} else if (currentSection && field.fieldname) {
+				sectionMap[currentSection].push(field.fieldname);
+			}
+		});
+
+		// hide everything
+		frappe.web_form.fields.forEach((field) => {
+			if (!field || !field.fieldname) return;
+
+			if (frappe.web_form.fields_dict[field.fieldname]) {
+				frappe.web_form.set_df_property(field.fieldname, "hidden", 1);
+			}
+		});
+
+		// always visible
+		ALWAYS_VISIBLE_FIELDS.forEach((fieldname) => {
+			if (frappe.web_form.fields_dict[fieldname]) {
+				frappe.web_form.set_df_property(fieldname, "hidden", 0);
+				visibleFields.add(fieldname);
+			}
+		});
+
+		// mode-based logic
+		if (isAgreement) {
+			// agreement only
+			AGREEMENT_FIELDS.forEach((fieldname) => {
+				if (frappe.web_form.fields_dict[fieldname]) {
+					frappe.web_form.set_df_property(fieldname, "hidden", 0);
+					visibleFields.add(fieldname);
+				}
+			});
+		} else {
+			// candidate form
+			allowed.forEach((fieldname) => {
+				if (frappe.web_form.fields_dict[fieldname]) {
+					frappe.web_form.set_df_property(fieldname, "hidden", 0);
+					if (requiredFields.includes(fieldname)) {
+						frappe.web_form.set_df_property(fieldname, "reqd", 1);
+					} else {
+						frappe.web_form.set_df_property(fieldname, "reqd", 0);
+					}
+					visibleFields.add(fieldname);
+				}
+			});
+			LDF_FIELDS.forEach((fieldname) => {
+				if (frappe.web_form.fields_dict[fieldname]) {
+					frappe.web_form.set_df_property(fieldname, "hidden", 0);
+					visibleFields.add(fieldname);
+				}
+			});
+		}
+
+		// show sections only if needed
+		Object.keys(sectionMap).forEach((section) => {
+			const fields = sectionMap[section];
+
+			const hasVisibleField = fields.some((f) => visibleFields.has(f));
+
+			if (hasVisibleField && frappe.web_form.fields_dict[section]) {
+				frappe.web_form.set_df_property(section, "hidden", 0);
+			}
+		});
+	}
+
+	function apply_prefill(values, tableColumns = {}) {
+		if (!values) return;
+
+		Object.keys(values).forEach((fieldname) => {
+			const field = frappe.web_form.fields_dict[fieldname];
+			if (!field) return;
+
+			const value = values[fieldname];
+
+			if (Array.isArray(value)) {
+				const allowedCols = tableColumns[fieldname];
+				const grid = field.grid;
+				if (!grid) return;
+
+				const doc = frappe.web_form.doc;
+
+				// 1️⃣ Build rows directly on doc with all required meta fields
+				doc[fieldname] = value.map((row, idx) => {
+					const cleanRow = allowedCols
+						? Object.fromEntries(
+								Object.entries(row).filter(([k]) => allowedCols.includes(k)),
+							)
+						: { ...row };
+
+					return {
+						...cleanRow,
+						doctype: field.df.options,
+						parentfield: fieldname,
+						parenttype: doc.doctype,
+						idx: idx + 1,
+						// 🔥 Use real name if it came from backend, otherwise mark as local
+						name: row.name || `new-${fieldname}-${idx}`,
+						__islocal: row.name ? 0 : 1,
+					};
+				});
+
+				if (grid.fields_map["name"]) {
+					grid.fields_map["name"].hidden = 1;
+				}
+
+				// 2️⃣ 🔥 Correct refresh API — field.grid.refresh(), NOT frappe.web_form.refresh_field()
+				grid.refresh();
+
+				// 3️⃣ Defer column hiding
+				if (allowedCols) {
+					setTimeout(() => hide_table_columns(fieldname, allowedCols), 0);
+				}
+			} else if (field.df.fieldtype === "Check") {
+				frappe.web_form.set_value(fieldname, value ? 1 : 0);
+			} else {
+				frappe.web_form.set_value(fieldname, value);
+			}
+		});
+	}
+
+	if ((pdfValue, agreementValue)) {
 		// fetch Agreement by Sales Order
 		frappe.call({
 			method: "verp_staffing.crm.api.pdf_to_image.pdf_to_images",
 			args: {
 				path: pdfValue,
+				agreement: agreementValue,
 			},
 			callback: function (res) {
-				if (!res.message || !res.message.length) {
+				if (!res.message) {
 					console.error("PDF to image conversion failed");
 					return;
 				}
-
+				if (res.message.status === "Agreement_signed") {
+					Agreement_signed = true;
+					disable_next_button();
+					return;
+				}
 				let html = "";
 
 				res.message.forEach((img) => {
@@ -162,181 +394,518 @@ frappe.ready(async function () {
 		show_text_button();
 	}
 
-	render_file_upload_buttons();
-
 	// check if already filled
-	if (localStorage.getItem(storage_key) === "1") {
-		// hide form and show message
+	if (localStorage.getItem(token) === "1") {
 		$(".web-form-container").html(`
     <div style="
         padding: clamp(16px, 4vw, 24px);
-        margin: 16px;
+        margin: 16px auto;
         background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
         border: 2px solid #ff6b6b;
         border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(255, 107, 107, 0.1);
         text-align: center;
         max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-        animation: slideIn 0.3s ease-out;
     ">
+        <div style="
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 5px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">
+            <span style="color: white; font-size: 24px;">!</span>
+        </div>
+
+        <h3 style="color: #d63031; margin-bottom: 10px;">
+            Form Already Submitted
+        </h3>
+
+        <p style="color: #636e72; margin-bottom: 16px;">
+            This form has already been submitted. If you need to make changes,
+            please contact support.
+        </p>
+
+        <button id="go_to_dashboard_btn" style="
+            display: inline-block;
+            padding: 10px 18px;
+            background: #d63031;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+        ">
+            Go to Dashboard
+        </button>
+    </div>
+	`);
+		$("#go_to_dashboard_btn").on("click", async function () {
+			if (!customerEmail) {
+				return;
+			}
+
+			try {
+				const r = await frappe.call({
+					method: "verp_staffing.crm.doctype.customer.customer.generate_token",
+					args: { email: customerEmail },
+				});
+
+				const token = r.message;
+
+				if (!token) {
+					frappe.msgprint("Failed to generate token");
+					return;
+				}
+
+				window.location.href = `/customer?t=${encodeURIComponent(token)}`;
+			} catch (e) {
+				console.error(e);
+				frappe.msgprint("Error while redirecting to dashboard");
+			}
+		});
+
+		return;
+	}
+
+	frappe.web_form.on("signature", () => {
+		if (isAgreement) {
+			fetch_server_fingerprint(function (fp) {
+				add_audit_event("signature", {
+					event: "signature_updated",
+					method: "Draw",
+					ip: fp.ip,
+					user_agent: fp.user_agent,
+				});
+			});
+		}
+	});
+
+	if (isAgreement) {
+		CONCERN_FIELDS.forEach(({ fieldname, label }) => {
+			frappe.web_form.on(fieldname, (field, value) => {
+				on_concern_checked(fieldname, label, value);
+			});
+		});
+	}
+});
+
+function isExpired(exp) {
+	if (!exp) return false;
+
+	const now = Math.floor(Date.now() / 1000);
+	return now > exp;
+}
+
+function blockExpiredUI() {
+	// ── Persist state across refreshes using localStorage ────────────────────
+	const STORAGE_KEY = "agreement_link_requested_" + token;
+	const alreadyRequested = localStorage.getItem(STORAGE_KEY) === "true";
+
+	const html = `
+    <div style="
+        position: relative;
+        width: 420px;
+        padding: 48px 40px 40px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 12px 40px rgba(0,0,0,0.08);
+        overflow: hidden;
+        text-align: center;
+        font-family: 'Georgia', serif;
+        margin: 0 auto;
+    ">
+        <div style="
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #c0392b, #e74c3c, #e67e22);
+        "></div>
+
         <div style="
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: clamp(48px, 12vw, 64px);
-            height: clamp(48px, 12vw, 64px);
-            background: #ff6b6b;
+            width: 64px; height: 64px;
             border-radius: 50%;
-            margin-bottom: 16px;
+            background: #fff0ee;
+            border: 1.5px solid #fad4cf;
+            margin-bottom: 24px;
         ">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                stroke="#c0392b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
             </svg>
         </div>
-        
-        <h3 style="
-            margin: 0 0 12px 0;
-            font-size: clamp(18px, 4vw, 24px);
-            font-weight: 600;
-            color: #d63031;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        ">
-            Form Already Submitted
-        </h3>
-        
-        <p style="
-            margin: 0;
-            font-size: clamp(14px, 3vw, 16px);
-            color: #636e72;
-            line-height: 1.6;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        ">
-            You have already submitted this form. If you need to make changes, please contact support.
+
+        <p style="margin: 0 0 6px; font-size: 11px; letter-spacing: 2.5px;
+            text-transform: uppercase; color: #c0392b; font-family: 'Georgia', serif;">
+            Agreement Notice
         </p>
+
+        <h3 style="margin: 0 0 16px; font-size: 24px; font-weight: normal;
+            color: #1a1a1a; letter-spacing: -0.3px; font-family: 'Georgia', serif;">
+            This link has expired
+        </h3>
+
+        <div style="width: 40px; height: 1px; background: #e0dbd5; margin: 0 auto 20px;"></div>
+
+        <p style="margin: 0 0 32px; font-size: 14.5px; line-height: 1.75;
+            color: #666; font-family: 'Georgia', serif;">
+            The agreement link you followed is no longer valid.<br/>
+            Please request a new link to proceed.
+        </p>
+
+        <button
+            id="request-new-link-btn"
+            onclick="handleRequestNewLink(this)"
+            style="
+                padding: 12px 32px;
+                background: #c0392b;
+                color: #fff;
+                border: 1.5px solid #c0392b;
+                border-radius: 3px;
+                font-size: 13px;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                font-family: 'Georgia', serif;
+                cursor: pointer;
+                min-width: 200px;
+            "
+        >
+            Request New Link
+        </button>
+
+        <div id="request-status-msg" style="
+            display: none;
+            margin-top: 16px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'Georgia', serif;
+            line-height: 1.6;
+        "></div>
     </div>
-    
-    <style>
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .web-form-container > div {
-                margin: 12px;
-                border-radius: 8px;
-            }
-        }
-    </style>
-`);
-		return;
+    `;
+
+	frappe.web_form.set_df_property("form_token", "hidden", 1);
+	document.querySelector(".discard-btn")?.remove();
+	document.querySelector(".btn-next")?.remove();
+	document.querySelector(".submit-btn")?.remove();
+
+	const wrapper = frappe.web_form.fields_dict["authentication_html"]?.$wrapper;
+	if (wrapper) {
+		wrapper.html(html);
 	}
 
-	// when submit button is clicked
-	if (frappe.web_form) {
-		frappe.web_form.validate = () => {
-			if (!validate_concerns()) return false;
-			if (!validateRequiredLeadDocuments()) return false;
-
-			let signature_method = frappe.web_form.get_value("signature_method") || [];
-			if (!validate_signature(signature_method)) return false;
-
-			let email = frappe.web_form.get_value("email");
-			if (!validate_email(email, "Email")) return false;
-
-			let personal_phone = frappe.web_form.get_value("personal_phone_number");
-			if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
-
-			let entry_date = frappe.web_form.get_value("entry_date");
-			if (!validate_entry_date(entry_date)) return false;
-
-			let ssn_digit = frappe.web_form.get_value("ssn_digit");
-			if (!validate_ssn_digit(ssn_digit)) return false;
-
-			let lead_course = frappe.web_form.get_value("educational_details") || [];
-			if (!validate_lead_course_table(lead_course)) return false;
-
-			let educational_details = frappe.web_form.get_value("past_experience_table") || [];
-			if (!validate_past_experience_table(educational_details)) return false;
-
-			let address_history = frappe.web_form.get_value("address_history") || [];
-			if (!validate_address_history(address_history)) return false;
-
-			let marketing_phone = frappe.web_form.get_value("number_for_marketing");
-			if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
-
-			return true;
-		};
-
-		// ✅ after_save handles normal first-time insert
-		frappe.web_form.after_save = (doc) => {
-			handle_form_success();
-		};
-
-		// ✅ Patch the submit button to also catch error responses
-		setTimeout(() => {
-			const submitBtn = document.querySelector(".btn-submit");
-			if (submitBtn) {
-				submitBtn.addEventListener("click", () => {
-					// Wait for Frappe's own submit to finish, then check
-					setTimeout(() => {
-						// If localStorage already set, do nothing
-						if (localStorage.getItem(storage_key) === "1") return;
-
-						// Check if error alert appeared with our specific message
-						const alerts = document.querySelectorAll(".modal-body, .msgprint");
-						alerts.forEach((el) => {
-							if (
-								el.innerText &&
-								el.innerText.includes("Record already exists. Updated instead.")
-							) {
-								// Close the error dialog
-								document.querySelector(".btn-modal-close, .modal .close")?.click();
-								handle_form_success();
-							}
-						});
-					}, 2000);
-				});
-			}
-		}, 1000);
+	// ── After DOM is injected, apply already-requested state immediately ─────
+	if (alreadyRequested) {
+		applyAlreadyRequestedState();
 	}
 
-	frappe.web_form.on("signature", () => {
+	// ── Spinner keyframe ──────────────────────────────────────────────────────
+	if (!document.getElementById("spin-keyframe")) {
+		const style = document.createElement("style");
+		style.id = "spin-keyframe";
+		style.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+		document.head.appendChild(style);
+	}
+
+	// ── Apply already-sent state on load (no button, just success message) ───
+	function applyAlreadyRequestedState() {
+		const btn = document.getElementById("request-new-link-btn");
+		const statusEl = document.getElementById("request-status-msg");
+		if (!btn || !statusEl) return;
+
+		btn.disabled = true;
+		btn.style.cursor = "not-allowed";
+		btn.style.background = "#27ae60";
+		btn.style.borderColor = "#27ae60";
+		btn.style.opacity = "1";
+		btn.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Request Sent
+            </span>
+        `;
+		showStatus(
+			statusEl,
+			"✔ Your request has already been sent. You will receive a new agreement link shortly.",
+			"#f0faf4",
+			"#27ae60",
+			"#1e8449",
+		);
+	}
+
+	function showStatus(el, message, bgColor, borderColor, textColor) {
+		el.style.display = "block";
+		el.style.background = bgColor;
+		el.style.border = `1px solid ${borderColor}`;
+		el.style.color = textColor;
+		el.textContent = message;
+	}
+
+	// ── Click handler ─────────────────────────────────────────────────────────
+	window.handleRequestNewLink = function (btn) {
+		if (localStorage.getItem(STORAGE_KEY) === "true") return; // ← double guard
+
+		// Lock immediately
+		btn.disabled = true;
+		btn.style.cursor = "not-allowed";
+		btn.style.opacity = "0.6";
+
+		const statusEl = document.getElementById("request-status-msg");
+
+		btn.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="animation: spin 1s linear infinite;">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                Sending Request…
+            </span>
+        `;
+
+		frappe.call({
+			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.request_new_agreement_link",
+			args: {
+				sales_order: salesOrder,
+				signer_email: customerEmail,
+				agreementValue: agreementValue,
+			},
+			callback: function (response) {
+				const success = response && response.message && response.message.status === "ok";
+
+				if (success) {
+					// ✅ Persist to localStorage so refresh keeps it locked
+					localStorage.setItem(STORAGE_KEY, "true");
+
+					btn.style.background = "#27ae60";
+					btn.style.borderColor = "#27ae60";
+					btn.style.opacity = "1";
+					btn.innerHTML = `
+                        <span style="display:inline-flex;align-items:center;gap:8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Request Sent
+                        </span>
+                    `;
+					showStatus(
+						statusEl,
+						"✔ Your request has been sent. You will receive a new agreement link shortly.",
+						"#f0faf4",
+						"#27ae60",
+						"#1e8449",
+					);
+				} else {
+					btn.style.background = "#95a5a6";
+					btn.style.borderColor = "#95a5a6";
+					btn.style.opacity = "1";
+					btn.innerHTML = "Request Unavailable";
+					showStatus(
+						statusEl,
+						"⚠ Something went wrong. Please contact your agreement administrator directly.",
+						"#fff8f0",
+						"#e67e22",
+						"#a04000",
+					);
+				}
+			},
+			error: function () {
+				btn.style.background = "#95a5a6";
+				btn.style.borderColor = "#95a5a6";
+				btn.style.opacity = "1";
+				btn.innerHTML = "Request Unavailable";
+				showStatus(
+					statusEl,
+					"⚠ Unable to reach the server. Please contact your agreement administrator directly.",
+					"#fff8f0",
+					"#e67e22",
+					"#a04000",
+				);
+			},
+		});
+	};
+}
+
+function shouldValidate(fieldname, candidateFields) {
+	return candidateFields.includes(fieldname);
+}
+
+async function custom_submit_handler() {
+	// ================= AGREEMENT =================
+	if (isAgreement) {
+		let signature_method = frappe.web_form.get_value("signature_method") || [];
+		if (!validate_signature(signature_method)) return false;
+
+		if (!validate_concerns()) return false;
+
 		fetch_server_fingerprint(function (fp) {
-			add_audit_event("signature", {
-				event: "signature_added",
-				method: "Draw",
+			add_audit_event("form", {
+				event: "form_submit",
 				ip: fp.ip,
 				user_agent: fp.user_agent,
 			});
 		});
+
+		const audit = load_audit_trail();
+
+		const r = frappe.call({
+			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.add_audit_log",
+			args: {
+				token,
+				audit,
+			},
+			async: false,
+		});
+	}
+
+	if (!isAgreement) {
+		const needsDocConfig = candidateFields.some((f) => DOC_FIELDS.has(f));
+
+		if (needsDocConfig) {
+			if (!validateRequiredLeadDocuments()) return false;
+		}
+
+		if (shouldValidate("email", candidateFields)) {
+			let email = frappe.web_form.get_value("email");
+			if (email && email.trim() && !validate_email(email.trim(), "Email")) return false;
+		}
+		if (shouldValidate("personal_linkedin", candidateFields)) {
+			let personal_linkedin = frappe.web_form.get_value("personal_linkedin");
+			if (personal_linkedin && personal_linkedin.trim()) {
+				const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
+
+				if (!pattern.test(personal_linkedin.trim())) {
+					frappe.msgprint(__("Please enter a valid LinkedIn profile URL."));
+					return false;
+				}
+			}
+		}
+		if (shouldValidate("marketing_linkedin", candidateFields)) {
+			let marketing_linkedin = frappe.web_form.get_value("marketing_linkedin");
+			if (marketing_linkedin && marketing_linkedin.trim()) {
+				const pattern = /^https?:\/\/(www\.)?linkedin\.com\/.+$/i;
+
+				if (!pattern.test(marketing_linkedin.trim())) {
+					frappe.msgprint(
+						__("Please enter a valid LinkedIn profile URL for marketing."),
+					);
+					return false;
+				}
+			}
+		}
+
+		if (shouldValidate("personal_phone_number", candidateFields)) {
+			let personal_phone = frappe.web_form.get_value("personal_phone_number");
+			if (personal_phone && personal_phone.trim()) {
+				personal_phone = personal_phone.replace(/[()-\s]/g, "");
+				if (!validate_phone(personal_phone, "Personal Phone Number")) return false;
+				frappe.web_form.set_value("personal_phone_number", personal_phone);
+			}
+		}
+
+		if (shouldValidate("entry_date", candidateFields)) {
+			let entry_date = frappe.web_form.get_value("entry_date");
+			if (entry_date && entry_date.trim() && !validate_entry_date(entry_date.trim()))
+				return false;
+		}
+
+		if (shouldValidate("ssn_digit", candidateFields)) {
+			let ssn_digit = String(frappe.web_form.get_value("ssn_digit"));
+			if (ssn_digit && ssn_digit.trim() && !validate_ssn_digit(ssn_digit.trim()))
+				return false;
+		}
+
+		if (shouldValidate("educational_details", candidateFields)) {
+			let lead_course = frappe.web_form.get_value("educational_details") || [];
+			if (!validate_lead_course_table(lead_course)) return false;
+		}
+
+		if (shouldValidate("past_experience_table", candidateFields)) {
+			let exp = frappe.web_form.get_value("past_experience_table") || [];
+			if (!validate_past_experience_table(exp)) return false;
+		}
+
+		if (shouldValidate("address_history", candidateFields)) {
+			let address_history = frappe.web_form.get_value("address_history") || [];
+			if (!validate_address_history(address_history)) return false;
+		}
+
+		if (shouldValidate("number_for_marketing", candidateFields)) {
+			let marketing_phone = frappe.web_form.get_value("number_for_marketing");
+			if (marketing_phone && marketing_phone.trim()) {
+				marketing_phone = marketing_phone.replace(/[()-\s]/g, "");
+				frappe.web_form.set_value("number_for_marketing", marketing_phone);
+				if (!validate_phone(marketing_phone, "Marketing Phone Number")) return false;
+			}
+		}
+	}
+
+	// ================= SUBMIT =================
+	const doc = frappe.web_form.get_values();
+
+	const r = await frappe.call({
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.upsert_lead_detail_form",
+		args: {
+			data: doc,
+			token: token,
+			signature_method: frappe.web_form.get_value("signature_method"),
+		},
 	});
 
-	CONCERN_FIELDS.forEach(({ fieldname, label }) => {
-		frappe.web_form.on(fieldname, (field, value) => {
-			on_concern_checked(fieldname, label, value);
+	if (r.message) {
+		handle_form_success();
+	}
+}
+
+async function getCandidateFieldsFromSalesOrder(salesOrderName) {
+	if (!salesOrderName) {
+		console.error("[Candidate Fields] Missing Sales Order name");
+		if (!salesOrderName) return { fields: [], values: {} };
+	}
+
+	try {
+		const r = await frappe.call({
+			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_candidate_fields_from_sales_order",
+			args: {
+				name: salesOrderName,
+				customer: customerValue,
+			},
 		});
-	});
-});
+
+		// Backend already returns final processed array
+		if (!r || !r.message) {
+			return { fields: [], values: {} };
+		}
+
+		return r.message;
+	} catch (err) {
+		console.error(err);
+		return { fields: [], values: {} };
+	}
+}
 
 function handle_form_success() {
-	if (localStorage.getItem(storage_key) === "1") return;
-
 	localStorage.removeItem(AUDIT_KEY);
-	localStorage.removeItem(AUTH_KEY);
-	localStorage.setItem(storage_key, "1");
+	localStorage.setItem(token, "1");
 
-	$(".web-form-container").html(`
+	const container = document.querySelector(".web-form-container");
+	if (!container) return;
+
+	container.innerHTML = `
         <div style="
             padding: clamp(16px, 4vw, 24px);
             margin: 16px auto;
@@ -346,295 +915,550 @@ function handle_form_success() {
             text-align: center;
             max-width: 600px;
         ">
-            <h3 style="color: #276749;">✅ Form Submitted Successfully!</h3>
-            <p style="color: #2f855a;">Your details have been saved successfully.</p>
+            <h3 style="color: #276749; margin-bottom: 10px;">
+                ✅ Submission Successful
+            </h3>
+
+            <p style="color: #2f855a; margin-bottom: 16px;">
+                Thank you. Your information has been submitted successfully.
+                If any further action is required, our team will contact you.
+            </p>
+
+            <button id="go_to_dashboard_btn" style="
+                display: inline-block;
+                padding: 10px 18px;
+                background: #38a169;
+                color: white;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 500;
+            ">
+                Go to Dashboard
+            </button>
         </div>
-    `);
-}
+    `;
 
-function set_auth_state(state, extra = {}) {
-	const auth = {
-		state,
-		updated_at: new Date().toISOString(),
-		...extra,
-	};
-
-	localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-	apply_auth_ui(auth);
-}
-
-function get_auth_state() {
-	try {
-		return JSON.parse(localStorage.getItem(AUTH_KEY));
-	} catch {
-		return null;
-	}
-}
-
-function apply_auth_ui(auth) {
-	const sendBtn = document.getElementById("send-otp-btn");
-	const otpSection = document.getElementById("otp-section");
-	const otpInput = document.getElementById("otp-input");
-	const verifyBtn = document.getElementById("verify-otp-btn");
-	const statusBox = document.getElementById("otp-status");
-	const timerBox = document.getElementById("otp-timer");
-
-	if (!sendBtn || !otpSection) return;
-
-	/* ---------------- HARD RESET ---------------- */
-	sendBtn.style.display = "inline-block";
-	sendBtn.disabled = false;
-
-	otpSection.style.display = "none";
-	otpInput.value = "";
-	otpInput.disabled = false;
-
-	verifyBtn.style.display = "none";
-
-	timerBox.innerText = "";
-	statusBox.innerText = "";
-	statusBox.className = "";
-
-	/* ---------------- IDLE ---------------- */
-	if (!auth || auth.state === "idle") {
-		sendBtn.innerText = "Send OTP";
-		return;
-	}
-
-	/* ---------------- OTP SENT ---------------- */
-	if (auth.state === "otp_sent") {
-		sendBtn.disabled = true;
-		sendBtn.innerText = "Send OTP";
-
-		otpSection.style.display = "block";
-		verifyBtn.style.display = "inline-block";
-
-		statusBox.innerText = "OTP sent. Please verify.";
-		return;
-	}
-
-	/* ---------------- OTP EXPIRED ---------------- */
-	if (auth.state === "otp_expired") {
-		sendBtn.disabled = false;
-		sendBtn.innerText = "Resend OTP";
-
-		statusBox.innerText = "OTP expired. Please resend.";
-		statusBox.classList.add("text-warning");
-
-		return;
-	}
-
-	/* ---------------- VERIFIED ---------------- */
-	if (auth.state === "verified") {
-		const headerDiv = document.getElementById("otp-header");
-		if (headerDiv) headerDiv.style.display = "none";
-
-		sendBtn.style.display = "none";
-		otpSection.style.display = "block";
-		verifyBtn.style.display = "none";
-
-		otpInput.disabled = true;
-		otpInput.style.display = "none";
-
-		statusBox.innerText = "Email verified successfully.";
-		statusBox.classList.add("text-success");
-		return;
-	}
-}
-
-function start_otp_timer(seconds) {
-	clearInterval(otpTimer);
-
-	const expiresAt = Date.now() + seconds * 1000;
-
-	otpTimer = setInterval(() => {
-		const remaining = Math.floor((expiresAt - Date.now()) / 1000);
-
-		if (remaining <= 0) {
-			clearInterval(otpTimer);
-
-			set_auth_state("otp_expired");
-			add_audit_event("authentication", { event: "otp_expired" });
-
+	$("#go_to_dashboard_btn").on("click", async function () {
+		if (!customerEmail) {
 			return;
 		}
 
-		update_timer_ui(remaining);
-	}, 1000);
-}
-
-function update_timer_ui(seconds) {
-	const min = Math.floor(seconds / 60);
-	const sec = seconds % 60;
-
-	document.getElementById("otp-timer").innerText =
-		`Resend OTP in ${min}:${sec.toString().padStart(2, "0")}`;
-}
-
-/* ---------------- OTP ACTIONS ---------------- */
-
-function send_otp() {
-	if (otpRequestInFlight) return; // HARD LOCK
-
-	const sendBtn = document.getElementById("send-otp-btn");
-	const customer = frappe.web_form.get_value("customer");
-	const email = customerEmail;
-
-	if (!email) {
-		frappe.msgprint("Email is required");
-		return;
-	}
-
-	// 🔒 LOCK IMMEDIATELY
-	otpRequestInFlight = true;
-	sendBtn.disabled = true;
-	sendBtn.innerText = "Sending OTP...";
-
-	frappe.call({
-		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.send_otp",
-		args: { customer, email },
-		callback(r) {
-			set_auth_state("otp_sent", {
-				expires_at: Date.now() + 300000,
+		try {
+			const r = await frappe.call({
+				method: "verp_staffing.crm.doctype.customer.customer.generate_token",
+				args: { email: customerEmail },
 			});
-			start_otp_timer(300);
 
-			add_audit_event("authentication", {
-				event: "otp_sent",
-			});
-		},
-		error() {
-			// 🔓 UNLOCK ONLY ON FAILURE
-			otpRequestInFlight = false;
-			sendBtn.disabled = false;
-			sendBtn.innerText = "Send OTP";
+			const token = r.message;
 
-			frappe.msgprint("Failed to send OTP. Please try again.");
-		},
-		always() {
-			// keep lock if success
-			if (get_auth_state()?.state !== "otp_sent") {
-				otpRequestInFlight = false;
+			if (!token) {
+				frappe.msgprint("Failed to generate token");
+				return;
 			}
-		},
+
+			window.location.href = `/customer?t=${encodeURIComponent(token)}`;
+		} catch (e) {
+			console.error(e);
+			frappe.msgprint("Error while redirecting to dashboard");
+		}
 	});
 }
 
-function verify_otp() {
-	const otp = document.getElementById("otp-input").value;
-	const customer = frappe.web_form.get_value("customer");
+function inject_otp_html() {
+	const wrapper =
+		document.querySelector('[data-fieldname="authentication_html"] .web-form-html') ||
+		document.querySelector('[data-fieldname="authentication_html"]') ||
+		document.getElementById("authentication_html");
 
-	if (!otp || otp.length !== 6) {
-		frappe.msgprint("Enter valid 6 digit OTP");
+	if (wrapper) {
+		wrapper.innerHTML = build_otp_html();
+	} else {
+		frappe.web_form.set_value("authentication_html", build_otp_html());
+	}
+}
+
+function poll_until(predicate, maxMs, errorMsg) {
+	return new Promise(function (resolve) {
+		if (predicate()) {
+			resolve();
+			return;
+		}
+		const deadline = Date.now() + (maxMs || 5000);
+		const iv = setInterval(function () {
+			if (predicate()) {
+				clearInterval(iv);
+				resolve();
+			} else if (Date.now() >= deadline) {
+				clearInterval(iv);
+				if (errorMsg) console.error(errorMsg);
+				resolve(); // resolve anyway — never block the pipeline
+			}
+		}, 50);
+	});
+}
+
+function bind_otp_events() {
+	if (_events_bound) return;
+	_events_bound = true;
+
+	const box = document.getElementById("otp-box");
+	if (!box) {
+		console.error("[OTP] #otp-box not found at bind time");
 		return;
 	}
 
-	frappe.call({
-		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.verify_otp",
-		args: { customer, otp },
-		callback(r) {
-			clearInterval(otpTimer);
-			set_auth_state("verified");
+	// Single delegated listener — survives any child re-renders
+	box.addEventListener("click", function (e) {
+		const id = e.target && e.target.id;
+		if (id === "send-otp-btn") handle_send_otp();
+		else if (id === "verify-otp-btn") handle_verify_otp();
+	});
 
+	box.addEventListener("keydown", function (e) {
+		if (e.target && e.target.id === "otp-input" && e.key === "Enter") {
+			handle_verify_otp();
+		}
+	});
+
+	box.addEventListener("input", function (e) {
+		if (e.target && e.target.id === "otp-input") {
+			e.target.value = e.target.value.replace(/\D/g, "").slice(0, 6);
+		}
+	});
+}
+
+async function restore_otp_state() {
+	const storedKey = sessionStorage.getItem("lead_verification_key_" + token);
+	const data = await safe_frappe_call({
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_otp_status",
+		args: { token: token, verification_key: storedKey },
+	});
+
+	if (!data) {
+		apply_state("idle");
+		return;
+	}
+
+	const state = data.state;
+	const expiresIn = parseInt(data.expires_in, 10) || 0;
+
+	if (state === "verified") {
+		apply_state("verified");
+	} else {
+		if (storedKey) {
+			sessionStorage.removeItem("lead_verification_key_" + token);
+		}
+		if (state === "otp_sent") {
+			if (expiresIn > 5) {
+				apply_state("otp_sent", {
+					seconds: expiresIn,
+					message: "📬 OTP already sent. Check your inbox.",
+					msgColor: "#007bff",
+				});
+			} else if (expiresIn === 0) {
+				apply_state("otp_sent", {
+					seconds: null, // null = skip timer entirely
+					message: "📬 OTP already sent. Enter the code below.",
+					msgColor: "#007bff",
+				});
+			} else {
+				// expiresIn is 1–5 s: about to expire; show expired immediately
+				apply_state("expired");
+			}
+		} else {
+			apply_state("idle");
+		}
+	}
+}
+
+async function handle_send_otp() {
+	// Block re-entry
+	if (_otp_state === "otp_sent" || _otp_state === "sending" || _otp_state === "verified") return;
+
+	if (!customerEmail) {
+		set_status("⚠️ Please fill in your email address first.", "orange");
+		return;
+	}
+
+	apply_state("sending");
+
+	const data = await safe_frappe_call({
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.send_otp",
+		args: { token: token, email: customerEmail },
+	});
+
+	if (!data) {
+		apply_state("idle");
+		set_status("Failed to send OTP. Please try again.", "red");
+		return;
+	}
+
+	let expiresIn = parseInt(data.expires_in, 10);
+	if (!(expiresIn > 0)) expiresIn = 300;
+
+	const isResend = data.status === "already_sent";
+
+	apply_state("otp_sent", {
+		seconds: expiresIn,
+		message: isResend
+			? "📬 OTP already sent. Check your inbox."
+			: "✅ OTP sent! Check your email.",
+		msgColor: isResend ? "#007bff" : "green",
+	});
+}
+
+async function handle_verify_otp() {
+	if (_otp_state !== "otp_sent") return;
+
+	const otpInput = document.getElementById("otp-input");
+	const otp = otpInput ? otpInput.value.trim() : "";
+
+	if (otp.length !== 6) {
+		set_status("⚠️ Please enter the complete 6-digit code.", "orange");
+		return;
+	}
+
+	// Disable verify button during request — stay in otp_sent state
+	const verifyBtn = document.getElementById("verify-otp-btn");
+	if (verifyBtn) {
+		verifyBtn.disabled = true;
+		verifyBtn.textContent = "Verifying…";
+	}
+	set_status("", "");
+
+	const data = await safe_frappe_call({
+		method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.verify_otp",
+		args: { token: token, otp: otp },
+		return_error: true,
+	});
+
+	if (data && data._error) {
+		if (verifyBtn) {
+			verifyBtn.disabled = false;
+			verifyBtn.textContent = "Verify OTP";
+		}
+
+		const msg = (data.message || "").toLowerCase();
+		if (msg.includes("too many failed attempts")) {
+			apply_state("expired");
+			if (otpInput) otpInput.value = "";
+			set_status(
+				"Too many failed attempts.Please try refreshing page and request a new verification code.",
+				"red",
+			);
+		} else if (msg.includes("expired")) {
+			apply_state("expired");
+		} else if (msg.includes("invalid")) {
+			set_status(`Wrong OTP. Please try again.`, "red");
+			if (otpInput) {
+				otpInput.style.borderColor = "#dc3545";
+				setTimeout(function () {
+					otpInput.style.borderColor = "#ddd";
+				}, 1500);
+			}
+		} else {
+			set_status("Verification failed. Please try again.", "red");
+		}
+		return;
+	}
+
+	if (data && data.status === "verified") {
+		if (data.verification_key) {
+			sessionStorage.setItem("lead_verification_key_" + token, data.verification_key);
+		}
+		apply_state("verified");
+
+		if (isAgreement) {
 			add_audit_event("authentication", {
 				event: "otp_verified",
-				ip: r.message.ip || null,
-				user_agent: r.message.user_agent || null,
+				ip: data.ip || null,
+				user_agent: data.user_agent || null,
 			});
-
-			enable_next_button();
-
-			frappe.msgprint("Email verified successfully");
-		},
-	});
+		}
+	} else {
+		if (verifyBtn) {
+			verifyBtn.disabled = false;
+			verifyBtn.textContent = "Verify OTP";
+		}
+		set_status("Unexpected response. Please try again.", "red");
+	}
 }
 
-function init_authentication_html() {
-	const html = `
-    <div id="otp-box" style="border:2px solid #e0e0e0;padding:24px;border-radius:12px;background:#ffffff;max-width:400px;margin:0 auto;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-        <p style="margin:0 0 8px 0;font-weight:600;font-size:18px;color:#333">
-            Email Verification
-        </p>
-        <div id="otp-header">
-        <p style="margin:0 0 20px 0;font-size:14px;color:#666;line-height:1.5">
-            We'll send a verification code to your email address
-        </p>
-        <button type="button" id="send-otp-btn" style="background:#007bff;color:#fff;border:none;padding:14px 24px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;width:100%;transition:background 0.3s;height:48px">
-            Send OTP
-        </button>
-        <div id="otp-section" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid #e0e0e0">
-            <p style="margin:0 0 12px 0;font-size:14px;color:#333;font-weight:500">
-                Enter the 6-digit code sent to your email
-            </p>
-            <input
-                type="text"
-                id="otp-input"
-                placeholder="000000"
-                maxlength="6"
-                style="padding:14px 24px;border:2px solid #ddd;border-radius:6px;font-size:18px;width:calc(100% - 52px);margin-bottom:12px;text-align:center;letter-spacing:8px;font-weight:600;height:48px;box-sizing:border-box"
-            />
-            <button type="button" id="verify-otp-btn" style="background:#28a745;color:#fff;border:none;padding:14px 24px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;width:100%;margin-bottom:16px;transition:background 0.3s;height:48px">
-                Verify OTP
-            </button>
-            <p id="otp-timer" style="margin:0 0 10px 0;font-size:13px;color:#666;text-align:center"></p>
-        </div>
-        </div>
-        <p id="otp-status" style="margin:16px 0 0 0;font-size:14px;text-align:center;padding-top:16px"></p>
-    </div>
-    <style>
-        #send-otp-btn:disabled {
-            background:#6c757d !important;
-            cursor:not-allowed !important;
-            opacity:0.6;
-        }
-        #verify-otp-btn:disabled {
-            background:#6c757d !important;
-            cursor:not-allowed !important;
-            opacity:0.6;
-        }
-        #otp-input:disabled {
-            background:#f5f5f5;
-            cursor:not-allowed;
-            opacity:0.6;
-        }
-        #send-otp-btn:not(:disabled):hover {
-            background:#0056b3;
-        }
-        #verify-otp-btn:not(:disabled):hover {
-            background:#218838;
-        }
-    </style>
-`;
-
-	frappe.web_form.set_value("authentication_html", html);
-
-	// 🔥 THIS IS WHAT YOU WERE MISSING
-	setTimeout(bind_auth_events, 0);
+// Returns: the message object on success, null on error (or error object if return_error:true)
+async function safe_frappe_call(opts) {
+	const return_error = opts.return_error || false;
+	return _frappe_call_with_retry(opts, return_error, 0);
 }
 
-function bind_auth_events() {
+async function _frappe_call_with_retry(opts, return_error, attempt) {
+	const call_opts = {
+		method: opts.method,
+		args: opts.args,
+		freeze: false,
+	};
+
+	let r;
+	try {
+		r = await frappe.call(call_opts);
+	} catch (ex) {
+		// Detect jQuery XHR abort: the thrown value is the XHR object itself,
+		// identifiable by readyState === 0 or statusText === "abort".
+		const isAbort =
+			ex &&
+			typeof ex === "object" &&
+			(ex.readyState === 0 || ex.statusText === "abort" || ex.statusText === "canceled");
+
+		if (isAbort && attempt < 2) {
+			// Wait 300 ms then retry — gives the previous XHR time to settle
+			console.warn(
+				"[OTP] XHR aborted (readyState 0), retrying attempt",
+				attempt + 1,
+				opts.method,
+			);
+			await new Promise(function (res) {
+				setTimeout(res, 300);
+			});
+			return _frappe_call_with_retry(opts, return_error, attempt + 1);
+		}
+
+		// Genuine network failure or max retries exceeded
+		console.error("[OTP] frappe.call failed:", opts.method, ex);
+		if (return_error) return { _error: true, message: "Network error. Please try again." };
+		return null;
+	}
+
+	// Must check BEFORE r.exc — sendmail(now=True) can set r.exc as non-fatal noise
+	if (r && r.message !== undefined && r.message !== null) {
+		if (r.exc) {
+			console.warn("[OTP] r.exc alongside valid r.message — non-fatal, ignoring:", r.exc);
+		}
+		return r.message;
+	}
+
+	// ── FAILURE: r.message absent, r.exc is the real error ───────────────────
+	if (r && r.exc) {
+		const user_msg = parse_frappe_exc(r.exc);
+		console.error("[OTP] server error:", opts.method, r.exc);
+		if (return_error) return { _error: true, message: user_msg };
+		return null;
+	}
+
+	// Empty / completely unexpected shape
+	console.error("[OTP] empty response:", opts.method, r);
+	if (return_error) return { _error: true, message: "Unexpected server response." };
+	return null;
+}
+
+// Extract the human-readable error from a Frappe exc traceback string
+function parse_frappe_exc(exc) {
+	if (!exc) return "server error";
+	const lines = String(exc)
+		.split("\n")
+		.map(function (l) {
+			return l.trim();
+		})
+		.filter(Boolean);
+	const last = lines[lines.length - 1] || "";
+	// Strip the exception class prefix if present
+	const colon = last.indexOf(":");
+	return colon >= 0 ? last.slice(colon + 1).trim() : last;
+}
+
+// ─── State machine (single point of all DOM writes) ───────────────────────────
+function apply_state(state, opts) {
+	opts = opts || {};
+	_otp_state = state;
+
 	const sendBtn = document.getElementById("send-otp-btn");
 	const verifyBtn = document.getElementById("verify-otp-btn");
+	const otpSec = document.getElementById("otp-section");
+	const subtext = document.getElementById("otp-subtext");
+	const otpInput = document.getElementById("otp-input");
+	// If the DOM isn't ready yet (edge case during restore), bail
+	if (!sendBtn || !otpSec) {
+		console.warn("[OTP] apply_state called before DOM ready, state:", state);
+		return;
+	}
+	// ── Hard reset baseline ────────────────────────────────────────────────────
+	stop_timer();
+	otpSec.style.display = "none";
+	sendBtn.disabled = false;
+	sendBtn.style.background = "#007bff";
+	sendBtn.style.color = "#fff";
+	if (Agreement_signed) {
+		otpSec.style.display = "none";
+		sendBtn.style.display = "none";
+		if (subtext) subtext.textContent = "Your agreement has been signed.";
+		set_status("✅ Agreement signed successfully!", "green");
+		return;
+	}
+	if (verifyBtn) verifyBtn.disabled = false;
 
-	if (sendBtn) {
-		sendBtn.addEventListener("click", send_otp);
+	// ── Per-state logic ────────────────────────────────────────────────────────
+	if (state === "idle") {
+		sendBtn.textContent = "Send OTP";
+		if (subtext)
+			subtext.textContent = "We'll send a 6-digit code to your registered email address.";
+		set_status("", "");
+		disable_next_button();
+	} else if (state === "sending") {
+		sendBtn.textContent = "Sending…";
+		sendBtn.disabled = true;
+		sendBtn.style.background = "#6c757d";
+		set_status("", "");
+		disable_next_button();
+	} else if (state === "otp_sent") {
+		otpSec.style.display = "block";
+		sendBtn.textContent = "OTP Sent";
+		sendBtn.disabled = true;
+		sendBtn.style.background = "#6c757d";
+		if (otpInput) {
+			otpInput.value = "";
+			otpInput.style.borderColor = "#ddd";
+		}
+		if (verifyBtn) {
+			verifyBtn.disabled = false;
+			verifyBtn.textContent = "Verify OTP";
+		}
+		set_status(opts.message || "✅ OTP sent! Check your email.", opts.msgColor || "green");
+		// Start timer only if we have a valid positive seconds value
+		if (opts.seconds && opts.seconds > 0) {
+			start_timer(opts.seconds);
+		}
+		disable_next_button();
+	} else if (state === "verified") {
+		otpSec.style.display = "none";
+		sendBtn.style.display = "none";
+		if (subtext) subtext.textContent = "Your email has been verified.";
+		set_status("✅ Email verified successfully!", "green");
+		enable_next_button();
+	} else if (state === "expired") {
+		otpSec.style.display = "none";
+		sendBtn.textContent = "Resend OTP";
+		sendBtn.disabled = false;
+		sendBtn.style.background = "#fd7e14";
+		if (otpInput) otpInput.value = "";
+		set_status("⏰ OTP expired. Request a new one.", "red");
+	}
+}
+
+function start_timer(seconds) {
+	stop_timer();
+	let remaining = Math.max(parseInt(seconds, 10) || 1, 1);
+
+	function tick() {
+		// Always query live — never hold a stale reference
+		const timerEl = document.getElementById("otp-timer");
+		if (!timerEl) {
+			stop_timer();
+			return;
+		}
+
+		if (remaining <= 0) {
+			stop_timer();
+			timerEl.textContent = "";
+			if (_otp_state === "otp_sent") apply_state("expired");
+			return;
+		}
+
+		const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+		const s = String(remaining % 60).padStart(2, "0");
+		timerEl.textContent = "Code expires in " + m + ":" + s;
+		remaining--;
 	}
 
-	if (verifyBtn) {
-		verifyBtn.addEventListener("click", verify_otp);
+	tick();
+	_timer_iv = setInterval(tick, 1000);
+}
+
+function stop_timer() {
+	if (_timer_iv) {
+		clearInterval(_timer_iv);
+		_timer_iv = null;
 	}
+}
+
+function set_status(msg, color) {
+	const el = document.getElementById("otp-status");
+	if (!el) return;
+	el.textContent = msg || "";
+	el.style.color = color || "#333";
+}
+
+function build_otp_html() {
+	// customerEmail is decoded from the URL token before this function runs
+	const email = typeof customerEmail !== "undefined" && customerEmail ? customerEmail : "";
+	const emailLine = email
+		? '<p style="margin:0 0 16px 0;font-size:13px;color:#333;line-height:1.5;">' +
+			'Email: <strong style="color:#1a1a2e;">' +
+			email +
+			"</strong></p>"
+		: "";
+
+	return [
+		'<div id="otp-box" style="border:2px solid #e0e0e0;padding:24px;border-radius:12px;',
+		"background:#ffffff;max-width:420px;margin:0 auto;",
+		'box-shadow:0 2px 12px rgba(0,0,0,0.08);font-family:inherit;">',
+
+		'<p style="margin:0 0 4px 0;font-weight:700;font-size:17px;color:#1a1a2e;">',
+		"Email Verification</p>",
+
+		'<p id="otp-subtext" style="margin:0 0 12px 0;font-size:13px;color:#666;line-height:1.5;">',
+		"We'll send a 6-digit verification code to your email address.</p>",
+
+		emailLine,
+
+		'<button type="button" id="send-otp-btn" style="',
+		"background:#007bff;color:#fff;border:none;padding:0 24px;border-radius:6px;",
+		"font-size:14px;font-weight:600;cursor:pointer;width:100%;height:46px;transition:background 0.25s;",
+		'">Send OTP</button>',
+
+		'<div id="otp-section" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid #ebebeb;">',
+		'<p style="margin:0 0 10px 0;font-size:13px;color:#333;font-weight:500;">',
+		"Enter the 6-digit code sent to your email:</p>",
+
+		'<input type="text" id="otp-input" placeholder="0 0 0 0 0 0" maxlength="6"',
+		' inputmode="numeric" autocomplete="one-time-code"',
+		' style="display:block;padding:12px 16px;border:2px solid #ddd;border-radius:6px;',
+		"font-size:22px;width:100%;margin-bottom:12px;text-align:center;letter-spacing:10px;",
+		'font-weight:700;height:52px;box-sizing:border-box;transition:border-color 0.2s;" />',
+
+		'<button type="button" id="verify-otp-btn" style="',
+		"background:#28a745;color:#fff;border:none;padding:0 24px;border-radius:6px;",
+		"font-size:14px;font-weight:600;cursor:pointer;width:100%;height:46px;",
+		'margin-bottom:14px;transition:background 0.25s;">Verify OTP</button>',
+
+		'<p id="otp-timer" style="margin:0;font-size:13px;color:#888;text-align:center;"></p>',
+		"</div>",
+
+		'<p id="otp-status" style="margin:14px 0 0 0;font-size:13px;text-align:center;min-height:20px;"></p>',
+		"</div>",
+
+		"<style>",
+		"#send-otp-btn:disabled,#verify-otp-btn:disabled{background:#adb5bd!important;cursor:not-allowed!important;}",
+		"#otp-input:disabled{background:#f5f5f5;cursor:not-allowed;color:#aaa;}",
+		"#send-otp-btn:not(:disabled):hover{background:#0056b3;}",
+		"#verify-otp-btn:not(:disabled):hover{background:#218838;}",
+		"#otp-input:focus{outline:none;border-color:#007bff;}",
+		"</style>",
+	].join("");
 }
 
 window.addEventListener("beforeunload", () => {
 	// reset signature logs on refresh
-	let audit = load_audit_trail();
-	audit["signature update logs"] = [];
-	save_audit_trail(audit);
+	if (isAgreement) {
+		let audit = load_audit_trail();
+		audit["signature update logs"] = [];
+		save_audit_trail(audit);
+	}
 });
 
 function validate_email(email, label) {
+	if (!email || !email.trim()) {
+		return true;
+	}
 	const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	if (!email_regex.test(email)) {
+	if (!email_regex.test(email.trim())) {
 		frappe.msgprint(`${label} is not a valid email address`);
 		return false;
 	}
@@ -642,15 +1466,12 @@ function validate_email(email, label) {
 }
 
 function validate_phone(phone, label) {
-	if (!phone) {
-		frappe.msgprint(`${label} is required`);
-		return false;
+	if (!phone || !phone.trim()) {
+		return true;
 	}
 
 	phone = phone.trim();
-
-	const phone_regex = /^[+]\d{10,15}$/;
-
+	const phone_regex = /^\+[1-9]\d{10}$/;
 	if (!phone_regex.test(phone)) {
 		frappe.msgprint(`${label} must be in format +countrycode followed by numbers`);
 		return false;
@@ -753,7 +1574,11 @@ function validate_address_history(table) {
 }
 
 function validate_entry_date(value) {
-	if (value && !is_valid_mm_yyyy(value)) {
+	if (!value || !value.trim()) {
+		return true;
+	}
+
+	if (!is_valid_mm_yyyy(value.trim())) {
 		frappe.msgprint("Entry Date Into USA/Canada must be in MM-YYYY format.");
 		return false;
 	}
@@ -761,47 +1586,62 @@ function validate_entry_date(value) {
 }
 
 function validate_ssn_digit(value) {
-	if (value && String(value).length !== 4) {
-		frappe.msgprint("SSN must contain only last 4 digits.");
+	if (!value || !value.trim()) {
+		return true;
+	}
+
+	if (!/^\d{4}$/.test(value.trim())) {
+		frappe.msgprint("SSN must be exactly 4 digits.");
 		return false;
 	}
+
 	return true;
 }
 
-function validate_signature(method) {
-	if (method === "Upload") {
-		let signature_image = frappe.web_form.get_value("signature_image");
-
-		if (!signature_image) {
-			frappe.msgprint("Please upload your signature image.");
-			return false;
-		}
-		return true;
-	}
-
-	if (method === "Text") {
-		let signature_image = frappe.web_form.get_value("signature_image");
-
-		if (!signature_image) {
-			frappe.msgprint("Please provide your Text signature image.");
-			return false;
-		}
-		return true;
-	}
-
+async function get_signature_value(method) {
 	if (method === "Draw") {
-		let signature = frappe.web_form.get_value("signature");
-
-		if (!signature) {
-			frappe.msgprint("Please draw your signature.");
-			return false;
-		}
-		return true;
+		return frappe.web_form.get_value("signature") || null;
 	}
 
-	// If no valid method selected
-	frappe.msgprint("Please select a signature method.");
-	return false;
+	// Upload/Text → fetch from server (once)
+	if (SIGNATURE_CACHE !== null) {
+		return SIGNATURE_CACHE;
+	}
+
+	try {
+		const r = await frappe.call({
+			method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_signature",
+			args: { token },
+		});
+
+		// ✅ r.message is now a plain string, not an object
+		const value = r.message || null;
+		SIGNATURE_CACHE = value;
+		return value;
+	} catch (e) {
+		console.error("Signature fetch failed", e);
+		return null;
+	}
+}
+
+async function validate_signature(method) {
+	if (!method) {
+		frappe.msgprint("Please select a signature method.");
+		return false;
+	}
+
+	const value = await get_signature_value(method);
+
+	if (!value) {
+		if (method === "Draw") {
+			frappe.msgprint("Please draw your signature.");
+		} else {
+			frappe.msgprint("Please upload or provide your signature.");
+		}
+		return false;
+	}
+
+	return true;
 }
 
 function load_audit_trail() {
@@ -864,7 +1704,6 @@ function add_audit_event(type, data = {}) {
 	}
 
 	save_audit_trail(audit);
-	frappe.web_form.set_value("audit_trail", JSON.stringify(audit));
 }
 
 function fetch_server_fingerprint(callback) {
@@ -882,16 +1721,18 @@ function on_concern_checked(fieldname, label, newValue) {
 	if (newValue === 1) {
 		// only false -> true
 
-		fetch_server_fingerprint(function (fp) {
-			add_audit_event("concern", {
-				event: "concern accepted",
-				fieldname: fieldname,
-				label: label,
-				accepted: true,
-				ip_address: fp.ip,
-				user_agent: fp.user_agent,
+		if (isAgreement) {
+			fetch_server_fingerprint(function (fp) {
+				add_audit_event("concern", {
+					event: "concern accepted",
+					fieldname: fieldname,
+					label: label,
+					accepted: true,
+					ip_address: fp.ip,
+					user_agent: fp.user_agent,
+				});
 			});
-		});
+		}
 	}
 }
 
@@ -1111,23 +1952,31 @@ function generate_signature_image(text, font, dialog) {
 			filename: "signature.png",
 			filedata: base64_img,
 		},
-		callback: function (r) {
+		callback: async function (r) {
 			if (r.message && r.message.success) {
-				fetch_server_fingerprint(function (fp) {
-					add_audit_event("signature", {
-						event: "signature_added",
-						method: "Text",
-						ip: fp.ip,
-						user_agent: fp.user_agent,
+				if (isAgreement) {
+					fetch_server_fingerprint(function (fp) {
+						add_audit_event("signature", {
+							event: "signature_added",
+							method: "Text",
+							ip: fp.ip,
+							user_agent: fp.user_agent,
+						});
 					});
-				});
+				}
 
 				frappe.msgprint("Signature uploaded successfully.");
 				dialog.hide();
 
 				frappe.web_form.set_df_property("signature_method", "read_only", 1);
 
-				frappe.web_form.set_value("signature_image", r.message.file_name);
+				await frappe.call({
+					method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.attach_signature",
+					args: {
+						token: token,
+						file_name: r.message.file_name,
+					},
+				});
 
 				frappe.web_form.set_value(
 					"signature_custom_html",
@@ -1263,20 +2112,28 @@ function upload_signature_file(file, dialog) {
 				filename: file.name,
 				filedata: base64_img,
 			},
-			callback: function (r) {
+			callback: async function (r) {
 				if (r.message && r.message.success) {
-					fetch_server_fingerprint(function (fp) {
-						add_audit_event("signature", {
-							event: "signature_added",
-							method: "Upload",
-							ip: fp.ip,
-							user_agent: fp.user_agent,
+					if (isAgreement) {
+						fetch_server_fingerprint(function (fp) {
+							add_audit_event("signature", {
+								event: "signature_added",
+								method: "Upload",
+								ip: fp.ip,
+								user_agent: fp.user_agent,
+							});
 						});
-					});
+					}
 
 					frappe.msgprint("Image Uploaded Successfully!");
 					dialog.hide();
-					frappe.web_form.set_value("signature_image", r.message.file_name);
+					await frappe.call({
+						method: "verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.attach_signature",
+						args: {
+							token: token,
+							file_name: r.message.file_name,
+						},
+					});
 					frappe.web_form.set_df_property("signature_method", "read_only", 1);
 
 					// Set image in HTML field
@@ -1300,14 +2157,6 @@ let label_map = {
 	old_resume: "Old Resume",
 };
 
-async function initRequiredLeadDocsConfig() {
-	const r = await frappe.call({
-		method: "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
-	});
-
-	REQUIRED_LEAD_DOCS_CONFIG = r.message || {};
-}
-
 function validate_concerns() {
 	for (let concern of CONCERN_FIELDS) {
 		const value = frappe.web_form.get_value(concern.fieldname);
@@ -1325,11 +2174,10 @@ function validate_concerns() {
 }
 
 function validateRequiredLeadDocuments() {
-	if (!REQUIRED_LEAD_DOCS_CONFIG || Object.keys(REQUIRED_LEAD_DOCS_CONFIG).length === 0) {
+	if (!REQUIRED_LEAD_DOCS_CONFIG) {
 		frappe.msgprint({
-			title: "configuration Error",
-			message:
-				"Required Lead Documents configuration is missing in site config. Please contact support.",
+			title: "Configuration Error",
+			message: "ERP Configuration is not loaded. Please contact support.",
 			indicator: "red",
 		});
 		return false; // nothing to validate
@@ -1359,18 +2207,19 @@ function validateRequiredLeadDocuments() {
 }
 
 async function render_file_upload_buttons() {
+	if (!REQUIRED_LEAD_DOCS_CONFIG) return;
+
 	let html = "";
 
 	Object.entries(REQUIRED_LEAD_DOCS_CONFIG).forEach(([fieldname, is_required]) => {
 		const label = label_map[fieldname] || fieldname;
-
 		html += `
           <div id="${fieldname}_container" style="margin-bottom:15px;">
             <button class="btn btn-primary file-btn" data-field="${fieldname}">
               Upload ${label}
             </button>
             ${
-				is_required
+				!!is_required
 					? `<p style="color:red;font-size:12px;margin-top:5px;">
                     * ${label} is compulsory
                   </p>`
@@ -1564,11 +2413,17 @@ function add_file_preview(field, url, name) {
 
 // disable next button
 function disable_next_button() {
-	const nextBtn = document.querySelector(".btn-next");
-	if (!nextBtn) return;
+	setTimeout(() => {
+		const nextBtn = document.querySelector(".btn-next");
 
-	nextBtn.disabled = true;
-	nextBtn.classList.add("btn-disabled");
+		if (!nextBtn) {
+			console.warn("Next button not found");
+			return;
+		}
+
+		nextBtn.disabled = true;
+		nextBtn.classList.add("btn-disabled");
+	}, 100);
 }
 
 // enable next button

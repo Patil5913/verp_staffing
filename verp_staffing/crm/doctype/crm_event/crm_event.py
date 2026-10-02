@@ -13,9 +13,12 @@ class CRMEvent(Document):
     def after_insert(doc):
         send_assignment_notification(doc)
 
-    def on_update(doc):
-        if doc.assigned_to and doc.has_value_changed("assigned_to"):
-            send_assignment_notification(doc)
+    def on_update(self):
+        if self.creation == self.modified:
+            return
+
+        if self.assigned_to and self.has_value_changed("assigned_to"):
+            send_assignment_notification(self)
 
 
 def send_assignment_notification(doc):

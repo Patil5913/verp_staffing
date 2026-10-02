@@ -1,0 +1,81 @@
+{
+  "country_code": "in",
+  "name": "India - Chart of Accounts",
+  "tree": {
+    "Application of Funds (Assets)": {
+      "Current Assets": {
+        "Accounts Receivable": {
+          "Debtors": {
+            "account_type": "Receivable"
+          }
+        },
+        "Bank Accounts": {
+          "account_type": "Bank",
+          "is_group": 1
+        },
+        "Cash In Hand": {
+          "Cash": {
+            "account_type": "Cash"
+          },
+          "account_type": "Cash"
+        }
+      },
+      "root_type": "Asset"
+    },
+
+    "Expenses": {
+      "Direct Expenses": {
+        "Cost of Goods and Service Sales": {
+          "account_type": "Expense Account"
+        }
+      },
+      "Indirect Expenses": {
+        "Salary": {
+          "account_type": "Expense Account"
+        },
+        "Office Expenses": {
+          "account_type": "Expense Account"
+        },
+        "Marketing Expenses": {
+          "account_type": "Expense Account"
+        },
+        "Discount": {
+          "account_type": "Expense Account"
+        },
+        "Rounded Off": {
+          "account_type": "Round Off"
+        }
+      },
+      "root_type": "Expense"
+    },
+
+    "Income": {
+      "Direct Income": {
+        "Sales": {
+          "account_type": "Income Account"
+        },
+        "account_type": "Income Account"
+      },
+      "root_type": "Income"
+    },
+
+    "Source of Funds (Liabilities)": {
+      "Current Liabilities": {
+        "Accounts Payable": {
+          "Creditors": {
+            "account_type": "Payable"
+          }
+        },
+        "Duties and Taxes": {
+          "GST": {
+            "account_type": "Tax"
+          },
+          "TDS": {
+            "account_type": "Tax"
+          }
+        }
+      },
+      "root_type": "Liability"
+    }
+  }
+}

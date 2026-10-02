@@ -1,14 +1,19 @@
 import frappe
+from frappe import _
 
 @frappe.whitelist(allow_guest=True)
-def pdf_to_images(path):
+def pdf_to_images(path, agreement=None):
     import fitz  # PyMuPDF
     import base64
     import os
 
     if not path:
         frappe.throw("PDF path not provided")
-
+    if not agreement:
+        frappe.throw("Agreement not provided")
+    agreement_status = frappe.db.get_value("Agreement", agreement, "status", as_dict=True)
+    if agreement_status.status == "Agreement signed":
+        return {"status": "Agreement_signed"}
     # strip leading slash and `files/`
     if path.startswith("/files/"):
         filename = path.replace("/files/", "", 1)

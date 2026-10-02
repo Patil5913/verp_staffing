@@ -1,0 +1,364 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-11 15:37:32.755850",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "immediate_triggerer_configuration_section",
+  "send_agreement_immediatly_after_sales_order_creation",
+  "expiry_hours_of_agreement",
+  "column_break_zgmd",
+  "send_candidate_form_immediatly_after_sales_order_creation",
+  "interview_configuration_section",
+  "default_interview_status",
+  "section_break_oaag",
+  "table_tpxt",
+  "section_break_ebvz",
+  "email_configuration",
+  "email_configuration_detail",
+  "section_break_zpyo",
+  "default_company",
+  "social_links_configuration_section",
+  "linkedin",
+  "facebook",
+  "column_break_ymvf",
+  "twitter_x",
+  "youtube",
+  "sample_data_section",
+  "sample_data_log",
+  "is_sample_data_removed",
+  "candidate_form_fields_tab",
+  "select_candidate_details_form_fields_html",
+  "candidate_details_form_fields",
+  "department_display_fields_tab",
+  "select_department_display_form_fields_html",
+  "department_display_form_fields",
+  "department_access_fields_tab",
+  "department_access_fields",
+  "department_access_form_fields",
+  "website_settings_tab",
+  "website_settings"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "send_agreement_immediatly_after_sales_order_creation",
+   "fieldtype": "Check",
+   "label": "Send agreement immediatly after sales order creation"
+  },
+  {
+   "fieldname": "column_break_zgmd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_candidate_form_immediatly_after_sales_order_creation",
+   "fieldtype": "Check",
+   "label": "Send candidate form immediatly after sales order creation"
+  },
+  {
+   "fieldname": "immediate_triggerer_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Immediate Triggerer Configuration"
+  },
+  {
+   "fieldname": "candidate_form_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Candidate Form Fields"
+  },
+  {
+   "fieldname": "select_candidate_details_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "candidate_details_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Candidate Details Form Fields"
+  },
+  {
+   "fieldname": "select_department_display_form_fields_html",
+   "fieldtype": "HTML",
+   "label": "Select Department Display Form Fields"
+  },
+  {
+   "fieldname": "department_display_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Department Display Form Fields"
+  },
+  {
+   "fieldname": "department_display_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Department Display Fields"
+  },
+  {
+   "fieldname": "department_access_fields_tab",
+   "fieldtype": "Tab Break",
+   "label": "Department Access Fields"
+  },
+  {
+   "fieldname": "department_access_fields",
+   "fieldtype": "HTML",
+   "label": "Department Access Fields"
+  },
+  {
+   "fieldname": "department_access_form_fields",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Department Access Form Fields"
+  },
+  {
+   "default": "48:00",
+   "description": "Enter duration in HH:MM format (00:01 to 23:59). Example: 02:30 = 2 hours 30 minutes",
+   "fieldname": "expiry_hours_of_agreement",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Agreement Expiry Duration",
+   "reqd": 1
+  },
+  {
+   "fieldname": "interview_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Interview Configuration"
+  },
+  {
+   "bold": 1,
+   "fieldname": "default_interview_status",
+   "fieldtype": "Link",
+   "label": "Select default interview status ",
+   "options": "Interview Status",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_oaag",
+   "fieldtype": "Section Break",
+   "label": "Permission Request Configuration"
+  },
+  {
+   "fieldname": "table_tpxt",
+   "fieldtype": "Table",
+   "options": "Permission Request Configuration"
+  },
+  {
+   "fieldname": "section_break_ebvz",
+   "fieldtype": "Section Break",
+   "label": "Email Usage Configuration"
+  },
+  {
+   "fieldname": "email_configuration",
+   "fieldtype": "HTML",
+   "label": "Email Configuration"
+  },
+  {
+   "fieldname": "email_configuration_detail",
+   "fieldtype": "JSON",
+   "hidden": 1,
+   "label": "Email Configuration detail"
+  },
+  {
+   "description": "Add social links of company which displays in emails ",
+   "fieldname": "social_links_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Social Links Configuration"
+  },
+  {
+   "description": "please paste full link starting with https://",
+   "fieldname": "linkedin",
+   "fieldtype": "Data",
+   "label": "LinkedIn"
+  },
+  {
+   "description": "please paste full link starting with https://",
+   "fieldname": "facebook",
+   "fieldtype": "Data",
+   "label": "Facebook"
+  },
+  {
+   "description": "please paste full link starting with https://",
+   "fieldname": "twitter_x",
+   "fieldtype": "Data",
+   "label": "Twitter (X)"
+  },
+  {
+   "description": "please paste full link starting with https://",
+   "fieldname": "youtube",
+   "fieldtype": "Data",
+   "label": "YouTube"
+  },
+  {
+   "fieldname": "column_break_ymvf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_zpyo",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sample_data_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Sample Data"
+  },
+  {
+   "description": "Internal log of every record inserted by the 'Add sample data' setup-wizard step, keyed by doctype. Used by the 'Remove Sample Data' action - not meant to be edited by hand.",
+   "fieldname": "sample_data_log",
+   "fieldtype": "Long Text",
+   "label": "Sample Data Log",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Set automatically once 'Remove Sample Data' finishes with no errors. Read-only.",
+   "fieldname": "is_sample_data_removed",
+   "fieldtype": "Check",
+   "label": "Is Sample Data Removed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "website_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Website Settings"
+  },
+  {
+   "fieldname": "website_settings",
+   "fieldtype": "HTML"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-11 18:03:58.430074",
+ "modified_by": "Administrator",
+ "module": "Settings",
+ "name": "ERP Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "role": "Lead Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Manager"
+  },
+  {
+   "read": 1,
+   "role": "Lead Team Lead"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Lead Person"
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales Person"
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager"
+  },
+  {
+   "read": 1,
+   "role": "Recruiter"
+  },
+  {
+   "read": 1,
+   "role": "Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person"
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator"
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager"
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager"
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person"
+  },
+  {
+   "read": 1,
+   "role": "HR"
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "read": 1,
+   "role": "CR"
+  },
+  {
+   "read": 1,
+   "role": "Technical Person"
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor"
+  },
+  {
+   "read": 1,
+   "role": "Account Person"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

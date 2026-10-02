@@ -1,105 +1,516 @@
 import frappe
-from frappe.desk.reportview import get as original_get
+from frappe.query_builder import DocType
+from verp_staffing.accounts.utils.sales_order_status import _get_department_map
+
 
 # get employee name from user
 def get_employee_name(user):
-    return frappe.db.get_value(
-        "Employee",
-        {"user": user},
-        "name",
-    )
+    try:
+        return frappe.db.get_value("Employee", {"user": user}, "name")
+    except Exception:
+        return None
+
+
+# get user from employee
+def get_user(employee_name):
+    if not employee_name:
+        return None
+
+    try:
+        user = frappe.db.get_value("Employee", employee_name, "user")
+        if user and frappe.db.exists("User", user):
+            return user
+    except Exception:
+        return None
+
+    return None
 
 
 # function to get all subordinate Employee names under root_employee
-def get_all_subordinates(
-    root_employee: str,
-    department: str | None = None
-) -> set[str]:
-    
-    collected = set()
-    stack = [root_employee]
+def get_all_subordinates(root_employee: str, department: str | None = None) -> set[str]:
+    query = """
+        SELECT DISTINCT parent, assigned_to
+        FROM `tabEmployee Assignment Detail`
+        WHERE assigned_to IS NOT NULL
+    """
 
+    params = {}
+
+    if department:
+        query += " AND department = %(department)s"
+        params["department"] = department
+
+    rows = frappe.db.sql(
+        query,
+        params,
+        as_dict=True,
+    )
+
+    # reverse map: manager → [direct subordinates]
+    reverse_map: dict[str, list[str]] = {}
+    for r in rows:
+        reverse_map.setdefault(r.assigned_to, []).append(r.parent)
+
+    # BFS in Python — zero DB calls
+    collected: set[str] = set()
+    stack = [root_employee]
     while stack:
         current = stack.pop()
-
-        filters = {"assigned_to": current}
-        if department:
-            filters["department"] = department
-        
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
+        for child in reverse_map.get(current, []):
+            if child not in collected:
+                collected.add(child)
+                stack.append(child)
 
     return collected
+
+
+@frappe.whitelist()
+def get_assign_to_by_service(doctype, txt, searchfield, start, page_len, filters):
+    """get service key from stag json and get department"""
+    service = filters.get("service")
+    customer = filters.get("customer")
+    stage = frappe.get_value("Customer", customer, "stage")
+    stage = json.loads(stage) if stage else {}
+    service_key = service.strip().lower()
+    department = stage[service_key][0].get("department")
+
+    return get_subordinate_employees(
+        doctype, txt, searchfield, start, page_len, filters={"department": department}
+    )
 
 
 # function to filter out only subordinate employees
 @frappe.whitelist()
 def get_subordinate_employees(doctype, txt, searchfield, start, page_len, filters):
     user = frappe.session.user
-
     department = filters.get("department") if filters else None
 
-    if user == "Administrator":
-        if department:
-            return frappe.db.sql(
-                """
-                SELECT DISTINCT e.name
-                FROM `tabEmployee` e
-                INNER JOIN `tabEmployee Assignment Detail` d
-                    ON d.parent = e.name
-                WHERE d.department = %s
-                AND e.name LIKE %s
-                ORDER BY e.name
-                LIMIT %s OFFSET %s
-                """,
-                (department, f"%{txt}%", page_len, start),
-            )
+    allowed = get_allowed_employees(user, department)
 
-        return frappe.db.sql(
-            """
-            SELECT name
-            FROM `tabEmployee`
-            WHERE name LIKE %s
-            ORDER BY name
-            LIMIT %s OFFSET %s
-            """,
-            (f"%{txt}%", page_len, start),
-        )
+    if not allowed:
+        return []
+
+    Employee = DocType("Employee")
+
+    return (
+        frappe.qb.from_(Employee)
+        .select(Employee.name)
+        .where(Employee.name.isin(allowed))
+        .where(Employee.name.like(f"%{txt}%"))
+        .orderby(Employee.name)
+        .limit(page_len)
+        .offset(start)
+        .run()
+    )
+
+
+def get_allowed_employees(user, department=None):
+    """
+    Returns employees user is allowed to see.
+    """
+
+    if user == "Administrator":
+        # admin sees all (optionally filtered by department)
+        if department:
+            return set(
+                frappe.get_all(
+                    "Employee Assignment Detail",
+                    filters={"department": department},
+                    pluck="parent",
+                    distinct=True,
+                )
+            )
+        return set(frappe.get_all("Employee", pluck="name"))
 
     employee = get_employee_name(user)
     if not employee:
-        return []
+        return set()
+
+    return get_reporting_subtree(employee, department)
 
 
-    allowed_set = get_all_subordinates(employee, department)
+def get_reporting_subtree(root_employee, department=None):
+    """
+    Returns root employee + all downstream employees
+    using Employee Assignment Detail hierarchy.
+    """
+    cache = frappe.cache()
+    cache_key = f"emp_tree:{root_employee}:{department or 'all'}"
 
-    if not allowed_set:
-        return []
-    
-    allowed = list(allowed_set)  # THIS is the missing piece
+    cached = cache.get_value(cache_key)
+    if cached:
+        return set(cached)
 
-    placeholders = ", ".join(["%s"] * len(allowed))
-
-    return frappe.db.sql(
-        f"""
-        SELECT name
-        FROM `tabEmployee`
-        WHERE name IN ({placeholders})
-          AND name LIKE %s
-        ORDER BY name
-        LIMIT %s OFFSET %s
-        """,
-        allowed + [f"%{txt}%", page_len, start]
+    assignments = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"department": department} if department else {},
+        fields=["parent", "assigned_to"],
     )
+
+    children_map = {}
+
+    for row in assignments:
+        children_map.setdefault(row.assigned_to, []).append(row.parent)
+
+    visited = set()
+    stack = [root_employee]
+
+    while stack:
+        emp = stack.pop()
+        if emp in visited:
+            continue
+
+        visited.add(emp)
+        stack.extend(children_map.get(emp, []))
+
+    result = list(visited)
+
+    cache.set_value(cache_key, result, expires_in_sec=600)
+
+    return visited
+
+
+@frappe.whitelist()
+def get_all_superiors_with_roles_cached(employee: str, department: str | None = None):
+    cache = frappe.cache()
+    key = f"superiors:{employee}:{department}"
+
+    cached = cache.get_value(key)
+    if cached:
+        return cached
+
+    query = """
+        SELECT
+            ead.parent,
+            ead.assigned_to,
+            e.user
+        FROM `tabEmployee Assignment Detail` ead
+        LEFT JOIN `tabEmployee` e
+            ON e.name = ead.assigned_to
+        WHERE ead.assigned_to IS NOT NULL
+    """
+
+    params = {}
+
+    if department:
+        query += " AND ead.department = %(department)s"
+        params["department"] = department
+
+    # Query 1: Fetch assignment hierarchy and linked users
+    rows = frappe.db.sql(
+        query,
+        params,
+        as_dict=True,
+    )
+
+    # employee -> (manager_employee, manager_user)
+    chain_map = {row.parent: (row.assigned_to, row.user) for row in rows}
+
+    # Walk up the hierarchy in memory
+    visited = set()
+    managers = []
+    current = employee
+    while current and current not in visited:
+        visited.add(current)
+        entry = chain_map.get(current)
+        if not entry:
+            break
+        manager_emp, manager_user = entry
+        managers.append((manager_emp, manager_user))
+        current = manager_emp
+
+    if not managers:
+        return []
+
+    # Query 2: all roles for all managers in one IN query
+    all_users = [u for _, u in managers if u]
+    roles_map = {}
+    if all_users:
+        role_rows = frappe.db.sql(
+            """
+            SELECT parent, role FROM `tabHas Role`
+            WHERE parent IN %(users)s
+              AND parenttype = 'User'
+            """,
+            {"users": all_users},
+            as_dict=True,
+        )
+        for r in role_rows:
+            roles_map.setdefault(r.parent, []).append(r.role)
+
+    superiors_with_roles = [
+        {
+            "employee": emp,
+            "user": user,
+            "roles": roles_map.get(user, []),
+        }
+        for emp, user in managers
+    ]
+
+    cache.set_value(key, superiors_with_roles, expires_in_sec=600)
+
+    return superiors_with_roles
+
+
+SERVICE_DEPARTMENT_MAP = {
+    "resume": "Technical",
+    "jdc": "Technical",
+    "ruc": "Technical",
+    "cover letter": "Technical",
+    "training": "Technical",
+    "technical other services": "Technical",
+    "marketing": "Marketing",
+    "marketing other services": "Marketing",
+}
+
+
+def _resolve_department_from_service(extra_info):
+    if not extra_info:
+        return None
+
+    mapped = SERVICE_DEPARTMENT_MAP.get(extra_info.strip().lower())
+    if mapped:
+        return mapped
+
+    dept = frappe.db.get_value("Other Services", {"service": extra_info}, "department")
+    return dept
+
+
+def get_employee_roles_cached(employee_name):
+    """Get Frappe system roles for an employee via their linked User."""
+    cache = frappe.cache()
+    key = f"roles:{employee_name}"
+
+    cached = cache.get_value(key)
+    if cached:
+        return cached
+
+    user = frappe.db.get_value("Employee", employee_name, "user")
+    if not user:
+        return []
+    roles = frappe.db.get_all(
+        "Has Role",
+        filters={"parent": user, "parenttype": "User"},
+        pluck="role",
+    )
+
+    employee_roles = roles or []
+
+    cache.set_value(key, employee_roles, expires_in_sec=3600)
+
+    return employee_roles
+
+
+def _find_employee_with_role_in_dept(required_role, target_dept):
+    """
+    Find ALL employees who:
+    1. Have an assignment row with target_dept
+    2. Have the required_role in their Frappe user roles
+
+    Returns the first match found.
+    """
+    # Get all employees who have an assignment in target_dept
+    dept_employees = frappe.db.get_all(
+        "Employee Assignment Detail",
+        filters={"department": target_dept},
+        fields=["parent", "assigned_to"],
+        order_by="idx asc",
+    )
+
+    for row in dept_employees:
+        emp = row.get("parent")
+        if not emp:
+            continue
+        emp_roles = get_employee_roles_cached(emp)
+        if required_role in emp_roles:
+            return emp
+
+    return None
+
+
+def get_dept_role_map_cached():
+    cache = frappe.cache()
+    key = "dept_role_map"
+
+    cached = cache.get_value(key)
+    if cached:
+        return cached
+
+    erp_config = frappe.get_single("ERP Configuration")
+
+    dept_role_map = {}
+    for row in erp_config.get("table_tpxt") or []:
+        if row.department and row.role:
+            dept_role_map[row.department.strip().lower()] = row.role
+
+    cache.set_value(key, dept_role_map, expires_in_sec=3600)
+
+    return dept_role_map
+
+
+def get_approver_by_department(employee_name, service_doctype=None, extra_info=None):
+    """
+    Finds the correct approver based on the required role for a department.
+    """
+
+    # Get ALL assignment rows for this employee
+    assignment_rows = frappe.db.get_all(
+        "Employee Assignment Detail",
+        filters={"parent": employee_name},
+        fields=["department", "designation", "assigned_to"],
+        order_by="idx asc",
+    )
+
+    if not assignment_rows:
+        return None
+
+    direct_manager = next(
+        (r.get("assigned_to") for r in assignment_rows if r.get("assigned_to")),
+        None,
+    )
+
+    # Build dept → role map from ERP Configuration child table
+    dept_role_map = get_dept_role_map_cached()
+
+    # ── CASE 1: Request from Other Services ───────────────────────────────
+    if service_doctype == "Other Services" and extra_info:
+        target_dept = _resolve_department_from_service(extra_info)
+
+        if not target_dept:
+            return direct_manager
+
+        # Get required role for this department from ERP Config
+        dept_key = next(
+            (
+                k
+                for k in dept_role_map
+                if k.strip().lower() == target_dept.strip().lower()
+            ),
+            None,
+        )
+        required_role = dept_role_map.get(dept_key) if dept_key else None
+
+        if not required_role:
+            return direct_manager
+
+        # Override direct_manager from matching dept row
+        matching_row = next(
+            (
+                r
+                for r in assignment_rows
+                if (r.get("department") or "").strip().lower()
+                == target_dept.strip().lower()
+            ),
+            None,
+        )
+        if matching_row and matching_row.get("assigned_to"):
+            direct_manager = matching_row.get("assigned_to")
+
+        approver = _find_employee_with_role_in_dept(
+            required_role, dept_key or target_dept
+        )
+        if approver and approver != employee_name:
+            return approver
+
+        if direct_manager:
+            starting_roles = get_employee_roles_cached(direct_manager)
+            if required_role in starting_roles:
+                return direct_manager
+
+            superiors = get_all_superiors_with_roles_cached(direct_manager)
+            for superior in superiors:
+                if required_role in superior.get("roles", []):
+                    return superior.get("employee")
+
+        return direct_manager
+
+    else:
+        required_roles = []
+        dept_keys = []
+        for row in assignment_rows:
+            dept = row.get("department")
+            if not dept:
+                continue
+            dept_key = next(
+                (k for k in dept_role_map if k.strip().lower() == dept.strip().lower()),
+                None,
+            )
+            if dept_key and dept_role_map[dept_key]:
+                role = dept_role_map[dept_key]
+                if role not in required_roles:
+                    required_roles.append(role)
+                    dept_keys.append(dept_key)
+
+        if not required_roles:
+            return direct_manager
+
+        for i, role in enumerate(required_roles):
+            dept_key = dept_keys[i] if i < len(dept_keys) else None
+            if dept_key:
+                approver = _find_employee_with_role_in_dept(role, dept_key)
+                if approver and approver != employee_name:
+                    return approver
+
+        superiors = get_all_superiors_with_roles_cached(employee_name)
+        for superior in superiors:
+            sup_roles = superior.get("roles", [])
+            matched = next((r for r in required_roles if r in sup_roles), None)
+            if matched:
+                return superior.get("employee")
+
+        return direct_manager
+
+
+def resolve_field_update_routing(employee_name, department):
+    """
+    Determines how a field-update request should route for this department,
+    reusing the existing assign_to-chain infrastructure:
+      - get_all_superiors_with_roles_cached: walks UP the chain for `department`
+      - get_dept_role_map_cached / get_employee_roles_cached: same role lookups
+        already used by get_approver_by_department
+
+    No separate Hierarchy-doc parsing is needed — employee.js already
+    enforces that an employee's `assigned_to` can only be the employee
+    holding the exact parent role above them in that department's
+    Hierarchy, so superiors[0] IS "one level up" by construction.
+
+    Returns:
+        {"mode": "direct"}                          — no superior recorded → save immediately
+        {"mode": "escalate", "manager_employee": X}  — requester holds the configured role →
+                                                        route to their direct superior
+        {"mode": "normal"}                           — below the configured role →
+                                                        caller should use get_approver_by_department as before
+        {"mode": "unresolved"}                       — no ERP Configuration role set for this department
+    """
+    if not employee_name or not department:
+        return {"mode": "unresolved"}
+
+    dept_role_map = get_dept_role_map_cached()
+    dept_key = next(
+        (k for k in dept_role_map if k.strip().lower() == department.strip().lower()),
+        None,
+    )
+    configured_role = dept_role_map.get(dept_key) if dept_key else None
+    if not configured_role:
+        return {"mode": "unresolved"}
+
+    superiors = get_all_superiors_with_roles_cached(employee_name, department)
+
+    # No one above them in this department's assign_to chain — top of hierarchy.
+    if not superiors:
+        return {"mode": "direct"}
+
+    own_roles = get_employee_roles_cached(employee_name)
+
+    # Requester already holds the configured approver role — escalate to
+    # their direct superior, which is guaranteed to hold the next role up.
+    if configured_role in own_roles:
+        direct_superior = superiors[0].get("employee")
+        if not direct_superior:
+            return {"mode": "direct"}
+        return {"mode": "escalate", "manager_employee": direct_superior}
+
+    return {"mode": "normal"}
 
 
 # to get visible employee names for a user
@@ -117,13 +528,57 @@ def get_visible_employee_names(user, department=None):
     return list(users)
 
 
+def get_visible_employee_names_cached(department=None):
+    cache = frappe.cache()
+    cache_key = f"Visible_Employee_Names:{frappe.session.user}:{department or 'all'}"
+
+    cached = cache.get_value(cache_key)
+    if cached:
+        return set(cached)
+
+    employees = get_visible_employee_names(
+        user=frappe.session.user,
+        department=department,
+    )
+
+    cache.set_value(cache_key, employees, expires_in_sec=600)
+    return employees
+
+
+def get_visible_user_names_cached(department=None):
+    """Same visibility rule as get_visible_employee_names_cached, but
+    resolves to User login ids instead of Employee names — Interview has
+    no assign_to field to compare Employee names against; it only has the
+    framework `owner` field, which stores a User.
+    """
+    cache = frappe.cache()
+    cache_key = f"Visible_User_Names:{frappe.session.user}:{department or 'all'}"
+
+    cached = cache.get_value(cache_key)
+    if cached:
+        return set(cached)
+
+    employee_names = get_visible_employee_names_cached(department=department)
+
+    users = set()
+    for emp in employee_names:
+        user = get_user(emp)
+        if user:
+            users.add(user)
+
+    users.add(frappe.session.user)  # always see your own docs
+
+    cache.set_value(cache_key, list(users), expires_in_sec=600)
+    return users
+
+
 # get allowed leads for sales person
 def get_allowed_leads(user):
     root_employee = get_employee_name(user)
     if not root_employee:
         return []
 
-    users = get_visible_employee_names(user)
+    users = get_visible_employee_names_cached()
 
     own_leads = frappe.db.get_all(
         "Lead",
@@ -134,126 +589,118 @@ def get_allowed_leads(user):
     opp_leads = frappe.db.get_all(
         "Opportunity",
         filters={"opportunity_owner": ["in", users]},
-        pluck="party_name",
+        pluck="opportunity_from_lead",
     )
 
     return list(set(own_leads + opp_leads))
 
 
-# to add list view restriction based on employee hierarchy
-@frappe.whitelist()
-def secure_get(**kwargs):
-    user = frappe.session.user
-    doctype = frappe.local.form_dict.get("doctype")
-
-    if user == "Administrator":
-        return original_get(**frappe.local.form_dict)
-
-    if doctype == "Lead":
-        allowed_leads = get_allowed_leads(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Lead", "name", "in", allowed_leads]]
-        )
-        return original_get(**frappe.local.form_dict)
-
-    if doctype == "Opportunity":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Opportunity", "opportunity_owner", "in", owners]]
-        )
-        return original_get(**frappe.local.form_dict)
-
-    if doctype == "Customer":
-        owners = get_visible_employee_names(user)
-        opportunities = frappe.db.get_all(
-            "Opportunity",
-            filters={"opportunity_owner": ["in", owners]},
-            pluck="name",
-        )
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Customer", "opportunity", "in", opportunities]]
-        )
-        return original_get(**frappe.local.form_dict)
-    
-    if doctype == "Resume" or doctype == "RUC":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Resume","assign_to","in",owners]]
-        )
-
-    if doctype == "Marketing":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Marketing","assign_to","in",owners]]
-        )
-
-    if doctype == "Training":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Training","assign_to","in",owners]]
-        )
-
-    if doctype == "RUC":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["RUC","assign_to","in",owners]]
-        )
-
-    if doctype == "JDC":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["JDC","assign_to","in",owners]]
-        )
-
-    if doctype == "Cover Letter":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Cover Letter","assign_to","in",owners]]
-        )
-
-    if doctype == "Technical Other Services":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Technical Other Services","assign_to","in",owners]]
-        )
-    
-    if doctype == "Marketing Other Services":
-        owners = get_visible_employee_names(user)
-        frappe.local.form_dict["filters"] = frappe.as_json(
-            [["Marketing Other Services","assign_to","in",owners]]
-        )
-
-    return original_get(**frappe.local.form_dict)
-
 import json
 
+
 def send_system_notification(
-    *,
-    user,
+    user, subject, message, reference_doctype=None, reference_name=None
+):
+    # user here must be the User 'name' field (login id), not email
+    # Verify the user actually exists before inserting
+    if not frappe.db.exists("User", user):
+        frappe.log_error(
+            f"send_system_notification: User '{user}' not found, skipping notification.",
+            "Notification Error",
+        )
+        return
+
+    frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": user,
+            "from_user": frappe.session.user,
+            "subject": subject,
+            "email_content": message,
+            "type": "Alert",
+            "document_type": reference_doctype,
+            "document_name": reference_name,
+        }
+    ).insert(ignore_permissions=True)
+
+
+def send_email(
+    recipients,
     subject,
     message,
+    attachments=None,
+    now=None,
     reference_doctype=None,
     reference_name=None,
 ):
-    frappe.get_doc({
-        "doctype": "Notification Log",
-        "subject": subject,
-        "email_content": message,
-        "for_user": user,
-        "document_type": reference_doctype,
-        "document_name": reference_name,
-        "type": "Alert",
-    }).insert(ignore_permissions=True)
+    sender = None
 
+    # Check if the logged-in user has a sendable email account
+    logged_in_user = frappe.session.user
 
-def send_email(recipients, subject, message, attachments=None, now=None):
+    if logged_in_user and logged_in_user != "Guest":
+        email_account = frappe.get_all(
+            "User Email",
+            filters={
+                "parent": logged_in_user,
+                "parenttype": "User",
+                "enable_outgoing": 1,
+            },
+            fields=["email_account"],
+            order_by="creation desc",
+            limit=1,
+        )
+
+        if email_account:
+            sender = frappe.db.get_value(
+                "Email Account",
+                {
+                    "name": email_account[0].email_account,
+                    "enable_outgoing": 1,
+                },
+                "email_id",
+            )
+    if not sender:
+        has_default_outgoing = frappe.db.exists(
+            "Email Account",
+            {
+                "default_outgoing": 1,
+                "enable_outgoing": 1,
+            },
+        )
+
+        if not has_default_outgoing:
+            if "System Manager" in frappe.get_roles():
+                frappe.throw(
+                    msg=(
+                        "No default outgoing email account is configured.<br><br>"
+                        "Please create an <b>Email Account</b>, enable <b>Outgoing</b>, "
+                        "mark it as <b>Default Outgoing</b>, and optionally link it to users "
+                        "from the <b>Email Accounts</b> section."
+                    ),
+                    primary_action={
+                        "label": "Open Email Accounts",
+                        "client_action": "frappe.set_route",
+                        "args": ["List", "Email Account"],
+                    },
+                )
+            else:
+                frappe.throw(
+                    "Unable to send email because no outgoing email account is configured. "
+                    "Please contact your System Administrator to configure a default outgoing email account."
+                )
+
+    # sender=None will fall back to Frappe's default outgoing email account
     frappe.sendmail(
+        sender=sender,
         recipients=recipients,
         subject=subject,
         message=message,
         attachments=attachments,
-        delayed=(not now) if now is not None else self.flags.delay_emails,
-		retry=3,
+        delayed=(not now) if now is not None else True,
+        retry=3,
+        reference_doctype=reference_doctype,
+        reference_name=reference_name,
     )
 
 
@@ -266,7 +713,8 @@ def notify(
     reference_name=None,
     send_email_flag=True,
     send_system_flag=True,
-    attachments=None
+    attachments=None,
+    now=False,
 ):
     """
     Internal dispatcher
@@ -291,8 +739,11 @@ def notify(
             subject=subject,
             message=message,
             attachments=attachments,
-            now=True,
+            now=now,
+            reference_doctype=reference_doctype,
+            reference_name=reference_name,
         )
+
 
 @frappe.whitelist()
 def send_notification(**kwargs):
@@ -309,7 +760,7 @@ def send_notification(**kwargs):
     attachments = kwargs.get("attachments")  # FIXED
     send_email_flag = int(kwargs.get("send_email", 1))
     send_system_flag = int(kwargs.get("send_system", 1))
-
+    now = kwargs.get("now", False)
     # ---- Validation ----
     if not recipients:
         frappe.throw("recipients is required")
@@ -327,18 +778,459 @@ def send_notification(**kwargs):
         frappe.throw("recipients must be a list")
 
     # ---- Dispatch ----
-    notify(
-        recipients=recipients,
-        subject=subject,
-        message=message,
-        attachments=attachments,
-        reference_doctype=reference_doctype,
-        reference_name=reference_name,
-        send_email_flag=bool(send_email_flag),
-        send_system_flag=bool(send_system_flag),
-    )
+
+    try:
+        notify(
+            recipients=recipients,
+            subject=subject,
+            message=message,
+            attachments=attachments,
+            reference_doctype=reference_doctype,
+            reference_name=reference_name,
+            send_email_flag=bool(send_email_flag),
+            send_system_flag=bool(send_system_flag),
+            now=now,
+        )
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"Notification failed | recipients: {recipients} | subject: {subject}",
+        )
 
     return {
         "status": "success",
         "recipients": recipients,
     }
+
+
+# permission query
+def generic_assign_query(user):
+
+    doctype = frappe.local.form_dict.get("doctype")
+
+    if user == "Administrator":
+        return ""
+
+    employee = frappe.db.get_value("Employee", {"user": user}, "name")
+    if not employee:
+        return "1=0"
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+
+    return f"`tab{doctype}`.assign_to IN ({team_sql})"
+
+
+def generic_assign_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    return doc.assign_to in team
+
+
+def customer_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    return doc.customer_owner in team
+
+
+def opportunity_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if doc.opportunity_owner in team:
+        return True
+
+    departments = get_user_departments(user)
+
+    return bool(
+        "Sales" in departments
+        and frappe.db.exists(
+            "Customer",
+            {"party_name": doc.name, "customer_owner": ["in", team]},
+        )
+    )
+
+
+def lead_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if doc.lead_owner in team:
+        return True
+
+    departments = get_user_departments(user)
+
+    return bool(
+        "Sales" in departments
+        and frappe.db.exists(
+            "Opportunity",
+            {"opportunity_from_lead": doc.name, "opportunity_owner": ["in", team]},
+        )
+    )
+
+
+def sales_order_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    departments = get_user_departments(user)
+
+    # Accounting sees everything
+    if "Accounting" in departments:
+        return True
+
+    team = get_visible_employee_names_cached()
+    if not team:
+        return False
+
+    if "Sales" in departments:
+        customer_owner = frappe.db.get_value("Customer", doc.customer, "customer_owner")
+        if customer_owner in team:
+            return True
+
+    if "CR" in departments:
+        return frappe.db.exists(
+            "CR",
+            {
+                "customer": doc.customer,
+                "assign_to": ["in", team],
+            },
+        )
+
+    if "Onboarding" in departments:
+        return frappe.db.exists(
+            "Onboardings",
+            {
+                "customer": doc.customer,
+                "assign_to": ["in", team],
+            },
+        )
+
+    return False
+
+
+def interview_has_permission(doc, ptype="read", user=None):
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+
+    visible_users = get_visible_user_names_cached()
+    if not visible_users:
+        return False
+
+    return doc.owner in visible_users
+
+
+from frappe.utils import cint
+
+
+@frappe.whitelist()
+def get_next_permitted(
+    doctype, value, prev, filters=None, sort_order="desc", sort_field="creation"
+):
+    prev = cint(prev)
+    if not filters:
+        filters = []
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    current_sort_value = frappe.db.get_value(doctype, value, sort_field)
+    is_ascending = sort_order.lower() == "asc"
+
+    if prev == is_ascending:
+        operator, order_by = "<", f"{sort_field} desc, name desc"
+    else:
+        operator, order_by = ">", f"{sort_field} asc, name asc"
+
+    query_filters = list(filters) + [
+        [doctype, sort_field, operator, current_sort_value]
+    ]
+
+    result = frappe.get_list(
+        doctype,
+        filters=query_filters,  # permission_query_conditions is applied here automatically
+        fields=["name"],
+        order_by=order_by,
+        limit_page_length=1,
+    )
+
+    if result:
+        return result[0]["name"]
+
+    frappe.msgprint(frappe._("No further accessible records"))
+    return None
+
+
+from verp_staffing.employee.doctype.employee.employee import get_user_departments
+
+
+def lead_query(user):
+    if user == "Administrator":
+        return ""
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    departments = get_user_departments(user)
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+    conditions = []
+
+    conditions.append(
+        f"""
+        `tabLead`.lead_owner IN ({team_sql})
+        """
+    )
+    # -------------------------
+    # SALES LOGIC
+    # -------------------------
+    if "Sales" in departments:
+        conditions.append(
+            f"""
+            `tabLead`.name IN (
+                SELECT `tabOpportunity`.opportunity_from_lead
+                FROM `tabOpportunity`
+                WHERE `tabOpportunity`.opportunity_owner IN ({team_sql})
+            )
+        """
+        )
+
+    return "(" + " OR ".join(conditions) + ")"
+
+
+def opportunity_query(user):
+    if user == "Administrator":
+        return ""
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    departments = get_user_departments(user)
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+    conditions = []
+
+    # -------------------------
+    # SALES LOGIC
+    # -------------------------
+    conditions.append(
+        f"""
+            `tabOpportunity`.opportunity_owner IN ({team_sql})
+        """
+    )
+
+    if "Sales" in departments:
+        conditions.append(
+            f"""
+            `tabOpportunity`.name IN (
+                SELECT `tabCustomer`.party_name
+                FROM `tabCustomer`
+                WHERE `tabCustomer`.customer_owner IN ({team_sql})
+            )
+        """
+        )
+
+    if not conditions:
+        return "1=0"
+
+    return "(" + " OR ".join(conditions) + ")"
+
+
+def customer_query(user):
+    if user == "Administrator":
+        return ""
+
+    # 1. get employee
+    employee = frappe.db.get_value("Employee", {"user": user}, "name")
+
+    if not employee:
+        return "1=0"
+
+    # 3. get team
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+
+    conditions = []
+
+    conditions.append(
+        f"""
+            `tabCustomer`.customer_owner IN ({team_sql})
+        """
+    )
+
+    # -------------------------
+    # FINAL CONDITION
+    # -------------------------
+    if not conditions:
+        return "1=0"
+
+    return "(" + " OR ".join(conditions) + ")"
+
+
+def interview_query(user):
+    if user == "Administrator":
+        return ""
+
+    visible_users = get_visible_user_names_cached()
+    if not visible_users:
+        return "1=0"
+
+    users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
+    return f"`tabInterview`.owner IN ({users_sql})"
+
+
+def sales_order_query(user):
+    if user == "Administrator":
+        return ""
+
+    departments = get_user_departments(user)
+
+    # Accounting sees everything
+    if "Accounting" in departments:
+        return ""
+
+    team = get_visible_employee_names_cached()
+
+    if not team:
+        return "1=0"
+
+    team_sql = ",".join([frappe.db.escape(x) for x in team])
+    conditions = []
+
+    if "Sales" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabCustomer`.name
+                FROM `tabCustomer`
+                WHERE `tabCustomer`.customer_owner IN ({team_sql})
+            )
+        """
+        )
+
+    if "CR" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabCR`.customer
+                FROM `tabCR`
+                WHERE `tabCR`.assign_to IN ({team_sql})
+            )
+        """
+        )
+
+    if "Onboarding" in departments:
+        conditions.append(
+            f"""
+            `tabSales Order`.customer IN (
+                SELECT `tabOnboardings`.customer
+                FROM `tabOnboardings`
+                WHERE `tabOnboardings`.assign_to IN ({team_sql})
+            )
+        """
+        )
+
+    if not conditions:
+        return "1=0"
+
+    return "(" + " OR ".join(conditions) + ")"
+
+
+from pathlib import Path
+
+
+@frappe.whitelist(allow_guest=True)
+def _validate_site_file_path(file_path: str) -> Path:
+    path = Path(file_path).resolve()
+
+    allowed_dirs = (
+        Path(frappe.get_site_path("public")).resolve(),
+        Path(frappe.get_site_path("private")).resolve(),
+    )
+
+    if not any(
+        path == directory or directory in path.parents for directory in allowed_dirs
+    ):
+        frappe.throw("Invalid file path.")
+
+    if not path.is_file():
+        frappe.throw("File not found.")
+
+    return path
+
+
+@frappe.whitelist()
+def _is_superior_in_department(
+    assign_to: str, current_user: str, department: str
+) -> dict:
+    """
+    Returns True if current_user is anywhere above assign_to
+    in the given department's assignment hierarchy.
+    """
+    if current_user == "Administrator":
+        return {"is_superior": True}
+    if current_user == frappe.db.get_value("Employee", assign_to, "user"):
+        return {"is_superior": False}
+
+    # Single query — entire chain at once
+    rows = frappe.db.sql(
+        """
+        SELECT ead.parent, ead.assigned_to, e.user
+        FROM `tabEmployee Assignment Detail` ead
+        JOIN `tabEmployee` e ON e.name = ead.assigned_to
+        WHERE ead.department = %(department)s
+          AND ead.assigned_to IS NOT NULL
+        """,
+        {"department": department},
+        as_dict=True,
+    )
+    chain_map = {r.parent: (r.assigned_to, r.user) for r in rows}
+
+    visited = set()
+    current = assign_to
+    while current and current not in visited:
+        visited.add(current)
+        entry = chain_map.get(current)
+        if not entry:
+            break
+        manager_emp, manager_user = entry
+        if manager_user == current_user:
+            return {"is_superior": True}
+        current = manager_emp
+
+    return {"is_superior": False}

@@ -1,0 +1,2 @@
+verp_staffing.patches.fix_agreement_pdf_file_hashes
+verp_staffing.patches.migrate_candidate_details_form_fields

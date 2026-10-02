@@ -45,9 +45,6 @@ def send_event_reminders():
 
         frappe.db.set_value("CRM Event", e.name, "reminder_sent", 1)
 
-    frappe.db.commit()
-
-
 @frappe.whitelist()
 def sendOpportunityClosingDateReminder():
     now = now_datetime()

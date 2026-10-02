@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-02 17:03:59.040999",
+ "modified": "2026-07-03 09:38:22.232131",
  "modified_by": "Administrator",
  "module": "Marketing",
  "name": "Future Interviews Per Customer",
@@ -24,31 +24,7 @@
    "role": "System Manager"
   },
   {
-   "role": "Sales Master Manager"
-  },
-  {
-   "role": "Sales Manager"
-  },
-  {
-   "role": "Sales Team Lead"
-  },
-  {
-   "role": "Sales Person"
-  },
-  {
-   "role": "Marketing Manager"
-  },
-  {
-   "role": "Marketing Team Lead"
-  },
-  {
-   "role": "Senior Recruiter"
-  },
-  {
-   "role": "Marketing Mentor"
-  },
-  {
-   "role": "Recruiter"
+   "role": "_show_sidebar_master"
   }
  ],
  "timeout": 0

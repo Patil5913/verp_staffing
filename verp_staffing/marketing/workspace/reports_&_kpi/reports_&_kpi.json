@@ -1,0 +1,71 @@
+{
+ "charts": [
+  {
+   "chart_name": "Future Interviews Per Customer",
+   "label": "Future Interviews Per Customer"
+  },
+  {
+   "chart_name": "Marketing KPI",
+   "label": "Marketing KPI"
+  }
+ ],
+ "content": "[{\"id\":\"J5rKgbwd9q\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reports &amp; KPI</span>\",\"col\":12}},{\"id\":\"emNAl0m0Cq\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interview Target Report\",\"col\":3}},{\"id\":\"ASpsYj94FV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Interviews Per Customer\",\"col\":3}},{\"id\":\"YPiL9DJ8H7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Future Interviews Per Customer\",\"col\":3}},{\"id\":\"6ecfg73aCo\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Profiles Per Recuiter\",\"col\":3}},{\"id\":\"H5DvtMreS6\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Future Interviews Per Customer\",\"col\":12}},{\"id\":\"pYHJAstdC3\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Marketing KPI\",\"col\":12}}]",
+ "creation": "2026-06-08 10:52:45.012649",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "chart",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Reports & KPI",
+ "links": [],
+ "modified": "2026-06-08 11:07:32.752555",
+ "modified_by": "Administrator",
+ "module": "Marketing",
+ "name": "Reports & KPI",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Marketings",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 36.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Interview Target Report",
+   "link_to": "Interview Target Report",
+   "report_ref_doctype": "Marketing",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Interviews Per Customer",
+   "link_to": "Interviews Per Customer",
+   "report_ref_doctype": "Interview",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Future Interviews Per Customer",
+   "link_to": "Future Interviews Per Customer",
+   "report_ref_doctype": "Interview",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Profiles Per Recuiter",
+   "link_to": "Profiles Per Recuiter",
+   "report_ref_doctype": "Interview",
+   "type": "Report"
+  }
+ ],
+ "title": "Reports & KPI"
+}

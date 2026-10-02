@@ -11,10 +11,12 @@
   "projects",
   "quality",
   "candidate_doubts",
-  "remarks"
+  "remarks",
+  "candidate_feedback"
  ],
  "fields": [
   {
+   "columns": 1,
    "default": "1",
    "fieldname": "session_duration_in_hour",
    "fieldtype": "Float",
@@ -49,17 +51,24 @@
    "label": "Remarks"
   },
   {
+   "columns": 1,
    "fieldname": "date",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Session Date"
+  },
+  {
+   "fieldname": "candidate_feedback",
+   "fieldtype": "Small Text",
+   "label": "Candidate Feedback",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-12-22 16:13:45.239127",
+ "modified": "2026-09-02 15:19:43.413124",
  "modified_by": "Administrator",
  "module": "Technical",
  "name": "Session Details",

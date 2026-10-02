@@ -1,10 +1,8 @@
 from __future__ import annotations
 import frappe
-from frappe.model.document import Document
 from frappe.utils import now_datetime
 
 
-@frappe.whitelist()
 @frappe.whitelist()
 def get_notes(reference_doctype, reference_name, limit=20, start=0):
     if not reference_doctype or not reference_name:
@@ -30,7 +28,6 @@ def get_notes(reference_doctype, reference_name, limit=20, start=0):
 
     notes = []
     updates = []
-
     for r in records:
         if r.reference_doctype == r.current_doctype:
             notes.append(r)
@@ -62,7 +59,6 @@ def add_note(reference_doctype, reference_name, note , current_doctype=None):
         }
     )
     doc.insert(ignore_permissions=True)
-    frappe.db.commit()
     return {
         "name": doc.name,
         "note": doc.note,
@@ -76,12 +72,10 @@ def update_note(note_id, note):
     doc = frappe.get_doc("CRM Note", note_id)
     doc.note = note
     doc.save(ignore_permissions=True)
-    frappe.db.commit()
     return doc
 
 
 @frappe.whitelist()
 def delete_note(note_id):
     frappe.delete_doc("CRM Note", note_id, ignore_permissions=True)
-    frappe.db.commit()
     return True

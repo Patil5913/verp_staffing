@@ -1,6 +1,9 @@
-import frappe
-from verp_staffing.marketing.api.utils import get_visible_employee_names
+# Copyright (c) 2026, Vrugle and contributors
+# For license information, please see license.txt
 
+import frappe
+from verp_staffing.crm.api.helpers import get_visible_employee_names_cached
+from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
 def execute(filters=None):
     filters = filters or {}
@@ -8,7 +11,6 @@ def execute(filters=None):
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -25,95 +27,155 @@ def get_columns():
             "fieldtype": "Int",
             "width": 120,
         },
+        {
+            "label": "Visa Breakdown",
+            "fieldname": "visa_summary",
+            "fieldtype": "Data",
+            "width": 320,
+        },
     ]
-
-
+    
 def get_data(filters):
-    conditions = []
+    conditions = ["l.lead_owner IS NOT NULL"]
     values = {}
 
+    # -- Date range ----------------------------------------------------------
     if filters.get("from_date"):
         conditions.append("l.creation >= %(from_date)s")
         values["from_date"] = filters["from_date"]
 
     if filters.get("to_date"):
-        conditions.append("l.creation <= %(to_date)s")
+        # Inclusive upper bound for a DATETIME column.
+        conditions.append("l.creation < DATE_ADD(%(to_date)s, INTERVAL 1 DAY)")
         values["to_date"] = filters["to_date"]
 
+    # -- Visa status filter --------------------------------------------------
     if filters.get("visa_status"):
         conditions.append("ldf.current_visa_status = %(visa_status)s")
         values["visa_status"] = filters["visa_status"]
 
-    user = frappe.session.user
-    hierarchy_conditions = []
-
-    # If employee filter is selected → show only that employee
+    # -- Employee / hierarchy scope ------------------------------------------
     if filters.get("employee"):
-        hierarchy_conditions.append("l.lead_owner = %(employee)s")
+        # Validate: non-admin cannot request an employee outside their scope.
+        if frappe.session.user != "Administrator":
+            allowed = get_visible_employee_names_cached()
+            if filters["employee"] not in allowed:
+                return []
+        conditions.append("l.lead_owner = %(employee)s")
         values["employee"] = filters["employee"]
 
-    # Otherwise apply hierarchy
-    elif user != "Administrator":
-
-        allowed_employees = get_visible_employee_names(user)
-
-        if not allowed_employees:
+    elif frappe.session.user != "Administrator":
+        allowed = get_visible_employee_names_cached()
+        if not allowed:
             return []
+        placeholders = _build_in_placeholders("emp", allowed, values)
+        conditions.append(f"l.lead_owner IN ({placeholders})")
 
-        placeholders = ", ".join(
-            [f"%(emp_{i})s" for i in range(len(allowed_employees))]
-        )
+    where_clause = "WHERE " + " AND ".join(conditions)
 
-        hierarchy_conditions.append(f"l.lead_owner IN ({placeholders})")
-
-        for i, emp in enumerate(allowed_employees):
-            values[f"emp_{i}"] = emp
-
-    where_conditions = ["l.lead_owner IS NOT NULL"] + conditions + hierarchy_conditions
-    where_clause = " AND ".join(where_conditions)
-
-    query = f"""
+    # -----------------------------------------------------------------------
+    # Single query — one join, one GROUP BY, one GROUP_CONCAT.
+    #
+    # visa_summary: counts each visa status in the employee's filtered lead
+    # set. Format: "Status A: 12 | Status B: 4".
+    #
+    # We compute the per-status counts using a conditional COUNT inside
+    # GROUP_CONCAT via an inline subquery is NOT needed — instead we run a
+    # second lightweight aggregation query for the breakdown (see below).
+    # This keeps the main query clean and avoids GROUP_CONCAT size limits
+    # on large employee sets.
+    # -----------------------------------------------------------------------
+    main_query = """
         SELECT
-            l.lead_owner AS employee,
-            COUNT(DISTINCT l.name) AS lead_count,
-            GROUP_CONCAT(
-                DISTINCT CONCAT(ldf.current_visa_status, ': ', v.cnt)
-                ORDER BY ldf.current_visa_status
-                SEPARATOR ' | '
-            ) AS visa_summary
+            l.lead_owner           AS employee,
+            COUNT(DISTINCT l.name) AS lead_count
         FROM `tabLead` l
         LEFT JOIN `tabLead Detail Form` ldf
             ON ldf.name = l.lead_details
-        LEFT JOIN (
-            SELECT
-                l2.lead_owner,
-                ldf2.current_visa_status,
-                COUNT(*) AS cnt
-            FROM `tabLead` l2
-            LEFT JOIN `tabLead Detail Form` ldf2
-                ON ldf2.name = l2.lead_details
-            WHERE l2.lead_owner IS NOT NULL
-            GROUP BY l2.lead_owner, ldf2.current_visa_status
-        ) v
-            ON v.lead_owner = l.lead_owner
-           AND v.current_visa_status = ldf.current_visa_status
-        WHERE {where_clause}
+    """
+
+    main_query += where_clause
+    main_query += """
         GROUP BY l.lead_owner
         ORDER BY lead_count DESC
     """
 
-    return frappe.db.sql(query, values, as_dict=True)
+    data = frappe.db.sql(
+        main_query,
+        values,
+        as_dict=True,
+    )
 
+    if not data:
+        return []
+
+    # -----------------------------------------------------------------------
+    # Second focused query — visa breakdown per employee.
+    #
+    # Rationale: keeping this separate from the main query avoids
+    # GROUP_CONCAT on a potentially wide result set and makes the main
+    # query's GROUP BY simpler for MySQL's optimizer. Both queries share
+    # the same WHERE clause and values dict so results are always consistent.
+    #
+    # Result shape: { employee_name: "Visa A: 3 | Visa B: 1", ... }
+    # -----------------------------------------------------------------------
+    breakdown_query = """
+        SELECT
+            l.lead_owner            AS employee,
+            ldf.current_visa_status AS visa_status,
+            COUNT(DISTINCT l.name)  AS cnt
+        FROM `tabLead` l
+        LEFT JOIN `tabLead Detail Form` ldf
+            ON ldf.name = l.lead_details
+    """
+
+    breakdown_query += where_clause
+    breakdown_query += """
+        AND ldf.current_visa_status IS NOT NULL
+        GROUP BY
+            l.lead_owner,
+            ldf.current_visa_status
+        ORDER BY
+            l.lead_owner,
+            cnt DESC
+    """
+
+    breakdown_rows = frappe.db.sql(
+        breakdown_query,
+        values,
+        as_dict=True,
+    )
+
+    # Build lookup: employee → "Status A: N | Status B: M"
+    visa_map = {}
+    for row in breakdown_rows:
+        emp = row.employee
+        entry = f"{row.visa_status if row.visa_status else 'No_Status'}: {row.cnt}"
+        if emp not in visa_map:
+            visa_map[emp] = []
+        visa_map[emp].append(entry)
+
+    visa_summary_map = {emp: " | ".join(parts) for emp, parts in visa_map.items()}
+
+    # Attach visa_summary to each data row in Python — no extra DB round trip.
+    for row in data:
+        row["visa_summary"] = visa_summary_map.get(row["employee"], "")
+
+    return data
 
 def get_chart(data):
+    """
+    Bar chart: lead count per employee.
+    Labels use employee name only — visa breakdown is shown in the table.
+    Frappe's chart engine does not render \\n in bar labels; putting the
+    visa_summary in the label produced broken display in the original.
+    """
     if not data:
         return {}
 
-    labels = [f"{row['employee']}\n{row['visa_summary'] or ''}" for row in data]
-
     return {
         "data": {
-            "labels": labels,
+            "labels": [row["employee"] for row in data],
             "datasets": [
                 {
                     "name": "Leads per Employee",
@@ -124,63 +186,3 @@ def get_chart(data):
         "type": "bar",
         "colors": ["#8494FF"],
     }
-
-
-@frappe.whitelist()
-def get_lead_hierarchy_employees(
-    doctype, txt, searchfield, start, page_len, filters
-):
-    """
-    Link field search for Lead report.
-    Shows only employees from Lead department.
-    Non-admin users see only themselves + their hierarchy.
-    """
-    user = frappe.session.user
-
-    values = {
-        "txt": f"%{txt}%",
-        "start": start,
-        "page_len": page_len,
-        "dept": "Lead",
-    }
-
-    conditions = [
-        f"tabEmployee.{searchfield} LIKE %(txt)s",
-        """
-        EXISTS (
-            SELECT 1
-            FROM `tabEmployee Assignment Detail` d
-            WHERE d.parent = tabEmployee.name
-              AND d.department = %(dept)s
-        )
-        """,
-    ]
-
-    # Apply hierarchy restriction for non-admin users
-    if user != "Administrator":
-        allowed_employees = get_visible_employee_names(user)
-
-        if not allowed_employees:
-            return []
-
-        placeholders = ", ".join(
-            [f"%(emp_{i})s" for i in range(len(allowed_employees))]
-        )
-
-        conditions.append(f"tabEmployee.name IN ({placeholders})")
-
-        for i, emp in enumerate(allowed_employees):
-            values[f"emp_{i}"] = emp
-
-    return frappe.db.sql(
-        f"""
-        SELECT
-            tabEmployee.name,
-            tabEmployee.employee_name
-        FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
-        ORDER BY tabEmployee.employee_name
-        LIMIT %(start)s, %(page_len)s
-        """,
-        values,
-    )

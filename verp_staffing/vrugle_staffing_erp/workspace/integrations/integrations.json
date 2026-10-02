@@ -218,7 +218,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-12-26 18:09:17.907168",
+ "modified": "2026-06-17 14:59:35.841264",
  "modified_by": "Administrator",
  "module": "Vrugle Staffing ERP",
  "name": "Integrations",
@@ -233,7 +233,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 10.0,
+ "sequence_id": 8.0,
  "shortcuts": [],
  "title": "Integrations"
 }

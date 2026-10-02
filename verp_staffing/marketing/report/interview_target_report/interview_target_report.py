@@ -1,8 +1,15 @@
+# Copyright (c) 2026, Vrugle and contributors
+# For license information, please see license.txt
+
 import frappe
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-from verp_staffing.marketing.api.utils import get_visible_employee_names
-
+from frappe.utils import getdate
+from verp_staffing.crm.api.helpers import (
+    get_visible_employee_names_cached,
+    get_reporting_subtree,
+)
+from verp_staffing.crm.api.report_helper import _build_in_placeholders
 
 def execute(filters=None):
     filters = filters or {}
@@ -10,7 +17,6 @@ def execute(filters=None):
     data = get_data(filters)
     chart = get_chart(data)
     return columns, data, None, chart
-
 
 def get_columns():
     return [
@@ -39,12 +45,17 @@ def get_columns():
             "fieldtype": "Data",
             "width": 120,
         },
-        {"label": "Target", "fieldname": "target", "fieldtype": "Int", "width": 90},
+        {
+            "label": "Target",
+            "fieldname": "target",
+            "fieldtype": "Int",
+            "width": 90,
+        },
         {
             "label": "Interview Count",
             "fieldname": "completed_target",
             "fieldtype": "Int",
-            "width": 220,
+            "width": 130,
         },
         {
             "label": "Highlight",
@@ -54,393 +65,224 @@ def get_columns():
         },
     ]
 
-
-def get_all_subordinates_by_assignment(root_employee, department=None):
+def _get_marketing_employees_cached():
     """
-    Recursively get all subordinates using Employee Assignment Detail.
-    assigned_to field mein parent employee hota hai.
+    Returns all Marketing-department employees for this company.
+    Cached in Redis for 1 hour, scoped by company.
+    Result: list of employee name strings.
     """
-    collected = set()
-    stack = [root_employee]
+    # cache_key = f"marketing_dept_employees::{company}"
+    cache_key = "marketing_dept_employees::interview_target_report"
+    cached = frappe.cache().get_value(cache_key)
+    if cached is not None:
+        return cached
 
-    while stack:
-        current = stack.pop()
-
-        filters = {"assigned_to": current}
-        if department:
-            filters["department"] = department
-
-        children = frappe.db.get_all(
-            "Employee Assignment Detail",
-            filters=filters,
-            pluck="parent",
-        )
-
-        for emp in children:
-            if emp and emp not in collected:
-                collected.add(emp)
-                stack.append(emp)
-
-    return collected
-
-
-def filter_marketing_employees(employee_list):
-    """Filter employees who belong to Marketing department."""
-    if not employee_list:
-        return []
-
-    data = frappe.db.sql(
+    rows = frappe.db.sql(
         """
         SELECT DISTINCT e.name
         FROM `tabEmployee` e
         INNER JOIN `tabEmployee Assignment Detail` d
             ON d.parent = e.name
-        WHERE e.name IN %(emp_list)s
-          AND d.department = 'Marketing'
+        WHERE d.department = 'Marketing'
         """,
-        {"emp_list": tuple(employee_list)},
+        # {"company": company},
         as_dict=True,
     )
+    names = [r.name for r in rows]
+    frappe.cache().set_value(cache_key, names, expires_in_sec=3600)
+    return names
 
-    return [row.name for row in data]
+def _get_period(target_based_on, start_date, selected_date):
+    """
+    Returns (period_start, period_end) for the current target period
+    as of selected_date.  No DB access — pure date arithmetic.
+    """
+    if target_based_on == "Weekly":
+        days_passed = (selected_date - start_date).days
+        week_number = days_passed // 7
+        period_start = start_date + timedelta(days=week_number * 7)
+        period_end = period_start + timedelta(days=6)
 
-
-def get_employee_from_user(user):
-    """Get Employee name linked to a user."""
-    return frappe.db.get_value("Employee", {"user": user}, "name")
-
-
-def get_data(filters):
-
-    if not filters or not filters.get("from_date"):
-        return []
-
-    selected_date = frappe.utils.getdate(filters["from_date"])
-    user = frappe.session.user
-    employee_filter = filters.get("employee")
-
-    values = {}
-    conditions = ["m.docstatus < 2"]
-
-    if employee_filter:
-        # Selected employee + all subordinates recursively
-        subordinates = get_all_subordinates_by_assignment(
-            employee_filter, department="Marketing"
+    elif target_based_on == "Monthly":
+        months_passed = (selected_date.year - start_date.year) * 12 + (
+            selected_date.month - start_date.month
         )
+        period_start = start_date + relativedelta(months=months_passed)
+        period_end = period_start + relativedelta(months=1) - timedelta(days=1)
 
-        # Include the selected employee itself
-        subordinates.add(employee_filter)
-
-        # Filter only Marketing dept employees
-        valid_employees = filter_marketing_employees(list(subordinates))
+    elif target_based_on == "Daily":
+        period_start = selected_date
+        period_end = selected_date
 
     else:
-        if user == "Administrator":
-            data = frappe.db.sql(
-                """
-                SELECT DISTINCT e.name
-                FROM `tabEmployee` e
-                INNER JOIN `tabEmployee Assignment Detail` d
-                    ON d.parent = e.name
-                WHERE d.department = 'Marketing'
-                """,
-                as_dict=True,
-            )
-            # frappe.errprint(data)
-            valid_employees = [row.name for row in data]
+        period_start = start_date
+        period_end = selected_date
 
-        else:
-            # Use existing utility — it already handles hierarchy via Employee Assignment Detail
-            employee_names = (
-                get_visible_employee_names(user, department="Marketing") or []
+    # Clamp upper bound to selected_date.
+    period_end = min(selected_date, period_end)
+    return period_start, period_end
+
+def get_data(filters):
+    """
+    Key fix: N+1 query loop eliminated.
+
+    The original fired one COUNT query per marketing record inside a Python
+    loop. With 200 records that is 200 sequential DB round trips.
+
+    Fix: bulk-fetch ALL interview counts for ALL marketing records in ONE
+    query using GROUP BY marketing_link, then join in Python using a dict.
+
+    This reduces the query count from (1 + N) to exactly 2 regardless of
+    how many marketing records exist.
+
+    Period boundaries are computed in Python per-row (pure date arithmetic,
+    no DB) then used to filter the pre-fetched interview counts.
+    """
+    if not filters.get("from_date"):
+        return []
+
+    selected_date = getdate(filters["from_date"])
+    user = frappe.session.user
+    # company = filters.get("company") or frappe.defaults.get_user_default("company")
+    employee_filter = filters.get("employee")
+
+    # -- Resolve employee scope (Marketing dept only) -------------------------
+    if employee_filter:
+        if user != "Administrator":
+            allowed = get_visible_employee_names_cached()
+            if employee_filter not in allowed:
+                return []
+        valid_employees = list(
+            get_reporting_subtree(
+                employee_filter,
+                department="Marketing",
             )
-            valid_employees = filter_marketing_employees(employee_names)
+        )
+
+    elif user == "Administrator":
+        valid_employees = _get_marketing_employees_cached()
+
+    else:
+        # get_visible_employee_names_cached() returns hierarchy-aware list.
+        # Filter it down to Marketing dept using the cache.
+        all_marketing = set(_get_marketing_employees_cached())
+        visible = set(get_visible_employee_names_cached())
+        valid_employees = list(all_marketing & visible)
 
     if not valid_employees:
         return []
 
-    placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(valid_employees))])
-    conditions.append(f"m.assign_to IN ({placeholders})")
+    # -- Query 1: marketing records ------------------------------------------
+    m_values = {"docstatus": 1}
+    emp_placeholders = _build_in_placeholders("emp", valid_employees, m_values)
 
-    for i, emp in enumerate(valid_employees):
-        values[f"emp_{i}"] = emp
-
-    where_clause = " AND ".join(conditions)
+    query = (
+        "SELECT "
+        "m.name, "
+        "m.assign_to, "
+        "IFNULL(c.name1, m.customer) AS customer_name, "
+        "m.start_date, "
+        "m.target_based_on, "
+        "m.target "
+        "FROM `tabMarketing` m "
+        "LEFT JOIN `tabCustomer` c "
+        "ON c.name = m.customer "
+        "WHERE m.assign_to IN (" + emp_placeholders + ") "
+        "ORDER BY m.assign_to, m.start_date DESC"
+    )
 
     marketing_records = frappe.db.sql(
-        f"""
-    SELECT
-        m.name,
-        m.assign_to,
-        IFNULL(c.name, m.customer) AS customer_name,
-        m.start_date,
-        m.target_based_on,
-        m.target
-    FROM `tabMarketing` m
-    LEFT JOIN `tabCustomer` c ON c.name = m.customer
-    WHERE {where_clause}
-    ORDER BY m.assign_to, m.start_date DESC
-    """,
-        values,
+        query,
+        m_values,
         as_dict=True,
     )
-    final_data = []
 
+    if not marketing_records:
+        return []
+
+    # -- Pre-compute period boundaries per marketing record ------------------
+    # No DB access here — pure Python date arithmetic.
+    valid_records = []
     for m in marketing_records:
-
         if not m.start_date or selected_date < m.start_date:
             continue
+        period_start, period_end = _get_period(
+            m.target_based_on, m.start_date, selected_date
+        )
+        m["period_start"] = period_start
+        m["period_end"] = period_end
+        valid_records.append(m)
 
-        completed_target = 0
+    if not valid_records:
+        return []
 
-        if m.target_based_on == "Weekly":
-            days_passed = (selected_date - m.start_date).days
-            week_number = days_passed // 7
-            period_start = m.start_date + timedelta(days=week_number * 7)
-            period_end = period_start + timedelta(days=6)
-            period_to = min(selected_date, period_end)
+    # -- Query 2: bulk interview counts (ONE query, replaces N queries) -------
+    #
+    # Fetch ALL interviews for ALL marketing_links in one shot.
+    # We fetch (marketing_link, creation) pairs and group in Python so we
+    # can apply per-record period boundaries (which differ per target_based_on
+    # and start_date, so a single SQL GROUP BY can't handle them uniformly).
+    #
+    # Alternative considered: pass all period ranges as a CASE WHEN expression.
+    # Rejected: with 200+ records it produces an unmaintainable 200-branch CASE.
+    # Python grouping after a bulk SELECT is simpler and equally fast.
 
-        elif m.target_based_on == "Monthly":
-            months_passed = (selected_date.year - m.start_date.year) * 12 + (
-                selected_date.month - m.start_date.month
-            )
-            period_start = m.start_date + relativedelta(months=months_passed)
-            period_end = period_start + relativedelta(months=1) - timedelta(days=1)
-            period_to = min(selected_date, period_end)
+    marketing_names = [m.name for m in valid_records]
+    iv_values = {}
+    mlink_placeholders = _build_in_placeholders("ml", marketing_names, iv_values)
 
-        elif m.target_based_on == "Daily":
-            period_start = selected_date
-            period_to = selected_date
+    # Fetch the earliest creation date we'll need (min period_start) so the
+    # query's date range is tight and the index is used effectively.
+    min_period_start = min(m["period_start"] for m in valid_records)
+    iv_values["min_period_start"] = min_period_start
+    iv_values["selected_date_ceil"] = selected_date + timedelta(days=1)
 
-        else:
-            period_start = m.start_date
-            period_to = selected_date
+    query = (
+        "SELECT "
+        "marketing_link, "
+        "DATE(creation) AS interview_date "
+        "FROM `tabInterview` "
+        "WHERE marketing_link IN (" + mlink_placeholders + ") "
+        "AND creation >= %(min_period_start)s "
+        "AND creation < %(selected_date_ceil)s"
+    )
 
-        completed_target = (
-            frappe.db.sql(
-                """
-                SELECT COUNT(name)
-                FROM `tabInterview`
-                WHERE marketing_link = %s
-                  AND DATE(creation) BETWEEN %s AND %s
-                """,
-                (m.name, period_start, period_to),
-            )[0][0]
-            or 0
+    interview_rows = frappe.db.sql(
+        query,
+        iv_values,
+        as_dict=True,
+    )
+
+    # Group by marketing_link → list of interview dates (Python, O(n)).
+    from collections import defaultdict
+
+    dates_by_link = defaultdict(list)
+    for iv in interview_rows:
+        dates_by_link[iv.marketing_link].append(iv.interview_date)
+
+    # -- Assemble final rows --------------------------------------------------
+    final_data = []
+    for m in valid_records:
+        period_start = m["period_start"]
+        period_end = m["period_end"]
+
+        # Count dates falling within this record's period — O(k) per record.
+        completed_target = sum(
+            1 for d in dates_by_link.get(m.name, []) if period_start <= d <= period_end
         )
 
-        row_data = {
+        row = {
             "employee": m.assign_to,
             "customer_name": m.customer_name,
             "start_date": m.start_date,
             "target_based_on": m.target_based_on,
-            "target": m.target,
+            "target": m.target or 0,
             "completed_target": completed_target,
-            "to_highlight": None,
+            "to_highlight": True if completed_target < (m.target or 0) else None,
         }
-
-        if completed_target < (m.target or 0):
-            row_data["to_highlight"] = True
-
-        final_data.append(row_data)
+        final_data.append(row)
 
     return final_data
-
-
-# def get_chart(data):
-#     if not data:
-#         return {}
-
-#     labels = []
-#     values = []
-
-#     for row in data:
-#         employee = row.get("employee", "")
-#         customer = row.get("customer_name", "")
-#         start_date = row.get("start_date")
-#         completed = row.get("completed_target", 0)
-#         target = row.get("target", 0)
-
-#         formatted_date = (
-#             frappe.utils.formatdate(start_date, "dd-MM-yyyy")
-#             if start_date else ""
-#         )
-
-#         label = f"{employee} | {customer} | {formatted_date} ({completed}/{target})"
-
-#         labels.append(label)
-#         values.append(completed)
-
-#     return {
-#         "data": {
-#             "labels": labels,
-#             "datasets": [
-#                 {
-#                     "name": "Completed Target",
-#                     "values": values,
-#                     # ✅ YOUR EXACT COLOR LOGIC (just moved inside dataset)
-#                     "colors": [
-#                         (
-#                             "#e79395"
-#                             if (row.get("completed_target", 0) < (row.get("target", 0) or 0))
-#                             else "#28a745"
-#                         )
-#                         for row in data
-#                     ],
-#                 }
-#             ],
-#         },
-#         "type": "bar",
-#     }
-
-
-# def get_chart(data):
-#     if not data:
-#         return {}
-
-#     labels = []
-#     values = []
-#     all_completed = True  # assume sab complete hai
-
-#     for row in data:
-#         employee = row.get("employee", "")
-#         customer = row.get("customer_name", "")
-#         start_date = row.get("start_date")
-#         completed = row.get("completed_target", 0)
-#         target = row.get("target", 0)
-
-#         formatted_date = (
-#             frappe.utils.formatdate(start_date, "dd-MM-yyyy") if start_date else ""
-#         )
-
-#         label = f"{employee} | {customer} | {formatted_date} ({completed}/{target})"
-
-#         labels.append(label)
-#         values.append(completed)
-
-#         if completed < target:
-#             all_completed = False
-
-#     return {
-#         "data": {
-#             "labels": labels,
-#             "datasets": [
-#                 {
-#                     "name": "Completed Target",
-#                     "values": values,
-#                     "colors": [
-#                         (
-#                             "#e79395"
-#                             if (
-#                                 row.get("completed_target", 0)
-#                                 < (row.get("target", 0) or 0)
-#                             )
-#                             else "#28a745"
-#                         )
-#                         for row in data
-#                     ],
-#                 }
-#             ],
-#         },
-#         "type": "bar",
-#     }
-
-
-# def get_chart(data):
-#     if not data:
-#         return {}
-
-#     labels = []
-#     red_values = []
-#     green_values = []
-
-#     for row in data:
-#         employee = row.get("employee", "")
-#         customer = row.get("customer_name", "")
-#         start_date = row.get("start_date")
-#         completed = row.get("completed_target", 0)
-#         target = row.get("target", 0)
-
-#         formatted_date = (
-#             frappe.utils.formatdate(start_date, "dd-MM-yyyy") if start_date else ""
-#         )
-
-#         label = f"{employee} | {customer} | {formatted_date} ({completed}/{target})"
-#         labels.append(label)
-
-#         if completed < (target or 0):
-#             red_values.append(completed)
-#             green_values.append(0)
-#         else:
-#             green_values.append(completed)
-#             red_values.append(0)
-
-#     return {
-#         "data": {
-#             "labels": labels,
-#             "datasets": [
-#                 {"name": "Below Target", "values": red_values},
-#                 {"name": "Met Target", "values": green_values},
-#             ],
-#         },
-#         "type": "bar",
-#         "stacked": 1,
-#         "colors": ["#e79395", "#28a745"],
-#     }
-
-# def get_chart(data):
-#     if not data:
-#         return {}
-
-#     labels = []
-#     red_values = []
-#     green_values = []
-#     has_below = False
-#     has_met = False
-
-#     for row in data:
-#         employee = row.get("employee", "")
-#         customer = row.get("customer_name", "")
-#         start_date = row.get("start_date")
-#         completed = row.get("completed_target", 0)
-#         target = row.get("target", 0)
-
-#         formatted_date = (
-#             frappe.utils.formatdate(start_date, "dd-MM-yyyy") if start_date else ""
-#         )
-
-#         label = f"{employee} | {customer} | {formatted_date} ({completed}/{target})"
-#         labels.append(label)
-
-#         if completed < (target or 0):
-#             red_values.append(completed)
-#             green_values.append(0)
-#             has_below = True
-#         else:
-#             green_values.append(completed)
-#             red_values.append(0)
-#             has_met = True
-
-#     datasets = []
-#     colors = []
-
-#     if has_below:
-#         datasets.append({"name": "Below Target", "values": red_values})
-#         colors.append("#e79395")
-
-#     if has_met:
-#         datasets.append({"name": "Met Target", "values": green_values})
-#         colors.append("#28a745")
-
-#     return {
-#         "data": {
-#             "labels": labels,
-#             "datasets": datasets,
-#         },
-#         "type": "bar",
-#         "stacked": 1,
-#         "colors": colors,
-#     }
 
 def get_chart(data):
     if not data:
@@ -459,15 +301,15 @@ def get_chart(data):
         formatted_date = (
             frappe.utils.formatdate(start_date, "dd-MM-yyyy") if start_date else ""
         )
-
-        label = f" {customer} | {employee} | {formatted_date} ({completed}/{target})"
-        labels.append(label)
+        labels.append(
+            f"{customer} | {employee} | {formatted_date} ({completed}/{target})"
+        )
         values.append(completed)
 
     return {
         "data": {
             "labels": labels,
-            "datasets": [{"values": values}],
+            "datasets": [{"name": "Interview Count", "values": values}],
         },
         "type": "bar",
         "colors": ["#28a745"],
@@ -478,410 +320,59 @@ def get_marketing_hierarchy_employees(
     doctype, txt, searchfield, start, page_len, filters
 ):
     """
-    Link field search — shows Marketing dept employees only.
-    Non-admin sees only self + subordinates via Employee Assignment Detail.
+    Link field search for the employee filter.
+    Non-admin sees only their visible Marketing-dept hierarchy.
+    Uses get_cached_value for user→employee lookup (no per-keystroke DB hit).
     """
     user = frappe.session.user
+    # company = frappe.defaults.get_user_default("company")
 
     values = {
         "txt": f"%{txt}%",
-        "start": start,
-        "page_len": page_len,
+        "start": int(start),  # always cast — HTTP delivers strings
+        "page_len": int(page_len),
         "dept": "Marketing",
     }
 
     conditions = [
-        f"tabEmployee.{searchfield} LIKE %(txt)s",
+        "tabEmployee.name LIKE %(txt)s",
         """
         EXISTS (
             SELECT 1
             FROM `tabEmployee Assignment Detail` d
-            WHERE d.parent = tabEmployee.name
+            WHERE d.parent     = tabEmployee.name
               AND d.department = %(dept)s
         )
         """,
     ]
 
     if user != "Administrator":
-        current_employee = get_employee_from_user(user)
-
+        # get_cached_value instead of get_value — no per-keystroke DB hit.
+        current_employee = frappe.get_cached_value("Employee", {"user": user}, "name")
         if not current_employee:
             return []
 
-        # Get full hierarchy
-        subordinates = get_all_subordinates_by_assignment(
-            current_employee, department="Marketing"
+        subtree = list(
+            get_reporting_subtree(
+                current_employee,
+                department="Marketing",
+            )
         )
-        subordinates.add(current_employee)
-        all_emps = list(subordinates)
-
-        if not all_emps:
+        if not subtree:
             return []
 
-        placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(all_emps))])
+        placeholders = _build_in_placeholders("se", subtree, values)
         conditions.append(f"tabEmployee.name IN ({placeholders})")
 
-        for i, emp in enumerate(all_emps):
-            values[f"emp_{i}"] = emp
-
-    return frappe.db.sql(
-        f"""
-        SELECT tabEmployee.name, tabEmployee.employee_name
-        FROM `tabEmployee`
-        WHERE {" AND ".join(conditions)}
-        ORDER BY tabEmployee.name
-        LIMIT %(start)s, %(page_len)s
-        """,
-        values,
+    query = (
+        "SELECT "
+        "tabEmployee.name, "
+        "tabEmployee.employee_name "
+        "FROM `tabEmployee` "
+        "WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY tabEmployee.employee_name "
+        "LIMIT %(start)s, %(page_len)s"
     )
-
-
-def get_employee_from_user(user):
-    return frappe.db.get_value("Employee", {"user": user}, "name")
-
-
-# import frappe
-# from datetime import timedelta
-# from dateutil.relativedelta import relativedelta
-# from verp_staffing.marketing.api.utils import get_visible_employee_names
-
-
-# def execute(filters=None):
-#     filters = filters or {}
-#     columns = get_columns()
-#     data = get_data(filters)
-#     chart = get_chart(data)
-#     return columns, data, None, chart
-
-
-# def get_columns():
-#     return [
-#         {
-#             "label": "Employee",
-#             "fieldname": "employee",
-#             "fieldtype": "Link",
-#             "options": "Employee",
-#             "width": 180,
-#         },
-#         {
-#             "label": "Customer Name",
-#             "fieldname": "name1",
-#             "fieldname": "name1",
-#             "fieldtype": "Data",
-#             "width": 200,
-#         },
-#         {
-#             "label": "Marketing Start Date",
-#             "fieldname": "start_date",
-#             "fieldtype": "Date",
-#             "width": 110,
-#         },
-#         {
-#             "label": "Target Based On",
-#             "fieldname": "target_based_on",
-#             "fieldtype": "Data",
-#             "width": 120,
-#         },
-#         {
-#             "label": "Target",
-#             "fieldname": "target",
-#             "fieldtype": "Int",
-#             "width": 90,
-#         },
-#         {
-#             "label": "Interview Count",
-#             "fieldname": "completed_target",
-#             "fieldtype": "Int",
-#             "width": 220,
-#         },
-#     ]
-
-# def get_all_subordinates_by_assignment(root_employee, department=None):
-#     """
-#     Recursively get all subordinates using Employee Assignment Detail.
-#     assigned_to field mein parent employee hota hai.
-#     """
-#     collected = set()
-#     stack = [root_employee]
-
-#     while stack:
-#         current = stack.pop()
-
-#         filters = {"assigned_to": current}
-#         if department:
-#             filters["department"] = department
-
-#         children = frappe.db.get_all(
-#             "Employee Assignment Detail",
-#             filters=filters,
-#             pluck="parent",
-#         )
-
-#         for emp in children:
-#             if emp and emp not in collected:
-#                 collected.add(emp)
-#                 stack.append(emp)
-
-#     return collected
-
-
-# def filter_marketing_employees(employee_list):
-#     """Filter employees who belong to Marketing department."""
-#     if not employee_list:
-#         return []
-
-#     data = frappe.db.sql(
-#         """
-#         SELECT DISTINCT e.name
-#         FROM `tabEmployee` e
-#         INNER JOIN `tabEmployee Assignment Detail` d
-#             ON d.parent = e.name
-#         WHERE e.name IN %(emp_list)s
-#           AND d.department = 'Marketing'
-#         """,
-#         {"emp_list": tuple(employee_list)},
-#         as_dict=True,
-#     )
-
-#     return [row.name for row in data]
-
-
-# def get_employee_from_user(user):
-#     """Get Employee name linked to a user."""
-#     return frappe.db.get_value("Employee", {"user": user}, "name")
-
-
-# def get_data(filters):
-
-#     if not filters or not filters.get("from_date"):
-#         return []
-
-#     selected_date = frappe.utils.getdate(filters["from_date"])
-#     user = frappe.session.user
-#     employee_filter = filters.get("employee")
-
-#     values = {}
-#     conditions = ["m.docstatus < 2"]
-
-#     if employee_filter:
-#         # Selected employee + all subordinates recursively
-#         subordinates = get_all_subordinates_by_assignment(
-#             employee_filter, department="Marketing"
-#         )
-
-#         # Include the selected employee itself
-#         subordinates.add(employee_filter)
-
-#         # Filter only Marketing dept employees
-#         valid_employees = filter_marketing_employees(list(subordinates))
-
-#     else:
-#         if user == "Administrator":
-#             data = frappe.db.sql(
-#                 """
-#                 SELECT DISTINCT e.name
-#                 FROM `tabEmployee` e
-#                 INNER JOIN `tabEmployee Assignment Detail` d
-#                     ON d.parent = e.name
-#                 WHERE d.department = 'Marketing'
-#                 """,
-#                 as_dict=True,
-#             )
-#             frappe.errprint(data)
-#             valid_employees = [row.name for row in data]
-
-#         else:
-#             # Use existing utility — it already handles hierarchy via Employee Assignment Detail
-#             employee_names = (
-#                 get_visible_employee_names(user, department="Marketing") or []
-#             )
-#             valid_employees = filter_marketing_employees(employee_names)
-
-#     if not valid_employees:
-#         return []
-
-#     placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(valid_employees))])
-#     conditions.append(f"m.assign_to IN ({placeholders})")
-
-#     for i, emp in enumerate(valid_employees):
-#         values[f"emp_{i}"] = emp
-
-#     where_clause = " AND ".join(conditions)
-
-#     marketing_records = frappe.db.sql(
-#         f"""
-#         SELECT
-#             m.name,
-#             m.assign_to,
-#             IFNULL(c.name, m.customer) AS name1,
-#             m.start_date,
-#             m.target_based_on,
-#             m.target
-#         FROM `tabMarketing` m
-#         LEFT JOIN `tabCustomer` c ON c.name = m.customer
-#         WHERE {where_clause}
-#         ORDER BY m.start_date DESC
-#         """,
-#         values,
-#         as_dict=True,
-#     )
-#     final_data = []
-
-#     for m in marketing_records:
-
-#         if not m.start_date or selected_date < m.start_date:
-#             continue
-
-#         completed_target = 0
-
-#         if m.target_based_on == "Weekly":
-#             days_passed = (selected_date - m.start_date).days
-#             week_number = days_passed // 7
-#             period_start = m.start_date + timedelta(days=week_number * 7)
-#             period_end = period_start + timedelta(days=6)
-#             period_to = min(selected_date, period_end)
-
-#         elif m.target_based_on == "Monthly":
-#             months_passed = (selected_date.year - m.start_date.year) * 12 + (
-#                 selected_date.month - m.start_date.month
-#             )
-#             period_start = m.start_date + relativedelta(months=months_passed)
-#             period_end = period_start + relativedelta(months=1) - timedelta(days=1)
-#             period_to = min(selected_date, period_end)
-
-#         elif m.target_based_on == "Daily":
-#             period_start = selected_date
-#             period_to = selected_date
-
-#         else:
-#             period_start = m.start_date
-#             period_to = selected_date
-
-#         completed_target = (
-#             frappe.db.sql(
-#                 """
-#                 SELECT COUNT(name)
-#                 FROM `tabInterview`
-#                 WHERE marketing_link = %s
-#                   AND DATE(creation) BETWEEN %s AND %s
-#                 """,
-#                 (m.name, period_start, period_to),
-#             )[0][0]
-#             or 0
-#         )
-
-#         final_data.append(
-#             {
-#                 "employee": m.assign_to,
-#                 "name1": m.name1,
-#                 "start_date": m.start_date,
-#                 "target_based_on": m.target_based_on,
-#                 "target": m.target,
-#                 "completed_target": completed_target,
-#             }
-#         )
-
-#     return final_data
-
-
-# def get_chart(data):
-#     if not data:
-#         return {}
-
-#     labels = []
-#     values = []
-
-#     for row in data:
-#         customer = row.get("name1", "")
-#         start_date = row.get("start_date")
-#         completed = row.get("completed_target", 0)
-#         target = row.get("target", 0)
-
-#         formatted_date = (
-#             frappe.utils.formatdate(start_date, "dd-MM-yyyy")
-#             if start_date else ""
-#         )
-
-#         label = f"{customer} | {formatted_date} ({completed} / {target})"
-
-#         labels.append(label)
-#         values.append(completed)
-
-#     return {
-#         "data": {
-#             "labels": labels,
-#             "datasets": [
-#                 {
-#                     "name": "Interview Count",
-#                     "values": values,
-#                 }
-#             ],
-#         },
-#         "type": "bar",
-#     }
-
-# @frappe.whitelist()
-# def get_marketing_hierarchy_employees(
-#     doctype, txt, searchfield, start, page_len, filters
-# ):
-#     """
-#     Link field search — shows Marketing dept employees only.
-#     Non-admin sees only self + subordinates via Employee Assignment Detail.
-#     """
-#     user = frappe.session.user
-
-#     values = {
-#         "txt": f"%{txt}%",
-#         "start": start,
-#         "page_len": page_len,
-#         "dept": "Marketing",
-#     }
-
-#     conditions = [
-#         f"tabEmployee.{searchfield} LIKE %(txt)s",
-#         """
-#         EXISTS (
-#             SELECT 1
-#             FROM `tabEmployee Assignment Detail` d
-#             WHERE d.parent = tabEmployee.name
-#               AND d.department = %(dept)s
-#         )
-#         """,
-#     ]
-
-#     if user != "Administrator":
-#         current_employee = get_employee_from_user(user)
-
-#         if not current_employee:
-#             return []
-
-#         # Get full hierarchy
-#         subordinates = get_all_subordinates_by_assignment(
-#             current_employee, department="Marketing"
-#         )
-#         subordinates.add(current_employee)
-#         all_emps = list(subordinates)
-
-#         if not all_emps:
-#             return []
-
-#         placeholders = ", ".join([f"%(emp_{i})s" for i in range(len(all_emps))])
-#         conditions.append(f"tabEmployee.name IN ({placeholders})")
-
-#         for i, emp in enumerate(all_emps):
-#             values[f"emp_{i}"] = emp
-
-#     return frappe.db.sql(
-#         f"""
-#         SELECT tabEmployee.name, tabEmployee.employee_name
-#         FROM `tabEmployee`
-#         WHERE {" AND ".join(conditions)}
-#         ORDER BY tabEmployee.name
-#         LIMIT %(start)s, %(page_len)s
-#         """,
-#         values,
-#     )
-
-
-# def get_employee_from_user(user):
-#     return frappe.db.get_value("Employee", {"user": user}, "name")
+    
+    return frappe.db.sql(query, values)

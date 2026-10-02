@@ -1,31 +1,27 @@
 frappe.listview_settings["Opportunity"] = {
 	onload(listview) {
-		const roles = frappe.user_roles;
 		const user = frappe.session.user;
-		if (user != "Administrator") {
-			// Only apply to Lead Employee
-			if (
-				roles.includes("Lead Employee") ||
-				roles.includes("Lead Manager") ||
-				roles.includes("Lead Master Manager")
-			) {
-				frappe.msgprint("You are not allowed to access Opportunity list.");
-				frappe.set_route("desk");
-			}
-		}
-	},
 
-	refresh: function (listview) {
-		let sidebar = $("body .layout-side-section");
-		if (!sidebar.length) {
+		if (user === "Administrator") {
 			return;
 		}
 
-		// HIDE ALL ITEMS FIRST
-		sidebar.find(".group-by-field").hide();
-		sidebar.find(".add-group-by").hide();
-		sidebar.find(".save-filter-section").hide();
+		frappe.call({
+			method: "verp_staffing.crm.doctype.opportunity.opportunity.get_lead_department_roles",
+			callback: (r) => {
+				const leadRoles = r.message || [];
 
+				const hasLeadRole = leadRoles.some((role) => frappe.user_roles.includes(role));
+
+				if (hasLeadRole) {
+					frappe.throw(__("You are not allowed to access Opportunity list."));
+					frappe.set_route("/");
+				}
+			},
+		});
+	},
+
+	refresh: function (listview) {
 		setTimeout(() => {
 			let primary_btn = listview.page.wrapper.find(".page-actions .btn-primary");
 
@@ -73,13 +69,13 @@ function open_custom_dialog() {
 				reqd: 1,
 			},
 			{
-				fieldname: "lead",
+				fieldname: "opportunity_from_lead",
 				fieldtype: "Link",
-				label: "Lead From",
+				label: "Opportunity From Lead",
 				options: "Lead",
 
 				onchange: function () {
-					let lead = dialog.get_value("lead");
+					let lead = dialog.get_value("opportunity_from_lead");
 
 					if (lead) {
 						frappe.db.get_value("Lead", lead, "name1").then((r) => {
@@ -109,9 +105,8 @@ function open_custom_dialog() {
 			};
 
 			// If Lead selected
-			if (values.lead) {
-				doc.opportunity_from = "Lead";
-				doc.party_name = values.lead;
+			if (values.opportunity_from_lead) {
+				doc.opportunity_from_lead = values.opportunity_from_lead;
 			}
 
 			// If Referral Customer selected
@@ -119,17 +114,32 @@ function open_custom_dialog() {
 				doc.referral_customer = values.referral_customer;
 			}
 
-			frappe.call({
-				method: "frappe.client.insert",
-				args: {
-					doc: doc,
-				},
-				callback: function (r) {
-					if (!r.exc) {
-						dialog.hide();
-						frappe.set_route("Form", "Opportunity", r.message.name);
-					}
-				},
+			frappe.db.get_value("Employee", { user: frappe.session.user }, "name").then((r) => {
+				if (r && r.message && r.message.name) {
+					doc.opportunity_owner = r.message.name;
+				}
+
+				frappe.call({
+					method: "frappe.client.insert",
+					args: { doc: doc },
+					callback: function (r) {
+						if (r.message) {
+							dialog.hide();
+							frappe.show_alert({
+								message: __("Opportunity created"),
+								indicator: "green",
+							});
+							frappe.set_route("Form", "Opportunity", r.message.name);
+						}
+					},
+					error: function (r) {
+						frappe.msgprint({
+							title: __("Error"),
+							message: r.message || __("Failed to create Opportunity"),
+							indicator: "red",
+						});
+					},
+				});
 			});
 		},
 
@@ -142,7 +152,6 @@ function open_custom_dialog() {
 
 	dialog.show();
 
-	// 🔥 Move "Edit Full Form" to left side
 	setTimeout(() => {
 		let footer = dialog.$wrapper.find(".modal-footer");
 

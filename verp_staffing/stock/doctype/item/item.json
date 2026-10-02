@@ -1,0 +1,189 @@
+{
+ "actions": [],
+ "autoname": "field:item_name",
+ "creation": "2026-04-07 11:24:11.162101",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "disabled",
+  "is_service",
+  "item_name",
+  "item_category",
+  "stock_uom"
+ ],
+ "fields": [
+  {
+   "bold": 1,
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Item Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "item_category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Item Category",
+   "link_filters": "[[\"Item Category\",\"is_group\",\"=\",0]]",
+   "options": "Item Category",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "stock_uom",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Unit Of Measurement",
+   "options": "UOM"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_service",
+   "fieldtype": "Check",
+   "label": "Is Service",
+   "set_only_once": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-27 10:12:43.125030",
+ "modified_by": "Administrator",
+ "module": "Stock",
+ "name": "Item",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Account Person",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Team Lead",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Marketing Mentor",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Senior Recruiter",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Resume Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Coordinator",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Person",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "Technical Master Manager",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "CR",
+   "select": 1
+  },
+  {
+   "read": 1,
+   "role": "OnBoarding Person",
+   "select": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "item_name",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "item_name",
+ "translated_doctype": 1
+}

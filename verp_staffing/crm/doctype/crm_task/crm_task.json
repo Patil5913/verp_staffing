@@ -1,92 +1,91 @@
 {
-    "actions": [],
-    "allow_import": 1,
-    "allow_rename": 1,
-    "creation": "2025-11-18 15:27:24.031825",
-    "doctype": "DocType",
-    "editable_grid": 1,
-    "engine": "InnoDB",
-    "field_order": [
-        "section_break_6pt3",
-        "description",
-        "date",
-        "assigned_to",
-        "related_to",
-        "reference_doctype",
-        "is_completed"
-    ],
-    "fields": [
-        {
-            "fieldname": "section_break_6pt3",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "description",
-            "fieldtype": "Small Text",
-            "label": "Description"
-        },
-        {
-            "fieldname": "date",
-            "fieldtype": "Datetime",
-            "in_list_view": 1,
-            "label": "Date"
-        },
-        {
-            "fieldname": "assigned_to",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "label": "Assigned To",
-            "options": "User"
-        },
-        {
-            "fieldname": "related_to",
-            "fieldtype": "Dynamic Link",
-            "label": "Related To",
-            "hidden": 1,
-            "options": "reference_doctype"
-        },
-        {
-            "fieldname": "reference_doctype",
-            "fieldtype": "Link",
-            "hidden": 1,
-            "label": "Reference Doctype",
-            "options": "DocType"
-        },
-        {
-            "default": "0",
-            "fieldname": "is_completed",
-            "fieldtype": "Check",
-            "in_list_view": 1,
-            "label": "Is Completed"
-        }
-    ],
-    "grid_page_length": 50,
-    "index_web_pages_for_search": 1,
-    "links": [],
-    "modified": "2025-11-21 12:16:36.575872",
-    "modified_by": "Administrator",
-    "module": "CRM",
-    "name": "CRM Task",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "System Manager",
-            "share": 1,
-            "write": 1
-        }
-    ],
-    "row_format": "Dynamic",
-    "rows_threshold_for_grid_search": 20,
-    "sort_field": "modified",
-    "sort_order": "DESC",
-    "states": [],
-    "track_changes": 1,
-    "track_seen": 1
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "creation": "2025-11-18 15:27:24.031825",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_6pt3",
+  "description",
+  "date",
+  "assigned_to",
+  "related_to",
+  "reference_doctype",
+  "is_completed"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_6pt3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assigned To",
+   "options": "User"
+  },
+  {
+   "fieldname": "related_to",
+   "fieldtype": "Dynamic Link",
+   "hidden": 1,
+   "label": "Related To",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Reference Doctype",
+   "options": "DocType"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_completed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Completed"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-26 16:56:16.945350",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "CRM Task",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "All",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1
 }

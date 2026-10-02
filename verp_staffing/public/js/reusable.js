@@ -43,22 +43,21 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 		frm.set_df_property(
 			html_field,
 			"options",
-			"<p style='text-align: center; color: #6b7280; padding: 20px;'>No customer selected</p>",
+			"<p style='text-align: center; color: var(--text-muted, #6b7280); padding: 20px;'>No customer selected</p>",
 		);
 		return;
 	}
 
 	frappe.call({
-		method: "verp_staffing.vrugle_staffing_erp.utils.customer_data.get_data_by_customer",
+		method: "verp_staffing.quota.utils.customer_data.get_data_by_customer",
 		args: { customer, fields },
 		callback(r) {
 			const records = r.message || [];
-
 			if (!Array.isArray(records) || !records.length) {
 				frm.set_df_property(
 					html_field,
 					"options",
-					"<p style='text-align:center;color:#6b7280;padding:20px;'>No records found</p>",
+					"<p style='text-align:center;color:var(--text-muted, #6b7280);padding:20px;'>No records found</p>",
 				);
 				return;
 			}
@@ -97,9 +96,10 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
             .record-section {
                 margin-bottom: 30px;
-                border: 1px solid #e5e7eb;
+                border: 1px solid var(--border-color, #e5e7eb);
                 border-radius: 8px;
-                background: #ffffff;
+                background: var(--card-bg, #ffffff);
+                color: var(--text-color, #212529);
                 overflow: hidden;
             }
 
@@ -112,7 +112,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                 grid-template-columns: 200px 1fr;
                 gap: 16px;
                 padding: 10px 0;
-                border-bottom: 1px solid #f1f3f5;
+                border-bottom: 1px solid var(--border-color, #f1f3f5);
             }
 
             .field-row:last-child {
@@ -122,33 +122,33 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
             .field-label {
                 font-size: 13px;
                 font-weight: 600;
-                color: #495057;
+                color: var(--text-muted, #495057);
             }
 
             .field-value {
                 font-size: 13px;
-                color: #212529;
+                color: var(--text-color, #212529);
                 word-break: break-word;
             }
 
             .table-section {
                 margin-top: 20px;
                 padding: 16px;
-                background: #f8f9fa;
-                border-top: 2px solid #dee2e6;
+                background: var(--bg-color, var(--subtle-fg, #f8f9fa));
+                border-top: 2px solid var(--border-color, #dee2e6);
             }
 
             .table-title {
                 font-size: 14px;
                 font-weight: 600;
                 margin-bottom: 12px;
-                color: #374151;
+                color: var(--text-color, #374151);
             }
 
             .table-wrapper {
                 overflow-x: auto;
-                background: #ffffff;
-                border: 1px solid #dee2e6;
+                background: var(--card-bg, #ffffff);
+                border: 1px solid var(--border-color, #dee2e6);
                 border-radius: 4px;
             }
 
@@ -163,18 +163,20 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
             table.data-table th,
             table.data-table td {
                 padding: 10px 12px;
-                border-bottom: 1px solid #f1f3f5;
+                border-bottom: 1px solid var(--border-color, #f1f3f5);
+                color: var(--text-color, #212529);
                 word-break: break-word;
                 overflow-wrap: break-word;
                 white-space: normal;
             }
 
             table.data-table thead {
-                background: #e9ecef;
+                background: var(--subtle-fg, var(--bg-color, #e9ecef));
+                color: var(--text-color, #212529);
             }
 
             table.data-table tbody tr:hover {
-                background-color: #f8f9fa;
+                background-color: var(--hover-notification-bg, var(--subtle-fg, rgba(0,0,0,0.03)));
             }
 
             .full-preview-overlay {
@@ -188,7 +190,8 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
             }
 
             .full-preview-box {
-                background: #ffffff;
+                background: var(--card-bg, #ffffff);
+                color: var(--text-color, #212529);
                 width: 90%;
                 max-width: 800px;
                 max-height: 80vh;
@@ -196,6 +199,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
                 padding: 20px;
                 overflow-y: auto;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+                border: 1px solid var(--border-color, transparent);
             }
 
             .preview-header {
@@ -239,15 +243,37 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
 					record.fields.forEach((f) => {
 						if (!f.value) return;
-
 						const value = frappe.utils.escape_html(String(f.value));
+						let current_display_html = value
+							? `<a href="${f.fieldtype == "Link" ? `/app/file/${value}` : value.startsWith("http") ? value : `https://${value}`}" target="_blank"
+        style="color:var(--primary, var(--text-color));font-weight:500;text-decoration:none;">${f.fieldname == "personal_linkedin" || f.fieldname == "marketing_linkedin" ? value : "📎 View Current File"}</a>`
+							: `<span style="color:var(--text-muted);font-style:italic;">No file</span>`;
+
+						let display_value = value;
+
+						if (f.fieldname === "email") {
+							display_value = `
+                <a href="#"
+                  class="open-email-composer"
+                  data-email="${frappe.utils.escape_html(value)}"
+                  style="color:var(--primary, var(--text-color));font-weight:500;text-decoration:none;">
+                  ${frappe.utils.escape_html(value)}
+                </a>
+              `;
+						} else if (
+							f.fieldtype == "Link" ||
+							f.fieldname == "personal_linkedin" ||
+							f.fieldname == "marketing_linkedin"
+						) {
+							display_value = current_display_html;
+						}
 
 						html += `
-                        <div class="field-row">
-                            <div class="field-label">${frappe.utils.escape_html(f.label)}</div>
-                            <div class="field-value">${value}</div>
-                        </div>
-                    `;
+              <div class="field-row">
+                <div class="field-label">${frappe.utils.escape_html(f.label)}</div>
+                <div class="field-value">${display_value}</div>
+              </div>
+            `;
 					});
 
 					html += `</div>`;
@@ -298,7 +324,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 
 									html += `
                                     <td style="width:500px; max-width:500px;">
-                                        <span style="cursor:pointer; color:#2563eb; font-weight:500;"
+                                        <span style="cursor:pointer; color:var(--primary, var(--text-color)); font-weight:500;"
                                               onclick="showFullPreview(\`${escapedText.replace(/`/g, "\\`")}\`)">
                                             ${shortText}
                                         </span>
@@ -309,7 +335,7 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 								}
 							});
 
-							html += `</tr>`;
+							html += `<tr>`;
 						});
 
 						html += `
@@ -327,37 +353,80 @@ window.render_customer_related_html = function ({ frm, html_field, customer, fie
 			html += `</div>`;
 
 			frm.set_df_property(html_field, "options", html);
+
+			const $wrapper = frm.fields_dict[html_field].$wrapper;
+
+			// Prevent duplicate handlers on refresh
+			$wrapper.off("click", ".open-email-composer");
+
+			$wrapper.on("click", ".open-email-composer", function (e) {
+				e.preventDefault();
+
+				const email = $(this).data("email");
+
+				new frappe.views.CommunicationComposer({
+					doc: frm.doc,
+					recipients: email,
+				});
+			});
 		},
 	});
 };
 
+window.get_display_fields = async function (doctype) {
+	try {
+		const res = await frappe.db.get_single_value(
+			"ERP Configuration",
+			"department_display_form_fields",
+		);
+		const CONFIG = res ? JSON.parse(res) : {};
+
+		const key = Object.keys(CONFIG).find((k) => k.toLowerCase() === doctype.toLowerCase());
+
+		const fields = key ? CONFIG[key] : [];
+
+		return Array.isArray(fields) ? fields : [];
+	} catch (e) {
+		console.error("Error fetching display fields:", e);
+		return [];
+	}
+};
+
 // --------------------- forward - button --------------------------
 
-window.add_forward_button = async function add_forward_button(frm) {
+window.add_forward_button = async function add_forward_button(frm, service_name) {
 	frm.add_custom_button("Forward Candidate", async () => {
 		let method = "";
 		let args = {};
-
 		if (frm.doctype === "Customer") {
 			method = "verp_staffing.crm.doctype.customer.customer.get_forwardable_departments";
-			args = {
-				customer: frm.doc.name,
-			};
+			args = { customer: frm.doc.name };
 		} else {
 			method =
 				"verp_staffing.crm.doctype.customer.customer.get_forwardable_departments_from_service";
-			args = {
-				doctype: frm.doctype,
-				docname: frm.doc.name,
-			};
+			args = { doctype: frm.doctype, docname: frm.doc.name };
 		}
 
 		frappe.call({
 			method: method,
 			args: args,
 			callback(r) {
-				let services = r.message || [];
+				const response = r.message;
+				const isNewShape =
+					response && typeof response === "object" && !Array.isArray(response);
 
+				if (isNewShape && response.blocked) {
+					const depts = response.active_in.join(" and ");
+					frappe.msgprint({
+						title: "Forwarding Not Allowed",
+						indicator: "red",
+						message: `This customer is currently forwarded to <b>${depts}</b>. 
+                                  No further forwarding is allowed.`,
+					});
+					return;
+				}
+
+				let services = isNewShape ? response.options || [] : response || [];
 				if (!services.length) {
 					frappe.msgprint("No services available for forwarding.");
 					return;
@@ -370,13 +439,20 @@ window.add_forward_button = async function add_forward_button(frm) {
 					return;
 				}
 
-				open_forward_prompt(frm, services);
+				open_forward_prompt(frm, services, service_name);
 			},
 		});
 	});
 };
 
-function open_forward_prompt(frm, services) {
+function toggle_manual_assign(dialog) {
+	const manual = dialog.get_value("manual_assign");
+	dialog.set_df_property("assign_employee", "hidden", !manual);
+	dialog.set_df_property("assign_employee", "reqd", manual);
+	dialog.refresh();
+}
+
+function open_forward_prompt(frm, services, service_name) {
 	const d = new frappe.ui.Dialog({
 		title: "Forward Candidate",
 		fields: [
@@ -387,21 +463,73 @@ function open_forward_prompt(frm, services) {
 				options: services,
 				reqd: 1,
 				onchange() {
+					d.set_value("assign_employee", null);
 					toggle_fields(d, frm);
 				},
 			},
 			{
-				fieldname: "note",
-				fieldtype: "Text Editor",
-				label: "Required",
+				fieldname: "interview_round",
+				fieldtype: "Autocomplete",
+				label: "Select Interview Round",
 				hidden: 1,
+				options: [],
 			},
 			{
 				fieldname: "interview",
-				fieldtype: "Select",
+				fieldtype: "Autocomplete",
 				label: "Select Interview",
 				hidden: 1,
 				options: [],
+			},
+			{
+				fieldname: "email",
+				options: "Email",
+				fieldtype: "Data",
+				label: "Candidate Email (Used For Marketing)",
+				hidden: 1,
+			},
+			{
+				fieldname: "password",
+				fieldtype: "Data",
+				label: "Email Password",
+				hidden: 1,
+			},
+			{
+				fieldname: "note",
+				fieldtype: "Text Editor",
+				label: "Note (Optional)",
+				hidden: 1,
+			},
+			{
+				fieldname: "reason_for_forwarding",
+				fieldtype: "Small Text",
+				label: "Reason For Forwarding",
+				hidden: 1,
+			},
+			{
+				fieldname: "manual_assign",
+				fieldtype: "Check",
+				label: "Assign Manually",
+				default: 0,
+				hidden: 1,
+				onchange() {
+					toggle_manual_assign(d);
+				},
+			},
+			{
+				fieldname: "assign_employee",
+				label: "Assign To",
+				fieldtype: "Link",
+				options: "Employee",
+				hidden: 1,
+				get_query: function () {
+					const selected_service = d.get_value("service");
+					return {
+						filters: [
+							["Employee Assignment Detail", "department", "=", selected_service],
+						],
+					};
+				},
 			},
 		],
 		primary_action_label: "Forward",
@@ -410,59 +538,144 @@ function open_forward_prompt(frm, services) {
 				frappe.msgprint("Note is required for RUC.");
 				return;
 			}
-
-			if (values.service === "JDC" && !values.interview) {
-				frappe.msgprint("Please select Interview for JDC.");
+			if (
+				(values.service === "JDC" || values.service === "Interview Support") &&
+				!values.interview_round
+			) {
+				frappe.msgprint(`Please select Interview Round for ${values.service}`);
 				return;
 			}
-
+			if (values.service?.toLowerCase() === "cr" && !values.reason_for_forwarding) {
+				frappe.msgprint("Reason for forwarding is required for CR.");
+				return;
+			}
+			if (values.service?.toLowerCase() === "onboarding") {
+				if (!values.interview) {
+					frappe.msgprint("Please select an Interview for Onboarding.");
+					return;
+				}
+				if (!values.email || !values.password) {
+					frappe.msgprint("Candidate Email and Password are required.");
+					return;
+				}
+				if (!frappe.utils.validate_type(values.email, "email")) {
+					frappe.msgprint("Please enter a valid Candidate Email.");
+					return;
+				}
+			}
 			d.disable_primary_action();
-			forward_candidate(frm, values);
+			forward_candidate(frm, values, service_name);
 			d.hide();
 		},
 	});
-
 	d.show();
 }
 
 function toggle_fields(dialog, frm) {
 	const service = dialog.get_value("service");
+	const serviceLower = service?.toLowerCase();
+	const fields_to_hide = [
+		"note",
+		"reason_for_forwarding",
+		"interview_round",
+		"interview",
+		"email",
+		"password",
+		"manual_assign",
+		"assign_employee",
+	];
+	fields_to_hide.forEach((f) => {
+		dialog.set_df_property(f, "hidden", 1);
+		dialog.set_df_property(f, "reqd", 0);
+	});
 
-	dialog.set_df_property("note", "hidden", 1);
-	dialog.set_df_property("note", "reqd", 0);
-	dialog.set_df_property("interview", "hidden", 1);
-	dialog.set_df_property("interview", "reqd", 0);
-
-	if (service) {
-		dialog.set_df_property("note", "hidden", 0);
-		dialog.set_df_property("note", "reqd", 1);
+	if (!service) {
+		dialog.refresh();
+		return;
 	}
 
-	if (service && service.toLowerCase() === "jdc") {
+	if (serviceLower === "cr") {
+		dialog.set_df_property("manual_assign", "hidden", 0);
+		dialog.set_df_property("reason_for_forwarding", "hidden", 0);
+		dialog.set_df_property("reason_for_forwarding", "reqd", 1);
+		dialog.set_df_property("note", "hidden", 1);
+		dialog.refresh();
+		return;
+	}
+
+	dialog.set_df_property("note", "hidden", 0);
+
+	if (
+		serviceLower === "jdc" ||
+		serviceLower === "interview support" ||
+		serviceLower === "onboarding"
+	) {
 		frappe.call({
 			method: "verp_staffing.crm.api.auto_assign.get_customer_interviews",
-			args: {
-				customer: frm.doc.customer || frm.doc.name,
-			},
+			args: { customer: frm.doc.customer || frm.doc.name, service: serviceLower },
 			callback(r) {
-				const interviews = r.message || [];
+				const data = r.message || [];
 
-				if (!interviews.length) {
-					frappe.msgprint({
-						title: __("No Interview"),
-						message: __("This customer does not have any interview."),
-						indicator: "orange",
+				if (serviceLower === "onboarding") {
+					dialog.set_df_property("manual_assign", "hidden", 0);
+
+					if (!data.length) {
+						frappe.msgprint({
+							title: __("No Interview Found"),
+							message: __(
+								"This customer does not have any interview with status 'Get The Offer'.",
+							),
+							indicator: "orange",
+						});
+						dialog.refresh();
+						return;
+					}
+
+					dialog.set_df_property("note", "hidden", 1);
+					dialog.set_df_property("interview", "options", data);
+					dialog.set_df_property("interview", "hidden", 0);
+					dialog.set_df_property("interview", "reqd", 1);
+
+					dialog.set_df_property("email", "hidden", 0);
+					dialog.set_df_property("email", "read_only", 1);
+					dialog.set_df_property("password", "hidden", 0);
+					dialog.set_df_property("password", "read_only", 1);
+
+					// preset from any existing Onboardings record so the marketing
+					// person can verify/edit rather than retype from scratch
+					frappe.call({
+						method: "verp_staffing.crm.doctype.customer.customer.get_onboarding_credentials",
+						args: { customer: frm.doc.customer || frm.doc.name },
+						callback(cr) {
+							if (cr.message?.marketing_email_id) {
+								dialog.set_value("email", cr.message.marketing_email_id);
+							}
+							if (cr.message?.marketing_email_password) {
+								dialog.set_value("password", cr.message.marketing_email_password);
+							}
+							dialog.refresh();
+						},
 					});
-
-					dialog.set_df_property("interview", "hidden", 1);
-					dialog.set_df_property("interview", "reqd", 0);
-					dialog.refresh();
 					return;
 				}
 
-				dialog.set_df_property("interview", "options", interviews);
-				dialog.set_df_property("interview", "hidden", 0);
-				dialog.set_df_property("interview", "reqd", 1);
+				// jdc / interview support (unchanged)
+				if (!data.length) {
+					frappe.msgprint({
+						title: __("No Interview Round Found"),
+						message: __(
+							"This customer does not have any interview round scheduled yet.",
+						),
+						indicator: "orange",
+					});
+					dialog.set_df_property("interview_round", "hidden", 1);
+					dialog.set_df_property("interview_round", "reqd", 0);
+					dialog.refresh();
+					return;
+				}
+				dialog.set_df_property("interview_round", "options", data);
+				dialog.set_df_property("interview_round", "hidden", 0);
+				dialog.set_df_property("interview_round", "reqd", 1);
 				dialog.refresh();
 			},
 		});
@@ -471,62 +684,36 @@ function toggle_fields(dialog, frm) {
 	dialog.refresh();
 }
 
-function get_stage_json(frm) {
-	return new Promise((resolve) => {
-		frappe.call({
-			method: "frappe.client.get",
-			args: {
-				doctype: "Customer",
-				name: frm.doc.name,
-			},
-			callback: function (r) {
-				if (!r.message || !r.message.stage) {
-					resolve([]);
-					return;
-				}
-
-				try {
-					const parsedStage = JSON.parse(r.message.stage);
-					// parsedStage.count = 0
-					resolve(Object.keys(parsedStage), parsedStage);
-					// resolve(parsedStage);
-				} catch (e) {
-					console.warn("Invalid stage JSON");
-					resolve([]);
-				}
-			},
-			error: function () {
-				resolve([]);
-			},
-		});
-	});
-}
-
-function forward_candidate(frm, values) {
+function forward_candidate(frm, values, service_name) {
 	frappe.call({
 		method: "verp_staffing.crm.api.auto_assign.forward_candidate",
 		args: {
 			customer: frm.doc.customer || frm.doc.name,
 			service: values.service,
+			interview_round: values.interview_round || null,
 			interview: values.interview || null,
+			email: values.email || null,
+			password: values.password || null,
+			assign_employee: values.assign_employee || null,
+			reason_for_forwarding: values.reason_for_forwarding || null,
+			from_service_name: service_name || null,
 		},
 		callback(r) {
 			const noteDoctype = r.message.doctype;
-
-			frappe.call({
-				method: "verp_staffing.crm.api.notes.add_note",
-				args: {
-					reference_doctype: noteDoctype,
-					reference_name: r.message.name,
-					current_doctype: frm.doctype,
-					note: values.note,
-				},
-			});
-
+			if (values.note && values.note.trim()) {
+				frappe.call({
+					method: "verp_staffing.crm.api.notes.add_note",
+					args: {
+						reference_doctype: noteDoctype,
+						reference_name: r.message.name,
+						current_doctype: frm.doctype,
+						note: values.note,
+					},
+				});
+			}
 			frappe.msgprint(
 				`Candidate forwarded for ${values.service} and assigned automatically.`,
 			);
-
 			frm.reload_doc();
 		},
 	});
@@ -554,7 +741,7 @@ window.render_notes = function (frm) {
 
 function load_notes(frm, $notes_wrapper, $updates_wrapper) {
 	$notes_wrapper.html(`<div class="p-3 text-muted">Loading...</div>`);
-	if (frm.doctype === "Customer") {
+	if (frm.doctype === "Customer" || frm.doctype === "Opportunity" || frm.doctype === "Lead") {
 		$updates_wrapper.closest(".form-group, .section-body, .frappe-control").hide();
 	} else {
 		$updates_wrapper.closest(".form-group, .section-body, .frappe-control").show();
@@ -643,9 +830,18 @@ function load_notes(frm, $notes_wrapper, $updates_wrapper) {
 				.find(".add-note-btn")
 				.on("click", () => open_add_note_dialog(frm, $notes_wrapper));
 
-			attach_edit_delete_events(frm, $notes_wrapper);
+			attach_edit_delete_events_for_note(frm, $notes_wrapper);
 		},
 	});
+}
+
+function refresh_notes(frm) {
+	const notes_field = frm.get_field("notes_html");
+	const updates_field = frm.get_field("updates_html");
+
+	if (!notes_field || !updates_field) return;
+
+	load_notes(frm, notes_field.$wrapper, updates_field.$wrapper);
 }
 
 function open_add_note_dialog(frm, $wrapper) {
@@ -667,7 +863,7 @@ function open_add_note_dialog(frm, $wrapper) {
 				callback(r) {
 					frappe.show_alert({ message: __("Note added"), indicator: "green" });
 					d.hide();
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 				error() {
 					frappe.msgprint(__("Failed to add note"));
@@ -679,7 +875,7 @@ function open_add_note_dialog(frm, $wrapper) {
 	d.show();
 }
 
-function attach_edit_delete_events(frm, $wrapper) {
+function attach_edit_delete_events_for_note(frm, $wrapper) {
 	// Edit note
 	$wrapper.find(".edit-note").on("click", function () {
 		const note_id = $(this).closest(".list-group-item").data("id");
@@ -697,7 +893,7 @@ function attach_edit_delete_events(frm, $wrapper) {
 				args: { note_id },
 				callback: () => {
 					frappe.show_alert("Note deleted");
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 			});
 		});
@@ -727,12 +923,80 @@ function open_edit_note_dialog(frm, $wrapper, note_id, old_note) {
 				callback: () => {
 					frappe.show_alert("Note updated");
 					d.hide();
-					get_notes(frm, $wrapper);
+					refresh_notes(frm, $wrapper);
 				},
 			});
 		},
 	});
 	d.show();
+}
+
+function get_notes(frm, $wrapper) {
+	$wrapper.html(`<div class="p-3 text-muted">Loading notes...</div>`);
+
+	frappe.call({
+		method: "verp_staffing.crm.api.notes.get_notes",
+		args: {
+			reference_doctype: frm.doctype,
+			reference_name: frm.doc.name,
+		},
+		callback: function (r) {
+			const notes = r.message || [];
+
+			if (!notes.length) {
+				$wrapper.html(`
+	                    <div class="p-3 text-center">
+	                        <div class="text-muted mb-2">No notes yet.</div>
+	                        <button class="btn btn-primary btn-sm add-note-btn">Add Note</button>
+	                    </div>
+	                `);
+				$wrapper
+					.find(".add-note-btn")
+					.on("click", () => open_add_note_dialog(frm, $wrapper));
+				return;
+			}
+
+			let html = `
+	            <div class="mt-2 mb-2">
+	                    <button class="btn btn-secondary btn-sm add-note-inline">Add Note</button>
+	                </div>
+	                <div class="notes-list list-group">
+	            `;
+
+			notes.forEach((n) => {
+				const added_on = frappe.datetime.str_to_user(n.added_on);
+
+				html += `
+	                <div class="list-group-item" data-id="${n.name}">
+	                    <div class="d-flex justify-content-between">
+	                        <div>
+	                            <b>${n.added_by}</b>
+	                            <span class="text-muted" style="margin-left: 6px;">
+	                                ${added_on}
+	                            </span>
+	                        </div>
+	                        <div>
+	                            <span class="text-primary edit-note" style="cursor:pointer;margin-right:10px;">Edit</span>
+	                            <span class="text-danger delete-note" style="cursor:pointer;">Delete</span>
+	                        </div>
+	                    </div>
+	                    <div class="note-content mt-2">${n.note}</div>
+	                </div>`;
+			});
+
+			html += `
+	                </div>
+	                
+	            `;
+
+			$wrapper.html(html);
+
+			$wrapper
+				.find(".add-note-inline")
+				.on("click", () => open_add_note_dialog(frm, $wrapper));
+			attach_edit_delete_events_for_note(frm, $wrapper);
+		},
+	});
 }
 
 // --------------------- activity --------------------------
@@ -750,6 +1014,7 @@ window.render_activity_section = function render_activity_section(frm) {
 		callback: function (r) {
 			let tasks = r.message.tasks;
 			let events = r.message.events;
+			tasks.sort((a, b) => a.is_completed - b.is_completed);
 			let html = `
             <div style="display:flex; gap:20px;">
                 
@@ -784,7 +1049,7 @@ window.render_activity_section = function render_activity_section(frm) {
 			$wrapper.html(html);
 			$wrapper.find(".add-task-btn").on("click", () => open_new_task_dialog(frm));
 			$wrapper.find(".add-event-btn").on("click", () => open_new_event_dialog(frm));
-			attach_edit_delete_events(frm, $wrapper);
+			attach_edit_delete_events_for_task_and_event(frm, $wrapper);
 			bind_task_checkbox_actions(frm);
 		},
 	});
@@ -794,7 +1059,12 @@ function open_new_task_dialog(frm) {
 	const d = new frappe.ui.Dialog({
 		title: __("Create Task"),
 		fields: [
-			{ label: "Description", fieldname: "description", fieldtype: "Small Text", reqd: 1 },
+			{
+				label: "Description",
+				fieldname: "description",
+				fieldtype: "Small Text",
+				reqd: 1,
+			},
 			{
 				label: "Date",
 				fieldname: "date",
@@ -802,7 +1072,12 @@ function open_new_task_dialog(frm) {
 				default: frappe.datetime.now_datetime(),
 				reqd: 1,
 			},
-			{ label: "Assigned To", fieldname: "assigned_to", fieldtype: "Link", options: "User" },
+			{
+				label: "Assigned To",
+				fieldname: "assigned_to",
+				fieldtype: "Link",
+				options: "User",
+			},
 		],
 		primary_action_label: __("Create"),
 		primary_action(values) {
@@ -814,14 +1089,17 @@ function open_new_task_dialog(frm) {
 			frappe.call({
 				method: "verp_staffing.crm.api.activities.create_task",
 				args: {
-					reference_doctype: "RUC",
+					reference_doctype: frm.doc.doctype,
 					reference_name: frm.doc.name,
 					description: values.description,
 					date: values.date,
 					assigned_to: values.assigned_to,
 				},
 				callback(r) {
-					frappe.show_alert({ message: __("Task created"), indicator: "green" });
+					frappe.show_alert({
+						message: __("Task created"),
+						indicator: "green",
+					});
 					d.hide();
 					render_activity_section(frm);
 				},
@@ -838,23 +1116,31 @@ function open_new_task_dialog(frm) {
 
 function render_task_card(t, frm) {
 	return `
-    <div class="task-card list-group-item" data-id="${t.name}" style="padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" class="task-complete" data-id="${t.name}" />
+    <div class="task-card list-group-item" data-id="${t.name}" style="padding:10px; border:1px solid var(--border-color, #ccc); border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:10px; background:var(--card-bg, inherit); color:var(--text-color, inherit); ${
+		t.is_completed ? "opacity:0.5; filter: grayscale(0.3);" : ""
+	}">
+        <input type="checkbox" ${t.is_completed ? "checked" : ""} class="task-complete" data-id="${t.name}" />
 
         <div style="flex:1">
             <b>${t.description}</b><br>
             <small>Due: ${t.date || "No date"} | Assigned: ${t.assigned_to || "N/A"}</small>
         </div>
-        <button class="btn btn-xs btn-secondary edit-task-btn"">Edit</button>
-        <button class="btn btn-xs btn-secondary delete-task-btn text-danger">Delete</button>
+        <button class="btn btn-xs btn-secondary edit-task-btn" 
+			${t.is_completed ? "disabled" : ""}>
+			Edit
+		</button>
 
+		<button class="btn btn-xs btn-secondary delete-task-btn text-danger" 
+			${t.is_completed ? "disabled" : ""}>
+			Delete
+		</button>
     </div>
     `;
 }
 
 function render_event_card(e, frm) {
 	return `
-    <div class="event-card list-group-item" data-id="${e.name}" style="padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:8px;">
+    <div class="event-card list-group-item" data-id="${e.name}" style="padding:10px; border:1px solid var(--border-color, #ccc); border-radius:6px; margin-bottom:8px; background:var(--card-bg, inherit); color:var(--text-color, inherit);">
         <b>${e.category}</b> <br>
         <small>Date: ${e.date || "No date"} | Assigned: ${e.assigned_to || "N/A"}</small>
         <button class="btn btn-xs btn-secondary edit-event-btn" style="margin-left:10px">Edit</button>
@@ -888,7 +1174,12 @@ function open_edit_task_dialog(task_name, frm) {
 					default: doc.description,
 					reqd: 1,
 				},
-				{ label: "Date", fieldname: "date", fieldtype: "Datetime", default: doc.date },
+				{
+					label: "Date",
+					fieldname: "date",
+					fieldtype: "Datetime",
+					default: doc.date,
+				},
 				{
 					label: "Assigned To",
 					fieldname: "assigned_to",
@@ -905,19 +1196,12 @@ function open_edit_task_dialog(task_name, frm) {
 			],
 			primary_action_label: __("Update"),
 			primary_action(values) {
-				frappe.call({
-					method: "verp_staffing.crm.api.activities.mark_task_complete",
-					args: {
-						task_name: task_name,
-						completed: values.is_completed ? 1 : 0,
-					},
-				});
-
 				frappe.db
 					.set_value("CRM Task", task_name, {
 						description: values.description,
 						date: values.date,
 						assigned_to: values.assigned_to,
+						is_completed: values.is_completed ? 1 : 0,
 					})
 					.then(() => {
 						frappe.show_alert("Task updated");
@@ -954,6 +1238,23 @@ function open_new_event_dialog(frm) {
 				fieldtype: "Select",
 				options: "Event\nMeeting\nCall\nFollow Up\nOther",
 				reqd: 1,
+				onchange: function () {
+					let value = d.get_value("category");
+
+					if (value === "Other") {
+						d.set_df_property("custom_title", "hidden", 0);
+						d.set_df_property("custom_title", "reqd", 1);
+					} else {
+						d.set_df_property("custom_title", "hidden", 1);
+						d.set_df_property("custom_title", "reqd", 0);
+					}
+				},
+			},
+			{
+				label: "Title (Enter Name of Event)",
+				fieldname: "custom_title",
+				fieldtype: "Data",
+				hidden: 1,
 			},
 			{
 				label: "Date",
@@ -963,15 +1264,24 @@ function open_new_event_dialog(frm) {
 				reqd: 1,
 			},
 			{ label: "Summary", fieldname: "summary", fieldtype: "Data", reqd: 1 },
-			{ label: "Description", fieldname: "description", fieldtype: "Text Editor" },
-			{ label: "Assigned To", fieldname: "assigned_to", fieldtype: "Link", options: "User" },
+			{
+				label: "Description",
+				fieldname: "description",
+				fieldtype: "Text Editor",
+			},
+			{
+				label: "Assigned To",
+				fieldname: "assigned_to",
+				fieldtype: "Link",
+				options: "User",
+			},
 		],
 		primary_action_label: __("Create"),
 		primary_action(values) {
 			frappe.call({
 				method: "verp_staffing.crm.api.activities.create_event",
 				args: {
-					reference_doctype: "RUC",
+					reference_doctype: frm.doc.doctype,
 					reference_name: frm.doc.name,
 					summary: values.summary,
 					date: values.date,
@@ -1003,6 +1313,23 @@ function open_edit_event_dialog(event_name, frm) {
 					options: "Event\nMeeting\nCall\nFollow Up\nOther",
 					default: doc.category,
 					reqd: 1,
+					onchange: function () {
+						let value = d.get_value("category");
+
+						if (value === "Other") {
+							d.set_df_property("custom_title", "hidden", 0);
+							d.set_df_property("custom_title", "reqd", 1);
+						} else {
+							d.set_df_property("custom_title", "hidden", 1);
+							d.set_df_property("custom_title", "reqd", 0);
+						}
+					},
+				},
+				{
+					label: "Title (Enter Name of Event)",
+					fieldname: "custom_title",
+					fieldtype: "Data",
+					hidden: 1,
 				},
 				{
 					label: "Date",
@@ -1064,4 +1391,149 @@ function open_edit_event_dialog(event_name, frm) {
 
 		d.show();
 	});
+}
+
+function attach_edit_delete_events_for_task_and_event(frm, $wrapper) {
+	$wrapper.find(".edit-task-btn").on("click", function () {
+		let task_id = $(this).closest(".task-card").data("id");
+		open_edit_task_dialog(task_id, frm);
+	});
+
+	$wrapper.find(".delete-task-btn").on("click", function () {
+		let task_id = $(this).closest(".task-card").data("id");
+
+		frappe.call({
+			method: "verp_staffing.crm.api.activities.delete_activity",
+			args: { doctype: "CRM Task", name: task_id },
+			callback() {
+				frappe.show_alert("Task deleted");
+				render_activity_section(frm);
+			},
+		});
+	});
+
+	$wrapper.find(".edit-event-btn").on("click", function () {
+		let event_id = $(this).closest(".event-card").data("id");
+		open_edit_event_dialog(event_id, frm);
+	});
+
+	$wrapper.find(".delete-event-btn").on("click", function () {
+		let event_id = $(this).closest(".event-card").data("id");
+
+		frappe.call({
+			method: "verp_staffing.crm.api.activities.delete_activity",
+			args: { doctype: "CRM Event", name: event_id },
+			callback() {
+				frappe.show_alert("Event deleted");
+				render_activity_section(frm);
+			},
+		});
+	});
+}
+
+// Show lates uploaded resume
+
+window.fetch_and_render_resume = function fetch_and_render_resume(frm) {
+	if (!frm.doc.customer) {
+		frm.set_df_property(
+			"resume",
+			"options",
+			'<div style="color:var(--text-muted, #888)">No customer selected</div>',
+		);
+		return;
+	}
+	const set_html = (html) => frm.set_df_property("resume", "options", html);
+
+	const clear_resume = () => set_html("");
+	frappe.call({
+		method: "verp_staffing.technical.doctype.resume.resume.get_latest_resume_document",
+		args: {
+			customer: frm.doc.customer,
+		},
+		callback(r) {
+			const resume = r.message;
+
+			if (!resume?.document) {
+				clear_resume();
+				return;
+			}
+
+			set_html(`
+				<div style="padding:8px">
+					<a
+						href="${resume.document}"
+						target="_blank"
+						style="
+							color:var(--primary, var(--text-color));
+							font-weight:600;
+							text-decoration:none;
+						"
+					>
+						📄 View Resume
+					</a>
+				</div>
+			`);
+		},
+		error() {
+			clear_resume();
+		},
+	});
+};
+
+window.verp_staffing.render_interview_details = function render_interview_details(
+	frm,
+	html_field,
+	interview_round,
+) {
+	const $wrapper = html_field.$wrapper;
+
+	if (!interview_round) {
+		$wrapper.html("");
+		frm.__interview_details_loaded_for = null;
+		return;
+	}
+
+	if (frm.__interview_details_loaded_for === frm.doc.name) {
+		return;
+	}
+
+	frappe.call({
+		method: "verp_staffing.technical.doctype.interview_support.interview_support.get_interview_details",
+		args: { interview_round: interview_round },
+		callback(r) {
+			frm.__interview_details_loaded_for = frm.doc.name;
+
+			if (!r.message || !Object.keys(r.message).length) {
+				$wrapper.html("");
+				return;
+			}
+
+			$wrapper.html(build_interview_details_html(r.message));
+		},
+	});
+};
+
+function build_interview_details_html(d) {
+	const date_str = d.interview_date ? moment(d.interview_date).format("ddd MMM D") : "";
+
+	const time_str =
+		d.from_time && d.to_time
+			? `${moment(d.from_time, "HH:mm:ss").format("h:mm A")} – ${moment(
+					d.to_time,
+					"HH:mm:ss",
+				).format("h:mm A")}${d.edt_est ? " " + d.edt_est : ""}`
+			: "";
+
+	const row = (label, value) =>
+		value ? `<div><strong>${label}:</strong> ${frappe.utils.escape_html(value)}</div>` : "";
+
+	return `
+		<div class="interview-details-block">
+			${row("Interview Round", d.interview_round)}
+			${row("Role", d.role)}
+			${row("Interview Date", date_str)}
+			${row("Interview Time" + (d.edt_est ? ` (${d.edt_est})` : ""), time_str)}
+			${row("Client Name", d.client_name)}
+		</div>
+	`;
 }

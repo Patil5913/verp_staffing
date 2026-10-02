@@ -11,30 +11,57 @@ app_license = "mit"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "verp_staffing",
-# 		"logo": "/assets/verp_staffing/logo.png",
-# 		"title": "Vrugle Staffing ERP",
-# 		"route": "/verp_staffing",
-# 		"has_permission": "verp_staffing.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "verp_staffing",
+		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-without-bg.png",
+		"title": "Vrugle Staffing ERP",
+		"route": "/app",
+		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"
+	}
+]
+
+website_context = {
+	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
+	"splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",
+}
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = ["/assets/verp_staffing/css/globel.css"]
+app_include_css = ["/assets/verp_staffing/css/global.css"]
 # pdflibjs Imports
 app_include_js = [
-    "pdf_lib_bundle.bundle.js",
+    "/assets/verp_staffing/js/pdf.min.js",
+    "/assets/verp_staffing/js/pdf.worker.min.js",
+    "/assets/verp_staffing/js/calculation_engine.js",
     "/assets/verp_staffing/js/reusable.js",
+    "/assets/verp_staffing/js/salesOrder.js",
     "/assets/verp_staffing/js/user_custom.js",
-    "/assets/verp_staffing/js/about_override.js",
+    "/assets/verp_staffing/js/override/about_override.js",
+    "/assets/verp_staffing/js/override/interview_common.js",
     # "/assets/verp_staffing/js/protection.js",
-    "/assets/verp_staffing/js/quick_entry_override.js",
+    "/assets/verp_staffing/js/email_badge.js",
+    "/assets/verp_staffing/js/utils.js",
+    "/assets/verp_staffing/js/override/global_hide.js",
+    "/assets/verp_staffing/js/purchase_common.js",
+    "/assets/verp_staffing/js/override/desk_override.js",
+    "/assets/verp_staffing/js/override/form_view_override.js",
+    "/assets/verp_staffing/js/override/list_view_override.js",
+    "/assets/verp_staffing/js/override/email_provider_defaults.js",
+    "/assets/verp_staffing/js/document_references_widget.js",
+    "/assets/verp_staffing/js/customer_history.js",
+    "/assets/verp_staffing/js/sample_data_guard.js",
 ]
+
+
+# Puts is_sample_data_removed into frappe.boot on every page load, so
+# the client can check it without a server call on every save.
+# If you already have an extend_bootinfo function, add the one line
+# from boot.boot_session into it instead of assigning this directly.
+extend_bootinfo = "verp_staffing.boot.boot_session"
+
 
 # include js, css files in header of web template
 # web_include_css = "/assets/verp_staffing/css/verp_staffing.css"
@@ -51,14 +78,41 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-validation_docs = ["Lead", "Lead Course", "Resume", "RUC", "Marketing","Marketing Other Services", "Customer","JDC","Cover Letter","Technical Other Services","Training" , "Other Services"]
+validation_docs = [
+    "Lead",
+    "Lead Course",
+    "Resume",
+    "RUC",
+    "Opportunity",
+    "Marketing",
+    "Marketing Other Services",
+    "Customer",
+    "JDC",
+    "Cover Letter",
+    "Technical Other Services",
+    "Training",
+    "Other Services",
+    "Sales Order",
+    "Agreement",
+    "Onboardings"
+]
 doctype_js = {
-    **{doc: "public/js/reusable.js" for doc in validation_docs},
+    doc: [
+        "public/js/reusable.js",
+        "public/js/salesOrder.js",
+        "public/js/permission_feature.js",
+    ]
+    for doc in validation_docs
 }
 
-doctype_list_js = {
-    "Lead": "public/js/lead_list.js"
-}
+doctype_js["Email Account"] = "public/js/override/email_account.js"
+
+
+# doctype_list_js = {"Lead": "public/js/lead_list.js"}
+treeviews = [
+    "Account",
+]
+
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -97,11 +151,15 @@ doctype_list_js = {
 # ------------
 
 # before_install = "verp_staffing.install.before_install"
-# after_install = "verp_staffing.install.after_install"
 after_install = [
-    # "verp_staffing.install.remove_default_workspaces",
     "verp_staffing.install.after_install",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.validate_required_lead_documents_config",
+    "verp_staffing.overrides.email_template.patch",
+]
+after_migrate = [
+    # "verp_staffing.install.remove_default_workspaces",
+    # "verp_staffing.install.after_install",
+    "verp_staffing.overrides.email_template.patch",
+    # "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
 
 # Uninstallation
@@ -136,43 +194,160 @@ after_install = [
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+    "Customer": "verp_staffing.crm.api.helpers.customer_query",
+    "Sales Order": "verp_staffing.crm.api.helpers.sales_order_query",
+    "Opportunity": "verp_staffing.crm.api.helpers.opportunity_query",
+    "Lead": "verp_staffing.crm.api.helpers.lead_query",
+    "Resume": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "RUC": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Marketing": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Interview": "verp_staffing.crm.api.helpers.interview_query",
+    "Training": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "JDC": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_query",
+    "CR": "verp_staffing.crm.api.helpers.generic_assign_query",
+}
+
+has_permission = {
+    "Resume": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "RUC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Marketing": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Training": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "JDC": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Cover Letter": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Technical Other Services": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Marketing Other Services": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Onboardings": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "CR": "verp_staffing.crm.api.helpers.generic_assign_has_permission",
+    "Customer": "verp_staffing.crm.api.helpers.customer_has_permission",
+    "Sales Order": "verp_staffing.crm.api.helpers.sales_order_has_permission",
+    "Opportunity": "verp_staffing.crm.api.helpers.opportunity_has_permission",
+    "Lead": "verp_staffing.crm.api.helpers.lead_has_permission",
+    "Interview": "verp_staffing.crm.api.helpers.interview_has_permission",
+}
 
 # DocType Class
 # ---------------
 # Override standard doctype classes
 
-override_doctype_class = {"User": "verp_staffing.overrides.override_user.CustomUser"}
+override_doctype_class = {
+    "User": "verp_staffing.overrides.override_user.CustomUser",
+    "Personal Data Download Request": "verp_staffing.overrides.email_template.CustomPersonalDataDownloadRequest",
+    "Personal Data Deletion Request": "verp_staffing.overrides.email_template.CustomPersonalDataDeletionRequest",
+}
 
 # Document Events
 # ---------------
 # Hook on document methods and events
 
 doc_events = {
+    "Resume": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "RUC": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "JDC": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Training": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Cover Letter": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Marketing": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Onboardings": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "CR": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Technical Other Services": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Marketing Other Services": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Other Services": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
+    },
+    "Department Service": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.invalidate_department_map_cache",
+        "on_trash": "verp_staffing.accounts.utils.sales_order_status.invalidate_department_map_cache",
+    },
+    "Department": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.invalidate_department_map_cache",
+    },
+    # --- Payment Terms ---
+    "Sales Order": {
+        "on_update": "verp_staffing.accounts.utils.sales_order_status.on_sales_order_update_hook"
+    },
     "User": {
-        "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.user_limit",
+        "before_insert": "verp_staffing.quota.utils.quota.user_limit",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
+        "on_update": "verp_staffing.utils.sidebar.on_user_change",
+        "validate": "verp_staffing.utils.sidebar.on_user_validate",
+        "on_trash": "verp_staffing.utils.sidebar.on_user_change",
+    },
+    "Has Role": {
+        "after_insert": "verp_staffing.utils.sidebar.on_has_role_change",
+        "on_update": "verp_staffing.utils.sidebar.on_has_role_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_has_role_change",
+    },
+    "Role": {
+        "on_update": "verp_staffing.utils.sidebar.on_role_update",
+    },
+    "DocPerm": {
+        "after_insert": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_update": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_docperm_change",
+    },
+    "Custom DocPerm": {
+        "after_insert": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_update": "verp_staffing.utils.sidebar.on_docperm_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_docperm_change",
+    },
+    "Employee": {
+        "on_update": "verp_staffing.utils.sidebar.on_employee_change",
+        "after_insert": "verp_staffing.utils.sidebar.on_employee_change",
+        "on_trash": "verp_staffing.utils.sidebar.on_employee_trash",
     },
     "File": {
-        "before_insert": "verp_staffing.vrugle_staffing_erp.utils.quota.site_space_limit",
+        "before_insert": "verp_staffing.quota.utils.quota.site_space_limit",
+        "after_insert": "verp_staffing.quota.utils.quota.on_file_after_insert",
+        "on_trash": "verp_staffing.quota.utils.quota.on_file_after_delete",
     },
     "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
-    "Employee": {
-        "on_update": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
-        "before_save": "verp_staffing.employee.api.workspace_automation.sync_user_workspace_roles",
-        "on_trash": "verp_staffing.employee.api.workspace_automation.remove_user_workspace_roles",
-    },
     "Interview Status": {
         "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
         "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",
         "on_update": "verp_staffing.marketing.doctype.interview.interview.sync_kanban",
-    }
+    },
+    "Sales Invoice": {
+        "on_submit": "verp_staffing.accounts.doctype.sales_invoice.gl.on_submit_sales_invoice",
+        "on_cancel": "verp_staffing.accounts.doctype.sales_invoice.gl.on_cancel_sales_invoice",
+    },
+    "Purchase Invoice": {
+        "on_submit": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_submit_purchase_invoice",
+        "on_cancel": "verp_staffing.accounts.doctype.purchase_invoice.gl.on_cancel_purchase_invoice",
+    },
+    "Fiscal Year": {
+        "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
+        "on_update": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_fiscal_year_save",
+    },
+    "GL Entry": {
+        "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
+    },
+    "ERP Configuration": {
+        "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
+    },
 }
 
 # Scheduled Tasks
@@ -181,19 +356,39 @@ doc_events = {
 # files delete from "file" doctype, time : weekly on sunday at 1 am (depends on site_config.json)
 # DB and file storage backup everyday morning, time : (depends on site_config.json)
 
+
 scheduler_events = {
     "hourly": [
-        "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-        "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
+        "verp_staffing.quota.utils.quota.site_expiry_check",
+        "verp_staffing.quota.utils.quota.block_non_admin",
     ],
-    "daily": ["verp_staffing.vrugle_staffing_erp.utils.quota.check_site_expiry"],
+    "daily": [
+        "verp_staffing.quota.utils.quota.check_site_expiry",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.daily_check_pending_fiscal_years",
+        "verp_staffing.accounts.utils.fiscal_year_opening_balance.recalculate_dirty_fiscal_years",
+        "verp_staffing.accounts.doctype.subscription.subscription.process_due_subscriptions",
+        "verp_staffing.accounts.doctype.sales_order.sales_order.send_payment_term_reminders",
+        "verp_staffing.quota.utils.quota.nightly_reconcile",
+    ],
     "cron": {
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight
             "verp_staffing.crm.api.event_remainders.sendOpportunityClosingDateReminder"
         ],
+        "0 */12 * * *": ["verp_staffing.crm.api.agreement.send_agreement_reminders"],
+        "0 9 * * *": [  # This cron expression runs daily at 8 am
+            "verp_staffing.accounts.doctype.sales_invoice.sales_invoice.send_dynamic_payment_reminders"
+        ],
     },
 }
+
+override_scheduled_jobs = {
+    "frappe.utils.change_log.check_for_update": "verp_staffing.overrides.notification_settings.override_updates_notification"
+}
+
+# Setup
+setup_wizard_requires = "assets/verp_staffing/js/setup/setup_wizard.js"
+setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 
 # Testing
 # -------
@@ -203,10 +398,19 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
+
 override_whitelisted_methods = {
-    "frappe.desk.reportview.get": "verp_staffing.crm.api.helpers.secure_get"
+	"frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card": (
+		"verp_staffing.overrides.kanban_board.update_order_for_single_card"
+	),
+	"frappe.desk.doctype.kanban_board.kanban_board.update_order": (
+		"verp_staffing.overrides.kanban_board.update_order"
+	),
+ 
+    "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
+    "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
+    "frappe.desk.form.utils.get_next": "verp_staffing.crm.api.helpers.get_next_permitted"
 }
-#
 
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -226,8 +430,10 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = [
-    "verp_staffing.vrugle_staffing_erp.utils.quota.site_expiry_check",
-    "verp_staffing.vrugle_staffing_erp.utils.quota.block_non_admin",
+    "verp_staffing.quota.utils.quota.site_expiry_check",
+    "verp_staffing.quota.utils.quota.block_non_admin",
+    "verp_staffing.overrides.email_template.patch",
+    "verp_staffing.overrides.notification_settings.ensure_notification_settings",
 ]
 
 # after_request = ["verp_staffing.utils.after_request"]
@@ -276,8 +482,30 @@ before_request = [
 # }
 
 fixtures = [
+    {"dt": "Kanban Board", "filters": [["kanban_board_name", "=", "Interview"]]},
     {
-        "dt": "Kanban Board",
-        "filters": [["kanban_board_name", "=", "Interview"]]
-    }
+        "dt": "Custom HTML Block",
+        "filters": [
+            [
+                "name",
+                "in",
+                [
+                    "Email Inbox",
+                    "Pending Payment Verification Requests",
+                    "Setup Workspace",
+                ],
+            ]
+        ],
+    },
+    {
+        "dt": "Workspace",
+        "filters": [["name", "in", ["Email Inbox", "Pending PE Requests", "Setup"]]],
+    },
 ]
+
+
+# # verp_staffing/hooks.py
+
+# override_doctype_class = {
+#     "Personal Data Download Request": "verp_staffing.overrides.personal_data_download_request.CustomPersonalDataDownloadRequest"
+# }
