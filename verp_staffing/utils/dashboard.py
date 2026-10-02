@@ -8,7 +8,7 @@ from frappe import _
 from frappe.utils import add_days, add_months, date_diff, flt, get_datetime, getdate
 
 from verp_staffing.utils.reports import _default_company
-from verp_staffing.utils.timezone import convert_round, round_day, user_time_zone, viewer_today
+from verp_staffing.utils.timezone import company_time_zone, convert_round, round_day, viewer_today
 
 # The data behind the dashboard page. One whitelisted call per tab returns a
 # ready-to-render board — KPI tiles, charts, tables and "needs attention"
@@ -1080,11 +1080,11 @@ def _mkt_load(p):
     except frappe.PermissionError:
         interviews = []
     ivs = {i.name: i for i in interviews}
-    rounds = _children("Interview Round", "Interview", list(ivs), ["parent", "idx", "round", "date_of_interview", "type_of_interview", "status", "support", "cancelled_by", "from_time", "edt_est"])
-    # Rounds are typed in Eastern time; the board counts them on the viewer's day (their Time Zone).
+    rounds = _children("Interview Round", "Interview", list(ivs), ["parent", "idx", "round", "date_of_interview", "type_of_interview", "status", "support", "cancelled_by", "from_time", "time_zone"])
+    # Rounds are stored in the company zone and counted on the company's day, like every other date.
     rounds = [r for r in rounds if r.date_of_interview]
     for r in rounds:
-        r.date = round_day(r.date_of_interview, r.from_time, r.edt_est, user_time_zone())
+        r.date = round_day(r.date_of_interview, r.from_time, r.time_zone)
 
     for i in interviews:
         i.opened = _d(i.creation)
@@ -1102,8 +1102,8 @@ def _mkt_load(p):
 
 
 def _round_clock(r):
-    """A round's start time on the viewer's clock, with the zone - "07:30 IST"."""
-    local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.edt_est, user_time_zone())
+    """A round's start time in the company zone, with the zone - "07:30 EDT" - to sit beside its company date."""
+    local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.time_zone, company_time_zone())
     return f"{_time(local['from_time'])} {local['tz_label']}".strip()
 
 
@@ -1608,11 +1608,11 @@ def _tech_prep(b, p, dts):
     if not docs:
         return
     names = _employee_names()
-    rounds = {r.name: r for r in _in_chunks("Interview Round", sorted({d.interview_round for d in docs if d.interview_round}), ["name", "parent", "round", "date_of_interview", "status", "from_time", "edt_est"])}
+    rounds = {r.name: r for r in _in_chunks("Interview Round", sorted({d.interview_round for d in docs if d.interview_round}), ["name", "parent", "round", "date_of_interview", "status", "from_time", "time_zone"])}
     ivs = {i.name: i for i in _in_chunks("Interview", sorted({r.parent for r in rounds.values()}), ["name", "company", "role"])}
     for d in docs:
         rd = rounds.get(d.interview_round)
-        d["on"] = round_day(rd.date_of_interview, rd.from_time, rd.edt_est, user_time_zone()) if rd else None
+        d["on"] = round_day(rd.date_of_interview, rd.from_time, rd.time_zone) if rd else None
         d["off"] = bool(rd and rd.status in CALLED_OFF)
     jdc = [d for d in docs if d.service_dt == "JDC"]
     support = [d for d in docs if d.service_dt == "Interview Support"]
@@ -1642,10 +1642,10 @@ def _tech_prep(b, p, dts):
     # How many of the interviews actually held had a JDC prep (needs read access to Interview).
     try:
         interviews = {i.name: i for i in _get("Interview", ["name", "customer", "company", "role"])}
-        # a day either side: a round typed in Eastern time can land on the next day here
-        all_rounds = _children("Interview Round", "Interview", list(interviews), ["parent", "name", "date_of_interview", "from_time", "edt_est", "status"], {"date_of_interview": _between(add_days(p.frm, -1), add_days(p.today, 8))})
+        # a day either side: a round can land on the neighbouring day in the viewer's zone
+        all_rounds = _children("Interview Round", "Interview", list(interviews), ["parent", "name", "date_of_interview", "from_time", "time_zone", "status"], {"date_of_interview": _between(add_days(p.frm, -1), add_days(p.today, 8))})
         for r in all_rounds:
-            r["day"] = round_day(r.date_of_interview, r.from_time, r.edt_est, user_time_zone())
+            r["day"] = round_day(r.date_of_interview, r.from_time, r.time_zone)
     except frappe.PermissionError:
         all_rounds = None
     if all_rounds is not None and jdc:

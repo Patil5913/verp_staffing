@@ -15,6 +15,8 @@ import os
 from frappe.utils import now_datetime
 import base64
 from datetime import datetime
+import pytz
+from verp_staffing.utils.timezone import company_now, company_time_zone
 
 import io
 from PIL import Image
@@ -63,10 +65,13 @@ class ESign(Document):
         file_doc.delete(ignore_permissions=True)
 
 
-def format_timestamp_UTC():
-    return frappe.utils.get_datetime_in_timezone("UTC").strftime(
-        "%d-%m-%Y, %H:%M:%S UTC"
-    )
+def format_timestamp_company():
+    """Now in the company time zone with its short name - "02-10-2026, 08:15:30 EDT"."""
+    now = company_now()
+    return now.strftime("%d-%m-%Y, %H:%M:%S ") + (now.tzname() or "")
+
+
+format_timestamp_UTC = format_timestamp_company  # old name, kept for any caller
 
 
 CONSENT_STATEMENTS = {
@@ -227,7 +232,7 @@ def send_all_signers(agreement):
         for row in rows:
             row.sign_token = token
             if not row.email_sent_on:
-                row.email_sent_on = format_timestamp_UTC()
+                row.email_sent_on = format_timestamp_company()
 
         link = f"{frappe.utils.get_url()}/sign_document?token={token}"
         if is_portal_signer(doc, email):
@@ -538,7 +543,7 @@ def save_signer_values(
             field.field_value = str(value)
 
         field.signed = 1
-        field.signed_on = format_timestamp_UTC()
+        field.signed_on = format_timestamp_company()
 
         field.save(ignore_permissions=True)
 
@@ -562,8 +567,14 @@ def _audit_label(act):
 
 
 def _audit_sort_key(act):
+    """When an audit entry happened, as company wall time. Entries are stamped in the company zone;
+    older ones carry "UTC" and are moved into it so the two kinds still sort together."""
     try:
-        return datetime.strptime(act.visited_at, "%d-%m-%Y, %H:%M:%S UTC")
+        stamp, _sep, label = act.visited_at.rpartition(" ")
+        when = datetime.strptime(stamp, "%d-%m-%Y, %H:%M:%S")
+        if label == "UTC":
+            when = pytz.utc.localize(when).astimezone(pytz.timezone(company_time_zone())).replace(tzinfo=None)
+        return when
     except Exception:
         return datetime.min
 
@@ -1413,7 +1424,7 @@ def verify_otp(token=None, otp=None):
             {"sign_token": token},
             {
                 "verification_key": verification_key,
-                "verified_on": format_timestamp_UTC(),
+                "verified_on": format_timestamp_company(),
             },
             update_modified=False,
         )
@@ -1490,7 +1501,7 @@ def log_activity(
             "browser": browser or client["browser"],
             "os": os or client["os"],
             "device": device or client["device"],
-            "visited_at": format_timestamp_UTC(),
+            "visited_at": format_timestamp_company(),
             "agreement": agreement.name,
         },
     )

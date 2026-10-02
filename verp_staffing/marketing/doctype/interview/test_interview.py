@@ -114,7 +114,6 @@ def make_interview(resolved=None, submit=False, rounds=None, **overrides):
                 "date_of_interview": today(),
                 "support": 0,
                 "follow_up": 0,
-                "edt_est": "EST",
                 "from_time": "10:00:00",
                 "to_time": "11:00:00",
             }
@@ -149,7 +148,6 @@ def make_interview(resolved=None, submit=False, rounds=None, **overrides):
                 "support": row.get("support", 0),
                 "feedback": row.get("feedback"),
                 "follow_up": row.get("follow_up", 0),
-                "edt_est": row.get("edt_est", "EST"),
                 "from_time": row.get("from_time"),
                 "to_time": row.get("to_time"),
             },
@@ -207,7 +205,6 @@ class InterviewTestBase(FrappeTestCase):
             ),
             "support": 0,
             "follow_up": follow_up,
-            "edt_est": "EST",
             "from_time": "10:00:00",
             "to_time": "11:00:00",
         }

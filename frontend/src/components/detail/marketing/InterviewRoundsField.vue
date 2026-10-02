@@ -117,7 +117,7 @@ const props = defineProps({
 
 const table = computed(() => props.detail.tables.value.find((t) => t.fieldname === 'interview_rounds_table'))
 // "round" is the position number, shown in the card header instead.
-// The round's time is typed in Eastern (EDT/EST); show what it is on this user's clock.
+// Rounds are stored in the zone on the row (the company's once saved); show what it is on this user's clock.
 function inZone(row) {
   const z = roundInZone(row)
   if (!z.converted) return ''

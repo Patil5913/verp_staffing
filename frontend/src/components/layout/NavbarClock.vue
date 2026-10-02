@@ -10,9 +10,8 @@
 </template>
 
 <script setup>
-// The user's clock: the time in their own Time Zone (User > General) with the zone's short code -
-// "09:41:07 PM EDT". That zone starts as the company's (System Settings, edited under ERP
-// Configuration > Website Settings).
+// The company clock: the time in the company Time Zone (System Settings, edited under ERP
+// Configuration > Website Settings) with the zone's short code - "09:41:07 PM EDT". Everyone sees the same.
 //
 // The time and the code come from the SERVER (utils/timezone.py get_clock), which reads the zone and
 // works out the wall time itself; this only ticks forward from that reading. So it is right whatever

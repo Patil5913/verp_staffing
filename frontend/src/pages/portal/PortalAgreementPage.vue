@@ -94,6 +94,7 @@ import { call, Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import { notify } from '@/utils/common/notify'
 import { normalizeError } from '@/utils/common/errors'
+import { siteTimeZone, zoneAbbr } from '@/utils/common/siteTime'
 
 const API = 'verp_staffing.www.agreement_sign.'
 const MAX_IMAGE = 1024 * 1024
@@ -129,9 +130,10 @@ const pad = ref(null)
 // ---- audit trail (same shape/keys as the webform's localStorage trail) ----
 const audit = { 'form visit logs': [], 'signature update logs': [], 'authentication logs': [], 'concern accepted': [] }
 function stamp() {
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  return `${p(d.getUTCDate())}-${p(d.getUTCMonth() + 1)}-${d.getUTCFullYear()}, ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} UTC`
+  // The company's clock, with its zone's short name - "02-10-2026, 08:15:30 EDT"
+  const zone = siteTimeZone()
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date()).map((x) => [x.type, x.value]))
+  return `${p.day}-${p.month}-${p.year}, ${p.hour}:${p.minute}:${p.second} ${zoneAbbr(zone)}`
 }
 async function log(key, data) {
   const fp = await call('verp_staffing.crm.doctype.lead_detail_form.lead_detail_form.get_ip_and_device').catch(() => ({}))

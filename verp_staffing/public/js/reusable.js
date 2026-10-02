@@ -1521,7 +1521,7 @@ function build_interview_details_html(d) {
 			? `${moment(d.from_time, "HH:mm:ss").format("h:mm A")} – ${moment(
 					d.to_time,
 					"HH:mm:ss",
-				).format("h:mm A")}${d.edt_est ? " " + d.edt_est : ""}`
+				).format("h:mm A")}${d.time_zone ? " " + verp_staffing.zone_abbr(d.time_zone) : ""}`
 			: "";
 
 	const row = (label, value) =>
@@ -1532,7 +1532,7 @@ function build_interview_details_html(d) {
 			${row("Interview Round", d.interview_round)}
 			${row("Role", d.role)}
 			${row("Interview Date", date_str)}
-			${row("Interview Time" + (d.edt_est ? ` (${d.edt_est})` : ""), time_str)}
+			${row("Interview Time" + (d.time_zone ? ` (${verp_staffing.zone_abbr(d.time_zone)})` : ""), time_str)}
 			${row("Client Name", d.client_name)}
 		</div>
 	`;

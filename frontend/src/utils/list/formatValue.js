@@ -2,6 +2,8 @@
 // deliberately simple (no locale/currency-symbol lookups from Frappe's own
 // System Settings) - good enough for a scannable list column, not a final
 // print/export representation.
+import { siteNowIso } from '@/utils/common/siteTime'
+
 const DATE_FIELDTYPES = new Set(['Date', 'Datetime'])
 
 function formatNumber(value, options) {
@@ -63,15 +65,14 @@ const RELATIVE_UNITS = [
 ]
 
 // Server timestamps come back as "YYYY-MM-DD HH:MM:SS" (no timezone) in the
-// site's local time, not UTC - replacing the space with "T" alone would let
-// the JS Date constructor treat it as UTC and skew the diff by the site's
-// UTC offset.
+// company's time zone. Both the timestamp and "now" (the company's wall clock, from
+// siteNowIso) are read the same way, so the diff doesn't depend on the browser's zone.
 export function formatRelativeTime(value) {
   if (!value) return ''
   const d = new Date(value.replace(' ', 'T'))
   if (Number.isNaN(d.getTime())) return String(value)
 
-  const diffSeconds = Math.round((d.getTime() - Date.now()) / 1000)
+  const diffSeconds = Math.round((d.getTime() - new Date(siteNowIso().replace(' ', 'T')).getTime()) / 1000)
   const absSeconds = Math.abs(diffSeconds)
 
   if (absSeconds < 60) return 'just now'

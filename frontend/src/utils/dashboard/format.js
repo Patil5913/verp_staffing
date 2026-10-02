@@ -55,7 +55,7 @@ export const PRESETS = [
 ]
 
 export function presetRange(preset, custom = {}) {
-  const today = siteTodayDate() // today on this user's clock, so a range agrees with the server's "today"
+  const today = siteTodayDate() // today in the company's zone, so a range agrees with the server's "today"
   const y = today.getFullYear()
   const m = today.getMonth()
   const q = Math.floor(m / 3) * 3

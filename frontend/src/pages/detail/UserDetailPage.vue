@@ -75,12 +75,7 @@
 						:doctype="doctype"
 						:detail="detail"
 						:fieldnames="GENERAL_FIELDS"
-						:field-overrides="{ time_zone: { fieldtype: 'Select', options: timeZoneOptions } }"
 					/>
-					<p class="-mt-4 text-p-xs text-app-text-muted">
-						Time Zone is the clock this user sees interview and other times on. It starts as the company time
-						zone (ERP Configuration &gt; Website Settings) and follows it when that changes, until you pick another.
-					</p>
 					<UserChangePassword v-if="controls.can_manage || controls.can_change_own_password" :user="name" :is-self="controls.is_self" />
 				</div>
 			</div>
@@ -155,8 +150,6 @@ const route = useRoute();
 const router = useRouter();
 
 // The zones offered by the Time Zone dropdown on the General tab.
-const timeZones = useResource({ url: "frappe.core.doctype.user.user.get_timezones", auto: true });
-const timeZoneOptions = computed(() => (timeZones.resource.data?.timezones || []).join("\n"));
 
 const doctype = computed(() => "User");
 const name = computed(() => route.params.name);
@@ -283,7 +276,7 @@ const activeTab = ref("profile");
 
 const PROFILE_FIELDS = ["full_name", "first_name", "last_name", "username", "email"];
 const EMAIL_FIELDS = ["thread_notify", "send_me_a_copy", "allowed_in_mentions"];
-const GENERAL_FIELDS = ["language", "time_zone", "desk_theme"];
+const GENERAL_FIELDS = ["language", "desk_theme"];
 const SECURITY_FIELDS = ["simultaneous_sessions", "restrict_ip", "login_after", "login_before"];
 
 // User's linked email accounts (the "user_emails" child table) - shown as

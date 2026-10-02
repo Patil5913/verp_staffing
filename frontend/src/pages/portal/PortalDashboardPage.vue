@@ -146,6 +146,7 @@ import SectionCard from '@/components/common/SectionCard.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { usePortal } from '@/composables/portal/usePortal'
 import { money, serviceTheme } from '@/utils/portal/status'
+import { siteTimeZone, siteTodayIso, zoneAbbr } from '@/utils/common/siteTime'
 
 const router = useRouter()
 const { data, loading, error, services, counts, unread, interviews, interviewsLoaded, loadInterviews, accounts, loadAccounts, docNames } = usePortal()
@@ -155,7 +156,7 @@ onMounted(() => {
 })
 const currency = computed(() => accounts.value?.invoices?.[0]?.currency || accounts.value?.orders?.[0]?.currency)
 
-const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: siteTimeZone() })
 const firstName = computed(() => (data.value?.user_name || '').split(' ')[0] || 'there')
 
 const pct = computed(() => (services.value.length ? Math.round((counts.value.completed / services.value.length) * 100) : 0))
@@ -171,7 +172,7 @@ const segments = computed(() => {
 
 // rounds still ahead of us, soonest first
 const upcoming = computed(() => {
-  const now = new Date().toISOString().slice(0, 10)
+  const now = siteTodayIso()
   const rows = []
   for (const rec of interviews.value) {
     for (const r of rec.interview_rounds_table || []) {
@@ -186,7 +187,7 @@ const upcoming = computed(() => {
         round: r.round || '-',
         month: date.toLocaleDateString(undefined, { month: 'short' }),
         day: date.getDate(),
-        time: r.from_time && r.to_time ? `${r.from_time} – ${r.to_time} ${r.edt_est || ''}` : '',
+        time: r.from_time && r.to_time ? `${r.from_time} – ${r.to_time} ${zoneAbbr(r.time_zone)}` : '',
       })
     }
   }

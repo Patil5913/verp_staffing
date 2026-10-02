@@ -1,14 +1,15 @@
-"""One company time zone, and per-user display of it.
+"""One company time zone, for everyone.
 
 The company time zone is System Settings' Time Zone, edited from ERP Configuration > Website
-Settings. Every User's Time Zone defaults to it (and follows it when it changes, unless the user
-picked their own), so by default the whole company sees the same clock.
+Settings. Every date and time is stored, shown and compared in it: a User's own Time Zone is not used
+(it is kept equal to the company's, see `force_company_time_zone`), so everyone sees the same clock
+and the same "today".
 
-Interview rounds are the one place a time is entered in a different zone: the recruiter types the
-candidate's Eastern time and labels it EDT or EST. Everything that shows or groups a round by day
-(calendar, "Today", dashboards, customer history) converts it into the viewer's zone through
-`convert_round`, so the date can differ from the one that was typed (9 pm EST is the next morning
-in India).
+Interview rounds are stored in the company time zone like everything else. The recruiter may type a
+round in another zone (the candidate's); the round's Time Zone says which, and saving converts the date
+and times to the company zone (`normalize_round`), keeping what was typed in `entered_as`. Everything
+that shows or groups a round by day (calendar, "Today", dashboards, customer history) goes through
+`convert_round`, which moves it from the zone it is stored in into the company's.
 """
 
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
@@ -16,10 +17,6 @@ from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 import frappe
 import pytz
 from frappe.utils import get_system_timezone, getdate
-
-# The label the recruiter picks says which Eastern offset the time was typed in.
-EASTERN_OFFSET_HOURS = {"EDT": -4, "EST": -5}
-
 
 def company_time_zone():
     return _valid(get_system_timezone()) or "UTC"
@@ -38,11 +35,8 @@ def _zone(tz=None):
 
 
 def user_time_zone(user=None):
-    """The zone this user sees times in: their own Time Zone, else the company's."""
-    user = user or frappe.session.user
-    if not user or user == "Guest":
-        return company_time_zone()
-    return _valid(frappe.get_cached_value("User", user, "time_zone")) or company_time_zone()
+    """The zone this user sees times in: always the company's."""
+    return company_time_zone()
 
 
 def time_zone_label(tz=None):
@@ -68,41 +62,68 @@ def _fmt(seconds):
     return f"{seconds // 3600:02d}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
 
 
-def convert_round(day, from_time, to_time, label, tz=None):
-    """An interview round's date and times, typed in US Eastern (`label` = EDT / EST), in zone `tz`
-    (default: the current user's). Returns {date, from_time, to_time, tz_label, entered, moved_days};
-    a round with no label or no start time is returned exactly as typed."""
+def _abbr(zone, moment):
+    return moment.tzname() or zone.zone
+
+
+def convert_round(day, from_time, to_time, source_tz, tz=None):
+    """An interview round's date and times, stored in zone `source_tz` (default: the company's), in
+    zone `tz` (default: the current user's). Daylight saving is applied by the zone database, so a
+    round in March or November gets the right offset. Returns {date, from_time, to_time, tz_label,
+    entered, moved_days, converted}; a round with no start time is returned as stored."""
     day = getdate(day) if day else None
     start, end = _seconds(from_time), _seconds(to_time)
-    entered = " ".join(x for x in (f"{_fmt(start)[:5]}" if start is not None else "", label or "") if x)
-    as_typed = {"date": day, "from_time": _fmt(start) if start is not None else None, "to_time": _fmt(end) if end is not None else None, "tz_label": label or "", "entered": entered, "moved_days": 0}
-    offset = EASTERN_OFFSET_HOURS.get(label)
-    if day is None or start is None or offset is None:
-        return as_typed
+    source = pytz.timezone(_valid(source_tz) or company_time_zone())
+    as_stored = {"date": day, "from_time": _fmt(start) if start is not None else None, "to_time": _fmt(end) if end is not None else None, "tz_label": "", "entered": "", "moved_days": 0, "converted": False}
+    if day is None or start is None:
+        return as_stored
 
     zone = _zone(tz)
     origin = datetime.combine(day, time.min)
 
-    def to_zone(seconds):
-        utc = (origin + timedelta(seconds=seconds) - timedelta(hours=offset)).replace(tzinfo=dt_timezone.utc)
-        return utc.astimezone(zone)
+    def at(seconds, target):
+        wall = origin + timedelta(seconds=seconds)
+        return source.localize(wall, is_dst=False).astimezone(target)
 
-    local = to_zone(start)
+    started = at(start, source)
+    entered = f"{_fmt(start)[:5]} {_abbr(source, started)}"
+    local = at(start, zone)
     return {
         "date": local.date(),
         "from_time": local.strftime("%H:%M:%S"),
-        "to_time": to_zone(end).strftime("%H:%M:%S") if end is not None else None,
-        "tz_label": local.tzname() or zone.zone,
+        "to_time": at(end, zone).strftime("%H:%M:%S") if end is not None else None,
+        "tz_label": _abbr(zone, local),
         "entered": entered,
         "moved_days": (local.date() - day).days,
+        "converted": source.zone != zone.zone,
     }
 
 
-def round_day(day, from_time, label, tz=None):
+def round_day(day, from_time, source_tz, tz=None):
     """Just the date a round falls on in `tz` (default: the company's), for grouping and 'today'."""
     if not day:
         return None
-    return convert_round(day, from_time, None, label, tz or company_time_zone())["date"]
+    return convert_round(day, from_time, None, source_tz, tz or company_time_zone())["date"]
+
+
+def normalize_round(row, previous=None):
+    """Interview Round validate: put the round's date and times in the company time zone. The row's
+    Time Zone says which zone they were typed in (blank = the company's); afterwards it is the company's,
+    and `entered_as` keeps what was typed ("09:00 IST") when that was a different zone. `previous` is the
+    row as last saved: retyping the round in the company zone drops a stale `entered_as`."""
+    company = company_time_zone()
+    typed_in = row.time_zone or company
+    if not _valid(typed_in):
+        frappe.throw(frappe._("Row #{0}: '{1}' is not a known time zone.").format(row.idx, typed_in))
+    if typed_in != company and row.date_of_interview and row.from_time:
+        local = convert_round(row.date_of_interview, row.from_time, row.to_time, typed_in, company)
+        row.entered_as = f"{local['entered']} ({typed_in})"
+        row.date_of_interview = local["date"]
+        row.from_time = local["from_time"]
+        row.to_time = local["to_time"]
+    elif row.entered_as and previous and (row.date_of_interview, row.from_time, row.to_time) != (previous.date_of_interview, previous.from_time, previous.to_time):
+        row.entered_as = None
+    row.time_zone = company
 
 
 @frappe.whitelist()
@@ -115,33 +136,42 @@ def get_clock():
     return {"zone": zone, "company_zone": company_time_zone(), "label": now.tzname() or zone, "wall": now.strftime("%Y-%m-%dT%H:%M:%S")}
 
 
-def viewer_today():
-    """Today's date on the current user's clock - what "today" means on their dashboards."""
-    return datetime.now(_zone()).date()
+def company_today():
+    """Today's date in the company time zone - the "today" every stored date is compared with."""
+    return datetime.now(pytz.timezone(company_time_zone())).date()
+
+
+viewer_today = company_today
+
+
+def company_now():
+    """The current moment, as a datetime in the company time zone (timezone-aware)."""
+    return datetime.now(pytz.timezone(company_time_zone()))
 
 
 def sync_users_to_company_time_zone(doc, method=None):
-    """System Settings on_update: when the company time zone changes, users who were following it
-    (same zone as before), and users with no valid zone at all, move to the new one. A user who
-    picked their own zone keeps it. Never blocks saving System Settings: a failure is logged."""
+    """System Settings on_update: when the company time zone changes, every user moves to it.
+    Never blocks saving System Settings: a failure is logged."""
     try:
         before = doc.get_doc_before_save()
         old, new = (before.time_zone if before else None), doc.time_zone
         if not _valid(new) or old == new:
             return
-        move_users_to(new, only_following=old)
+        move_users_to(new)
     except Exception:
         frappe.log_error(title="Company time zone: could not update users", message=frappe.get_traceback())
 
 
-def move_users_to(new, only_following=None):
-    """Set users' Time Zone to `new`: those on `only_following`, plus any with an empty or unknown zone.
-    With only_following=None every user is moved (see apply_company_time_zone_to_all_users)."""
+def force_company_time_zone(doc, method=None):
+    """User validate: a user's Time Zone is always the company's, whatever was sent."""
+    doc.time_zone = company_time_zone()
+
+
+def move_users_to(new):
+    """Set every user's Time Zone to `new`."""
     rows = frappe.db.sql("select name, time_zone from `tabUser` where name not in ('Guest')", as_dict=True)
     moved = 0
     for r in rows:
-        if only_following is not None and _valid(r.time_zone) and r.time_zone != only_following:
-            continue
         if r.time_zone == new:
             continue
         frappe.db.set_value("User", r.name, "time_zone", new, update_modified=False)
@@ -153,6 +183,6 @@ def move_users_to(new, only_following=None):
 
 @frappe.whitelist()
 def apply_company_time_zone_to_all_users():
-    """System Manager: put every user on the company time zone, discarding personal choices."""
+    """System Manager: put every user on the company time zone."""
     frappe.only_for("System Manager")
     return {"time_zone": company_time_zone(), "users_updated": move_users_to(company_time_zone())}

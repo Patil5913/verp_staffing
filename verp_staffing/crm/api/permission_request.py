@@ -706,7 +706,7 @@ def request_field_update(
                     "field_updates": field_updates,
                     "service_doctype": service_doctype,
                     "service_name": service_name,
-                    "requested_at": datetime.now(timezone.utc).isoformat(),
+                    "requested_at": frappe.utils.now(),
                 }
             ),
             "comment_by": user,
@@ -824,7 +824,7 @@ def request_field_update_by_owner(customer_name, reason, field_updates):
                     "approver_user": manager_user,
                     "status": "Pending",
                     "field_updates": field_updates,
-                    "requested_at": datetime.now(timezone.utc).isoformat(),
+                    "requested_at": frappe.utils.now(),
                 }
             ),
             "comment_by": user,
@@ -1128,7 +1128,7 @@ def apply_field_updates(customer_name, comment_name, approved_fields):
     data["approved_by"] = manager_employee
     data["approved_fields"] = approved_fields
     data["rejected_fields"] = rejected_fields
-    data["approved_at"] = datetime.now(timezone.utc).isoformat()
+    data["approved_at"] = frappe.utils.now()
     frappe.db.set_value("Comment", comment_name, "content", json.dumps(data))
 
     # ── Build activity log message ──
@@ -1262,7 +1262,7 @@ def reject_field_update_request(customer_name, comment_name):
 
     data["status"] = "Rejected"
     data["rejected_by"] = manager_employee
-    data["rejected_at"] = datetime.now(timezone.utc).isoformat()
+    data["rejected_at"] = frappe.utils.now()
     frappe.db.set_value("Comment", comment_name, "content", json.dumps(data))
 
     activity_message = (

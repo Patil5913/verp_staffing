@@ -49,7 +49,7 @@ def generate_name_series(
     )
 
     safe_name = sanitize(name)
-    today = datetime.now().strftime("%d_%m_%Y")
+    today = frappe.utils.getdate(frappe.utils.today()).strftime("%d_%m_%Y")
 
     base_name = f"{prefix}_{safe_name}_{today}"
 

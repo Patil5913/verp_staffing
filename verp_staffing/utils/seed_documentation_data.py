@@ -794,7 +794,7 @@ def _rounds(kind, active_days, types):
 	def round_(number, day, status, feedback=None, **extra):
 		hour = _pick([9, 10, 11, 13, 14, 15])
 		return {
-			"round": str(number), "date_of_interview": str(day), "type_of_interview": _pick(types), "edt_est": _pick(["EST", "EST", "EDT"]),
+			"round": str(number), "date_of_interview": str(day), "type_of_interview": _pick(types),
 			"from_time": f"{hour}:00:00", "to_time": f"{hour + 1}:00:00", "follow_up": 0, "status": status, "feedback": feedback, **extra,
 		}
 

@@ -23,7 +23,7 @@
               <td class="px-3 py-2">{{ r.type_of_interview || '-' }}</td>
               <td class="px-3 py-2">{{ r.date || '-' }}</td>
               <td class="px-3 py-2">{{ r.date_of_interview || '-' }}</td>
-              <td class="whitespace-nowrap px-3 py-2">{{ r.from_time && r.to_time ? `${r.from_time} – ${r.to_time} ${r.edt_est || ''}` : '-' }}</td>
+              <td class="whitespace-nowrap px-3 py-2">{{ r.from_time && r.to_time ? `${r.from_time} – ${r.to_time} ${zoneAbbr(r.time_zone)}` : '-' }}</td>
               <td class="px-3 py-2"><AppBadge :label="r.status || '-'" :theme="interviewTheme(r.status)" /></td>
               <td class="max-w-[16rem] px-3 py-2">
                 <template v-if="(r.feedback || '').trim()">
@@ -47,6 +47,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { Dialog } from 'frappe-ui'
+import { zoneAbbr } from '@/utils/common/siteTime'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'

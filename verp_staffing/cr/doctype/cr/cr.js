@@ -266,7 +266,7 @@ function render_interviews(data, append = false) {
                     <td style="padding:8px;">${r.type_of_interview || "-"}</td>
                     <td style="padding:8px;">${r.date_of_interview || "-"}</td>
 					<td style="padding:8px;">
-                      ${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${r.edt_est || ""}` : "-"}
+                      ${r.from_time && r.to_time ? `${r.from_time} - ${r.to_time} ${verp_staffing.zone_abbr(r.time_zone)}` : "-"}
                     </td>
                     <td style="padding:8px;">
                                         ${

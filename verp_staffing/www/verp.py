@@ -93,8 +93,8 @@ def get_boot():
 			"site_time_zone": frappe.utils.get_system_timezone(),
 			# The short name of that zone ("IST") for the navbar clock, which shows company time to everyone.
 			"site_time_zone_label": time_zone_label(company_time_zone()),
-			# The zone this user sees times in: their own Time Zone (the company's unless they chose
-			# another). Empty for portal customers, who see interview times as entered - Eastern.
+			# The zone times are read in: the company's, for everyone. Empty for portal customers, whose
+			# interview times are shown as stored (also the company zone).
 			"display_time_zone": "" if _is_chat_customer() else user_time_zone(user),
 			"display_time_zone_label": "" if _is_chat_customer() else time_zone_label(user_time_zone(user)),
 			# Fresh-site detection, same source as Desk's boot (frappe.is_setup_complete):
