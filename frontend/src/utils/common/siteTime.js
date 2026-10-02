@@ -4,25 +4,27 @@
 // same day the server (and the list/Kanban) count as today.
 export const siteTimeZone = () => window.site_time_zone || Intl.DateTimeFormat().resolvedOptions().timeZone
 
-// The zone this user reads times in: their own Time Zone (User > General; the company's unless they
-// chose another). Empty for portal customers, who see interview times as entered.
+// The zone times are read in: the company's, for everyone. Empty for portal customers, whose interview
+// times are shown as stored (also the company zone).
 export const displayTimeZone = () => window.display_time_zone || ''
 
-// 'YYYY-MM-DD' - today for THIS user, in the zone they read times in.
+// 'YYYY-MM-DD' - today in the company's time zone, for everyone: stored dates are company dates, so a
+// user on another zone must not stamp (or lock) rows with their own calendar day.
 export function siteTodayIso() {
   try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: displayTimeZone() || siteTimeZone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    return new Intl.DateTimeFormat('en-CA', { timeZone: siteTimeZone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
   } catch {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   }
 }
 
-// 'YYYY-MM-DD HH:MM:SS' - right now on this user's clock (what a "Now" default should be).
+// 'YYYY-MM-DD HH:MM:SS' - right now in the company's time zone (what a "Now" default should be: stored
+// datetimes are company time).
 export function siteNowIso() {
   try {
     const parts = Object.fromEntries(
-      new Intl.DateTimeFormat('en-CA', { timeZone: displayTimeZone() || siteTimeZone(), hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      new Intl.DateTimeFormat('en-CA', { timeZone: siteTimeZone(), hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
         .formatToParts(new Date())
         .map((p) => [p.type, p.value]),
     )
@@ -52,31 +54,56 @@ export function msSinceSiteTime(serverTimestamp) {
 }
 
 // ── Interview rounds ──
-// A round's time is typed in US Eastern and labelled EDT or EST. This moves it into the viewer's zone
-// (the same maths as utils/timezone.py's convert_round), so 9 pm EST on the 4th reads as 07:30 on the
-// 5th in India. Returns the round as typed when there's no label, no start time or no zone to move to.
-const EASTERN_OFFSET_HOURS = { EDT: -4, EST: -5 }
+// A round is stored in the zone on its Time Zone (the company's once saved). This moves it into the
+// viewer's zone (the same maths as utils/timezone.py's convert_round), so 9 pm on the 4th in New York
+// reads as 06:30 on the 5th in India. Returns the round as stored when there's no start time or no zone
+// to move to. Daylight saving comes from the browser's zone database.
 const hhmm = (t) => {
   const [h = '', m = ''] = String(t ?? '').split(':')
   return h ? `${h.padStart(2, '0')}:${m.padStart(2, '0')}` : ''
 }
 
+const wallParts = (utcMs, zone) =>
+  Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      .formatToParts(new Date(utcMs))
+      .map((p) => [p.type, p.value]),
+  )
+
+// The UTC instant at which `zone`'s clock reads the given wall time.
+function wallToUtc(y, m, d, h, mi, zone) {
+  const wall = Date.UTC(y, m - 1, d, h, mi)
+  const offsetAt = (utcMs) => {
+    const p = wallParts(utcMs, zone)
+    return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - utcMs
+  }
+  const first = wall - offsetAt(wall)
+  return wall - offsetAt(first)
+}
+
+// Short name of a zone ("EDT", "IST") - the zone itself when the browser has none.
+export function zoneAbbr(zone, at = new Date()) {
+  if (!zone) return ''
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'short' }).formatToParts(at).find((p) => p.type === 'timeZoneName')?.value || zone
+  } catch {
+    return zone
+  }
+}
+
 export function roundInZone(round, zone = displayTimeZone()) {
-  const typed = { date: String(round?.date_of_interview || '').slice(0, 10), from: hhmm(round?.from_time), to: hhmm(round?.to_time), zone: round?.edt_est || '', movedDays: 0, converted: false }
-  const offset = EASTERN_OFFSET_HOURS[round?.edt_est]
-  if (!zone || offset === undefined || !typed.date || !typed.from) return typed
-  const [y, m, d] = typed.date.split('-').map(Number)
+  const source = round?.time_zone || siteTimeZone()
+  const stored = { date: String(round?.date_of_interview || '').slice(0, 10), from: hhmm(round?.from_time), to: hhmm(round?.to_time), zone: zoneAbbr(source), movedDays: 0, converted: false }
+  if (!zone || !stored.date || !stored.from) return stored
+  const [y, m, d] = stored.date.split('-').map(Number)
   const at = (time) => {
     const [h = 0, mi = 0] = String(time).split(':').map(Number)
-    const parts = Object.fromEntries(
-      new Intl.DateTimeFormat('en-CA', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-        .formatToParts(new Date(Date.UTC(y, m - 1, d, h - offset, mi)))
-        .map((p) => [p.type, p.value]),
-    )
-    return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` }
+    const utc = wallToUtc(y, m, d, h, mi, source)
+    const p = wallParts(utc, zone)
+    return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}`, utc }
   }
-  const start = at(typed.from)
-  const end = typed.to ? at(typed.to) : null
-  const days = Math.round((Date.parse(`${start.date}T00:00:00Z`) - Date.parse(`${typed.date}T00:00:00Z`)) / 86400000)
-  return { date: start.date, from: start.time, to: end?.time || '', zone: window.display_time_zone_label || zone, movedDays: days, converted: true }
+  const start = at(stored.from)
+  const end = stored.to ? at(stored.to) : null
+  const days = Math.round((Date.parse(`${start.date}T00:00:00Z`) - Date.parse(`${stored.date}T00:00:00Z`)) / 86400000)
+  return { date: start.date, from: start.time, to: end?.time || '', zone: window.display_time_zone_label || zoneAbbr(zone, new Date(start.utc)), movedDays: days, converted: source !== zone }
 }

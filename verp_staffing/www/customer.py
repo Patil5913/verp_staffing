@@ -178,7 +178,7 @@ def _portal_safe(history):
                         r,
                         [
                             "round", "type_of_interview", "date", "date_of_interview", "from_time",
-                            "to_time", "edt_est", "status", "feedback", "support",
+                            "to_time", "time_zone", "status", "feedback", "support",
                         ],
                     )
                     for r in rec.get("interview_rounds_table") or []
@@ -272,8 +272,10 @@ def get_portal_data() -> dict:
 
 
 def _pending_interview_feedback(customer_name):
-    from frappe.utils import get_datetime, now_datetime
     import pytz
+    from frappe.utils import get_datetime
+
+    from verp_staffing.utils.timezone import company_now, company_time_zone
 
     marketing_names_ctx = frappe.get_all(
         "Marketing",
@@ -289,12 +291,8 @@ def _pending_interview_feedback(customer_name):
         fields=["name", "marketing_link", "status", "role", "company"],
     )
 
-    # Convert current system time → US/Eastern
-    system_now = now_datetime()
-    tz = pytz.timezone("US/Eastern")
-
-    # Convert system time to Eastern
-    now_est = system_now.astimezone(tz)
+    # Rounds are stored in the company time zone (or the zone on the row), so "now" is compared there
+    now = company_now()
 
     # ================= FEEDBACK =================
 
@@ -310,14 +308,10 @@ def _pending_interview_feedback(customer_name):
                 and getattr(round, "to_time", None)
             ):
                 dt_str = f"{round.date_of_interview} {round.to_time}"
-                interview_dt = get_datetime(dt_str)
+                zone = pytz.timezone(round.time_zone if round.time_zone in pytz.all_timezones_set else company_time_zone())
+                interview_dt = zone.localize(get_datetime(dt_str).replace(tzinfo=None), is_dst=False)
 
-                if interview_dt.tzinfo is None:
-                    interview_dt = tz.localize(interview_dt)
-                else:
-                    interview_dt = interview_dt.astimezone(tz)
-
-                if now_est >= interview_dt:
+                if now >= interview_dt:
                     rounds.append(
                         {
                             "round_name": round.name,
@@ -981,7 +975,7 @@ def _populate_interview_history(history, customer, interview_limit, interview_of
                 "date_of_interview",
                 "from_time",
                 "to_time",
-                "edt_est",
+                "time_zone",
                 "feedback",
                 "status",
                 "support",
@@ -1007,7 +1001,7 @@ def _populate_interview_history(history, customer, interview_limit, interview_of
                         "date_of_interview": r["date_of_interview"],
                         "from_time": r["from_time"],
                         "to_time": r["to_time"],
-                        "edt_est": r["edt_est"],
+                        "time_zone": r["time_zone"],
                         "feedback": r["feedback"],
                         "status": r["status"],
                         "support": r["support"],

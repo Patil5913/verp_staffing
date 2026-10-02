@@ -74,7 +74,7 @@
                   <td class="py-1.5 pr-4">{{ r.type_of_interview || '-' }}</td>
                   <td class="py-1.5 pr-4">{{ formatDate(r.date) || '-' }}</td>
                   <td class="py-1.5 pr-4">{{ formatDate(roundInZone(r).date) || '-' }}</td>
-                  <td class="py-1.5 pr-4" :title="roundInZone(r).converted ? `Entered ${r.from_time} ${r.edt_est}` : ''">{{ r.from_time && r.to_time ? `${roundInZone(r).from} - ${roundInZone(r).to} ${roundInZone(r).zone}`.trim() : '-' }}</td>
+                  <td class="py-1.5 pr-4" :title="roundInZone(r).converted ? r.entered_as ? `Entered ${r.entered_as}` : `Stored in ${r.time_zone}` : ''">{{ r.from_time && r.to_time ? `${roundInZone(r).from} - ${roundInZone(r).to} ${roundInZone(r).zone}`.trim() : '-' }}</td>
                   <td class="py-1.5 pr-4"><DocStatusBadge :status="r.status" /></td>
                   <td class="py-1.5 max-w-xs"><TruncatedText v-if="r.feedback" :text="r.feedback" :limit="20" /><template v-else>-</template></td>
                 </tr>

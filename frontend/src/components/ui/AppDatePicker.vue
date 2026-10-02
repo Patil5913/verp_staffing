@@ -126,6 +126,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { Popover } from 'frappe-ui'
+import { siteTodayIso } from '@/utils/common/siteTime'
 
 // The app's date control — a calendar popover instead of the browser's native
 // picker. Values stay plain strings, so it drops in where <input type=date>
@@ -149,10 +150,8 @@ const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
 const pad = (n) => String(n).padStart(2, '0')
 const toIso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
-const todayIso = () => {
-  const t = new Date()
-  return toIso(t.getFullYear(), t.getMonth(), t.getDate())
-}
+// Today is the company's day, not the browser's.
+const todayIso = () => siteTodayIso()
 const parts = (iso) => {
   const [y, m, d] = iso.split('-').map(Number)
   return { year: y, month: m - 1, day: d }

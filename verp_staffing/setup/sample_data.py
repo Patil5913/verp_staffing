@@ -1097,7 +1097,6 @@ def create_interviews_for_marketing(marketing_name):
 						"round": f"Round {r}",
 						"date_of_interview": add_days(today(), r),
 						"type_of_interview": type_of_interview,
-						"edt_est": "EDT",
 						"follow_up": 0,
 						"status": interview_status,
 					},

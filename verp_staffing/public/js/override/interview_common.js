@@ -259,7 +259,7 @@ function ivw_is_kanban_route() {
 								date_of_interview: row.date_of_interview,
 								from_time: row.from_time,
 								to_time: row.to_time,
-								edt_est: row.edt_est,
+								time_zone: row.time_zone,
 								customer: row.customer,
 							};
 						});

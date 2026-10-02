@@ -107,8 +107,8 @@ def get_expiry_timestamp():
     except (ValueError, AttributeError):
         return None
     total_seconds = hours * 3600 + minutes * 60
-    expiry_dt = datetime.utcnow() + timedelta(seconds=total_seconds)
-    return int(expiry_dt.timestamp())
+    expiry_dt = now_datetime() + timedelta(seconds=total_seconds)
+    return expiry_dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def generate_form_url(

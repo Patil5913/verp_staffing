@@ -58,7 +58,7 @@ def _department_events(customer):
             link = [department, rid] if rid else None
             for r in entry.get("interview_rounds_table") or []:
                 when = f"{r.get('date_of_interview') or r.get('date')} {r.get('from_time') or ''}".strip()
-                detail = " · ".join(filter(None, [r.get("type_of_interview"), r.get("edt_est"), entry.get("company")]))
+                detail = " · ".join(filter(None, [r.get("type_of_interview"), r.get("time_zone"), entry.get("company")]))
                 events.append(_ev(when, "department", f"Interview round {r.get('round')}", detail, r.get("status") or "", link, group=department))
             for row in entry.get("job_application_count") or []:
                 events.append(_ev(row.get("date"), "department", f"{row.get('total_application', 0)} job applications", f"{row.get('small_application', 0)} small · {row.get('large_application', 0)} large", "", link, group=department))

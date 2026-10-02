@@ -305,11 +305,11 @@ def _interviews(customer, idx, ctx):
         for r in range(1, past + 1):
             last = r == past and kind == 1
             rounds.append({"round": str(r), "date_of_interview": add_days(nowdate(), -(past - r + 1) * 5 - k), "type_of_interview": ctx.types[(idx + r) % len(ctx.types)],
-                           "edt_est": "EST", "from_time": "10:00:00", "to_time": "11:00:00", "follow_up": 0,
+                           "from_time": "10:00:00", "to_time": "11:00:00", "follow_up": 0,
                            "status": outcomes[(idx + k) % len(outcomes)] if last else done, "feedback": notes[(idx + r + k) % len(notes)]})
         if kind != 1:
             rounds.append({"round": str(len(rounds) + 1), "date_of_interview": add_days(nowdate(), 2 + (idx + k) % 9), "type_of_interview": ctx.types[(idx + k) % len(ctx.types)],
-                           "edt_est": "EST", "from_time": "10:00:00", "to_time": "11:00:00", "follow_up": 0, "status": upcoming, "feedback": None})
+                           "from_time": "10:00:00", "to_time": "11:00:00", "follow_up": 0, "status": upcoming, "feedback": None})
         doc = frappe.get_doc({"doctype": "Interview", "marketing_link": marketing, "company": company, "role": role,
                               "status": rounds[-1]["status"], "interview_rounds_table": rounds})
         doc.insert(ignore_permissions=True)

@@ -358,6 +358,7 @@ doc_events = {
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
         "on_update": "verp_staffing.utils.sidebar.on_user_change",
         "validate": [
+            "verp_staffing.utils.timezone.force_company_time_zone",
             "verp_staffing.utils.sidebar.on_user_validate",
             "verp_staffing.utils.user_security.guard_user_save",
         ],

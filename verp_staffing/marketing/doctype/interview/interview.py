@@ -6,7 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
-from verp_staffing.utils.timezone import convert_round, round_day, user_time_zone
+from verp_staffing.utils.timezone import convert_round, normalize_round, round_day, user_time_zone
 from verp_staffing.crm.api.helpers import (
     get_reporting_subtree,
     get_visible_employee_names_cached,
@@ -123,6 +123,7 @@ class Interview(Document):
                 row.status = DEFAULT_ROUND_STATUS
 
             self._validate_round_status_not_locked(row, i)
+            normalize_round(row, self._previous_round(row))
 
             if row.status in CANCELLED_LIKE_STATUSES and (
                 not row.cancelled_by or not row.reason_of_cancel
@@ -164,6 +165,12 @@ class Interview(Document):
                         ),
                         frappe.ValidationError,
                     )
+
+    def _previous_round(self, row):
+        before = self.get_doc_before_save()
+        if row.is_new() or not before:
+            return None
+        return next((r for r in before.interview_rounds_table or [] if r.name == row.name), None)
 
     def _validate_round_status_not_locked(self, row, row_number):
         if row.is_new():
@@ -337,11 +344,11 @@ def update_interview_status_from_kanban(
 def _todays_interview_names(names=None):
     """Interviews with a still-open round dated today (any round — an earlier
     one can be today while a later one is already booked). "Today" is the
-    company's day: a round typed in Eastern time is moved to the company zone
-    first, so 9 pm EST on the 4th is already the 5th for an India-based team."""
+    company's day. Rounds are stored in the company zone, so this is a plain date
+    match; a round still in another zone (the company zone was changed later) is moved first."""
     today = frappe.utils.getdate(frappe.utils.today())
     query = """
-        SELECT r.parent, r.date_of_interview, r.from_time, r.edt_est
+        SELECT r.parent, r.date_of_interview, r.from_time, r.time_zone
         FROM `tabInterview Round` r
         INNER JOIN `tabInterview` i ON i.name = r.parent
         WHERE r.parenttype = 'Interview'
@@ -354,7 +361,7 @@ def _todays_interview_names(names=None):
         query += " AND r.parent IN %(names)s"
         values["names"] = tuple(names)
     rows = frappe.db.sql(query, values, as_dict=True)
-    return {r.parent for r in rows if round_day(r.date_of_interview, r.from_time, r.edt_est) == today}
+    return {r.parent for r in rows if round_day(r.date_of_interview, r.from_time, r.time_zone) == today}
 
 
 def _status_wanted(filters):
@@ -469,14 +476,14 @@ def get_round_summary_for_kanban(names):
     rounds = frappe.get_all(
         "Interview Round",
         filters={"parenttype": "Interview", "parent": ["in", names]},
-        fields=["parent", "round", "date_of_interview", "from_time", "edt_est", "status"],
+        fields=["parent", "round", "date_of_interview", "from_time", "time_zone", "status"],
         order_by="parent asc, idx asc",
     )
 
     tz = user_time_zone()
     grouped = {name: [] for name in names}
     for row in rounds:
-        local = convert_round(row["date_of_interview"], row["from_time"], None, row["edt_est"], tz)
+        local = convert_round(row["date_of_interview"], row["from_time"], None, row["time_zone"], tz)
         grouped[row["parent"]].append(
             {
                 "round": row["round"],
@@ -687,14 +694,14 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
 
     conditions += _owner_scoping_sql_condition()
 
-    # Rounds are typed in Eastern time; the viewer sees them in their own zone, where a round can land
+    # Rounds are stored in the company zone; the viewer sees them in their own zone, where a round can land
     # on the neighbouring day - so fetch a day either side and keep what falls in the range afterwards.
     first, last = frappe.utils.getdate(start), frappe.utils.getdate(end)
     values.update({"start": frappe.utils.add_days(first, -1), "end": frappe.utils.add_days(last, 1)})
 
     rounds = frappe.db.sql(f"""
         SELECT ir.name AS round_name, ir.parent AS interview, ir.round,
-            ir.date_of_interview, ir.from_time, ir.to_time, ir.edt_est,
+            ir.date_of_interview, ir.from_time, ir.to_time, ir.time_zone,
             ir.status AS round_status, i.company, i.role, i.status AS interview_status,
             i.marketing_link, i.customer AS customer_name
         FROM `tabInterview Round` ir
@@ -708,7 +715,7 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
     events = []
     for r in rounds:
         has_time = bool(r.from_time is not None and r.to_time is not None)
-        local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.edt_est, tz)
+        local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.time_zone, tz)
         if not first <= local["date"] <= last:
             continue
         status = r.round_status or r.interview_status or ""
@@ -727,7 +734,7 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
             "round": r.round,
             "from_time": local["from_time"],
             "to_time": local["to_time"],
-            "edt_est": r.edt_est,
+            "time_zone": r.time_zone,
             "tz_label": local["tz_label"],
             "entered": local["entered"],
             "customer": r.customer_name or r.marketing_link,
@@ -745,7 +752,7 @@ def get_interview_gantt_rows(filters=None):
         f"""
         SELECT
             ir.name AS round_id, ir.parent AS interview, ir.round,
-            ir.date_of_interview, ir.from_time, ir.to_time, ir.edt_est,
+            ir.date_of_interview, ir.from_time, ir.to_time, ir.time_zone,
             ir.status AS round_status,
             i.company, i.role, i.status AS interview_status,
             i.docstatus AS docstatus, i.owner AS owner, i.marketing_link,
@@ -764,7 +771,7 @@ def get_interview_gantt_rows(filters=None):
     out = []
     for r in rows:
         status = r.round_status or r.interview_status or ""
-        local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.edt_est, tz)
+        local = convert_round(r.date_of_interview, r.from_time, r.to_time, r.time_zone, tz)
         start_dt = f"{local['date']} {local['from_time'] or '09:00:00'}"
         end_dt = f"{local['date']} {local['to_time'] or '10:00:00'}"
         if end_dt <= start_dt:
@@ -783,7 +790,7 @@ def get_interview_gantt_rows(filters=None):
             "subject": f"{r.company} — {r.role} · Round {r.round} · {status}",
             "from_time": local["from_time"],
             "to_time": local["to_time"],
-            "edt_est": r.edt_est,
+            "time_zone": r.time_zone,
             "tz_label": local["tz_label"],
             "start": start_dt,
             "end": end_dt,

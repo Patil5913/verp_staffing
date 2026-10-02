@@ -1,4 +1,5 @@
 // Small helpers the mail screens share.
+import { siteNowIso } from '@/utils/common/siteTime'
 
 export const initials = (name) => {
   const parts = String(name || '').replace(/[<>"]/g, ' ').trim().split(/[\s@._-]+/).filter(Boolean)
@@ -21,7 +22,7 @@ export function mailDate(value, { long = false } = {}) {
   if (!value) return ''
   const d = new Date(String(value).replace(' ', 'T'))
   if (Number.isNaN(d.getTime())) return String(value)
-  const now = new Date()
+  const now = new Date(siteNowIso().replace(' ', 'T')) // the company's clock
   if (long) return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
   if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })

@@ -10,6 +10,7 @@ from frappe import _
 import base64
 from frappe.model.document import Document
 from verp_staffing.crm.api.helpers import send_notification
+from verp_staffing.utils.timezone import company_now
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.helpers import _validate_site_file_path
 import re
@@ -234,6 +235,14 @@ def apply_pdf_signature(doc, signature_image_file):
                 raise
 
 
+def _link_expired(exp):
+    """Links carry their expiry as company wall time ("2026-10-02 08:15:00"); links sent before that
+    carry an epoch number, which is the same instant in any zone."""
+    if isinstance(exp, (int, float)):
+        return company_now().timestamp() > exp
+    return frappe.utils.now_datetime() > frappe.utils.get_datetime(exp)
+
+
 def verify_token(token):
     try:
         decoded = base64.urlsafe_b64decode(token).decode()
@@ -250,7 +259,7 @@ def verify_token(token):
 
         # EXPIRY CHECK
         if data.get("exp"):
-            if datetime.utcnow().timestamp() > data["exp"]:
+            if _link_expired(data["exp"]):
                 return None
 
         return data
@@ -271,7 +280,7 @@ def load_signature_clean(img_path):
 def generate_certificate_id(agreement_name):
     import secrets
 
-    date_part = datetime.utcnow().strftime("%Y%m%d")
+    date_part = frappe.utils.now_datetime().strftime("%Y%m%d")
     random_part = secrets.token_hex(3).upper()  # 6 chars
     return f"CERT-{date_part}-{agreement_name}-{random_part}"
 

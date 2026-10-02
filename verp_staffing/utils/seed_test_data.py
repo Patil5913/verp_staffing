@@ -639,7 +639,6 @@ def interviews(ctx, n, errors):
 				"round": str(r),
 				"date_of_interview": add_days(nowdate(), random.randint(-10, 14)),
 				"type_of_interview": random.choice(types),
-				"edt_est": random.choice(["EDT", "EST"]),
 				"from_time": f"{random.randint(9, 16):02d}:00:00",
 				"to_time": f"{random.randint(17, 19):02d}:00:00",
 				"follow_up": 0,

@@ -136,7 +136,7 @@ def get_interview_details(interview_round):
 	round_data = frappe.db.get_value(
 		"Interview Round",
 		interview_round,
-		["round", "date_of_interview", "from_time", "to_time", "edt_est", "parent"],
+		["round", "date_of_interview", "from_time", "to_time", "time_zone", "parent"],
 		as_dict=True,
 	)
 
@@ -160,6 +160,6 @@ def get_interview_details(interview_round):
 		"interview_date": round_data.date_of_interview,
 		"from_time": round_data.from_time,
 		"to_time": round_data.to_time,
-		"edt_est": round_data.edt_est,
+		"time_zone": round_data.time_zone,
 		"interview_round": round_data.round,
 	}

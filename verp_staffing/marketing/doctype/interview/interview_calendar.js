@@ -410,7 +410,7 @@ function ivw_compute_correct_x(svg, date_of_interview, time_str) {
 		if (info.from_time) {
 			time_range = String(info.from_time).slice(0, 5);
 			if (info.to_time) time_range += " – " + String(info.to_time).slice(0, 5);
-			if (info.edt_est) time_range += ` (${info.edt_est})`;
+			if (info.tz_label) time_range += ` (${info.tz_label})`;
 		}
 
 		const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
@@ -703,11 +703,11 @@ function ivw_compute_correct_x(svg, date_of_interview, time_str) {
 
 // Formats a from/to time range (with optional timezone label) into a single
 // display string, e.g. "09:00 – 09:30 (EST)".
-function ivwc_format_when(from_time, to_time, edt_est) {
+function ivwc_format_when(from_time, to_time, tz_label) {
 	if (!from_time) return "";
 	let range = String(from_time).slice(0, 5);
 	if (to_time) range += " – " + String(to_time).slice(0, 5);
-	if (edt_est) range += ` (${edt_est})`;
+	if (tz_label) range += ` (${tz_label})`;
 	return range;
 }
 
@@ -722,7 +722,7 @@ function render_interview_calendar_card(event, element, view) {
 	const company = props.company || "";
 	const role = props.role || "";
 	const round_no = props.round || "";
-	const when = ivwc_format_when(props.from_time, props.to_time, props.edt_est);
+	const when = ivwc_format_when(props.from_time, props.to_time, props.tz_label);
 
 	const view_name = (view && view.name) || "";
 	const is_compact = view_name === "month" || element.hasClass?.("fc-day-grid-event");
