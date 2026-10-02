@@ -6,3 +6,4 @@ verp_staffing.patches.show_email_queue_status
 verp_staffing.patches.link_resume_attachment_files
 verp_staffing.patches.set_call_details_duration_unit
 verp_staffing.patches.backfill_call_details_duration_unit
+verp_staffing.patches.assign_vruglechat_roles

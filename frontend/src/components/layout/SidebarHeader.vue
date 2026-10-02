@@ -19,7 +19,7 @@
       <img
         :src="appLogo"
         :alt="appName"
-        class="h-7 w-auto shrink-0 object-contain object-left"
+        class="h-7 w-auto shrink-0 object-contain"
         style="height: 1.75rem"
         height="28"
         :class="sidebarOpen && !isMobile ? 'max-w-[7.5rem]' : isMobile ? 'max-w-[6rem]' : 'max-w-[2.25rem]'"
