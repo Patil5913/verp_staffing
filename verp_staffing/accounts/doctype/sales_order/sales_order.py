@@ -587,6 +587,8 @@ def get_forward_gate(customer):
     Services that need neither never block it.
     """
     frappe.has_permission("Customer", "read", customer, throw=True)
+    if frappe.session.user == "Administrator":
+        return {"blocked": False, "reasons": [], "form_required": False, "agreement_required": False}
     config = get_erp_config()
     form_needed = agreement_needed = False
     unsigned = []
@@ -1488,7 +1490,9 @@ def get_owned_sales_orders(customer):
             },
             pluck="user",
         )
-        if not visible_users:
+        # Same rule as the Sales Order permission query: the customer's owner being in the viewer's
+        # team is enough, whoever created the order.
+        if not visible_users and not visible_employee_names:
             return []
 
         rows = frappe.db.sql(
@@ -1521,14 +1525,18 @@ def get_owned_sales_orders(customer):
                 AND cpt.parenttype = 'Sales Order'
             WHERE
                 so.customer = %(customer)s
-                AND so.owner IN %(owners)s
+                AND (
+                    so.owner IN %(owners)s
+                    OR (SELECT c.customer_owner FROM `tabCustomer` AS c WHERE c.name = so.customer) IN %(employees)s
+                )
             ORDER BY
                 so.creation DESC,
                 cpt.idx ASC
             """,
             {
                 "customer": customer,
-                "owners": tuple(visible_users),
+                "owners": tuple(visible_users) or ("",),
+                "employees": tuple(visible_employee_names),
             },
             as_dict=True,
         )
