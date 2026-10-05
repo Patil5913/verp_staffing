@@ -5,6 +5,17 @@ import json
 import frappe
 
 from verp_staffing.core.license import client, enforcement, service
+from verp_staffing.core.license.client import DashboardError
+
+
+def _as_user_error(fn, *args, **kwargs):
+	"""Runs fn and turns a DashboardError (central's own {"error": "..."} message) into a plain
+	frappe.throw, so it reaches the SPA as a normal, readable validation error — not a raw
+	exception/stack trace from inside the requests call."""
+	try:
+		return fn(*args, **kwargs)
+	except DashboardError as e:
+		frappe.throw(str(e), frappe.ValidationError)
 
 
 def _summary() -> dict:
@@ -28,18 +39,23 @@ def get_status() -> dict:
 @frappe.whitelist()
 def get_plans() -> dict:
 	frappe.only_for("System Manager")
-	service.register_site()
-	return client.get_plans()
+	service.register_site()  # best-effort; its own failures go to last_sync_error, not here
+	return _as_user_error(client.get_plans)
 
 
 @frappe.whitelist(methods=["POST"])
-def start_checkout(plan_id: str, addon_ids=None) -> dict:
+def start_checkout(plan_id: str, limit_quantities=None) -> dict:
 	"""-> {"url": dashboard payment page}. The site stays blocked until a signed entitlement
-	arrives, so leaving the dashboard unpaid gets nothing."""
+	arrives, so leaving the dashboard unpaid gets nothing.
+
+	NOTE: limit_quantities (e.g. {"Storage": 50, "BackupFrequency": 2}) is passed through to
+	central but it does not yet price or apply it (see client.start_checkout) — it has no effect
+	on the resulting subscription until that's wired up on the dashboard side. There is no
+	per-user/seat quantity at all — the entitlement data model has no field for it."""
 	frappe.only_for("System Manager")
-	if isinstance(addon_ids, str):
-		addon_ids = json.loads(addon_ids or "[]")
-	return {"url": service.start_checkout(plan_id, addon_ids or [])}
+	if isinstance(limit_quantities, str):
+		limit_quantities = json.loads(limit_quantities or "{}")
+	return {"url": _as_user_error(service.start_checkout, plan_id, limit_quantities or {})}
 
 
 @frappe.whitelist(methods=["POST"])

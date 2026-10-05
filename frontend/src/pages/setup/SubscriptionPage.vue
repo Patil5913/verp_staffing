@@ -23,31 +23,37 @@
               <span class="text-p-base font-semibold text-app-text">{{ p.planName }}</span>
               <span class="text-p-sm text-app-text-muted">{{ money(p.basePrice, p.currency) }} / {{ p.billingCycle.toLowerCase() }}</span>
             </div>
-            <p class="mt-1 text-p-sm text-app-text-muted">{{ p.description }}</p>
-            <ul class="mt-3 space-y-1 text-p-sm text-app-text">
-              <li v-for="l in p.limitEntries" :key="l.limitCode">{{ l.value }} {{ l.unit }} <span class="text-app-text-muted">· {{ label(l.limitCode) }}</span></li>
-              <li v-for="a in p.appEntries" :key="a.appName">{{ a.appName }}</li>
-            </ul>
+            <div v-if="p.appEntries.length" class="mt-3">
+              <div class="text-p-xs font-medium uppercase tracking-wide text-app-text-muted">Apps included</div>
+              <ul class="mt-1 space-y-0.5 text-p-sm text-app-text">
+                <li v-for="a in p.appEntries" :key="a.id">{{ a.appName }}</li>
+              </ul>
+            </div>
+            <div v-if="p.limitEntries.length" class="mt-3">
+              <div class="text-p-xs font-medium uppercase tracking-wide text-app-text-muted">Limits</div>
+              <ul class="mt-1 space-y-0.5 text-p-sm text-app-text">
+                <li v-for="l in p.limitEntries" :key="l.id">{{ label(l.limitCode) }}: {{ l.value }} {{ l.unit.unitName }}</li>
+              </ul>
+            </div>
           </button>
         </div>
 
-        <div v-if="catalogue.addons.length" class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
-          <h2 class="mb-3 text-p-base font-semibold text-app-text">Add-ons</h2>
-          <label v-for="a in catalogue.addons" :key="a.id" class="flex cursor-pointer items-center justify-between py-1.5 text-p-sm text-app-text">
-            <span class="flex items-center gap-2">
-              <input v-model="selectedAddons" type="checkbox" :value="a.id" />
-              {{ addonLabel(a) }}
-            </span>
-            <span class="text-app-text-muted">+ {{ money(a.price, currency) }}</span>
-          </label>
+        <!-- Quantities only, no pricing shown here — and not yet applied by checkout at all (see
+             start_checkout's note); central only copies the plan's own limits as-is today. -->
+        <div v-if="selectedPlan && selectedPlan.limitEntries.length" class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
+          <h2 class="mb-1 text-p-base font-semibold text-app-text">Add-ons</h2>
+          <p class="mb-3 text-p-xs text-app-text-muted">Pricing for anything added here is shown on the payment page.</p>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <AppInput
+              v-for="l in selectedPlan.limitEntries" :key="l.id"
+              type="number" :label="`Additional ${label(l.limitCode)} (${l.unit.unitName})`" min="0"
+              v-model.number="addons.limitQuantities[l.limitCode]"
+              :placeholder="`${l.value} included`"
+            />
+          </div>
         </div>
 
-        <div class="flex items-center justify-between rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
-          <div>
-            <div class="text-p-xs text-app-text-muted">Estimated total</div>
-            <div class="text-lg font-semibold text-app-text">{{ money(total, currency) }}</div>
-            <div class="text-p-xs text-app-text-muted">Final pricing, discounts and tax are shown on the payment page.</div>
-          </div>
+        <div class="flex items-center justify-end rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
           <AppButton :disabled="!selectedPlan" :loading="paying" @click="pay">Continue to payment</AppButton>
         </div>
       </div>
@@ -57,46 +63,50 @@
 
 <script setup>
 // Shown to everyone until the site holds a valid, unexpired subscription (router guard on
-// window.subscription_status). Pick a plan + add-ons, go to the subscription dashboard to pay,
-// come back here: we ask the server to pull and verify the signed entitlement, and only then
-// reload into the app. Coming back without paying leaves the site blocked.
-import { computed, onMounted, reactive, ref } from 'vue'
+// window.subscription_status). Pick a plan, optionally more users / Storage / BackupFrequency
+// than it includes, go to the subscription dashboard to pay, come back here: we ask the server
+// to pull and verify the signed entitlement, and only then reload into the app. Coming back
+// without paying leaves the site blocked.
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { call, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppInput from '@/components/ui/AppInput.vue'
 import { normalizeError } from '@/utils/common/errors'
 
 const API = 'verp_staffing.core.license.api'
+const LIMIT_LABELS = { Storage: 'Storage', BackupFrequency: 'Backup Frequency' }
 
 const loading = ref(true)
 const paying = ref(false)
 const errorMessage = ref('')
 const notice = ref('')
-const catalogue = reactive({ plans: [], addons: [] })
+const catalogue = reactive({ plans: [] })
 const selectedPlanId = ref('')
-const selectedAddons = ref([])
+// No "extra users" input: the entitlement/checkout data model has no seat-count concept at all
+// (no field for it anywhere in the Plan/SubscriptionVersion/entitlement shapes) — only per-limit
+// quantities (Storage, BackupFrequency) exist to even ask the admin about.
+const addons = reactive({ limitQuantities: {} })
 
 const selectedPlan = computed(() => catalogue.plans.find((p) => p.id === selectedPlanId.value))
-const currency = computed(() => selectedPlan.value?.currency?.code || catalogue.plans[0]?.currency?.code || 'USD')
-const total = computed(() => {
-  if (!selectedPlan.value) return 0
-  const addons = catalogue.addons.filter((a) => selectedAddons.value.includes(a.id))
-  return addons.reduce((sum, a) => sum + Number(a.price), Number(selectedPlan.value.basePrice))
-})
 const subtitle = computed(() =>
   window.subscription_status === 'Expired'
     ? 'Your subscription has expired. Renew to continue.'
     : 'A subscription is required before this site can be set up.',
 )
 
-const LIMIT_LABELS = { User: 'Users', Storage: 'Storage' }
+// Reset the quantity inputs to the newly selected plan's own limits, not whatever was typed for
+// a previous plan's (possibly different) limit codes.
+watch(selectedPlan, (p) => {
+  addons.limitQuantities = Object.fromEntries((p?.limitEntries || []).map((l) => [l.limitCode, 0]))
+})
+
 const label = (code) => LIMIT_LABELS[code] || code
-const money = (v, cur) => `${cur} ${Number(v).toFixed(2)}`
-const addonLabel = (a) => (a.type === 'app' ? `${a.appName} app` : `+${a.value} ${label(a.limitCode).toLowerCase()}`)
+const money = (v, cur) => `${cur.code} ${Number(v).toFixed(2)}`
 
 onMounted(async () => {
   try {
-    // Back from the dashboard: the webhook may beat us here, or may not have landed yet — poll
-    // the recovery endpoint (POST /api/client/sync) a few times before giving up on this load.
+    // Back from the dashboard: the payment_confirmed webhook may beat us here, or may not have
+    // landed yet — poll the recovery endpoint (POST /api/client/sync) a few times before giving up.
     const returning = new URLSearchParams(window.location.search).get('checkout') === 'return'
     let status = await call(returning ? `${API}.refresh_status` : `${API}.get_status`)
     for (let attempt = 0; returning && status.status !== 'Active' && attempt < 3; attempt++) {
@@ -115,8 +125,8 @@ onMounted(async () => {
 })
 
 // frappe.throw()'d text (e.g. "Invalid entitlement signature", "Cannot reach the subscription
-// dashboard...") lands in normalizeError(e).messages; .message is a generic fallback that
-// doesn't carry it, so prefer the first real message when there is one.
+// dashboard...") lands in normalizeError(e).messages; .message already falls back to it, this
+// just makes the intent explicit at each call site.
 function serverMessage(e) {
   const err = normalizeError(e)
   return err.messages?.[0] || err.message
@@ -128,7 +138,7 @@ async function pay() {
   try {
     const { url } = await call(`${API}.start_checkout`, {
       plan_id: selectedPlanId.value,
-      addon_ids: JSON.stringify(selectedAddons.value),
+      limit_quantities: JSON.stringify(addons.limitQuantities),
     })
     window.location.href = url
   } catch (e) {

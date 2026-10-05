@@ -18,32 +18,32 @@ from frappe.utils import add_to_date, now_datetime
 
 from verp_staffing.core.license import crypto
 
-# Stand-in for central's Plan / App / Limit catalogue (spec 5.2's response shape).
+# Matches the real GET /api/client/plans response shape exactly (appEntries[].price is the
+# appversion's flat price, not per-user; limitEntries[].price is the base cost of including that
+# limit at all — see LimitEntry.price in the schema). There is no per-plan user count or
+# overageUnitPrice in this response, and no "User" LimitCode — only Storage / BackupFrequency.
 MOCK_PLANS = [
 	{
 		"id": "plan_starter", "planCode": "STARTER", "planName": "Starter Plan",
-		"billingCycle": "Monthly", "basePrice": 49.0, "currency": {"code": "USD", "symbol": "$"},
-		"appEntries": [{"appName": "verp_staffing", "version": "1.0.0"}],
+		"billingCycle": "Monthly", "basePrice": 49.0, "currency": {"id": "cur_usd", "code": "USD", "symbol": "$"},
+		"appEntries": [{"id": "ae_1", "appName": "verp_staffing", "version": "1.0.0", "price": 0}],
 		"limitEntries": [
-			{"limitCode": "User", "value": 10, "unit": "users"},
-			{"limitCode": "Storage", "value": 10, "unit": "GB"},
+			{"id": "le_1", "limitCode": "Storage", "value": 10, "price": 0, "unit": {"id": "u_gb", "unitName": "GB", "limitCode": "Storage"}},
+			{"id": "le_2", "limitCode": "BackupFrequency", "value": 1, "price": 0, "unit": {"id": "u_pd", "unitName": "per day", "limitCode": "BackupFrequency"}},
 		],
 	},
 	{
 		"id": "plan_business", "planCode": "BUSINESS", "planName": "Business Plan",
-		"billingCycle": "Monthly", "basePrice": 149.0, "currency": {"code": "USD", "symbol": "$"},
-		"appEntries": [{"appName": "verp_staffing", "version": "1.0.0"}, {"appName": "verp_payroll", "version": "1.0.0"}],
+		"billingCycle": "Monthly", "basePrice": 149.0, "currency": {"id": "cur_usd", "code": "USD", "symbol": "$"},
+		"appEntries": [
+			{"id": "ae_2", "appName": "verp_staffing", "version": "1.0.0", "price": 0},
+			{"id": "ae_3", "appName": "verp_payroll", "version": "1.0.0", "price": 25.0},
+		],
 		"limitEntries": [
-			{"limitCode": "User", "value": 50, "unit": "users"},
-			{"limitCode": "Storage", "value": 100, "unit": "GB"},
+			{"id": "le_3", "limitCode": "Storage", "value": 100, "price": 0, "unit": {"id": "u_gb", "unitName": "GB", "limitCode": "Storage"}},
+			{"id": "le_4", "limitCode": "BackupFrequency", "value": 2, "price": 0, "unit": {"id": "u_pd", "unitName": "per day", "limitCode": "BackupFrequency"}},
 		],
 	},
-]
-# Priced add-ons: an extra app, or extra units of an existing limit.
-MOCK_ADDONS = [
-	{"id": "app_version_payroll", "type": "app", "appName": "verp_payroll", "price": 25.0},
-	{"id": "addon_users_10", "type": "limit", "limitCode": "User", "value": 10, "price": 20.0},
-	{"id": "addon_storage_50", "type": "limit", "limitCode": "Storage", "value": 50, "price": 10.0},
 ]
 
 
@@ -80,17 +80,17 @@ def mock_register(site_id: str, installation_id: str, site_name: str, site_confi
 
 def mock_get_plans() -> dict:
 	"""Stands in for GET /api/client/plans."""
-	return {"plans": MOCK_PLANS, "addons": MOCK_ADDONS}
+	return {"plans": MOCK_PLANS}
 
 
-def mock_checkout(lic: dict, plan_id: str, addon_ids: list[str]) -> dict:
+def mock_checkout(lic: dict, plan_id: str, limit_quantities: dict) -> dict:
 	"""Stands in for POST /api/client/checkout. Central would create a Pending
 	SubscriptionVersion + SalesInvoice and return its own checkout page; the mock points at the
 	local dashboard's /user-form and stashes the selection in the URL so the mock payment step
 	(mock_sync) can price it without a real backing Subscription record."""
 	from urllib.parse import urlencode
 
-	query = urlencode({"site_id": lic["site_id"], "plan": plan_id, "addons": ",".join(addon_ids)})
+	query = urlencode({"site_id": lic["site_id"], "plan": plan_id})
 	return {
 		"checkoutUrl": f"/user-form?{query}",
 		"subscriptionId": f"sub_{lic['site_id'][:12]}",
@@ -111,22 +111,19 @@ def mock_sync(lic: dict) -> dict | None:
 	plan = next((p for p in MOCK_PLANS if p["id"] == checkout["plan_id"]), None)
 	if not plan:
 		return None
-	addons = [a for a in MOCK_ADDONS if a["id"] in checkout.get("addon_ids", [])]
-
-	enabled_apps = ["verp_staffing"] + [e["appName"] for e in plan["appEntries"] if e["appName"] != "verp_staffing"]
+	# extra_users / limit_quantities are deliberately NOT applied here: the real checkout route
+	# doesn't apply them either (it only copies the plan's own appEntries/limitEntries verbatim —
+	# see client.start_checkout's note), so the mock stays faithful to that by ignoring them too.
+	enabled_apps = [e["appName"] for e in plan["appEntries"]]
 	limits = {e["limitCode"]: e["value"] for e in plan["limitEntries"]}
-	for a in addons:
-		if a["type"] == "app":
-			enabled_apps.append(a["appName"])
-		else:
-			limits[a["limitCode"]] = limits.get(a["limitCode"], 0) + a["value"]
 
 	issued = now_datetime()
 	payload = {
 		"site_id": lic["site_id"],
 		"installation_id": lic["installation_id"],
 		"subscription_id": f"sub_{lic['site_id'][:12]}",
-		"entitlement_version": int(lic.get("entitlement_version") or 0) + 1,
+		# Mirrors central's own (non-monotonic) derivation — see service.apply_entitlement's note.
+		"entitlement_version": int.from_bytes(os.urandom(4), "big"),
 		"status": "Active",
 		"plan": {"plan_id": plan["id"], "plan_name": plan["planName"]},
 		"enabled_apps": sorted(set(enabled_apps)),

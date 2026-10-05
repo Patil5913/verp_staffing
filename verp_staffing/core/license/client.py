@@ -30,13 +30,39 @@ def use_mock() -> bool:
 	return bool(frappe.conf.get("subscription_use_mock", 1))
 
 
+class DashboardError(Exception):
+	"""Raised with whatever message the dashboard itself gave (its routes all return
+	{"error": "..."} on failure) so it reaches the admin's screen as-is instead of a generic
+	500 / connection-error dump. Caught as frappe.ValidationError-ish by callers that want to
+	keep going (register_site); left to propagate where it should surface in the UI
+	(get_plans, start_checkout). `status` is the HTTP status, or None for a connection failure."""
+
+	def __init__(self, message: str, status: int | None = None):
+		super().__init__(message)
+		self.status = status
+
+
 def _request(method: str, path: str, **kwargs) -> dict:
 	# TODO(integration): sign these requests to central (RSA-PSS) once the dashboard defines how
 	# it wants the client authenticated — the spec lists auth as "Site Credentials / Token" but
 	# doesn't yet say what that token is or how it's issued.
-	response = requests.request(method, f"{dashboard_url()}{path}", timeout=TIMEOUT, **kwargs)
-	response.raise_for_status()
-	return response.json()
+	try:
+		response = requests.request(method, f"{dashboard_url()}{path}", timeout=TIMEOUT, **kwargs)
+	except requests.exceptions.RequestException as e:
+		raise DashboardError(f"Could not reach the subscription dashboard ({e.__class__.__name__}).") from e
+
+	try:
+		body = response.json()
+	except ValueError:
+		body = None
+
+	if not response.ok:
+		# Every /api/client/* route answers errors as {"error": "..."} — surface that text
+		# verbatim rather than letting requests' generic "404 Client Error: ..." through.
+		message = (body or {}).get("error") if isinstance(body, dict) else None
+		raise DashboardError(message or f"Subscription dashboard returned {response.status_code}.", response.status_code)
+
+	return body or {}
 
 
 def register_site(site_id: str, installation_id: str, site_name: str, site_config: dict) -> dict:
@@ -79,16 +105,24 @@ def get_plans() -> dict:
 	return _request("GET", "/api/client/plans")
 
 
-def start_checkout(lic: dict, site_name: str, plan_id: str, addon_ids: list[str], return_url: str) -> dict:
-	"""POST /api/client/checkout -> {"checkoutUrl": str, "subscriptionId": str, "versionId": str}"""
+def start_checkout(lic: dict, site_name: str, plan_id: str, limit_quantities: dict, return_url: str) -> dict:
+	"""POST /api/client/checkout -> {"checkoutUrl": str, "subscriptionId": str, "versionId": str}.
+
+	NOTE: as of the handler the dashboard currently ships, it only reads `planId` — it copies the
+	plan's own appEntries/limitEntries straight onto the new SubscriptionVersion and never looks
+	at `addonIds` or any per-limit quantity at all. `addons` is sent anyway (harmless, unknown
+	keys are ignored) so nothing here needs to change once the dashboard starts pricing add-ons;
+	until then, extra Storage / extra BackupFrequency chosen on our /site-subscription page do not
+	change what gets billed.
+	"""
 	if use_mock():
 		from verp_staffing.core.license import mock_dashboard
 
-		result = mock_dashboard.mock_checkout(lic, plan_id, addon_ids)
+		result = mock_dashboard.mock_checkout(lic, plan_id, limit_quantities)
 	else:
 		result = _request(
 			"POST", "/api/client/checkout",
-			json={"siteName": site_name, "planId": plan_id, "addonIds": addon_ids},
+			json={"siteName": site_name, "planId": plan_id, "addonIds": [], "addons": {"limits": limit_quantities}},
 		)
 
 	from urllib.parse import urlencode
@@ -97,13 +131,21 @@ def start_checkout(lic: dict, site_name: str, plan_id: str, addon_ids: list[str]
 	return {**result, "checkoutUrl": f"{result['checkoutUrl']}{sep}{urlencode({'return_url': return_url})}"}
 
 
-def sync(lic: dict) -> dict | None:
+def sync(lic: dict, site_name: str) -> dict | None:
 	"""POST /api/client/sync -> {"signed_payload": str, "signature": str} or None.
 
 	Recovery path (spec 2): pulls whatever entitlement central currently has for this site,
-	independent of the webhook — used on return-from-payment and by the daily cron."""
+	independent of the webhook — used on return-from-payment and by the daily cron. Central
+	identifies the site by `siteName` (same key as /checkout), not by our site_id."""
 	if use_mock():
 		from verp_staffing.core.license import mock_dashboard
 
 		return mock_dashboard.mock_sync(lic)
-	return _request("POST", "/api/client/sync", json={"site_id": lic["site_id"]}) or None
+	try:
+		return _request("POST", "/api/client/sync", json={"siteName": site_name}) or None
+	except DashboardError as e:
+		# 404 is central's "no active signed entitlement yet" (not paid) — a normal state, not a
+		# failure, so it must not surface as a Sync Error on every page load.
+		if e.status == 404:
+			return None
+		raise

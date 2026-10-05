@@ -63,13 +63,24 @@ def has_app(app_name: str) -> bool:
 
 def get_quota() -> dict | None:
 	"""The licence in the shape quota.py has always read from site_config["quota"]; None when
-	there is no valid licence (callers then fall back to site_config)."""
+	there is no valid licence (callers then fall back to site_config).
+
+	NOTE: the real entitlement payload (verp-subscription's issueAndPushEntitlement) carries no
+	seat/user count at all — `limits` is only ever {limitCode: value} for Storage /
+	BackupFrequency, built straight from SubscriptionVersion.limitEntries, and there is nothing
+	in the Prisma schema that represents "extra users" as a priced, trackable quantity. So
+	`users_limit` is deliberately left out here and quota.py keeps falling back to
+	site_config["quota"]["users_limit"] for it — add a real field (central side) before this can
+	be enforced from the signed entitlement."""
 	state = get_state()
 	if state["status"] not in (ACTIVE, EXPIRED):
 		return None
 	payload = state["payload"]
-	return {
-		"users_limit": get_limit("User"),
+	quota = {
 		"site_space_limit_gb": get_limit("Storage"),
 		"expiry_date": str(get_datetime(payload["expires_at"]).date()),
 	}
+	legacy_users_limit = frappe.get_site_config().get("quota", {}).get("users_limit")
+	if legacy_users_limit is not None:
+		quota["users_limit"] = legacy_users_limit
+	return quota
