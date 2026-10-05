@@ -111,6 +111,31 @@
                   </label>
                 </div>
               </template>
+
+              <!-- Lead/Customer/Opportunity only: extra fields that live on
+              Lead Detail Form, not this doctype itself - see
+              linked_detail_import.py. Same checkbox UI, kept visually
+              separate since it's a different record behind the scenes. -->
+              <template v-if="templateFields.linked">
+                <div class="mt-4 border-t border-app-border pt-3">
+                  <p class="mb-2 text-p-xs font-medium text-app-text">{{ templateFields.linked.doctype }} fields</p>
+                  <div class="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                    <label v-for="f in templateFields.linked.fields" :key="f.fieldname" class="flex items-center gap-2 text-p-xs text-app-text">
+                      <input type="checkbox" :checked="selectedLinkedFields.has(f.fieldname)" @change="toggleLinkedField(f.fieldname)" />
+                      {{ f.label }}
+                    </label>
+                  </div>
+                  <template v-for="table in templateFields.linked.child_tables" :key="table.fieldname">
+                    <p class="mb-1 mt-3 text-p-xs font-medium text-app-text">{{ table.label }}</p>
+                    <div class="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                      <label v-for="f in table.fields" :key="f.fieldname" class="flex items-center gap-2 text-p-xs text-app-text">
+                        <input type="checkbox" :checked="selectedLinkedChildFields[table.fieldname]?.has(f.fieldname)" @change="toggleLinkedChildField(table.fieldname, f.fieldname)" />
+                        {{ f.label }}
+                      </label>
+                    </div>
+                  </template>
+                </div>
+              </template>
             </template>
           </div>
         </div>
@@ -299,6 +324,25 @@
         </div>
       </div>
 
+      <!-- Lead/Customer/Opportunity only - the extra fields mapped to Lead
+      Detail Form are saved as a second step, after the records above, so
+      they get their own summary (see linked_detail_import.py). -->
+      <div v-if="result.linked" class="flex items-center gap-3 rounded-lg border p-4" :class="result.linked.failed ? 'border-amber-400/40 bg-amber-400/10' : 'border-green-500/40 bg-green-500/10'">
+        <span class="size-6 shrink-0" :class="result.linked.failed ? 'lucide-alert-triangle text-amber-600' : 'lucide-check-circle-2 text-green-600'" />
+        <div>
+          <p class="text-p-sm font-medium text-app-text">
+            {{ result.linked.success }} {{ result.linked.doctype }} record{{ result.linked.success === 1 ? '' : 's' }} saved from the extra columns
+          </p>
+          <p v-if="result.linked.failed" class="text-p-xs text-app-text-muted">{{ result.linked.failed }} couldn't be saved - see below.</p>
+        </div>
+      </div>
+      <div v-if="result.linked?.failures?.length" class="flex flex-col gap-2">
+        <div v-for="(f, i) in result.linked.failures.slice(0, 10)" :key="i" class="rounded-lg border border-app-border bg-app-panel-2 p-3 text-p-xs">
+          <span class="font-medium text-app-text">Row{{ f.rows?.length > 1 ? 's' : '' }} {{ (f.rows || []).join(', ') || '-' }}:</span>
+          <span class="text-app-text-muted"> {{ (f.messages || []).join(' ') || 'Unknown error.' }}</span>
+        </div>
+      </div>
+
       <div class="flex justify-end gap-2 pt-1">
         <AppButton variant="outline" @click="reset">Import More Data</AppButton>
         <AppButton v-if="props.onDone" @click="props.onDone">Done</AppButton>
@@ -349,7 +393,7 @@ const previewRows = ref([])
 const rawColumns = ref([]) // every uploaded column, matched or not - see applyPreview
 const warnings = ref([])
 const totalRows = ref(0)
-const result = reactive({ total: 0, success: 0, failed: 0, failures: [] })
+const result = reactive({ total: 0, success: 0, failed: 0, failures: [], linked: null })
 
 // Column mapper: lets someone override how a spreadsheet column maps to a
 // field (see remap_data_import_columns) - both to fix a wrong auto-match and
@@ -359,6 +403,12 @@ const result = reactive({ total: 0, success: 0, failed: 0, failures: [] })
 const showColumnMapper = ref(false)
 const remapping = ref(false)
 const pendingColumnMap = reactive({})
+// The raw {header_row_index: value} map the server has stored, straight
+// from start_data_import_wizard/remap_data_import_columns - needed because
+// an "ldf::"-tagged mapping (see linked_detail_import.py) never resolves to
+// a real preview.columns[i].df, so that alone can't tell "mapped to Lead
+// Details" apart from "never mapped at all".
+const columnMap = ref({})
 
 const selectedLabel = computed(() => {
   const all = [...doctypes.suggested, ...doctypes.other]
@@ -375,15 +425,27 @@ const fieldOptions = computed(() => {
   for (const t of templateFields.child_tables) {
     for (const f of t.fields) options.push({ label: `${f.label} (${t.label})`, value: `${t.fieldname}.${f.fieldname}` })
   }
+  if (templateFields.linked) {
+    const linkedLabel = templateFields.linked.doctype
+    for (const f of templateFields.linked.fields) options.push({ label: `${f.label} (${linkedLabel})`, value: `ldf::${f.fieldname}` })
+    for (const t of templateFields.linked.child_tables) {
+      for (const f of t.fields) options.push({ label: `${f.label} (${t.label}, ${linkedLabel})`, value: `ldf::${t.fieldname}.${f.fieldname}` })
+    }
+  }
   return options
 })
 
 // Reconstructs the value fieldOptions above would use for a column that's
 // already matched (or not) - so the dropdown starts on what's actually
-// happening, not blank. col.df.parent is the child DOCTYPE name for a
-// child-table match (not the parent's table fieldname), so it's resolved
-// against child_doctype from get_template_fields.
-function currentMappedValue(col) {
+// happening, not blank. The stored column_to_field_map (columnMap) is
+// checked first since it's the only place an "ldf::"-tagged mapping shows up
+// at all - core Importer can't resolve it, so col.df comes back empty for
+// one of those even though it IS mapped. col.df.parent is the child DOCTYPE
+// name for a child-table match (not the parent's table fieldname), so it's
+// resolved against child_doctype from get_template_fields.
+function currentMappedValue(col, index) {
+  const stored = columnMap.value[index]
+  if (stored) return stored
   if (!col.df) return "Don't Import"
   if (col.df.parent === form.doctype) return col.df.fieldname
   const table = templateFields.child_tables.find((t) => t.child_doctype === col.df.parent)
@@ -394,7 +456,7 @@ const mappedColumns = computed(() =>
   rawColumns.value.map((col, index) => ({
     index,
     headerTitle: col.header_title,
-    currentValue: currentMappedValue(col),
+    currentValue: currentMappedValue(col, index),
   }))
 )
 
@@ -419,6 +481,7 @@ async function applyColumnMapping() {
       column_map: changes,
     })
     applyPreview(r.preview)
+    columnMap.value = r.column_map || {}
     Object.keys(pendingColumnMap).forEach((k) => delete pendingColumnMap[k])
   } catch (e) {
     errorMessage.value = normalizeError(e).message
@@ -469,12 +532,20 @@ const templateOptions = reactive({ exportRecords: 'blank_template', fileType: 'E
 // it down themselves.
 const showFieldPicker = ref(false)
 const loadingFields = ref(false)
-const templateFields = reactive({ fields: [], child_tables: [] })
+const templateFields = reactive({ fields: [], child_tables: [], linked: null })
 const selectedFields = ref(new Set())
 const selectedChildFields = reactive({})
+// Lead/Customer/Opportunity only - selections for the linked Lead Detail
+// Form fields (templateFields.linked), same shape as the base-doctype ones.
+const selectedLinkedFields = ref(new Set())
+const selectedLinkedChildFields = reactive({})
 
 const selectedFieldCount = computed(
-  () => selectedFields.value.size + Object.values(selectedChildFields).reduce((n, s) => n + s.size, 0)
+  () =>
+    selectedFields.value.size +
+    Object.values(selectedChildFields).reduce((n, s) => n + s.size, 0) +
+    selectedLinkedFields.value.size +
+    Object.values(selectedLinkedChildFields).reduce((n, s) => n + s.size, 0)
 )
 
 watch(
@@ -483,18 +554,30 @@ watch(
     showFieldPicker.value = false
     templateFields.fields = []
     templateFields.child_tables = []
+    templateFields.linked = null
     selectedFields.value = new Set()
     Object.keys(selectedChildFields).forEach((k) => delete selectedChildFields[k])
+    selectedLinkedFields.value = new Set()
+    Object.keys(selectedLinkedChildFields).forEach((k) => delete selectedLinkedChildFields[k])
     if (!doctype) return
     loadingFields.value = true
     try {
       const r = await call('verp_staffing.setup.data_import_api.get_template_fields', { doctype })
       templateFields.fields = r.fields
       templateFields.child_tables = r.child_tables
+      templateFields.linked = r.linked
       selectedFields.value = new Set(r.fields.map((f) => f.fieldname))
       r.child_tables.forEach((t) => {
         selectedChildFields[t.fieldname] = new Set(t.fields.map((f) => f.fieldname))
       })
+      // Linked (Lead Detail Form) fields default to NOT selected - unlike
+      // the base doctype's own fields, these are extra/optional and a
+      // template shouldn't balloon with columns nobody configured for use.
+      if (r.linked) {
+        r.linked.child_tables.forEach((t) => {
+          selectedLinkedChildFields[t.fieldname] = new Set()
+        })
+      }
     } catch (e) {
       errorMessage.value = normalizeError(e).message
     } finally {
@@ -520,11 +603,29 @@ function toggleChildField(tableFieldname, fieldname) {
   selectedChildFields[tableFieldname] = new Set(set)
 }
 
+function toggleLinkedField(fieldname) {
+  const next = new Set(selectedLinkedFields.value)
+  next.has(fieldname) ? next.delete(fieldname) : next.add(fieldname)
+  selectedLinkedFields.value = next
+}
+
+function toggleLinkedChildField(tableFieldname, fieldname) {
+  const set = selectedLinkedChildFields[tableFieldname] || new Set()
+  set.has(fieldname) ? set.delete(fieldname) : set.add(fieldname)
+  selectedLinkedChildFields[tableFieldname] = new Set(set)
+}
+
 function selectAllFields() {
   selectedFields.value = new Set(templateFields.fields.map((f) => f.fieldname))
   templateFields.child_tables.forEach((t) => {
     selectedChildFields[t.fieldname] = new Set(t.fields.map((f) => f.fieldname))
   })
+  if (templateFields.linked) {
+    selectedLinkedFields.value = new Set(templateFields.linked.fields.map((f) => f.fieldname))
+    templateFields.linked.child_tables.forEach((t) => {
+      selectedLinkedChildFields[t.fieldname] = new Set(t.fields.map((f) => f.fieldname))
+    })
+  }
 }
 
 function selectMandatoryFields() {
@@ -532,6 +633,15 @@ function selectMandatoryFields() {
   templateFields.child_tables.forEach((t) => {
     selectedChildFields[t.fieldname] = new Set(t.fields.filter((f) => f.reqd).map((f) => f.fieldname))
   })
+  // Linked fields are never required on the base doctype's own import, so
+  // "Required fields only" clears them the same way it clears any other
+  // optional column.
+  if (templateFields.linked) {
+    selectedLinkedFields.value = new Set()
+    templateFields.linked.child_tables.forEach((t) => {
+      selectedLinkedChildFields[t.fieldname] = new Set()
+    })
+  }
 }
 
 function downloadTemplate() {
@@ -545,6 +655,13 @@ function downloadTemplate() {
     fields: JSON.stringify([...selectedFields.value]),
     child_fields: JSON.stringify(childFields),
   })
+  if (templateFields.linked) {
+    const linkedChildFields = Object.fromEntries(
+      Object.entries(selectedLinkedChildFields).map(([k, v]) => [k, [...v]])
+    )
+    params.set('linked_fields', JSON.stringify([...selectedLinkedFields.value]))
+    params.set('linked_child_fields', JSON.stringify(linkedChildFields))
+  }
   window.open(`/api/method/verp_staffing.setup.data_import_api.download_template?${params}`, '_blank')
 }
 
@@ -598,6 +715,7 @@ async function createDataImport(source) {
     })
     dataImportName.value = r.data_import
     applyPreview(r.preview)
+    columnMap.value = r.column_map || {}
     return true
   } catch (e) {
     errorMessage.value = normalizeError(e).message
@@ -671,9 +789,10 @@ function reset() {
   rawColumns.value = []
   showColumnMapper.value = false
   Object.keys(pendingColumnMap).forEach((k) => delete pendingColumnMap[k])
+  columnMap.value = {}
   warnings.value = []
   totalRows.value = 0
-  Object.assign(result, { total: 0, success: 0, failed: 0, failures: [] })
+  Object.assign(result, { total: 0, success: 0, failed: 0, failures: [], linked: null })
   errorMessage.value = ''
   step.value = 0
 }

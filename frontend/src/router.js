@@ -5,6 +5,8 @@ import * as accounts from '@/configs/detail/accounts'
 import { itemConfig, itemCategoryConfig, uomConfig } from '@/configs/detail/items'
 import { eSignConfig } from '@/configs/detail/esign'
 import { emailQueueConfig } from '@/configs/detail/emailQueue'
+import { emailTemplateConfig, printFormatConfig } from '@/configs/detail/templates'
+import { servicePlanConfig } from '@/configs/detail/servicePlan'
 import { hasRole } from '@/utils/common/roles'
 import { accessTarget, canAccess } from '@/utils/common/routeAccess'
 
@@ -44,6 +46,9 @@ const CONFIG_ROUTES = [
   configPage('/UOM/:name', 'UomDetail', uomConfig),
   configPage('/E%20Sign/:name', 'ESignDetail', eSignConfig),
   configPage('/Email%20Queue/:name', 'EmailQueueDetail', emailQueueConfig),
+  configPage('/Email%20Template/:name', 'EmailTemplateDetail', emailTemplateConfig),
+  configPage('/Print%20Format/:name', 'PrintFormatDetail', printFormatConfig),
+  configPage('/Service%20Plan/:name', 'ServicePlanDetail', servicePlanConfig),
 ]
 
 // The customer portal: the same shell as the staff app with its own pages. Only

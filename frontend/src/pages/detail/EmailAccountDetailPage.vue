@@ -21,6 +21,7 @@
           :detail="detail"
           :title="section.title"
           :fieldnames="section.fieldnames"
+          :field-overrides="FIELD_OVERRIDES"
         />
       </div>
     </template>
@@ -76,6 +77,10 @@ const sections = computed(() => [
     fieldnames: isSystemManager() ? ['attachment_limit', 'default_outgoing'] : ['attachment_limit'],
   },
 ])
+
+// Frappe shows Default Outgoing only once Enable Outgoing is ticked. This page fixes outgoing on
+// at save and hides the tick, so on a new account the option would never appear.
+const FIELD_OVERRIDES = { default_outgoing: { depends_on: '' } }
 
 const FIXED_VALUES = { enable_outgoing: 1, enable_incoming: 1, auth_method: 'Basic' }
 // The desk form copies these from the Email Domain client-side; the server

@@ -74,11 +74,17 @@ def can_open_report(report: str) -> bool:
         return False
 
 
+# Pages only the Administrator opens in the frontend (templates written in Jinja/HTML).
+ADMIN_ONLY_DOCTYPES = {"Email Template", "Print Format"}
+
+
 @frappe.whitelist()
 def get_route_access(doctype=None, view="form", page=None, report=None):
     """Whether the current user may open a frontend route. Pass whichever of
     doctype (+ view "list" | "form"), page (a /verp route) and report apply;
     every one given has to pass."""
+    if doctype in ADMIN_ONLY_DOCTYPES and frappe.session.user != "Administrator":
+        return {"allowed": False, "reason": "admin_only"}
     if doctype:
         if not can_read_doctype(doctype):
             return {"allowed": False, "reason": "doctype"}

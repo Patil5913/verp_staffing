@@ -1365,6 +1365,16 @@ def get_default_sidebar_config():
                     "icon": "icon-setting-gear",
                     "shortcut": "",
                     "roles": []
+                },
+                {
+                    "key": "service_plan",
+                    "name": "Service Plan",
+                    "type": "doctype",
+                    "route": "/app/service-plan",
+                    "doctype": "Service Plan",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": []
                 }
             ]
         },

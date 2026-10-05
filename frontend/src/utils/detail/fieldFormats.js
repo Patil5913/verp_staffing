@@ -141,7 +141,7 @@ export function validateFieldValue(field, value) {
   }
   if (field.fieldtype === 'Select') {
     const options = (field.options || '').split('\n').filter(Boolean)
-    if (!options.includes(strValue)) return `${label} must be a valid option`
+    if (options.length && !options.includes(strValue)) return `${label} must be a valid option`
   }
   return ''
 }

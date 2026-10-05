@@ -12,13 +12,13 @@ app_license = "mit"
 
 # Each item in the list will be shown as an app in the apps page
 add_to_apps_screen = [
-	{
-		"name": "verp_staffing",
-		"logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-trimmed.png",
-		"title": "Vrugle Staffing ERP",
-		"route": "/verp",
-		"has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission"
-	}
+    {
+        "name": "verp_staffing",
+        "logo": "/assets/verp_staffing/images/Vrugle-icon-Logo-trimmed.png",
+        "title": "Vrugle Staffing ERP",
+        "route": "/verp",
+        "has_permission": "verp_staffing.vrugle_staffing_erp.api.permission.check_app_permission",
+    }
 ]
 
 # frappe-ui frontend (Vue3 + Tailwind), served at /verp.
@@ -28,32 +28,32 @@ add_to_apps_screen = [
 # says (vruglechat sets Chat External's to /chat, and Administrator has every role, so it was
 # winning). A customer who lands there is sent on to the portal by the app's own router.
 website_redirects = [
-	{"source": "/", "target": "/verp"},
-	# Frappe's reset email links to /update-password?key=...; land on the app's own page instead
-	{
-		"source": r"update-password\?(.*)",
-		"target": r"/verp/update-password?\1",
-		"match_with_query_string": True,
-		"redirect_http_status": 302,
-	},
+    {"source": "/", "target": "/verp"},
+    # Frappe's reset email links to /update-password?key=...; land on the app's own page instead
+    {
+        "source": r"update-password\?(.*)",
+        "target": r"/verp/update-password?\1",
+        "match_with_query_string": True,
+        "redirect_http_status": 302,
+    },
 ]
 
 website_route_rules = [
-	{"from_route": "/verp/<path:app_path>", "to_route": "verp"},
-	# old /customer links go on to the portal in the app (/verp/portal/...)
-	{"from_route": "/customer/<path:app_path>", "to_route": "customer"},
+    {"from_route": "/verp/<path:app_path>", "to_route": "verp"},
+    # old /customer links go on to the portal in the app (/verp/portal/...)
+    {"from_route": "/customer/<path:app_path>", "to_route": "customer"},
 ]
 
 # Serves the PWA service worker at /verp-sw.js (see utils/pwa.py).
 page_renderer = [
-	"verp_staffing.utils.pwa.ServiceWorkerRenderer",
-	# /verp/portal/invoices/<x>/print and the other customer downloads (see utils/portal_downloads.py)
-	"verp_staffing.utils.portal_downloads.PortalDownloadRenderer",
+    "verp_staffing.utils.pwa.ServiceWorkerRenderer",
+    # /verp/portal/invoices/<x>/print and the other customer downloads (see utils/portal_downloads.py)
+    "verp_staffing.utils.portal_downloads.PortalDownloadRenderer",
 ]
 
 website_context = {
-	"favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
-	"splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",
+    "favicon": "/assets/verp_staffing/images/vrugle-icon_logo.ico",
+    "splash_image": "/assets/verp_staffing/images/vrugle_full_logo_withoug_bg.png",
 }
 
 # Includes in <head>
@@ -124,7 +124,7 @@ validation_docs = [
     "Other Services",
     "Sales Order",
     "Agreement",
-    "Onboardings"
+    "Onboardings",
 ]
 doctype_js = {
     doc: [
@@ -185,8 +185,10 @@ home_page = "verp"
 after_install = [
     "verp_staffing.install.after_install",
     "verp_staffing.overrides.email_template.patch",
+    "verp_staffing.utils.email_template.trigger_email_template_refresh",
 ]
 after_migrate = [
+    "verp_staffing.utils.printformat.seed_sales_invoice_print_format",
     # "verp_staffing.install.remove_default_workspaces",
     # "verp_staffing.install.after_install",
     # "verp_staffing.overrides.email_template.patch",
@@ -199,7 +201,7 @@ after_migrate = [
     # ...and they get services, interviews, orders/payments, agreements and chats to test with
     # "verp_staffing.utils.seed_demo_journeys.demo_journeys_after_migrate",
     # Realistic data for documentation screenshots — does nothing unless site_config has "seed_documentation_data": 1
-    "verp_staffing.utils.seed_documentation_data.after_migrate",
+    # "verp_staffing.utils.seed_documentation_data.after_migrate",
 ]
 
 # Uninstallation
@@ -238,8 +240,18 @@ permission_query_conditions = {
     **{
         dt: "verp_staffing.utils.portal_guard.portal_query_conditions"
         for dt in (
-            "CRM Task", "CRM Event", "CRM Note", "ToDo", "Event", "Contact", "Address",
-            "Communication", "Notification Log", "Tag Link", "Tag", "Personal Data Download Request",
+            "CRM Task",
+            "CRM Event",
+            "CRM Note",
+            "ToDo",
+            "Event",
+            "Contact",
+            "Address",
+            "Communication",
+            "Notification Log",
+            "Tag Link",
+            "Tag",
+            "Personal Data Download Request",
         )
     },
     "Customer": "verp_staffing.crm.api.helpers.customer_query",
@@ -302,8 +314,12 @@ override_doctype_class = {
 # Hook on document methods and events
 
 doc_events = {
-    "Communication": {"after_insert": "verp_staffing.utils.mailbox.on_new_communication"},
-    "System Settings": {"on_update": "verp_staffing.utils.timezone.sync_users_to_company_time_zone"},
+    "Communication": {
+        "after_insert": "verp_staffing.utils.mailbox.on_new_communication"
+    },
+    "System Settings": {
+        "on_update": "verp_staffing.utils.timezone.sync_users_to_company_time_zone"
+    },
     "Resume": {
         "on_update": "verp_staffing.accounts.utils.sales_order_status.on_service_update_hook"
     },
@@ -414,7 +430,10 @@ doc_events = {
         "after_insert": "verp_staffing.accounts.utils.fiscal_year_opening_balance.on_gl_entry_submit",
     },
     "ERP Configuration": {
-        "on_update": "verp_staffing.utils.email_template.trigger_email_template_refresh"
+        "on_update": [
+            "verp_staffing.utils.email_template.trigger_email_template_refresh",
+            "verp_staffing.utils.printformat.seed_sales_invoice_print_format",
+        ]
     },
 }
 
@@ -469,16 +488,15 @@ setup_wizard_complete = "verp_staffing.setup.setup_wizard.setup_complete"
 #
 
 override_whitelisted_methods = {
-	"frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card": (
-		"verp_staffing.overrides.kanban_board.update_order_for_single_card"
-	),
-	"frappe.desk.doctype.kanban_board.kanban_board.update_order": (
-		"verp_staffing.overrides.kanban_board.update_order"
-	),
- 
+    "frappe.desk.doctype.kanban_board.kanban_board.update_order_for_single_card": (
+        "verp_staffing.overrides.kanban_board.update_order_for_single_card"
+    ),
+    "frappe.desk.doctype.kanban_board.kanban_board.update_order": (
+        "verp_staffing.overrides.kanban_board.update_order"
+    ),
     "frappe.www.contact.send_message": "verp_staffing.overrides.email_template.send_message",
     "frappe.desk.page.backups.backups.schedule_files_backup": "verp_staffing.overrides.email_template.schedule_files_backup",
-    "frappe.desk.form.utils.get_next": "verp_staffing.crm.api.helpers.get_next_permitted"
+    "frappe.desk.form.utils.get_next": "verp_staffing.crm.api.helpers.get_next_permitted",
 }
 
 # each overriding function accepts a `data` argument;
