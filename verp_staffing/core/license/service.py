@@ -35,6 +35,21 @@ def _public_site_config(lic) -> dict:
 	}
 
 
+def _installation_id(lic) -> str:
+	"""This installation's id, kept in site_config.json so it survives a reinstall (which wipes the
+	database and this license row). Central ties entitlements to it, so a new random id on every
+	reinstall would make the site reject its own entitlement."""
+	from frappe.installer import update_site_config
+
+	existing = frappe.conf.get("installation_id")
+	if existing:
+		return existing
+	# Sites that already have a license keep the id central already knows about.
+	new = lic.installation_id if lic else str(uuid.uuid4())
+	update_site_config("installation_id", new)
+	return new
+
+
 def register_site():
 	"""Called from after_install (and lazily whenever the site isn't registered yet). Never
 	raises: a dashboard that is down must not fail a site install — the error is kept and the
@@ -42,10 +57,15 @@ def register_site():
 	ensure_table()
 	lic = repository.get_license()
 	frappe.errprint(f"register_site: current license: {lic}")
+	installation_id = _installation_id(lic)
 	if not lic:
 		# Deterministic per site name, so a re-registration lands on the same identity.
 		site_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, frappe.local.site))
-		repository.create_license(site_id, str(uuid.uuid4()))
+		repository.create_license(site_id, installation_id)
+		lic = repository.get_license()
+	elif lic.installation_id != installation_id:
+		# Database restored or site moved: the config is the source of truth for the id.
+		repository.update_license(installation_id=installation_id)
 		lic = repository.get_license()
 	if lic.public_key:
 		return lic

@@ -202,6 +202,8 @@ onMounted(async () => {
       }
     }
     applyStatus(s)
+    // Fresh site: the setup wizard is the next step, so continue straight into it.
+    if (s.status === 'Active' && window.setup_complete === false) return enterApp()
     if (returning && s.status === 'Active') notice.value = 'Payment confirmed. Your subscription is active.'
     if (returning && s.status !== 'Active') notice.value = 'Payment has not been confirmed yet. If you have completed payment, refresh in a moment.'
     Object.assign(catalogue, await call(`${API}.get_plans`))
@@ -232,6 +234,11 @@ async function refresh() {
 function serverMessage(e) {
   const err = normalizeError(e)
   return err.messages?.[0] || err.message
+}
+
+// Full reload: the router then sends a fresh site on to the setup wizard.
+function enterApp() {
+  window.location.href = '/verp'
 }
 
 async function pay() {
