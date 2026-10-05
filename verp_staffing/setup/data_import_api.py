@@ -13,12 +13,28 @@ from frappe.core.doctype.data_import.exporter import Exporter
 from frappe.model import display_fieldtypes, no_value_fields
 from frappe.model import table_fields as table_fieldtypes
 from frappe.utils import cint, strip_html_tags
+from frappe.utils.csvutils import build_csv_response
+from frappe.utils.xlsxutils import build_xlsx_response
+
+from verp_staffing.setup.linked_detail_import import (
+	LINKED_DETAIL_DOCTYPE,
+	get_linked_template_fields,
+	import_linked_detail_rows,
+	linked_template_columns,
+	sample_values_for_template,
+)
 
 # Fields a template's field picker should never bother offering: layout-only
 # and display-only fieldtypes (same rule Exporter.get_exportable_fields uses
-# to decide what's actually exportable) plus a few standard bookkeeping
-# fields nobody re-imports by hand.
-NOT_EXPORTABLE_FIELDTYPES = set(display_fieldtypes) | set(no_value_fields)
+# to decide what's actually exportable), plus fieldtypes a flat spreadsheet
+# cell simply can't carry - a file upload (Attach/Attach Image), a drawn
+# Signature, or a Dynamic Link (its value only means something alongside a
+# second column naming which doctype it points to, which this wizard has no
+# way to collect) - and a few standard bookkeeping fields nobody re-imports
+# by hand. Applied both to what the template download offers as a column and
+# to what the column mapper offers as a target field.
+UNIMPORTABLE_FIELDTYPES = {"Attach", "Attach Image", "Signature", "Dynamic Link", "Password"}
+NOT_EXPORTABLE_FIELDTYPES = set(display_fieldtypes) | set(no_value_fields) | UNIMPORTABLE_FIELDTYPES
 SKIP_TEMPLATE_FIELDS = {"naming_series", "amended_from"}
 
 # Doctypes this app suggests up front, with the friendly copy a non-technical
@@ -145,7 +161,7 @@ def start_data_import_wizard(
 			)
 		frappe.throw(_("Could not read that file. Please check it's a valid CSV or Excel file and try again."))
 
-	return {"data_import": data_import.name, "preview": preview}
+	return {"data_import": data_import.name, "preview": preview, "column_map": {}}
 
 
 @frappe.whitelist()
@@ -182,10 +198,27 @@ def run_data_import_wizard(data_import, import_type=None):
 	return {"status": di.status}
 
 
+TERMINAL_STATUSES = ("Success", "Partial Success", "Error", "Timed Out")
+
+
 @frappe.whitelist()
 def get_data_import_wizard_status(data_import):
 	di = frappe.get_doc("Data Import", data_import)
 	di.check_permission("read")
+
+	# Runs once, the first poll after the base import reaches a terminal
+	# status - cached on template_options so later polls (and reopening this
+	# Data Import later) just replay the same result instead of re-saving
+	# Lead Detail Form records every time the frontend polls.
+	linked_result = None
+	if di.status in TERMINAL_STATUSES and di.reference_doctype in LINKED_DETAIL_DOCTYPE:
+		template_options = frappe.parse_json(di.template_options or "{}") or {}
+		if "linked_import_result" not in template_options:
+			linked_result = import_linked_detail_rows(di)
+			template_options["linked_import_result"] = linked_result
+			di.db_set("template_options", frappe.as_json(template_options))
+		else:
+			linked_result = template_options["linked_import_result"]
 
 	logs = frappe.get_all(
 		"Data Import Log",
@@ -217,6 +250,7 @@ def get_data_import_wizard_status(data_import):
 		"success": success,
 		"failed": failed,
 		"failures": failures,
+		"linked": linked_result,
 	}
 
 
@@ -265,7 +299,14 @@ def get_template_fields(doctype):
 				"child_doctype": df.options,
 			})
 
-	return {"fields": fields, "child_tables": child_tables}
+	return {
+		"fields": fields,
+		"child_tables": child_tables,
+		# Lead/Customer/Opportunity only - fields that live on Lead Detail
+		# Form instead, offered as a second group in the mapper/picker (see
+		# linked_detail_import.py). None when there's nothing to offer.
+		"linked": get_linked_template_fields(doctype, NOT_EXPORTABLE_FIELDTYPES),
+	}
 
 
 @frappe.whitelist()
@@ -293,22 +334,45 @@ def remap_data_import_columns(data_import, column_map):
 	di.reload()
 
 	preview = di.get_preview_from_template()
-	return {"preview": preview}
+	# Core Importer can't resolve an "ldf::"-tagged mapping (see
+	# linked_detail_import.py), so preview.columns[i].df comes back empty for
+	# one of those columns even though it IS mapped - the frontend needs the
+	# raw map itself to tell "deliberately routed elsewhere" apart from
+	# "really unmapped" and render the mapper correctly after this reload.
+	return {"preview": preview, "column_map": existing_map}
 
 
 @frappe.whitelist()
-def download_template(doctype, export_records="blank_template", file_type="CSV", fields=None, child_fields=None):
+def download_template(
+	doctype,
+	export_records="blank_template",
+	file_type="CSV",
+	fields=None,
+	child_fields=None,
+	linked_fields=None,
+	linked_child_fields=None,
+):
 	"""Wraps core's download_template: that one requires an explicit export_fields
 	dict (Desk's export dialog always supplies one via its field checkboxes) - the
 	wizard's own field picker (get_template_fields) supplies the same thing here.
 	`fields`/`child_fields` are optional; omitted, every field is included (e.g.
-	the setup-wizard's quick "just download something" path)."""
+	the setup-wizard's quick "just download something" path).
+
+	`linked_fields`/`linked_child_fields` (Lead/Customer/Opportunity only) are
+	extra columns from the linked Lead Detail Form - Exporter only knows how
+	to build a template for one doctype's own schema, so those are appended
+	onto its output by hand instead of going through export_fields.
+	"""
 	frappe.has_permission(doctype, "read", throw=True)
 	if not _can_import(doctype):
 		frappe.throw(_("You cannot import {0}.").format(doctype), frappe.PermissionError)
 
 	fields = frappe.parse_json(fields) if isinstance(fields, str) else fields
 	child_fields = frappe.parse_json(child_fields) if isinstance(child_fields, str) else child_fields
+	linked_fields = frappe.parse_json(linked_fields) if isinstance(linked_fields, str) else linked_fields
+	linked_child_fields = (
+		frappe.parse_json(linked_child_fields) if isinstance(linked_child_fields, str) else linked_child_fields
+	)
 
 	meta = frappe.get_meta(doctype)
 	valid_fieldnames = {df.fieldname for df in meta.fields}
@@ -327,14 +391,50 @@ def download_template(doctype, export_records="blank_template", file_type="CSV",
 		if chosen:
 			export_fields[df.fieldname] = chosen
 
+	extra_columns = []
+	if doctype in LINKED_DETAIL_DOCTYPE and (linked_fields or linked_child_fields):
+		extra_columns = linked_template_columns(doctype, linked_fields, linked_child_fields, NOT_EXPORTABLE_FIELDTYPES)
+
+	if not extra_columns:
+		e = Exporter(
+			doctype,
+			export_fields=export_fields,
+			export_data=export_records != "blank_template",
+			file_type=file_type,
+			export_page_length=5 if export_records == "5_records" else None,
+		)
+		e.build_response()
+		return
+
+	# Combined template: build the base doctype's own columns through
+	# Exporter as usual, then append the Lead Detail Form columns to the same
+	# header row (and, with sample data, to each record's row - fetched via
+	# the same Doctype Reference link the Candidate Profile view reads).
+	export_data = export_records != "blank_template"
 	e = Exporter(
 		doctype,
 		export_fields=export_fields,
-		export_data=export_records != "blank_template",
+		export_data=export_data,
 		file_type=file_type,
 		export_page_length=5 if export_records == "5_records" else None,
 	)
-	e.build_response()
+	csv_array = e.get_csv_array()
+	if not csv_array:
+		csv_array = [[]]
+
+	linked_doctype = LINKED_DETAIL_DOCTYPE[doctype]
+	csv_array[0] = [*csv_array[0], *[label for label, *_ in extra_columns]]
+	for row in csv_array[1:]:
+		base_name = row[0] if row else None
+		if base_name and frappe.db.exists(doctype, base_name):
+			row.extend(sample_values_for_template(linked_doctype, doctype, base_name, extra_columns))
+		else:
+			row.extend(["" for _ in extra_columns])
+
+	if file_type == "Excel":
+		build_xlsx_response(csv_array, _(doctype))
+	else:
+		build_csv_response(csv_array, _(doctype))
 
 
 @frappe.whitelist()

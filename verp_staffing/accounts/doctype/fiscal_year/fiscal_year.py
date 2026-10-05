@@ -86,12 +86,17 @@ def get_available_companies(doctype, txt, searchfield, start, page_len, filters)
         filters   – dict with key "current_fiscal_year"
     """
     
-    current_fiscal_year = (filters or {}).get("current_fiscal_year", "")
- 
-    results = frappe.db.sql("""
+    filters = filters or {}
+    current_fiscal_year = filters.get("current_fiscal_year", "")
+    # Companies already picked on other rows of the same table (see fiscal_year's
+    # rowLinkQueries) - not offered again, so a duplicate never reaches save.
+    exclude = [c for c in (filters.get("exclude") or []) if c] or [""]
+
+    return frappe.db.sql("""
 		SELECT c.name, c.abbr
 		FROM `tabCompany` c
 		WHERE c.name LIKE %(txt)s
+			AND c.name NOT IN %(exclude)s
 			AND NOT EXISTS (
 				SELECT 1
 				FROM `tabFiscal Year Company` fyc
@@ -104,12 +109,11 @@ def get_available_companies(doctype, txt, searchfield, start, page_len, filters)
 		LIMIT %(start)s, %(page_len)s
 	""", {
 		"txt": "%%%s%%" % (txt or ""),
+		"exclude": exclude,
 		"current_fiscal_year": current_fiscal_year,
 		"start": int(start),
 		"page_len": int(page_len)
 	})
- 
-    return results
  
 
 

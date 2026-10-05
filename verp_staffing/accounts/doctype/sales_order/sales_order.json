@@ -15,6 +15,7 @@
   "currency",
   "column_break_izeh",
   "conversion_rate",
+  "service_plan",
   "items_section",
   "items",
   "section_break_jldk",
@@ -96,6 +97,13 @@
    "label": "Company",
    "options": "Company",
    "set_only_once": 1
+  },
+  {
+   "description": "Picking a plan fills in its items and rates below - everything stays editable afterwards.",
+   "fieldname": "service_plan",
+   "fieldtype": "Link",
+   "label": "Service Plan",
+   "options": "Service Plan"
   },
   {
    "fieldname": "items_section",

@@ -727,7 +727,36 @@ def generate_certificate_page(agreement_name):
 
     def draw_document_summary(c, top_y, title, completed_on, ref):
         """Compact two-row summary card.  Returns bottom y of card."""
-        CARD_H = 90
+        half = COL_W / 2
+        max_title_w = half - 14 - 12
+
+        # wrap a long document name (it may have no spaces) onto up to 3 lines
+        lines, cur = [], ""
+        for word in str(title or "—").split(" "):
+            trial = (cur + " " + word).strip()
+            if c.stringWidth(trial, "Helvetica-Bold", 9) <= max_title_w:
+                cur = trial
+                continue
+            if cur:
+                lines.append(cur)
+                cur = ""
+            while c.stringWidth(word, "Helvetica-Bold", 9) > max_title_w:
+                n = len(word)
+                while n > 1 and c.stringWidth(word[:n], "Helvetica-Bold", 9) > max_title_w:
+                    n -= 1
+                lines.append(word[:n])
+                word = word[n:]
+            cur = word
+        if cur:
+            lines.append(cur)
+        if len(lines) > 3:
+            lines = lines[:3]
+            while lines[2] and c.stringWidth(lines[2] + "…", "Helvetica-Bold", 9) > max_title_w:
+                lines[2] = lines[2][:-1]
+            lines[2] += "…"
+        extra = 11 * (len(lines) - 1)
+
+        CARD_H = 90 + extra
         card_y = top_y - CARD_H
         rounded_rect(
             c, MARGIN, card_y, COL_W, CARD_H, r=6, fill=BG_CARD, stroke=BORDER, lw=0.5
@@ -740,20 +769,23 @@ def generate_certificate_page(agreement_name):
         c.drawString(inner_x, top_y - 14, "DOCUMENT SUMMARY")
         divider(c, inner_x, top_y - 20, COL_W - 28)
 
-        half = COL_W / 2
         # row 1
-        label_then_value(c, inner_x, top_y - 34, "Document", title, lsize=7, vsize=9)
+        label_then_value(c, inner_x, top_y - 34, "Document", lines[0], lsize=7, vsize=9)
+        c.setFont("Helvetica-Bold", 9)
+        set_fill(c, DARK)
+        for i, line in enumerate(lines[1:], start=1):
+            c.drawString(inner_x, top_y - 44 - 11 * i, line)
         label_then_value(
             c, MARGIN + half, top_y - 34, "Status", "Completed", lsize=7, vsize=9
         )
         # row 2
         label_then_value(
-            c, inner_x, top_y - 62, "Completed On", completed_on, lsize=7, vsize=8
+            c, inner_x, top_y - 62 - extra, "Completed On", completed_on, lsize=7, vsize=8
         )
         label_then_value(
             c,
             MARGIN + half,
-            top_y - 62,
+            top_y - 62 - extra,
             "Reference",
             ref[:28] + ("…" if len(ref) > 28 else ""),
             lsize=7,
