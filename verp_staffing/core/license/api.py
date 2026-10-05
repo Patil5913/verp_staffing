@@ -21,12 +21,17 @@ def _as_user_error(fn, *args, **kwargs):
 def _summary() -> dict:
 	state = enforcement.get_state()
 	lic, payload = state["license"], state["payload"]
+	payload = payload or {}
 	return {
 		"status": enforcement.get_status(),
-		"plan": (payload or {}).get("plan", {}).get("plan_name"),
-		"expires_at": (payload or {}).get("expires_at"),
+		"plan": payload.get("plan", {}).get("plan_name"),
+		"enabled_apps": payload.get("enabled_apps", []),
+		"limits": payload.get("limits", {}),
+		"issued_at": payload.get("issued_at"),
+		"expires_at": payload.get("expires_at"),
 		"checkout_pending": bool(lic and lic.checkout_request),
 		"last_sync_error": lic.last_sync_error if lic else None,
+		"last_synced_at": str(lic.last_synced_at) if lic and lic.last_synced_at else None,
 	}
 
 

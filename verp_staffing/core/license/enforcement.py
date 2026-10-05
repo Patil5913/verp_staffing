@@ -7,11 +7,28 @@ nothing, because state is recomputed here from the signature, the payload and it
 import json
 
 import frappe
-from frappe.utils import get_datetime, now_datetime
 
 from verp_staffing.core.license import crypto, repository
+from verp_staffing.core.license.repository import utc_naive, utc_now
 
-ACTIVE, PENDING, EXPIRED, INVALID = "Active", "Pending", "Expired", "Invalid"
+# Kept in sync with service.CENTRAL_STATES (central's status codes stored on a revoked row).
+CENTRAL_STATES = (
+	"PENDING_PAYMENT", "NO_SUBSCRIPTION", "SITE_NOT_FOUND", "SUSPENDED", "EXPIRED", "PAST_DUE", "CANCELLED", "DRAFT",
+)
+
+# Central's SubscriptionStatus (inside the signed payload's `status`) -> the site's state.
+PAYLOAD_STATUS_TO_STATE = {
+	"Active": "ACTIVE",
+	"PendingPayment": "PENDING_PAYMENT",
+	"Draft": "DRAFT",
+	"PastDue": "PAST_DUE",
+	"Suspended": "SUSPENDED",
+	"Cancelled": "CANCELLED",
+	"Expired": "EXPIRED",
+}
+
+ACTIVE, PENDING, EXPIRED, INVALID, STALE = "Active", "Pending", "Expired", "Invalid", "STALE"
+DEFAULT_FRESHNESS_HOURS = 12  # one job at 00:00 and 12:00 — see hooks.py scheduler_events
 
 
 def is_enforced() -> bool:
@@ -30,6 +47,8 @@ def get_state() -> dict:
 
 def _compute_state() -> dict:
 	lic = repository.get_license()
+	if lic and not lic.signed_payload and lic.status in CENTRAL_STATES:
+		return {"status": lic.status, "payload": None, "license": lic}
 	if not lic or not lic.signed_payload or not lic.signature or not lic.public_key:
 		return {"status": PENDING, "payload": None, "license": lic}
 	if not crypto.verify(lic.signed_payload, lic.signature, lic.public_key):
@@ -37,9 +56,23 @@ def _compute_state() -> dict:
 	payload = json.loads(lic.signed_payload)
 	if payload.get("site_id") != lic.site_id or payload.get("installation_id") != lic.installation_id:
 		return {"status": INVALID, "payload": None, "license": lic}
-	if get_datetime(payload["expires_at"]) <= now_datetime():
+	# Central's own status travels inside the signed payload (set when it was issued).
+	central_state = PAYLOAD_STATUS_TO_STATE.get(payload.get("status"), "INVALID")
+	if central_state != "ACTIVE":
+		return {"status": central_state, "payload": payload, "license": lic}
+	if utc_naive(payload["expires_at"]) <= utc_now():
 		return {"status": EXPIRED, "payload": payload, "license": lic}
+	# An entitlement is only trusted while central confirmed it recently. A restored old row goes
+	# stale on its own, and so does a site whose sync has failed for longer than the window.
+	if not lic.last_verified_at or utc_naive(lic.last_verified_at) < utc_now() - freshness_window():
+		return {"status": STALE, "payload": payload, "license": lic}
 	return {"status": ACTIVE, "payload": payload, "license": lic}
+
+
+def freshness_window():
+	from datetime import timedelta
+
+	return timedelta(hours=int(frappe.conf.get("subscription_freshness_hours") or DEFAULT_FRESHNESS_HOURS))
 
 
 def get_status() -> str:
@@ -78,9 +111,12 @@ def get_quota() -> dict | None:
 	payload = state["payload"]
 	quota = {
 		"site_space_limit_gb": get_limit("Storage"),
-		"expiry_date": str(get_datetime(payload["expires_at"]).date()),
+		"expiry_date": str(utc_naive(payload["expires_at"]).date()),
 	}
-	legacy_users_limit = frappe.get_site_config().get("quota", {}).get("users_limit")
-	if legacy_users_limit is not None:
-		quota["users_limit"] = legacy_users_limit
+	# The dashboard sends the seat count as limits.User (it is in the payload now).
+	users_limit = get_limit("User")
+	if users_limit is None:
+		users_limit = frappe.get_site_config().get("quota", {}).get("users_limit")
+	if users_limit is not None:
+		quota["users_limit"] = users_limit
 	return quota

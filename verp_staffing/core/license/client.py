@@ -131,21 +131,30 @@ def start_checkout(lic: dict, site_name: str, plan_id: str, limit_quantities: di
 	return {**result, "checkoutUrl": f"{result['checkoutUrl']}{sep}{urlencode({'return_url': return_url})}"}
 
 
-def sync(lic: dict, site_name: str) -> dict | None:
-	"""POST /api/client/sync -> {"signed_payload": str, "signature": str} or None.
+def sync(lic: dict, site_name: str) -> dict:
+	"""POST /api/client/sync -> {"status": ..., "signed_payload"?, "signature"?}.
 
-	Recovery path (spec 2): pulls whatever entitlement central currently has for this site,
-	independent of the webhook — used on return-from-payment and by the daily cron. Central
-	identifies the site by `siteName` (same key as /checkout), not by our site_id."""
+	Central answers every lifecycle state with `status` in the body: ACTIVE (with the signed
+	entitlement), PENDING_PAYMENT, NO_SUBSCRIPTION, SUSPENDED, EXPIRED, and SITE_NOT_FOUND (404).
+	The caller maps `status`; nothing here depends on error wording."""
 	if use_mock():
 		from verp_staffing.core.license import mock_dashboard
 
-		return mock_dashboard.mock_sync(lic)
+		entitlement = mock_dashboard.mock_sync(lic)
+		return {"status": "ACTIVE", **entitlement} if entitlement else {"status": "NO_SUBSCRIPTION"}
+
 	try:
-		return _request("POST", "/api/client/sync", json={"siteName": site_name}) or None
-	except DashboardError as e:
-		# 404 is central's "no active signed entitlement yet" (not paid) — a normal state, not a
-		# failure, so it must not surface as a Sync Error on every page load.
-		if e.status == 404:
-			return None
-		raise
+		response = requests.post(
+			f"{dashboard_url()}/api/client/sync", json={"siteName": site_name}, timeout=TIMEOUT
+		)
+	except requests.exceptions.RequestException as e:
+		raise DashboardError(f"Could not reach the subscription dashboard ({e.__class__.__name__}).") from e
+
+	try:
+		body = response.json()
+	except ValueError:
+		body = {}
+	if isinstance(body, dict) and "status" in body and response.status_code in (200, 404):
+		return body
+	message = body.get("error") if isinstance(body, dict) else None
+	raise DashboardError(message or f"Subscription dashboard returned {response.status_code}.", response.status_code)

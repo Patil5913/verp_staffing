@@ -353,7 +353,7 @@ doc_events = {
         "before_validate": "verp_staffing.overrides.email_account.before_validate",
     },
     "User": {
-        "before_insert": "verp_staffing.quota.utils.quota.user_limit",
+        "validate": "verp_staffing.quota.utils.quota.user_limit",
         # sets the flag the new frontend reads to offer "Create Employee" after a User is created
         "after_insert": "verp_staffing.overrides.user.after_insert",
         "before_save": "verp_staffing.overrides.user.sync_employee_enabled_from_user",
@@ -440,7 +440,9 @@ scheduler_events = {
     ],
     "cron": {
         # Subscription dashboard sync, once a day at 12:00 (customers' off hours).
-        "0 12 * * *": ["verp_staffing.core.license.service.scheduled_sync"],
+        # Subscription sync, twice a day (00:00 and 12:00). Must stay in step with
+        # subscription_freshness_hours (default 12): see core/license/enforcement.py.
+        "0 0,12 * * *": ["verp_staffing.core.license.service.scheduled_sync"],
         "0/10 * * * *": ["verp_staffing.utils.mailbox.sync_extra_all"],
         "*/15 * * * *": ["verp_staffing.crm.api.event_remainders.send_event_reminders"],
         "0 0 * * *": [  # This cron expression runs daily at midnight

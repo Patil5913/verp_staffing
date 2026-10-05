@@ -4,9 +4,10 @@ import json
 import uuid
 
 import frappe
-from frappe.utils import get_datetime, get_url, now_datetime
+from frappe.utils import get_url
 
 from verp_staffing.core.license import client, crypto, repository
+from verp_staffing.core.license.repository import utc_naive, utc_now
 from verp_staffing.core.license.schema import ensure_table
 
 
@@ -75,7 +76,7 @@ def start_checkout(plan_id: str, limit_quantities: dict) -> str:
 		frappe.throw("Cannot reach the subscription dashboard. Please try again shortly.")
 	repository.update_license(
 		checkout_request=json.dumps(
-			{"plan_id": plan_id, "limit_quantities": limit_quantities, "created_at": str(now_datetime())}
+			{"plan_id": plan_id, "limit_quantities": limit_quantities, "created_at": str(utc_now())}
 		)
 	)
 	lic = repository.get_license()
@@ -87,27 +88,76 @@ def start_checkout(plan_id: str, limit_quantities: dict) -> str:
 	return result["checkoutUrl"]
 
 
+# Central's status codes stored as-is in site_license.status, so the site shows exactly what the
+# dashboard reported. (ACTIVE is never stored as a code: it is only set after a verified payload.)
+CENTRAL_STATES = (
+	"PENDING_PAYMENT", "NO_SUBSCRIPTION", "SITE_NOT_FOUND", "SUSPENDED", "EXPIRED", "PAST_DUE", "CANCELLED", "DRAFT",
+)
+
+
 def sync() -> str:
-	"""Recovery path: ask central for whatever entitlement it currently has (POST
-	/api/client/sync) and store it if it verifies and is newer. Used on return from payment, by
-	the daily job, and after a fresh registration — independent of the payment_confirmed webhook,
-	which is expected to arrive on its own without this being called."""
+	"""Ask central for the site's state (POST /api/client/sync). ACTIVE stores the verified signed
+	entitlement; any other status revokes the stored one and records that state. Used on refresh,
+	on return from payment, by the daily job, and after a fresh registration."""
 	lic = register_site()
 	if not lic.public_key:
 		return lic.status
 	try:
-		entitlement = client.sync(lic, frappe.local.site)
-		frappe.errprint(f"sync: entitlement from central: {entitlement}")
-		if entitlement:
-			apply_entitlement(entitlement["signed_payload"], entitlement["signature"])
+		result = client.sync(lic, frappe.local.site)
+		status = result.get("status")
+		if status == "ACTIVE":
+			apply_entitlement(result["signed_payload"], result["signature"])
+		elif status in CENTRAL_STATES:
+			revoke_entitlement(status, "Site is not registered with the subscription dashboard." if status == "SITE_NOT_FOUND" else None)
 		else:
-			repository.update_license(last_synced_at=now_datetime(), last_sync_error=None)
+			repository.update_license(status="Sync Error", last_sync_error=f"sync: unknown status {status!r}"[:1000])
 	except frappe.ValidationError:
 		raise
 	except Exception as e:
 		repository.update_license(status="Sync Error", last_sync_error=f"sync: {e}"[:1000])
 	frappe.db.commit()  # nosemgrep
 	return repository.get_license().status
+
+
+def revoke_entitlement(status: str, message: str | None = None) -> None:
+	"""Central says the site has no active entitlement. Drop the stored one so the site is locked,
+	and store the state central reported (e.g. SUSPENDED, PENDING_PAYMENT)."""
+	repository.update_license(
+		signed_payload=None, signature=None, status=status, last_synced_at=utc_now(), last_sync_error=message,
+	)
+	frappe.db.commit()  # nosemgrep
+	frappe.clear_cache()
+
+
+REQUIRED_ENTITLEMENT_KEYS = (
+	"site_id", "installation_id", "subscription_id", "entitlement_version", "status",
+	"issued_at", "expires_at",
+)
+
+
+def _parse_entitlement(signed_payload: str) -> dict:
+	"""Check the shape of a signed payload before anything is stored. Returns the payload with
+	entitlement_version as an int and the timestamps as naive UTC, truncated to whole seconds (the
+	columns hold seconds). A malformed payload gets a readable error, never a database error."""
+	try:
+		payload = json.loads(signed_payload)
+	except ValueError:
+		frappe.throw("Entitlement payload is not valid JSON", frappe.ValidationError)
+	if not isinstance(payload, dict):
+		frappe.throw("Entitlement payload must be a JSON object", frappe.ValidationError)
+	missing = [k for k in REQUIRED_ENTITLEMENT_KEYS if payload.get(k) in (None, "")]
+	if missing:
+		frappe.throw(f"Entitlement payload is missing: {', '.join(missing)}", frappe.ValidationError)
+	try:
+		version = int(payload["entitlement_version"])
+		if not 0 <= version < 2**63:
+			raise ValueError("out of range")
+		payload["entitlement_version"] = version
+		for key in ("issued_at", "expires_at"):
+			payload[key] = utc_naive(payload[key]).replace(microsecond=0)
+	except (TypeError, ValueError, OverflowError):
+		frappe.throw("Entitlement payload has an invalid version or timestamp", frappe.ValidationError)
+	return payload
 
 
 def apply_entitlement(signed_payload: str, signature: str) -> None:
@@ -119,39 +169,39 @@ def apply_entitlement(signed_payload: str, signature: str) -> None:
 
 	# Central hands back the same signed entitlement on every sync until something changes. That
 	# is not a replay and not an error — just confirm we're still in sync.
-	if lic.signature == signature:
-		repository.update_license(last_synced_at=now_datetime(), last_sync_error=None)
+	if lic.signature == signature and lic.signed_payload == signed_payload:
+		# Central confirmed it again: this is what keeps the freshness window open.
+		repository.update_license(last_synced_at=utc_now(), last_verified_at=utc_now(), last_sync_error=None)
 		frappe.db.commit()  # nosemgrep
 		return
 
+	# A rejected push changes nothing: the stored entitlement is still the last verified one.
 	if not crypto.verify(signed_payload, signature, lic.public_key):
-		repository.update_license(status="Invalid", last_sync_error="Signature verification failed")
-		frappe.db.commit()  # nosemgrep
 		frappe.throw("Invalid entitlement signature", frappe.ValidationError)
 
-	payload = json.loads(signed_payload)
-	if payload.get("site_id") != lic.site_id or payload.get("installation_id") != lic.installation_id:
+	payload = _parse_entitlement(signed_payload)
+	if payload["site_id"] != lic.site_id or payload["installation_id"] != lic.installation_id:
 		frappe.throw("Entitlement is for a different site", frappe.ValidationError)
 
-	issued_at = get_datetime(payload["issued_at"])
+	issued_at = payload["issued_at"]
 	# NOTE: central's entitlement_version is parseInt(subscriptionVersion.id.slice(-8), 16) — a
 	# hash of a cuid, NOT an auto-incrementing counter, so it is not reliably monotonic across
 	# versions. Ordering by issued_at (a real, always-increasing UTC timestamp) instead of the
 	# version number avoids rejecting a genuinely newer entitlement whose hash happens to be
 	# smaller. entitlement_version is still stored, but only for display/diagnostics.
-	if lic.issued_at and issued_at <= get_datetime(lic.issued_at):
+	if lic.issued_at and issued_at <= utc_naive(lic.issued_at):
 		frappe.throw("Stale entitlement (replay?)", frappe.ValidationError)
 
-	expires_at = get_datetime(payload["expires_at"])
-	now = now_datetime()
-	central_status = payload.get("status", "Active")
+	expires_at = payload["expires_at"]
+	now = utc_now()
+	central_status = payload["status"]
 	status = "Expired" if expires_at <= now or central_status == "Expired" else central_status
 	repository.update_license(
 		subscription_id=payload.get("subscription_id"),
-		entitlement_version=int(payload["entitlement_version"]),
+		entitlement_version=payload["entitlement_version"],
 		signed_payload=signed_payload,
 		signature=signature,
-		issued_at=get_datetime(payload["issued_at"]),
+		issued_at=issued_at,
 		expires_at=expires_at,
 		last_verified_at=now,
 		last_synced_at=now,
@@ -167,7 +217,7 @@ def apply_entitlement(signed_payload: str, signature: str) -> None:
 def refresh_expiry():
 	"""Cron: persist the Expired status (enforcement already computes it live from expires_at)."""
 	lic = repository.get_license()
-	if lic and lic.expires_at and lic.status == "Active" and get_datetime(lic.expires_at) <= now_datetime():
+	if lic and lic.expires_at and lic.status == "Active" and utc_naive(lic.expires_at) <= utc_now():
 		repository.update_license(status="Expired")
 		frappe.db.commit()  # nosemgrep
 

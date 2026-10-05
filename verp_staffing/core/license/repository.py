@@ -1,6 +1,9 @@
 """Raw reads / writes of the single `site_license` row."""
 
+from datetime import datetime, timezone
+
 import frappe
+from frappe.utils import get_datetime
 
 from verp_staffing.core.license.schema import TABLE, ensure_table, raw_table_exists
 
@@ -34,3 +37,17 @@ def update_license(**values) -> None:
 		return
 	assignments = ", ".join(f"`{k}` = %({k})s" for k in values)
 	frappe.db.sql(f"UPDATE `{TABLE}` SET {assignments}", values)
+
+
+def utc_now() -> datetime:
+	"""Naive UTC — the same basis as the payload's Z timestamps and the stored DATETIME columns."""
+	return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def utc_naive(value) -> datetime:
+	"""Parse a timestamp from the dashboard (ISO with Z) or the DB into naive UTC, so comparing it
+	to utc_now() never mixes aware and naive datetimes."""
+	dt = get_datetime(value)
+	if dt.tzinfo is not None:
+		dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+	return dt

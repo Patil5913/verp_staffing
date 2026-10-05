@@ -60,7 +60,8 @@ const PORTAL_ROUTES = [
   { path: '/portal/documents', name: 'PortalDocuments', component: () => import('@/pages/portal/PortalDocumentsPage.vue'), meta: { portal: true, title: 'Documents' } },
   // First-run setup for a fresh site (see the beforeEach guard: sent here while
   // the site's setup isn't complete). Blank layout, like the agreement page.
-  // Plan + add-on picker; the router sends everyone here until the site's subscription is Active.
+  // Subscription status + plan picker. Non-Active sites are sent here; System Managers can also
+  // open it while Active to see the status and renew. Only System Managers see it at all.
   { path: '/site-subscription', name: 'SiteSubscription', component: () => import('@/pages/setup/SubscriptionPage.vue'), meta: { standalone: true, title: 'Subscription' } },
   { path: '/setup-wizard', name: 'SetupWizard', component: () => import('@/pages/setup/SetupWizardPage.vue'), meta: { standalone: true, title: 'Set up' } },
   { path: '/sign-agreement', name: 'SignAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, standalone: true, title: 'Sign Agreement' } },
@@ -393,10 +394,14 @@ router.beforeEach(async (to) => {
 
   // No valid subscription (none bought yet, unpaid checkout, expired): nothing else opens.
   // The server enforces this too (core/license/guard.py); this is the friendly half.
-  if (window.subscription_status && window.subscription_status !== 'Active') {
-    return to.path === '/site-subscription' ? true : { path: '/site-subscription' }
+  // The page itself shows a "contact your administrator" message to non-admins; the APIs refuse them.
+  const notActive = window.subscription_status && window.subscription_status !== 'Active'
+  if (to.path === '/site-subscription') {
+    return notActive || hasRole('System Manager') ? true : { path: '/' }
   }
-  if (to.path === '/site-subscription') return { path: '/' }
+  if (notActive) {
+    return { path: '/site-subscription' }
+  }
 
   // Fresh site: Frappe (desk.js/router.js) sends the admin to its setup wizard
   // while boot.setup_complete is false; same rule here, for System Managers.

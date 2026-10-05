@@ -14,8 +14,16 @@ def _quota():
 
 # user limit validate
 def user_limit(doc=None, method=None):
+    """Runs on EVERY save (validate), not only insert: a Website User turned into a System User
+    is an update, and must count against the seat limit too. The user being saved is excluded
+    from the count so re-saving an existing seat at the limit still works."""
+    if doc is None:
+        return
+
     # The limit is for staff seats; customers signing in to the chat don't use one.
-    if doc is not None and any(r.role == "Chat External" for r in doc.get("roles") or []):
+    if any(r.role == "Chat External" for r in doc.get("roles") or []):
+        return
+    if doc.user_type != "System User" or not doc.enabled:
         return
 
     quota = _quota()
@@ -25,16 +33,17 @@ def user_limit(doc=None, method=None):
     if not isinstance(users_limit, int):
         frappe.throw("Invalid users_limit. Must be integer.")
 
-    # count current users
+    # count current seats, not counting this user
     total_users = frappe.db.sql(
         """
         SELECT COUNT(*) FROM `tabUser` u
-        WHERE u.enabled = 1
+        WHERE u.enabled = 1 AND u.user_type = 'System User' AND u.name != %s
           AND NOT EXISTS (
               SELECT 1 FROM `tabHas Role` hr
               WHERE hr.parent = u.name AND hr.parenttype = 'User' AND hr.role = 'Chat External'
           )
-        """
+        """,
+        (doc.name,),
     )[0][0]
     if total_users >= users_limit:
         subject = "User Limit Exceeded"
@@ -62,17 +71,19 @@ def user_limit(doc=None, method=None):
                 template.response_html or template.response, context
             )
 
+        # No reference_doctype: this runs before the user is saved, so a link to it would point
+        # at an unsaved, random-named record. The notification is about the site, not this user.
         send_notification(
             recipients=["Administrator"],
             subject=subject,
             message=message,
-            reference_doctype="User",
             send_email=1,
             send_system=1,
         )
         frappe.throw(
             f"User limit exceeded. Limit = {users_limit}, Current = {total_users}"
         )
+
 
 STORAGE_CACHE_KEY = "site_storage_bytes"
 DB_SIZE_CACHE_KEY = "site_db_size_bytes"
