@@ -13,10 +13,10 @@
     </div>
 
     <div v-if="rows.length" class="flex flex-col gap-2">
+      <div v-for="(row, idx) in rows" :key="idx" :data-row="idx">
       <div
-        v-for="(row, idx) in rows"
-        :key="idx"
-        class="group flex cursor-pointer items-center gap-4 rounded-lg border border-app-border bg-app-panel-2/40 px-4 py-3 transition-colors hover:border-app-primary/40 hover:bg-app-panel-2"
+        class="group flex cursor-pointer items-center gap-4 rounded-lg border px-4 py-3 transition-colors hover:border-app-primary/40 hover:bg-app-panel-2"
+        :class="rowErrorsAt(idx).length ? 'border-red-500/60 bg-red-500/5' : 'border-app-border bg-app-panel-2/40'"
         @click="openRow(idx)"
       >
         <div class="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
@@ -39,6 +39,10 @@
           @click.stop="removeRow(idx)"
         />
       </div>
+      <ul v-if="rowErrorsAt(idx).length" class="mt-1 list-disc rounded-lg bg-red-500/5 py-2 pl-8 pr-4 text-p-xs text-red-600" @click="openRow(idx)">
+        <li v-for="(msg, mi) in rowErrorsAt(idx)" :key="mi">{{ msg }}</li>
+      </ul>
+      </div>
     </div>
     <div v-else class="rounded-lg border border-dashed border-app-border py-8 text-center text-p-sm text-app-text-muted">
       No rows yet.
@@ -46,6 +50,9 @@
 
     <Dialog v-model="dialogOpen" :options="{ title: dialogTitle, size: dialogSize }">
       <template #body-content>
+        <ul v-if="editingIndex !== null && rowErrorsAt(editingIndex).length" class="w-full list-disc rounded-lg border border-red-500/40 bg-red-500/10 py-2 pl-8 pr-4 text-p-sm text-red-700 dark:text-red-300">
+          <li v-for="(msg, mi) in rowErrorsAt(editingIndex)" :key="mi">{{ msg }}</li>
+        </ul>
         <div class="flex flex-wrap gap-3">
           <div
             v-for="col in visibleColumns"
@@ -115,6 +122,9 @@ const props = defineProps({
   // fieldtype rules - (draft, rows, editingIndex) => error string | null.
   // Blocks "Done" and shows the message inline when it returns one.
   validateRow: { type: Function, default: null },
+  // Server-side problems per row, keyed by row index (0-based): ["End Date is required", ...].
+  // Shown under the row and at the top of its dialog so the user sees what to fix there.
+  rowErrors: { type: Object, default: () => ({}) },
   // Column fieldnames to always keep out of the dialog - e.g. Sales
   // Order's Income Account, meant to be fetched and set automatically
   // (onFieldChange below), never picked by hand.
@@ -146,7 +156,7 @@ const props = defineProps({
   // portal's education/experience/address tables) can ask for more room.
   dialogSize: { type: String, default: 'xl' },
 })
-const emit = defineEmits(['update:rows'])
+const emit = defineEmits(['update:rows', 'field-edited', 'row-saved'])
 
 // The row being edited first, then whatever the parent document offers.
 const parentCurrencyDocs = inject('fieldCurrencyDocs', null)
@@ -171,6 +181,7 @@ const visibleColumns = computed(() =>
 )
 
 async function onFieldInput(fieldname, value) {
+  if (editingIndex.value !== null) emit('field-edited', { index: editingIndex.value, fieldname })
   draft.value[fieldname] = value
   if (props.onFieldChange) {
     const patch = await props.onFieldChange(fieldname, value, draft.value)
@@ -180,6 +191,8 @@ async function onFieldInput(fieldname, value) {
 }
 
 // A per-field message (MM-YYYY, grade range, and so on) as soon as that field changes.
+const rowErrorsAt = (idx) => props.rowErrors[idx] || []
+
 // Distinct from rowError (the single message a full validateRow check returns), which still
 // runs on Done.
 const fieldProblems = ref({})
@@ -275,6 +288,7 @@ async function commitRow() {
     rows[editingIndex.value] = { ...draft.value }
   }
   emit('update:rows', rows)
+  if (editingIndex.value !== null) emit('row-saved', editingIndex.value)
   dialogOpen.value = false
 }
 

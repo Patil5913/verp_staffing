@@ -36,13 +36,13 @@
                   :rows="values[name] || []"
                   :disabled="readOnly"
                   :validate-row="(draft) => rowProblem(name, draft)"
+                  :row-errors="rowErrorsFor(name)"
                   dialog-size="3xl"
                   @update:rows="(rows) => (values[name] = rows)"
+                  @field-edited="({ index, fieldname }) => clearError(`${name}.${index + 1}.${fieldname}`)"
+                  @row-saved="(index) => clearRowErrors(name, index)"
                 />
                 <p v-if="errors[name]" class="mt-1 text-p-xs text-red-600">{{ errors[name] }}</p>
-                <ul v-if="rowErrors(name).length" class="mt-1 list-disc pl-5 text-p-xs text-red-600">
-                  <li v-for="e in rowErrors(name)" :key="e.key">{{ e.message }}</li>
-                </ul>
               </div>
               <div v-else :data-field="name" @focusout="checkField(fieldOf(name))">
                 <FieldControl
@@ -96,24 +96,45 @@ const tableOf = (name) => tables.value.find((t) => t.fieldname === name)
 const colClass = (n) => (n >= 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : n === 2 ? 'sm:grid-cols-2' : '')
 const labelOf = (name) => [...fields.value, ...tables.value].find((f) => f.fieldname === name)?.label || name
 const summaryEl = ref(null)
+// Keys: "field" (a plain field), "table.N.field" or "table.N" (row N of a child table, 1-based).
 const errorList = computed(() =>
   Object.entries(errors.value).map(([key, message]) => {
     if (key === '_form') return { key, message }
     const [name, row] = key.split('.')
-    if (row) return { key, message: `${labelOf(name)}, row ${row}: ${message}` }
+    if (row) return { key, message: `${labelOf(name)} - row ${row}: ${message}` }
     // Prefix the field name unless the message already starts with it.
     return { key, message: message.toLowerCase().startsWith(labelOf(name).toLowerCase()) ? message : `${labelOf(name)}: ${message}` }
   }),
 )
 function jumpTo(key) {
-  const el = document.querySelector(`[data-field="${key.split('.')[0]}"]`)
-  el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  el?.querySelector('input, textarea, select')?.focus({ preventScroll: true })
+  const [name, row] = key.split('.')
+  const section = document.querySelector(`[data-field="${name}"]`)
+  const target = row ? section?.querySelector(`[data-row="${Number(row) - 1}"]`) || section : section
+  target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  if (!row) target?.querySelector('input, textarea, select')?.focus({ preventScroll: true })
 }
-const rowErrors = (table) =>
-  Object.entries(errors.value)
-    .filter(([k]) => k.startsWith(`${table}.`))
-    .map(([key, message]) => ({ key, message: `Row ${key.split('.')[1]}: ${message}` }))
+function clearError(key) {
+  if (!(key in errors.value)) return
+  const next = { ...errors.value }
+  delete next[key]
+  errors.value = next
+}
+// Once a row is saved from its dialog, its remaining problems are stale - drop them.
+function clearRowErrors(table, index) {
+  const prefix = `${table}.${index + 1}`
+  const next = Object.fromEntries(Object.entries(errors.value).filter(([k]) => k !== prefix && !k.startsWith(`${prefix}.`)))
+  errors.value = next
+}
+// A table's row problems as { 0-based row index: [messages] } for ChildTableField.
+const rowErrorsFor = (table) => {
+  const out = {}
+  for (const [key, message] of Object.entries(errors.value)) {
+    const [name, row] = key.split('.')
+    if (name !== table || !row) continue
+    ;(out[Number(row) - 1] ||= []).push(message)
+  }
+  return out
+}
 
 // Live validation: says exactly what's wrong (format, e.g. a phone number) as it is typed,
 // not just once the field is left, so the field itself guides what to fill in. Runs on every

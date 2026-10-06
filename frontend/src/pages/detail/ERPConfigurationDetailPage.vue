@@ -129,6 +129,16 @@
       </div>
     </template>
 
+    <template #tab-sales-invoice-print>
+      <SalesInvoicePrintFormatPanel />
+    </template>
+
+    <template #tab-email-templates>
+      <div class="h-full">
+        <EmailTemplatesPanel />
+      </div>
+    </template>
+
     <template #tab-website>
       <div class="h-full">
         <WebsiteSystemSettingsPanel
@@ -173,6 +183,8 @@ import WebsiteSystemSettingsPanel from '@/components/detail/erp/WebsiteSystemSet
 import SampleDataPanel from '@/components/detail/erp/SampleDataPanel.vue'
 import { useResource } from '@/composables/list/useResource'
 import { useSystemSettingsPanel } from '@/composables/detail/useSystemSettingsPanel'
+import SalesInvoicePrintFormatPanel from '@/components/settings/SalesInvoicePrintFormatPanel.vue'
+import EmailTemplatesPanel from '@/components/settings/EmailTemplatesPanel.vue'
 import { notify } from '@/utils/common/notify'
 
 const router = useRouter()
@@ -182,6 +194,8 @@ const tabs = [
   { key: 'candidate-form', label: 'Candidate Form Fields' },
   { key: 'department-display', label: 'Department Display Fields' },
   { key: 'department-access', label: 'Department Access Fields' },
+  { key: 'sales-invoice-print', label: 'Sales Invoice Print Format' },
+  { key: 'email-templates', label: 'Email Templates' },
   { key: 'website', label: 'Website Settings' },
 ]
 const activeTab = ref('general')
