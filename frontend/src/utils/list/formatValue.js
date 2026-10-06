@@ -36,23 +36,36 @@ export function formatFieldValue(value, field) {
   }
 }
 
+// Stored dates and datetimes are the system's wall clock, with no zone attached. They are
+// rebuilt from their parts and formatted in UTC, so the day and time shown are exactly the
+// stored ones on every device - a browser's own timezone never shifts them.
+const WALL_CLOCK = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/
+
+function wallClockDate(value) {
+  const m = WALL_CLOCK.exec(String(value))
+  if (!m) return null
+  const [, y, mo, da, h = 0, mi = 0, se = 0] = m
+  return new Date(Date.UTC(Number(y), Number(mo) - 1, Number(da), Number(h), Number(mi), Number(se)))
+}
+
 export function formatDate(value) {
   if (!value) return ''
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return String(value)
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  const d = wallClockDate(value)
+  if (!d) return String(value)
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
 export function formatDatetime(value) {
   if (!value) return ''
-  const d = new Date(value.replace(' ', 'T'))
-  if (Number.isNaN(d.getTime())) return String(value)
-  return d.toLocaleString(undefined, {
+  const d = wallClockDate(value)
+  if (!d) return String(value)
+  return d.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'UTC',
   })
 }
 
