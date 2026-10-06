@@ -40,7 +40,8 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Quantity",
-   "reqd": 1
+   "reqd": 1,
+   "non_negative": 1
   },
   {
    "fieldname": "rejected_qty",
@@ -68,7 +69,8 @@
    "in_list_view": 1,
    "label": "Rate",
    "options": "currency",
-   "reqd": 1
+   "reqd": 1,
+   "non_negative": 1
   },
   {
    "fieldname": "amount",

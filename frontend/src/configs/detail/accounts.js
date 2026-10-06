@@ -14,6 +14,7 @@ import OutstandingInvoicesPanel from '@/components/detail/accounts/OutstandingIn
 import LinkedInvoicesPanel from '@/components/detail/accounts/LinkedInvoicesPanel.vue'
 import PaymentEntryAssist from '@/components/detail/accounts/PaymentEntryAssist.vue'
 import PaymentTermsField from '@/components/detail/accounts/PaymentTermsField.vue'
+import PrintFormatAction from '@/components/detail/actions/PrintFormatAction.vue'
 
 const notNew = (d) => !d.isNew.value
 const submitted = (d) => d.docstatus.value === 1
@@ -95,6 +96,33 @@ const uniqueItemQuery = (row, rows, idx) => ({
 
 const salesItemsFieldChange = makeItemsTableFieldChange({ type: 'Sales', accountField: 'default_income_account' })
 const purchaseItemsFieldChange = makeItemsTableFieldChange({ type: 'Purchase', accountField: 'default_expense_account' })
+
+// Sales Order's "Service Plan" Link field: picking a plan replaces the whole
+// items table with that plan's items/rates (reusing salesItemsFieldChange
+// row-by-row so uom/income_account/amount all come out the same as if each
+// item had been picked by hand) - everything it fills in stays editable, and
+// more rows can still be added normally afterwards.
+async function populateItemsFromServicePlan(detail, planName) {
+  const plan = await call('frappe.client.get', { doctype: 'Service Plan', name: planName }).catch(() => null)
+  if (!plan) return
+
+  const rows = []
+  for (const row of plan.items || []) {
+    if (!row.item) continue
+    const patch = await salesItemsFieldChange('item', row.item, { rate: row.rate }, { detail })
+    rows.push({ item: row.item, rate: row.rate, ...patch })
+  }
+  detail.values.items = rows
+}
+
+function salesOrderSetup(detail) {
+  watch(
+    () => detail.values.service_plan,
+    (planName) => {
+      if (planName) populateItemsFromServicePlan(detail, planName)
+    },
+  )
+}
 
 // Payment Terms' own condition-based clearing/interview-count/due-date
 // logic now lives in PaymentTermsField.vue (the grid+row-expand component
@@ -366,6 +394,16 @@ export const fiscalYearConfig = {
             company: {
               query: 'verp_staffing.accounts.doctype.fiscal_year.fiscal_year.get_available_companies',
               filters: { current_fiscal_year: name || '' },
+            },
+          }),
+          // Same company can't be picked on two rows of this year.
+          rowLinkQueries: (row, rows, idx, { detail }) => ({
+            company: {
+              query: 'verp_staffing.accounts.doctype.fiscal_year.fiscal_year.get_available_companies',
+              filters: {
+                current_fiscal_year: detail.meta.resource.data?.name || '',
+                exclude: (rows || []).filter((r, i) => i !== idx && r.company).map((r) => r.company),
+              },
             },
           }),
         }),
@@ -687,6 +725,11 @@ export const salesInvoiceConfig = {
   actions: [
     ...invoiceActions('sales'),
     {
+      component: PrintFormatAction,
+      props: { doctype: 'Sales Invoice', format: 'Verp Sales Invoice' },
+      show: notNew,
+    },
+    {
       component: DocAction,
       props: {
         label: 'Send Invoice',
@@ -785,6 +828,7 @@ export const salesOrderConfig = {
   companyDefaults: {},
   autoCalculate: true,
   allowOnSubmitEdit: true,
+  setup: salesOrderSetup,
   // Sales Order's own `status` (Open/Closed, server-computed) only ever
   // matters once it reads "Closed" - otherwise the ordinary Draft/
   // Submitted/Cancelled docstatus badge tells the fuller story.
@@ -795,7 +839,7 @@ export const salesOrderConfig = {
       label: 'Details',
       sections: [
         fields(['customer', 'posting_date'], 'Order'),
-        auto('items', { hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange, rowLinkQueries: uniqueItemQuery }),
+        auto('items', { beforeFields: ['service_plan'], hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange, rowLinkQueries: uniqueItemQuery }),
         grid('taxes', TAXES_GRID_COLUMNS, {
           readOnlyColumns: taxesReadOnlyColumns,
           onFieldChange: taxesFieldChange,

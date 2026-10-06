@@ -37,7 +37,7 @@
           <RecordLabel v-if="card.customer" doctype="Customer" :id="card.customer" class="mt-1 w-full" title-class="text-p-xs text-app-text-muted" />
           <ul v-if="rounds[card.name]?.length" class="mt-2 flex flex-col gap-1 border-t border-app-border pt-2">
             <li v-for="(r, i) in rounds[card.name].slice(-3)" :key="i" class="flex items-center justify-between gap-2 text-p-xs">
-              <span class="truncate text-app-text-muted">Round {{ r.round }} · {{ formatDate(r.date_of_interview) || 'no date' }}</span>
+              <span class="truncate text-app-text-muted">{{ r.round_title || `Round ${r.round}` }} · {{ formatDate(r.date_of_interview) || 'no date' }}</span>
               <DocStatusBadge :status="r.status" />
             </li>
             <li v-if="rounds[card.name].length > 3" class="text-p-xs text-app-text-muted">+{{ rounds[card.name].length - 3 }} earlier</li>

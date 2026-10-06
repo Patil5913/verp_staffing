@@ -41,6 +41,9 @@ def compute_customer_status(customer):
     if frappe.db.exists("Onboardings", {"customer": customer,"status": "Active"}):
         return "Moved To Onboarding"
 
+    if frappe.db.exists("CR", {"customer": customer, "status": "Refund"}):
+        return "Backout and Refund"
+
     if frappe.db.exists("Onboardings", {"customer": customer,"status": "Completed"}):
             return "Customer Placed"
 

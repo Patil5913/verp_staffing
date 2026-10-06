@@ -9,6 +9,7 @@ from verp_staffing.services.doctype.document_references.document_references impo
     set_document_reference_titles,
 )
 from frappe import _
+from verp_staffing.utils.user_security import is_admin
 
 # Child fields we never treat as "content" for the purposes of deciding
 # whether a proof_of_work row was actually edited.
@@ -58,7 +59,7 @@ class InterviewSupport(Document):
             return
 
         previous_status = self.db_get("status")
-        if previous_status == "Completed":
+        if previous_status == "Completed" and not is_admin():
             frappe.throw("Completed Interview Support cannot be modified.")
 
     def stamp_updated_document_rows(self):

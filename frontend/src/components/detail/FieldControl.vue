@@ -54,7 +54,9 @@
 				{{ linkedFile.name || modelValue }}
 			</a>
 			<!-- A value with no readable file record (e.g. the portal can't look one up) is still a file. -->
-			<span v-else-if="modelValue" class="text-p-sm text-app-text">{{ linkedFile.name || "File uploaded" }}</span>
+			<span v-else-if="modelValue" class="text-p-sm text-app-text">{{
+				linkedFile.name || "File uploaded"
+			}}</span>
 			<span v-else class="text-p-sm text-app-text-muted">No file attached</span>
 
 			<FileUploader v-if="!disabled" @success="onLinkToFileUploaded">
@@ -178,14 +180,18 @@
 			v-if="disabled && isEmailField(field.fieldname) && displayValue"
 			:href="`mailto:${displayValue}`"
 			class="text-p-sm font-medium text-app-primary hover:underline"
-		>{{ displayValue }}</a>
+			>{{ displayValue }}</a
+		>
 		<a
 			v-else-if="disabled && isLinkedinField(field.fieldname) && displayValue"
-			:href="String(displayValue).startsWith('http') ? displayValue : `https://${displayValue}`"
+			:href="
+				String(displayValue).startsWith('http') ? displayValue : `https://${displayValue}`
+			"
 			target="_blank"
 			rel="noopener"
 			class="text-p-sm font-medium text-app-primary hover:underline"
-		>{{ displayValue }}</a>
+			>{{ displayValue }}</a
+		>
 		<TruncatedText
 			v-else-if="controlType === 'textarea' && disabled"
 			:text="displayValue || ''"
@@ -194,6 +200,7 @@
 		/>
 		<AppTextarea
 			v-else-if="controlType === 'textarea'"
+			:rows="field.rows || 3"
 			:model-value="displayValue ?? ''"
 			:disabled="disabled"
 			:placeholder="placeholder"
@@ -342,7 +349,9 @@ async function clearFile() {
 const isDataField = computed(() => props.field.fieldtype === "Data");
 const isMonthYear = computed(() => isDataField.value && isMonthYearField(props.field.fieldname));
 const isPhone = computed(() => isDataField.value && isPhoneField(props.field.fieldname));
-const isAvailability = computed(() => isDataField.value && isAvailabilityField(props.field.fieldname));
+const isAvailability = computed(
+	() => isDataField.value && isAvailabilityField(props.field.fieldname),
+);
 const isSsn = computed(() => isDataField.value && isSsnField(props.field.fieldname));
 
 const currencyInfo = computed(() => {
@@ -463,6 +472,7 @@ const selectOptions = computed(() => {
 
 const error = computed(() => {
 	if (!props.showErrors) return "";
+	if (props.disabled) return "";
 	return validateFieldValue(props.field, props.modelValue);
 });
 

@@ -59,6 +59,16 @@
       <div v-else class="h-full overflow-y-auto px-3 md:px-6 py-4">
         <div class="flex flex-col gap-6">
           <template v-for="(section, i) in visibleSections(tab)" :key="i">
+            <!-- A table section's own fields, shown above its table (e.g. Sales Order's Service Plan). -->
+            <DocDetailView
+              v-if="section.beforeFields"
+              :doctype="doctype"
+              :detail="detail"
+              :fieldnames="section.beforeFields"
+              :force-disabled="locked || section.readOnly === true"
+              :read-only-fields="readOnlyFields"
+              :field-link-queries="linkQueriesFor(section)"
+            />
             <DocDetailView
               v-if="section.type === 'fields'"
               :doctype="doctype"

@@ -237,13 +237,15 @@ def forward_candidate(customer, service, interview_round=None):
                 )
 
                 frappe.db.set_value("Customer", customer, "stage", json.dumps(stage))
+                # Marketing's own statuses are Started/Pending/Hold/Completed - a reforward reopens it as Pending.
+                frappe.db.set_value(doctype, d.name, "status", "Pending")
 
                 frappe.msgprint(f"Candidate is reforwarded for {service}. ")
 
             return {"reforward": True, "doctype": doctype, "name": docs[0].name}
 
         for d in docs:
-            frappe.db.set_value(doctype, d.name, "status", "Request for Update")
+            frappe.db.set_value(doctype, d.name, "status", "Pending" if service_key == "marketing" else "Request for Update")
 
         stage_entry = {
             "department": department,
@@ -385,7 +387,7 @@ def get_customer_interviews(customer, service=None):
     base_select = """
 		SELECT
 			ir.name AS value,
-			CONCAT(ir.round, ' (', i.company, ')') AS label
+			CONCAT(COALESCE(NULLIF(ir.round_title, ''), ir.round), ' (', i.company, ')') AS label
 		FROM `tabInterview` i
 		INNER JOIN `tabInterview Round` ir ON ir.parent = i.name
 	"""

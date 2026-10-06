@@ -1177,6 +1177,14 @@ def _append_verification_log(doc, message, now_str):
     doc.save()
 
 
+def _get_sales_owner_recipients(so):
+    """The customer's sales owner (not whoever created the order, e.g. an admin); falls back to
+    the creator when the customer has no owner with a user."""
+    employee = frappe.db.get_value("Customer", so.customer, "customer_owner")
+    user = frappe.get_cached_value("Employee", employee, "user") if employee else None
+    return [user or so.owner]
+
+
 def handle_background_failure(title, sales_order, error, message):
     # Error Log
     frappe.log_error(error, title)
@@ -1397,7 +1405,7 @@ def send_payment_term_reminders():
         # --------------------------------------------------------------
         try:
             send_notification(
-                recipients=[so.owner],
+                recipients=_get_sales_owner_recipients(so),
                 subject=subject,
                 message=message,
                 reference_doctype="Sales Order",

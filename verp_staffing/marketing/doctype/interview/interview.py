@@ -13,6 +13,7 @@ from verp_staffing.crm.api.helpers import (
     get_visible_user_names_cached,
 )
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
+from verp_staffing.utils.user_security import is_admin
 
 CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
@@ -197,6 +198,7 @@ class Interview(Document):
             previous_row.status in FINAL_ROUND_STATUSES
             and row.status != previous_row.status
             and not _is_outcome_of_completed(previous_row.status, row.status)
+            and not is_admin()
         ):
             frappe.throw(
                 _(
@@ -309,6 +311,7 @@ def update_interview_status_from_kanban(
         last_round.status in FINAL_ROUND_STATUSES
         and last_round.status != status
         and not _is_outcome_of_completed(last_round.status, status)
+        and not is_admin()
     ):
         frappe.throw(
             _(
@@ -476,7 +479,7 @@ def get_round_summary_for_kanban(names):
     rounds = frappe.get_all(
         "Interview Round",
         filters={"parenttype": "Interview", "parent": ["in", names]},
-        fields=["parent", "round", "date_of_interview", "from_time", "time_zone", "status"],
+        fields=["parent", "round", "round_title", "date_of_interview", "from_time", "time_zone", "status"],
         order_by="parent asc, idx asc",
     )
 
@@ -487,6 +490,7 @@ def get_round_summary_for_kanban(names):
         grouped[row["parent"]].append(
             {
                 "round": row["round"],
+                "round_title": row["round_title"],
                 "date_of_interview": local["date"] or row["date_of_interview"],
                 "status": row["status"],
             }

@@ -6,7 +6,7 @@ const KEYWORD_THEMES = [
   [/^sent$|delivered/, 'green'],
   [/expired|partially/, 'orange'],
   [/^sending$/, 'blue'],
-  [/won|success|approved|complete|paid|active|accepted|convert/, 'green'],
+  [/won|success|approved|complete|paid|active|accepted|convert|placed/, 'green'],
   [/lost|cancel|reject|fail|inactive|closed|error/, 'red'],
   [/pending|draft|hold|review|interested|waiting/, 'orange'],
   [/open|new|opportunity|progress|working/, 'blue'],
@@ -47,6 +47,7 @@ const DOCTYPE_FIELD_OVERRIDES = {
   'Interview.status': (value) => INTERVIEW_STATUS_THEMES[value] || genericStatusTheme(value),
   'Customer.overall_status': (value) => {
     const status = String(value || '')
+    if (status.includes('Backout') || status.includes('Refund')) return 'red'
     if (status.includes('Pending')) return 'red'
     if (status.includes('Rework')) return 'orange'
     if (status.includes('In Progress')) return 'blue'

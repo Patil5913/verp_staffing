@@ -11,7 +11,7 @@ SERVICE_DOCTYPE_MAP = {
     "cover letter": "Cover Letter",
     "marketing": "Marketing",
     "cr": "CR",
-    "onboarding": "Onboarding",
+    "onboarding": "Onboardings",
     "interview support": "Interview Support",
 }
 
@@ -1362,6 +1362,16 @@ def get_default_sidebar_config():
                     "type": "doctype",
                     "route": "/app/customer",
                     "doctype": "Customer",
+                    "icon": "icon-setting-gear",
+                    "shortcut": "",
+                    "roles": []
+                },
+                {
+                    "key": "service_plan",
+                    "name": "Service Plan",
+                    "type": "doctype",
+                    "route": "/app/service-plan",
+                    "doctype": "Service Plan",
                     "icon": "icon-setting-gear",
                     "shortcut": "",
                     "roles": []

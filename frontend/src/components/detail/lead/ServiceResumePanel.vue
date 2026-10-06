@@ -13,7 +13,7 @@
       <span class="lucide-file-text size-4" />
       View Resume
     </a>
-    <p v-else class="text-p-sm text-app-text-muted">No resume on file for this customer yet.</p>
+    <p v-else class="text-p-sm text-app-text-muted">No resume file for this customer yet.</p>
   </div>
 </template>
 

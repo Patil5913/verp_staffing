@@ -143,10 +143,10 @@
       "label": "Passport Number"
     },
     {
-      "description": " ",
+      "description": "(Only Last 4-Digits) People from Canada can ignore this field.",
       "fieldname": "ssn_digit",
       "fieldtype": "Data",
-      "label": "SSN (Only Last 4-Digits)",
+      "label": "SSN",
       "length": 4,
       "non_negative": 1
     },
@@ -226,7 +226,7 @@
     {
       "fieldname": "ead_card",
       "fieldtype": "Link",
-      "label": "EAD Card",
+      "label": "EAD/Work Authorization Card",
       "options": "File"
     },
     {

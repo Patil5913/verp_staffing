@@ -28,6 +28,8 @@ ALLOWED_METHODS = {
     "upload_file",
     "logout",
     "ping",
+    # public branding (app name and logo) for the sidebar and login page - guests can already read it
+    "verp_staffing.settings.doctype.erp_configuration.erp_configuration.get_website_app_settings",
     "frappe.sessions.clear",
     # agreement signing on the portal (signature image upload + audit fingerprint)
     "verp_staffing.crm.api.upload.upload_file",

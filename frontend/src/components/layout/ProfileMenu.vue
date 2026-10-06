@@ -45,7 +45,7 @@ import { Avatar, Dropdown, call } from 'frappe-ui'
 import { useTheme } from '@/composables/common/useTheme'
 import { notify } from '@/utils/common/notify'
 import { useInstallPrompt } from '@/composables/common/useInstallPrompt'
-import { hasRole } from '@/utils/common/roles'
+import { hasRole, isAdministrator } from '@/utils/common/roles'
 import KeyboardShortcutsDialog from '@/components/overlays/KeyboardShortcutsDialog.vue'
 
 defineProps({
@@ -74,6 +74,10 @@ function openSettings() {
 
 function openSidebarCustomization() {
   router.push('/Sidebar Master')
+}
+
+function openTemplates(doctype) {
+  router.push(`/${doctype}`)
 }
 
 function openDataImport() {
@@ -112,6 +116,12 @@ const menuOptions = computed(() => [
   // a customer has no staff user record to edit
   ...(window.is_portal_user ? [] : [{ icon: 'lucide-settings', label: 'My Settings', onClick: openSettings }]),
   ...(window.is_portal_user ? [] : [{ icon: 'lucide-layout-panel-left', label: 'Customize Sidebar', onClick: openSidebarCustomization }]),
+  ...(!window.is_portal_user && isAdministrator()
+    ? [
+        { icon: 'lucide-mail', label: 'Email Templates', onClick: () => openTemplates('Email Template') },
+        { icon: 'lucide-printer', label: 'Print Formats', onClick: () => openTemplates('Print Format') },
+      ]
+    : []),
   ...(!window.is_portal_user && hasRole('System Manager') ? [{ icon: 'lucide-upload', label: 'Import Data', onClick: openDataImport }] : []),
   {
     icon: 'lucide-monitor',

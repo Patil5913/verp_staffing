@@ -160,7 +160,7 @@ def get_data(filters):
         return []
 
     # -- Build WHERE ---------------------------------------------------------
-    conditions = ["so.owner IS NOT NULL", "so.docstatus = 1"]
+    conditions = ["emp.user IS NOT NULL", "so.docstatus = 1"]
     values = {}
 
     if company:
@@ -179,7 +179,7 @@ def get_data(filters):
         values["end_date"] = end_date
 
     user_placeholders = _build_in_placeholders("usr", user_list, values)
-    conditions.append(f"so.owner IN ({user_placeholders})")
+    conditions.append(f"emp.user IN ({user_placeholders})")
 
     where_clause = "WHERE " + " AND ".join(conditions)
 
@@ -188,17 +188,21 @@ def get_data(filters):
     # duplication bug. Employee metadata is merged from the cache in Python.
     query = """
         SELECT
-            so.owner AS user,
+            emp.user AS user,
             SUM(cpt.amount) AS total_revenue
         FROM `tabCustomer Payment Terms` cpt
         INNER JOIN `tabSales Order` so
             ON cpt.parent = so.name
+        INNER JOIN `tabCustomer` cust
+            ON cust.name = so.customer
+        INNER JOIN `tabEmployee` emp
+            ON emp.name = cust.customer_owner
     """
 
     query += where_clause
 
     query += """
-        GROUP BY so.owner
+        GROUP BY emp.user
         ORDER BY total_revenue DESC
     """
 

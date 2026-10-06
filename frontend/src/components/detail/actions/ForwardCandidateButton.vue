@@ -158,7 +158,7 @@ async function openDialog() {
 
   const res = isCustomerDoctype.value
     ? await customerDepartments.resource.submit({ customer: props.customer })
-    : await departments.resource.submit({ doctype: props.doctype, docname: props.name })
+    : await departments.resource.submit({ doctype: props.doctype, docname: props.name, from_service_name: props.fromServiceName })
   if (!res) return
   if (res.blocked) {
     blocked.value = true

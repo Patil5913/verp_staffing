@@ -101,6 +101,7 @@
 </template>
 
 <script setup>
+import { hasRole } from '@/utils/common/roles'
 // JDC's (interview session) detail page: Details/Proof of Work/Feedback/
 // Notes/Activity - `customer_feedback` is read_only on the doctype itself
 // (filled in by the customer's own feedback flow, not edited here), so its
@@ -131,7 +132,7 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const locked = computed(() => detail.values.status === 'Completed')
+const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },

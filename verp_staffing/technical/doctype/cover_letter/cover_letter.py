@@ -8,6 +8,7 @@ from verp_staffing.crm.api.customer import update_customer_stage
 from verp_staffing.services.doctype.document_references.document_references import (
     set_document_reference_titles,
 )
+from verp_staffing.utils.user_security import is_admin
 
 # Child fields we never treat as "content" for the purposes of deciding
 # whether a proof_of_work row was actually edited.
@@ -62,7 +63,7 @@ class CoverLetter(Document):
             return
 
         previous_status = self.db_get("status")
-        if previous_status == "Completed":
+        if previous_status == "Completed" and not is_admin():
             frappe.throw("Completed Cover Letter cannot be modified.")
 
     def stamp_updated_document_rows(self):
