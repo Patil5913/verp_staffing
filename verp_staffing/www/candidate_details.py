@@ -13,6 +13,7 @@ import json
 import re
 
 import frappe
+from frappe.model import no_value_fields
 from frappe import _
 from frappe.utils import validate_email_address
 
@@ -281,6 +282,18 @@ def _validate(data, names, required, tables):
         for i, row in enumerate(data.get(table) or [], start=1):
             for field, msg in checks(row):
                 errors.setdefault(f"{table}.{i}.{field}", msg)
+
+    # Required child-table columns, checked here so each missing value is reported on
+    # its own row (table.N.field) instead of as Frappe's combined "Lead Course Row #1" text.
+    for table in tables:
+        child_meta = frappe.get_meta(frappe.get_meta(LDF).get_field(table).options)
+        required_cols = [
+            df for df in child_meta.fields if df.reqd and not df.hidden and df.fieldtype not in no_value_fields
+        ]
+        for i, row in enumerate(data.get(table) or [], start=1):
+            for df in required_cols:
+                if row.get(df.fieldname) in (None, ""):
+                    errors.setdefault(f"{table}.{i}.{df.fieldname}", _("{0} is required").format(df.label or df.fieldname))
 
     def mm(row, field, text):
         if row.get(field) and not MM_YYYY.match(str(row[field])):
