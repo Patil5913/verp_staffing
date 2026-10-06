@@ -11,7 +11,7 @@ SERVICE_DOCTYPE_MAP = {
     "cover letter": "Cover Letter",
     "marketing": "Marketing",
     "cr": "CR",
-    "onboarding": "Onboarding",
+    "onboarding": "Onboardings",
     "interview support": "Interview Support",
 }
 
