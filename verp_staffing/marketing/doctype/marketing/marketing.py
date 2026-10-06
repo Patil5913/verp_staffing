@@ -86,9 +86,13 @@ def get_interviews_by_marketing(marketing):
     interviews = frappe.get_all(
         "Interview",
         filters={"marketing_link": marketing},
-        fields=["company", "name", "role", "status"],
+        fields=["company", "name", "role", "status", "owner"],
         order_by="creation desc",
     )
+    owner_names = {
+        u.name: u.full_name
+        for u in frappe.get_all("User", filters={"name": ["in", list({i.owner for i in interviews}) or [""]]}, fields=["name", "full_name"])
+    }
 
     # `can_open` = whether the current user may read it (their own, or a visible team member's -
     # Interview's permission hook); every interview is still listed, the rest are just not linked
@@ -98,6 +102,7 @@ def get_interviews_by_marketing(marketing):
             "company": i.company,
             "role": i.role,
             "status": i.status,
+            "owner": owner_names.get(i.owner) or i.owner,
             "can_open": bool(frappe.has_permission("Interview", "read", doc=i.name)),
         }
         for i in interviews

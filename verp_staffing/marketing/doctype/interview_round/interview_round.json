@@ -8,6 +8,7 @@
  "field_order": [
   "basic_details_section",
   "round",
+  "round_title",
   "date_of_interview",
   "column_break_zjwy",
   "type_of_interview",
@@ -40,6 +41,12 @@
    "in_list_view": 1,
    "label": "Round",
    "reqd": 1
+  },
+  {
+   "fieldname": "round_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Round Title"
   },
   {
    "default": "Today",

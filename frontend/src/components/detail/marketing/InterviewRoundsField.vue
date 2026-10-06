@@ -87,6 +87,7 @@
 //    reason (interview_list.js's prompt_cancellation_details);
 //  * follow_up may only step up by exactly one.
 import { computed, reactive, ref, watch } from 'vue'
+import { hasRole } from '@/utils/common/roles'
 import { roundInZone, siteTodayIso } from '@/utils/common/siteTime'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -166,11 +167,15 @@ watch(
 const savedRows = computed(() => table.value?.rows || [])
 const savedCompleted = (row) => !!row.name && savedRows.value.some((r) => r.name === row.name && statusOf(r) === 'completed')
 const OUTCOME_OPTIONS = 'Completed\nGet The Offer\nRejected'
+// The System Manager may move a round's status from any status to any other (the reason popup for
+// Cancelled/Rescheduled still applies - the server checks the same thing).
+const isAdmin = hasRole('System Manager')
 const fieldFor = (col, row) =>
-  col.fieldname === 'status' && savedCompleted(row) ? { ...col, fieldtype: 'Select', options: OUTCOME_OPTIONS } : col
+  col.fieldname === 'status' && savedCompleted(row) && !isAdmin ? { ...col, fieldtype: 'Select', options: OUTCOME_OPTIONS } : col
 
 function fieldDisabled(col, row, idx) {
   if (!editable.value || col.read_only) return true
+  if (isAdmin && col.fieldname === 'status') return false
   if (!isSuperior.value && idx !== rows.value.length - 1) return true
   if (savedCompleted(row)) return col.fieldname !== 'status'
   if (finalized(row)) return true

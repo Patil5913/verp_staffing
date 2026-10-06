@@ -1,3 +1,4 @@
+import { hasRole } from '@/utils/common/roles'
 import { watch } from 'vue'
 import { call } from 'frappe-ui'
 import { notify } from '@/utils/common/notify'
@@ -14,7 +15,7 @@ import MarketingInterviewsPanel from '@/components/detail/marketing/MarketingInt
 import MarketingTargetPanel from '@/components/detail/marketing/MarketingTargetPanel.vue'
 import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
-const isCompleted = (detail) => detail.values.status === 'Completed'
+const isCompleted = (detail) => detail.values.status === 'Completed' && !hasRole('System Manager')
 const notNew = (detail) => !detail.isNew.value
 
 // Ported from marketing.js: the assignee, target block and per-day job
@@ -41,7 +42,18 @@ export const marketingConfig = {
       key: 'details',
       label: 'Details',
       sections: [
-        { type: 'fields', fieldnames: ['customer', 'status'] },
+        {
+          type: 'fields',
+          fieldnames: ['customer', 'status'],
+          // Placed is computed from the customer's services (set automatically), so it's shown
+          // but never offered as a choice, and can't be edited by hand.
+          fieldOverrides: (detail) => ({
+            status: {
+              options: 'Pending\nStarted\nCompleted\nHold',
+              read_only: detail.values.status === 'Placed' ? 1 : 0,
+            },
+          }),
+        },
         {
           type: 'component',
           component: AssignToField,
@@ -65,7 +77,7 @@ export const marketingConfig = {
       key: 'history',
       label: 'History',
       show: notNew,
-      sections: [{ type: 'component', component: CustomerHistoryPanel }],
+      sections: [{ type: 'component', component: CustomerHistoryPanel, props: { includeInterviews: false } }],
     },
   ],
 }
