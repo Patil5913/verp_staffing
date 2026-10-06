@@ -255,7 +255,7 @@ def can_user_forward_to_department(user, department):
 
 
 @frappe.whitelist()
-def get_forwardable_departments_from_service(doctype, docname):
+def get_forwardable_departments_from_service(doctype, docname, from_service_name=None):
     """
     Fetch forwardable services using the customer
     linked inside any service doctype.
@@ -290,7 +290,8 @@ def get_forwardable_departments_from_service(doctype, docname):
 
     all_completed = is_all_services_completed(customer, services)
 
-    options = list(services)
+    from_key = (from_service_name or "").strip().lower()
+    options = [s for s in services if s.strip().lower() != from_key]
 
     # CR
     if "CR" not in active_departments:

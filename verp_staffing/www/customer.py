@@ -399,8 +399,6 @@ _DOCTYPE_TO_STAGE_KEY = {v: k for k, v in SERVICE_DOCTYPE_MAP.items()}
 FEEDBACK_ALLOWED_DOCTYPES = {"JDC", "Interview Support", "Training"}
 
 
-EXCLUDED_SERVICES = {"cr", "onboarding"}
-
 INTERVIEW_LINKED_DOCTYPES = {"JDC", "Interview Support"}
 FEEDBACK_TRACKED_DOCTYPES = {"JDC", "Interview Support", "Training"}
 DOCUMENT_REFERENCE_DOCTYPES = {
@@ -433,6 +431,8 @@ DOC_FIELDS_BY_DOCTYPE = {
     "Other Services": ["name", "assign_to", "status", "service"],
     "JDC": ["name", "assign_to", "interview_round", "status"],
     "Interview Support": ["name", "assign_to", "interview_round", "status"],
+    "CR": ["name", "assign_to", "status"],
+    "Onboardings": ["name", "assign_to", "status"],
 }
 
 
@@ -533,17 +533,19 @@ def _get_feedback_child_fieldname(doctype):
 
 
 @frappe.whitelist()
-def get_customer_history(customer=None, interview_limit=5, interview_offset=0):
+def get_customer_history(customer=None, interview_limit=5, interview_offset=0, include_interviews=1):
     # Staff pass the customer they are looking at. A portal user always gets
     # their own record, whatever they ask for, and only the customer-safe view of it.
+    # Marketing's History doesn't show interviews, so it passes include_interviews=0 and
+    # they aren't fetched at all.
     if is_portal_user():
         customer = get_portal_customer()["customer"]
         history = _load_history(customer, interview_limit, interview_offset)
         return _portal_safe(_augment_history_for_display(history))
-    return _load_history(customer, interview_limit, interview_offset)
+    return _load_history(customer, interview_limit, interview_offset, include_interviews=frappe.utils.cint(include_interviews))
 
 
-def _load_history(customer, interview_limit=5, interview_offset=0):
+def _load_history(customer, interview_limit=5, interview_offset=0, include_interviews=True):
     customer_rows = frappe.get_all(
         "Customer",
         filters={"name": customer},
@@ -567,17 +569,63 @@ def _load_history(customer, interview_limit=5, interview_offset=0):
             stage_data = json.loads(stage_data)
         _populate_department_history(history, stage_data, customer)
 
-    _populate_interview_history(history, customer, interview_limit, interview_offset)
+    _populate_cr_and_onboarding_history(history, customer)
+    if include_interviews:
+        _populate_interview_history(history, customer, interview_limit, interview_offset)
 
     return history
+
+
+# Each record's own history table, shown row by row on its card.
+_RECORD_HISTORY = {
+    "CR": ("CR History", ["forwarded_on", "forwarded_by", "forwarded_from_department", "reason_for_forwarding", "remarks", "status", "assign_to", "action_by", "resolve_refund_on"]),
+    "Onboardings": ("Onboarding History", ["forwarded_on", "forwarded_by", "forwarded_from", "company", "role", "status", "assign_to", "action_by", "action_on"]),
+}
+
+
+def _populate_cr_and_onboarding_history(history, customer):
+    """CR and Onboarding forwards don't write to the customer's stage history, so their cards come
+    straight from their own records (the same ones the customer card reads). Each record's history
+    table is read in one query per doctype, not one per record."""
+    for doctype, (child_table, child_fields) in _RECORD_HISTORY.items():
+        parents = frappe.get_all(
+            doctype,
+            filters={"customer": customer},
+            fields=["name", "assign_to", "status", "creation"],
+            order_by="creation asc",
+        )
+        if not parents:
+            continue
+        child_rows = frappe.get_all(
+            child_table,
+            filters={"parenttype": doctype, "parent": ["in", [p.name for p in parents]]},
+            fields=["parent", *child_fields],
+            order_by="forwarded_on asc, idx asc",
+        )
+        rows_by_parent = {}
+        for row in child_rows:
+            rows_by_parent.setdefault(row.parent, []).append(
+                {f: str(row.get(f)) for f in child_fields if row.get(f) not in (None, "")}
+            )
+        for d in parents:
+            rows = rows_by_parent.get(d.name, [])
+            history["departments"].setdefault(doctype, []).append(
+                {
+                    "department": doctype,
+                    "docname": d.name,
+                    "id": d.name,
+                    "assign_to": d.assign_to,
+                    "status": d.status,
+                    "history_rows": rows,
+                    "forward_events": [{"department": doctype, "timestamp": str(d.creation)}],
+                }
+            )
 
 
 def _populate_department_history(history, stage_data, customer):
     doctype_events = {}  # doctype -> list of raw forward-event dicts
 
     for stage_key, events in stage_data.items():
-        if stage_key in EXCLUDED_SERVICES:
-            continue
         if not isinstance(events, list) or not events:
             continue
 

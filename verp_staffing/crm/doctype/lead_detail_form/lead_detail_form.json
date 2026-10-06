@@ -146,7 +146,7 @@
       "description": " ",
       "fieldname": "ssn_digit",
       "fieldtype": "Data",
-      "label": "SSN (Only Last 4-Digits)",
+      "label": "SSN (Only Last 4-Digits) People from Canada can ignore this field.",
       "length": 4,
       "non_negative": 1
     },
