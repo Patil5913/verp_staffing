@@ -212,6 +212,9 @@ def on_service_update_hook(doc, method=None):
     try:
         status = compute_customer_status(doc.customer)
         frappe.db.set_value("Customer", doc.customer, "overall_status", status)
+        if status == "Customer Placed":
+            # Marketing gets its own "Placed" too, so staff can tell placed candidates apart.
+            frappe.db.set_value("Marketing", {"customer": doc.customer}, "status", "Placed")
         sync_chat_access(doc.customer)  # chat access ends once the customer is placed
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Customer Status Update Failed")
