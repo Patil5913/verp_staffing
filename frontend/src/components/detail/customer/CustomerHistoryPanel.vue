@@ -40,6 +40,22 @@
             <template v-else>Assigned to {{ entry.assign_to || '-' }}</template>
           </p>
 
+          <!-- CR and Onboarding: this record's own history, one line per step. -->
+          <ol v-if="entry.history_rows?.length" class="flex flex-col gap-1.5 border-l border-app-border pl-3">
+            <li v-for="(step, si) in entry.history_rows" :key="si" class="text-p-sm">
+              <div class="flex flex-wrap items-center gap-2">
+                <DocStatusBadge v-if="step.status" :status="step.status" />
+                <span class="text-app-text-muted">{{ formatDatetime(step.forwarded_on) || formatDatetime(step.action_on) || '' }}</span>
+              </div>
+              <p class="text-app-text-muted">
+                <span v-if="step.assign_to">Assigned to {{ step.assign_to }}</span>
+                <span v-if="step.forwarded_by"> · Forwarded by {{ step.forwarded_by }}</span>
+                <span v-if="step.reason_for_forwarding"> · {{ step.reason_for_forwarding }}</span>
+                <span v-if="step.remarks"> · {{ step.remarks }}</span>
+              </p>
+            </li>
+          </ol>
+
           <dl v-if="entry.interview_round_detail" class="grid grid-cols-2 gap-x-4 gap-y-1 text-p-sm sm:grid-cols-4">
             <div v-for="row in roundRows(entry.interview_round_detail)" :key="row.label">
               <dt class="text-p-xs text-app-text-muted">{{ row.label }}</dt>
@@ -138,7 +154,7 @@
       </div>
     </SectionCard>
 
-    <div v-if="hasMoreInterviews" class="flex justify-center">
+    <div v-if="hasMoreInterviews && !props.exclude.includes('Interview')" class="flex justify-center">
       <AppButton variant="outline" size="sm" :loading="history.isLoading" @click="loadMoreInterviews">Load more interviews</AppButton>
     </div>
   </div>
@@ -156,7 +172,7 @@ import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import SectionCard from '@/components/common/SectionCard.vue'
 import TruncatedText from '@/components/ui/TruncatedText.vue'
 import { useResource } from '@/composables/list/useResource'
-import { formatDate } from '@/utils/list/formatValue'
+import { formatDate, formatDatetime } from '@/utils/list/formatValue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -165,6 +181,10 @@ const props = defineProps({
   // When set, shows only this department (doctype) - e.g. Marketing's
   // History tab only cares about its own trail plus interviews.
   departments: { type: Array, default: null },
+  // Department cards this page doesn't show (e.g. Marketing hides Interview).
+  exclude: { type: Array, default: () => [] },
+  // False on pages that don't show interviews (Marketing) - they aren't fetched at all.
+  includeInterviews: { type: Boolean, default: true },
 })
 
 const customer = computed(() => props.customer || props.detail?.values.customer || '')
@@ -174,7 +194,7 @@ const interviewLimit = ref(PAGE)
 
 const history = useResource({
   url: 'verp_staffing.www.customer.get_customer_history',
-  makeParams: () => ({ customer: customer.value, interview_limit: interviewLimit.value, interview_offset: 0 }),
+  makeParams: () => ({ customer: customer.value, interview_limit: interviewLimit.value, interview_offset: 0, include_interviews: props.includeInterviews ? 1 : 0 }),
   notifyOnError: false,
 })
 
@@ -182,7 +202,7 @@ watch(
   customer,
   (value) => {
     interviewLimit.value = PAGE
-    if (value) history.resource.submit({ customer: value, interview_limit: PAGE, interview_offset: 0 })
+    if (value) history.resource.submit({ customer: value, interview_limit: PAGE, interview_offset: 0, include_interviews: props.includeInterviews ? 1 : 0 })
   },
   { immediate: true },
 )
@@ -190,7 +210,7 @@ watch(
 const groups = computed(() => {
   const departments = history.resource.data?.departments || {}
   return Object.entries(departments)
-    .filter(([name, entries]) => entries?.length && (!props.departments || props.departments.includes(name)))
+    .filter(([name, entries]) => entries?.length && (!props.departments || props.departments.includes(name)) && !props.exclude.includes(name))
     .map(([department, entries]) => ({ department, entries }))
 })
 
@@ -201,7 +221,7 @@ const hasMoreInterviews = computed(() => {
 
 function loadMoreInterviews() {
   interviewLimit.value += PAGE
-  history.resource.submit({ customer: customer.value, interview_limit: interviewLimit.value, interview_offset: 0 })
+  history.resource.submit({ customer: customer.value, interview_limit: interviewLimit.value, interview_offset: 0, include_interviews: props.includeInterviews ? 1 : 0 })
 }
 
 // Matches customer_history.js's format_display_datetime exactly - "25 Aug
