@@ -15,6 +15,14 @@ from verp_staffing.crm.api.helpers import (
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 from verp_staffing.utils.user_security import is_admin
 
+LOCKED_STATUS_KEYWORDS = (
+    "cancelled",
+    "canceled",
+    "completed",
+    "rescheduled",
+    "rejected",
+)
+CANCELLED_LIKE_KEYWORDS = ("cancelled", "canceled", "rescheduled")
 CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
 DEFAULT_ROUND_STATUS = "Scheduled"
@@ -28,6 +36,20 @@ TODAY_EXCLUDED_STATUSES = FINAL_ROUND_STATUSES | {"Rejected", "Get The Offer", T
 
 def _is_outcome_of_completed(previous, new):
     return previous == "Completed" and new in COMPLETED_OUTCOMES
+
+
+def is_status_locked(status):
+    if not status or not isinstance(status, str):
+        return False
+    lower = status.lower()
+    return any(keyword in lower for keyword in LOCKED_STATUS_KEYWORDS)
+
+
+def is_cancelled_like_status(status):
+    if not status or not isinstance(status, str):
+        return False
+    lower = status.lower()
+    return any(keyword in lower for keyword in CANCELLED_LIKE_KEYWORDS)
 
 
 class Interview(Document):
@@ -78,7 +100,9 @@ class Interview(Document):
             self.customer = None
             return
 
-        customer_name = frappe.db.get_value("Marketing", self.marketing_link, "customer")
+        customer_name = frappe.db.get_value(
+            "Marketing", self.marketing_link, "customer"
+        )
         if not customer_name:
             self.customer = None
             return
@@ -126,7 +150,7 @@ class Interview(Document):
             self._validate_round_status_not_locked(row, i)
             normalize_round(row, self._previous_round(row))
 
-            if row.status in CANCELLED_LIKE_STATUSES and (
+            if is_cancelled_like_status(row.status) and (
                 not row.cancelled_by or not row.reason_of_cancel
             ):
                 frappe.throw(
@@ -686,8 +710,13 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
         try:
             links = (
                 json.loads(marketing_link)
-                if isinstance(marketing_link, str) and marketing_link.strip().startswith("[")
-                else (marketing_link if isinstance(marketing_link, list) else [marketing_link])
+                if isinstance(marketing_link, str)
+                and marketing_link.strip().startswith("[")
+                else (
+                    marketing_link
+                    if isinstance(marketing_link, list)
+                    else [marketing_link]
+                )
             )
         except (ValueError, TypeError):
             links = [marketing_link]
@@ -703,7 +732,8 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
     first, last = frappe.utils.getdate(start), frappe.utils.getdate(end)
     values.update({"start": frappe.utils.add_days(first, -1), "end": frappe.utils.add_days(last, 1)})
 
-    rounds = frappe.db.sql(f"""
+    rounds = frappe.db.sql(
+        f"""
         SELECT ir.name AS round_name, ir.parent AS interview, ir.round,
             ir.date_of_interview, ir.from_time, ir.to_time, ir.time_zone,
             ir.status AS round_status, i.company, i.role, i.status AS interview_status,
@@ -713,7 +743,10 @@ def get_interview_round_events(start, end, filters=None, marketing_link=None):
         WHERE ir.date_of_interview BETWEEN %(start)s AND %(end)s
         {conditions}
         ORDER BY ir.date_of_interview, ir.from_time
-    """, values, as_dict=True)
+    """,
+        values,
+        as_dict=True,
+    )
 
     tz = user_time_zone()
     events = []

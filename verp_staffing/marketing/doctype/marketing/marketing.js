@@ -412,7 +412,11 @@ function render_interview_list_html(frm, data) {
 			.map(
 				(d) => `
 					<li>
-						<a href="#" class="mkt-interview-item" data-interview="${esc(d.company || "")}">
+						<a href="${d.owner ? `/app/interview/${d.name}` : "javascript:void(0)"}" class="mkt-interview-item"${
+							!d.owner
+								? ' title="You are not permitted to view other recrutiers interview" style="cursor: not-allowed;"'
+								: ""
+						}>
 							<span class="mkt-interview-dot"></span>
 							<span>${esc(d.company || "")}</span>
 						</a>
@@ -440,17 +444,6 @@ function render_interview_list_html(frm, data) {
 	const $wrap = $wrapper.find(".mkt-interview-list-wrap");
 	const $list = $wrapper.find(".mkt-interview-list");
 	const $toggle = $wrapper.find(".mkt-interview-toggle-btn");
-
-	function bind_item_clicks() {
-		$wrapper
-			.find(".mkt-interview-item")
-			.off("click")
-			.on("click", function (e) {
-				e.preventDefault();
-				frappe.set_route("List", "Interview", "Kanban", { marketing_link: frm.doc.name });
-			});
-	}
-	bind_item_clicks();
 
 	if (!has_more) return;
 

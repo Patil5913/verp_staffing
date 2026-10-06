@@ -245,7 +245,7 @@ def send_existing_agreement(agreement):
             frappe.throw("Agreement is required")
 
         doc = frappe.get_doc("Agreement", agreement)
-        if doc.status != "Ready To Send" and doc.status != "Sent For Signature":
+        if doc.status != "Ready To Send" and doc.status != "Sent":
             frappe.throw("Agreement is not in sendable state")
 
         if not doc.sales_order:
@@ -282,7 +282,7 @@ def send_existing_agreement(agreement):
 
         doc.db_set(
             {
-                "status": "Sent For Signature",
+                "status": "Sent",
                 "sent_on": now_datetime(),
                 "last_reminder_sent": None,
             }
@@ -304,7 +304,7 @@ def send_agreement_reminders():
 
     agreements = frappe.get_all(
         "Agreement",
-        filters={"status": "Sent For Signature"},
+        filters={"status": "Sent"},
         fields=[
             "name",
             "status",
