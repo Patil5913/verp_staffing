@@ -117,13 +117,13 @@
             </colgroup>
             <thead>
               <tr>
-                <th v-if="canDelete" class="sticky top-0 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
+                <th v-if="canDelete" class="sticky top-0 z-20 h-11 w-10 border-b border-app-border bg-app-panel-2 px-3">
                   <AppCheckbox :model-value="allSelected" :indeterminate="!allSelected && selected.size > 0" @click.stop @update:model-value="toggleSelectAll" />
                 </th>
                 <th
                   v-for="column in columns"
                   :key="column.key"
-                  class="sticky top-0 h-11 cursor-pointer select-none truncate border-b border-r border-app-border bg-app-panel-2 px-3 text-left text-p-base font-semibold text-app-text-muted hover:text-app-text"
+                  class="sticky top-0 z-20 h-11 cursor-pointer select-none truncate border-b border-r border-app-border bg-app-panel-2 px-3 text-left text-p-base font-semibold text-app-text-muted hover:text-app-text"
                   @click="onSort(column.key)"
                 >
                   <span class="inline-flex items-center gap-1">
@@ -142,7 +142,7 @@
                     <span class="w-0.5 group-hover:bg-app-text-muted" />
                   </span>
                 </th>
-                <th class="sticky top-0 h-11 border-b border-app-border bg-app-panel-2 px-2" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
+                <th class="sticky top-0 z-20 h-11 border-b border-app-border bg-app-panel-2 px-2" :class="rowActionDefs.length ? 'w-36' : 'w-12'" />
               </tr>
             </thead>
             <tbody>
