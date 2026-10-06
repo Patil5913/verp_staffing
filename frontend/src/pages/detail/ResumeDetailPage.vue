@@ -6,6 +6,10 @@
 		:detail="detail"
 		@back="goBack"
 	>
+		<template #title-extra>
+			<DocStatusBadge v-if="detail.values.status" :status="detail.values.status" doctype="Resume" field="status" />
+		</template>
+
 		<template #actions>
 			<RecordActionBar
 				show-save
@@ -35,6 +39,18 @@
 
 		<template #tab-details>
 			<div class="h-full overflow-y-auto px-3 md:px-6 py-4">
+				<NoticeBanner
+					v-if="detail.values.status === 'Completed'"
+					:tone="'info'"
+					:message="locked ? 'This form will be unlocked when someone reforwards the customer to Resume.' : 'This resume is completed. You can still edit it as a System Manager.'"
+					class="mb-4"
+				/>
+				<NoticeBanner
+					v-else
+					:tone="'warning'"
+					message="To complete this, upload the resume in the Attachments tab - the status will update to Completed automatically."
+					class="mb-4"
+				/>
 				<DocDetailView
 					:doctype="doctype"
 					:detail="detail"
@@ -44,21 +60,18 @@
 					}"
 					:read-only-fields="locked ? DETAIL_FIELDS : []"
 				/>
-			</div>
-		</template>
-
-		<template #tab-attachments>
-			<div class="h-full overflow-y-auto px-3 md:px-6 py-4">
-				<ChildTableField
-					v-if="resumeTable"
-					:table="resumeTable"
-					:rows="detail.values.resume_table || []"
-					:disabled="!detail.canWrite.value || locked"
-					:field-overrides="{ document: { accept: '.pdf,.jpg,.jpeg,.png' } }"
-					:on-file-meta="autoTitleFromFile"
-					:max-rows="1"
-					@update:rows="(rows) => (detail.values.resume_table = rows)"
-				/>
+				<section v-if="resumeTable" class="mt-4 rounded-xl border border-app-border bg-app-panel p-4">
+					<h3 class="mb-3 text-p-sm font-medium text-app-text">Attachments</h3>
+					<ChildTableField
+						:table="resumeTable"
+						:rows="detail.values.resume_table || []"
+						:disabled="!detail.canWrite.value || locked"
+						:field-overrides="{ document: { accept: '.pdf,.jpg,.jpeg,.png' } }"
+						:on-file-meta="autoTitleFromFile"
+						:max-rows="1"
+						@update:rows="(rows) => (detail.values.resume_table = rows)"
+					/>
+				</section>
 			</div>
 		</template>
 
@@ -115,6 +128,7 @@
 </template>
 
 <script setup>
+import { hasRole } from '@/utils/common/roles'
 // Resume's detail page: Details/Attachments/Notes/Activity instead of the
 // generic Details/Notes/Activity - the resume attachment(s) get their own
 // tab (child table "resume_table") instead of being stacked under the
@@ -128,6 +142,8 @@ import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { Dialog } from "frappe-ui";
 import AppButton from "@/components/ui/AppButton.vue";
+import DocStatusBadge from "@/components/common/DocStatusBadge.vue";
+import NoticeBanner from "@/components/common/NoticeBanner.vue";
 import RecordActionBar from "@/components/common/RecordActionBar.vue";
 import FieldUpdateActions from "@/components/detail/fieldUpdate/FieldUpdateActions.vue";
 import DetailPageLayout from "@/components/detail/DetailPageLayout.vue";
@@ -147,11 +163,10 @@ const name = computed(() => route.params.name);
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
 	useDetailPageController(doctype, name);
 
-const locked = computed(() => detail.values.status === "Completed");
+const locked = computed(() => detail.values.status === "Completed" && !hasRole('System Manager'));
 
 const DEFAULT_TABS = [
 	{ key: "details", label: "Details" },
-	{ key: "attachments", label: "Attachments" },
 	{ key: "customer", label: "Customer" },
 	{ key: "notes", label: "Notes" },
 	{ key: "updates", label: "Updates" },
@@ -162,7 +177,8 @@ const tabs = computed(() =>
 );
 const activeTab = ref("details");
 
-const DETAIL_FIELDS = ["assign_to", "status"];
+// Status isn't editable here - it shows in the title and changes by itself (see the notes above).
+const DETAIL_FIELDS = ["assign_to"];
 
 const resumeTable = computed(() =>
 	detail.tables.value.find((t) => t.fieldname === "resume_table"),

@@ -6,6 +6,7 @@ from frappe.utils import now_datetime
 from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.customer import update_customer_stage
+from verp_staffing.utils.user_security import is_admin
 
 
 class Resume(Document):
@@ -103,7 +104,7 @@ class Resume(Document):
 
     def validate_resume_submission(self):
         # Completed Resume is locked.
-        if not self.is_new() and self.get_db_value("status") == "Completed":
+        if not self.is_new() and self.get_db_value("status") == "Completed" and not is_admin():
             frappe.throw("Completed Resume cannot be modified.")
 
         new_rows = self.get_new_resume_rows()

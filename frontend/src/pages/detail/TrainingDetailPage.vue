@@ -97,6 +97,7 @@
 </template>
 
 <script setup>
+import { hasRole } from '@/utils/common/roles'
 // Training's detail page - a "service record" for a Customer, same shape
 // as Interview Support and Technical Other Services (see those pages'
 // header comments and public/js/reusable.js's refresh() for the desk form
@@ -127,7 +128,7 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const locked = computed(() => detail.values.status === 'Completed')
+const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
 
 const TABS = [
   { key: 'details', label: 'Details' },

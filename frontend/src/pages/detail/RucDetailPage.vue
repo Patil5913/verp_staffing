@@ -87,6 +87,7 @@
 </template>
 
 <script setup>
+import { hasRole } from '@/utils/common/roles'
 // RUC's (Resume Update Call) detail page: Details/Sessions/Notes/Activity -
 // `outsource` only matters "when outsourcing the sessions" (ruc.json's own
 // field description), so it lives on Details next to assign_to rather than
@@ -115,7 +116,7 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const locked = computed(() => detail.values.status === 'Completed')
+const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },

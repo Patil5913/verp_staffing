@@ -114,6 +114,7 @@
 </template>
 
 <script setup>
+import { hasRole } from '@/utils/common/roles'
 // Interview Support's detail page - same "service record" shape as
 // Training/Technical Other Services, plus an Interview Round link (hidden
 // once set, per the desk form) whose Interview Details panel is fetched
@@ -145,7 +146,7 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const locked = computed(() => detail.values.status === 'Completed')
+const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
 
 const TABS = [
   { key: 'details', label: 'Details' },
