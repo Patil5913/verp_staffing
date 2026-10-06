@@ -839,8 +839,7 @@ export const salesOrderConfig = {
       label: 'Details',
       sections: [
         fields(['customer', 'posting_date'], 'Order'),
-        auto('items', { hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange, rowLinkQueries: uniqueItemQuery }),
-        fields(['service_plan'], 'Service Plan'),
+        auto('items', { beforeFields: ['service_plan'], hiddenColumns: ['income_account'], onFieldChange: salesItemsFieldChange, rowLinkQueries: uniqueItemQuery }),
         grid('taxes', TAXES_GRID_COLUMNS, {
           readOnlyColumns: taxesReadOnlyColumns,
           onFieldChange: taxesFieldChange,
