@@ -13,6 +13,25 @@ class CustomUser(User):
         # REMOVE role_profile_name from quick entry
         return [f for f in fields if f.get("fieldname") != "role_profile_name"]
 
+    def send_login_mail(self, subject, template, add_args, now=None, custom_template=None):
+        # On a site that also runs vrugledm, its own User override loses to this one, so apply
+        # its fix here: send from the default outgoing Email Account rather than the signed-in
+        # user's address, which the SMTP server rejects as "not owned by user".
+        if "vrugledm" not in frappe.get_installed_apps():
+            return super().send_login_mail(subject, template, add_args, now=now, custom_template=custom_template)
+
+        real_sendmail = frappe.sendmail
+
+        def sendmail(*args, **kwargs):
+            kwargs["sender"] = None
+            return real_sendmail(*args, **kwargs)
+
+        frappe.sendmail = sendmail
+        try:
+            return super().send_login_mail(subject, template, add_args, now=now, custom_template=custom_template)
+        finally:
+            frappe.sendmail = real_sendmail
+
     def on_update(self):
         super().on_update()
         if self.user_type == "Website User":
