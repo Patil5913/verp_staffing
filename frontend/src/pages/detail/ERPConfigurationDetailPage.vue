@@ -130,7 +130,9 @@
     </template>
 
     <template #tab-sales-invoice-print>
-      <SalesInvoicePrintFormatPanel />
+      <div class="h-full">
+        <SalesInvoicePrintFormatPanel />
+      </div>
     </template>
 
     <template #tab-email-templates>
