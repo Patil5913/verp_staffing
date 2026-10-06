@@ -87,6 +87,7 @@
 </template>
 
 <script setup>
+import { hasRole } from '@/utils/common/roles'
 // Cover Letter's detail page: Details/Proof of Work/Notes/Activity - same
 // shape as Resume/RUC/JDC, this app's other Customer-attached "service"
 // doctypes. `customer` is hidden + set_only_once server-side and never
@@ -117,7 +118,7 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
 
 // Same as Training/Interview Support/Technical Other Services: a Completed
 // service record is frozen - status/proof of work can no longer change.
-const locked = computed(() => detail.values.status === 'Completed')
+const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
