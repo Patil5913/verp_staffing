@@ -8,12 +8,53 @@ from verp_staffing.crm.api.lead_details import create_lead_details, get_or_creat
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.crm.api.customer_chat import revoke_chat_access
+from verp_staffing.crm.api.notes import add_system_note
+from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
 
 
 class Customer(Document):
     def on_trash(self):
         unlink_and_clean_lead_detail("Customer", self.name, self.lead_details)
         revoke_chat_access(self.name)
+        self._reopen_source_opportunity()
+
+    def _reopen_source_opportunity(self):
+        # Reverse of _mark_source_converted: a customer deleted before any
+        # Sales Order exists puts its Opportunity back to Open (so "Create
+        # Customer" reappears) and its Lead back to "Opportunity", each with
+        # a note in the timeline.
+        if self.customer_from != "Opportunity" or not self.party_name:
+            return
+
+        if not frappe.db.exists("Opportunity", self.party_name):
+            return
+
+        if frappe.db.exists("Sales Order", {"customer": self.name}):
+            return
+
+        if frappe.db.exists("Customer", {"party_name": self.party_name, "customer_from": "Opportunity", "name": ["!=", self.name]}):
+            return
+
+        status, lead = frappe.db.get_value(
+            "Opportunity", self.party_name, ["status", "opportunity_from_lead"]
+        )
+        if status != "Converted":
+            return
+
+        frappe.db.set_value("Opportunity", self.party_name, "status", "Open")
+        add_system_note(
+            "Opportunity",
+            self.party_name,
+            f"Customer {self.name} was deleted (no Sales Order). Status changed from Converted back to Open.",
+        )
+
+        if lead and frappe.db.exists("Lead", lead):
+            update_status_based_on_opportunity(lead, "Open")
+            add_system_note(
+                "Lead",
+                lead,
+                f"Customer {self.name} of Opportunity {self.party_name} was deleted. Status changed from Won back to Opportunity.",
+            )
 
     def before_insert(self):
         self._set_default_customer_owner()
@@ -85,6 +126,26 @@ class Customer(Document):
         # Link Customer → Lead Details in BOTH cases
         if lead_detail_name:
             self.db_set("lead_details", lead_detail_name)
+
+        self._mark_source_converted()
+
+    def _mark_source_converted(self):
+        # Customers can be created from the quick-create dialog / list view
+        # (plain insert) as well as Opportunity.create_customer; mark the
+        # source Opportunity Converted (and its Lead Won) on every path so
+        # the status and the "Create Customer" button never go stale.
+        if self.customer_from != "Opportunity" or not self.party_name:
+            return
+
+        status, lead = frappe.db.get_value(
+            "Opportunity", self.party_name, ["status", "opportunity_from_lead"]
+        ) or (None, None)
+
+        if status and status != "Converted":
+            frappe.db.set_value("Opportunity", self.party_name, "status", "Converted")
+
+        if lead:
+            update_status_based_on_opportunity(lead, "Converted")
 
     def validate(self):
         if self.stage:

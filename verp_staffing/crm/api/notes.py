@@ -101,3 +101,23 @@ def delete_note(note_id):
     _check_note_access(doc)
     frappe.delete_doc("CRM Note", note_id, ignore_permissions=True)
     return True
+
+
+def add_system_note(reference_doctype, reference_name, text):
+    """Log a system-generated entry in a record's Notes timeline (CRM Note).
+
+    Internal helper for document hooks - not whitelisted.
+    """
+    from frappe.utils import escape_html, now_datetime
+
+    frappe.get_doc(
+        {
+            "doctype": "CRM Note",
+            "reference_doctype": reference_doctype,
+            "reference_name": reference_name,
+            "current_doctype": reference_doctype,
+            "note": f"<p>{escape_html(text)}</p>",
+            "added_by": frappe.session.user,
+            "added_on": now_datetime(),
+        }
+    ).insert(ignore_permissions=True)
