@@ -316,6 +316,7 @@ override_doctype_class = {
 # Hook on document methods and events
 
 doc_events = {
+    "Notification Log": {"after_insert": "verp_staffing.utils.push.push_notification_log"},
     "Communication": {
         "after_insert": "verp_staffing.utils.mailbox.on_new_communication"
     },

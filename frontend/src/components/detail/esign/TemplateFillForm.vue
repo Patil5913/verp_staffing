@@ -50,7 +50,7 @@ const JUSTIFY_BUTTON = {
   isActive: (editor) => editor.isActive({ textAlign: 'justify' }),
 }
 const EDITOR_BUTTONS = [
-  'Bold', 'Italic', 'Underline', 'Strikethrough', 'FontColor',
+  'Bold', 'Italic', 'Underline', 'Strikethrough',
   'Separator',
   'Bullet List', 'Numbered List',
   'Separator',
@@ -132,9 +132,19 @@ function preview() {
 /* Keep the whole toolbar inside the card: wrap onto a second row instead of running past it. */
 .agreement-editor > .overflow-x-auto {
   display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: visible;
 }
 .agreement-editor > .overflow-x-auto > div {
   flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+}
+.agreement-editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 </style>

@@ -30,6 +30,7 @@ function start() {
     }
     socket.on('chat_new_message', soon)
     socket.on('chat_read', soon)
+    socket.on('chat_unread_changed', soon)
     socket.on('chat_room_updated', soon)
     setInterval(() => !document.hidden && refresh(), 60000)
     document.addEventListener('visibilitychange', () => !document.hidden && refresh())

@@ -4,6 +4,8 @@
 
     <span v-if="customerTitle" class="hidden max-w-[16rem] truncate text-p-sm text-app-text-muted sm:block">{{ customerTitle }}</span>
 
+    <PushToggle v-if="data?.chat_enabled && route.name !== 'PortalMessages'" />
+
     <button
       v-if="data?.chat_enabled"
       type="button"
@@ -26,6 +28,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PushToggle from '@/components/common/PushToggle.vue'
 import { usePortal } from '@/composables/portal/usePortal'
 
 const route = useRoute()

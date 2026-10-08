@@ -48,6 +48,7 @@ ALLOWED_PREFIXES = (
     "verp_staffing.www.agreement_sign.",
     "verp_staffing.esign.portal.",
     "verp_staffing.crm.api.customer_portal.",
+    "verp_staffing.utils.push.",
     "vruglechat.api.",
     "frappe.realtime.",
 )

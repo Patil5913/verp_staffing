@@ -15,6 +15,14 @@ from verp_staffing.crm.api.helpers import (
 from verp_staffing.employee.doctype.employee.employee import get_employee_from_user
 from verp_staffing.utils.user_security import is_admin
 
+LOCKED_STATUS_KEYWORDS = (
+    "cancelled",
+    "canceled",
+    "completed",
+    "rescheduled",
+    "rejected",
+)
+CANCELLED_LIKE_KEYWORDS = ("cancelled", "canceled", "rescheduled")
 CANCELLED_LIKE_STATUSES = {"Cancelled", "Rescheduled"}
 FINAL_ROUND_STATUSES = {"Cancelled", "Rescheduled", "Completed"}
 DEFAULT_ROUND_STATUS = "Scheduled"
@@ -28,6 +36,20 @@ TODAY_EXCLUDED_STATUSES = FINAL_ROUND_STATUSES | {"Rejected", "Get The Offer", T
 
 def _is_outcome_of_completed(previous, new):
     return previous == "Completed" and new in COMPLETED_OUTCOMES
+
+
+def is_status_locked(status):
+    if not status or not isinstance(status, str):
+        return False
+    lower = status.lower()
+    return any(keyword in lower for keyword in LOCKED_STATUS_KEYWORDS)
+
+
+def is_cancelled_like_status(status):
+    if not status or not isinstance(status, str):
+        return False
+    lower = status.lower()
+    return any(keyword in lower for keyword in CANCELLED_LIKE_KEYWORDS)
 
 
 class Interview(Document):
