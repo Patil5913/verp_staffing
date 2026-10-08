@@ -37,17 +37,33 @@ import PortalSidebar from '@/components/portal/PortalSidebar.vue'
 import PendingFeedbackGate from '@/components/portal/PendingFeedbackGate.vue'
 import CandidateFormGate from '@/components/portal/CandidateFormGate.vue'
 import { useSidebar } from '@/composables/layout/useSidebar'
+import { getSocket } from '@/utils/common/realtime'
+import { notify } from '@/utils/common/notify'
 import { usePortal } from '@/composables/portal/usePortal'
 
 const { isMobile, mobileNavOpen, closeMobileNav } = useSidebar()
-const { load, refreshUnread } = usePortal()
+const { load, refreshUnread, unread } = usePortal()
 const route = useRoute()
 
 watch(() => route.fullPath, closeMobileNav)
+// A new message while the customer is elsewhere in the portal.
+watch(unread, (now, before) => {
+  if (now > before && route.name !== 'PortalMessages') notify.info(`You have ${now} unread message${now > 1 ? 's' : ''}.`)
+})
 
 onMounted(async () => {
   await load()
   refreshUnread()
+  // live badge: new messages, and reading them (here or in the chat iframe)
+  if (data.value?.chat_enabled) {
+    const socket = getSocket()
+    let timer = null
+    const soon = () => {
+      clearTimeout(timer)
+      timer = setTimeout(refreshUnread, 400)
+    }
+    for (const ev of ['chat_new_message', 'chat_unread_changed', 'chat_room_updated']) socket.on(ev, soon)
+  }
   setInterval(() => !document.hidden && route.name !== 'PortalMessages' && refreshUnread(), 30000)
 })
 </script>

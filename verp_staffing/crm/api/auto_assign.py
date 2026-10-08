@@ -165,6 +165,8 @@ def forward_candidate(customer, service, interview_round=None):
             filters["interview_round"] = interview_round
 
         docs = frappe.get_all(doctype, filters=filters, fields=["name", "assign_to"])
+        # May be empty (no earlier request for this service): never index it blindly.
+        first_doc_name = docs[0].name if docs else None
 
         if not docs and (service_key == "jdc" or service_key == "interview support"):
             assignee = get_auto_assign_employee(
@@ -218,8 +220,8 @@ def forward_candidate(customer, service, interview_round=None):
                         frappe.db.set_value(
                             doctype, d.name, "status", "Request for Update"
                         )
-                frappe.msgprint(f"reforward doctype: {doctype}, name:{docs[0].name}")
-                return {"reforward": True, "doctype": doctype, "name": docs[0].name}
+                frappe.msgprint(f"reforward doctype: {doctype}, name:{first_doc_name}")
+                return {"reforward": True, "doctype": doctype, "name": first_doc_name}
 
             for d in docs:
                 if d.assign_to:
@@ -242,7 +244,7 @@ def forward_candidate(customer, service, interview_round=None):
 
                 frappe.msgprint(f"Candidate is reforwarded for {service}. ")
 
-            return {"reforward": True, "doctype": doctype, "name": docs[0].name}
+            return {"reforward": True, "doctype": doctype, "name": first_doc_name}
 
         for d in docs:
             frappe.db.set_value(doctype, d.name, "status", "Pending" if service_key == "marketing" else "Request for Update")
@@ -264,7 +266,7 @@ def forward_candidate(customer, service, interview_round=None):
             f"Status updated to 'Request for Update'."
         )
 
-        return {"reforward": True, "doctype": doctype, "name": docs[0].name}
+        return {"reforward": True, "doctype": doctype, "name": first_doc_name}
 
     parents = frappe.db.sql(
         """

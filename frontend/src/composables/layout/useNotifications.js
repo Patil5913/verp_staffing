@@ -10,9 +10,8 @@ import { deskToSpaPath, isDeskPath } from '@/utils/common/deskRoute'
 // same "Notification Log" whitelisted methods, same realtime channel - see
 // apps/frappe/frappe/desk/doctype/notification_log/notification_log.py and
 // apps/frappe/frappe/public/js/frappe/ui/notifications/notifications.js.
-const GET_LOGS = 'frappe.desk.doctype.notification_log.notification_log.get_notification_logs'
-const MARK_AS_READ = 'frappe.desk.doctype.notification_log.notification_log.mark_as_read'
-const MARK_ALL_AS_READ = 'frappe.desk.doctype.notification_log.notification_log.mark_all_as_read'
+const GET_LOGS = 'verp_staffing.utils.notification_read.get_logs'
+const MARK_READ = 'verp_staffing.utils.notification_read.mark_read'
 
 // module-level (shared) state
 const notifications = ref([])
@@ -40,20 +39,22 @@ async function markAsRead(name) {
   const item = notifications.value.find((n) => n.name === name)
   if (item) item.read = 1
   try {
-    await call(MARK_AS_READ, { docname: name })
+    await call(MARK_READ, { names: [name] })
   } catch {
-    // non-critical: local (optimistic) state already reflects it
+    notify.error('Failed to mark the notification as read.')
   }
+  await load()
 }
 
+// No early return on an empty list: the notifications page has its own, longer list.
 async function markAllAsRead() {
-  if (!notifications.value.length) return
   notifications.value.forEach((n) => (n.read = 1))
   try {
-    await call(MARK_ALL_AS_READ)
+    await call(MARK_READ)
   } catch {
     notify.error('Failed to mark notifications as read.')
   }
+  await load()
 }
 
 // Same channel core's own bell listens on (see notification_log.py's

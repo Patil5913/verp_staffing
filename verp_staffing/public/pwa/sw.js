@@ -5,7 +5,7 @@
 // (user, CSRF token) and every API call is per-user, so neither is ever
 // cached. Only static build assets are, which makes repeat loads fast and
 // gives the app a branded offline page instead of the browser's error.
-const VERSION = 'v2'
+const VERSION = 'v3'
 const STATIC_CACHE = `verp-static-${VERSION}`
 const OFFLINE_URL = '/assets/verp_staffing/pwa/offline.html'
 const PRECACHE = [OFFLINE_URL, '/assets/verp_staffing/pwa/icon-192.png']
@@ -72,3 +72,39 @@ async function staleWhileRevalidate(event, request) {
   }
   return refresh
 }
+
+// ── Web Push (chat messages) ───────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data ? event.data.text() : '' }
+  }
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      // the app is on screen: its own toast already covers it
+      if (wins.some((w) => w.visibilityState === 'visible')) return
+      return self.registration.showNotification(data.title || 'New message', {
+        body: data.body || '',
+        icon: '/assets/verp_staffing/pwa/icon-192.png',
+        badge: '/assets/verp_staffing/pwa/icon-192.png',
+        tag: data.tag || 'chat',
+        renotify: true,
+        data: { url: data.room ? `/chat/${encodeURIComponent(data.room)}` : '/chat' },
+      })
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/chat'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => 'focus' in w)
+      if (open) return open.navigate(url).then((c) => (c || open).focus()).catch(() => self.clients.openWindow(url))
+      return self.clients.openWindow(url)
+    }),
+  )
+})

@@ -90,7 +90,7 @@ const sanitize = (html) => DOMPurify.sanitize(html || '', { ALLOWED_TAGS: ['b', 
 async function load() {
   loading.value = true
   try {
-    const res = await call('frappe.desk.doctype.notification_log.notification_log.get_notification_logs', { limit: limit.value })
+    const res = await call('verp_staffing.utils.notification_read.get_logs', { limit: limit.value })
     items.value = res?.notification_logs || []
     canLoadMore.value = items.value.length >= limit.value
   } finally {
@@ -105,10 +105,12 @@ function more() {
 async function read(n) {
   n.read = 1
   await bell.markAsRead(n.name)
+  await load()
 }
 async function readAll() {
   items.value.forEach((n) => (n.read = 1))
   await bell.markAllAsRead()
+  await load()
 }
 async function open(n) {
   if (!n.read) read(n)

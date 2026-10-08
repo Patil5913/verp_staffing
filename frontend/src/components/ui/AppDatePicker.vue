@@ -51,7 +51,7 @@
       </template>
 
       <template #body="{ close }">
-        <div class="date-popover-body mt-1.5 w-[19rem] select-none rounded-2xl border border-app-border bg-app-panel p-3 shadow-2xl">
+        <div class="date-popover-body mt-1.5 w-[19rem] max-w-[calc(100vw-1.5rem)] select-none rounded-2xl border border-app-border bg-app-panel p-3 shadow-2xl">
           <!-- Header: month/year switcher -->
           <div class="mb-2 flex items-center justify-between">
             <button type="button" class="nav-btn" aria-label="Previous" @click="step(-1)"><span class="lucide-chevron-left size-4" /></button>
@@ -107,7 +107,8 @@
             <input type="number" min="0" max="23" :value="pad(time.h)" class="time-input" aria-label="Hour" @input="setTime('h', $event.target.value)" />
             <span class="text-app-text-muted">:</span>
             <input type="number" min="0" max="59" :value="pad(time.m)" class="time-input" aria-label="Minute" @input="setTime('m', $event.target.value)" />
-            <button type="button" class="ml-auto rounded-lg bg-app-primary px-3 py-1.5 text-p-xs font-medium text-white hover:bg-app-primary-hover" @click="close()">Done</button>
+            <button type="button" class="foot-btn ml-auto" @click="goToday(close)">Today</button>
+            <button type="button" class="rounded-lg bg-app-primary px-3 py-1.5 text-p-xs font-medium text-white hover:bg-app-primary-hover" @click="close()">Done</button>
           </div>
 
           <!-- Footer -->
