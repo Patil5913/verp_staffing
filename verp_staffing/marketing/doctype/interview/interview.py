@@ -159,33 +159,19 @@ class Interview(Document):
                     frappe.MandatoryError,
                 )
 
-            follow_up = row.follow_up or 0
+            follow_up = int(row.follow_up or 0)
 
-            if not isinstance(follow_up, (int, float)) or int(follow_up) < 0:
-                frappe.throw(
-                    _("Row #{0}: Follow Up must be a non-negative number").format(i),
-                    frappe.ValidationError,
-                )
+            # Follow Up depends only on its own saved value: it may stay the
+            # same or go up by exactly one. New rows are not checked.
+            saved = self._previous_round(row)
+            if saved is not None:
+                saved_follow_up = int(saved.follow_up or 0)
 
-            if i > 1:
-                prev_row = rounds[i - 2]
-                prev_follow_up = prev_row.follow_up or 0
-
-                if int(follow_up) not in (
-                    0,
-                    int(prev_follow_up),
-                    int(prev_follow_up) + 1,
-                ):
+                if follow_up not in (saved_follow_up, saved_follow_up + 1):
                     frappe.throw(
                         _(
-                            "Row #{0}: Follow Up value {1} is invalid. "
-                            "Only {2} or {3} is allowed."
-                        ).format(
-                            i,
-                            follow_up,
-                            int(prev_follow_up),
-                            int(prev_follow_up) + 1,
-                        ),
+                            "Row #{0}: Follow Up {1} is invalid. Only {2} (current + 1) is allowed."
+                        ).format(i, follow_up, saved_follow_up + 1),
                         frappe.ValidationError,
                     )
 
