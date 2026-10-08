@@ -38,6 +38,9 @@ const emit = defineEmits(['update:modelValue'])
 const displayValue = computed(() => {
   const v = props.modelValue || ''
   if (!v) return ''
-  return /^\d{2}:\d{2}$/.test(v) ? `${v}:00` : v
+  // Frappe sends timedelta strings with an unpadded hour ("1:01:01"); the
+  // input rejects that, so pad the hour and add seconds when missing.
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/.exec(v)
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}:${m[3] || '00'}` : v
 })
 </script>

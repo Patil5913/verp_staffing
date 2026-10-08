@@ -85,7 +85,7 @@
 //  * Cancelled / Rescheduled / Rejected all go through the same
 //    confirmation dialog first, collecting who it's attributed to and a
 //    reason (interview_list.js's prompt_cancellation_details);
-//  * follow_up may only step up by exactly one.
+//  * follow_up is a digits-only text box; the backend enforces previous row + 1 on save.
 import { computed, reactive, ref, watch } from 'vue'
 import { hasRole } from '@/utils/common/roles'
 import { roundInZone, siteTodayIso } from '@/utils/common/siteTime'
@@ -170,8 +170,14 @@ const OUTCOME_OPTIONS = 'Completed\nGet The Offer\nRejected'
 // The System Manager may move a round's status from any status to any other (the reason popup for
 // Cancelled/Rescheduled still applies - the server checks the same thing).
 const isAdmin = hasRole('System Manager')
-const fieldFor = (col, row) =>
-  col.fieldname === 'status' && savedCompleted(row) && !isAdmin ? { ...col, fieldtype: 'Select', options: OUTCOME_OPTIONS } : col
+// follow_up renders as a plain text box (digits only, see onChange), not a
+// number input with spinner arrows.
+const fieldFor = (col, row) => {
+  if (col.fieldname === 'follow_up') return { ...col, fieldtype: 'Data' }
+  return col.fieldname === 'status' && savedCompleted(row) && !isAdmin
+    ? { ...col, fieldtype: 'Select', options: OUTCOME_OPTIONS }
+    : col
+}
 
 function fieldDisabled(col, row, idx) {
   if (!editable.value || col.read_only) return true
@@ -223,14 +229,7 @@ function confirmStatusDialog() {
 async function onChange(idx, fieldname, value) {
   const row = rows.value[idx]
 
-  if (fieldname === 'follow_up') {
-    const prev = Number(row.follow_up || 0)
-    const next = Number(value || 0)
-    if (next !== prev && next !== prev + 1) {
-      notify.error(`Invalid Follow Up value. Only allowed value is ${prev + 1}`)
-      return
-    }
-  }
+  if (fieldname === 'follow_up') value = String(value ?? '').replace(/\D/g, '')
 
   if (fieldname === 'status' && value !== row.status) {
     const next = String(value || '').toLowerCase()
