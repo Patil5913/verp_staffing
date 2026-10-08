@@ -61,6 +61,11 @@ export function useDocDetail(doctype, name) {
   // ('{}' !== ''), so leaving the page in that window (e.g. clicking back
   // immediately) wrongly triggered the unsaved-changes prompt.
   const snapshot = ref(JSON.stringify(values))
+  // The server's copy of the scalar values as of the last load/save (set
+  // before `values` is touched, so a watcher reacting to `values` sees it
+  // already updated). Lets page logic tell a user's edit from the record
+  // merely being loaded or re-rendered after a save.
+  const loaded = ref({})
 
   // Shared by the initial load and by a successful save - save_doc_fields
   // returns the same {values, tables, ...} shape get_doc_meta does, so
@@ -70,6 +75,7 @@ export function useDocDetail(doctype, name) {
   // unsaved-changes prompt before that reload had resolved).
   function applyData(data) {
     if (!data) return
+    loaded.value = { ...(data.values || {}) }
     Object.keys(values).forEach((k) => delete values[k])
     Object.assign(values, data.values)
     Object.keys(hidden).forEach((k) => delete hidden[k])
@@ -218,6 +224,7 @@ export function useDocDetail(doctype, name) {
     fields,
     tables,
     values,
+    loaded,
     hidden,
     hiddenTables,
     canWrite,

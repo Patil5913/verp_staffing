@@ -101,7 +101,9 @@ const purchaseItemsFieldChange = makeItemsTableFieldChange({ type: 'Purchase', a
 // items table with that plan's items/rates (reusing salesItemsFieldChange
 // row-by-row so uom/income_account/amount all come out the same as if each
 // item had been picked by hand) - everything it fills in stays editable, and
-// more rows can still be added normally afterwards.
+// more rows can still be added normally afterwards. Only an actual change of
+// the plan does this: loading a saved order, or re-rendering it after a save,
+// must never re-fetch the plan and overwrite negotiated rates/items.
 async function populateItemsFromServicePlan(detail, planName) {
   const plan = await call('frappe.client.get', { doctype: 'Service Plan', name: planName }).catch(() => null)
   if (!plan) return
@@ -119,7 +121,8 @@ function salesOrderSetup(detail) {
   watch(
     () => detail.values.service_plan,
     (planName) => {
-      if (planName) populateItemsFromServicePlan(detail, planName)
+      if (!planName || planName === detail.loaded.value?.service_plan) return
+      populateItemsFromServicePlan(detail, planName)
     },
   )
 }

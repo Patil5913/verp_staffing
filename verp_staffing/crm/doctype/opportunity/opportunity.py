@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.lead_details import create_lead_details, get_or_create_lead_detail
 from verp_staffing.crm.api.on_trash import unlink_and_clean_lead_detail
 from verp_staffing.crm.api.naming import generate_name_series
+from verp_staffing.crm.api.notes import add_system_note
 from verp_staffing.crm.doctype.lead.lead import update_status_based_on_opportunity
 
 
@@ -52,6 +53,29 @@ class Opportunity(Document):
             "Opportunity",
             self.name,
             self.lead_details,
+        )
+        self._reopen_source_lead()
+
+    def _reopen_source_lead(self):
+        # Deleting the only Opportunity of a Lead unlocks the Lead (the
+        # "Create Opportunity" button is driven by lead_has_opportunity) and
+        # puts its status back to Open, with a note in the Lead's timeline.
+        lead = self.opportunity_from_lead
+        if not lead or not frappe.db.exists("Lead", lead):
+            return
+
+        if frappe.db.exists("Opportunity", {"opportunity_from_lead": lead, "name": ["!=", self.name]}):
+            return
+
+        old_status = frappe.db.get_value("Lead", lead, "status")
+        if old_status in ("Lost", "Open"):
+            return
+
+        frappe.db.set_value("Lead", lead, "status", "Open", update_modified=False)
+        add_system_note(
+            "Lead",
+            lead,
+            f"Opportunity {self.name} was deleted. Status changed from {old_status} back to Open.",
         )
 
     def after_insert(self):
