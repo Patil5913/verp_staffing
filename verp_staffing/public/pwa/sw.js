@@ -91,7 +91,7 @@ self.addEventListener('push', (event) => {
         badge: '/assets/verp_staffing/pwa/icon-192.png',
         tag: data.tag || 'chat',
         renotify: true,
-        data: { url: data.room ? `/chat/${encodeURIComponent(data.room)}` : '/chat' },
+        data: { url: data.url || (data.room ? `/chat/${encodeURIComponent(data.room)}` : '/chat') },
       })
     }),
   )

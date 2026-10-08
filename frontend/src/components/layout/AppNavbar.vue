@@ -20,6 +20,7 @@
       </button>
     </div>
 
+    <PushToggle v-if="!$route.path.startsWith('/chat')" />
     <ChatBell />
     <NotificationBell />
 
@@ -30,7 +31,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import NavbarClock from '@/components/layout/NavbarClock.vue'
-import { usePushNotifications } from '@/composables/pwa/usePushNotifications'
+import PushToggle from '@/components/common/PushToggle.vue'
 import ChatBell from '@/components/layout/ChatBell.vue'
 import NotificationBell from '@/components/overlays/NotificationBell.vue'
 import CommandPalette from '@/components/overlays/CommandPalette.vue'
@@ -46,11 +47,6 @@ function onKeydown(e) {
   }
 }
 
-// no icon here (the chat has its own); this only registers the device / asks once on a first tap
-const { autoPrompt } = usePushNotifications()
-onMounted(() => {
-  document.addEventListener('keydown', onKeydown)
-  autoPrompt()
-})
+onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>

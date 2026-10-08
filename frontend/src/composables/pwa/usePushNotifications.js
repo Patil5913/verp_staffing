@@ -22,10 +22,13 @@ async function subscribe() {
   const reg = await registration()
   let sub = await reg.pushManager.getSubscription()
   if (!sub) {
-    const key = await call('vruglechat.api.get_push_public_key')
+    const key = await call('verp_staffing.utils.push.get_public_key')
     sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(key) })
   }
-  await call('vruglechat.api.save_push_subscription', { subscription: JSON.stringify(sub.toJSON()) })
+  const subscription = JSON.stringify(sub.toJSON())
+  await call('verp_staffing.utils.push.save_subscription', { subscription })
+  // chat messages are pushed from the chat app's own store; harmless if chat isn't set up for this user
+  call('vruglechat.api.save_push_subscription', { subscription }).catch(() => {})
   subscribed.value = true
 }
 
