@@ -60,9 +60,12 @@ const PORTAL_ROUTES = [
   { path: '/portal/documents', name: 'PortalDocuments', component: () => import('@/pages/portal/PortalDocumentsPage.vue'), meta: { portal: true, title: 'Documents' } },
   // First-run setup for a fresh site (see the beforeEach guard: sent here while
   // the site's setup isn't complete). Blank layout, like the agreement page.
-  // Subscription status + plan picker. Non-Active sites are sent here; System Managers can also
-  // open it while Active to see the status and renew. Only System Managers see it at all.
+  // Current subscription status + a "View Plans" button. A not-yet-licensed site is sent
+  // straight to the plans page instead (see NO_LICENSE_STATES below); this page is for a site
+  // that has a license but isn't Active (Suspended/Expired/...), or an Active site's admin
+  // checking status/renewing.
   { path: '/site-subscription', name: 'SiteSubscription', component: () => import('@/pages/setup/SubscriptionPage.vue'), meta: { standalone: true, title: 'Subscription' } },
+  { path: '/site-subscription/plans', name: 'SiteSubscriptionPlans', component: () => import('@/pages/setup/SubscriptionPlansPage.vue'), meta: { standalone: true, title: 'Plans' } },
   { path: '/setup-wizard', name: 'SetupWizard', component: () => import('@/pages/setup/SetupWizardPage.vue'), meta: { standalone: true, title: 'Set up' } },
   { path: '/sign-agreement', name: 'SignAgreement', component: () => import('@/pages/portal/PortalAgreementPage.vue'), meta: { portal: true, standalone: true, title: 'Sign Agreement' } },
   { path: '/portal/agreements', name: 'PortalAgreements', component: () => import('@/pages/portal/PortalAgreementsPage.vue'), meta: { portal: true, title: 'Agreements' } },
@@ -372,6 +375,9 @@ router.onError((error, to) => {
 // = 1), and Guests are already redirected to /verp/login there before the
 // SPA ever mounts. This guard is just a client-side mirror of that - a
 // safety net for in-app navigation, not the source of truth.
+// Kept in sync with SubscriptionPage.vue's own copy (both read window.subscription_status).
+const NO_LICENSE_STATES = ['Pending', 'NO_SUBSCRIPTION', 'SITE_NOT_FOUND']
+
 function isLoggedIn() {
   return Boolean(window.user) && window.user !== 'Guest'
 }
@@ -396,8 +402,15 @@ router.beforeEach(async (to) => {
   // The server enforces this too (core/license/guard.py); this is the friendly half.
   // The page itself shows a "contact your administrator" message to non-admins; the APIs refuse them.
   const notActive = window.subscription_status && window.subscription_status !== 'Active'
-  if (to.path === '/site-subscription') {
+  // These mean "no license at all yet" (never bought, or central says so) - send straight to the
+  // plans page rather than a status page with nothing to show.
+  const noLicense = notActive && NO_LICENSE_STATES.includes(window.subscription_status)
+  if (to.path === '/site-subscription/plans' || to.path === '/site-subscription') {
+    if (noLicense && to.path === '/site-subscription') return { path: '/site-subscription/plans' }
     return notActive || hasRole('System Manager') ? true : { path: '/' }
+  }
+  if (noLicense) {
+    return { path: '/site-subscription/plans' }
   }
   if (notActive) {
     return { path: '/site-subscription' }

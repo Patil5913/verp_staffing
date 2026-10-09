@@ -101,7 +101,9 @@ def start_checkout(plan_id: str, limit_quantities: dict) -> str:
 	)
 	lic = repository.get_license()
 	result = client.start_checkout(
-		lic, frappe.local.site, plan_id, limit_quantities, get_url("/verp/site-subscription?checkout=return")
+		# No "?checkout=return" flag: the status page always re-syncs on open, so there's nothing
+		# for a query param to distinguish.
+		lic, frappe.local.site, plan_id, limit_quantities, get_url("/verp/site-subscription")
 	)
 	repository.update_license(subscription_id=result.get("subscriptionId") or lic.subscription_id)
 	frappe.db.commit()  # nosemgrep
