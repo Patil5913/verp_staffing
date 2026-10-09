@@ -27,6 +27,9 @@ def get_context(context):
 		frappe.local.flags.redirect_location = redirect_to
 		raise frappe.Redirect
 
+	from verp_staffing.utils.pwa import get_branding
+
+	context.app_name, context.app_logo = get_branding()
 	context.boot = get_boot()
 	return context
 
