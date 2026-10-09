@@ -48,6 +48,7 @@ website_route_rules = [
 page_renderer = [
     "verp_staffing.utils.pwa.ServiceWorkerRenderer",
     "verp_staffing.utils.pwa.ManifestRenderer",
+    "verp_staffing.utils.pwa.InstallIconRenderer",
     # /verp/portal/invoices/<x>/print and the other customer downloads (see utils/portal_downloads.py)
     "verp_staffing.utils.portal_downloads.PortalDownloadRenderer",
     # branded "Updating" page shown while a site is in maintenance mode (see utils/maintenance_page.py)
