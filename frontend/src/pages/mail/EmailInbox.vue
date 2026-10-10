@@ -193,7 +193,7 @@ let timer
 // safety net for a dropped connection.
 const socket = getSocket()
 function onNewMail(mail) {
-  notify.success(`New mail from ${mail?.sender || 'someone'}${mail?.subject ? `: ${mail.subject}` : ''}`)
+  notify.success(`New mail from ${mail?.sender || 'someone'}${mail?.subject ? `: ${mail.subject}` : ''}`, { sound: 'other' })
   if (!composing.value) load({ quiet: true })
 }
 onMounted(() => {

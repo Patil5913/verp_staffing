@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { playSound } from './sound'
 
 // A single, app-wide "are you sure" dialog instance (see
 // UnsavedChangesDialog.vue, mounted once in App.vue) instead of the
@@ -41,6 +42,7 @@ export function confirmLeave({
     state.saving = false
     state.resolve = resolve
     state.open = true
+    playSound('delete')
   })
 }
 

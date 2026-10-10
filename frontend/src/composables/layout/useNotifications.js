@@ -1,5 +1,6 @@
 import { computed, h, ref } from 'vue'
 import { call, toast } from 'frappe-ui'
+import { playSound } from '@/utils/common/sound'
 import LucideBell from '~icons/lucide/bell'
 import router from '@/router'
 import { getSocket } from '@/utils/common/realtime'
@@ -66,6 +67,7 @@ const escapeHtml = (t) =>
 // Rich toast: the source document type as a bold heading, the subject under
 // it, and a View action that opens the record (or the notifications page).
 function showToast(n) {
+  playSound('other')
   const subject = new DOMParser().parseFromString(n.subject || '', 'text/html').body.textContent.trim()
   const heading = n.document_type || 'Notification'
   const name = n.document_name ? ` &middot; ${escapeHtml(n.document_name)}` : ''
