@@ -22,7 +22,7 @@ frappe.ui.form.on("CR", {
 		frappe.breadcrumbs.update();
 		render_tab_data(frm);
 
-		if (frm.doc.status != "Dispute Pending") {
+		if (!["Dispute Pending", "Refund Rejected"].includes(frm.doc.status)) {
 			frm.disable_form();
 			frm.disable_save();
 			window.add_forward_button(frm);
@@ -415,7 +415,7 @@ function add_resolution_buttons(frm) {
 	if (frm.is_new() || !frm.doc.cr_history || !frm.doc.cr_history.length) return;
 
 	const latest = frm.doc.cr_history[frm.doc.cr_history.length - 1];
-	if (latest.status !== "Dispute Pending") return;
+	if (!["Dispute Pending", "Refund Rejected"].includes(latest.status)) return;
 
 	frm.add_custom_button(
 		"Resolve",

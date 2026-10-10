@@ -21,7 +21,16 @@
   "column_break_iyyn",
   "forwarded_on",
   "column_break_jphf",
-  "action_by"
+  "action_by",
+  "held_doctype",
+  "held_name",
+  "held_previous_status",
+  "backout_snapshot",
+  "refund_section",
+  "refund_request",
+  "refund_status",
+  "refund_amount",
+  "refund_remarks"
  ],
  "fields": [
   {
@@ -65,7 +74,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Dispute Pending\nDispute Resolved\nRefund",
+   "options": "Dispute Pending\nRefund Pending\nRefund Rejected\nDispute Resolved\nRefund\nBackout",
    "read_only": 1,
    "reqd": 1
   },
@@ -76,7 +85,7 @@
   {
    "description": "Write reason for refund if any otherwise remarks for resolution",
    "fieldname": "remarks",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Remarks",
    "read_only": 1
   },
@@ -130,6 +139,69 @@
    "label": "Action By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "fieldname": "held_doctype",
+   "fieldtype": "Link",
+   "label": "Held Record Type",
+   "options": "DocType",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "held_name",
+   "fieldtype": "Data",
+   "label": "Held Record",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "held_previous_status",
+   "fieldtype": "Data",
+   "label": "Status Before Hold",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "backout_snapshot",
+   "fieldtype": "Long Text",
+   "label": "Backout Snapshot",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "refund_section",
+   "fieldtype": "Section Break",
+   "label": "Refund"
+  },
+  {
+   "fieldname": "refund_request",
+   "fieldtype": "Link",
+   "label": "Refund",
+   "options": "Refund Request",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "refund_status",
+   "fieldtype": "Data",
+   "label": "Refund Status",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Amount",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "refund_remarks",
+   "fieldtype": "Small Text",
+   "label": "Refund Remarks",
+   "read_only": 1,
+   "in_list_view": 1
   }
  ],
  "grid_page_length": 50,

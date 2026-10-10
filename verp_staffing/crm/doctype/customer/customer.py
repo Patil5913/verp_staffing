@@ -165,7 +165,7 @@ def get_forwardable_departments(customer):
 
     active_in = []
 
-    if frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]}):
+    if frappe.db.exists("CR", {"customer": customer, "status": ["in", ["Dispute Pending", "Refund Pending", "Refund Rejected", "Refund", "Backout"]]}):
         active_in.append("CR")
 
     if frappe.db.exists("Onboardings", {"customer": customer,  "status": ["in", ["Active","Completed"]]}):
@@ -298,7 +298,7 @@ def is_service_completed(service, customer):
 
 def check_CR_Onboarding_departments_active(customer):
     active = []
-    if frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]}):
+    if frappe.db.exists("CR", {"customer": customer, "status": ["in", ["Dispute Pending", "Refund Pending", "Refund Rejected", "Refund", "Backout"]]}):
         active.append("CR")
     if frappe.db.exists("Onboardings", {"customer": customer, "status": "Active"}):
         active.append("Onboarding")
@@ -329,7 +329,7 @@ def get_forwardable_departments_from_service(doctype, docname, from_service_name
 
     customer = doc.customer
     # If customer already has active CR or Onboarding, block all forwarding
-    cr_active = frappe.db.exists("CR", {"customer": customer, "status": ["in",["Dispute Pending", "Refund"]]})
+    cr_active = frappe.db.exists("CR", {"customer": customer, "status": ["in", ["Dispute Pending", "Refund Pending", "Refund Rejected", "Refund", "Backout"]]})
     onboarding_active = frappe.db.exists(
         "Onboardings", {"customer": customer, "status": ["in", ["Active","Completed"]]}
     )

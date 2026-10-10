@@ -12,6 +12,7 @@
   "payment_type",
   "verification_status",
   "payment_term_row",
+  "refund_request",
   "column_break_5",
   "posting_date",
   "company",
@@ -580,6 +581,15 @@
    "fieldname": "payer_account_name",
    "fieldtype": "Data",
    "label": "Payer's Account Name"
+  },
+  {
+   "fieldname": "refund_request",
+   "fieldtype": "Link",
+   "label": "Refund Request",
+   "options": "Refund Request",
+   "read_only": 1,
+   "no_copy": 1,
+   "search_index": 1
   }
  ],
  "is_submittable": 1,

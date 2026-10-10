@@ -54,6 +54,13 @@
         </template>
 
         <AppTextarea v-if="isCR" v-model="reasonForForwarding" label="Reason For Forwarding" />
+        <!-- A query raised from a service: should that service pause while CR looks into it? -->
+        <div v-if="isCR && !isCustomerDoctype" class="flex flex-col gap-1.5">
+          <AppInput label="Put this service on hold?" type="select" v-model="holdService" :options="holdOptions" />
+          <p class="text-p-xs text-app-text-muted">
+            Yes pauses {{ doctype }} until the case is resolved, then it carries on where it left off. No keeps the work going meanwhile.
+          </p>
+        </div>
 
         <AppTextarea v-model="note" :label="`Note${isRUC ? '' : ' (optional)'}`" />
       </div>
@@ -111,6 +118,11 @@ const interview = ref('')
 const interviewOptions = ref([])
 const email = ref('')
 const password = ref('')
+const holdService = ref('No')
+const holdOptions = [
+  { label: 'No - keep working', value: 'No' },
+  { label: 'Yes - put on hold', value: 'Yes' },
+]
 
 const isRUC = computed(() => service.value === 'RUC')
 const isCR = computed(() => service.value.toLowerCase() === 'cr')
@@ -155,6 +167,7 @@ async function openDialog() {
   interviewOptions.value = []
   email.value = ''
   password.value = ''
+  holdService.value = 'No'
 
   const res = isCustomerDoctype.value
     ? await customerDepartments.resource.submit({ customer: props.customer })
@@ -228,6 +241,9 @@ async function onSubmit() {
     password: password.value || null,
     reason_for_forwarding: reasonForForwarding.value || null,
     from_service_name: props.fromServiceName || null,
+    ...(isCR.value && !isCustomerDoctype.value
+      ? { hold_service: holdService.value === 'Yes' ? 1 : 0, from_doctype: props.doctype, from_name: props.name }
+      : {}),
   })
   if (!result) return
 

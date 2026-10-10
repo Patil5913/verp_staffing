@@ -20,7 +20,8 @@
   "updates_section",
   "updates_html",
   "activites_tab",
-  "open_activities_html"
+  "open_activities_html",
+  "held_by_cr"
  ],
  "fields": [
   {
@@ -62,7 +63,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nCompleted\nRequest for Update"
+   "options": "Pending\nCompleted\nRequest for Update\nHold\nBackout"
   },
   {
    "fieldname": "section_break_izli",
@@ -118,6 +119,15 @@
   {
    "fieldname": "section_break_rtcu",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "held_by_cr",
+   "fieldtype": "Check",
+   "label": "Held By CR",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "default": "0"
   }
  ],
  "grid_page_length": 50,

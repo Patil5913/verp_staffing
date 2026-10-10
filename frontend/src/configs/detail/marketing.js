@@ -19,6 +19,8 @@ import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
 const isCompleted = (detail) => detail.values.status === 'Completed' && !hasRole('System Manager')
 const notNew = (detail) => !detail.isNew.value
+// Put on hold when a CR query was raised from this service: frozen until the case moves on.
+const heldByCr = (detail) => Boolean(detail.values.held_by_cr)
 
 // Ported from marketing.js: the assignee, target block and per-day job
 // application counts, the interviews raised from this record, and (on their
@@ -28,6 +30,7 @@ export const marketingConfig = {
   timeline: 'service',
   // Forwarded/auto-created off a Customer's own workflow - no manual delete.
   noDelete: true,
+  locked: heldByCr,
   // status locks once Completed; the customer can't be re-picked after the
   // record exists (marketing.js sets it read_only when !is_new()).
   readOnlyFields: (detail) => [
@@ -47,14 +50,17 @@ export const marketingConfig = {
         {
           type: 'fields',
           fieldnames: ['customer', 'status'],
-          // Placed is computed from the customer's services (set automatically), so it's shown
-          // but never offered as a choice, and can't be edited by hand.
-          fieldOverrides: (detail) => ({
-            status: {
-              options: 'Pending\nStarted\nCompleted\nHold',
-              read_only: detail.values.status === 'Placed' ? 1 : 0,
-            },
-          }),
+          // Placed and Backout are set automatically (placement; a backed-out case in CR), so they're shown
+          // when they apply but never offered as a choice, and can't be edited by hand.
+          fieldOverrides: (detail) => {
+            const automatic = ['Placed', 'Backout'].includes(detail.values.status)
+            return {
+              status: {
+                options: automatic ? `Pending\nStarted\nCompleted\nHold\n${detail.values.status}` : 'Pending\nStarted\nCompleted\nHold',
+                read_only: automatic ? 1 : 0,
+              },
+            }
+          },
         },
         {
           type: 'component',
@@ -142,7 +148,7 @@ export function otherServicesConfig({ doctype, department }) {
     timeline: 'service',
     // Forwarded/auto-created off a Customer's own workflow - no manual delete.
     noDelete: true,
-    locked: isCompleted,
+    locked: (detail) => isCompleted(detail) || heldByCr(detail),
     readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer', 'service', 'department']),
     actions: [
       { component: ForwardAction, props: { serviceField: 'service' } },

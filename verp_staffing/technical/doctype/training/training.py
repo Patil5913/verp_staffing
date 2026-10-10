@@ -39,6 +39,9 @@ class Training(Document):
         self.name = generate_name_series("Training", customer_name) 
         
     def validate(self):
+        from verp_staffing.cr.backout import validate_status_change
+
+        validate_status_change(self)
         from verp_staffing.crm.api.helpers import validate_assign_to_change
 
         validate_assign_to_change(self, "Training")

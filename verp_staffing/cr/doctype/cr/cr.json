@@ -12,6 +12,7 @@
   "status",
   "section_break_shrg",
   "cr_history",
+  "cr_events",
   "history_tab",
   "customer_details",
   "sales_order_tab",
@@ -46,7 +47,7 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Dispute Pending\nDispute Resolved\nRefund",
+   "options": "Dispute Pending\nRefund Pending\nRefund Rejected\nDispute Resolved\nRefund\nBackout",
    "read_only": 1
   },
   {
@@ -94,6 +95,14 @@
    "fieldname": "cr_history",
    "fieldtype": "Table",
    "options": "CR History"
+  },
+  {
+   "fieldname": "cr_events",
+   "fieldtype": "Table",
+   "label": "Case Events",
+   "options": "CR Event",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "grid_page_length": 50,

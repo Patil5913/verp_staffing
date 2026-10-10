@@ -1,7 +1,8 @@
 #!/bin/bash
 # Full release update for every tenant:
 #   1. take fresh backups (DB + files) of all sites
-#   2. delete the older backups (only after the new ones succeeded)
+#   2. prune old backups: the newest BACKUPS_TO_KEEP (default 5) per site are kept, older ones deleted
+#      (only after the new ones succeeded)
 #   3. put all sites in maintenance mode
 #   4. docker compose pull + up -d (restart on the new image)
 #   5. migrate all sites
@@ -16,21 +17,18 @@ cd "$(dirname "$0")"
 bench() { docker compose exec -T backend bench "$@"; }
 
 echo "==> [1/6] Taking new backups of all sites"
-# Create a timestamp file. Anything newer than it is a new backup;
-# anything older is a previous backup that step 2 may delete.
-# Marker so step 2 can tell new backups from old ones.
+# Create a timestamp file so step 2 can check that new backups really were written.
 docker compose exec -T backend bash -c 'touch /home/frappe/frappe-bench/sites/.backup-marker'
 bench --site all backup --with-files
 
-echo "==> [2/6] Deleting previous backups (keeping the ones just taken)"
-docker compose exec -T backend bash -c '
-  cd /home/frappe/frappe-bench/sites
-  # Safety check: only delete old backups if new ones really exist.
-  found=$(find . -path "*/private/backups/*" -type f -newer .backup-marker | wc -l)
-  if [ "$found" -eq 0 ]; then echo "No new backup files found, refusing to delete old ones" >&2; exit 1; fi
-  find . -path "*/private/backups/*" -type f ! -newer .backup-marker -print -delete
-  rm -f .backup-marker
-'
+KEEP="${BACKUPS_TO_KEEP:-5}"
+echo "==> [2/6] Pruning old backups (keeping the newest $KEEP per site)"
+# Safety check: only prune if new backups really exist.
+found=$(docker compose exec -T backend bash -c 'cd /home/frappe/frappe-bench/sites && find . -path "*/private/backups/*" -type f -newer .backup-marker | wc -l')
+if [ "$found" -eq 0 ]; then echo "No new backup files found, refusing to delete old ones" >&2; exit 1; fi
+docker compose exec -T backend rm -f /home/frappe/frappe-bench/sites/.backup-marker
+# The script runs inside the container (read from stdin), counting backups per site.
+docker compose exec -T backend bash -s -- /home/frappe/frappe-bench/sites "$KEEP" < prune-backups.sh
 
 # From here on visitors see the "Updating" page instead of a half-updated site.
 echo "==> [3/6] Enabling maintenance mode on all sites"

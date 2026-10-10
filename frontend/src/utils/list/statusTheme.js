@@ -47,6 +47,7 @@ const DOCTYPE_FIELD_OVERRIDES = {
   'Interview.status': (value) => INTERVIEW_STATUS_THEMES[value] || genericStatusTheme(value),
   'Customer.overall_status': (value) => {
     const status = String(value || '')
+    if (status === 'Refund Pending' || status === 'Moved To CR') return 'orange'
     if (status.includes('Backout') || status.includes('Refund')) return 'red'
     if (status.includes('Pending')) return 'red'
     if (status.includes('Rework')) return 'orange'

@@ -38,16 +38,18 @@ const props = defineProps({
   doctype: { type: String, required: true },
   name: { type: String, required: true },
   historyField: { type: String, required: true },
-  openStatus: { type: String, required: true },
+  // The status the case must be in for these buttons to show - or any of several.
+  openStatus: { type: [String, Array], required: true },
   method: { type: String, required: true },
   nameArg: { type: String, required: true },
-  // [{ label, action, remarks?: bool, variant?, icon?, confirm? }]
+  // [{ label, action, remarks?: bool, variant?, icon?, confirm?, method?, nameArg? }] - method/nameArg override the
+  // component's own for one button (e.g. a backout that has its own endpoint).
   options: { type: Array, required: true },
 })
 
 const rows = computed(() => props.detail.values[props.historyField] || [])
 const visible = computed(
-  () => !props.detail.isNew.value && rows.value.length && rows.value[rows.value.length - 1].status === props.openStatus,
+  () => !props.detail.isNew.value && rows.value.length && [].concat(props.openStatus).includes(rows.value[rows.value.length - 1].status),
 )
 
 const open = ref(false)
@@ -61,12 +63,17 @@ function start(opt) {
 }
 
 const resolver = useResource({ url: props.method })
-const running = computed(() => resolver.isLoading)
+const resolvers = {}
+const resolverFor = (opt) => {
+  if (!opt.method) return resolver
+  return (resolvers[opt.method] ||= useResource({ url: opt.method }))
+}
+const running = computed(() => resolver.isLoading || Object.values(resolvers).some((r) => r.isLoading))
 
 async function run() {
-  const args = { [props.nameArg]: props.name, action: pending.value.action }
+  const args = { [pending.value.nameArg || props.nameArg]: props.name, action: pending.value.action }
   if (pending.value.remarks) args.remarks = remarks.value.trim()
-  const result = await resolver.resource.submit(args)
+  const result = await resolverFor(pending.value).resource.submit(args)
   if (!result) return
   notify.success(`${props.doctype} marked ${pending.value.action}.`)
   open.value = false

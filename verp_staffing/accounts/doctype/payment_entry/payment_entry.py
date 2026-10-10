@@ -122,6 +122,11 @@ class PaymentEntry(Document):
         update_invoice_outstanding(self)
         update_order_outstanding(self)
 
+        if self.get("refund_request"):
+            from verp_staffing.cr.refund import on_refund_payment_verified
+
+            on_refund_payment_verified(self)
+
     def validate_references_not_tampered(self):
         if not self.payment_term_row or self.is_new():
             return
@@ -175,6 +180,10 @@ class PaymentEntry(Document):
         self.make_gl_entries(cancel=True)
         update_invoice_outstanding(self, cancel=True)
         update_order_outstanding(self, cancel=True)
+        if self.get("refund_request"):
+            from verp_staffing.cr.refund import on_refund_payment_cancelled
+
+            on_refund_payment_cancelled(self)
         # Reset linked payment term to Unpaid with cancellation log
         if self.payment_term_row:
             frappe.db.set_value(
@@ -686,6 +695,9 @@ def validate_party_type_in_master(doc):
 
 def validate_party_type_matches_payment_direction(doc):
     if doc.payment_type == "Internal Transfer" or not doc.party_type:
+        return
+    # A backout refund pays money back to a customer (Pay + Customer is otherwise a mismatch).
+    if doc.get("refund_request") and doc.payment_type == "Pay" and doc.party_type == "Customer":
         return
     account_type = frappe.get_cached_value("Party Type", doc.party_type, "account_type")
     if not account_type:

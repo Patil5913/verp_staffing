@@ -131,7 +131,7 @@ const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting
 
 const canReassign = useCanReassign(doctype, name, detail.isNew, 'JDC')
 
-const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
+const locked = computed(() => (detail.values.status === 'Completed' && !hasRole('System Manager')) || Boolean(detail.values.held_by_cr))
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },

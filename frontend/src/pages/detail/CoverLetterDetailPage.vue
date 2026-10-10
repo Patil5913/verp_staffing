@@ -117,7 +117,7 @@ const canReassign = useCanReassign(doctype, name, detail.isNew, 'Cover Letter')
 
 // Same as Training/Interview Support/Technical Other Services: a Completed
 // service record is frozen - status/proof of work can no longer change.
-const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
+const locked = computed(() => (detail.values.status === 'Completed' && !hasRole('System Manager')) || Boolean(detail.values.held_by_cr))
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },

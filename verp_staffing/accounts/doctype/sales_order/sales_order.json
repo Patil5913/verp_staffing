@@ -415,7 +415,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Open\nClosed",
+   "options": "Open\nClosed\nBackout",
    "read_only": 1
   }
  ],

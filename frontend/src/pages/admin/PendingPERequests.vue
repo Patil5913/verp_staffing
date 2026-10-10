@@ -47,7 +47,7 @@
       </div>
 
       <template v-else>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div v-for="card in summaryCards" :key="card.label" class="rounded-xl border border-app-border bg-app-panel p-4 shadow-sm">
             <p class="text-p-xs font-medium uppercase tracking-wide text-app-text-muted">{{ card.label }}</p>
             <p class="mt-1 text-2xl font-semibold tabular-nums text-app-text">{{ card.value }}</p>
@@ -69,7 +69,7 @@
                 <th class="h-10 px-4 font-semibold">Payment Entry</th>
                 <th class="h-10 px-3 font-semibold">Party</th>
                 <th class="h-10 w-32 px-3 font-semibold">Date</th>
-                <th class="h-10 w-40 px-3 text-right font-semibold">Amount</th>
+                <th class="h-10 w-48 px-3 text-right font-semibold">Amount</th>
                 <th class="h-10 w-36 px-3 font-semibold">Mode</th>
                 <th class="h-10 w-52 px-3" />
               </tr>
@@ -84,12 +84,25 @@
                 <td class="px-4 py-3">
                   <p class="truncate font-medium text-app-primary">{{ row.name }}</p>
                   <p v-if="row.reference_no" class="truncate text-p-xs text-app-text-muted">Ref {{ row.reference_no }}</p>
+                  <p v-if="row.refund_request" class="truncate text-p-xs font-medium text-orange-600">Refund to candidate - {{ row.refund_request }}</p>
                 </td>
                 <td class="truncate px-3 py-3 text-app-text">{{ row.party_name || row.party || '-' }}</td>
                 <td class="px-3 py-3 text-app-text-muted">{{ formatDate(row.posting_date) }}</td>
-                <td class="px-3 py-3 text-right font-medium tabular-nums text-app-text">
-                  {{ formatFieldValue(row.paid_amount, { fieldtype: 'Currency' }) }}
-                  <span class="text-p-xs font-normal text-app-text-muted">{{ row.currency }}</span>
+                <td class="px-3 py-3 text-right font-medium tabular-nums">
+                  <!-- a refund goes OUT: show what is actually paid (refund less the fee recovered) -->
+                  <template v-if="row.refund_request">
+                    <span class="text-orange-600">- {{ formatFieldValue(netPay(row), { fieldtype: 'Currency' }) }}</span>
+                    <span class="text-p-xs font-normal text-app-text-muted"> {{ row.currency }}</span>
+                    <p class="text-p-xs font-normal text-app-text-muted">
+                      to pay out - refund {{ formatFieldValue(row.paid_amount, { fieldtype: 'Currency' }) }}
+                      <template v-if="feeOf(row)">less {{ formatFieldValue(feeOf(row), { fieldtype: 'Currency' }) }} fee</template>
+                    </p>
+                  </template>
+                  <template v-else>
+                    <span class="text-app-text">{{ formatFieldValue(row.paid_amount, { fieldtype: 'Currency' }) }}</span>
+                    <span class="text-p-xs font-normal text-app-text-muted"> {{ row.currency }}</span>
+                    <p class="text-p-xs font-normal text-app-text-muted">received</p>
+                  </template>
                 </td>
                 <td class="truncate px-3 py-3 text-app-text-muted">{{ row.mode_of_payment || '-' }}</td>
                 <td class="px-3 py-3" @click.stop>
@@ -117,14 +130,32 @@
       </template>
     </div>
 
-    <Dialog v-model="verifyDialog.show" :options="{ title: `Submit ${actingOn}?`, size: 'md', icon: { name: 'check-circle', appearance: 'success' } }">
+    <Dialog v-model="verifyDialog.show" :options="{ title: verifyingRow?.refund_request ? `Approve refund ${actingOn}?` : `Submit ${actingOn}?`, size: 'md', icon: { name: 'check-circle', appearance: 'success' } }">
       <template #body-content>
         <div class="flex flex-col gap-4">
           <div v-html="verifyConfirmHtml" />
-          <AppLinkField label="Paid From" doctype="Account" v-model="verifyDialog.paidFrom" :filters="paidFromFilters" />
-          <AppLinkField label="Paid To" doctype="Account" v-model="verifyDialog.paidTo" :filters="paidToFilters" />
+          <AppLinkField
+            :label="verifyingRow?.refund_request ? 'Pay from (bank account)' : 'Paid From'"
+            doctype="Account"
+            v-model="verifyDialog.paidFrom"
+            :filters="paidFromFilters"
+          />
+          <AppLinkField v-if="!verifyingRow?.refund_request" label="Paid To" doctype="Account" v-model="verifyDialog.paidTo" :filters="paidToFilters" />
 
-          <div class="flex flex-col gap-2 rounded-lg border border-app-border p-3">
+          <div v-if="verifyingRow?.refund_request" class="flex flex-col gap-3 rounded-lg border border-app-border bg-app-panel-2 p-3 text-p-sm">
+            <div>
+              <div class="flex justify-between"><span class="text-app-text-muted">Refund amount</span><span class="tabular-nums">{{ money(verifyingRow.paid_amount) }}</span></div>
+              <div class="flex justify-between"><span class="text-app-text-muted">Less: fee recovered from the candidate</span><span class="tabular-nums">- {{ money(feeOf(verifyingRow)) }}</span></div>
+              <div class="mt-1 flex justify-between border-t border-app-border pt-1 font-semibold"><span>Pay the candidate</span><span class="tabular-nums text-orange-600">{{ money(netPay(verifyingRow)) }}</span></div>
+            </div>
+            <div v-if="refundBank" class="border-t border-app-border pt-2">
+              <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">To this bank account</p>
+              <p class="font-medium text-app-text">{{ refundBank.account_holder_name }} - {{ refundBank.bank_name }}</p>
+              <p class="tabular-nums text-app-text">{{ refundBank.account_number }}<span v-if="refundBank.routing_code" class="text-app-text-muted"> - {{ refundBank.routing_code }}</span></p>
+            </div>
+            <p class="text-p-xs text-app-text-muted">Choose the bank account to pay from below. The fee is already on the entry.</p>
+          </div>
+          <div v-else class="flex flex-col gap-2 rounded-lg border border-app-border p-3">
             <AppInput label="Platform / Other Charges (optional)" type="number" v-model="verifyDialog.charges" placeholder="0" />
             <p class="text-p-xs text-app-text-muted">
               Enter a negative amount if charges were deducted from your end (e.g. -60), positive if the customer paid extra. Refer to the final received amount below.
@@ -140,7 +171,7 @@
         </div>
       </template>
       <template #actions>
-        <AppButton icon="check" :loading="verify.isLoading" @click="submitVerify">Submit</AppButton>
+        <AppButton icon="check" :loading="verify.isLoading" @click="submitVerify">{{ verifyingRow?.refund_request ? 'Approve & pay' : 'Submit' }}</AppButton>
       </template>
     </Dialog>
 
@@ -151,7 +182,7 @@
           label="Remarks"
           v-model="rejectDialog.remarks"
           required
-          description="Required - explains why this payment entry was rejected. It's added to the payment term's verification log."
+          :description="rejectingRefund ? 'Required - the CR employee sees this reason on the case, so say what needs correcting (bank details, amount, fee).' : 'Required - explains why this payment entry was rejected. It\'s added to the payment term\'s verification log.'"
         />
       </template>
       <template #actions>
@@ -175,7 +206,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // history the desk page didn't have.
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Dialog, LoadingIndicator } from 'frappe-ui'
+import { call, Dialog, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
@@ -266,16 +297,18 @@ const rows = useResource({
   url: 'frappe.client.get_list',
   params: {
     doctype: 'Payment Entry',
-    filters: [
-      ['verification_status', 'in', ['Pending Verification', 'Rejected', 'Verified']],
+    filters: [['verification_status', 'in', ['Pending Verification', 'Rejected', 'Verified']]],
+    // payments against a sales order's terms, and refunds paid back to a backed-out candidate
+    or_filters: [
       ['payment_term_row', 'is', 'set'],
+      ['refund_request', 'is', 'set'],
     ],
     fields: [
       'name', 'party', 'party_name', 'posting_date', 'paid_amount', 'currency', 'mode_of_payment',
       'reference_no', 'verification_status', 'modified',
       // Needed for the Verify dialog's Paid From/Paid To pickers - same
       // filter inputs Payment Entry's own detail page uses.
-      'party_type', 'payment_type', 'company', 'paid_from', 'paid_to',
+      'party_type', 'payment_type', 'company', 'paid_from', 'paid_to', 'refund_request', 'paid_amount_after_tax', 'payer_account_name',
     ],
     order_by: 'modified desc',
     limit_page_length: 500,
@@ -301,16 +334,28 @@ const visible = computed(() =>
   all.value.filter((r) => r.verification_status === activeStatus.value && rowMatches(r, parsedQuery.value)),
 )
 
-const pendingTotal = computed(() =>
-  all.value.filter((r) => r.verification_status === 'Pending Verification').reduce((sum, r) => sum + Number(r.paid_amount || 0), 0),
-)
+// Money coming in (payments to verify) and going out (refunds to approve) are kept apart: adding them together says nothing.
+const netPay = (r) => Number(r.paid_amount_after_tax) || Number(r.paid_amount) || 0
+const feeOf = (r) => Math.max(0, (Number(r.paid_amount) || 0) - netPay(r))
+const pendingRows = computed(() => all.value.filter((r) => r.verification_status === 'Pending Verification'))
+const toReceive = computed(() => pendingRows.value.filter((r) => !r.refund_request).reduce((s, r) => s + Number(r.paid_amount || 0), 0))
+const toPayOut = computed(() => pendingRows.value.filter((r) => r.refund_request).reduce((s, r) => s + netPay(r), 0))
 const oldestPending = computed(() => {
   const dates = all.value.filter((r) => r.verification_status === 'Pending Verification').map((r) => r.posting_date).sort()
   return dates[0] ? formatDate(dates[0]) : '-'
 })
 const summaryCards = computed(() => [
-  { label: 'Awaiting verification', value: counts.value['Pending Verification'] ?? 0, hint: 'payment entries in the queue' },
-  { label: 'Pending amount', value: formatFieldValue(pendingTotal.value, { fieldtype: 'Currency' }), hint: 'sum across pending entries' },
+  { label: 'Awaiting verification', value: counts.value['Pending Verification'] ?? 0, hint: 'entries in the queue' },
+  {
+    label: 'To receive',
+    value: formatFieldValue(toReceive.value, { fieldtype: 'Currency' }),
+    hint: `${pendingRows.value.filter((r) => !r.refund_request).length} payment(s) from customers`,
+  },
+  {
+    label: 'To pay out',
+    value: formatFieldValue(toPayOut.value, { fieldtype: 'Currency' }),
+    hint: `${pendingRows.value.filter((r) => r.refund_request).length} refund(s) to candidates`,
+  },
   { label: 'Oldest pending', value: oldestPending.value, hint: 'posting date' },
 ])
 
@@ -365,9 +410,20 @@ const paidToFilters = computed(() =>
     : {},
 )
 
+const refundBank = ref(null)
 function openVerify(row) {
   actingOn.value = row.name
   verifyingRow.value = row
+  refundBank.value = null
+  if (row.refund_request) {
+    call('frappe.client.get_value', {
+      doctype: 'Refund Request',
+      filters: row.refund_request,
+      fieldname: ['account_holder_name', 'bank_name', 'account_number', 'routing_code'],
+    })
+      .then((r) => (refundBank.value = r))
+      .catch(() => {})
+  }
   verifyDialog.value = { show: true, paidFrom: row.paid_from || '', paidTo: row.paid_to || '', charges: '', chargesAccount: '' }
 }
 
@@ -389,7 +445,7 @@ function submitVerify() {
     charges_account: chargesAmount.value ? verifyDialog.value.chargesAccount : undefined,
     payment_entry: actingOn.value,
     paid_from: verifyDialog.value.paidFrom || undefined,
-    paid_to: verifyDialog.value.paidTo || undefined,
+    paid_to: verifyingRow.value?.refund_request ? undefined : verifyDialog.value.paidTo || undefined,
   })
 }
 
@@ -402,6 +458,7 @@ const reject = useResource({
   },
 })
 const rejectDialog = ref({ show: false, remarks: '' })
+const rejectingRefund = computed(() => Boolean(all.value.find((r) => r.name === actingOn.value)?.refund_request))
 function openReject(name) {
   actingOn.value = name
   rejectDialog.value = { show: true, remarks: '' }
