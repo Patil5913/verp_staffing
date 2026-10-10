@@ -9,9 +9,11 @@ import ForwardAction from '@/components/detail/actions/ForwardAction.vue'
 import ServiceResumePanel from '@/components/detail/lead/ServiceResumePanel.vue'
 import CreateInterviewButton from '@/components/detail/marketing/CreateInterviewButton.vue'
 import FieldUpdateActions from '@/components/detail/fieldUpdate/FieldUpdateActions.vue'
+import InterviewAssigneeField from '@/components/detail/marketing/InterviewAssigneeField.vue'
 import InterviewRoundsField from '@/components/detail/marketing/InterviewRoundsField.vue'
 import JobApplicationGrid from '@/components/detail/marketing/JobApplicationGrid.vue'
 import MarketingInterviewsPanel from '@/components/detail/marketing/MarketingInterviewsPanel.vue'
+import AssignmentTreePanel from '@/components/detail/marketing/AssignmentTreePanel.vue'
 import MarketingTargetPanel from '@/components/detail/marketing/MarketingTargetPanel.vue'
 import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
@@ -57,7 +59,7 @@ export const marketingConfig = {
         {
           type: 'component',
           component: AssignToField,
-          props: { query: 'verp_staffing.crm.api.helpers.get_assign_to_by_service', filters: { service: 'Marketing' }, withCustomer: true },
+          props: { query: 'verp_staffing.crm.api.helpers.get_assign_to_by_service', filters: { service: 'Marketing' }, withCustomer: true, restrict: true },
         },
         { type: 'component', component: MarketingInterviewsPanel, show: notNew },
         { type: 'component', component: MarketingTargetPanel },
@@ -78,6 +80,12 @@ export const marketingConfig = {
       label: 'History',
       show: notNew,
       sections: [{ type: 'component', component: CustomerHistoryPanel, props: { includeInterviews: false } }],
+    },
+    {
+      key: 'hierarchy',
+      label: 'Hierarchy',
+      show: notNew,
+      sections: [{ type: 'component', component: AssignmentTreePanel, props: { department: 'Marketing' } }],
     },
   ],
 }
@@ -118,6 +126,7 @@ export const interviewConfig = {
       sections: [
         { type: 'fields', fieldnames: ['marketing_link'], show: (d) => d.isNew.value },
         { type: 'fields', fieldnames: ['company', 'role', 'status'] },
+        { type: 'component', component: InterviewAssigneeField },
         { type: 'component', component: ServiceResumePanel, show: notNew },
         { type: 'component', component: InterviewRoundsField },
       ],
@@ -150,6 +159,7 @@ export function otherServicesConfig({ doctype, department }) {
             component: AssignToField,
             props: {
               query: 'verp_staffing.crm.api.helpers.get_subordinate_employees',
+              restrict: true,
               ...(department ? { filters: { department } } : { departmentField: 'department' }),
             },
           },

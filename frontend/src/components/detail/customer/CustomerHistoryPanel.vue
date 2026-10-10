@@ -6,15 +6,87 @@
     <div v-else-if="history.isLoading && !history.resource.data" class="flex justify-center py-10">
       <LoadingIndicator class="h-5 w-5 text-app-text-muted" />
     </div>
-    <p v-else-if="!groups.length" class="rounded-xl border border-dashed border-app-border py-8 text-center text-p-sm text-app-text-muted">
+    <p v-else-if="!groups.length && !marketingEntries.length" class="rounded-xl border border-dashed border-app-border py-8 text-center text-p-sm text-app-text-muted">
       This customer hasn't been forwarded to any department yet.
     </p>
+
+    <!-- Marketing and Interview at one place: one row per Marketing record with its
+         applications, interviews and forwards (replaces the separate Marketing cards). -->
+    <SectionCard v-if="marketingEntries.length" title="Marketing" :subtitle="marketingSubtitle">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-p-sm">
+          <thead class="text-p-xs text-app-text-muted">
+            <tr>
+              <th class="py-1.5 pr-4 font-medium">Marketing</th>
+              <th class="py-1.5 pr-4 font-medium">Status</th>
+              <th class="py-1.5 pr-4 font-medium">Assigned To</th>
+              <th class="py-1.5 pr-4 font-medium">Small</th>
+              <th class="py-1.5 pr-4 font-medium">Large</th>
+              <th class="py-1.5 pr-4 font-medium">Applications</th>
+              <th class="py-1.5 pr-4 font-medium">Forwards</th>
+              <th class="py-1.5 font-medium">Last Forwarded</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="entry in marketingEntries" :key="entry.id" class="border-t border-app-border">
+              <td class="py-1.5 pr-4">
+                <router-link :to="`/Marketing/${encodeURIComponent(entry.id)}`" class="font-medium text-app-primary hover:underline">{{ entry.id }}</router-link>
+              </td>
+              <td class="py-1.5 pr-4"><DocStatusBadge :status="entry.status" /></td>
+              <td class="py-1.5 pr-4">{{ entry.assign_to || '-' }}</td>
+              <td class="py-1.5 pr-4">{{ sumApps(entry, 'small_application') }}</td>
+              <td class="py-1.5 pr-4">{{ sumApps(entry, 'large_application') }}</td>
+              <td class="py-1.5 pr-4 font-medium">{{ sumApps(entry, 'total_application') }}</td>
+              <td class="py-1.5 pr-4">{{ entry.forward_events?.length || 0 }}</td>
+              <td class="py-1.5">{{ lastForward(entry) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-for="entry in marketingEntries.filter((e) => e.job_application_count?.length)" :key="`apps-${entry.id}`" class="overflow-x-auto">
+        <p class="mb-1 mt-3 text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Applications · {{ entry.id }}</p>
+        <table class="w-full text-left text-p-sm">
+          <thead class="text-p-xs text-app-text-muted">
+            <tr><th class="py-1 pr-4 font-medium">Date</th><th class="py-1 pr-4 font-medium">Small</th><th class="py-1 pr-4 font-medium">Large</th><th class="py-1 font-medium">Total</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, i) in entry.job_application_count" :key="i" class="border-t border-app-border">
+              <td class="py-1 pr-4">{{ formatDate(row.date) }}</td>
+              <td class="py-1 pr-4">{{ row.small_application ?? 0 }}</td>
+              <td class="py-1 pr-4">{{ row.large_application ?? 0 }}</td>
+              <td class="py-1 font-medium">{{ rowTotal(row) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="forwardRows.length" class="overflow-x-auto">
+        <p class="mb-1 mt-3 text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Forward History</p>
+        <table class="w-full text-left text-p-sm">
+          <thead class="text-p-xs text-app-text-muted">
+            <tr>
+              <th class="py-1.5 pr-4 font-medium">#</th>
+              <th class="py-1.5 pr-4 font-medium">Marketing</th>
+              <th class="py-1.5 pr-4 font-medium">Forwarded To</th>
+              <th class="py-1.5 font-medium">Forwarded On</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(r, i) in forwardRows" :key="i" class="border-t border-app-border">
+              <td class="py-1.5 pr-4">{{ i + 1 }}</td>
+              <td class="py-1.5 pr-4">{{ r.id }}</td>
+              <td class="py-1.5 pr-4">{{ r.department || '-' }} Dept.</td>
+              <td class="py-1.5">{{ formatForwardEventTime(r.timestamp) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </SectionCard>
 
     <SectionCard
       v-for="group in groups"
       :key="group.department"
       :title="group.department"
-      :subtitle="`${group.entries.length} ${group.entries.length === 1 ? 'record' : 'records'}`"
+      :subtitle="groupSubtitle(group)"
     >
       <div class="flex max-h-96 flex-col gap-3 overflow-y-auto pr-1">
         <div
@@ -40,21 +112,29 @@
             <template v-else>Assigned to {{ entry.assign_to || '-' }}</template>
           </p>
 
-          <!-- CR and Onboarding: this record's own history, one line per step. -->
-          <ol v-if="entry.history_rows?.length" class="flex flex-col gap-1.5 border-l border-app-border pl-3">
-            <li v-for="(step, si) in entry.history_rows" :key="si" class="text-p-sm">
-              <div class="flex flex-wrap items-center gap-2">
-                <DocStatusBadge v-if="step.status" :status="step.status" />
-                <span class="text-app-text-muted">{{ formatDatetime(step.forwarded_on) || formatDatetime(step.action_on) || '' }}</span>
-              </div>
-              <p class="text-app-text-muted">
-                <span v-if="step.assign_to">Assigned to {{ step.assign_to }}</span>
-                <span v-if="step.forwarded_by"> · Forwarded by {{ step.forwarded_by }}</span>
-                <span v-if="step.reason_for_forwarding"> · {{ step.reason_for_forwarding }}</span>
-                <span v-if="step.remarks"> · {{ step.remarks }}</span>
-              </p>
-            </li>
-          </ol>
+          <!-- CR and Onboarding: this record's own history, one table row per step. -->
+          <div v-if="entry.history_rows?.length" class="overflow-x-auto">
+            <table class="w-full text-left text-p-sm">
+              <thead class="text-p-xs text-app-text-muted">
+                <tr>
+                  <th class="py-1.5 pr-4 font-medium">Status</th>
+                  <th class="py-1.5 pr-4 font-medium">Date</th>
+                  <th class="py-1.5 pr-4 font-medium">Assigned To</th>
+                  <th class="py-1.5 pr-4 font-medium">Forwarded By</th>
+                  <th class="py-1.5 font-medium">Reason / Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(step, si) in entry.history_rows" :key="si" class="border-t border-app-border">
+                  <td class="py-1.5 pr-4"><DocStatusBadge v-if="step.status" :status="step.status" /><template v-else>-</template></td>
+                  <td class="py-1.5 pr-4">{{ formatDatetime(step.forwarded_on) || formatDatetime(step.action_on) || '-' }}</td>
+                  <td class="py-1.5 pr-4">{{ step.assign_to || '-' }}</td>
+                  <td class="py-1.5 pr-4">{{ step.forwarded_by || '-' }}</td>
+                  <td class="py-1.5">{{ [step.reason_for_forwarding, step.remarks].filter(Boolean).join(' · ') || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <dl v-if="entry.interview_round_detail" class="grid grid-cols-2 gap-x-4 gap-y-1 text-p-sm sm:grid-cols-4">
             <div v-for="row in roundRows(entry.interview_round_detail)" :key="row.label">
@@ -98,22 +178,6 @@
             </table>
           </div>
 
-          <div v-if="entry.job_application_count?.length" class="overflow-x-auto">
-            <table class="w-full text-left text-p-sm">
-              <thead class="text-p-xs text-app-text-muted">
-                <tr><th class="py-1 pr-4 font-medium">Date</th><th class="py-1 pr-4 font-medium">Small</th><th class="py-1 pr-4 font-medium">Large</th><th class="py-1 font-medium">Total</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, i) in entry.job_application_count" :key="i" class="border-t border-app-border">
-                  <td class="py-1 pr-4">{{ formatDate(row.date) }}</td>
-                  <td class="py-1 pr-4">{{ row.small_application ?? 0 }}</td>
-                  <td class="py-1 pr-4">{{ row.large_application ?? 0 }}</td>
-                  <td class="py-1 font-medium">{{ row.total_application ?? 0 }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
           <div v-if="entry.session_details?.length" class="flex flex-col gap-1 text-p-sm">
             <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Sessions</p>
             <p v-for="(s, i) in entry.session_details" :key="i" class="text-app-text">
@@ -142,13 +206,26 @@
             </p>
           </div>
 
-          <div v-if="entry.forward_events?.length" class="flex flex-col gap-1 text-p-sm">
-            <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">Forward History</p>
-            <ol class="ml-4 list-decimal text-app-text">
-              <li v-for="(e, i) in entry.forward_events" :key="i">
-                Forwarded to <b>{{ e.department || '-' }} Dept.</b> - {{ formatForwardEventTime(e.timestamp) }}
-              </li>
-            </ol>
+          <div v-if="entry.forward_events?.length" class="overflow-x-auto">
+            <p class="mb-1 text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">
+              Forward History · {{ entry.forward_events.length }} {{ entry.forward_events.length === 1 ? 'forward' : 'forwards' }}
+            </p>
+            <table class="w-full text-left text-p-sm">
+              <thead class="text-p-xs text-app-text-muted">
+                <tr>
+                  <th class="py-1.5 pr-4 font-medium">#</th>
+                  <th class="py-1.5 pr-4 font-medium">Forwarded To</th>
+                  <th class="py-1.5 font-medium">Forwarded On</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(e, i) in entry.forward_events" :key="i" class="border-t border-app-border">
+                  <td class="py-1.5 pr-4">{{ i + 1 }}</td>
+                  <td class="py-1.5 pr-4">{{ e.department || '-' }} Dept.</td>
+                  <td class="py-1.5">{{ formatForwardEventTime(e.timestamp) }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -185,6 +262,8 @@ const props = defineProps({
   exclude: { type: Array, default: () => [] },
   // False on pages that don't show interviews (Marketing) - they aren't fetched at all.
   includeInterviews: { type: Boolean, default: true },
+  // Free-text filter over the rows shown (ids, status, people, dates, companies).
+  search: { type: String, default: '' },
 })
 
 const customer = computed(() => props.customer || props.detail?.values.customer || '')
@@ -207,12 +286,40 @@ watch(
   { immediate: true },
 )
 
+const needle = computed(() => props.search.trim().toLowerCase())
+const matches = (entry) => !needle.value || JSON.stringify(entry).toLowerCase().includes(needle.value)
+
 const groups = computed(() => {
   const departments = history.resource.data?.departments || {}
   return Object.entries(departments)
-    .filter(([name, entries]) => entries?.length && (!props.departments || props.departments.includes(name)) && !props.exclude.includes(name))
-    .map(([department, entries]) => ({ department, entries }))
+    .filter(([name, entries]) => entries?.length && name !== 'Marketing' && (!props.departments || props.departments.includes(name)) && !props.exclude.includes(name))
+    .map(([department, entries]) => ({ department, entries: entries.filter(matches) }))
+    .filter((g) => g.entries.length)
 })
+
+const marketingEntries = computed(() => {
+  if (props.exclude.includes('Marketing') || (props.departments && !props.departments.includes('Marketing'))) return []
+  return (history.resource.data?.departments?.Marketing || []).filter(matches)
+})
+const forwardRows = computed(() =>
+  marketingEntries.value
+    .flatMap((e) => (e.forward_events || []).map((f) => ({ ...f, id: e.id })))
+    .sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp))),
+)
+const marketingSubtitle = computed(() => {
+  const n = marketingEntries.value.length
+  const parts = [`${n} ${n === 1 ? 'record' : 'records'}`]
+  const meta = history.resource.data?.interview_meta
+  if (meta) parts.push(`${meta.total} ${meta.total === 1 ? 'interview' : 'interviews'}`)
+  return parts.join(' · ')
+})
+// A row's total can be stored empty - fall back to small + large (as the dashboard does).
+const rowTotal = (r) => Number(r.total_application) || Number(r.small_application || 0) + Number(r.large_application || 0)
+const sumApps = (entry, key) => (entry.job_application_count || []).reduce((t, r) => t + (key === 'total_application' ? rowTotal(r) : Number(r[key]) || 0), 0)
+const lastForward = (entry) => {
+  const last = entry.forward_events?.[entry.forward_events.length - 1]
+  return last ? formatForwardEventTime(last.timestamp) : '-'
+}
 
 const hasMoreInterviews = computed(() => {
   const list = history.resource.data?.departments?.Interview || []
@@ -232,6 +339,17 @@ function formatForwardEventTime(value) {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return String(value)
   return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+// Interview card counts its rounds; the rest just count records.
+function groupSubtitle(group) {
+  const n = group.entries.length
+  const records = `${n} ${n === 1 ? 'record' : 'records'}`
+  if (group.department === 'Interview') {
+    const rounds = group.entries.reduce((sum, e) => sum + (e.interview_rounds_table?.length || 0), 0)
+    return `${records} · ${rounds} ${rounds === 1 ? 'round' : 'rounds'}`
+  }
+  return records
 }
 
 function roundRows(r) {

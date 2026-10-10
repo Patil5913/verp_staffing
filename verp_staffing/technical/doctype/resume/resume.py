@@ -19,6 +19,9 @@ class Resume(Document):
         self.name = generate_name_series("Resume", customer_name)
 
     def validate(self):
+        from verp_staffing.crm.api.helpers import validate_assign_to_change
+
+        validate_assign_to_change(self, "Resume")
         self.validate_resume_submission()
         self.handle_resume_status()
 

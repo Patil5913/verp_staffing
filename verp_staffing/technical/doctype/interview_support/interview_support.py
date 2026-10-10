@@ -39,6 +39,9 @@ class InterviewSupport(Document):
         self.name = generate_name_series("Interview Support", customer_name)
 
     def validate(self):
+        from verp_staffing.crm.api.helpers import validate_assign_to_change
+
+        validate_assign_to_change(self, "Interview Support")
         set_document_reference_titles(self.proof_of_work)
         self.validate_completed_lock()
         self.stamp_updated_document_rows()

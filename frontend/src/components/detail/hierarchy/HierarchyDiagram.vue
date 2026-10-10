@@ -41,16 +41,19 @@
           :height="H"
           rx="12"
           fill="none"
-          :stroke="node.isStart ? color(node.level) : 'var(--app-border)'"
-          :stroke-width="node.isStart ? 2 : 1"
+          :stroke="node.isStart || node.id === highlight ? color(node.level) : 'var(--app-border)'"
+          :stroke-width="node.isStart || node.id === highlight ? 2 : 1"
         />
         <rect :x="node.x - W / 2" :y="node.y - H / 2" width="6" :height="H" rx="3" :fill="color(node.level)" />
         <text :x="node.x - W / 2 + 20" :y="node.y - 2" font-size="13" font-weight="600" class="fill-app-text">
-          {{ truncate(node.id) }}
+          {{ truncate(labels[node.id]?.title || node.id) }}
         </text>
         <text :x="node.x - W / 2 + 20" :y="node.y + 13" font-size="10" class="fill-app-text-muted">
-          {{ node.isStart ? 'Top level' : `Level ${node.level + 1}` }} ·
-          {{ node.reports ? `${node.reports} report${node.reports > 1 ? 's' : ''}` : 'No reports' }}
+          <template v-if="labels[node.id]">{{ labels[node.id].subtitle }}</template>
+          <template v-else>
+            {{ node.isStart ? 'Top level' : `Level ${node.level + 1}` }} ·
+            {{ node.reports ? `${node.reports} report${node.reports > 1 ? 's' : ''}` : 'No reports' }}
+          </template>
         </text>
       </g>
     </svg>
@@ -69,6 +72,10 @@ const PALETTE = ['#2563eb', '#0891b2', '#059669', '#d97706', '#9333ea', '#db2777
 const props = defineProps({
   // Parsed role_hierarchy_json: [{ parent_role, child_roles: [] }, ...]
   data: { type: Array, default: () => [] },
+  // Optional: node id -> { title, subtitle } to show instead of the id /
+  // level text, and a node id to outline (e.g. employees instead of roles).
+  labels: { type: Object, default: () => ({}) },
+  highlight: { type: String, default: '' },
 })
 
 const result = computed(() => computeHierarchyDiagram(props.data))
