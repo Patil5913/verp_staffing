@@ -329,6 +329,16 @@ def _pending_interview_feedback(customer_name):
     return rounds
 
 
+def _check_round_feedback_is_new(round_name, feedback):
+    """A round's feedback is written once, and never blank - the same rule as RUC, Interview Support and the
+    JDC / Training feedback below. A portal user must not be able to overwrite or wipe an earlier answer."""
+    if not feedback or not str(feedback).strip():
+        frappe.throw(_("Feedback cannot be empty"))
+    existing = frappe.db.get_value("Interview Round", round_name, "feedback")
+    if existing and str(existing).strip():
+        frappe.throw(_("Feedback already submitted for this round"))
+
+
 @frappe.whitelist()
 def save_interview_feedback(feedback_data):
     if not feedback_data:
@@ -372,6 +382,8 @@ def save_interview_feedback(feedback_data):
 
             if not allowed:
                 frappe.throw(_("Unauthorized"))
+
+            _check_round_feedback_is_new(round_name, feedback)
 
             frappe.db.set_value(
                 "Interview Round",
@@ -1085,6 +1097,7 @@ def save_customer_feedback(doctype, docname, feedback, session_row_name=None):
         frappe.throw(_("Unauthorized"))
 
     if doctype == "Interview Round":
+        _check_round_feedback_is_new(docname, feedback)
         frappe.db.set_value(
             "Interview Round", docname, "feedback", feedback, update_modified=False
         )

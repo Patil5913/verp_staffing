@@ -239,8 +239,11 @@ function compareValues(actual, op, expected) {
   const numA = Number(actual)
   const numE = Number(expected)
   const bothNumeric = actual !== '' && expected !== '' && !Number.isNaN(numA) && !Number.isNaN(numE)
-  const dateA = Date.parse(actual)
-  const dateE = Date.parse(expected)
+  // Only ISO-style dates are compared as dates. Date.parse alone is far too forgiving - it reads
+  // "Bank 2" or "Account 12" as a day in 2001 - which made `name=Account 1` miss "Account 12".
+  const isoDate = (v) => /^\d{4}-\d{1,2}-\d{1,2}/.test(String(v))
+  const dateA = isoDate(actual) ? Date.parse(actual) : NaN
+  const dateE = isoDate(expected) ? Date.parse(expected) : NaN
   const bothDate = !bothNumeric && !Number.isNaN(dateA) && !Number.isNaN(dateE)
   const cmp = bothNumeric ? numA - numE : bothDate ? dateA - dateE : String(actual).localeCompare(String(expected))
   const exact = bothNumeric || bothDate

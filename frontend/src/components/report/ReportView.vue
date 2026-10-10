@@ -56,6 +56,7 @@
 // presentation config (reportConfigs.js). Financial statements, ledgers,
 // funnels and target tracking all go through here; only the config differs.
 import { computed } from 'vue'
+import DOMPurify from 'dompurify'
 import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
@@ -86,7 +87,8 @@ const currency = computed(() => {
 
 const message = computed(() => {
   const m = result.value?.message
-  return Array.isArray(m) ? m.join('<br>') : m || ''
+  // A report's message may embed record values and is shown as HTML: clean it first.
+  return DOMPurify.sanitize(Array.isArray(m) ? m.join('<br>') : m || '')
 })
 
 const TONES = { green: 'text-green-600', red: 'text-red-600', orange: 'text-orange-600', blue: 'text-app-text' }

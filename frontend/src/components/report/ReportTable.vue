@@ -153,8 +153,10 @@ const filtered = computed(() => {
   if (!sortKey.value) return base
   const col = props.columns.find((c) => c.fieldname === sortKey.value)
   const dir = sortDir.value === 'asc' ? 1 : -1
-  // Summary rows (opening / total / closing) stay pinned where the report put them.
-  return [...base].sort((a, b) => {
+  // Summary rows (opening / total / closing) and spacer rows stay pinned where the report put them;
+  // only the data rows between them are reordered.
+  const pinned = (r) => !r || !Object.keys(r).length || r.is_total_row || r.is_opening_row || r.is_closing_row
+  const sorted = base.filter((r) => !pinned(r)).sort((a, b) => {
     const x = a[sortKey.value]
     const y = b[sortKey.value]
     if (x === y) return 0
@@ -162,6 +164,8 @@ const filtered = computed(() => {
     if (y === '' || y == null) return -1
     return (isNumeric(col) ? Number(x) - Number(y) : String(x).localeCompare(String(y), undefined, { numeric: true })) * dir
   })
+  let next = 0
+  return base.map((r) => (pinned(r) ? r : sorted[next++]))
 })
 const visibleRows = computed(() => filtered.value.slice(0, limit.value))
 const hiddenCount = computed(() => Math.max(filtered.value.length - limit.value, 0))

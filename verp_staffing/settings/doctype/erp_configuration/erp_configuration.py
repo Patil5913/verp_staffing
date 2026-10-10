@@ -63,6 +63,10 @@ class ERPConfiguration(Document):
 
 		hours, minutes = [int(part) for part in value.split(":")]
 
+		# the settings page lets agreements stay open for up to 99 h 59 min (e.g. "72:00"), so hours are not capped at 23
+		if minutes > 59:
+			frappe.throw("Invalid time. Minutes must be 00-59.")
+
 		if hours == 0 and minutes == 0:
 			frappe.throw("Expiry duration must be greater than 00:00.")
    

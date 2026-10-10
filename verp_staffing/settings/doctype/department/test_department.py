@@ -330,7 +330,7 @@ class TestDepartmentRoleRemovalProtection(TestDepartmentBase):
                 _resolved["role_b"],
             ],
         )
-        user = _ensure_user()
+        user = _ensure_user("dept_multi_role")
         employee = frappe.get_doc(
             {
                 "doctype": "Employee",

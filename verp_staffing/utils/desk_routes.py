@@ -30,7 +30,7 @@ def get_doctype_slugs() -> dict:
 def spa_path(doctype: str, name: str | None = None) -> str:
     from urllib.parse import quote
 
-    path = f"/verp/{quote(doctype)}"
+    path = f"/verp/{quote(doctype, safe='')}"
     return f"{path}/{quote(str(name), safe='')}" if name else path
 
 
@@ -73,17 +73,17 @@ def desk_path_to_spa(path: str) -> str | None:
     if first in PAGES:
         return PAGES[first]
     if first == "query-report" and len(parts) > 1:
-        return f"/verp/report/{quote(parts[1])}"
+        return f"/verp/report/{quote(parts[1], safe='')}"
     if first in SINGLES:
-        return f"/verp/settings/{quote(SINGLES[first])}"
+        return f"/verp/settings/{quote(SINGLES[first], safe='')}"
 
     doctype = get_doctype_slugs().get(first)
     if not doctype:
         return "/verp"
     second = parts[1] if len(parts) > 1 else ""
     if not second or second == "view" or second == "new" or second.startswith("new-"):
-        return f"/verp/{quote(doctype)}/view/tree" if second == "view" and parts[2:3] == ["tree"] else f"/verp/{quote(doctype)}"
-    return f"/verp/{quote(doctype)}/{quote(second, safe='')}"
+        return f"/verp/{quote(doctype, safe='')}/view/tree" if second == "view" and parts[2:3] == ["tree"] else f"/verp/{quote(doctype, safe='')}"
+    return f"/verp/{quote(doctype, safe='')}/{quote(second, safe='')}"
 
 
 def redirect_desk_to_spa():

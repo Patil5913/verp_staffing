@@ -38,6 +38,7 @@ import { call, LoadingIndicator, TextEditor } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
 import { useResource } from '@/composables/list/useResource'
+import { notify } from '@/utils/common/notify'
 
 // The only formatting an agreement's rich-text field offers: bold, italic, underline,
 // strike-through, font colour, ordered / unordered lists, table controls, left / right /
@@ -96,6 +97,8 @@ watch(template, async (name) => {
       seen.add(key)
       return true
     })
+  } catch {
+    notify.error('Could not load that template.')
   } finally {
     loadingTemplate.value = false
   }

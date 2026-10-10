@@ -12,6 +12,15 @@ class Agreement(Document):
 	pass
 
 
+def _px(value, default):
+    """A coordinate from the template's JSON as a plain number, since it is written straight into a style attribute."""
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return default
+    return default if n != n or n in (float("inf"), float("-inf")) else n
+
+
 def render_html_from_pdf_template(template_doc, data_dict):
     """
     Render pages from template_doc.fields_json which contains placed fields.
@@ -27,7 +36,7 @@ def render_html_from_pdf_template(template_doc, data_dict):
 
     # Build full HTML: for each page produce a div with background image (original file URL)
     # Use the uploaded file URL accessible via template_doc.upload_pdf_template
-    pdf_url = template_doc.upload_pdf_template
+    pdf_url = frappe.utils.escape_html(template_doc.upload_pdf_template or "")
     # Note: Using <img src="data:image/..."> would be heavier. We use absolute file URL.
     # We'll render one <div> per page and overlay fields using absolute positioning using pixel dimensions stored in fields.
 
@@ -48,10 +57,10 @@ def render_html_from_pdf_template(template_doc, data_dict):
             val = data_dict.get(key, "")
 
             # use style absolute position using px assuming renderer will use same image natural width
-            left = f.get("x", 0)
-            top = f.get("y", 0)
-            width = f.get("width", 150)
-            height = f.get("height", 30)
+            left = _px(f.get("x"), 0)
+            top = _px(f.get("y"), 0)
+            width = _px(f.get("width"), 150)
+            height = _px(f.get("height"), 30)
             label = f.get("label") or key
 
             # Safely escape value
@@ -108,6 +117,7 @@ def render_preview(template, data):
     """
     data_dict = json.loads(data) if isinstance(data, str) else data
     tpl = frappe.get_doc("Pdf Agreement Template", template)
+    tpl.check_permission("read")
 
     html = render_html_from_pdf_template(tpl, data_dict)
     pdf = get_pdf(html)
@@ -126,6 +136,9 @@ def render_preview(template, data):
 @frappe.whitelist()
 def create_and_send(sales_order, template, data):
     data_dict = json.loads(data) if isinstance(data, str) else data
+
+    frappe.has_permission("Agreement", "create", throw=True)
+    frappe.has_permission("Sales Order", "read", sales_order, throw=True)
 
     # Prevent duplicates
     if frappe.db.exists("Agreement", {"sales_order": sales_order}):
@@ -168,4 +181,5 @@ def create_and_send(sales_order, template, data):
 @frappe.whitelist()
 def load_template_fields(template_name):
     tpl = frappe.get_doc("Pdf Agreement Template", template_name)
+    tpl.check_permission("read")
     return tpl.fields_json or "[]"

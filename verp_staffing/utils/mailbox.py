@@ -411,9 +411,8 @@ def mailbox_action(names, action: str):
     """Apply an action to one or more messages (a list, or a JSON string of one)."""
     if action not in BULK_ACTIONS:
         frappe.throw(_("Unknown action: {0}").format(action))
-    names = frappe.parse_json(names) if isinstance(names, str) else names
     if isinstance(names, str):
-        names = [names]
+        names = frappe.parse_json(names) if names.strip().startswith("[") else [names]
 
     done = 0
     for name in names or []:

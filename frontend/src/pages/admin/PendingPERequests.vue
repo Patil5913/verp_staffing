@@ -195,6 +195,7 @@
 </template>
 
 <script setup>
+import DOMPurify from 'dompurify'
 import SearchSyntaxPopover from '@/components/common/SearchSyntaxPopover.vue'
 import AppSearchInput from '@/components/ui/AppSearchInput.vue'
 import AppInput from '@/components/ui/AppInput.vue'
@@ -388,7 +389,7 @@ const chargesAccountFilters = computed(() => ({
   company: verifyingRow.value?.company,
 }))
 const verifyingRow = ref(null)
-const verifyConfirmHtml = computed(() => (verifyingRow.value ? paymentEntrySubmitConfirm({ values: verifyingRow.value }) : ''))
+const verifyConfirmHtml = computed(() => (verifyingRow.value ? DOMPurify.sanitize(paymentEntrySubmitConfirm({ values: verifyingRow.value })) : ''))
 const paidFromFilters = computed(() =>
   verifyingRow.value
     ? paidAccountFilterFor({

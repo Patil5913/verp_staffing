@@ -15,7 +15,7 @@
             </div>
             <div class="min-w-0 flex-1 break-words pt-1 [overflow-wrap:anywhere]">
               <h2 class="text-p-lg font-medium text-app-text">{{ state.title }}</h2>
-              <div v-if="state.html" class="mt-1 text-p-sm text-app-text-muted [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_b]:text-app-text" v-html="state.html" />
+              <div v-if="state.html" class="mt-1 text-p-sm text-app-text-muted [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_b]:text-app-text" v-html="safeHtml" />
               <p v-else class="mt-1 text-p-sm text-app-text-muted">{{ state.message }}</p>
             </div>
           </div>
@@ -38,11 +38,15 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import DOMPurify from 'dompurify'
 import { FeatherIcon } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useConfirmDialogState } from '@/utils/common/confirmDialog'
 
 const { state, settle, onSaveClick } = useConfirmDialogState()
+// Callers pass HTML that can embed record values: cleaned before it is rendered.
+const safeHtml = computed(() => DOMPurify.sanitize(state.html || ''))
 </script>
 
 <style scoped>

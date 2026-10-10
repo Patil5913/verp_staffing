@@ -13,7 +13,7 @@
     </div>
     <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
       <button v-if="filters.length > LIMIT" type="button" class="text-p-sm font-medium text-app-primary hover:underline" @click="expanded = !expanded">
-        {{ expanded ? 'Fewer filters' : `More filters (${filters.length - LIMIT})` }}
+        {{ expanded ? 'Fewer filters' : `More filters (${filters.length - shown.length})` }}
       </button>
       <span v-else />
       <div class="flex gap-2">
@@ -44,15 +44,13 @@ const emit = defineEmits(['change', 'run', 'reset'])
 
 const expanded = ref(false)
 // Required filters and the first few always show; the rest fold away.
-const shown = computed(() => (expanded.value || props.filters.length <= LIMIT ? props.filters : props.filters.slice(0, LIMIT)))
+const shown = computed(() => (expanded.value || props.filters.length <= LIMIT ? props.filters : props.filters.filter((f, i) => i < LIMIT || f.reqd)))
 
 function controlField(f) {
   return {
     ...f,
     // A Link whose target is another filter's value (GL's Party follows Party Type).
     options: f.options_from ? props.values[f.options_from] || f.options : f.options,
-    label: f.reqd ? `${f.label} *` : f.label,
-    fieldtype: f.fieldtype,
   }
 }
 

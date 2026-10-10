@@ -271,22 +271,21 @@ class TestRequiredFieldValidation(InterviewTestBase):
         with self.assertRaises((frappe.MandatoryError, frappe.ValidationError)):
             self._make(role=None)
 
-    def test_missing_status_rejected(self):
-        with self.assertRaises(
-            (frappe.MandatoryError, frappe.ValidationError, frappe.LinkValidationError)
-        ):
-            self._make(status=None)
+    def test_status_without_rounds_is_what_was_given(self):
+        """With no rounds nothing derives the status, so it stays as set."""
+        doc = self._make(rounds=[])
+        self.assertEqual(doc.status, self.resolved["status"])
 
-    def test_nonexistent_status_rejected(self):
-        with self.assertRaises((frappe.ValidationError, frappe.LinkValidationError)):
-            self._make(status="__ghost_status__")
+    def test_status_follows_the_last_round(self):
+        """The Interview's status always mirrors its latest round; a round with no status is Scheduled."""
+        doc = self._make(rounds=[self.make_round(round_no=1)])
+        self.assertEqual(doc.status, "Scheduled")
 
     def test_all_required_fields_present_succeeds(self):
         doc = self._make()
         self.assertTrue(doc.name)
         self.assertEqual(doc.company, TEST_COMPANY)
         self.assertEqual(doc.role, TEST_ROLE)
-        self.assertEqual(doc.status, self.resolved["status"])
 
 
 # ===========================================================================
@@ -318,23 +317,34 @@ class TestInterviewRoundsValidation(InterviewTestBase):
         doc = self._make(rounds=rounds)
         self.assertEqual(len(doc.interview_rounds_table), 3)
 
-    def test_follow_up_negative_value_rejected(self):
-        with self.assertRaises(frappe.ValidationError):
-            self._make(rounds=[self.make_round(follow_up=-1)])
-
-    def test_follow_up_skips_value_rejected(self):
-        """follow_up jumping by 2 must be rejected."""
+    def test_follow_up_on_new_rows_is_not_checked(self):
+        """Follow Up only depends on a row's own saved value, so new rows may start anywhere."""
         rounds = [
             self.make_round(round_no=1, follow_up=0),
-            self.make_round(round_no=2, follow_up=2),  # should be 1
+            self.make_round(round_no=2, follow_up=2),
         ]
-        with self.assertRaises(frappe.ValidationError):
-            self._make(rounds=rounds)
+        doc = self._make(rounds=rounds)
+        self.assertEqual([r.follow_up for r in doc.interview_rounds_table], [0, 2])
 
-    def test_round_numbers_must_be_sequential(self):
-        """round field must match idx (1, 2, 3 …)."""
+    def test_follow_up_may_stay_or_go_up_by_one(self):
+        doc = self._make(rounds=[self.make_round(follow_up=1)])
+        doc.interview_rounds_table[0].follow_up = 1
+        doc.save(ignore_permissions=True)
+        doc.interview_rounds_table[0].follow_up = 2
+        doc.save(ignore_permissions=True)
+        self.assertEqual(doc.interview_rounds_table[0].follow_up, 2)
+
+    def test_follow_up_skipping_a_value_is_rejected_on_saved_row(self):
+        doc = self._make(rounds=[self.make_round(follow_up=0)])
+        doc.interview_rounds_table[0].follow_up = 2  # should be at most 1
         with self.assertRaises(frappe.ValidationError):
-            self._make(rounds=[self.make_round(round_no=5)])  # should be 1
+            doc.save(ignore_permissions=True)
+
+    def test_follow_up_cannot_go_down_on_saved_row(self):
+        doc = self._make(rounds=[self.make_round(follow_up=2)])
+        doc.interview_rounds_table[0].follow_up = 1
+        with self.assertRaises(frappe.ValidationError):
+            doc.save(ignore_permissions=True)
 
 
 # ===========================================================================

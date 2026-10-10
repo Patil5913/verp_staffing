@@ -142,7 +142,10 @@ async function onConfirmRemove() {
   } else {
     notify.success('Sample data removed.')
   }
-  removed.value = true
-  emit('removed')
+  // Only a clean run switches the feature off; leftovers (errors, records needing review) can be retried.
+  if (res.is_sample_data_removed) {
+    removed.value = true
+    emit('removed')
+  }
 }
 </script>

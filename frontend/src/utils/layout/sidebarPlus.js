@@ -27,7 +27,6 @@ export const NO_PLUS_BUTTON_DISPLAY_DOCTYPES = new Set([
   'Interview Support',
   'Training',
   'Bank Account Type',
-  'Bank Account Subtype',
   'Sidebar Master',
   'Email Queue',
   'Erp Configuration',

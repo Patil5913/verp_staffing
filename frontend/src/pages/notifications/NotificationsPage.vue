@@ -69,6 +69,7 @@ import AppBadge from '@/components/ui/AppBadge.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 import AppTabs from '@/components/ui/AppTabs.vue'
 import { useNotifications } from '@/composables/layout/useNotifications'
+import { notify } from '@/utils/common/notify'
 
 const router = useRouter()
 const bell = useNotifications()
@@ -93,6 +94,8 @@ async function load() {
     const res = await call('verp_staffing.utils.notification_read.get_logs', { limit: limit.value })
     items.value = res?.notification_logs || []
     canLoadMore.value = items.value.length >= limit.value
+  } catch {
+    notify.error('Could not load your notifications.')
   } finally {
     loading.value = false
   }

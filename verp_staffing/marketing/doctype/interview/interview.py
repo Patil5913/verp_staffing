@@ -331,13 +331,16 @@ def update_interview_status_from_kanban(
             ).format(last_round.status)
         )
 
-    if status in CANCELLED_LIKE_STATUSES:
-        if not cancelled_by or not reason_of_cancel:
-            frappe.throw(
-                _("'Cancelled By' and 'Reason of Cancel' are required for this status.")
-            )
-        last_round.cancelled_by = cancelled_by
-        last_round.reason_of_cancel = reason_of_cancel
+    if status in CANCELLED_LIKE_STATUSES and (not cancelled_by or not reason_of_cancel):
+        frappe.throw(
+            _("'Cancelled By' and 'Reason of Cancel' are required for this status.")
+        )
+    # A rejection does not demand a reason, but the board asks for one: keep it rather than drop it.
+    if status in CANCELLED_LIKE_STATUSES or status == "Rejected":
+        if cancelled_by:
+            last_round.cancelled_by = cancelled_by
+        if reason_of_cancel:
+            last_round.reason_of_cancel = reason_of_cancel
 
     last_round.status = status
     doc.save()

@@ -1,12 +1,82 @@
 # Copyright (c) 2026, Vrugle and Contributors
 # See license.txt
 
+from unittest import mock
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from verp_staffing.accounts.doctype.company import company as mod
+from verp_staffing.accounts.doctype.company.company import Company
+
+
+def co(**kw):
+    return Company({"doctype": "Company", "company_name": "Acme Widgets Ltd", **kw})
+
 
 class TestCompany(FrappeTestCase):
-    pass
+    def test_abbreviation_defaults_to_initials_and_is_trimmed(self):
+        doc = co()
+        with mock.patch.object(mod.frappe.db, "exists", return_value=False):
+            doc.validate_abbr()
+        self.assertEqual(doc.abbr, "AWL")
+        doc = co(abbr="  xy  ")
+        with mock.patch.object(mod.frappe.db, "exists", return_value=False):
+            doc.validate_abbr()
+        self.assertEqual(doc.abbr, "xy")
+
+    def test_blank_or_taken_abbreviation_is_refused(self):
+        with self.assertRaises(frappe.ValidationError):
+            co(abbr="   ").validate_abbr()
+        with mock.patch.object(mod.frappe.db, "exists", return_value=True):
+            with self.assertRaises(frappe.ValidationError):
+                co(abbr="AW").validate_abbr()
+
+    def test_existing_company_chart_needs_a_source(self):
+        doc = co(create_chart_of_accounts_based_on="Existing Company", chart_of_accounts="X")
+        with self.assertRaises(frappe.ValidationError):
+            doc.validate_coa_input()
+        doc.existing_company = "Other"
+        doc.validate_coa_input()
+        self.assertIsNone(doc.chart_of_accounts)
+
+    def test_standard_template_is_the_default(self):
+        doc = co(existing_company="Other")
+        doc.validate_coa_input()
+        self.assertEqual(doc.create_chart_of_accounts_based_on, "Standard Template")
+        self.assertEqual(doc.chart_of_accounts, "India - Chart of Accounts")
+        self.assertIsNone(doc.existing_company)
+
+    def test_a_parent_company_forces_its_chart(self):
+        doc = co(parent_company="Group")
+        doc.set_chart_of_accounts()
+        self.assertEqual((doc.create_chart_of_accounts_based_on, doc.existing_company), ("Existing Company", "Group"))
+
+    def test_parent_must_be_a_group(self):
+        with mock.patch.object(mod.frappe, "get_cached_value", return_value=0):
+            with self.assertRaises(frappe.ValidationError):
+                co(parent_company="P").validate_parent_company()
+        with mock.patch.object(mod.frappe, "get_cached_value", return_value=1):
+            co(parent_company="P").validate_parent_company()
+        co().validate_parent_company()
+
+    def test_default_company_comes_from_erp_configuration(self):
+        with mock.patch.object(mod.frappe, "get_cached_value", return_value="Acme"):
+            self.assertEqual(mod.fetch_default_company(), "Acme")
+        with mock.patch.object(mod.frappe, "get_cached_value", return_value=None):
+            with self.assertRaises(frappe.ValidationError):
+                mod.fetch_default_company()
+
+    def test_company_currency_is_cached_per_company(self):
+        old = frappe.flags.company_currency
+        frappe.flags.company_currency = None
+        try:
+            with mock.patch.object(mod.frappe, "get_cached_value", return_value="INR") as g:
+                self.assertEqual(mod.get_company_currency("A"), "INR")
+                self.assertEqual(mod.get_company_currency("A"), "INR")
+                self.assertEqual(g.call_count, 1)
+        finally:
+            frappe.flags.company_currency = old
 
 
 # utils for test cases

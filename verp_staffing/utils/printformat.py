@@ -206,6 +206,7 @@ def remove_other_sales_invoice_print_formats():
     others = frappe.get_all(
         "Print Format",
         filters={
+            "doc_type": "Sales Invoice",  # never another doctype's formats
             "name": ["!=", SALES_INVOICE_PRINT_FORMAT],
         },
         fields=["name", "standard"],

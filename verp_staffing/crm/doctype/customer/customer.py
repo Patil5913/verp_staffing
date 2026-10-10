@@ -374,18 +374,6 @@ def get_onboarding_credentials(customer):
 
     return credentials if credentials else {"email": None, "password": None}
 
-@frappe.whitelist()
-def update_company_percentage(lead_name, company_percentage):
-
-    lead = frappe.get_doc("Lead Detail Form", lead_name)
-
-    lead.company_percentage = company_percentage
-
-    lead.save(ignore_permissions=True)
-
-    return "updated"
-
-
 @frappe.whitelist(allow_guest=True)
 def generate_token(email: str):
     import hmac, hashlib, base64

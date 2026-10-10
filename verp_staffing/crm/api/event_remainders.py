@@ -47,37 +47,37 @@ def send_event_reminders():
 
 @frappe.whitelist()
 def sendOpportunityClosingDateReminder():
+    from verp_staffing.crm.api.helpers import get_user
+
     now = now_datetime()
     closing_window_end = add_to_date(now, days=1)
 
-    # Fetch opportunities closing between now → now+1 day
+    # Fetch open opportunities closing between now → now+1 day
     opportunities = frappe.get_all(
-        "CRM Opportunity",
+        "Opportunity",
         filters={
             "expected_closing_date": ["between", [now.date(), closing_window_end.date()]],
-            "status": ["!=", ["Lost", "Converted"]],
+            "status": ["not in", ["Lost", "Converted"]],
         },
-        fields=["name", "name", "expected_closing_date", "assigned_to"],
+        fields=["name", "name1", "expected_closing_date", "opportunity_owner"],
     )
 
-    if not opportunities:
-        return
-
     for opp in opportunities:
-
-        if not opp.assigned_to:
+        # The owner is an Employee; the notification goes to their user.
+        user = get_user(opp.opportunity_owner)
+        if not user:
             continue
 
-        # Notification Message
-        message = f"⏰ Opportunity Closing Soon: <b>{opp.opportunity_name}</b> on {opp.expected_closing_date}"
+        title = opp.name1 or opp.name
+        message = f"⏰ Opportunity Closing Soon: <b>{title}</b> on {opp.expected_closing_date}"
 
         frappe.get_doc(
             {
                 "doctype": "Notification Log",
-                "subject": f"Opportunity Closing Soon: {opp.opportunity_name}",
+                "subject": f"Opportunity Closing Soon: {title}",
                 "email_content": message,
-                "for_user": opp.assigned_to,
-                "document_type": "CRM Opportunity",
+                "for_user": user,
+                "document_type": "Opportunity",
                 "document_name": opp.name,
                 "type": "Alert",
             }
@@ -86,5 +86,5 @@ def sendOpportunityClosingDateReminder():
         frappe.publish_realtime(
             event="notification",
             message={"type": "Alert", "message": message},
-            user=opp.assigned_to,
+            user=user,
         )

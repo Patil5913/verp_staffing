@@ -124,7 +124,7 @@ export function invoiceStatusTheme(label) {
 
 const LIST_STATUS_OVERRIDES = {
   'Payment Entry': (row) =>
-    row.payment_term_row ? { label: row.verification_status, theme: statusBadgeTheme(row.verification_status) } : null,
+    row.payment_term_row ? { label: row.verification_status, theme: verificationStatusTheme(row.verification_status) } : null,
   'Sales Invoice': (row) => {
     const label = computeInvoiceStatus(row)
     return { label, theme: invoiceStatusTheme(label) }

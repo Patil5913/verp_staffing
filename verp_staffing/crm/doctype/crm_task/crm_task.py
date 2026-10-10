@@ -2,7 +2,7 @@ from __future__ import annotations
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.utils import escape_html, now_datetime
 
 
 class CRMTask(Document):
@@ -51,7 +51,7 @@ def send_assignment_notification(doc):
 
         # Notification Message
     message = f"""
-    ⏰ Task Assigned: <b>{doc.description}</b> on {doc.date}<br><br>
+    ⏰ Task Assigned: <b>{escape_html(doc.description or '')}</b> on {doc.date}<br><br>
     <a href="/verp/CRM%20Task/{doc.name}" target="_blank">
     👉 Open Task!!
     </a>
@@ -71,6 +71,6 @@ def send_assignment_notification(doc):
 
     frappe.publish_realtime(
         event="msgprint",
-        message=f"You have been assigned a new Task: <b>{doc.description}</b>",
+        message=f"You have been assigned a new Task: <b>{escape_html(doc.description or '')}</b>",
         user=doc.assigned_to,
     )

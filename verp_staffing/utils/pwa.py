@@ -2,7 +2,7 @@ import io
 import re
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 import frappe
 from frappe.website.page_renderers.base_renderer import BaseRenderer
@@ -103,7 +103,7 @@ def _flatten(raw, size, maskable):
 	"""Logo centred on opaque white. Maskable icons keep a 20% safe margin."""
 	logo = Image.open(io.BytesIO(raw)).convert("RGBA")
 	inner = int(size * (0.6 if maskable else 0.8))
-	logo.thumbnail((inner, inner), Image.LANCZOS)
+	logo = ImageOps.contain(logo, (inner, inner), Image.LANCZOS)  # unlike thumbnail(), also enlarges a small logo
 	canvas = Image.new("RGB", (size, size), (255, 255, 255))
 	canvas.paste(logo, ((size - logo.width) // 2, (size - logo.height) // 2), logo)
 	out = io.BytesIO()

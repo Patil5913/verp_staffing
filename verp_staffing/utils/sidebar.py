@@ -39,14 +39,14 @@ def _frontend_route(item: dict, item_kind: str) -> str:
     if item_kind == "doctype" and item.get("doctype"):
         doctype = item["doctype"]
         if doctype in SINGLE_DOCTYPES:
-            return f"/verp/settings/{quote(doctype)}"
+            return f"/verp/settings/{quote(doctype, safe='')}"
         # List is the default view for a doctype, so it gets the bare route.
-        return f"/verp/{quote(doctype)}"
+        return f"/verp/{quote(doctype, safe='')}"
 
     if item_kind == "report":
         report_name = item.get("name") or item.get("report_name")
         if report_name:
-            return f"/verp/report/{quote(report_name)}"
+            return f"/verp/report/{quote(report_name, safe='')}"
         return route
 
     if item_kind == "page":

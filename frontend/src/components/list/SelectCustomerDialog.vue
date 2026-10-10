@@ -62,23 +62,28 @@ watch(show, (open) => {
   fetchPage(true)
 })
 
+// Every restart (open, search) bumps this, so an answer to an older request is dropped instead of
+// painting stale rows over the newer search.
+let generation = 0
 async function fetchPage(reset) {
-  if (loading.value) return
   if (reset) {
+    generation++
     loaded.value = []
     start.value = 0
     hasMore.value = true
-  } else if (!hasMore.value) {
+  } else if (loading.value || !hasMore.value) {
     return
   }
+  const mine = generation
   loading.value = true
   try {
     const rows = (await call(METHOD, { txt: searchTerm.value, start: start.value, page_length: PAGE_SIZE })) || []
+    if (mine !== generation) return
     hasMore.value = rows.length === PAGE_SIZE
     start.value += rows.length
     loaded.value = [...loaded.value, ...rows]
   } finally {
-    loading.value = false
+    if (mine === generation) loading.value = false
   }
 }
 

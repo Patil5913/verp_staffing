@@ -319,9 +319,9 @@ def _href(doctype, name=None, filters=None):
     """A card's click-through target: a single doc, a doctype's whole list, or
     (with `filters`, get_list-style tuples) that list pre-scoped to exactly the
     rows the card counted - e.g. [["status", "=", "Get The Offer"]]."""
-    base = f"/{quote(doctype)}"
+    base = f"/{quote(doctype, safe='')}"
     if name:
-        return f"{base}/{quote(str(name))}"
+        return f"{base}/{quote(str(name), safe='')}"
     if filters:
         return f"{base}?filters={quote(json.dumps(filters))}"
     return base

@@ -97,6 +97,8 @@ def resolve_or_refund_cr(cr_name, action, remarks):
     if not remarks:
         frappe.throw("Reason is required")
 
+    frappe.has_permission("CR", "write", cr_name, throw=True)
+
     cr_doc = frappe.get_doc("CR", cr_name)
     latest = cr_doc._get_latest_history_row()
 

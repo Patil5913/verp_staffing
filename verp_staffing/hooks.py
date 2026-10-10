@@ -413,7 +413,6 @@ doc_events = {
         "after_insert": "verp_staffing.quota.utils.quota.on_file_after_insert",
         "on_trash": "verp_staffing.quota.utils.quota.on_file_after_delete",
     },
-    "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
     "Interview Status": {
         "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
         "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",

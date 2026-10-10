@@ -135,7 +135,7 @@ def site_space_limit(doc=None, method=None):
 
     if total_gb > limit_gb:
         frappe.enqueue(
-            "verp_staffing.vrugle_staffing_erp.utils.quota.notify_limit_exceeded",
+            "verp_staffing.quota.utils.quota.notify_limit_exceeded",
             queue="short",
             limit_gb=limit_gb,
             total_gb=total_gb,
