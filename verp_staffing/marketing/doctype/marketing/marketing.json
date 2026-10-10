@@ -29,7 +29,8 @@
   "updates_section",
   "updates_html",
   "activites_tab",
-  "open_activities_html"
+  "open_activities_html",
+  "held_by_cr"
  ],
  "fields": [
   {
@@ -150,7 +151,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending\nStarted\nCompleted\nHold\nPlaced"
+   "options": "Pending\nStarted\nCompleted\nHold\nPlaced\nBackout"
   },
   {
    "fieldname": "history_tab",
@@ -164,6 +165,15 @@
   {
    "fieldname": "column_break_jxks",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "held_by_cr",
+   "fieldtype": "Check",
+   "label": "Held By CR",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "default": "0"
   }
  ],
  "grid_page_length": 50,

@@ -278,11 +278,11 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
 
     txt = (txt or "").strip()
 
-    values = [
-        department,
-        designation,
-        current_emp,
-    ]
+    # A single role arrives as a plain string; `in %s` needs a sequence.
+    if isinstance(designation, str):
+        designation = [designation]
+
+    values = [department, tuple(designation)]
 
     query = """
         SELECT
@@ -294,8 +294,12 @@ def get_employees_by_assignment(doctype, txt, searchfield, start, page_len, filt
         WHERE
             d.department = %s
             AND d.designation in %s
-            AND NOT e.name = %s
     """
+
+    # `NOT e.name = NULL` is never true, so the exclusion only applies when there is a record to exclude.
+    if current_emp:
+        query += "            AND NOT e.name = %s\n"
+        values.append(current_emp)
 
     if txt:
         query += """

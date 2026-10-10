@@ -213,6 +213,7 @@
 //                                            // the generic one-line message
 // }
 import { computed, ref, watch } from 'vue'
+import DOMPurify from 'dompurify'
 import { useRoute } from 'vue-router'
 import { Dialog } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -261,8 +262,9 @@ const {
 // A config without either keeps exactly the previous behavior (submit
 // fires immediately; cancel shows the generic message).
 const showSubmitDialog = ref(false)
-const submitConfirmHtml = computed(() => props.config.submitConfirm?.(detail) || '')
-const cancelConfirmHtml = computed(() => props.config.cancelConfirm?.(detail) || '')
+// Rendered with v-html and built from record values, so cleaned before it reaches the page.
+const submitConfirmHtml = computed(() => DOMPurify.sanitize(props.config.submitConfirm?.(detail) || ''))
+const cancelConfirmHtml = computed(() => DOMPurify.sanitize(props.config.cancelConfirm?.(detail) || ''))
 
 // A submit that fails because the customer has no email to send the
 // candidate form/agreement to (Sales Order's pre-submit checks) offers a
@@ -360,8 +362,7 @@ const TIMELINE_TABS = {
     { key: 'activity', label: 'Activity', timeline: { types: ['task', 'event'], create: true, empty: 'No tasks or events linked to this record yet.' } },
   ],
   service: [
-    { key: 'notes', label: 'Notes', timeline: { types: ['note'], composer: true, empty: 'Nothing here yet - add the first note below.' } },
-    { key: 'updates', label: 'Updates', timeline: { types: ['update'], empty: 'No updates yet.' } },
+    { key: 'notes', label: 'Notes', timeline: { types: ['note', 'update'], composer: true, empty: 'Nothing here yet - add the first note below.' } },
     { key: 'activity', label: 'Activity', timeline: { types: ['task', 'event'], create: true, empty: 'No tasks or events linked to this record yet.' } },
   ],
 }

@@ -120,7 +120,7 @@
 // (company, fiscal year, sample data, email account + mail-server presets).
 // The router sends System Managers here while boot.setup_complete is false -
 // the same test Desk uses (frappe.is_setup_complete).
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { call, LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppInput from '@/components/ui/AppInput.vue'
@@ -157,18 +157,24 @@ const timezoneOptions = computed(() => {
 })
 const providerOptions = computed(() => Object.values(EMAIL_PROVIDERS).map((p) => p.label).sort((a, b) => a.localeCompare(b)))
 
+// Filling the form from what the site already has must not trigger the "country changed" defaults below,
+// or a time zone / currency the site already has would be replaced by the country's first one.
+let restoring = false
 onMounted(async () => {
   try {
     Object.assign(data, await call('verp_staffing.setup.wizard_api.get_wizard_data'))
     const cur = data.current || {}
+    restoring = true
     form.language = data.languages.default_language || 'English'
     form.country = cur.country || guessCountry() || ''
     form.timezone = cur.time_zone || ''
     form.currency = cur.currency || ''
     if (form.country) onCountryChange(form.country, !cur.time_zone, !cur.currency)
+    await nextTick() // the country watcher runs in this flush
   } catch (e) {
     errorMessage.value = normalizeError(e).message
   } finally {
+    restoring = false
     loading.value = false
   }
 })
@@ -188,7 +194,7 @@ function onCountryChange(country, setTimezone = true, setCurrency = true) {
   if (setTimezone) form.timezone = (info.timezones || [])[0] || form.timezone
   if (setCurrency && info.currency) form.currency = info.currency
 }
-watch(() => form.country, (c) => c && onCountryChange(c))
+watch(() => form.country, (c) => c && !restoring && onCountryChange(c))
 
 // ---- email provider detection / presets (same rules as the Desk wizard) ----
 const providerKey = (label) => label.toLowerCase().split(' ').join('_')

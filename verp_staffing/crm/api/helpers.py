@@ -1088,7 +1088,11 @@ def interview_has_permission(doc, ptype="read", user=None):
     if not marketing:
         return False
     team = get_visible_employee_names_cached(user=user)
-    return bool(team) and frappe.db.get_value("Marketing", marketing, "assign_to") in team
+    if not team:
+        return False
+    if doc.get("assign_to") in team:
+        return True
+    return frappe.db.get_value("Marketing", marketing, "assign_to") in team
 
 
 from frappe.utils import cint
@@ -1266,10 +1270,12 @@ def interview_query(user):
     users_sql = ", ".join([frappe.db.escape(u) for u in visible_users])
     conditions = [f"`tabInterview`.owner IN ({users_sql})"]
 
-    # ...and the interviews of Marketing records assigned inside their team (see interview_has_permission)
+    # ...the interviews assigned to them or their team, and those of Marketing records assigned
+    # inside their team (see interview_has_permission)
     team = get_visible_employee_names_cached(user=user)
     if team:
         team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        conditions.append(f"`tabInterview`.assign_to IN ({team_sql})")
         conditions.append(
             f"`tabInterview`.marketing_link IN (SELECT `tabMarketing`.name FROM `tabMarketing` "
             f"WHERE `tabMarketing`.assign_to IN ({team_sql}))"
@@ -1465,3 +1471,343 @@ def user_can_see_customer(customer, user=None) -> bool:
 def require_customer_access(customer, user=None):
     if not user_can_see_customer(customer, user):
         frappe.throw(frappe._("You do not have permission to view this candidate."), frappe.PermissionError)
+
+
+def _reporting_chain(employee, manager_of):
+    """employee followed by each superior above them (cycle-safe), assignee first."""
+    chain, seen, current = [], set(), employee
+    while current and current not in seen:
+        seen.add(current)
+        chain.append(current)
+        current = manager_of.get(current)
+    return chain
+
+
+def _assignee_periods(doctype, name):
+    """[(assignee, start, end)] oldest first, from the record's Version log of assign_to changes
+    (end is None for the current holder). Records never re-assigned give a single period."""
+    doc = frappe.db.get_value(doctype, name, ["assign_to", "creation"], as_dict=True)
+    changes = []
+    for v in frappe.get_all(
+        "Version",
+        filters={"ref_doctype": doctype, "docname": name},
+        fields=["creation", "data"],
+        order_by="creation asc",
+    ):
+        try:
+            data = json.loads(v.data or "{}")
+        except Exception:
+            continue
+        for field, old, new in data.get("changed") or []:
+            if field == "assign_to":
+                changes.append((v.creation, old, new))
+
+    periods, start = [], doc.creation
+    for ts, old, _new in changes:
+        if old:
+            periods.append((old, start, ts))
+        start = ts
+    periods.append((doc.assign_to, start, None))
+    return [p for p in periods if p[0]]
+
+
+@frappe.whitelist()
+def get_assignment_tree(doctype, name, department):
+    """
+    Reporting chain of a record's assignee in `department`: the assignee and
+    every superior above them (Employee Assignment Detail.assigned_to) up to
+    the department's highest level. Visible to anyone who can read the record.
+
+    Also returns `history`: every team that held the record (from its assign_to
+    changes), each with its chain, the job applications logged and the
+    interviews raised while it held the record.
+    """
+    frappe.has_permission(doctype, "read", name, throw=True)
+
+    assign_to = frappe.db.get_value(doctype, name, "assign_to")
+    if not assign_to or not department:
+        return {"nodes": [], "history": [], "assign_to": assign_to}
+
+    rows = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"department": department},
+        fields=["parent", "assigned_to", "designation"],
+    )
+    manager_of = {r.parent: r.assigned_to for r in rows if r.assigned_to}
+    role_of = {r.parent: r.designation for r in rows}
+
+    periods = _assignee_periods(doctype, name)
+    chains = [_reporting_chain(p[0], manager_of) for p in periods]
+    everyone = {e for c in chains for e in c}
+    names = {
+        e.name: e.employee_name
+        for e in frappe.get_all(
+            "Employee", filters={"name": ["in", list(everyone)]}, fields=["name", "employee_name"]
+        )
+    }
+
+    def person(emp):
+        return {"employee": emp, "employee_name": names.get(emp) or emp, "role": role_of.get(emp)}
+
+    # current team, top -> assignee
+    current = _reporting_chain(assign_to, manager_of)
+    nodes = [
+        {**person(emp), "parent": manager_of.get(emp) if emp != current[-1] else None}
+        for emp in reversed(current)
+    ]
+
+    apps = frappe.get_all(
+        "Job Application Count",
+        filters={"parent": name, "parenttype": doctype},
+        fields=["small_application", "large_application", "total_application", "creation", "owner"],
+    )
+    owner_employee = {
+        e.user: e.name
+        for e in frappe.get_all(
+            "Employee", filters={"user": ["in", list({a.owner for a in apps}) or [""]]}, fields=["user", "name"]
+        )
+    }
+    interviews = frappe.get_all(
+        "Interview",
+        filters={"marketing_link": name},
+        fields=["name", "company", "role", "status", "creation", "assign_to"],
+        order_by="creation asc",
+    )
+
+    def within(ts, start, end):
+        return ts >= start and (end is None or ts < end)
+
+    def period_of(iv):
+        """Index of the period an interview belongs to: its own assignee's period (the one it was
+        created in if they held the record twice), else whichever period it was created in."""
+        mine = [k for k, p in enumerate(periods) if p[0] == iv.assign_to]
+        if mine:
+            return next((k for k in mine if within(iv.creation, periods[k][1], periods[k][2])), mine[-1])
+        return next((k for k, p in enumerate(periods) if within(iv.creation, p[1], p[2])), None)
+
+    interview_period = {iv.name: period_of(iv) for iv in interviews}
+
+    def app_period(a):
+        """A job application count belongs to the recruiter who created the row (its owner). If they held
+        the record more than once, the stint it was created in; rows by someone who never held the
+        record (e.g. a manager entering them) fall back to the period they were created in."""
+        mine = [k for k, p in enumerate(periods) if p[0] == owner_employee.get(a.owner)]
+        if mine:
+            return next((k for k in mine if within(a.creation, periods[k][1], periods[k][2])), mine[-1])
+        return next((k for k, p in enumerate(periods) if within(a.creation, p[1], p[2])), None)
+
+    app_periods = [app_period(a) for a in apps]
+
+    history = []
+    for k, ((emp, start, end), chain) in enumerate(zip(periods, chains)):
+        mine = [a for a, idx in zip(apps, app_periods) if idx == k]
+        history.append(
+            {
+                **person(emp),
+                "start": start,
+                "end": end,
+                "is_current": end is None,
+                "team": [person(e) for e in reversed(chain)],
+                "applications": {
+                    "small": sum(cint(a.small_application) for a in mine),
+                    "large": sum(cint(a.large_application) for a in mine),
+                    "total": sum(cint(a.total_application) for a in mine),
+                },
+                "interviews": [i for i in interviews if interview_period[i.name] == k],
+            }
+        )
+    return {"nodes": nodes, "history": history, "assign_to": assign_to}
+
+
+def _auto_assign_role(department):
+    cfg = frappe.db.get_value("Hierarchy", {"department": department}, "auto_assign_config")
+    try:
+        return (json.loads(cfg or "{}") or {}).get("role")
+    except Exception:
+        return None
+
+
+def can_change_assign_to(assign_to, user, department):
+    """
+    Who may re-assign a record currently held by `assign_to` in `department`:
+    the holder of the department's auto-assignment role that the record sits
+    with (the lowest such person in the assignee's reporting chain), and
+    anyone above them in that chain. Administrator always may.
+    """
+    if user == "Administrator":
+        return True
+    role = _auto_assign_role(department)
+    if not role or not assign_to:
+        return False
+
+    rows = frappe.get_all(
+        "Employee Assignment Detail",
+        filters={"department": department},
+        fields=["parent", "assigned_to"],
+    )
+    manager_of = {r.parent: r.assigned_to for r in rows if r.assigned_to}
+
+    chain, seen, current = [], set(), assign_to
+    while current and current not in seen:
+        seen.add(current)
+        chain.append(current)
+        current = manager_of.get(current)
+
+    users = {
+        e.name: e.user
+        for e in frappe.get_all("Employee", filters={"name": ["in", chain]}, fields=["name", "user"])
+    }
+    role_users = set(
+        frappe.get_all("Has Role", filters={"role": role, "parenttype": "User", "parent": ["in", [u for u in users.values() if u]]}, pluck="parent")
+    )
+
+    for i, emp in enumerate(chain):
+        if users.get(emp) in role_users:
+            return user in {users.get(e) for e in chain[i:]}
+    return False
+
+
+def resolve_record_department(doc_or_values, doctype, service=None):
+    """Department a service record belongs to: the department stored on the customer's stage for its
+    service (the same one the Assign To picker uses), else the record's own `department`, else the
+    service's default department."""
+    get = (lambda k: doc_or_values.get(k)) if hasattr(doc_or_values, "get") else (lambda k: None)
+    service = service or get("service") or doctype
+    customer = get("customer")
+    if customer:
+        stage = frappe.db.get_value("Customer", customer, "stage")
+        try:
+            rows = (json.loads(stage) if stage else {}).get(service.strip().lower()) or []
+            if rows and rows[0].get("department"):
+                return rows[0]["department"]
+        except Exception:
+            pass
+    return get("department") or SERVICE_DEPARTMENT_MAP.get(service.strip().lower()) or "Technical"
+
+
+@frappe.whitelist()
+def can_change_assign_to_for_record(doctype, name, service=None):
+    frappe.has_permission(doctype, "read", name, throw=True)
+    meta = frappe.get_meta(doctype)
+    fields = [f for f in ("assign_to", "customer", "department", "service") if f == "assign_to" or meta.has_field(f)]
+    doc = frappe.db.get_value(doctype, name, fields, as_dict=True)
+    if not doc:
+        return {"allowed": False}
+    department = resolve_record_department(doc, doctype, service)
+    return {"allowed": bool(can_change_assign_to(doc.assign_to, frappe.session.user, department))}
+
+
+def validate_assign_to_change(doc, service=None):
+    """Server-side guard for an existing record's assign_to edit: the user must be allowed to
+    re-assign it (see can_change_assign_to) and may only pick from their own reporting subtree."""
+    before = doc.get_doc_before_save()
+    if doc.is_new() or not before or before.assign_to == doc.assign_to:
+        return
+    user = frappe.session.user
+    if user == "Administrator":
+        return
+    department = resolve_record_department(before, doc.doctype, service)
+    if not can_change_assign_to(before.assign_to, user, department):
+        frappe.throw(
+            frappe._("You are not allowed to change Assigned To on this record."),
+            frappe.PermissionError,
+        )
+    me = get_employee_name(user)
+    if doc.assign_to and doc.assign_to not in get_reporting_subtree(me, department):
+        frappe.throw(
+            frappe._("{0} is not in your reporting line.").format(doc.assign_to),
+            frappe.PermissionError,
+        )
+
+
+# --- Interview assignee -----------------------------------------------------------------------
+
+
+def _marketing_department(marketing):
+    return resolve_record_department(
+        frappe.db.get_value("Marketing", marketing, ["customer"], as_dict=True) or {}, "Marketing"
+    )
+
+
+def _marketing_holders(marketing):
+    """Every employee who has held this Marketing record (oldest first)."""
+    return [p[0] for p in _assignee_periods("Marketing", marketing)]
+
+
+def is_marketing_top_authority(marketing, user):
+    """Administrator, or the top of the reporting chain above the Marketing record's current assignee."""
+    if user == "Administrator":
+        return True
+    assign_to = frappe.db.get_value("Marketing", marketing, "assign_to")
+    if not assign_to:
+        return False
+    department = _marketing_department(marketing)
+    rows = frappe.get_all(
+        "Employee Assignment Detail", filters={"department": department}, fields=["parent", "assigned_to"]
+    )
+    manager_of = {r.parent: r.assigned_to for r in rows if r.assigned_to}
+    top = _reporting_chain(assign_to, manager_of)[-1]
+    return frappe.db.get_value("Employee", top, "user") == user
+
+
+@frappe.whitelist()
+def get_interview_assignee_options(marketing):
+    """Earlier holders of this Marketing record (other than the current user) whose interviews the
+    current team can still add on their behalf."""
+    frappe.has_permission("Marketing", "read", marketing, throw=True)
+    me = get_employee_name(frappe.session.user)
+    holders = [e for e in dict.fromkeys(_marketing_holders(marketing)) if e != me]
+    return [
+        {"employee": e.name, "employee_name": e.employee_name or e.name}
+        for e in frappe.get_all("Employee", filters={"name": ["in", holders]}, fields=["name", "employee_name"])
+    ]
+
+
+@frappe.whitelist()
+def can_reassign_interview(name):
+    frappe.has_permission("Interview", "read", name, throw=True)
+    marketing = frappe.db.get_value("Interview", name, "marketing_link")
+    return {"allowed": bool(marketing and is_marketing_top_authority(marketing, frappe.session.user))}
+
+
+def validate_interview_assignee(doc):
+    """A new Interview belongs to its creator unless they add it on behalf of an earlier holder of the
+    Marketing record (or someone in their own line). Afterwards only the Marketing's top authority
+    can move it to another employee of the department."""
+    marketing = doc.marketing_link
+    if not marketing or not frappe.db.exists("Marketing", marketing):
+        return
+    user = frappe.session.user
+    me = get_employee_name(user)
+    holders = set(_marketing_holders(marketing))
+
+    if doc.is_new():
+        if not doc.assign_to:
+            doc.assign_to = me or frappe.db.get_value("Marketing", marketing, "assign_to")
+            return
+        if user == "Administrator" or doc.assign_to == me or doc.assign_to in holders:
+            return
+        if me and doc.assign_to in get_reporting_subtree(me, _marketing_department(marketing)):
+            return
+        frappe.throw(
+            frappe._("{0} is not part of this record's team, so the interview can't be added for them.").format(doc.assign_to),
+            frappe.PermissionError,
+        )
+
+    before = doc.get_doc_before_save()
+    if not before or before.assign_to == doc.assign_to:
+        return
+    if not doc.assign_to:
+        frappe.throw(frappe._("Assigned To can't be cleared."), frappe.ValidationError)
+    if not is_marketing_top_authority(marketing, user):
+        frappe.throw(
+            frappe._("Only the highest authority of Marketing can change who an interview is assigned to."),
+            frappe.PermissionError,
+        )
+    in_department = frappe.db.exists(
+        "Employee Assignment Detail", {"parent": doc.assign_to, "department": _marketing_department(marketing)}
+    )
+    if not in_department and doc.assign_to not in holders:
+        frappe.throw(
+            frappe._("{0} does not work in this department.").format(doc.assign_to), frappe.ValidationError
+        )

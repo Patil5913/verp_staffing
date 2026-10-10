@@ -741,7 +741,8 @@ def execute_removal(delete_conflicts=False):
         result["demo_company_removal"] = _delete_demo_company_if_empty()
         _reset_default_company_after_removal()
 
+    if all_clean:
+        mark_sample_data_removed()
     frappe.db.commit()
-    mark_sample_data_removed()
 
     return {"status": "done", "result": result, "is_sample_data_removed": all_clean}

@@ -174,7 +174,7 @@ const TOTALS_FIELDS = [
 
 const TAXES_GRID_COLUMNS = ['charge_type', 'account_head', 'rate', 'tax_amount', 'total']
 
-function taxesReadOnlyColumns(col, row) {
+export function taxesReadOnlyColumns(col, row) {
   if (col.fieldname === 'rate') return row.charge_type === 'Actual'
   if (col.fieldname === 'tax_amount') return row.charge_type !== 'Actual'
   return false
@@ -193,7 +193,7 @@ function taxesReadOnlyColumns(col, row) {
 // patch, and surfaces the message as a toast (notify.error, the same
 // utility fieldGuards already uses in ConfigDetailPage) as the closest
 // equivalent.
-function taxesFieldChange(fieldname, value, draft, { idx }) {
+export function taxesFieldChange(fieldname, value, draft, { idx }) {
   // rate / tax_amount typed with no Charge Type chosen (validate_taxes_and_charges'
   // first branch): reset the row rather than keep numbers that mean nothing.
   if ((fieldname === 'rate' || fieldname === 'tax_amount') && !draft.charge_type && value) {
@@ -595,13 +595,41 @@ function discountAccountLinkQueries({ detail }) {
   }
 }
 
-const fmtAmount = (d) => `${formatFieldValue(d.values.paid_amount, { fieldtype: 'Currency' })} ${d.values.currency || ''}`.trim()
+// These confirmations are rendered as HTML, and some values in them are free text a user typed
+// (payer account name, party, currency...): always escaped.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+
+const fmtAmount = (d) => esc(`${formatFieldValue(d.values.paid_amount, { fieldtype: 'Currency' })} ${d.values.currency || ''}`.trim())
+
+// A refund paid back to a backed-out candidate (Pay entry tied to a Refund Request): its figures read differently
+// from a normal payment - refund amount, fee recovered, and what actually goes out - so it gets its own wording.
+const isRefund = (d) => Boolean(d.values?.refund_request || d.hidden?.refund_request)
+const fmtMoney = (d, n) => esc(`${formatFieldValue(n, { fieldtype: 'Currency' })} ${d.values.currency || ''}`.trim())
+// paid_amount_after_tax is a hidden field on Payment Entry, so a record page carries it in `hidden`, not `values`
+// (the queue's rows carry it in `values`).
+const fieldValue = (d, field) => d.values?.[field] ?? d.hidden?.[field]
+const refundNet = (d) => num(fieldValue(d, 'paid_amount_after_tax')) || num(d.values.paid_amount)
+const refundFee = (d) => Math.max(0, num(d.values.paid_amount) - refundNet(d))
 
 // Ported verbatim (content-wise) from the old desk payment_entry.js's
 // Submit/Cancel confirmation dialogs - Submit had no confirmation at all
 // before ConfigDetailPage's submitConfirm/cancelConfirm hooks, and Cancel
 // only ever showed one generic sentence.
-export const paymentEntrySubmitConfirm = (d) => `
+export const paymentEntrySubmitConfirm = (d) =>
+  isRefund(d)
+    ? `
+  <div style="line-height:1.6">
+    <p><b>You are about to approve this refund.</b></p>
+    <p>Submitting confirms that:</p>
+    <ul style="padding-left:16px">
+      <li><b>${fmtMoney(d, refundNet(d))}</b> is <b>paid out</b> to <b>${esc(d.values.payer_account_name || d.values.party_name || 'the candidate')}</b>${d.values.paid_from ? ` from <b>${esc(d.values.paid_from)}</b>` : ''}</li>
+      <li>The refund of <b>${fmtAmount(d)}</b> is booked as a credit note against the customer's invoices${refundFee(d) ? `, less <b>${fmtMoney(d, refundFee(d))}</b> transaction fee recovered from the candidate` : ''}</li>
+      <li>The candidate is then marked <b>Backout and Refund</b> and loses portal access</li>
+      <li>This <b>cannot be edited</b> after submission.</li>
+    </ul>
+  </div>
+`
+    : `
   <div style="line-height:1.6">
     <p><b>You are about to submit this Payment Entry.</b></p>
     <p>Submitting confirms that:</p>
@@ -616,7 +644,19 @@ export const paymentEntrySubmitConfirm = (d) => `
   </div>
 `
 
-const paymentEntryCancelConfirm = (d) => `
+const paymentEntryCancelConfirm = (d) =>
+  isRefund(d)
+    ? `
+  <div style="line-height:1.6">
+    <p><b>You are about to cancel this refund.</b></p>
+    <ul style="padding-left:16px">
+      <li>The payment of <b>${fmtMoney(d, refundNet(d))}</b> to the candidate will be <b>reversed</b>, together with its credit note</li>
+      <li>The CR case goes back to <b>Dispute Pending</b>, so CR can resolve it or back the candidate out without a refund</li>
+      <li>This action <b>cannot be undone</b></li>
+    </ul>
+  </div>
+`
+    : `
   <div style="line-height:1.6">
     <p><b>You are about to cancel this Payment Entry.</b></p>
     <p>Cancelling means:</p>
@@ -650,7 +690,7 @@ export const paymentEntryConfig = {
   // throughout that whole review, telling the viewer nothing. A Payment
   // Entry with no payment_term isn't part of that flow, so it keeps the
   // ordinary Draft/Submitted/Cancelled badge.
-  statusField: (d) => (d.hidden.payment_term_row ? 'verification_status' : null),
+  statusField: (d) => (d.hidden.payment_term_row || isRefund(d) ? 'verification_status' : null),
   // The generic "submit this to confirm" draft banner is redundant once
   // Rejected already has its own (locked, verification_status badge) -
   // only suppress it for that specific state, not for every draft.
@@ -664,12 +704,30 @@ export const paymentEntryConfig = {
       key: 'details',
       label: 'Details',
       sections: [
-        strip([
-          { label: 'Paid Amount', field: 'paid_amount' },
-          { label: 'Allocated', field: 'total_allocated_amount' },
-          { label: 'Unallocated', field: 'unallocated_amount' },
-          { label: 'Difference', field: 'difference_amount', tone: (v) => (num(v) === 0 ? 'text-green-600' : 'text-red-600') },
-        ]),
+        {
+          ...strip([
+            { label: 'Paid Amount', field: 'paid_amount' },
+            { label: 'Allocated', field: 'total_allocated_amount' },
+            { label: 'Unallocated', field: 'unallocated_amount' },
+            { label: 'Difference', field: 'difference_amount', tone: (v) => (num(v) === 0 ? 'text-green-600' : 'text-red-600') },
+          ]),
+          show: (d) => !isRefund(d),
+        },
+        // A refund: no allocation to speak of, just what was asked for, what is recovered and what goes out.
+        {
+          ...strip([
+            { label: 'Refund amount', field: 'paid_amount' },
+            { label: 'Fee recovered from candidate', value: refundFee },
+            { label: 'Amount to pay the candidate', value: refundNet, tone: () => 'text-orange-600' },
+            {
+              label: 'Status',
+              type: 'text',
+              value: (d) => ({ 'Pending Verification': 'Awaiting approval', Verified: 'Refunded', Rejected: 'Refund rejected' })[d.values.verification_status] || 'Draft',
+              tone: (v) => (v === 'Refund rejected' ? 'text-red-600' : v === 'Refunded' ? 'text-green-600' : 'text-app-text'),
+            },
+          ]),
+          show: isRefund,
+        },
         fields(['naming_series', 'payment_type', 'posting_date', 'company', 'mode_of_payment', 'party_type', 'party', 'party_name', 'payer_account_name'], 'Payment'),
         { type: 'component', component: PaymentEntryAssist },
         fields(

@@ -236,7 +236,7 @@ def make_employee(
     skip_insert=False,
     **overrides,
 ):
-    user = user or _ensure_user()
+    user = user or _ensure_user(f"emp{uuid.uuid4().hex[:10]}")
 
     values = {
         "doctype": "Employee",
@@ -1203,3 +1203,44 @@ class TestEmployeeHierarchyValidation(EmployeeTestBase):
 
         with self.assertRaises(frappe.ValidationError):
             coordinator.save(ignore_permissions=True)
+
+class TestGetEmployeesByAssignmentRegressions(FrappeTestCase):
+    """A single role may arrive as a plain string, and `current_emp` may be missing (a new record)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _ensure_hierarchies()
+        cls.department = "HR"
+        cls.role = "HR Manager"
+        cls.emp = make_employee(
+            f"Regression {uuid.uuid4().hex[:6]}",
+            assignments=[{"department": cls.department, "designation": cls.role}],
+        )
+
+    def _call(self, **filters):
+        return get_employees_by_assignment(
+            doctype="Employee", txt="", searchfield="name", start=0, page_len=50, filters=filters
+        )
+
+    def test_designation_as_plain_string(self):
+        names = [r[0] for r in self._call(department=self.department, designation=self.role)]
+        self.assertIn(self.emp.name, names)
+
+    def test_designation_as_list(self):
+        names = [r[0] for r in self._call(department=self.department, designation=[self.role, "Other"])]
+        self.assertIn(self.emp.name, names)
+
+    def test_missing_current_emp_still_returns_rows(self):
+        self.assertTrue(self._call(department=self.department, designation=self.role, current_emp=None))
+
+    def test_current_emp_is_excluded(self):
+        names = [
+            r[0]
+            for r in self._call(department=self.department, designation=self.role, current_emp=self.emp.name)
+        ]
+        self.assertNotIn(self.emp.name, names)
+
+    def test_missing_filters_return_nothing(self):
+        self.assertEqual(self._call(department=self.department), [])
+        self.assertEqual(self._call(designation=self.role), [])

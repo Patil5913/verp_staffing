@@ -1147,6 +1147,11 @@ def reject_payment_entry(payment_entry, remarks):
     pe.verification_status = "Rejected"
     pe.save(ignore_permissions=True)
 
+    if pe.get("refund_request"):
+        from verp_staffing.cr.refund import on_refund_payment_rejected
+
+        on_refund_payment_rejected(pe, remarks)
+
     if pe.payment_term_row:
         payment_term = frappe.get_doc(
             "Customer Payment Terms",

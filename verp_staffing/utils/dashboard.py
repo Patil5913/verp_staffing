@@ -319,9 +319,9 @@ def _href(doctype, name=None, filters=None):
     """A card's click-through target: a single doc, a doctype's whole list, or
     (with `filters`, get_list-style tuples) that list pre-scoped to exactly the
     rows the card counted - e.g. [["status", "=", "Get The Offer"]]."""
-    base = f"/{quote(doctype)}"
+    base = f"/{quote(doctype, safe='')}"
     if name:
-        return f"{base}/{quote(str(name))}"
+        return f"{base}/{quote(str(name), safe='')}"
     if filters:
         return f"{base}?filters={quote(json.dumps(filters))}"
     return base
@@ -1838,7 +1838,7 @@ def _care_disputes(b, p, names):
         c["customer"] = by_name[c.parent].customer
     raised = [c for c in cases if p.in_cur(_d(c.forwarded_on))]
     raised_prev = sum(1 for c in cases if p.in_prev(_d(c.forwarded_on)))
-    pending = [c for c in cases if c.status == "Dispute Pending"]
+    pending = [c for c in cases if c.status in ("Dispute Pending", "Refund Pending", "Refund Rejected")]
     closed = [c for c in cases if c.status in ("Dispute Resolved", "Refund") and p.in_cur(_d(c.resolve_refund_on))]
     resolved = [c for c in closed if c.status == "Dispute Resolved"]
     refunds = [c for c in closed if c.status == "Refund"]
@@ -1846,7 +1846,7 @@ def _care_disputes(b, p, names):
     old = [c for c in pending if date_diff(p.today, _d(c.forwarded_on)) > 7]
     href = lambda rows: _href_in("CR", (c.parent for c in rows))  # noqa: E731
 
-    b.kpi("open_disputes", "Open disputes", len(pending), "number", icon="scale", tone="bad" if pending else "good", href=href(pending), calc="Dispute cases (any date) still Dispute Pending. A customer can be forwarded to CR again after a case is closed, so this counts cases, not customers.")
+    b.kpi("open_disputes", "Open disputes", len(pending), "number", icon="scale", tone="bad" if pending else "good", href=href(pending), calc="Dispute cases (any date) still open: Dispute Pending, Refund Pending while an accountant verifies the refund, or Refund Rejected. A customer can be forwarded to CR again after a case is closed, so this counts cases, not customers.")
     b.kpi("disputes_new", "Disputes raised", len(raised), "number", raised_prev, invert=True, icon="file-text", href=href(raised), calc="CR cases forwarded in the selected period, whichever department sent them.")
     b.kpi("disputes_resolved", "Resolved", len(resolved), "number", icon="circle-check", href=href(resolved), calc="Cases closed as Dispute Resolved in the selected period.")
     b.kpi("disputes_refund", "Refunds", len(refunds), "number", invert=True, icon="undo-2", tone="bad" if refunds else None, href=href(refunds), calc="Cases closed as Refund in the selected period.")
@@ -1856,7 +1856,7 @@ def _care_disputes(b, p, names):
     b.alert("old_disputes", "Disputes pending for over a week", len(old), "bad", href(old))
 
     b.chart("disputes_trend", "Disputes raised over time", "bar", _trend(p, {"Disputes": [(_d(c.forwarded_on), 1) for c in cases]}), _series(("Disputes", "bar", RED)), span=2)
-    b.chart("dispute_status", "How disputes ended", "donut", _counts([c.status for c in raised], ["Dispute Pending", "Dispute Resolved", "Refund"]), subtitle="Raised in the period")
+    b.chart("dispute_status", "How disputes ended", "donut", _counts([c.status for c in raised], ["Dispute Pending", "Refund Pending", "Refund Rejected", "Dispute Resolved", "Refund"]), subtitle="Raised in the period")
     b.chart("dispute_source", "Which department sends disputes", "hbar", _counts([c.forwarded_from_department for c in raised], n=10), subtitle="Raised in the period")
     b.chart("dispute_owner", "Pending disputes per handler", "hbar", _counts([names.get(c.assign_to, c.assign_to) for c in pending], n=10))
     oldest = sorted(pending, key=lambda c: _d(c.forwarded_on) or p.today)[:8]

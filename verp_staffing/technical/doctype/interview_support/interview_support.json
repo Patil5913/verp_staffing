@@ -23,7 +23,8 @@
   "updates_tab",
   "updates_html",
   "activities_tab",
-  "open_activities_html"
+  "open_activities_html",
+  "held_by_cr"
  ],
  "fields": [
   {
@@ -78,7 +79,7 @@
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Status",
-   "options": "Pending\nCompleted\nRequest for Update"
+   "options": "Pending\nCompleted\nRequest for Update\nHold\nBackout"
   },
   {
    "fieldname": "resume",
@@ -134,6 +135,15 @@
   {
    "fieldname": "open_activities_html",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "held_by_cr",
+   "fieldtype": "Check",
+   "label": "Held By CR",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "default": "0"
   }
  ],
  "grid_page_length": 50,

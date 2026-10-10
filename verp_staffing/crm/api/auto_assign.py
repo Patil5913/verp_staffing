@@ -140,6 +140,9 @@ def forward_candidate(customer, service, interview_round=None):
             from_service_name=frappe.form_dict.get("from_service_name"),
             reason_for_forwarding=frappe.form_dict.get("reason_for_forwarding"),
             assign_employee=frappe.form_dict.get("assign_employee"),
+            hold_service=frappe.form_dict.get("hold_service"),
+            from_doctype=frappe.form_dict.get("from_doctype"),
+            from_name=frappe.form_dict.get("from_name"),
         )
 
     if service_key == "onboarding":
@@ -501,7 +504,8 @@ def _resolve_forwarded_from_department(from_service_name):
 
 
 def handle_cr_forward(
-    customer, from_service_name, reason_for_forwarding, assign_employee=None
+    customer, from_service_name, reason_for_forwarding, assign_employee=None,
+    hold_service=False, from_doctype=None, from_name=None,
 ):
     if not reason_for_forwarding:
         frappe.throw(_("Reason for forwarding is required for CR"))
@@ -512,7 +516,7 @@ def handle_cr_forward(
 
     if existing_cr_name:
         current_status = frappe.db.get_value("CR", existing_cr_name, "status")
-        if current_status == CR_BLOCKING_STATUS:
+        if current_status in (CR_BLOCKING_STATUS, "Refund Pending", "Refund Rejected"):
             frappe.throw(
                 f"Customer already has an active CR case in '{CR_BLOCKING_STATUS}' status. "
                 f"It must be resolved or refunded before forwarding again."
@@ -529,9 +533,24 @@ def handle_cr_forward(
         "assign_to": assignee,
     }
 
+    # Raised from a service with "hold it while CR looks into this" answered yes: that service goes on
+    # Hold, and goes back to what it was if the case is resolved.
+    if frappe.parse_json(hold_service) if isinstance(hold_service, str) else hold_service:
+        from verp_staffing.cr.backout import hold_service as put_on_hold
+
+        history_row.update(put_on_hold(history_row, customer, from_doctype, from_name))
+
+    from verp_staffing.cr.events import FORWARDED, HELD, event_row
+
+    events = [event_row(FORWARDED, CR_BLOCKING_STATUS, remarks=reason_for_forwarding, assign_to=assignee)]
+    if history_row.get("held_name"):
+        events.append(event_row(HELD, CR_BLOCKING_STATUS, remarks=f"{history_row['held_doctype']} {history_row['held_name']}"))
+
     if existing_cr_name:
         cr_doc = frappe.get_doc("CR", existing_cr_name)
         cr_doc.append("cr_history", history_row)
+        for e in events:
+            cr_doc.append("cr_events", e)
         cr_doc.save(ignore_permissions=True)
     else:
         cr_doc = frappe.get_doc(
@@ -539,6 +558,7 @@ def handle_cr_forward(
                 "doctype": "CR",
                 "customer": customer,
                 "cr_history": [history_row],
+                "cr_events": events,
             }
         )
         cr_doc.insert(ignore_permissions=True)

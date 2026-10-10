@@ -1,11 +1,32 @@
 <template>
-  <SectionCard title="Party & Outstanding" subtitle="Pick a party to fill its account, then pull in what it owes.">
+  <SectionCard
+    title="Party & Outstanding"
+    :subtitle="refund ? 'Refund to a backed-out candidate - pay the bank account below.' : 'Pick a party to fill its account, then pull in what it owes.'"
+  >
     <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-p-sm">
       <span class="text-app-text-muted">Party balance: <b class="text-app-text">{{ balanceText(info?.party_balance) }}</b></span>
       <span class="text-app-text-muted">Account balance: <b class="text-app-text">{{ balanceText(info?.account_balance) }}</b></span>
       <span v-if="loadingParty" class="text-app-text-muted">Loading…</span>
     </div>
-    <div v-if="editable" class="flex flex-wrap gap-2">
+    <!-- A refund entry: where the candidate wants the money, and what is actually being paid out -->
+    <div v-if="refund" class="flex flex-col gap-3 rounded-lg border border-app-border bg-app-panel-2 p-4 text-p-sm">
+      <p class="text-p-xs font-semibold uppercase tracking-wide text-app-text-muted">
+        Candidate bank account details - refund {{ values.refund_request }}
+      </p>
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+        <div v-for="row in bankRows" :key="row.label" class="flex flex-col">
+          <dt class="text-p-xs text-app-text-muted">{{ row.label }}</dt>
+          <dd class="break-words font-medium text-app-text" :class="row.mono ? 'tabular-nums' : ''">{{ row.value || '-' }}</dd>
+        </div>
+      </dl>
+      <div class="border-t border-app-border pt-2">
+        <div class="flex justify-between"><span class="text-app-text-muted">Refund amount</span><span class="tabular-nums">{{ money(refund.refund_amount) }}</span></div>
+        <div class="flex justify-between"><span class="text-app-text-muted">Less: transaction fee recovered</span><span class="tabular-nums">- {{ money(refund.fee_recovered) }}</span></div>
+        <div class="mt-1 flex justify-between border-t border-app-border pt-1 font-semibold"><span>Amount to pay the candidate</span><span class="tabular-nums">{{ money(refund.net_payout) }}</span></div>
+      </div>
+      <p v-if="refund.reason" class="text-p-xs text-app-text-muted">Reason: {{ refund.reason }}</p>
+    </div>
+    <div v-if="editable && !values.refund_request" class="flex flex-wrap gap-2">
       <AppButton variant="outline" size="sm" icon="file-text" :disabled="!ready" @click="openDialog(true)">Get Outstanding Invoices</AppButton>
       <AppButton variant="outline" size="sm" icon="shopping-cart" :disabled="!ready" @click="openDialog(false)">Get Outstanding Orders</AppButton>
     </div>
@@ -108,6 +129,38 @@ async function fillAccountCurrency(account, field) {
 }
 watch(() => values.paid_from, (a) => fillAccountCurrency(a, 'paid_from_account_currency'))
 watch(() => values.paid_to, (a) => fillAccountCurrency(a, 'paid_to_account_currency'))
+
+// A refund payment entry carries its Refund Request: show the candidate's bank details and the net payout.
+const refund = ref(null)
+watch(
+  () => values.refund_request,
+  async (name) => {
+    refund.value = null
+    if (!name) return
+    try {
+      refund.value = await call('frappe.client.get_value', {
+        doctype: 'Refund Request',
+        filters: name,
+        fieldname: [
+          'account_holder_name', 'bank_name', 'account_number', 'routing_code', 'branch', 'bank_notes',
+          'refund_amount', 'fee_recovered', 'net_payout', 'reason', 'currency',
+        ],
+      })
+    } catch {
+      refund.value = null // not allowed to read it, or gone: the remarks still carry the essentials
+    }
+  },
+  { immediate: true },
+)
+const bankRows = computed(() => [
+  { label: 'Account holder', value: refund.value?.account_holder_name },
+  { label: 'Bank', value: refund.value?.bank_name },
+  { label: 'Account number', value: refund.value?.account_number, mono: true },
+  { label: 'IFSC / SWIFT / Routing code', value: refund.value?.routing_code },
+  { label: 'Branch', value: refund.value?.branch },
+  { label: 'Other details', value: refund.value?.bank_notes },
+])
+const money = (n) => `${formatFieldValue(n || 0, { fieldtype: 'Currency' })} ${refund.value?.currency || values.currency || ''}`.trim()
 
 const balanceText = (n) => (n === undefined || n === null ? '-' : formatFieldValue(n, { fieldtype: 'Currency' }))
 

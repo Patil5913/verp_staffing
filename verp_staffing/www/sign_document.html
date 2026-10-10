@@ -2889,6 +2889,8 @@
 					alert("This code has expired. Please request a new one.");
 				} else if (status === "invalid_otp") {
 					alert("Invalid OTP");
+				} else if (status === "too_many_attempts") {
+					alert("Too many wrong attempts. Please request a new code.");
 				} else {
 					throw new Error(serverErrorText(data) || "Could not verify the code");
 				}

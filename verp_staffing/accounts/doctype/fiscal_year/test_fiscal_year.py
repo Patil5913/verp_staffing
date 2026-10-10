@@ -44,6 +44,14 @@ def create_fiscal_year_if_not_exists(
         }
 
         if company not in existing_companies:
+            # A company may belong to only one active Fiscal Year: if it is already in another one, use that.
+            other = frappe.db.get_value(
+                "Fiscal Year Company",
+                {"company": company, "parenttype": "Fiscal Year", "parent": ["!=", fiscal_year]},
+                "parent",
+            )
+            if other and not frappe.db.get_value("Fiscal Year", other, "disabled"):
+                return frappe.get_doc("Fiscal Year", other)
             fy.append("included_companies", {"company": company})
             fy.save(ignore_permissions=True)
 

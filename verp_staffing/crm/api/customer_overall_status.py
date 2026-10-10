@@ -36,6 +36,12 @@ def compute_customer_status(customer):
 
     # Hard overrides checked before anything else, so we skip fetching
     # stage entirely when they apply.
+    if frappe.db.exists("Refund Request", {"customer": customer, "status": "Pending Verification"}) or frappe.db.exists(
+        "CR", {"customer": customer, "status": "Refund Pending"}
+    ):
+        return "Refund Pending"
+    if frappe.db.exists("CR", {"customer": customer, "status": "Refund Rejected"}):
+        return "Refund Rejected"
     if frappe.db.exists("CR", {"customer": customer, "status": "Dispute Pending"}):
         return "Moved To CR"
     if frappe.db.exists("Onboardings", {"customer": customer,"status": "Active"}):
@@ -43,6 +49,8 @@ def compute_customer_status(customer):
 
     if frappe.db.exists("CR", {"customer": customer, "status": "Refund"}):
         return "Backout and Refund"
+    if frappe.db.exists("CR", {"customer": customer, "status": "Backout"}):
+        return "Backout"
 
     if frappe.db.exists("Onboardings", {"customer": customer,"status": "Completed"}):
             return "Customer Placed"

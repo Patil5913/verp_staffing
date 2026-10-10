@@ -107,6 +107,10 @@ def _get_period(target_based_on, start_date, selected_date):
         months_passed = (selected_date.year - start_date.year) * 12 + (
             selected_date.month - start_date.month
         )
+        # The current period began on the start day of the previous month
+        # when the selected day hasn't reached the start day yet.
+        if selected_date.day < start_date.day:
+            months_passed -= 1
         period_start = start_date + relativedelta(months=months_passed)
         period_end = period_start + relativedelta(months=1) - timedelta(days=1)
 

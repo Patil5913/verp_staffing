@@ -43,7 +43,7 @@ export function useMailbox() {
   const drafts = ref(readDrafts())
   const persistDrafts = () => localStorage.setItem(draftKey(), JSON.stringify(drafts.value))
   const saveDraft = (draft) => {
-    const id = draft.id || `d${Date.now()}`
+    const id = draft.id || `d${Date.now()}${Math.random().toString(36).slice(2, 6)}`
     const next = { ...draft, id, updated: new Date().toISOString() }
     drafts.value = [next, ...drafts.value.filter((d) => d.id !== id)]
     persistDrafts()

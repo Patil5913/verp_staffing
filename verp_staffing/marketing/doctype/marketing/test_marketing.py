@@ -14,12 +14,16 @@ from verp_staffing.employee.doctype.employee.test_employee import (
 from verp_staffing.marketing.doctype.interview.test_interview import make_interview
 from verp_staffing.marketing.doctype.marketing.marketing import (
     get_interviews_by_marketing,
-    _is_superior_in_marketing,
 )
 from verp_staffing.crm.api.helpers import (
+    _is_superior_in_department,
     get_all_superiors_with_roles_cached,
     get_all_subordinates,
 )
+
+
+def _is_superior_in_marketing(assign_to, current_user):
+    return _is_superior_in_department(assign_to, current_user, "Marketing")
 
 
 def _uid(prefix: str) -> str:

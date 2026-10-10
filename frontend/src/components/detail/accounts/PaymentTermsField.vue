@@ -214,7 +214,8 @@ const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.amount) |
 // a new row always starts at 0 and would either sit stuck there or trip
 // amountWithinBudget the instant it's given anything, so hide the action
 // entirely once the terms already account for the full order total.
-const hasRoom = computed(() => total.value < soTotal.value)
+// (a cent of tolerance: 0.1 + 0.2 style sums must not leave a phantom sliver of room)
+const hasRoom = computed(() => total.value + 0.005 < soTotal.value)
 
 const CONDITION_OPTIONS = ['Number of Interviews', 'Number of Days', 'Not Applied']
 
@@ -293,7 +294,7 @@ const today = () => siteTodayIso()
 function amountWithinBudget(idx, value) {
   const others = rows.value.filter((_, i) => i !== idx).reduce((s, r) => s + (Number(r.amount) || 0), 0)
   const room = Math.max(0, soTotal.value - others)
-  if ((Number(value) || 0) > room) {
+  if ((Number(value) || 0) > room + 0.005) {
     notify.error(
       `Total of Decided Amount in Payment Terms cannot be greater than the Sales Order total (${formatFieldValue(soTotal.value, { fieldtype: 'Currency' })}).`,
     )

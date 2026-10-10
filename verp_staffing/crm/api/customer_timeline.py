@@ -38,10 +38,15 @@ def _ev(ts, kind, title, detail="", status="", link=None, group=None):
 
 def _esign_time(row):
     """Every row of an E Sign is saved together, so `creation` is the same for all of them;
-    `visited_at` ("dd-mm-YYYY, HH:MM:SS UTC") is when the step really happened."""
+    `visited_at` ("dd-mm-YYYY, HH:MM:SS <zone>") is when the step really happened. Current entries
+    are stamped in the company time zone (the system zone, as stored datetimes are); older ones say
+    "UTC" and are moved into it."""
     try:
-        utc = datetime.strptime(row.visited_at, "%d-%m-%Y, %H:%M:%S UTC")
-        return convert_utc_to_system_timezone(utc).replace(tzinfo=None)
+        stamp, _sep, zone = row.visited_at.rpartition(" ")
+        when = datetime.strptime(stamp, "%d-%m-%Y, %H:%M:%S")
+        if zone == "UTC":
+            return convert_utc_to_system_timezone(when).replace(tzinfo=None)
+        return when
     except Exception:
         return row.creation
 

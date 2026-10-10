@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { debounce } from 'frappe-ui'
 import { useResource } from './useResource'
 import { ROW_ACTIONS } from '@/configs/detail/listOptions'
@@ -96,6 +96,7 @@ export function useDocList(doctype, options = {}) {
   // Guards against the setup-time watchers below firing before the
   // doctype's meta (and therefore fieldsToFetch) has loaded once.
   let ready = false
+  let started = false
 
   function refetchAll() {
     page.value = 1
@@ -106,11 +107,15 @@ export function useDocList(doctype, options = {}) {
   watch(
     () => meta.resource.data,
     (value) => {
-      if (!value || ready) return
+      if (!value || ready || started) return
+      started = true
       sortField.value = value.sort_field || 'modified'
       sortOrder.value = value.sort_order || 'desc'
-      ready = true
       refetchAll()
+      // Only after this flush: the sort change above would otherwise trip the orderBy watcher and fetch twice.
+      nextTick(() => {
+        ready = true
+      })
     },
   )
 

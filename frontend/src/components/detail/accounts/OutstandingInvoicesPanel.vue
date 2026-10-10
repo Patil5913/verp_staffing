@@ -161,7 +161,7 @@ async function apply() {
         [k.amountField]: amount,
       })
     }
-    rows.push({ [k.balanceField]: total })
+    rows.push({ [k.balanceField]: Number(total.toFixed(6)) }) // toFixed: 0.1 + 0.2 must not leave 0.30000000000000004 on the balancing row
     values.accounts = rows
     if (multi) values.multi_currency = 1
     open.value = false

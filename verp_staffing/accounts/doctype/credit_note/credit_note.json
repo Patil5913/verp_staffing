@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "creation": "2026-10-10 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "company",
+  "cb1",
+  "posting_date",
+  "currency",
+  "debit_to",
+  "sec",
+  "invoices",
+  "total",
+  "refund_request",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break",
+   "label": "Cb1"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1,
+   "default": "Today"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "debit_to",
+   "fieldtype": "Link",
+   "label": "Receivable Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sec",
+   "fieldtype": "Section Break",
+   "label": "Credited Invoices"
+  },
+  {
+   "fieldname": "invoices",
+   "fieldtype": "Table",
+   "label": "Invoices",
+   "options": "Credit Note Invoice",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total Credit",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "refund_request",
+   "fieldtype": "Link",
+   "label": "Refund Request",
+   "options": "Refund Request",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Credit Note",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Credit Note",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1
+  },
+  {
+   "role": "Account Person",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1
+  },
+  {
+   "role": "CR",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "is_submittable": 1,
+ "autoname": "CN-.YYYY.-.#####",
+ "title_field": "customer",
+ "track_changes": 1
+}

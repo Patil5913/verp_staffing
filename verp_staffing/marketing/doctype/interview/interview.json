@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "marketing_link",
+  "assign_to",
   "customer",
   "status",
   "column_break_iehb",
@@ -78,6 +79,16 @@
    "in_list_view": 1,
    "label": "Customer",
    "search_index": 1
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "label": "Assigned To",
+   "options": "Employee",
+   "search_index": 1,
+   "no_copy": 1
   }
  ],
  "grid_page_length": 50,

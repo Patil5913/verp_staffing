@@ -125,7 +125,7 @@ def push_notification_log(doc, method=None):
 	if not doc.for_user or doc.for_user == doc.from_user:
 		return
 	url = (
-		f"/verp/{quote(doc.document_type)}/{quote(doc.document_name)}"
+		f"/verp/{quote(doc.document_type, safe='')}/{quote(doc.document_name, safe='')}"
 		if doc.document_type and doc.document_name
 		else "/verp/notifications"
 	)

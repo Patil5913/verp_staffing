@@ -12,7 +12,6 @@ from verp_staffing.crm.doctype.customer.customer import (
     generate_token,
     get_customer_email,
     get_forwardable_departments,
-    update_company_percentage,
 )
 from verp_staffing.employee.doctype.employee.test_employee import (
     _ensure_hierarchies,
@@ -456,7 +455,7 @@ class TestGetForwardableDepartments(CustomerTestBase):
         customer = make_customer(_uid("Active CR Cust"))
         cr = frappe.new_doc("CR")
         cr.customer = customer.name
-        cr.status = "Active"
+        cr.status = "Dispute Pending"
         cr.insert(ignore_permissions=True)
 
         result = get_forwardable_departments(customer.name)
@@ -468,7 +467,7 @@ class TestGetForwardableDepartments(CustomerTestBase):
         customer = make_customer(_uid("Active CR Active In"))
         cr = frappe.new_doc("CR")
         cr.customer = customer.name
-        cr.status = "Active"
+        cr.status = "Dispute Pending"
         cr.insert(ignore_permissions=True)
 
         result = get_forwardable_departments(customer.name)
@@ -491,7 +490,7 @@ class TestGetForwardableDepartments(CustomerTestBase):
         customer = make_customer(_uid("Active In List Check"))
         cr = frappe.new_doc("CR")
         cr.customer = customer.name
-        cr.status = "Active"
+        cr.status = "Dispute Pending"
         cr.insert(ignore_permissions=True)
 
         result = get_forwardable_departments(customer.name)
@@ -505,7 +504,7 @@ class TestGetForwardableDepartments(CustomerTestBase):
         customer = make_customer(_uid("Both Active Cust"))
         cr = frappe.new_doc("CR")
         cr.customer = customer.name
-        cr.status = "Active"
+        cr.status = "Dispute Pending"
         cr.insert(ignore_permissions=True)
 
         onboarding = frappe.new_doc("Onboardings")
@@ -647,49 +646,3 @@ class TestGenerateToken(CustomerTestBase):
             base64.urlsafe_b64decode(token.encode())
         except Exception:
             self.fail("generate_token() did not return valid base64url-encoded data")
-
-
-class TestUpdateCompanyPercentage(CustomerTestBase):
-    """
-    update_company_percentage() must persist the supplied value to the
-    Lead Detail Form and return the string 'updated'.
-    """
-
-    def _get_ldf_for(self, customer: Document) -> Document:
-        return frappe.get_doc("Lead Detail Form", customer.lead_details)
-
-    def test_returns_updated_string(self):
-        customer = make_customer(_uid("Pct Return"))
-        result = update_company_percentage(customer.lead_details, 25)
-        self.assertEqual(result, "updated")
-
-    def test_value_is_persisted_in_db(self):
-        customer = make_customer(_uid("Pct Persist"))
-        update_company_percentage(customer.lead_details, 42)
-        db_val = frappe.db.get_value(
-            "Lead Detail Form", customer.lead_details, "company_percentage"
-        )
-        self.assertEqual(float(db_val), 42.0)
-
-    def test_zero_percentage_is_accepted(self):
-        customer = make_customer(_uid("Pct Zero"))
-        result = update_company_percentage(customer.lead_details, 0)
-        self.assertEqual(result, "updated")
-
-    def test_hundred_percentage_is_accepted(self):
-        customer = make_customer(_uid("Pct Hundred"))
-        result = update_company_percentage(customer.lead_details, 100)
-        self.assertEqual(result, "updated")
-
-    def test_sequential_updates_store_latest_value(self):
-        customer = make_customer(_uid("Pct Sequential"))
-        update_company_percentage(customer.lead_details, 10)
-        update_company_percentage(customer.lead_details, 75)
-        db_val = frappe.db.get_value(
-            "Lead Detail Form", customer.lead_details, "company_percentage"
-        )
-        self.assertEqual(float(db_val), 75.0)
-
-    def test_nonexistent_lead_name_raises(self):
-        with self.assertRaises(Exception):
-            update_company_percentage("NonExistentLDF-99999", 50)

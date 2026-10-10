@@ -20,12 +20,36 @@ from verp_staffing.accounts.doctype.fiscal_year.test_fiscal_year import (
     create_fiscal_year_if_not_exists,
 )
 from verp_staffing.accounts.doctype.sales_order.sales_order import (
-    create_sales_invoice_from_sales_order,
-    get_sales_invoice_for_order,
-    create_payment_entry_from_term,
+    create_payment_entry_from_term as _create_payment_entry_from_term,
     verify_payment_entry,
     reject_payment_entry,
 )
+
+
+def create_sales_invoice_from_sales_order(sales_order, payment_term_row, reference_no, reference_date, remarks=None):
+    """A payment term's Sales Invoice and Payment Entry are now created together by
+    create_payment_entry_from_term, in the chosen company's currency."""
+    company = frappe.db.get_value("Sales Order", sales_order, "company")
+    return _create_payment_entry_from_term(
+        sales_order=sales_order,
+        payment_term_row=payment_term_row,
+        reference_no=reference_no,
+        reference_date=reference_date,
+        remarks=remarks,
+        company=company,
+    )
+
+
+def get_sales_invoice_for_order(sales_order):
+    """The Sales Invoice of the order's first payment term that has one, else None."""
+    return frappe.db.get_value(
+        "Customer Payment Terms", {"parent": sales_order, "sales_invoice": ["is", "set"]}, "sales_invoice"
+    )
+
+
+def create_payment_entry_from_term(**kwargs):
+    kwargs.setdefault("company", frappe.db.get_value("Sales Order", kwargs["sales_order"], "company"))
+    return _create_payment_entry_from_term(**kwargs)["payment_entry"]
 
 
 def make_sales_order(
@@ -505,8 +529,8 @@ class TestPaymentTermsDeletion(TestSalesOrder):
         so.save()
         self.assertEqual(len(so.payment_terms), 0)
 
-    def test_delete_term_with_draft_pe_deletes_pe(self):
-        "Deletion of term with linked draft PE must also delete the PE"
+    def test_delete_term_with_invoice_and_draft_pe_blocked(self):
+        "Once a term has its Sales Invoice (created with the PE) it can no longer be deleted"
         so = make_sales_order(
             company=self.company,
             customer=self.customer,
@@ -521,14 +545,13 @@ class TestPaymentTermsDeletion(TestSalesOrder):
             reference_date=nowdate(),
             remarks="Test remarks",
         )
-        pe_name = result["payment_entry"]
-
         term_name = so.payment_terms[0].name
         so.payment_terms = [t for t in so.payment_terms if t.name != term_name]
-        so.save()
+        with self.assertRaises(frappe.ValidationError):
+            so.save()
 
-        self.assertFalse(frappe.db.exists("Customer Payment Terms", term_name))
-        self.assertFalse(frappe.db.exists("Payment Entry", pe_name))
+        self.assertTrue(frappe.db.exists("Customer Payment Terms", term_name))
+        self.assertTrue(frappe.db.exists("Payment Entry", result["payment_entry"]))
 
     def test_delete_term_with_submitted_pe_blocked(self):
         "Deletion of term linked to submitted PE must raise ValidationError"
@@ -596,8 +619,30 @@ class TestCreatePaymentEntryFromTerm(TestSalesOrder):
         self.assertEqual(term.payment_status, "Pending Verification")
         self.assertEqual(term.payment_entry, pe_name)
 
-    def test_pe_creation_without_si_blocked(self):
-        "PE creation without SI must raise ValidationError"
+    def test_first_request_creates_the_invoice_with_the_payment_entry(self):
+        "A term with no Sales Invoice gets one, for the term amount, created together with its PE"
+        so = make_sales_order(
+            company=self.company,
+            customer=self.customer,
+            income_account=self.sales_account,
+            do_not_submit=True,
+            items=add_item(self.item, self.sales_account, rate=1000),
+            payment_terms=add_terms(700),
+        )
+        result = _create_payment_entry_from_term(
+            sales_order=so.name,
+            payment_term_row=so.payment_terms[0].name,
+            reference_no="REF-001",
+            reference_date=nowdate(),
+            company=self.company,
+        )
+        si = frappe.get_doc("Sales Invoice", result["invoice"])
+        self.assertEqual(si.sales_order, so.name)
+        self.assertEqual(flt(si.grand_total), 700)
+        self.assertEqual(flt(result["received_amount"]), 700)
+
+    def test_first_request_requires_a_company(self):
+        "Without a company the invoice for the term cannot be created"
         so = make_sales_order(
             company=self.company,
             customer=self.customer,
@@ -607,7 +652,7 @@ class TestCreatePaymentEntryFromTerm(TestSalesOrder):
             payment_terms=add_terms(700),
         )
         with self.assertRaises(frappe.ValidationError):
-            create_payment_entry_from_term(
+            _create_payment_entry_from_term(
                 sales_order=so.name,
                 payment_term_row=so.payment_terms[0].name,
                 reference_no="REF-001",

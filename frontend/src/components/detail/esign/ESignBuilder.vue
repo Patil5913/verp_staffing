@@ -162,7 +162,7 @@ import AppInput from '@/components/ui/AppInput.vue'
 // uses to draw the final PDF. Rows live in the hidden `signature_fields`
 // table: read from the detail's hiddenTables until edited, then written into
 // `values` so the page's normal Save persists them.
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { LoadingIndicator } from 'frappe-ui'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCombobox from '@/components/ui/AppCombobox.vue'
@@ -215,7 +215,8 @@ function addRecipient() {
   activeRecipient.value = email
   newEmail.value = ''
 }
-if (!activeRecipient.value && recipients.value.length) activeRecipient.value = recipients.value[0]
+// (a watch, not a one-off check: the document's fields usually arrive after this component is created)
+watch(recipients, (list) => { if (!activeRecipient.value && list.length) activeRecipient.value = list[0] }, { immediate: true })
 
 const selectedKey = ref(null)
 const selected = computed(() => rows.value.find((r) => keyOf(r) === selectedKey.value) || null)

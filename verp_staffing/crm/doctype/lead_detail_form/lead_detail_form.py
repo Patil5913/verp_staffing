@@ -2067,9 +2067,10 @@ def request_new_agreement_link(sales_order, signer_email, agreementValue):
     return {"status": "ok"}
 
 
-import random
+import secrets
 
 OTP_TTL = 300  # seconds — OTP validity window (5 minutes)
+MAX_OTP_ATTEMPTS = 5  # wrong guesses allowed per code before it is burnt
 VERIFIED_TTL = 86400  # seconds — how long "verified" state persists (1 day)
 
 
@@ -2146,6 +2147,16 @@ def send_otp(token, email):
     if "@" not in str(email):
         frappe.throw("Invalid email address")
 
+    # This is a guest endpoint: without these two checks it would mail a code to any address for
+    # any made-up token. Only a genuine, unexpired link may ask, and only for its own address.
+    link = verify_token(str(token))
+    if not link:
+        frappe.throw("This link is not valid or has expired.")
+    link_email = (link.get("e") or "").strip().lower()
+    if link_email and str(email).strip().lower() != link_email:
+        frappe.throw("The verification code can only be sent to the address this link was issued for.")
+    email = link_email or str(email).strip()
+
     token = str(token)
     cache_key = f"otp:{token}"
 
@@ -2160,7 +2171,7 @@ def send_otp(token, email):
             frappe.cache().delete_value(cache_key)
 
     # Generate a new 6-digit OTP
-    otp = random.randint(100000, 999999)
+    otp = secrets.randbelow(900000) + 100000  # 6 digits, from a secure source
     expires_at = frappe.utils.now_datetime().timestamp() + OTP_TTL
 
     frappe.cache().set_value(
@@ -2168,6 +2179,7 @@ def send_otp(token, email):
         {"otp": str(otp), "email": str(email), "_expires_at": expires_at},
         expires_in_sec=OTP_TTL,
     )
+    frappe.cache().delete_value(f"otp_attempts:{token}")  # a new code starts with a clean slate
 
     # ─── Send the email ──────────────────────────────────────────────────────────
     try:
@@ -2234,8 +2246,11 @@ def verify_otp(token, otp):
 
     token = str(token)
     otp = str(otp).strip()
+    if not verify_token(token):
+        frappe.throw("This link is not valid or has expired.")
     cache_key = f"otp:{token}"
     verified_key = f"otp_verified:{token}"
+    attempts_key = f"otp_attempts:{token}"
 
     # Already verified? Accept immediately (idempotent)
     if frappe.cache().get_value(verified_key):
@@ -2254,11 +2269,19 @@ def verify_otp(token, otp):
         frappe.cache().delete_value(cache_key)
         frappe.throw("OTP expired.")
 
-    if data.get("otp") != otp:
+    if not hmac.compare_digest(str(data.get("otp")), otp):
+        # A 6-digit code is only safe if guessing is capped: burn it after a few wrong tries.
+        attempts = int(frappe.cache().get_value(attempts_key) or 0) + 1
+        if attempts >= MAX_OTP_ATTEMPTS:
+            frappe.cache().delete_value(cache_key)
+            frappe.cache().delete_value(attempts_key)
+            frappe.throw("Too many failed attempts. Please request a new verification code.")
+        frappe.cache().set_value(attempts_key, attempts, expires_in_sec=OTP_TTL)
         frappe.throw("Invalid OTP")
 
     # OTP is correct — single-use: delete immediately
     frappe.cache().delete_value(cache_key)
+    frappe.cache().delete_value(attempts_key)
 
     # Store verified flag for VERIFIED_TTL seconds (1 day by default)
     frappe.cache().set_value(

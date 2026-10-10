@@ -7,6 +7,8 @@ import uuid
 from frappe.model.document import Document
 from frappe.utils.file_manager import save_file
 import random
+import secrets
+import hmac
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from pdfrw import PdfReader, PdfWriter
@@ -1319,6 +1321,9 @@ def track_ip_and_device(browser=None, os=None, device=None, token=None):
     return {"status": "success"}
 
 
+MAX_OTP_ATTEMPTS = 5  # wrong guesses allowed per code before it is burnt
+
+
 @frappe.whitelist(allow_guest=True)
 def send_otp(token=None):
     try:
@@ -1349,8 +1354,9 @@ def send_otp(token=None):
                 # Stale entry — remove it and send fresh
                 frappe.cache().delete_value(cache_key)
 
-        otp = str(random.randint(100000, 999999))
+        otp = str(secrets.randbelow(900000) + 100000)  # 6 digits, from a secure source
         expires_at = frappe.utils.now_datetime().timestamp() + 300
+        frappe.cache().delete_value(f"otp_attempts_{token}")  # a new code starts with a clean slate
         frappe.cache().set_value(
             cache_key,
             {
@@ -1418,7 +1424,15 @@ def verify_otp(token=None, otp=None):
         if remaining == 0:
             return {"status": "expired"}
 
-        if otp != cached_otp["otp"]:
+        if not hmac.compare_digest(str(otp), str(cached_otp["otp"])):
+            # A 6-digit code is only safe if guessing is capped: burn it after a few wrong tries.
+            attempts_key = f"otp_attempts_{token}"
+            attempts = int(frappe.cache().get_value(attempts_key) or 0) + 1
+            if attempts >= MAX_OTP_ATTEMPTS:
+                frappe.cache().delete_value(f"otp_{token}")
+                frappe.cache().delete_value(attempts_key)
+                return {"status": "too_many_attempts"}
+            frappe.cache().set_value(attempts_key, attempts, expires_in_sec=300)
             return {"status": "invalid_otp"}
 
         # Generate persistent verification key
@@ -1474,6 +1488,7 @@ def verify_otp(token=None, otp=None):
         )
 
         frappe.cache().delete_value(f"otp_{token}")
+        frappe.cache().delete_value(f"otp_attempts_{token}")
 
         return {"status": "verified"}
 

@@ -67,7 +67,7 @@
 <script setup>
 // The same signature dialog as the emailed signing page: Draw (with undo / clear and a baseline), Type (eight
 // script fonts) or Upload; hands back a cropped PNG data URL and the method used, for the audit trail.
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const open = defineModel({ type: Boolean, default: false })
 const emit = defineEmits(['save'])
@@ -115,6 +115,11 @@ watch(open, async (v) => {
   strokes.value = []
   uploaded.value = ''
   setMode('draw')
+})
+
+// Leaving the page with the dialog still open must not leave the page unscrollable.
+onBeforeUnmount(() => {
+  if (open.value) document.body.style.overflow = ''
 })
 
 async function setMode(m) {

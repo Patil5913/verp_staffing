@@ -53,7 +53,7 @@
             :detail="detail"
             :fieldnames="['assign_to', 'status']"
             :field-link-queries="{ assign_to: { query: assignToQuery, filters: assignToFilters } }"
-            :read-only-fields="locked ? ['assign_to', 'status'] : []"
+            :read-only-fields="[...(locked ? ['assign_to', 'status'] : []), ...(canReassign ? [] : ['assign_to'])]"
           />
 
           <div class="rounded-xl border border-app-border bg-app-panel p-5 shadow-sm">
@@ -134,6 +134,7 @@ import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ServiceResumePanel from '@/components/detail/lead/ServiceResumePanel.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
 import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
+import { useCanReassign } from '@/composables/detail/useCanReassign'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { useResource } from '@/composables/list/useResource'
 import { autoTitleFromFile } from '@/utils/detail/documentTitle'
@@ -146,7 +147,9 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
+const canReassign = useCanReassign(doctype, name, detail.isNew, 'Interview Support')
+
+const locked = computed(() => (detail.values.status === 'Completed' && !hasRole('System Manager')) || Boolean(detail.values.held_by_cr))
 
 const TABS = [
   { key: 'details', label: 'Details' },

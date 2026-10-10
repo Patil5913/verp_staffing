@@ -37,7 +37,7 @@
           <span v-for="t in ROOT_TYPES" :key="t.name" class="inline-flex items-center gap-1.5 rounded-full border border-app-border bg-app-panel px-2.5 py-1">
             <span class="size-2 rounded-full" :class="t.dot" />{{ t.name }}
           </span>
-          <span v-if="showBalances" class="ml-auto">Balances are shown as Dr / Cr in company currency.</span>
+          <span v-if="showBalances" class="ml-auto">Balances are in company currency: debit positive, credit negative.</span>
         </div>
 
         <DocTreeView

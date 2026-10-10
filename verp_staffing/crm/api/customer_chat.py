@@ -30,7 +30,8 @@ PORTAL_PATH = "/verp/portal/dashboard"
 # Where the emailed link goes. A customer signing in here lands on /verp, and the app's
 # router sends portal users on to PORTAL_PATH.
 LOGIN_PATH = "/verp/login"
-ENDED_STATUSES = {"Customer Placed"}
+# Statuses after which the customer has no portal or chat: placed, or backed out and refunded.
+ENDED_STATUSES = {"Customer Placed", "Backout and Refund", "Backout"}
 
 DEFAULT_SUBJECT = "Your portal and chat access"
 DEFAULT_MESSAGE = (

@@ -1,8 +1,10 @@
 import AssignToField from '@/components/detail/AssignToField.vue'
 import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
+import CrCaseHistory from '@/components/detail/customer/CrCaseHistory.vue'
 import CustomerHistoryPanel from '@/components/detail/customer/CustomerHistoryPanel.vue'
 import CustomerSalesOrdersPanel from '@/components/detail/customer/CustomerSalesOrdersPanel.vue'
 import ForwardAction from '@/components/detail/actions/ForwardAction.vue'
+import RefundRequestAction from '@/components/detail/actions/RefundRequestAction.vue'
 import ResolutionActions from '@/components/detail/actions/ResolutionActions.vue'
 import CreateSalesOrderAction from '@/components/detail/actions/CreateSalesOrderAction.vue'
 
@@ -49,27 +51,35 @@ export const crConfig = {
   // manual delete either.
   noDelete: true,
   // A resolved / refunded case is read-only (cr.js: disable_form()).
-  locked: (detail) => notNew(detail) && !!latestStatus(detail, 'cr_history') && latestStatus(detail, 'cr_history') !== 'Dispute Pending',
+  // (Dispute Pending and Refund Rejected are both still open for CR to act on.)
+  locked: (detail) => notNew(detail) && !!latestStatus(detail, 'cr_history') && !['Dispute Pending', 'Refund Rejected'].includes(latestStatus(detail, 'cr_history')),
   readOnlyFields: (detail) => (detail.isNew.value ? [] : ['customer']),
   actions: [
     {
       component: ResolutionActions,
       props: {
         historyField: 'cr_history',
-        openStatus: 'Dispute Pending',
+        openStatus: ['Dispute Pending', 'Refund Rejected'],
         method: 'verp_staffing.cr.doctype.cr.cr.resolve_or_refund_cr',
         nameArg: 'cr_name',
         options: [
           { label: 'Resolve', action: 'Dispute Resolved', remarks: true, icon: 'check-circle', variant: 'primary' },
-          { label: 'Refund', action: 'Refund', remarks: true, icon: 'rotate-ccw', variant: 'outline' },
+          // The candidate leaves and no money goes back.
+          {
+            label: 'Backout (no refund)', action: 'Backout', remarks: true, icon: 'user-x', variant: 'outline',
+            method: 'verp_staffing.cr.doctype.cr.cr.backout_without_refund', nameArg: 'cr_name',
+          },
         ],
       },
     },
+    // The candidate leaves and part of what they paid goes back - verified by an accountant before anything is booked.
+    { component: RefundRequestAction },
     // Only once the dispute is closed can the candidate be sent elsewhere.
     {
       component: ForwardAction,
       props: { fromServiceName: 'CR' },
-      show: (d) => notNew(d) && !!latestStatus(d, 'cr_history') && latestStatus(d, 'cr_history') !== 'Dispute Pending',
+      // Not while the dispute is open or a refund waits for the accountant.
+      show: (d) => notNew(d) && ['Dispute Resolved', 'Refund', 'Backout'].includes(latestStatus(d, 'cr_history')),
     },
     // A new Sales Order for the dispute's customer, prefilled.
     { component: CreateSalesOrderAction, show: notNew },
@@ -81,7 +91,7 @@ export const crConfig = {
       sections: [
         { type: 'fields', fieldnames: ['customer'] },
         { type: 'component', component: AssignToField, props: { filters: { department: 'CR' } } },
-        { type: 'table', fieldname: 'cr_history', readOnly: true },
+        { type: 'component', component: CrCaseHistory },
       ],
     },
     ...customerTabs(),

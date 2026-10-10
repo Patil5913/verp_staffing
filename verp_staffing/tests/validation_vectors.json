@@ -1,0 +1,41 @@
+{
+  "_doc": "Inputs and the exact message each validator must give. Read by BOTH www/candidate_details.py's tests and the frontend's fieldProblems tests, so the browser and the server cannot drift apart.",
+  "email": [
+    ["a b@c.com", "Email must not contain spaces"],
+    ["abc", "Email is missing the @ symbol"],
+    ["a@b@c.com", "Email must contain only one @ symbol"],
+    ["@c.com", "Email is missing the part before @"],
+    ["a@", "Email is missing the domain after @ (e.g. gmail.com)"],
+    ["a@com", "Email domain looks incomplete (e.g. name@gmail.com)"],
+    ["a@.com", "Email domain looks incomplete (e.g. name@gmail.com)"],
+    ["a@com.", "Email domain looks incomplete (e.g. name@gmail.com)"],
+    ["a@b.com", null],
+    ["first.last+tag@sub.example.co", null]
+  ],
+  "linkedin": [
+    ["linkedin.com/in/x", "LinkedIn URL must start with https://"],
+    ["ftp://linkedin.com/in/x", "LinkedIn URL must start with https://"],
+    ["https://example.com/in/x", "LinkedIn URL must be on linkedin.com (e.g. https://www.linkedin.com/in/your-name)"],
+    ["https://www.linkedin.com", "LinkedIn URL is missing the profile path after linkedin.com/"],
+    ["https://www.linkedin.com/in/x", null],
+    ["HTTPS://LinkedIn.com/in/x", null]
+  ],
+  "phone": [
+    ["4155552671", "Phone number must start with + and the country code (e.g. +14155552671)"],
+    ["+1415abc2671", "Phone number may contain only digits after the + (spaces, ( ) and - are allowed)"],
+    ["+0155552671", "Phone number: the country code cannot start with 0"],
+    ["+141555", "Phone number needs 11 digits including the country code, you entered 6"],
+    ["+141555526712", "Phone number needs 11 digits including the country code, you entered 12"],
+    ["+1 (415) 555-2671", null],
+    ["+14155552671", null]
+  ],
+  "mm_yyyy": [
+    ["13-2024", false],
+    ["00-2024", false],
+    ["1-2024", false],
+    ["01-24", false],
+    ["2024-01", false],
+    ["01-2024", true],
+    ["12-1999", true]
+  ]
+}

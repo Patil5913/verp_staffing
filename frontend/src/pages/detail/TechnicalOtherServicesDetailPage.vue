@@ -38,7 +38,7 @@
             <AppLinkField
               doctype="Employee"
               v-model="detail.values.assign_to"
-              :disabled="!detail.canWrite.value || locked"
+              :disabled="!detail.canWrite.value || locked || !canReassign"
               :query="assignToQuery"
               :filters="{ department: 'Technical' }"
             />
@@ -117,6 +117,7 @@ import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ServiceResumePanel from '@/components/detail/lead/ServiceResumePanel.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
 import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
+import { useCanReassign } from '@/composables/detail/useCanReassign'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
@@ -128,7 +129,9 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
-const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
+const canReassign = useCanReassign(doctype, name, detail.isNew)
+
+const locked = computed(() => (detail.values.status === 'Completed' && !hasRole('System Manager')) || Boolean(detail.values.held_by_cr))
 
 const TABS = [
   { key: 'details', label: 'Details' },

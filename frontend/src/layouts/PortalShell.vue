@@ -42,7 +42,7 @@ import { notify } from '@/utils/common/notify'
 import { usePortal } from '@/composables/portal/usePortal'
 
 const { isMobile, mobileNavOpen, closeMobileNav } = useSidebar()
-const { load, refreshUnread, unread } = usePortal()
+const { data, load, refreshUnread, unread } = usePortal()
 const route = useRoute()
 
 watch(() => route.fullPath, closeMobileNav)

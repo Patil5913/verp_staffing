@@ -29,7 +29,7 @@
           :detail="detail"
           :fieldnames="DETAIL_FIELDS"
           :field-link-queries="{ assign_to: { query: assignToQuery, filters: assignToFilters } }"
-          :read-only-fields="locked ? ['status'] : []"
+          :read-only-fields="[...(locked ? ['status'] : []), ...(canReassign ? [] : ['assign_to'])]"
         />
       </div>
     </template>
@@ -48,11 +48,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
-    </template>
-
-    <template #tab-updates>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['update']" empty-text="No updates yet." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note', 'update']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-activity>
@@ -105,6 +101,7 @@ import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
 import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
+import { useCanReassign } from '@/composables/detail/useCanReassign'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 import { autoTitleFromFile } from '@/utils/detail/documentTitle'
 
@@ -116,16 +113,17 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
+const canReassign = useCanReassign(doctype, name, detail.isNew, 'Cover Letter')
+
 // Same as Training/Interview Support/Technical Other Services: a Completed
 // service record is frozen - status/proof of work can no longer change.
-const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
+const locked = computed(() => (detail.values.status === 'Completed' && !hasRole('System Manager')) || Boolean(detail.values.held_by_cr))
 
 const DEFAULT_TABS = [
   { key: 'details', label: 'Details' },
   { key: 'proof', label: 'Proof of Work' },
   { key: 'customer', label: 'Customer' },
   { key: 'notes', label: 'Notes' },
-  { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },
 ]
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))

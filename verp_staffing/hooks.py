@@ -48,6 +48,7 @@ website_route_rules = [
 page_renderer = [
     "verp_staffing.utils.pwa.ServiceWorkerRenderer",
     "verp_staffing.utils.pwa.ManifestRenderer",
+    "verp_staffing.utils.pwa.InstallIconRenderer",
     # /verp/portal/invoices/<x>/print and the other customer downloads (see utils/portal_downloads.py)
     "verp_staffing.utils.portal_downloads.PortalDownloadRenderer",
     # branded "Updating" page shown while a site is in maintenance mode (see utils/maintenance_page.py)
@@ -412,7 +413,6 @@ doc_events = {
         "after_insert": "verp_staffing.quota.utils.quota.on_file_after_insert",
         "on_trash": "verp_staffing.quota.utils.quota.on_file_after_delete",
     },
-    "Agreement": {"on_submit": "verp_staffing.crm.api.agreement.generate_final_pdf"},
     "Interview Status": {
         "after_insert": "verp_staffing.marketing.doctype.interview.interview.add_to_kanban",
         "on_trash": "verp_staffing.marketing.doctype.interview.interview.remove_from_kanban",

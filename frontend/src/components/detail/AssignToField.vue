@@ -4,7 +4,7 @@
     <AppLinkField
       doctype="Employee"
       v-model="detail.values[fieldname]"
-      :disabled="locked || !detail.canWrite.value"
+      :disabled="locked || !detail.canWrite.value || !canReassign"
       :query="query"
       :filters="mergedFilters"
     />
@@ -16,7 +16,8 @@
 // server-side by a whitelisted standard query (desk's frm.set_query on
 // assign_to): `get_assign_to_by_service` for a service + customer, or
 // `get_subordinate_employees` for a department's subordinates.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useCanReassign } from '@/composables/detail/useCanReassign'
 import AppLinkField from '@/components/common/AppLinkField.vue'
 
 const props = defineProps({
@@ -30,7 +31,20 @@ const props = defineProps({
   withCustomer: { type: Boolean, default: false },
   serviceField: { type: String, default: '' },
   departmentField: { type: String, default: '' },
+  // Restrict re-assigning an existing record to the department's auto-assign
+  // role holder and their superiors (also enforced server-side).
+  restrict: { type: Boolean, default: false },
+  doctype: { type: String, default: '' },
+  name: { type: String, default: '' },
 })
+
+const canReassign = props.restrict
+  ? useCanReassign(
+      computed(() => props.doctype),
+      computed(() => props.name),
+      props.detail.isNew,
+    )
+  : ref(true)
 
 const mergedFilters = computed(() => ({
   ...props.filters,

@@ -38,6 +38,9 @@ class OtherServices(Document):
 
         self.name = generate_name_series("Other Services", customer_name) 
     def validate(self):
+        from verp_staffing.cr.backout import validate_status_change
+
+        validate_status_change(self)
         set_document_reference_titles(self.proof_of_work)
         self.validate_completed_lock()
         self.stamp_updated_document_rows()

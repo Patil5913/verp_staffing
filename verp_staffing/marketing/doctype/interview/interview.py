@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.utils.timezone import convert_round, normalize_round, round_day, user_time_zone
 from verp_staffing.crm.api.helpers import (
+    validate_interview_assignee,
     get_reporting_subtree,
     get_visible_employee_names_cached,
     get_visible_user_names_cached,
@@ -77,6 +78,7 @@ class Interview(Document):
         self._set_default_status()
         self.set_customer_from_marketing()
         self._validate_marketing_link()
+        validate_interview_assignee(self)
         self._validate_required_fields()
         self._validate_interview_rounds()
         self._sync_status_from_last_round()
@@ -281,6 +283,7 @@ def _owner_scoping_sql_condition():
     team = get_visible_employee_names_cached()
     if team:
         team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        condition += f" OR i.assign_to IN ({team_sql})"
         condition += (
             f" OR i.marketing_link IN (SELECT m.name FROM `tabMarketing` m WHERE m.assign_to IN ({team_sql}))"
         )
@@ -328,13 +331,16 @@ def update_interview_status_from_kanban(
             ).format(last_round.status)
         )
 
-    if status in CANCELLED_LIKE_STATUSES:
-        if not cancelled_by or not reason_of_cancel:
-            frappe.throw(
-                _("'Cancelled By' and 'Reason of Cancel' are required for this status.")
-            )
-        last_round.cancelled_by = cancelled_by
-        last_round.reason_of_cancel = reason_of_cancel
+    if status in CANCELLED_LIKE_STATUSES and (not cancelled_by or not reason_of_cancel):
+        frappe.throw(
+            _("'Cancelled By' and 'Reason of Cancel' are required for this status.")
+        )
+    # A rejection does not demand a reason, but the board asks for one: keep it rather than drop it.
+    if status in CANCELLED_LIKE_STATUSES or status == "Rejected":
+        if cancelled_by:
+            last_round.cancelled_by = cancelled_by
+        if reason_of_cancel:
+            last_round.reason_of_cancel = reason_of_cancel
 
     last_round.status = status
     doc.save()

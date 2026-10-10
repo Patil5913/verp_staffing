@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "creation": "2026-10-10 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_invoice",
+  "receipt",
+  "paid_amount",
+  "refunded_before",
+  "refund_amount",
+  "fee_share"
+ ],
+ "fields": [
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "receipt",
+   "fieldtype": "Link",
+   "label": "Receipt (Payment Entry)",
+   "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "refunded_before",
+   "fieldtype": "Currency",
+   "label": "Already Refunded",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "Refund",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "fee_share",
+   "fieldtype": "Currency",
+   "label": "Fee Recovered",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CR",
+ "name": "Refund Request Invoice",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

@@ -12,6 +12,8 @@ frappe.listview_settings["CR"] = {
 	get_indicator(doc) {
 		const colors = {
 			"Dispute Pending": "orange",
+			"Refund Pending": "yellow",
+			"Refund Rejected": "red",
 			"Dispute Resolved": "green",
 			Refund: "red",
 		};

@@ -16,7 +16,7 @@
           {{ iv.company }}<span v-if="iv.role"> · {{ iv.role }}</span>
           <span class="lucide-lock ml-1 inline-block size-3 align-[-1px]" />
         </span>
-        <span v-if="iv.owner" class="hidden shrink-0 truncate text-p-xs text-app-text-muted sm:inline" :title="`Created by ${iv.owner}`">{{ iv.owner }}</span>
+        <span v-if="iv.assign_to_name || iv.owner" class="hidden shrink-0 truncate text-p-xs text-app-text-muted sm:inline" :title="`Assigned to ${iv.assign_to_name || iv.owner} - created by ${iv.owner}`">{{ iv.assign_to_name || iv.owner }}</span>
         <DocStatusBadge :status="iv.status" />
       </li>
     </ul>

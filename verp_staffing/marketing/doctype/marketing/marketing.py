@@ -19,6 +19,12 @@ class Marketing(Document):
         self.name = generate_name_series("Marketing", customer_name)
 
     def validate(self):
+        from verp_staffing.cr.backout import validate_status_change
+
+        validate_status_change(self)
+        from verp_staffing.crm.api.helpers import validate_assign_to_change
+
+        validate_assign_to_change(self, "Marketing")
         self._validate_job_application_rows()
         # validate() runs before Frappe casts Int fields, so `target` can still
         # be the raw string the client sent ("5", "5.0") — compare as a number.
@@ -86,12 +92,17 @@ def get_interviews_by_marketing(marketing):
     interviews = frappe.get_all(
         "Interview",
         filters={"marketing_link": marketing},
-        fields=["company", "name", "role", "status", "owner"],
+        fields=["company", "name", "role", "status", "owner", "assign_to"],
         order_by="creation desc",
     )
     owner_names = {
         u.name: u.full_name
         for u in frappe.get_all("User", filters={"name": ["in", list({i.owner for i in interviews}) or [""]]}, fields=["name", "full_name"])
+    }
+
+    employee_names = {
+        e.name: e.employee_name
+        for e in frappe.get_all("Employee", filters={"name": ["in", list({i.assign_to for i in interviews if i.assign_to}) or [""]]}, fields=["name", "employee_name"])
     }
 
     # `can_open` = whether the current user may read it (their own, or a visible team member's -
@@ -103,6 +114,8 @@ def get_interviews_by_marketing(marketing):
             "role": i.role,
             "status": i.status,
             "owner": owner_names.get(i.owner) or i.owner,
+            "assign_to": i.assign_to,
+            "assign_to_name": employee_names.get(i.assign_to) or i.assign_to,
             "can_open": bool(frappe.has_permission("Interview", "read", doc=i.name)),
         }
         for i in interviews
