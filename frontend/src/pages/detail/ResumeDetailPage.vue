@@ -58,7 +58,7 @@
 					:field-link-queries="{
 						assign_to: { query: assignToQuery, filters: assignToFilters },
 					}"
-					:read-only-fields="locked ? DETAIL_FIELDS : []"
+					:read-only-fields="[...(locked ? DETAIL_FIELDS : []), ...(canReassign ? [] : ['assign_to'])]"
 				/>
 				<section v-if="resumeTable" class="mt-4 rounded-xl border border-app-border bg-app-panel p-4">
 					<h3 class="mb-3 text-p-sm font-medium text-app-text">Attachments</h3>
@@ -79,18 +79,9 @@
 			<ActivityTimeline
 				:doctype="doctype"
 				:name="name"
-				:types="['note']"
+				:types="['note', 'update']"
 				show-composer
 				empty-text="Nothing here yet - add the first note below."
-			/>
-		</template>
-
-		<template #tab-updates>
-			<ActivityTimeline
-				:doctype="doctype"
-				:name="name"
-				:types="['update']"
-				empty-text="No updates yet."
 			/>
 		</template>
 
@@ -152,6 +143,7 @@ import ChildTableField from "@/components/detail/ChildTableField.vue";
 import ActivityTimeline from "@/components/detail/ActivityTimeline.vue";
 import ForwardCandidateButton from "@/components/detail/actions/ForwardCandidateButton.vue";
 import CustomerContextPanel from "@/components/detail/customer/CustomerContextPanel.vue";
+import { useCanReassign } from "@/composables/detail/useCanReassign"
 import { useDetailPageController } from "@/composables/detail/useDetailPageController";
 import { autoTitleFromFile } from "@/utils/detail/documentTitle";
 
@@ -163,13 +155,14 @@ const name = computed(() => route.params.name);
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
 	useDetailPageController(doctype, name);
 
+const canReassign = useCanReassign(doctype, name, detail.isNew, "Resume");
+
 const locked = computed(() => detail.values.status === "Completed" && !hasRole('System Manager'));
 
 const DEFAULT_TABS = [
 	{ key: "details", label: "Details" },
 	{ key: "customer", label: "Customer" },
 	{ key: "notes", label: "Notes" },
-	{ key: "updates", label: "Updates" },
 	{ key: "activity", label: "Activity" },
 ];
 const tabs = computed(() =>

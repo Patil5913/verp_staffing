@@ -29,7 +29,7 @@
           :detail="detail"
           :fieldnames="DETAIL_FIELDS"
           :field-link-queries="{ assign_to: { query: assignToQuery, filters: assignToFilters } }"
-          :read-only-fields="locked ? ['status'] : []"
+          :read-only-fields="[...(locked ? ['status'] : []), ...(canReassign ? [] : ['assign_to'])]"
         />
       </div>
     </template>
@@ -48,11 +48,7 @@
     </template>
 
     <template #tab-notes>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['note']" show-composer empty-text="Nothing here yet - add the first note below." />
-    </template>
-
-    <template #tab-updates>
-      <ActivityTimeline :doctype="doctype" :name="name" :types="['update']" empty-text="No updates yet." />
+      <ActivityTimeline :doctype="doctype" :name="name" :types="['note', 'update']" show-composer empty-text="Nothing here yet - add the first note below." />
     </template>
 
     <template #tab-activity>
@@ -106,6 +102,7 @@ import ChildTableField from '@/components/detail/ChildTableField.vue'
 import ActivityTimeline from '@/components/detail/ActivityTimeline.vue'
 import ForwardCandidateButton from '@/components/detail/actions/ForwardCandidateButton.vue'
 import CustomerContextPanel from '@/components/detail/customer/CustomerContextPanel.vue'
+import { useCanReassign } from '@/composables/detail/useCanReassign'
 import { useDetailPageController } from '@/composables/detail/useDetailPageController'
 
 const route = useRoute()
@@ -116,6 +113,8 @@ const name = computed(() => route.params.name)
 const { detail, recordTitle, isDirty, onSave, goBack, showDeleteDialog, deleting, onDelete } =
   useDetailPageController(doctype, name)
 
+const canReassign = useCanReassign(doctype, name, detail.isNew, 'RUC')
+
 const locked = computed(() => detail.values.status === 'Completed' && !hasRole('System Manager'))
 
 const DEFAULT_TABS = [
@@ -123,7 +122,6 @@ const DEFAULT_TABS = [
   { key: 'sessions', label: 'Sessions' },
   { key: 'customer', label: 'Customer' },
   { key: 'notes', label: 'Notes' },
-  { key: 'updates', label: 'Updates' },
   { key: 'activity', label: 'Activity' },
 ]
 const tabs = computed(() => (detail.isNew.value ? DEFAULT_TABS.filter((t) => t.key === 'details') : DEFAULT_TABS))

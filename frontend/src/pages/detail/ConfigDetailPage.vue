@@ -360,8 +360,7 @@ const TIMELINE_TABS = {
     { key: 'activity', label: 'Activity', timeline: { types: ['task', 'event'], create: true, empty: 'No tasks or events linked to this record yet.' } },
   ],
   service: [
-    { key: 'notes', label: 'Notes', timeline: { types: ['note'], composer: true, empty: 'Nothing here yet - add the first note below.' } },
-    { key: 'updates', label: 'Updates', timeline: { types: ['update'], empty: 'No updates yet.' } },
+    { key: 'notes', label: 'Notes', timeline: { types: ['note', 'update'], composer: true, empty: 'Nothing here yet - add the first note below.' } },
     { key: 'activity', label: 'Activity', timeline: { types: ['task', 'event'], create: true, empty: 'No tasks or events linked to this record yet.' } },
   ],
 }

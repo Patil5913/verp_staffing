@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from verp_staffing.crm.api.naming import generate_name_series
 from verp_staffing.utils.timezone import convert_round, normalize_round, round_day, user_time_zone
 from verp_staffing.crm.api.helpers import (
+    validate_interview_assignee,
     get_reporting_subtree,
     get_visible_employee_names_cached,
     get_visible_user_names_cached,
@@ -77,6 +78,7 @@ class Interview(Document):
         self._set_default_status()
         self.set_customer_from_marketing()
         self._validate_marketing_link()
+        validate_interview_assignee(self)
         self._validate_required_fields()
         self._validate_interview_rounds()
         self._sync_status_from_last_round()
@@ -281,6 +283,7 @@ def _owner_scoping_sql_condition():
     team = get_visible_employee_names_cached()
     if team:
         team_sql = ", ".join([frappe.db.escape(e) for e in team])
+        condition += f" OR i.assign_to IN ({team_sql})"
         condition += (
             f" OR i.marketing_link IN (SELECT m.name FROM `tabMarketing` m WHERE m.assign_to IN ({team_sql}))"
         )

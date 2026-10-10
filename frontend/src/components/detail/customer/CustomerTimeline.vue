@@ -1,5 +1,14 @@
 <template>
-  <div class="mx-auto max-w-2xl">
+  <div class="mx-auto max-w-4xl">
+    <div class="relative mb-3 max-w-xs">
+      <span class="lucide-search pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-app-text-muted" />
+      <input
+        v-model="search"
+        type="search"
+        placeholder="Search history"
+        class="w-full rounded-lg border border-app-border bg-app-panel py-1.5 pl-8 pr-3 text-p-sm text-app-text placeholder:text-app-text-muted focus:border-app-primary focus:outline-none"
+      />
+    </div>
     <div v-if="groups.length > 1" class="mb-5 flex flex-wrap gap-2">
       <button
         v-for="g in ['All', ...groups]"
@@ -12,10 +21,24 @@
         {{ g }} <span class="opacity-70">{{ g === 'All' ? all.length : countOf(g) }}</span>
       </button>
     </div>
-    <div v-if="timeline.isLoading && !timeline.resource.data" class="flex justify-center py-16">
+    <!-- Fixed width and a minimum height, so switching filters doesn't resize the page (the jerk). -->
+    <div class="min-h-[60vh]">
+    <!-- Marketing / Interview: the same tables as the Marketing record's History tab. -->
+    <CustomerHistoryPanel
+      v-if="tableDept"
+      :key="tableDept"
+      :customer="customer"
+      :departments="[tableDept]"
+      :exclude="tableDept === 'Marketing' ? ['Interview'] : []"
+      :search="search"
+    />
+    <div v-else-if="timeline.isLoading && !timeline.resource.data" class="flex justify-center py-16">
       <LoadingIndicator class="h-6 w-6 text-app-text-muted" />
     </div>
     <StateBanner v-else-if="timeline.hasError" icon="alert-triangle" title="Couldn't load the history" :description="timeline.errorMessage" />
+    <p v-else-if="all.length && !entries.length" class="rounded-xl border border-dashed border-app-border py-8 text-center text-p-sm text-app-text-muted">
+      Nothing matches "{{ search }}".
+    </p>
     <p v-else-if="!all.length" class="rounded-xl border border-dashed border-app-border py-8 text-center text-p-sm text-app-text-muted">
       Nothing has happened for this customer yet. Sales orders, agreements, payments, portal access, forwards and department work will show up here.
     </p>
@@ -46,6 +69,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -55,6 +79,7 @@
 // Backed by verp_staffing.crm.api.customer_timeline.
 import { computed, ref, watch } from 'vue'
 import { FeatherIcon, LoadingIndicator } from 'frappe-ui'
+import CustomerHistoryPanel from '@/components/detail/customer/CustomerHistoryPanel.vue'
 import DocStatusBadge from '@/components/common/DocStatusBadge.vue'
 import StateBanner from '@/components/common/StateBanner.vue'
 import { useResource } from '@/composables/list/useResource'
@@ -82,9 +107,16 @@ const timeline = useResource({
 watch(() => props.customer, () => timeline.resource.reload())
 const all = computed(() => timeline.resource.data || [])
 const filter = ref('')
+const tableDept = computed(() => (filter.value === 'Marketing' || filter.value === 'Interview' ? filter.value : ''))
 // Filter chips come from what's actually in the timeline (Sales Orders, Agreements, ... and each department).
 const groups = computed(() => [...new Set(all.value.map((e) => e.group))])
 const countOf = (g) => all.value.filter((e) => e.group === g).length
-const entries = computed(() => (filter.value ? all.value.filter((e) => e.group === filter.value) : all.value))
+const search = ref('')
+const entries = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  return all.value.filter(
+    (e) => (!filter.value || e.group === filter.value) && (!q || [e.title, e.detail, e.status, e.group, e.ts].some((v) => String(v || '').toLowerCase().includes(q))),
+  )
+})
 defineExpose({ reload: () => timeline.resource.reload() })
 </script>
