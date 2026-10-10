@@ -1559,8 +1559,14 @@ def get_assignment_tree(doctype, name, department):
     apps = frappe.get_all(
         "Job Application Count",
         filters={"parent": name, "parenttype": doctype},
-        fields=["small_application", "large_application", "total_application", "creation"],
+        fields=["small_application", "large_application", "total_application", "creation", "owner"],
     )
+    owner_employee = {
+        e.user: e.name
+        for e in frappe.get_all(
+            "Employee", filters={"user": ["in", list({a.owner for a in apps}) or [""]]}, fields=["user", "name"]
+        )
+    }
     interviews = frappe.get_all(
         "Interview",
         filters={"marketing_link": name},
@@ -1581,9 +1587,20 @@ def get_assignment_tree(doctype, name, department):
 
     interview_period = {iv.name: period_of(iv) for iv in interviews}
 
+    def app_period(a):
+        """A job application count belongs to the recruiter who created the row (its owner). If they held
+        the record more than once, the stint it was created in; rows by someone who never held the
+        record (e.g. a manager entering them) fall back to the period they were created in."""
+        mine = [k for k, p in enumerate(periods) if p[0] == owner_employee.get(a.owner)]
+        if mine:
+            return next((k for k in mine if within(a.creation, periods[k][1], periods[k][2])), mine[-1])
+        return next((k for k, p in enumerate(periods) if within(a.creation, p[1], p[2])), None)
+
+    app_periods = [app_period(a) for a in apps]
+
     history = []
     for k, ((emp, start, end), chain) in enumerate(zip(periods, chains)):
-        mine = [a for a in apps if within(a.creation, start, end)]
+        mine = [a for a, idx in zip(apps, app_periods) if idx == k]
         history.append(
             {
                 **person(emp),
