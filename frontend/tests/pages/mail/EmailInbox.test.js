@@ -52,11 +52,11 @@ describe('lifecycle', () => {
   it('new mail announces itself and refreshes the list, unless a message is being written', () => {
     const w = make(); const onNew = h.socket.on.mock.calls[0][1]
     onNew({ sender: 'a@x.com', subject: 'Hello' })
-    expect(h.notify.success).toHaveBeenCalledWith('New mail from a@x.com: Hello')
+    expect(h.notify.success).toHaveBeenCalledWith('New mail from a@x.com: Hello', { sound: 'other' })
     expect(h.mb.load).toHaveBeenLastCalledWith({ quiet: true })
     h.mb.load.mockClear(); w.vm.composing = true
     onNew(undefined)
-    expect(h.notify.success).toHaveBeenLastCalledWith('New mail from someone')
+    expect(h.notify.success).toHaveBeenLastCalledWith('New mail from someone', { sound: 'other' })
     expect(h.mb.load).not.toHaveBeenCalled()
   })
 })
